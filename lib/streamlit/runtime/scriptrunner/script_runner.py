@@ -124,6 +124,62 @@ def _close_async_generator(async_gen: Any) -> None:
             temporary_loop.close()
 
 
+def _cancel_rejected_task(result: Any) -> None:
+    """Cancel a returned task and finish that cancellation when possible."""
+    cancel = getattr(result, "cancel", None)
+    if not callable(cancel):
+        return
+    try:
+        cancel()
+    except Exception:
+        _LOGGER.debug(
+            "Failed to cancel a rejected future or task entrypoint.",
+            exc_info=True,
+        )
+        return
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        # This thread is already running a loop, so it cannot drive the task.
+        _close_task_coroutine(result)
+        return
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = None
+    if loop is not None and not loop.is_closed():
+        try:
+            loop.run_until_complete(result)
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            _LOGGER.debug(
+                "Failed to finish cancelling a rejected task entrypoint.",
+                exc_info=True,
+            )
+            _close_task_coroutine(result)
+        return
+    _close_task_coroutine(result)
+
+
+def _close_task_coroutine(result: Any) -> None:
+    """Close a task's coroutine when its loop cannot run the cancellation."""
+    get_coro = getattr(result, "get_coro", None)
+    if not callable(get_coro):
+        return
+    try:
+        coro = get_coro()
+    except Exception:
+        _LOGGER.debug("Failed to read a rejected task coroutine.", exc_info=True)
+        return
+    if coro is not None:
+        _close_awaitable(coro)
+
+
 def _close_awaitable(awaitable: Any) -> None:
     """Close an awaitable, ignoring failures while abandoning it."""
     closer = getattr(awaitable, "close", None)
@@ -166,17 +222,9 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
                 )
         else:
             # Futures and Tasks are awaitable but have cancel(), not close().
-            # Leaving them pending would keep the wrapper's work running after
-            # the entrypoint error.
-            cancel = getattr(result, "cancel", None)
-            if callable(cancel):
-                try:
-                    cancel()
-                except Exception:
-                    _LOGGER.debug(
-                        "Failed to cancel a rejected future or task entrypoint.",
-                        exc_info=True,
-                    )
+            # cancel() only requests cancellation; drive it on this thread's
+            # non-running loop so the coroutine's finally runs before the error.
+            _cancel_rejected_task(result)
 
     raise StreamlitAPIException(
         "st.App callable entrypoints must not return a coroutine or generator. "
@@ -388,6 +436,10 @@ class ScriptRunner:
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
         self._script_entrypoint = script_entrypoint
+        if script_entrypoint is not None:
+            # Callable apps never run pages/ as MPA v1. Set this once so
+            # st.switch_page uses the st.navigation error, not the pages/ hint.
+            PagesManager.uses_pages_directory = False
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -1050,10 +1102,6 @@ class ScriptRunner:
                         )
                         try:
                             if self._script_entrypoint is not None:
-                                # Callable apps never run pages/ as MPA v1.
-                                # Clear the flag so st.switch_page uses the
-                                # st.navigation error instead of the pages/ hint.
-                                PagesManager.uses_pages_directory = False
                                 _invoke_script_entrypoint(self._script_entrypoint)
                             elif PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)

@@ -25,7 +25,7 @@ from streamlit.errors import (
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
-from streamlit.navigation.page import Page, raise_if_page_created_outside_run
+from streamlit.navigation.page import Page, _raise_if_page_created_outside_run
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -49,11 +49,12 @@ def convert_to_streamlit_page(
 ) -> Page:
     """Convert various input types to Page objects."""
     if isinstance(page_input, Page):
-        # Bare execution has no script run; leave the incomplete page alone
-        # so import-time navigation can still return it. Inside a run, reject
-        # it before later code touches attributes that were never set.
+        # Outside a script run (for example at module import), return the page
+        # unchanged so importing the launcher still works. Inside a run, reject
+        # pages created at import time before later code reads attributes
+        # st.Page never set.
         if get_script_run_ctx() is not None:
-            raise_if_page_created_outside_run(page_input)
+            _raise_if_page_created_outside_run(page_input)
         return page_input
 
     if isinstance(page_input, str):

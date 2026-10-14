@@ -209,13 +209,10 @@ def _require_zero_arg_callable(obj: Any) -> None:
         signature = inspect.signature(
             _callable_for_signature(obj), follow_wrapped=False
         )
-    except TypeError:
-        # signature() itself failed to inspect the object. That is not
-        # "this callable requires arguments".
-        raise
     except ValueError:
-        # Some callables do not expose a signature. Argument mismatches then
-        # surface as normal user-code exceptions at invocation time.
+        # A missing signature means the object could not be inspected, which
+        # is separate from "this callable requires arguments". TypeError from
+        # signature() itself propagates.
         return
     try:
         signature.bind()
@@ -255,29 +252,72 @@ def _is_nested_function(candidate: Any) -> bool:
     return isinstance(qualname, str) and "<locals>" in qualname
 
 
-def _module_references_module(importer_name: str, target_name: str) -> bool:
-    """Return whether ``importer_name``'s module globals reference ``target_name``."""
-    importer = sys.modules.get(importer_name)
-    if importer is None:
-        return False
-    target = sys.modules.get(target_name)
+def _is_module_object(value: Any) -> bool:
+    """Return whether ``value`` is a module, ignoring lookup failures."""
     try:
-        values = vars(importer).values()
-    except TypeError:
+        return inspect.ismodule(value)
+    except Exception:
         return False
+
+
+def _object_module_name(value: Any) -> str | None:
+    """Return the module name a global refers to, ignoring lookup failures."""
+    try:
+        if inspect.ismodule(value):
+            name = getattr(value, "__name__", None)
+        else:
+            name = getattr(value, "__module__", None)
+    except Exception:
+        # Proxy objects can raise arbitrary lookup errors. Skip the value so
+        # one bad global does not fail App construction.
+        return None
+    return name if isinstance(name, str) else None
+
+
+def _values_reference_module(
+    values: tuple[Any, ...], target_name: str, target: Any
+) -> bool:
+    """Return whether any value is ``target`` or an object defined in it."""
     for value in values:
         if target is not None and value is target:
             return True
-        try:
-            if (
-                inspect.ismodule(value)
-                and getattr(value, "__name__", None) == target_name
-            ):
-                return True
-            if getattr(value, "__module__", None) == target_name:
-                return True
-        except (AttributeError, TypeError, ValueError):
+        if _object_module_name(value) == target_name:
+            return True
+    return False
+
+
+def _module_namespace_values(module: Any) -> tuple[Any, ...] | None:
+    """Return a snapshot of ``module``'s globals, or None if it cannot be read."""
+    try:
+        return tuple(vars(module).values())
+    except (TypeError, RuntimeError):
+        # A live module dict can change during iteration. A snapshot avoids
+        # that RuntimeError; some objects have no namespace at all.
+        return None
+
+
+def _module_references_module(importer_name: str, target_name: str) -> bool:
+    """Return whether ``importer_name`` can reach ``target_name``.
+
+    A direct import stores the decorator or its module in the importer.
+    ``import helpers`` plus ``@helpers.deco`` only stores the package, so also
+    look one level into imported modules for a re-exported decorator.
+    """
+    importer = sys.modules.get(importer_name)
+    if importer is None:
+        return False
+    values = _module_namespace_values(importer)
+    if values is None:
+        return False
+    target = sys.modules.get(target_name)
+    if _values_reference_module(values, target_name, target):
+        return True
+    for value in values:
+        if not _is_module_object(value) or value is importer:
             continue
+        nested = _module_namespace_values(value)
+        if nested is not None and _values_reference_module(nested, target_name, target):
+            return True
     return False
 
 
@@ -377,6 +417,18 @@ def _candidate_source_file(candidate: Any) -> Path | None:
     return None
 
 
+def _is_streamlit_framework_path(path: Path) -> bool:
+    """Return whether ``path`` is inside the Streamlit package.
+
+    Editable installs are not under site-packages. Decorators such as
+    ``st.fragment`` still must not anchor ``static/`` on Streamlit's source.
+    ``starlette_app.py`` lives at ``streamlit/web/server/starlette/``.
+    """
+    streamlit_root = Path(__file__).resolve().parents[3]
+    resolved = path.resolve()
+    return resolved == streamlit_root or streamlit_root in resolved.parents
+
+
 def _is_installed_package_path(path: Path) -> bool:
     """Return whether ``path`` is inside an installed-package directory.
 
@@ -436,7 +488,9 @@ def _resolve_callable_source_path(obj: Any) -> Path:
         if fallback is None:
             fallback = candidate_path
         imported_decorator = _is_imported_decorator_wrapper(candidate)
-        if _is_installed_package_path(candidate_path):
+        if _is_installed_package_path(candidate_path) or _is_streamlit_framework_path(
+            candidate_path
+        ):
             if installed is None and not imported_decorator:
                 installed = candidate_path
             continue
@@ -631,11 +685,10 @@ class App:
         - Path: absolute or relative. Relative paths resolve against the main
           script when started via ``streamlit run``, otherwise against the
           current working directory.
-        - Callable: A zero-argument synchronous callable defined in a
-          filesystem-backed Python source file. Streamlit calls it on every
-          full rerun. Locals are fresh each run, and module globals are shared
-          across reruns and sessions. Use ``st.session_state`` for per-session
-          values. Restart the process after editing the callable.
+        - Callable: Streamlit calls it on every full rerun. Local variables are
+          fresh each run; module globals are shared across reruns and sessions,
+          so use ``st.session_state`` for per-session values. Restart the process
+          after editing the callable or modules it imported at the top level.
 
           .. note::
               ``static/`` files and source watching use the callable's source
@@ -886,7 +939,7 @@ class App:
 
     @property
     def script_path(self) -> Path:
-        """The app script path as given, or the resolved source file of a callable entrypoint."""
+        """The script path, or the callable entrypoint's source file."""
         return self._script_path
 
     @property

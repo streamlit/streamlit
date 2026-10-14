@@ -322,15 +322,24 @@ class ScriptRunnerTest(unittest.TestCase):
         assert exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
 
     def test_invoke_script_entrypoint_cancels_task(self) -> None:
-        """A rejected task is cancelled and does not run after the error."""
+        """Cancelling a returned task runs its finally on the script loop."""
         ran = False
+        cleaned = False
         with _installed_event_loop() as loop:
 
             async def work() -> None:
-                nonlocal ran
-                ran = True
+                nonlocal ran, cleaned
+                try:
+                    ran = True
+                    await asyncio.sleep(10)
+                finally:
+                    cleaned = True
 
             task = loop.create_task(work())
+            with pytest.raises(TimeoutError):
+                loop.run_until_complete(asyncio.wait_for(asyncio.shield(task), 0.01))
+            assert ran is True
+            assert cleaned is False
 
             def entrypoint() -> Any:
                 return task
@@ -338,8 +347,7 @@ class ScriptRunnerTest(unittest.TestCase):
             with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
                 _invoke_script_entrypoint(entrypoint)
 
-            loop.run_until_complete(asyncio.sleep(0))
-            assert ran is False
+            assert cleaned is True
             assert task.cancelled()
 
     def test_callable_entrypoint_uses_normal_error_handling(self) -> None:
@@ -387,6 +395,7 @@ class ScriptRunnerTest(unittest.TestCase):
         """A callable entrypoint runs instead of the pages-directory MPA path."""
         main = MagicMock()
         scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        assert PagesManager.uses_pages_directory is False
 
         with (
             patch.object(PagesManager, "uses_pages_directory", True),
@@ -394,7 +403,6 @@ class ScriptRunnerTest(unittest.TestCase):
         ):
             scriptrunner.start()
             scriptrunner.join()
-            assert PagesManager.uses_pages_directory is False
 
         main.assert_called_once_with()
         mpa_v1.assert_not_called()

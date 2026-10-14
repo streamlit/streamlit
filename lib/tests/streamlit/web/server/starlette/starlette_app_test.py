@@ -1972,6 +1972,65 @@ class TestAppInit:
 
         assert app.script_path == app_file.resolve()
 
+    def test_app_anchors_package_exported_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """import helpers; @helpers.deco anchors on the app, not the decorator module."""
+        package_dir = tmp_path / "st_app_callable_helpers"
+        package_dir.mkdir()
+        (package_dir / "__init__.py").write_text("from .decorators import deco\n")
+        (package_dir / "decorators.py").write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_helpers_app.py"
+        app_file.write_text(
+            "import st_app_callable_helpers\n"
+            "\n"
+            "@st_app_callable_helpers.deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_helpers",
+            "st_app_callable_helpers.decorators",
+            "st_app_callable_helpers_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_helpers_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_fragment_decorator_outside_site_packages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """@st.fragment stays on the app file when Streamlit is not in site-packages."""
+        app_file = tmp_path / "st_app_callable_fragment_app.py"
+        app_file.write_text(
+            "import streamlit as st\n\n@st.fragment\ndef main():\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("st_app_callable_fragment_app", None)
+        app_mod = importlib.import_module("st_app_callable_fragment_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            sys.modules.pop("st_app_callable_fragment_app", None)
+
+        assert app.script_path == app_file.resolve()
+
     def test_app_anchors_outer_file_when_every_candidate_is_installed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

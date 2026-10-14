@@ -422,6 +422,7 @@ class Page:
 
         The title supports GitHub-flavored Markdown as described in ``st.Page``.
         """
+        _reject_import_time_page(self)
         return self._title
 
     @property
@@ -430,6 +431,7 @@ class Page:
 
         If no icon was declared in ``st.Page``, this property returns ``""``.
         """
+        _reject_import_time_page(self)
         return self._icon
 
     @property
@@ -445,6 +447,7 @@ class Page:
         The default page will always have a ``url_path`` of ``""`` to indicate
         the root URL (e.g. homepage).
         """
+        _reject_import_time_page(self)
         return "" if self._default else self._url_path
 
     @property
@@ -491,8 +494,7 @@ class Page:
         """
         # Import-time pages never receive _page or _can_be_called. Reject them
         # before those attributes are read, once a script run exists.
-        if get_script_run_ctx() is not None:
-            raise_if_page_created_outside_run(self)
+        _reject_import_time_page(self)
 
         if not self._can_be_called:
             raise StreamlitAPIException(
@@ -543,13 +545,18 @@ def _create_page(page: str | Path, *, default: bool = False) -> Page:
     return page_object
 
 
-def raise_if_page_created_outside_run(page: Page) -> None:
-    """Reject a ``Page`` that ``st.Page`` returned before a script run existed.
+def _reject_import_time_page(page: Page) -> None:
+    """Reject an import-time page once a script run exists."""
+    if get_script_run_ctx() is not None:
+        _raise_if_page_created_outside_run(page)
 
-    Importing a callable app creates module-level pages with no script run.
-    Those objects never receive ``_page``. ``st.navigation`` can still return
-    one when it also runs at import, and a later ``Page.run()`` would then
-    raise ``AttributeError``.
+
+def _raise_if_page_created_outside_run(page: Page) -> None:
+    """Reject a Page built while no script run was active.
+
+    Importing a callable app can call ``st.Page`` before a run exists.
+    Navigation APIs raise once a script run starts, before they read
+    attributes that were never initialized.
     """
     if not getattr(page, "_created_outside_run", False):
         return

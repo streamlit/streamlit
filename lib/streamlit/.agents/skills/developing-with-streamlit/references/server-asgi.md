@@ -163,7 +163,7 @@ Callable requirements and behavior:
   that file for `static/` files and source watching. It prefers the outermost
   source file outside an installed package (`site-packages`, `dist-packages`,
   or this interpreter's site roots), including a nested wrapper the app
-  defines around another module. A decorator is skipped only when the wrapped
+  defines around another module. A nested decorator is skipped when the wrapped
   function's module imports that decorator. When every source file is inside
   an installed package, the outermost of those files is used. The callable's
   directory is also prepended to `sys.path` during runs, so a callable that
