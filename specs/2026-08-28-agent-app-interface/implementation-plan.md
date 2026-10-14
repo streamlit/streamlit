@@ -24,7 +24,10 @@ until its own PR. Sizes are estimates measured from the prototype.
 - **Nothing heavy on the event loop.** Building a snapshot reads every table's Arrow data
   and runs the app's `format_func`s, and `get_data` decodes whole tables, so both run in
   a worker thread, as the prototype does, or one agent request stalls every browser
-  session on the server. Session bookkeeping that can close sessions stays on the loop.
+  session on the server. Encoding the response as JSON belongs there too, which the
+  prototype does not yet do; it matters for multi-megabyte responses, which follow-up #9
+  removes at the source. Session bookkeeping that can close sessions stays on the loop,
+  and a session stays claimed until a worker it started has finished.
 - **Public hooks over private internals.** The prototype reaches into `AppSession`
   (`_run_on_save`, `_client_state`), the session manager (`_session_mgr`), session
   state (`_new_widget_state`), and the in-memory media storage. Each PR that ports such
@@ -131,8 +134,9 @@ explicitly sent `0` or `False` is kept and an unset field reads as `None`; e2e f
 create, read, navigate, and a slow app that times out and is collected. Mark the
 routing and identity e2e tests `@pytest.mark.external_test`: a path-stripping proxy,
 `server.baseUrlPath`, a refused `Origin`, spoofed identity headers, the `st.login`
-cookie not authenticating a call, and the app shell still loading with the new
-`index.html` link under a host CSP.
+cookie not authenticating a call, the app shell still loading with the new
+`index.html` link under a host CSP, and a SiS caller's-rights app that reads its token
+from `st.context.headers` on every interaction.
 
 ### PR 4: Acting: widgets, triggers, forms
 
@@ -203,7 +207,7 @@ product spec describes v1 without them.
 
 | Leave out | Saves | Impact if left out | Where it goes instead |
 | --------- | ----- | ------------------ | --------------------- |
-| The MCP endpoint (`mcp.py`, `data_access.py` for its `get_data` tool, its route, its OpenAPI path) | ~550 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design |
+| The MCP endpoint (`mcp.py`, `data_access.py` for its `get_data` tool, its route, its OpenAPI path) | ~550 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design. That PR also bounds `get_data`'s memory before its 5 MB check, which today converts every requested row first. |
 | Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | [Potential follow-up](potential-follow-ups.md#keep-only-summaries-in-the-session-buffer) if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
 | Input checks beyond options and the widget's own deserializer (bounds, whole numbers, `max_chars`, string formats, range shape and order) | ~170 lines | Low. The runtime already resets an out-of-range, malformed, or wrong-shape value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A reversed slider range is stored as sent, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
 | A new action replacing a run still going after `run_timed_out` | ~25 lines, the `_awaiting_run` gate, and the race where a replaced run's result answers the wrong request — the most stateful code in `interaction.py` | Low. The same request or an empty one still collects the run; anything else gets `session_busy` until it finishes. | Follow-up #4 |

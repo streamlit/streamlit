@@ -23,6 +23,7 @@ stale-node cleanup are the runtime's own behavior.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import secrets
 import time
@@ -591,6 +592,13 @@ async def _run_interaction(
             widget_state=widget_state,
             trigger=trigger,
         )
+        if rerun.fragment_id and not app_session._fragment_storage.contains(
+            rerun.fragment_id
+        ):
+            # The runtime silently drops a rerun of a fragment it no longer
+            # holds, so nothing would ever settle. A full rerun applies the
+            # values instead.
+            rerun.fragment_id = ""
 
     back_msg = BackMsg()
     back_msg.rerun_script.CopyFrom(rerun)
@@ -627,15 +635,19 @@ async def _settle(
         session.timed_out = interaction
         raise
     except TimeoutError as exc:
-        session.timed_out = interaction
-        raise AgentRequestError(
-            "run_timed_out",
-            f"The app did not finish within {timeout:g} seconds, and is still "
-            "running. Nothing is lost: send a request with only `session_id` to "
-            "wait for it without starting it over.",
-            # Always included, because the remedy is a request on this session.
-            session_id=session.handle,
-        ) from exc
+        if _app_is_running(app_session):
+            session.timed_out = interaction
+            raise AgentRequestError(
+                "run_timed_out",
+                f"The app did not finish within {timeout:g} seconds, and is still "
+                "running. Nothing is lost: send a request with only `session_id` "
+                "to wait for it without starting it over.",
+                # Always included, because the remedy is a request on this session.
+                session_id=session.handle,
+            ) from exc
+        # Nothing is running, so no run is coming: the runtime dropped the
+        # request, as it does after shutdown. Marking it timed out would make
+        # every retry wait for that run forever, so report the state as it is.
 
     # Keep the query string the way a browser keeps its address bar: what was
     # sent, unless the run reported a change. Streamlit scopes widget-bound
@@ -651,18 +663,25 @@ async def _settle(
     # server. Safe while the session is claimed: no other run can start, and the
     # message list is copied here, on the loop that appends to it.
     messages = session.client.messages
-    try:
-        result = await asyncio.to_thread(
+    build = asyncio.ensure_future(
+        asyncio.to_thread(
             snapshot_module.build_snapshot,
             session_id=session.handle,
             messages=messages,
             session_state=app_session.session_state,
             query_params=_decode_query_params(session.query_string),
         )
+    )
+    try:
+        result = await asyncio.shield(build)
     except asyncio.CancelledError:
         # The client left while the snapshot was built. The run has settled, so
-        # its retry collects it, exactly as for a client that left earlier.
+        # its retry collects it, exactly as for a client that left earlier. The
+        # thread cannot be stopped and reads session state, so the session stays
+        # claimed until it finishes: a new interaction must not run under it.
         session.timed_out = interaction
+        with contextlib.suppress(Exception):
+            await build
         raise
     session.element_states = result.element_states
     session.pages = result.document.get("pages", [])
@@ -671,6 +690,13 @@ async def _settle(
     if interaction.unverified_page is not None:
         _verify_page_exists(interaction.unverified_page, result.document, session)
     return result.document
+
+
+def _app_is_running(app_session: Any) -> bool:
+    """Whether the session's script is running, so a run may still settle."""
+    from streamlit.runtime.app_session import AppSessionState
+
+    return bool(app_session._state == AppSessionState.APP_IS_RUNNING)
 
 
 def _verify_page_exists(

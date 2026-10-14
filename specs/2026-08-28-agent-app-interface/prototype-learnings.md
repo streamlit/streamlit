@@ -1252,6 +1252,18 @@ A QA round and a branch review after that found, in v1 scope:
   public hooks instead of private internals, skipping agent Arrow files on browser
   cache replay) went to the implementation plan.
 
+A second branch review found two concurrency bugs, both fixed:
+
+- **A dropped run left a session stuck.** `AppSession` silently drops a rerun of a
+  fragment it no longer holds, and any rerun after shutdown, so the run the agent
+  waited for never came and every retry waited for it again. A fragment that is gone
+  now gets a full rerun, and a timeout with nothing running reports the current state
+  instead of marking the interaction timed out.
+- **A cancelled build released the session too early.** Moving the snapshot into a
+  worker thread meant a disconnect could release the session while that thread still
+  read session state, letting a new run start under it. The session now stays claimed
+  until the thread finishes.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

@@ -187,7 +187,8 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
 
-    # Add the agent API route (no-op unless server.enableAgentApi is set):
+    # Add the agent API routes. With server.enableAgentApi unset they run nothing:
+    # the schema route reports the API as disabled, and the others refuse.
     routes.extend(create_agent_routes(runtime, base_url))
 
     # Add app static routes if enabled:
