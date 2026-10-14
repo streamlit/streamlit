@@ -527,11 +527,12 @@ The request blocks until the run chain settles. One interaction may cause \
 several script runs through callbacks, `st.rerun()`, or a page redirect; "one \
 interaction" means one submission, not one execution.
 
-An interaction with no changes is an explicit rerun, not a read. It executes \
-the script again and can repeat side effects exactly as any other rerun does. \
-The one exception is a retry after a timeout, below. You rarely need a read: \
-nothing changes a session between interactions, so the last snapshot stays \
-current until you act.
+An interaction with no changes runs nothing: it returns the latest result as \
+it was sent, or collects a run that timed out, below. Nothing changes a \
+session between interactions, so that result is current until you act, and \
+sending only `session_id` is always safe, even after a lost response. Send \
+`rerun: true` to run the app again: to close a dialog, to pick up an edited \
+script, or to refresh data that changed outside the app.
 
 **A timeout is not a failure.** Slow work, such as an app's first load of data \
 it has not cached, can outlast `server.agentRunTimeout`. The request then \
@@ -658,6 +659,16 @@ def schemas() -> dict[str, Any]:
                         "out does not reset its widget, which keeps its value "
                         "for the session and may be written back, so `{}` "
                         "clears only the unbound ones."
+                    ),
+                },
+                "rerun": {
+                    "type": "boolean",
+                    "description": (
+                        "Run the app again without other changes. Without it, a "
+                        "request with no changes returns the latest result and "
+                        "runs nothing. Needed to close a dialog whose "
+                        "`on_dismiss` is `ignore`, to pick up an edited script, "
+                        "or to refresh data that changed outside the app."
                     ),
                 },
                 "context": {

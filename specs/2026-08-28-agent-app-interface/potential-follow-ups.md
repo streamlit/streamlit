@@ -263,28 +263,6 @@ widgets, where the note could come from.
 Three chat-client evaluations asked for it, one after a batch that switched modes
 silently dropped the field it removed.
 
-## Read the last snapshot without running
-
-**Today:** every `interact` runs the script, and one with no changes is an explicit
-rerun. Yet nothing changes in an agent session between calls: `run_every` timers belong
-to the browser, and no other client shares the session. So the last snapshot stays
-current until the agent acts, which the tool description could say outright.
-
-**The fuller version:** keep each session's last document and return it from a read
-that does not execute, as an MCP tool or the `GET /_stcore/agent/v1/sessions/{id}` of
-the product spec's follow-up #4. About 20 lines, plus one document of memory per
-session.
-
-**Why not now:** a rerun is what every browser interaction does, so apps are already
-built to tolerate one, and the main client that needs a read is one that lost the last
-snapshot from its context.
-
-**What would make it worth doing:** clients rerunning only to re-read, against apps
-whose runs are expensive or have side effects, or the polling work in follow-up #4. A
-chat-client evaluation hit exactly this: its context management cleared older tool
-results, after which a rerun was the only way back to the current state, and
-`get_data` could no longer reach the files of a result it had lost.
-
 ## Refuse values that do not match `value_schema`
 
 **Today:** `value_schema` says what to send, and three checks decide what is refused:

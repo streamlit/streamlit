@@ -1313,6 +1313,16 @@ otherwise matches bare hashes against the tree; a `not_on_page` for a generated 
 says so; a repeated timeout says how long the run has gone; and the MCP description
 corrects what setting a bound widget does to `query_params`.
 
+A spec review then turned the read into v1 behavior. A request with only `session_id`
+used to mean "collect a timed-out run" or "rerun the app", depending on timing, so a
+client that lost a final `200` and retried reran the app and could repeat side effects.
+A request with no changes now returns the latest result as it was sent, and
+`rerun: true` runs the app again. The natural retry is safe, the read that model
+clients losing context asked for comes free, and the cost is one stored document per
+session, smaller than the message buffer each session already holds. What needs
+`rerun: true`: closing a default dialog, picking up an edited script, and refreshing
+data that changed outside the app.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

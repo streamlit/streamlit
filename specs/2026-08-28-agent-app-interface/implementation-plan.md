@@ -112,7 +112,9 @@ and run a parameterized report in one call.
   `server.trustedUserHeaders`. Idle sessions are swept on a timer, not only when a
   request arrives, so a quiet server releases their memory and media; and the config
   options refuse values of zero or below.
-- `interact` for creating calls and reruns; `page` and `query_params`, including the
+- `interact` for creating calls, reads (a request with no changes returns the session's
+  latest result as it was sent), and runs, including `rerun: true`; `page` and
+  `query_params`, including the
   browser's page-change rule, listing widget states with a page change, and the
   unknown-page check after a creating call; the run timeout as a `202` that a request
   with only `session_id` collects (the same request also does, except after a creating
