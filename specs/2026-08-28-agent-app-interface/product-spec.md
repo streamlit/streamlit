@@ -204,7 +204,11 @@ agents is the half nobody owns.
    endpoint. Two caveats: it gets its own session, so it consults the app independently
    rather than seeing or changing what the human is looking at — not their filters,
    uploads, or session state; and it does not inherit the asking user's identity unless
-   the deployment maps it, which matters in an app with per-user data access.
+   the deployment maps it, which matters in an app with per-user data access. Its own
+   session can still start from the user's filters: the app can hand the agent the
+   user's widget values, or the page can carry them in `widget_state` form, as
+   [#17394](https://github.com/streamlit/streamlit/pull/17394) prototypes for assistants
+   that read the page, and the agent sends them in its first interactions.
 
 ## Proposal
 
@@ -312,12 +316,21 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
   a run the client did not ask for.
-- **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
-  empty, and its URL, theme, and embedding fields are `None` rather than guessed.
-  Timezone and locale are `None` too unless the request states them in `context`, which
-  is what lets an app that formats times from `st.context.timezone` render them as it
-  would for a user. `st.user` comes from the deployment's trusted identity headers when
-  it maps them, and is anonymous otherwise.
+- **From the request:** `st.context.headers` are the headers of the request being
+  served, minus `Cookie` and `Authorization`, as a browser session's are those of its
+  WebSocket handshake. Apps read headers for real behavior — identity a proxy set, or
+  the caller's-rights token a Snowflake app opens its connection with — so empty ones
+  would make an app run differently for an agent, or fail. They are refreshed on every
+  interaction, since such tokens are short-lived. This grants nothing new: any client
+  that can reach the WebSocket can send arbitrary handshake headers, so what makes a
+  header trustworthy is what the deployment's proxy sets and strips, on both paths.
+  `st.user` comes from the deployment's trusted identity headers when it maps them, and
+  is anonymous otherwise.
+- **Absent, because a browser supplies it:** `st.context.cookies` is empty, since the
+  route reads no cookie, and the URL, theme, and embedding fields are `None` rather than
+  guessed. Timezone and locale are `None` too unless the request states them in
+  `context`, which is what lets an app that formats times from `st.context.timezone`
+  render them as it would for a user.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -956,7 +969,7 @@ back to a browser rather than mistake it for missing content:
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
 | Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
-| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie` and `Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun. The last snapshot stays current until the client acts.                                       |
@@ -1061,7 +1074,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | Agent sign-in for `st.login` apps (follow-up #10). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, the request's headers reach `st.context.headers` as the handshake's do, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here, in `st.user` and in the headers an app reads. | Agent sign-in for `st.login` apps (follow-up #10). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1305,6 +1318,10 @@ Smaller potential follow-ups and alternatives considered while building the prot
   round; the column's Arrow type keeps their meaning.
 - Marking pandas index columns in `data.columns`, so `__index_level_0__` does not read
   as a leaked internal name.
+- Starting an agent session from a browser session's state: widget values the page
+  carries ([#17394](https://github.com/streamlit/streamlit/pull/17394)), or a fork that
+  also copies code-only state and uploads
+  ([#17401](https://github.com/streamlit/streamlit/pull/17401)).
 
 ## Beyond the app surface
 

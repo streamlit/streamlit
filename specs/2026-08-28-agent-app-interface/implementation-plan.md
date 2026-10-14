@@ -104,7 +104,8 @@ and run a parameterized report in one call.
   rules: Host allow-list, `Origin` refusal, bounded body, strict JSON, no cookies read.
   Also the `Link` header, the debug audit log, `errors.py`, and the config options.
 - The `st.context` fix that reports unset browser fields as `None` (`runtime/context.py`,
-  `app_session.py`).
+  `app_session.py`), and `st.context.headers` from each request, minus `Cookie` and
+  `Authorization`, refreshed per interaction (the per-request part of #17401).
 - The OpenAPI base document: request envelope, snapshot schema, error catalog so far.
 
 **Review focus:** security and resource limits (this is the PR for the security review),
