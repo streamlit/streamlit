@@ -2787,12 +2787,11 @@ def test_data_editor_set_value_is_unsupported() -> None:
         st.data_editor(pd.DataFrame({"a": [3]}))
 
     at = AppTest.from_function(script).run()
-    with pytest.raises(AppTestError, match="Playwright") as exc_info:
+    with pytest.raises(AppTestError, match="edited_rows") as exc_info:
         at.data_editor[0].set_value(pd.DataFrame({"a": [9]}))
     message = str(exc_info.value)
     assert "set_value() is not supported for data_editor" in message
-    assert "at.session_state" not in message
-    assert "session state key is read-only" in message
+    assert "at.session_state" in message
     assert at.data_editor[0].value["a"].tolist() == [1, 2]
 
     with pytest.raises(AppTestError, match="Playwright") as keyless_info:
@@ -2804,8 +2803,8 @@ def test_data_editor_set_value_is_unsupported() -> None:
 def test_selectable_dataframe_set_value_points_at_session_state() -> None:
     """A selection dataframe keeps the generic interaction error.
 
-    That message points at ``at.session_state``. Editors use a different
-    message because their keys reject writes.
+    That message points at ``at.session_state``. Editors point at the
+    edit-state payload instead of ``set_value()``.
     """
 
     def script() -> None:
@@ -2824,11 +2823,10 @@ def test_selectable_dataframe_set_value_points_at_session_state() -> None:
 
 
 def test_data_editor_session_state_is_edit_state() -> None:
-    """A keyed editor's session state is the edit payload, not the table.
+    """A keyed editor's session state is the edit payload, not ``.value``.
 
-    Assigning that key on ``at.session_state`` before ``.run()`` does not
-    apply cell edits. AppTest stores the assignment before the script, so
-    it is not the in-script write that ``st.data_editor`` rejects.
+    Assigning that payload before ``.run()`` changes the table the script
+    receives. ``.value`` stays the input table.
     """
 
     def script() -> None:
@@ -2836,13 +2834,15 @@ def test_data_editor_session_state_is_edit_state() -> None:
 
         import streamlit as st
 
-        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        edited = st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.text(str(edited["a"].tolist()))
 
     at = AppTest.from_function(script).run()
     state = at.session_state["editor"]
     assert state["edited_rows"] == {}
     assert state["added_rows"] == []
     assert state["deleted_rows"] == []
+    assert at.text[0].value == "[1, 2]"
 
     at.session_state["editor"] = {
         "edited_rows": {0: {"a": 9}},
@@ -2851,6 +2851,7 @@ def test_data_editor_session_state_is_edit_state() -> None:
     }
     at = at.run()
     assert not at.exception
+    assert at.text[0].value == "[9, 2]"
     assert at.data_editor[0].value["a"].tolist() == [1, 2]
 
 

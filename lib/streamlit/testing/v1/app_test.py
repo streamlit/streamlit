@@ -1000,15 +1000,12 @@ class AppTest:
         when ``editing_mode`` is not ``"read_only"``.
 
         - ``.value`` is the table passed to the editor, without cell edits.
-        - ``set_value()`` raises ``AppTestError`` because AppTest cannot apply
-          cell edits.
+        - ``set_value()`` raises ``AppTestError``.
         - A keyed editor's session state value is the edit state
           (``edited_rows``, ``added_rows``, ``deleted_rows``). Assigning
-          that key on ``at.session_state`` before ``.run()`` does not apply
-          cell edits. The script rejects ``st.session_state`` writes to the
-          key.
-
-        Use a Playwright e2e test to exercise editing.
+          that state on ``at.session_state`` before ``.run()`` changes the
+          table the script receives. ``.value`` stays the input table.
+        - The script rejects ``st.session_state`` writes to that key.
 
         Returns
         -------
