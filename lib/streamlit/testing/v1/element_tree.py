@@ -2266,10 +2266,7 @@ class FileUploader(Widget):
             self._files = None
         elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
             # Single file as tuple (filename, content, mime_type)
-            single_file = cast(  # type: ignore[redundant-cast]
-                "tuple[str, bytes, str]", files
-            )
-            filename, content, mime_type = single_file
+            filename, content, mime_type = files
             self._files = [(str(uuid4()), filename, content, mime_type)]
         else:
             # Multiple files
