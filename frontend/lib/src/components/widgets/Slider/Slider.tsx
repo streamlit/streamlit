@@ -251,8 +251,9 @@ function Slider({
       const input = thumbEl.querySelector<HTMLInputElement>(
         'input[type="range"]'
       )
-      if (input && formattedValueArr[i] !== undefined) {
-        input.setAttribute("aria-valuetext", formattedValueArr[i])
+      const formattedValue = formattedValueArr.at(i)
+      if (input && formattedValue !== undefined) {
+        input.setAttribute("aria-valuetext", formattedValue)
       }
     })
 
@@ -389,7 +390,7 @@ function getCurrStateFromProto(element: SliderProto): number[] {
   if (isSelectSlider(element)) {
     // For select_slider, read string values from rawValue and convert to indices
     const rawValues = element.rawValue
-    if (rawValues && rawValues.length > 0) {
+    if (rawValues.length > 0) {
       return stringValuesToIndices(rawValues, element.options, element.default)
     }
     // Fall back to default indices
