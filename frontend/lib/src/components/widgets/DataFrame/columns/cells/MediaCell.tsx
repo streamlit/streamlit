@@ -93,7 +93,7 @@ export const MediaCellEditor: ReturnType<
 const renderer: CustomRenderer<MediaCell> = {
   kind: GridCellKind.Custom,
   isMatch: (c): c is MediaCell =>
-    (c.data as MediaCellProps).kind === "media-cell",
+    (c.data as { kind?: string } | null | undefined)?.kind === "media-cell",
   draw: (args, cell) => {
     const { ctx, theme, rect } = args
     const { src, mediaType } = cell.data
