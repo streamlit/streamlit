@@ -297,6 +297,30 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(_DESCRIBED_COMMANDS)
+    def test_deferring_widgets_report_on_change(self, command: str) -> None:
+        """A widget that can defer its rerun says whether it does.
+
+        With `on_change="ignore"` the browser applies a change without
+        rerunning, so a client batches such a widget with the trigger that
+        should rerun, which it can only do if the description names the mode.
+        """
+        on_change = inspect.signature(getattr(st, command)).parameters.get("on_change")
+        if on_change is None or not any(
+            mode in str(on_change.annotation) for mode in ("OnChangeMode", "ignore")
+        ):
+            return
+        unreported = [
+            keywords
+            for keywords in self._own_calls(command)
+            if keywords.get("action") == "value" and "on_change" not in keywords
+        ]
+        assert not unreported, (
+            f"st.{command} can defer its rerun with `on_change='ignore'`, but its "
+            "description does not report `on_change`. Pass "
+            "`on_change='ignore' if on_change == 'ignore' else 'rerun'`."
+        )
+
+    @parameterized.expand(_DESCRIBED_COMMANDS)
     def test_description_matches_signature(self, command: str) -> None:
         described = self._described_names(command)
         assert described is not None, (

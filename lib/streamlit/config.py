@@ -3328,6 +3328,21 @@ WebSocket connection.
                 "iframe) will not work."
             )
 
+    # The agent API's bounds only bound something when they are positive: a
+    # TTL of zero reclaims every session at once, a run timeout of zero answers
+    # every request with `run_timed_out`, and a session cap of zero refuses all.
+    for name in (
+        "server.agentMaxSessions",
+        "server.agentRunTimeout",
+        "server.agentSessionTTL",
+    ):
+        value = get_option(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            raise RuntimeError(
+                f"Invalid value for config option {name}: {value!r}. It must be "
+                "a number greater than 0."
+            )
+
 
 def _set_development_mode() -> None:
     development.is_development_mode = get_option("global.developmentMode")

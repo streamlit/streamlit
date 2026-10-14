@@ -409,7 +409,7 @@ class _SnapshotBuilder:
             data = description[_DATA_SUMMARY_KEY] or {}
         else:
             data = _element_data(proto_field, payload) or {}
-        if data_url := description.get("data_url"):
+        if (data_url := description.get("data_url")) and "unavailable" not in data:
             # A fetch-now handle for the complete data, registered while the
             # script ran. Do not persist it: the media file is reference
             # counted against the session and collected once the element that
@@ -687,12 +687,14 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         spec = _parse_json(payload.spec)
         if len(buffers) > 1:
             data = {"complete": False, "unavailable": "multiple_datasets"}
+        elif _loads_from_url(spec):
+            # The browser fetches some or all of it from a URL in the
+            # specification, which nothing here holds. Like a chart over
+            # several dataframes, none of it is served then, rather than a
+            # part passed off as the whole.
+            data = {"complete": False, "unavailable": "external_url"}
         elif buffers:
             data = summarize_arrow(buffers[0]) or {}
-        elif _loads_from_url(spec):
-            # The browser fetches it from the URL in the specification; nothing
-            # here holds it.
-            data = {"complete": False, "unavailable": "external_url"}
         else:
             # Inline values travel as Arrow, so what is left in the
             # specification, such as GeoJSON, is all of it.

@@ -137,7 +137,7 @@ with no changes: a full rerun closes it, as closing it does in a browser. With \
 serves the rest, or `data.unavailable` says why it cannot: \
 `too_large_to_serve`, `multiple_datasets` (a chart over several dataframes), \
 `lazy_loading`, `undescribed` (an element listed in `undescribed_types`), or \
-`external_url` (a chart whose `spec` loads its data from a URL).
+`external_url` (a chart whose `spec` loads any of its data from a URL).
 - Table values are the data as stored, not as displayed: no `format`, no time \
 zone conversion. An unnamed pandas index appears as `__index_level_0__`, also \
 when `hide_index` hides it in the browser.

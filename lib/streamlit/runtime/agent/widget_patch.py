@@ -244,6 +244,7 @@ def build_widget_states(
             value,
             advertised=state.options,
             accepts_new=state.options_open,
+            as_numbers=state.schema_type in {"integer", "number"},
         )
         wire_value = _temporal_to_wire(
             key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
@@ -256,6 +257,7 @@ def build_widget_states(
             # An option's reported value can be a number, such as
             # `st.feedback`'s index; free text cannot.
             option_labels=frozenset(metadata.formatted_options or state.options or ()),
+            schema_type=state.schema_type,
         )
         _check_readable(key, metadata, encoded)
         states.widgets.append(encoded)
@@ -394,6 +396,7 @@ def _validate_options(
     *,
     advertised: list[Any] | None,
     accepts_new: bool = False,
+    as_numbers: bool = False,
 ) -> None:
     """Reject values outside a selection widget's declared options.
 
@@ -430,7 +433,12 @@ def _validate_options(
             continue
         count = counts.get(str(candidate), 0)
         if count == 0 and not accepts_new:
-            listed = ", ".join(repr(option) for option in options[:_LISTED_OPTIONS])
+            # Listed in the JSON type a request sends, so `st.feedback`'s
+            # indexes read as numbers.
+            listed = ", ".join(
+                str(option) if as_numbers else repr(option)
+                for option in options[:_LISTED_OPTIONS]
+            )
             more = len(options) - _LISTED_OPTIONS
             raise AgentRequestError(
                 "invalid_value",
@@ -495,6 +503,7 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
             f"The value for {key!r} must be ISO dates or times, like the "
             "snapshot reports.",
         )
+    _check_slider_offsets(key, metadata, parsed)
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
     except Exception as exc:
@@ -545,15 +554,47 @@ def _iso_text_to_wire(
         ) from exc
 
 
-def _is_temporal(metadata: WidgetMetadata[Any]) -> bool:
-    """Whether a slider holds dates or times, judged by its default value."""
+def _slider_default(metadata: WidgetMetadata[Any]) -> Any:
+    """A slider's default value, or its first one for a range."""
     try:
         default = metadata.deserializer(None)
     except Exception:
-        return False
+        return None
     if isinstance(default, (list, tuple)):
         default = default[0] if default else None
-    return isinstance(default, (datetime.date, datetime.time))
+    return default
+
+
+def _is_temporal(metadata: WidgetMetadata[Any]) -> bool:
+    """Whether a slider holds dates or times, judged by its default value."""
+    return isinstance(_slider_default(metadata), (datetime.date, datetime.time))
+
+
+def _check_slider_offsets(
+    key: str, metadata: WidgetMetadata[Any], items: list[Any]
+) -> None:
+    """Refuse an offset a temporal slider would drop.
+
+    The slider keeps a value's wall time and puts its own time zone on it, so an
+    offset it does not have would silently move the value.
+    """
+    own_tz = getattr(_slider_default(metadata), "tzinfo", None)
+    for item in items:
+        sent = item.utcoffset() if getattr(item, "tzinfo", None) else None
+        if sent is None:
+            continue
+        if own_tz is None:
+            raise AgentRequestError(
+                "invalid_value",
+                f"The value for {key!r} has an offset, which this widget cannot "
+                "hold. Send it without one, like the snapshot reports.",
+            )
+        if item.replace(tzinfo=own_tz).utcoffset() != sent:
+            raise AgentRequestError(
+                "invalid_value",
+                f"The value for {key!r} has an offset other than its time "
+                "zone's. Send it like the snapshot reports.",
+            )
 
 
 def _encode(
@@ -563,6 +604,7 @@ def _encode(
     key: str,
     *,
     option_labels: frozenset[str],
+    schema_type: str | None = None,
 ) -> WidgetState:
     """Write a JSON value into the ``WidgetState`` arm the widget registered.
 
@@ -579,8 +621,17 @@ def _encode(
     state.id = element_id
 
     if value is None:
-        # An explicit null clears the widget. Leaving the value oneof unset is
-        # how the runtime represents "cleared".
+        # `null` clears a widget whose empty value is null, as clearing it in
+        # the browser does, and resets any other to its default. An unset value
+        # means "use the default" to every widget, so a widget that tells
+        # "cleared" apart gets the form its browser sends.
+        if is_array_value_field_name(value_type) and schema_type != "array":
+            # A single-select button group clears on an empty list; a single
+            # slider reads one as its default.
+            getattr(state, value_type).SetInParent()
+        elif value_type == "string_value" and schema_type == "integer":
+            # `st.feedback` carries its index as text, and "" is cleared.
+            state.string_value = ""
         return state
 
     try:

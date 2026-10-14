@@ -597,7 +597,8 @@ def schemas() -> dict[str, Any]:
                         "`value_schema` states. A number counts as text only "
                         "where it names an option, and dates and times are ISO "
                         "text, a date or time slider's included; a date-time or "
-                        "time input takes any ISO 8601 form without an offset. "
+                        "time input takes any ISO 8601 form without an offset, "
+                        "and a slider takes no offset its own values lack. "
                         "A single value and a one-item list are interchangeable "
                         "for a list-valued element.\n"
                         "- A value outside the element's `options` or over its "
@@ -1117,10 +1118,10 @@ def schemas() -> dict[str, Any]:
                         "`undescribed_types`, such as one replayed from a cache "
                         "a browser session filled, so nothing registered its "
                         "data; only the preview is available.\n"
-                        "- `external_url`: the chart's `spec` loads its data "
-                        "from a URL, which the browser fetches and this "
-                        "interface does not. Fetch it from there if you can "
-                        "reach it."
+                        "- `external_url`: the chart's `spec` loads some or all "
+                        "of its data from a URL, which the browser fetches and "
+                        "this interface does not, so none of it is served "
+                        "here. Fetch it from there if you can reach it."
                     ),
                 },
                 "spec": {

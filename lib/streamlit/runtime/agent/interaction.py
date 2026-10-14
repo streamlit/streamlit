@@ -494,7 +494,9 @@ async def interact(
     if session.busy:
         raise AgentRequestError(
             "session_busy",
-            "This session already has an interaction in flight.",
+            "This session already has an interaction in flight. If it is one "
+            "whose response you lost, send only `session_id` in a moment to "
+            "collect it.",
         )
     session.busy = True
     try:

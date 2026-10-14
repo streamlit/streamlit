@@ -414,6 +414,7 @@ class PaginationMixin:
                 value_schema=agent_spec.INTEGER,
                 num_pages=num_pages,
                 disabled=disabled,
+                on_change="ignore" if on_change == "ignore" else "rerun",
             ),
         )
 

@@ -832,7 +832,9 @@ refused with `invalid_value`:
   `st.feedback` takes its index as `1`, not `"1"` — and dates and times are ISO text,
   even for a slider that carries them as microseconds. A date-time or time input takes
   any ISO 8601 form without an offset and stores it in the layout it reads, since its
-  own parser would silently replace any other form with the default. A list longer than
+  own parser would silently replace any other form with the default, and a date or time
+  slider refuses an offset its own values do not carry, which it would otherwise drop.
+  A list longer than
   the schema's `maxItems`, such as a third date for a range, is refused, since the app
   would get a value it cannot unpack. The server is a little more lenient than the
   schema otherwise: for a list-valued element, a single value and a one-item list are
@@ -943,9 +945,10 @@ Charts and maps:
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
   so there is no table to serve and a client should stop looking for one. The
-  exception is an `st.vega_lite_chart` whose specification loads its data from a URL:
-  the browser fetches it and this interface does not, so it reports `complete: false`
-  with `unavailable: "external_url"`, and the URL stays in `spec`. Plotly's theme
+  exception is a Vega-Lite specification that loads any of its data from a URL, also
+  beside a dataframe: the browser fetches it and this interface does not, so it reports
+  `complete: false` with `unavailable: "external_url"` and serves none of the data, as
+  for a chart over several dataframes, and the URL stays in `spec`. Plotly's theme
   styling is about nine tenths of a small figure, so it is dropped and named in
   `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
@@ -1001,7 +1004,7 @@ back to a browser rather than mistake it for missing content:
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
-| Chart data loaded from a URL                                               | A Vega-Lite specification that loads its data from a URL reports `data.unavailable: external_url`; the URL stays in `spec`, and the interface does not fetch it. |
+| Chart data loaded from a URL                                               | A Vega-Lite specification that loads any of its data from a URL, also beside a dataframe, reports `data.unavailable: external_url` and serves none of it; the URL stays in `spec`, and the interface does not fetch it. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
@@ -1015,7 +1018,8 @@ back to a browser rather than mistake it for missing content:
 ### Limits and configuration
 
 Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-so an operator can tune them; the defaults are what v1 ships. The run timeout bounds
+so an operator can tune them, and each must be greater than zero; the defaults are what
+v1 ships. The run timeout bounds
 how long one request waits, not how long the run may take, so it sits below clients'
 own timeouts rather than growing to fit the slowest app. The preview size is a hidden
 option: the default is meant to be right, and the setting is there for operators and

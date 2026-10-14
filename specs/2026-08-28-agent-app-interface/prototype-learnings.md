@@ -1355,6 +1355,25 @@ is refused. So that refusal now echoes the request's `id`, and `server/discover`
 the plain `-32601 Method not found`, the two shapes Claude Code has been reported to
 mishandle.
 
+QA round 6 found the remaining gaps small, and all were fixed:
+
+- **Missing `on_change`:** `st.segmented_control`, `st.pills`, and `st.pagination` did
+  not report it, so an agent could not tell they defer. The coverage test now requires
+  `on_change` on every widget whose `on_change` can be `"ignore"`.
+- **`null` did not clear:** it reset a single-select button group or an `st.feedback`
+  to its default, because an unset value means "use the default" to every widget. It
+  now sends the form each widget's browser sends when cleared: an empty list, or `""`.
+- **Offsets dropped:** a date or time slider silently dropped an offset its values did
+  not carry. It now refuses one, as the inputs do.
+- **Smaller fixes:**
+  - URL-loaded data beside a dataframe counts as `external_url`.
+  - A stateful popover reports its state once.
+  - Feedback errors list its options as numbers.
+  - The agent options refuse zero or below, which had made the idle sweeper spin.
+
+Still open: a client that leaves during the snapshot build waits for it and then pays
+for a second build. The click still fires once.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

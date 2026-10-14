@@ -2083,7 +2083,8 @@ class LayoutsMixin:
                     help=help,
                     icon=icon,
                     disabled=disabled,
-                    open=current_open,
+                    # A stateful popover reports whether it is open as `value`.
+                    open=None if is_stateful else current_open,
                     on_change=_reported_on_change(on_change, stateful=is_stateful),
                 ),
             ),
