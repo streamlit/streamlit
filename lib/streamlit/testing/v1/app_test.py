@@ -986,8 +986,9 @@ class AppTest:
             Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
             Individual elements can be accessed from an ElementList by index
             (order on the page) or, when the element has a key, by key. For
-            example, ``at.dataframe[0]`` for the first element. Dataframe is an
-            extension of the Element class.
+            example, ``at.dataframe[0]`` for the first element or
+            ``at.dataframe(key="editor")`` for an element with a given key.
+            Dataframe is an extension of the Element class.
         """
         return self._tree.dataframe
 
@@ -995,11 +996,14 @@ class AppTest:
     def data_editor(self) -> ElementList[Dataframe]:
         """Sequence of all ``st.data_editor`` elements.
 
-        These are dataframes whose ``editing_mode`` is not ``"read_only"``.
-        ``at.dataframe`` includes them too. ``.value`` is the table passed to
-        the editor, without cell edits. ``set_value()`` raises ``AppTestError``.
-        AppTest cannot apply those edits, and the editor's session state key
-        is read-only. Use a Playwright test to exercise editing.
+        ``at.dataframe`` includes these elements too. A table is included here
+        when ``editing_mode`` is not ``"read_only"``.
+
+        - ``.value`` is the table passed to the editor, without cell edits.
+        - ``set_value()`` raises ``AppTestError``. AppTest cannot apply cell
+          edits.
+        - A keyed editor's session state value is read-only. Use a Playwright
+          e2e test to exercise editing.
 
         Returns
         -------

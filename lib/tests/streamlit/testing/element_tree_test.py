@@ -2782,6 +2782,7 @@ def test_data_editor_set_value_is_unsupported() -> None:
         import streamlit as st
 
         st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.data_editor(pd.DataFrame({"a": [3]}))
 
     at = AppTest.from_function(script).run()
     with pytest.raises(AppTestError, match="Playwright") as exc_info:
@@ -2789,7 +2790,13 @@ def test_data_editor_set_value_is_unsupported() -> None:
     message = str(exc_info.value)
     assert "set_value() is not supported for dataframe" in message
     assert "at.session_state" not in message
+    assert "session state key is read-only" in message
     assert at.data_editor[0].value["a"].tolist() == [1, 2]
+
+    with pytest.raises(AppTestError, match="Playwright") as keyless_info:
+        at.data_editor[1].set_value(pd.DataFrame({"a": [9]}))
+    assert "session state key" not in str(keyless_info.value)
+    assert at.data_editor[1].value["a"].tolist() == [3]
 
 
 def test_data_editor_is_scoped_to_container() -> None:
@@ -2829,7 +2836,7 @@ def test_data_editor_empty_without_editors() -> None:
 
 
 def test_dataframe_unknown_editing_mode_stays_inspectable() -> None:
-    """An unrecognized proto editing mode stays readable and is not read-only."""
+    """AppTest returns an unrecognized editing mode as text and lists that dataframe on ``at.data_editor``."""
 
     def script() -> None:
         import pandas as pd

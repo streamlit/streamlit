@@ -1140,33 +1140,39 @@ class Dataframe(Element):
 
     @property
     def editing_mode(self) -> str:
-        """How the table can be edited.
+        """Configured row-editing mode.
 
-        One of ``"read_only"`` (``st.dataframe``), ``"fixed"``, ``"dynamic"``,
-        ``"add"``, or ``"delete"`` (``st.data_editor``'s ``num_rows``).
+        ``"read_only"`` is ``st.dataframe``. ``"fixed"``, ``"dynamic"``,
+        ``"add"``, and ``"delete"`` match ``st.data_editor``'s ``num_rows``.
+        A disabled editor keeps its configured mode. An unrecognized proto
+        value is returned as text and is not ``"read_only"``.
         """
         mode = self.proto.editing_mode
         name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
         if name is not None:
             return name
         # Unmapped values stay readable: a known enum uses its lowercase proto
-        # name, and any other number stays decimal text.
-        try:
+        # name, and any other number stays decimal text. The name branch is
+        # unreachable while the map lists every current enum value.
+        try:  # pragma: no cover - defensive
             return DataframeProto.EditingMode.Name(mode).lower()
         except ValueError:
             return str(mode)
 
     def _raise_unsupported_interaction(self, method: str) -> NoReturn:
-        # Selection dataframes can still be written through session state.
-        # st.data_editor rejects those writes.
+        # Callers can still assign selection state for a read-only dataframe
+        # through session state. st.data_editor rejects those writes.
         if self.editing_mode == "read_only":
             super()._raise_unsupported_interaction(method)
         key_part = f" (key={self.key!r})" if self.key else ""
+        # A keyless editor has no session-state entry.
+        session_state_note = (
+            " The editor's session state key is read-only." if self.key else ""
+        )
         raise AppTestError(
             f"{method}() is not supported for dataframe{key_part}. "
             "AppTest can read the table and editing_mode, but it does not "
-            "apply cell edits. The editor's session state key is read-only. "
-            "Use a Playwright e2e test."
+            f"apply cell edits.{session_state_note} Use a Playwright e2e test."
         )
 
     @property
