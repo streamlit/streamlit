@@ -41,12 +41,26 @@ default-groups = ["dev"]
 # Check their compatibility before raising it.
 required-version = ">=0.11.8"
 # Resolve the development lock only for supported Python and runtime environments.
-environments = ["python_version < '3.15' and sys_platform != 'emscripten'"]
+# The bound is exclusive: keep it one minor version above the newest supported Python.
+environments = ["python_version < '3.16' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Pandas 3.x is the current major on every supported Python. Keep the dev lock
 # there; the published package still allows older pandas releases.
-override-dependencies = ["pandas>=3.0.0,<4"]
+override-dependencies = [
+  "pandas>=3.0.0,<4",
+  # A marker on an override replaces every PyArrow requirement, so both sides
+  # are listed. Below 3.15, keep <24 so the dev lock stays on 23.0.1.
+  # snowflake-connector-python 4.8.0's pandas extra requires PyArrow <24 on
+  # Python >=3.14. The <3.15 override also covers 3.11-3.13, where that extra
+  # does not cap PyArrow. Drop the <24 side once that extra allows PyArrow >=24.
+  # On 3.15, require >=26. Earlier releases have no CPython 3.15 wheels, and
+  # the pandas extra would otherwise lock 23.0.1. E2E runs on 3.15, so
+  # regenerate st.table snapshots on this interpreter: PyArrow 26 prints
+  # list-of-dict keys in insertion order, and Python <3.15 (PyArrow 23) does not.
+  "pyarrow>=10.0.1,!=25.0.0,<24; python_version < '3.15'",
+  "pyarrow>=26,<27; python_version >= '3.15'",
+]
 
 [tool.uv.sources]
 streamlit = { path = "lib", editable = true }
@@ -85,15 +99,21 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.84",
+  "ty==0.0.85",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.16.10",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy==2.4.0",
-  # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
-  # Streamlit type-checks as Python 3.11, the oldest supported version.
-  "numpy<2.5",
+  # Pin NumPy by Python version:
+  # - Below 3.15, stay under 2.5. NumPy 2.5 stubs use Python 3.12 syntax that
+  #   mypy cannot parse while Streamlit type-checks as 3.11, the oldest
+  #   supported version. The 3.15 CI leg skips make python-types for that reason.
+  # - On 3.15 and newer, require at least 2.5. Earlier releases declare 3.15
+  #   support and publish a source distribution, but no CPython 3.15 wheel, so
+  #   uv would lock 2.4.6.
+  "numpy<2.5; python_version < '3.15'",
+  "numpy>=2.5,<3; python_version >= '3.15'",
   "mypy-protobuf",
   "semver",
   "setuptools",

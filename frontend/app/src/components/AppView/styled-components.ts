@@ -40,42 +40,116 @@ export const StyledAppViewContainer = styled.div({
   },
 })
 
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values --
+ * The unfocused clip pattern needs literal px values. Focused styles use theme tokens.
+ */
+/**
+ * Visually hidden until keyboard focus, then shown above app chrome so users
+ * can bypass repeated header/sidebar controls (WCAG 2.4.1).
+ */
+export const StyledSkipToContentLink = styled.a(({ theme }) => ({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+
+  "&:focus-visible": {
+    position: "fixed",
+    top: theme.spacing.sm,
+    left: theme.spacing.sm,
+    width: "auto",
+    height: "auto",
+    margin: 0,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    overflow: "visible",
+    clip: "auto",
+    whiteSpace: "normal",
+    zIndex: theme.zIndices.popup,
+    backgroundColor: theme.colors.bgColor,
+    color: theme.colors.bodyText,
+    borderRadius: theme.radii.default,
+    textDecoration: "none",
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    fontFamily: theme.genericFonts.bodyFont,
+    outline: "none",
+    boxShadow: theme.shadows.focusRing,
+  },
+
+  "@media print": {
+    display: "none",
+  },
+}))
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
 interface StyledAppViewMainProps {
   isEmbedded: boolean
   disableScrolling: boolean
 }
 
-export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
-  ({ disableScrolling, theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    width: theme.sizes.full,
-    overflow: disableScrolling ? "hidden" : "auto",
-    alignItems: "center",
-    height: `100dvh`,
+export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
+  ({ disableScrolling, theme }) => {
+    // Visible scrollport below the absolutely positioned header.
+    const focusRingHeight = `calc(100dvh - ${theme.sizes.headerHeight})`
 
-    "&:focus": {
-      outline: "none",
-    },
+    return {
+      display: "flex",
+      flexDirection: "column",
+      width: theme.sizes.full,
+      overflow: disableScrolling ? "hidden" : "auto",
+      alignItems: "center",
+      height: `100dvh`,
 
-    // Added so sidebar overlays main app content on
-    // smaller screen sizes, except when printing
-    "@media not print": {
-      [`@media (max-width: ${theme.breakpoints.md})`]: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: `100dvh`,
+      "&:focus": {
+        outline: "none",
       },
-    },
 
-    "@media print": {
-      // print multiple pages if app is scrollable in Safari
-      overflow: "visible",
-    },
-  })
+      // Inset ring frames the area below the absolutely positioned header.
+      // Use the muted ring because stMain is a scroll region, not an actionable control.
+      // Sticky + negative margin pins the ring to the scrollport so it does not
+      // scroll away with content. Stacked above the sticky bottom container (for
+      // example the chat input). The header is a sibling and still paints over the top.
+      "&:focus-visible::before": {
+        content: '""',
+        pointerEvents: "none",
+        position: "sticky",
+        top: theme.sizes.headerHeight,
+        flexShrink: 0,
+        alignSelf: "stretch",
+        width: theme.sizes.full,
+        height: focusRingHeight,
+        marginBottom: `calc(-1 * (${focusRingHeight}))`,
+        zIndex: theme.zIndices.bottom + 1,
+        boxShadow: `inset ${theme.shadows.focusRingMuted}`,
+      },
+
+      // Added so sidebar overlays main app content on
+      // smaller screen sizes, except when printing
+      "@media not print": {
+        [`@media (max-width: ${theme.breakpoints.md})`]: {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: `100dvh`,
+        },
+      },
+
+      "@media print": {
+        // print multiple pages if app is scrollable in Safari
+        overflow: "visible",
+        "&:focus-visible::before": {
+          content: "none",
+        },
+      },
+    }
+  }
 )
 
 export const StyledStickyBottomContainer = styled.div(({ theme }) => ({
@@ -152,33 +226,52 @@ export const StyledAppViewBlockContainer =
       const littlePadding = getBareEmbedOverlayToolbarPadding(theme)
 
       // Top padding logic per specification:
-      let topPadding = littlePadding
+      let topPadding: string
+      let printPaddingTop: string
 
-      if (!embedded) {
-        // Non-embedded apps always get 6rem or 8rem
-        topPadding = hasTopNav ? "8rem" : "6rem"
-      } else if (showPadding || showToolbar) {
-        // 6rem if embedded with show_padding or show_toolbar
-        topPadding = "6rem"
-      } else if (hasHeader || hasSidebar) {
-        // 4.5rem if embedded with header but no padding/toolbar
-        topPadding = "4.5rem"
+      const configuredPaddingTop = theme.paddingTop
+
+      if (configuredPaddingTop !== undefined) {
+        // Configured value is the gap below the header. Add headerHeight when
+        // a header is shown so content clears the overlay. Embed options leave
+        // that value as-is; print uses the configured gap alone.
+        topPadding = hasHeader
+          ? `calc(${theme.sizes.headerHeight} + ${configuredPaddingTop})`
+          : configuredPaddingTop
+        printPaddingTop = configuredPaddingTop
+      } else {
+        // Unset: use the built-in spacing, which varies with embed options.
+        if (!embedded) {
+          // Non-embedded apps always get 6rem or 8rem
+          topPadding = hasTopNav ? "8rem" : "6rem"
+        } else if (showPadding || showToolbar) {
+          // 6rem if embedded with show_padding or show_toolbar
+          topPadding = "6rem"
+        } else if (hasHeader || hasSidebar) {
+          // 4.5rem if embedded with header but no padding/toolbar
+          topPadding = "4.5rem"
+        } else {
+          topPadding = littlePadding
+        }
+        printPaddingTop = littlePadding
       }
-      // Otherwise keep littlePadding: embedded with no header and no padding/toolbar
 
-      const bottomEmbedPadding =
-        showPadding && !hasBottom ? "10rem" : theme.spacing.lg
+      // Configured value replaces the aesthetic inset regardless of
+      // showPadding / hasBottom. Unset keeps the built-in spacing.
+      const bottomPadding =
+        theme.paddingBottom ??
+        (showPadding && !hasBottom ? "10rem" : theme.spacing.lg)
 
       return {
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
         paddingTop: topPadding,
-        paddingBottom: bottomEmbedPadding,
+        paddingBottom: bottomPadding,
         maxWidth: theme.sizes.contentMaxWidth,
         ...(isWideMode && applyWideModePadding(theme)),
         [`@media print`]: {
-          paddingTop: littlePadding,
+          paddingTop: printPaddingTop,
         },
       }
     }

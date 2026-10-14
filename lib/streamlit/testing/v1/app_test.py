@@ -45,6 +45,7 @@ from streamlit.testing.v1.element_tree import (
     BlockList,
     Button,
     ButtonGroup,
+    CameraInput,
     Caption,
     ChatInput,
     ChatMessage,
@@ -522,7 +523,7 @@ class AppTest:
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
             new_secrets = Secrets()
-            new_secrets._secrets = self.secrets
+            new_secrets._secrets = self.secrets  # ty: ignore[invalid-assignment]
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
@@ -572,17 +573,23 @@ class AppTest:
         return self
 
     def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
-        """Register bytes for file-upload widgets with the file manager.
+        """Register bytes for widgets that upload files.
 
-        Covers ``st.file_uploader`` and ``st.audio_input``. Both widgets
-        deserialize ``file_uploader_state_value`` through
-        ``MemoryUploadedFileManager``.
+        Covers ``st.file_uploader``, ``st.audio_input``, ``st.camera_input``,
+        and files attached to ``st.chat_input``. Those widgets read the bytes
+        back from ``MemoryUploadedFileManager`` while deserializing widget
+        state.
         """
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
         submitted = _submitted_form_ids(self._tree)
         form_clears = _form_clear_flags(self._tree)
-        for widget in (*self._tree.file_uploader, *self._tree.audio_input):
+        for widget in (
+            *self._tree.file_uploader,
+            *self._tree.audio_input,
+            *self._tree.camera_input,
+            *self._tree.chat_input,
+        ):
             form_id = _widget_form_id(widget)
             saved_files = widget._files
             if form_id and form_id not in submitted:
@@ -839,6 +846,20 @@ class AppTest:
             for a widget with a given key.
         """
         return self._tree.segmented_control
+
+    @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        """Sequence of all ``st.camera_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of CameraInput
+            Sequence of all ``st.camera_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.camera_input[0]`` for the first widget or
+            ``at.camera_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.camera_input
 
     @property
     def caption(self) -> ElementList[Caption]:

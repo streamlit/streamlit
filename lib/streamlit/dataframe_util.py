@@ -1152,7 +1152,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, Mapping):
-        return cast("list[V_co]", list(obj.keys()))
+        return cast("list[V_co]", list(obj.keys()))  # ty: ignore[redundant-cast]
 
     if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
@@ -1171,7 +1171,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return (
             []
             if data_df.empty
-            else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))
+            else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))  # ty: ignore[redundant-cast]
         )
     except errors.StreamlitAPIException:  # pragma: no cover - defensive
         # Defensive fallback: wrap the object into a list if conversion fails

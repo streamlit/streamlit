@@ -161,6 +161,19 @@ describe("ButtonGroup widget", () => {
     expect(icon.textContent).toContain(materialIconNames[1])
   })
 
+  it("ignores negative and out-of-range default indexes", () => {
+    const props = getProps({ default: [-1, 99] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
+    )
+  })
+
   it("sets widget value on mount", () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -1293,6 +1306,17 @@ describe("on_change='ignore' mode", () => {
         ignoreRerun: true,
       },
       buttonIndex: 1,
+      expected: ["apple"],
+    },
+    {
+      label: "selecting a segmented control option",
+      elementProps: {
+        style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
+        clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+        default: [],
+        ignoreRerun: true,
+      },
+      buttonIndex: 0,
       expected: ["apple"],
     },
   ])(

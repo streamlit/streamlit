@@ -773,7 +773,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -796,7 +796,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -819,7 +819,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -851,7 +851,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -874,7 +874,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -897,7 +897,7 @@ class ButtonGroupMixin:
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -1000,8 +1000,31 @@ class ButtonGroupMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this widget's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the segmented control should respond to value changes. This
+            controls whether Streamlit reruns the app when the user interacts
+            with the control. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit reruns the app when the user
+              selects, replaces, or clears a segment. Clearing is unavailable
+              when ``required=True`` in single-select mode. In multi-select
+              mode, adding or removing a segment also reruns. Keyboard
+              activation commits the same way as a click.
+
+            - ``"ignore"``: Streamlit does not rerun the app when the user
+              commits a new value. The segmented control still updates in the
+              UI. The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit reruns the app and executes the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1068,6 +1091,12 @@ class ButtonGroupMixin:
             the URL. For ``selection_mode="multi"``, multiple selections use
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
+
+            When ``on_change="ignore"``, Streamlit updates the URL on the
+            same commits described above. As with widgets inside a form,
+            the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page load
+            or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -1387,11 +1416,9 @@ class ButtonGroupMixin:
             raise StreamlitValueError("style", ["'pills'", "'segmented_control'"])
 
         key = to_key(key)
-        # Only pills accepts on_change mode strings. Segmented control is
-        # callback-only.
         on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=("rerun", "ignore") if style == "pills" else (),
+            supported_modes=("rerun", "ignore"),
         )
 
         _default = default

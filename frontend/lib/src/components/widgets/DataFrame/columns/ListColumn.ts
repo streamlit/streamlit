@@ -91,7 +91,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
       } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
-      if (isNullOrUndefined(cell.data?.values)) {
+      if (isNullOrUndefined(cell.data.values)) {
         return null
       }
 

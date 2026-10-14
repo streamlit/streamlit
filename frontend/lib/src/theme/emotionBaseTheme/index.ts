@@ -43,6 +43,10 @@ export default {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
+  /** Configured gap (rem/px string) between chrome and first widget. Undefined = use hardcoded defaults. */
+  paddingTop: undefined as string | undefined,
+  /** Configured aesthetic bottom inset (rem/px string). Undefined = use hardcoded defaults. */
+  paddingBottom: undefined as string | undefined,
   breakpoints,
   colors,
   fonts,

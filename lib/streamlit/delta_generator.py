@@ -400,7 +400,8 @@ class DeltaGenerator(
         """
         return self._parent._main_dg if self._parent else self
 
-    def __getattr__(self, name: str) -> Callable[..., NoReturn]:
+    def _raise_for_unknown_command(self, name: str) -> Callable[..., NoReturn]:
+        """Return a callable that raises ``StreamlitAPIException`` for ``name``."""
         import streamlit as st
 
         streamlit_methods = [
@@ -427,6 +428,12 @@ class DeltaGenerator(
             )
 
         return wrapper
+
+    # Hide ``__getattr__`` from type checkers so unknown container methods such
+    # as ``st.sidebar.echo`` stay type errors. mypy only honors the unaliased
+    # ``TYPE_CHECKING`` name here; an alias makes those calls type-check.
+    if not TYPE_CHECKING:
+        __getattr__ = _raise_for_unknown_command
 
     def __deepcopy__(self, _memo: Any) -> DeltaGenerator:
         dg = DeltaGenerator(

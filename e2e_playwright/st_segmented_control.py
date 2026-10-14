@@ -432,3 +432,29 @@ _sc_wrap_val = st.segmented_control(
     key="sc_wrap_preserve",
 )
 st.text(f"sc_wrap_preserve: {_sc_wrap_val}")
+
+# --- on_change="ignore" segmented control ---
+# Reuses the script-run counter above ("Runs:").
+
+ignore_single = st.segmented_control(
+    "Ignore change segmented control",
+    ["alpha", "beta", "gamma"],
+    key="ignore_sc",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_sc: {ignore_single}")
+
+ignore_multi = st.segmented_control(
+    "Ignore change multi segmented control",
+    ["Red", "Green", "Blue"],
+    selection_mode="multi",
+    key="ignore_sc_multi",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_sc_multi: {ignore_multi}")
+
+if st.button("Apply ignore segmented control", key="apply_ignore_sc"):
+    st.text(f"Applied ignore segmented control: {ignore_single}")
+    st.text(f"Applied ignore multi segmented control: {ignore_multi}")
