@@ -46,10 +46,11 @@ Each template follows this structure:
 
 ```
 dashboard-{name}/
-├── streamlit_app.py         # Main application code
-├── pyproject.toml           # Dependencies and metadata
-└── .streamlit/config.toml   # Optional theme (dashboard-metrics ships dense-dashboard)
+├── streamlit_app.py    # Main application code
+└── pyproject.toml      # Dependencies and metadata
 ```
+
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
 
 ## Canonical Patterns
 

@@ -200,7 +200,7 @@ When **editing an existing app**, use templates as reference for best practices:
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
 - Prefer `theme.base` (shared corporate/brand TOML or URL) when several apps should inherit the same brand tokens, then override per app for layout-specific tweaks
-- Defaults: `shadcn-dual` (general brand + appearance toggle), `dense-dashboard` (KPI + compact padding + toggle), or locked `shadcn` (light) / `vscode` (dark); other single-mode themes are aesthetic variants
+- Defaults: `shadcn-dual` for a general brand with the appearance toggle, `dense-dashboard` for KPI layouts with compact padding and the toggle, or locked `shadcn` (light) / `vscode` (dark). Other single-mode themes are aesthetic variants
 - Copy the chosen file to the app's `.streamlit/config.toml` (or point `theme.base` at a shared file)
 - Themes include custom fonts via Google Fonts
 - See `assets/templates/themes/README.md` for picker defaults and the full theme list

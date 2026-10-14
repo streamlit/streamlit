@@ -4299,6 +4299,10 @@ class TestMetaSkillPackaging:
         install deterministically — the exact failure this change removes — so
         build the wheel and assert both files are inside it, and that
         repo-only files under ``.agents`` are not.
+
+        Also assert dashboard-metrics/.streamlit/config.toml is in the wheel.
+        Python's default glob skips hidden directories, so a package-data pattern
+        alone can omit that sample theme.
         """
         import shutil
         import zipfile
@@ -4354,6 +4358,49 @@ class TestMetaSkillPackaging:
             and not name.startswith(allowed_prefixes)
         ]
         assert unexpected == []
+
+    def test_dashboard_metrics_theme_matches_dense_dashboard(self) -> None:
+        """dashboard-metrics config.toml must stay a copy of dense-dashboard.toml.
+
+        The sample adds a provenance comment; compare bodies after stripping
+        leading comments so the two theme files cannot drift silently.
+        """
+        skill_root = (
+            Path(__file__).resolve().parents[3]
+            / "streamlit"
+            / ".agents"
+            / "skills"
+            / "developing-with-streamlit"
+        )
+        sample = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "apps"
+            / "dashboard-metrics"
+            / ".streamlit"
+            / "config.toml"
+        )
+        source = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "themes"
+            / "configs"
+            / "dense-dashboard.toml"
+        )
+        assert sample.is_file()
+        assert source.is_file()
+
+        def strip_leading_comments(text: str) -> str:
+            lines = text.splitlines()
+            while lines and (not lines[0].strip() or lines[0].lstrip().startswith("#")):
+                lines.pop(0)
+            return "\n".join(lines)
+
+        assert strip_leading_comments(sample.read_text(encoding="utf-8")) == (
+            strip_leading_comments(source.read_text(encoding="utf-8"))
+        )
 
 
 class TestVendoredMetaSkillDiscovery:

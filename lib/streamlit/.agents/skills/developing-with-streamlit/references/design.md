@@ -107,7 +107,7 @@ st.markdown(":orange-background[:orange[Pending]]")
 ## Spacing
 
 - **Page / sidebar chrome:** `paddingTop` (gap under the header, or before the first sidebar widget) and `paddingBottom` (bottom inset) in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
-- **Between widgets or sections:** prefer removing heavy `st.divider()` / `---` first; use `st.space` or container `gap` when you genuinely need a gap (see `layouts.md`).
+- **Between widgets or sections:** see below (and `layouts.md` for container `gap`).
 
 Dividers (`st.divider()` or `---`) look heavy. Just remove them—Streamlit's default spacing is usually enough.
 

@@ -17,7 +17,7 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 | Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` | Adapt a template into the shared file |
 | Single locked look | `[theme]` only (`base = "light"` or `"dark"`) | `shadcn` (light) or `vscode` (dark) |
 | User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) | `shadcn-dual` |
-| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` — full contrast set, not only `backgroundColor` | Dual example or `shadcn-dual` |
+| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` — full contrast set, not only `backgroundColor` | `shadcn-dual` |
 | Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) | `dense-dashboard` |
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
@@ -31,13 +31,13 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 
 ## Cheat sheet: common customization intents
 
-Token-level polish/brand asks. Use **Choose a config shape** (and Start from) for layout/mode; deeper sections only as needed.
+Map common polish and brand requests to config keys. For mode and layout choices, use **Choose a config shape** above.
 
 | Intent | Put in `config.toml` | Start from |
 |--------|----------------------|------------|
 | Brand accent (buttons, links) | `primaryColor`, usually also `linkColor` | Any template; retint primary |
 | Page / panel surfaces | `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `borderColor` | `shadcn` / `shadcn-dual` |
-| Chart / dataframe brand | `chartCategoricalColors`; sequential/diverging must be exactly 10 colors; `dataframe*` | `dense-dashboard` or dual example |
+| Chart / dataframe brand | `chartCategoricalColors`; sequential/diverging must be exactly 10 colors; `dataframe*` | `dense-dashboard` |
 | Fonts, radii, widget borders | `font` / `headingFont` / `codeFont`, `baseRadius`, `showWidgetBorder` | Most templates |
 
 Prefer these over CSS. Full detail below; inventory via `streamlit config show`.
