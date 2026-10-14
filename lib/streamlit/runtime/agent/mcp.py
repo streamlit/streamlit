@@ -55,19 +55,15 @@ if TYPE_CHECKING:
 # request is answered with the newest, which the client accepts or disconnects
 # over, as these versions' negotiation prescribes. Nothing this server does
 # differs between them. Only versions whose `initialize` handshake this server
-# implements are listed.
+# implements are listed: not `2026-07-28`, which replaced the handshake, and
+# whose clients fall back to it when a probe is refused with a plain error.
 SUPPORTED_PROTOCOL_VERSIONS: Final = (
     "2025-11-25",
     "2025-06-18",
-    "2025-03-26",
 )
 
 TOOL_NAME: Final = "interact"
 GET_DATA_TOOL_NAME: Final = "get_data"
-
-# Batches exist for clients on protocol versions that still send them, which
-# need a handshake's worth of messages, not an unbounded queue of interactions.
-MAX_BATCH_SIZE: Final = 8
 
 # JSON-RPC 2.0 error codes.
 PARSE_ERROR: Final = -32700
@@ -287,47 +283,41 @@ def _input_schema() -> dict[str, Any]:
     return result
 
 
-def error_response(request_id: Any, code: int, message: str) -> dict[str, Any]:
+def error_response(
+    request_id: Any, code: int, message: str, *, data: Any = None
+) -> dict[str, Any]:
     """A JSON-RPC error response."""
-    return {
-        "jsonrpc": "2.0",
-        "id": request_id,
-        "error": {"code": code, "message": message},
-    }
+    error: dict[str, Any] = {"code": code, "message": message}
+    if data is not None:
+        error["data"] = data
+    return {"jsonrpc": "2.0", "id": request_id, "error": error}
 
 
 def _result(request_id: Any, result: dict[str, Any]) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-async def handle(payload: Any, interact: InteractCall, get_data: GetDataCall) -> Any:
-    """Answer a JSON-RPC message or batch.
+async def handle(
+    payload: Any, interact: InteractCall, get_data: GetDataCall
+) -> dict[str, Any] | None:
+    """Answer one JSON-RPC message.
 
-    Returns the response to send, or ``None`` when nothing needs an answer: a
-    notification, or a batch made only of notifications.
+    Returns the response to send, or ``None`` for a notification, which needs
+    no answer.
     """
     if isinstance(payload, list):
-        if not payload:
-            return error_response(
-                None, INVALID_REQUEST, "An empty batch is not a request."
-            )
-        if len(payload) > MAX_BATCH_SIZE:
-            # Each `tools/call` in a batch is a full interaction, run in turn
-            # within this one request.
-            return error_response(
-                None,
-                INVALID_REQUEST,
-                f"A batch may hold at most {MAX_BATCH_SIZE} messages.",
-            )
-        responses = [
-            await _handle_one(message, interact, get_data) for message in payload
-        ]
-        answered = [response for response in responses if response is not None]
-        return answered or None
+        # Only MCP's 2025-03-26 revision had batches, and this server does not
+        # offer it. Answering one would also run several interactions inside a
+        # single HTTP request, past the timeout each is held under.
+        return error_response(
+            None,
+            INVALID_REQUEST,
+            "Batches are not supported: send one JSON-RPC message per request.",
+        )
     return await _handle_one(payload, interact, get_data)
 
 
-def _reply_id(message: Any) -> str | int | None:
+def reply_id(message: Any) -> str | int | None:
     """The id an error reply may echo: the request's, if it is a valid one.
 
     A malformed message can carry any JSON as its id, and echoing an object or
@@ -344,7 +334,7 @@ async def _handle_one(
 ) -> dict[str, Any] | None:
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
         return error_response(
-            _reply_id(message), INVALID_REQUEST, "Not a JSON-RPC 2.0 message."
+            reply_id(message), INVALID_REQUEST, "Not a JSON-RPC 2.0 message."
         )
 
     method = message.get("method")
@@ -354,7 +344,7 @@ async def _handle_one(
         return None
     if not isinstance(method, str):
         return error_response(
-            _reply_id(message), INVALID_REQUEST, "A request needs a `method`."
+            reply_id(message), INVALID_REQUEST, "A request needs a `method`."
         )
     if "id" not in message:
         # A notification, such as `notifications/initialized`. Nothing to answer,
@@ -386,9 +376,12 @@ async def _handle_one(
     return error_response(
         request_id,
         METHOD_NOT_FOUND,
-        f"Method {method!r} is not supported. This server offers the tools "
-        f"{TOOL_NAME!r} and {GET_DATA_TOOL_NAME!r}, through `tools/list` and "
-        "`tools/call`.",
+        # The standard message, exactly: a client that probes for a newer
+        # revision with `server/discover` reads it as "fall back to the
+        # handshake".
+        "Method not found",
+        data=f"This server offers the tools {TOOL_NAME!r} and "
+        f"{GET_DATA_TOOL_NAME!r}, through `tools/list` and `tools/call`.",
     )
 
 

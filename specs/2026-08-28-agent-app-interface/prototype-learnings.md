@@ -1345,6 +1345,16 @@ text rather than reset it, `max_selections` is checked, `st.pdf` is a custom com
 and `column` and `tab` are container types. It also stopped promising JSON Schema
 formats other than `date`.
 
+The MCP endpoint dropped protocol `2025-03-26` and its batches. A batch ran several
+interactions inside one HTTP request, so a client could time out on the whole of it
+while the 30-second run timeout held each part, and the one trial that negotiated that
+version was an agent probing by hand. `2025-11-25` and `2025-06-18` remain.
+`2026-07-28`, which replaces the handshake, waits until ChatGPT or the Claude apps
+default to it. Claude Code already does, and falls back to the handshake when its probe
+is refused. So that refusal now echoes the request's `id`, and `server/discover` gets
+the plain `-32601 Method not found`, the two shapes Claude Code has been reported to
+mishandle.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

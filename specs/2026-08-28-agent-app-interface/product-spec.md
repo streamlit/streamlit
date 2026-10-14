@@ -1292,9 +1292,11 @@ numbered for reference rather than ranked.
    pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
    call takes the same path as an `interact` request, so its HTTP request's headers
    supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most
-   AI applications connect to tools, so this belongs in the same release cycle as v1 if
-   possible, together with #9.
+   rather than on the MCP SDK, which keeps it free of new dependencies. It speaks the
+   `initialize`-handshake revisions the common clients support, and adds `2026-07-28`,
+   whose stateless model `session_id` already follows, once they default to it. MCP is
+   how most AI applications connect to tools, so this belongs in the same release cycle
+   as v1 if possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2

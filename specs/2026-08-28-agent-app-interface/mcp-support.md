@@ -121,9 +121,9 @@ A notification such as `notifications/initialized` gets `202 Accepted` with no b
 `GET`, which a client uses to open a stream for server-initiated messages, gets `405`, as
 the transport allows; the route is registered for it explicitly, because otherwise the
 request falls through to the app's page handler and returns its HTML with a `200`.
-Batches are answered message by message, for clients on protocol versions that still
-send them. A client asking for a protocol version the server does not list gets the
-newest it does. With the agent API off, every request gets a `403` whose message names
+A batch is refused: only MCP's `2025-03-26` revision had them, and answering one would
+run several interactions inside one HTTP request, past the timeout each is held under.
+With the agent API off, every request gets a `403` whose message names
 the setting to turn on. That is about 150–200 lines in the style of the existing agent
 routes, and it adds no dependency, so the product spec's "no new dependencies" still
 holds.
@@ -135,6 +135,28 @@ app startup paths. The cost of writing it by hand is owning compatibility: the e
 has to be tested against the clients above and follow the protocol versions they
 negotiate. **Switch to the SDK when OAuth for signed-in apps becomes a goal**, since that
 is where it saves real work.
+
+### Protocol versions
+
+The endpoint speaks `2025-11-25` and `2025-06-18`, the `initialize`-handshake revisions
+the common clients support. A client asking for another version gets the newest of
+these, which it accepts or disconnects over, as negotiation in those revisions
+prescribes.
+
+`2026-07-28` replaced the handshake with per-request metadata. Of the common clients,
+only Claude Code defaults to it so far, and it probes first and falls back to the
+handshake when the answer is not a modern error. Two details keep that fallback
+reliable: the `400` for an unsupported `MCP-Protocol-Version` echoes the request's `id`,
+and an unknown method, `server/discover` included, gets the plain `-32601 Method not
+found`.
+
+Adding `2026-07-28` once ChatGPT or the Claude apps default to it stays contained,
+because the endpoint already follows its stateless model: no protocol session, nothing
+sent unprompted, and `session_id` a server-minted handle passed as a tool argument,
+which is the pattern the revision prescribes. It needs `server/discover`, the version
+read from each request's `_meta` with `-32022` for one the server does not offer, header
+checks against the body, `resultType` on every result, and `ttlMs` and `cacheScope` on
+`tools/list`. The SDK covers both eras, if the switch to it comes first.
 
 ## Security
 
