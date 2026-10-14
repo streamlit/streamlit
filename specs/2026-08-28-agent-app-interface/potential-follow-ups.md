@@ -291,8 +291,9 @@ results, after which a rerun was the only way back to the current state, and
 the JSON type, the options, and whether the widget can read the value. Anything else
 reaches the widget, which adjusts it: a fraction sent to an integer input is truncated,
 a malformed date resets to the default, and a reversed or one-item range is stored as
-sent. The next `value` shows each outcome. Only `maxItems` is enforced already, because
-a third date for a range made `start, end = st.date_input(...)` raise in the app.
+sent. The next `value` shows each outcome. Two parts are enforced already: `maxItems`,
+because a third date for a range made `start, end = st.date_input(...)` raise in the
+app, and a number schema refusing text, because `st.feedback` carries text on the wire.
 
 **The fuller version:** check the request against the element's `value_schema` before
 running, so a whole-number type, a date format, a range's length, and its order are

@@ -1296,6 +1296,13 @@ QA round 5 then found, in v1 scope:
   `Authorization`; `st.popover` reports `on_change`; and an unparseable time and an
   offset get separate errors.
 
+A further QA round found the stand-in script context incomplete: it carried session
+state but not the request's timezone and locale, so a `format_func` reading
+`st.context.locale` or `st.context.timezone` formatted a label the run never offered,
+and the raw option was reported. The context now carries them. The same round's repeat
+finding, `st.feedback` taking `"1"`, is closed by refusing text where `value_schema`
+says number.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

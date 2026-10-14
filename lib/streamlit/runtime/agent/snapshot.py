@@ -218,6 +218,9 @@ class ElementState(NamedTuple):
     # The most items its `value_schema` allows, such as 2 for a range. A longer
     # list would reach the app, where `start, end = st.date_input(...)` raises.
     max_items: int | None = None
+    # The JSON type its `value_schema` names, so a number is not accepted as
+    # text where the wire form happens to be a string, as for `st.feedback`.
+    schema_type: str | None = None
 
 
 @dataclass
@@ -473,6 +476,7 @@ class _SnapshotBuilder:
             in_dialog=self._in_dialog,
             command=description["type"],
             max_items=(description.get("value_schema") or {}).get("maxItems"),
+            schema_type=(description.get("value_schema") or {}).get("type"),
         )
         if actionable:
             self.actions.append(

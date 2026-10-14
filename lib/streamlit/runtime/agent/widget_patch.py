@@ -213,6 +213,11 @@ def build_widget_states(
             )
 
         state = element_states[element_id]
+        if state.schema_type in {"integer", "number"} and isinstance(value, str):
+            raise AgentRequestError(
+                "invalid_value",
+                f"{key!r} takes a number, as its `value_schema` says, not text.",
+            )
         if (
             state.max_items is not None
             and isinstance(value, list)

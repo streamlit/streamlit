@@ -711,9 +711,11 @@ def _script_context(app_session: Any, session: AgentSession) -> ScriptRunContext
     """A script context for building this session's snapshot.
 
     A widget's `value` goes through its serializer, which runs the app's
-    `format_func`, and one that reads `st.session_state` needs a script context
-    to find the session's state. The build emits nothing, so anything the app's
-    code writes while it runs is dropped.
+    `format_func`, and one that reads `st.session_state` or `st.context` needs a
+    script context to find the session's state and the timezone and locale the
+    request stated. Without them it would format a label the run never offered.
+    The build emits nothing, so anything the app's code writes while it runs is
+    dropped.
     """
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         ScriptRunContext,
@@ -732,6 +734,7 @@ def _script_context(app_session: Any, session: AgentSession) -> ScriptRunContext
         user_info=app_session._user_info,
         fragment_storage=app_session._fragment_storage,
         pages_manager=app_session._pages_manager,
+        context_info=session.context_info,
     )
 
 
