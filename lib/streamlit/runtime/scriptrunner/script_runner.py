@@ -77,6 +77,10 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# A rejected task can swallow CancelledError or await slow cleanup. Bound the
+# wait so the entrypoint error still surfaces.
+_REJECTED_TASK_CANCEL_WAIT_SECS = 0.1
+
 
 def _close_async_generator(async_gen: Any) -> None:
     """Finalize an async generator returned by a rejected entrypoint.
@@ -124,8 +128,30 @@ def _close_async_generator(async_gen: Any) -> None:
             temporary_loop.close()
 
 
+def _task_event_loop(result: Any) -> asyncio.AbstractEventLoop | None:
+    """Return the loop that owns ``result``, if it has one."""
+    get_loop = getattr(result, "get_loop", None)
+    if not callable(get_loop):
+        return None
+    try:
+        loop = get_loop()
+    except Exception:
+        _LOGGER.debug("Failed to read a rejected task loop.", exc_info=True)
+        return None
+    if isinstance(loop, asyncio.AbstractEventLoop):
+        return loop
+    return None
+
+
 def _cancel_rejected_task(result: Any) -> None:
-    """Cancel a returned task and finish that cancellation when possible."""
+    """Cancel a returned task without waiting for cleanup that ignores it.
+
+    ``cancel()`` only requests cancellation. This thread drives that request
+    when it owns the task's loop, and only briefly. A task that swallows
+    ``CancelledError`` must not block the entrypoint error. A task owned by
+    another loop is left alone after ``cancel()``; closing its coroutine would
+    race the loop that is still scheduling it.
+    """
     cancel = getattr(result, "cancel", None)
     if not callable(cancel):
         return
@@ -138,46 +164,33 @@ def _cancel_rejected_task(result: Any) -> None:
         )
         return
 
+    task_loop = _task_event_loop(result)
+    if task_loop is None or task_loop.is_closed() or task_loop.is_running():
+        return
+
     try:
         asyncio.get_running_loop()
     except RuntimeError:
         pass
     else:
-        # This thread is already running a loop, so it cannot drive the task.
-        _close_task_coroutine(result)
         return
 
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
-        loop = None
-    if loop is not None and not loop.is_closed():
-        try:
-            loop.run_until_complete(result)
-        except asyncio.CancelledError:
-            return
-        except Exception:
-            _LOGGER.debug(
-                "Failed to finish cancelling a rejected task entrypoint.",
-                exc_info=True,
-            )
-            _close_task_coroutine(result)
         return
-    _close_task_coroutine(result)
-
-
-def _close_task_coroutine(result: Any) -> None:
-    """Close a task's coroutine when its loop cannot run the cancellation."""
-    get_coro = getattr(result, "get_coro", None)
-    if not callable(get_coro):
+    if loop is not task_loop or loop.is_closed():
         return
+
     try:
-        coro = get_coro()
+        loop.run_until_complete(
+            asyncio.wait({result}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+        )
     except Exception:
-        _LOGGER.debug("Failed to read a rejected task coroutine.", exc_info=True)
-        return
-    if coro is not None:
-        _close_awaitable(coro)
+        _LOGGER.debug(
+            "Failed to finish cancelling a rejected task entrypoint.",
+            exc_info=True,
+        )
 
 
 def _close_awaitable(awaitable: Any) -> None:
@@ -222,8 +235,8 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
                 )
         else:
             # Futures and Tasks are awaitable but have cancel(), not close().
-            # cancel() only requests cancellation; drive it on this thread's
-            # non-running loop so the coroutine's finally runs before the error.
+            # Give this thread's loop a short time to finish cancellation, then
+            # raise even if the task ignores it.
             _cancel_rejected_task(result)
 
     raise StreamlitAPIException(

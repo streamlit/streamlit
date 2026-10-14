@@ -1724,6 +1724,41 @@ class TestAppInit:
         assert app.script_path == app_file.resolve()
         assert app._script_entrypoint is app_mod.main
 
+    def test_app_anchors_decorator_without_wrapped_on_decorator_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A decorator that does not set __wrapped__ keeps the decorator file."""
+        decorator_file = tmp_path / "st_app_callable_plain_deco.py"
+        decorator_file.write_text(
+            "def deco(fn):\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_plain_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_plain_deco import deco\n"
+            "\n"
+            "@deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_plain_deco",
+            "st_app_callable_plain_wrapped",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_plain_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == decorator_file.resolve()
+
     def test_app_prefers_source_outside_site_packages(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2130,8 +2165,8 @@ class TestAppInit:
         monkeypatch.setattr(
             "streamlit.web.server.starlette.starlette_app.inspect.signature", boom
         )
-        with pytest.raises(TypeError, match="cannot inspect"):
-            App(main)
+        app = App(main)
+        assert app._script_entrypoint is main
 
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""

@@ -164,7 +164,9 @@ Callable requirements and behavior:
   source file outside an installed package (`site-packages`, `dist-packages`,
   or this interpreter's site roots), including a nested wrapper the app
   defines around another module. A nested decorator is skipped when the wrapped
-  function's module imports that decorator. When every source file is inside
+  function's module imports that decorator. The skip follows `__wrapped__`, which
+  `functools.wraps` sets. A decorator that does not set `__wrapped__` keeps the
+  decorator's file. When every source file is inside
   an installed package, the outermost of those files is used. The callable's
   directory is also prepended to `sys.path` during runs, so a callable that
   lives inside a package can be imported under its package name and as a

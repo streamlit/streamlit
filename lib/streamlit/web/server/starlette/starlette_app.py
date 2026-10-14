@@ -209,10 +209,9 @@ def _require_zero_arg_callable(obj: Any) -> None:
         signature = inspect.signature(
             _callable_for_signature(obj), follow_wrapped=False
         )
-    except ValueError:
-        # A missing signature means the object could not be inspected, which
-        # is separate from "this callable requires arguments". TypeError from
-        # signature() itself propagates.
+    except (ValueError, TypeError):
+        # A missing or unreadable signature means the object could not be
+        # inspected, which is separate from "this callable requires arguments".
         return
     try:
         signature.bind()
@@ -474,8 +473,10 @@ def _resolve_callable_source_path(obj: Any) -> Path:
     The outermost source file outside an installed package wins, including a
     nested wrapper the app defines around another module. A nested decorator
     is skipped when the wrapped function's module imports that decorator, so
-    the decorator file does not hide the app callable. When every file is
-    inside an installed package, the outermost of those files is used.
+    the decorator file does not hide the app callable. That skip follows
+    ``__wrapped__``, which ``functools.wraps`` sets. A decorator that does not
+    set ``__wrapped__`` keeps the decorator's file. When every file is inside
+    an installed package, the outermost of those files is used.
     """
     fallback: Path | None = None
     installed: Path | None = None

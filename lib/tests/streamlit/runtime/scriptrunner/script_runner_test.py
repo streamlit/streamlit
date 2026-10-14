@@ -350,6 +350,71 @@ class ScriptRunnerTest(unittest.TestCase):
             assert cleaned is True
             assert task.cancelled()
 
+    def test_invoke_script_entrypoint_bounds_ignored_task_cancellation(self) -> None:
+        """A task that swallows cancellation does not block the entrypoint error."""
+        with _installed_event_loop() as loop:
+
+            async def work() -> None:
+                try:
+                    await asyncio.sleep(30)
+                except asyncio.CancelledError:
+                    await asyncio.sleep(30)
+
+            task = loop.create_task(work())
+            with pytest.raises(TimeoutError):
+                loop.run_until_complete(asyncio.wait_for(asyncio.shield(task), 0.01))
+
+            def entrypoint() -> Any:
+                return task
+
+            started = time.monotonic()
+            with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
+                _invoke_script_entrypoint(entrypoint)
+            assert time.monotonic() - started < 1
+
+            task.get_coro().close()
+
+    def test_invoke_script_entrypoint_leaves_foreign_loop_task(self) -> None:
+        """A task on another loop is cancelled in place and not closed here."""
+        foreign_loop = asyncio.new_event_loop()
+        started = threading.Event()
+
+        async def work() -> None:
+            started.set()
+            await asyncio.sleep(30)
+
+        def run_foreign_loop() -> None:
+            asyncio.set_event_loop(foreign_loop)
+            foreign_loop.run_forever()
+
+        thread = threading.Thread(target=run_foreign_loop, daemon=True)
+        thread.start()
+
+        async def start_task() -> asyncio.Task[None]:
+            return foreign_loop.create_task(work())
+
+        task = asyncio.run_coroutine_threadsafe(start_task(), foreign_loop).result(
+            timeout=2
+        )
+        assert started.wait(timeout=2)
+
+        def entrypoint() -> Any:
+            return task
+
+        try:
+            with _installed_event_loop():
+                began = time.monotonic()
+                with pytest.raises(
+                    StreamlitAPIException, match="coroutine or generator"
+                ):
+                    _invoke_script_entrypoint(entrypoint)
+                assert time.monotonic() - began < 1
+        finally:
+            task.cancel()
+            foreign_loop.call_soon_threadsafe(foreign_loop.stop)
+            thread.join(timeout=2)
+            foreign_loop.close()
+
     def test_callable_entrypoint_uses_normal_error_handling(self) -> None:
         """Exceptions from callable entrypoints use the standard script error path."""
         error_handler = MagicMock(return_value=None)

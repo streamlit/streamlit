@@ -153,7 +153,9 @@ app = st.App(main)
   is used for `static/` serving and source watching. Streamlit prefers the outermost
   source file outside an installed package, including a nested wrapper the app defines
   around another module. A nested decorator is skipped when the wrapped function's
-  module imports that decorator. When every source file is inside an installed package,
+  module imports that decorator. The skip follows `__wrapped__`, which `functools.wraps`
+  sets. A decorator that does not set `__wrapped__` keeps the decorator's file.
+  When every source file is inside an installed package,
   the outermost of those files is used. The callable's directory is prepended to
   `sys.path` during runs, so a callable inside a package can also be imported as a
   top-level module.
