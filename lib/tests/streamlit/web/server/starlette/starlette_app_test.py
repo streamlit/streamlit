@@ -2210,6 +2210,21 @@ class TestAppInit:
         app = App(main)
         assert app._script_entrypoint is main
 
+    def test_raising_wrapped_descriptor_does_not_fail_app_construction(self) -> None:
+        """A __wrapped__ descriptor that raises is ignored while resolving source."""
+
+        class Entry:
+            def __call__(self) -> None:
+                return None
+
+            @property
+            def __wrapped__(self) -> Any:
+                raise RuntimeError("wrapped descriptor")
+
+        entry = Entry()
+        app = App(entry)
+        assert app._script_entrypoint is entry
+
     def test_callable_app_disables_pages_directory(self) -> None:
         """A callable App clears the pages-directory flag once, at construction."""
 

@@ -226,7 +226,9 @@ def _next_wrapped(obj: Any) -> Any | None:
     """Return the next ``__wrapped__`` object, one edge only."""
     try:
         wrapped = getattr(obj, "__wrapped__", None)
-    except (AttributeError, TypeError, ValueError):
+    except Exception:
+        # ``__wrapped__`` may be a descriptor that raises. One bad wrapper
+        # must not fail App construction.
         return None
     if wrapped is None or wrapped is obj:
         return None

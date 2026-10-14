@@ -49,10 +49,9 @@ def convert_to_streamlit_page(
 ) -> Page:
     """Convert various input types to Page objects."""
     if isinstance(page_input, Page):
-        # Outside a script run (for example at module import), return the page
-        # unchanged so importing the launcher still works. Inside a run, reject
-        # pages created at import time before later code reads attributes
-        # st.Page never set.
+        # Reject pages created at import time once a script run exists.
+        # Outside a run, return the page unchanged so importing the module
+        # still works.
         if get_script_run_ctx() is not None:
             _raise_if_page_created_outside_run(page_input)
         return page_input
