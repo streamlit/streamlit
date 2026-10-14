@@ -471,7 +471,10 @@ class Page:
         the external URL in a new browser tab instead of navigating within
         the app.
         """
-        _raise_if_page_created_outside_run(self)
+        # Outside a script run, st.navigation still classifies pages while a
+        # launcher is imported. Raise only once a run exists.
+        if get_script_run_ctx() is not None:
+            _raise_if_page_created_outside_run(self)
         return self._external_url is not None
 
     @property
@@ -480,7 +483,10 @@ class Page:
 
         Returns ``None`` if this is not an external URL page.
         """
-        _raise_if_page_created_outside_run(self)
+        # Outside a script run, st.navigation still classifies pages while a
+        # launcher is imported. Raise only once a run exists.
+        if get_script_run_ctx() is not None:
+            _raise_if_page_created_outside_run(self)
         return self._external_url
 
     def run(self) -> None:
@@ -495,9 +501,13 @@ class Page:
         to the external URL is handled by the frontend.
 
         """
-        # Import-time pages never receive _page or _can_be_called. Reject them
-        # before those attributes are read, including outside a script run.
-        _raise_if_page_created_outside_run(self)
+        # A raw import-time page has no _can_be_called and would raise
+        # AttributeError. st.navigation sets that attribute before returning,
+        # including in bare mode, where run() must stay a no-op.
+        if getattr(self, "_created_outside_run", False) and (
+            get_script_run_ctx() is not None or not hasattr(self, "_can_be_called")
+        ):
+            _raise_if_page_created_outside_run(self)
 
         if not self._can_be_called:
             raise StreamlitAPIException(

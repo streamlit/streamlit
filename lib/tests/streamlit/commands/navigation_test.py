@@ -107,6 +107,20 @@ class NavigationTest(DeltaGeneratorTestCase):
 
         assert exc_info.value.error_id == "page-created-outside-script-run"
 
+    def test_navigation_run_outside_script_run_does_not_raise(self) -> None:
+        """Bare execution can call st.navigation(...).run() with no script run."""
+        with (
+            patch("streamlit.navigation.page.get_script_run_ctx", return_value=None),
+            patch(
+                "streamlit.commands.navigation.get_script_run_ctx", return_value=None
+            ),
+        ):
+
+            def home() -> None:
+                pass
+
+            st.navigation([st.Page(home)]).run()
+
     def test_page_attributes_reject_page_created_outside_script_run(self) -> None:
         """title, icon, url_path, and external fields use the import-time page error."""
         with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
