@@ -56,7 +56,7 @@ export const getDecimalPlaces = (step: number): number => {
     const match = stepStr.match(/(\d+(?:\.\d+)?)e-(\d+)/)
     if (match) {
       // Account for decimal places in the coefficient (e.g., "2.5" has 1)
-      const coefficientDecimals = (match[1]?.split(".")[1] || "").length
+      const coefficientDecimals = (match[1].split(".")[1] || "").length
       const exponent = Number.parseInt(match[2], 10)
       return coefficientDecimals + exponent
     }

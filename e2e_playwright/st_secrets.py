@@ -27,13 +27,13 @@ if runtime.exists():
     ALT_SECRETS_FILE = STATIC_DIR / "alt_secrets.toml"
     ALT_SECRETS_FILE2 = STATIC_DIR / "alt_secrets2.toml"
     config.set_option("secrets.files", [str(ALT_SECRETS_FILE)])
-    st.secrets._secrets = None
+    st.secrets._secrets = None  # ty: ignore[invalid-assignment]
 
     st.write("Alt Secret: ", st.secrets["fake"]["FAKE_SECRET"])
     st.write("Alt Secret From File 2 visible: ", "other-fake" in st.secrets)
 
     config.set_option("secrets.files", [str(ALT_SECRETS_FILE), str(ALT_SECRETS_FILE2)])
-    st.secrets._secrets = None
+    st.secrets._secrets = None  # ty: ignore[invalid-assignment]
 
     st.write("Alt Secret (Multiple): ", st.secrets["fake"]["FAKE_SECRET"])
     st.write(
@@ -43,4 +43,4 @@ if runtime.exists():
 
     # Reset the secrets file to the original to avoid affecting other tests
     config.set_option("secrets.files", original_option)
-    st.secrets._secrets = None
+    st.secrets._secrets = None  # ty: ignore[invalid-assignment]

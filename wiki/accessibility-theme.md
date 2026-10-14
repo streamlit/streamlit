@@ -21,7 +21,9 @@ Public config keys live in `lib/streamlit/config.py` (`theme`, `theme.light` / `
 
 Score the criteria below for **default** light and dark only. Do not score AAA.
 
-This is not a full shell audit. The following criteria were not evaluated: 1.4.4, 1.4.10, 1.4.12, 2.4.1, 2.4.2, full focus behavior (2.4.7 / 2.4.11), 3.1.1, and app-shell 4.1.3. Command-level gaps stay on the [command inventory](accessibility-wcag.md).
+This is not a full shell audit. The following criteria were not evaluated: 1.4.4, 1.4.10, 1.4.12, 2.4.2, full focus behavior (2.4.7 / 2.4.11), 3.1.1, and app-shell 4.1.3. Command-level gaps stay on the [command inventory](accessibility-wcag.md).
+
+**2.4.1 Bypass Blocks (shell):** The app shell exposes a `<main>` landmark (`stMain`), a named page-navigation landmark (`aria-label="App pages"`) when multipage nav is shown, and a keyboard skip link (“Skip to main content”) that moves focus into main. This inventory still does not claim full app conformance.
 
 In each scorecard table, rows are ordered **Library blocks** first, then **Library meets**. Light and dark are scored in separate columns when they differ.
 

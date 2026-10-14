@@ -54,9 +54,7 @@ export function preferWindowValue<T>(
   windowValue: T | undefined | null,
   endpointValue: T
 ): T {
-  return windowValue !== undefined && windowValue !== null
-    ? windowValue
-    : endpointValue
+  return windowValue ?? endpointValue
 }
 
 /**

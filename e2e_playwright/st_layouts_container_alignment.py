@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
+import altair as alt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import plotly.express as px
 
 import streamlit as st
 
@@ -193,9 +195,11 @@ with st.container(horizontal=True, key="container-horizontal-stretch-height"):
     with st.container(border=True, key="stretch-height-content-card"):
         st.write("Content card")
 
+# The tallest card must be taller than the default chart height, which a
+# stretch chart uses as its minimum in a content-height row.
 with st.container(horizontal=True, key="container-horizontal-stretch-height-data"):
     with st.container(border=True, key="stretch-height-data-tallest"):
-        for line in range(6):
+        for line in range(10):
             st.write(f"Line {line}")
     st.line_chart(df, x="x", y="y", height="stretch")
     st.dataframe(df, height="stretch")
@@ -218,3 +222,145 @@ with st.container(
 with st.container(horizontal=True, key="container-horizontal-top-checkboxes"):
     st.text_input("Top-aligned input")
     st.checkbox("Top-aligned checkbox")
+
+# Without a taller sibling, a stretch chart uses its default height.
+with st.container(horizontal=True, key="container-horizontal-stretch-chart-fallback"):
+    st.line_chart(df, x="x", y="y", height="stretch")
+    st.button("Chart neighbor")
+
+with st.container(horizontal=True, key="container-horizontal-content-width-chart"):
+    st.line_chart(df, x="x", y="y", width="content", height="stretch")
+    st.button("Content-width chart neighbor")
+
+with st.container(
+    horizontal=True, key="container-horizontal-content-width-pixel-height-chart"
+):
+    st.line_chart(df, x="x", y="y", width="content", height=200)
+    st.button("Pixel-height chart neighbor")
+
+with st.container(horizontal=True, key="container-horizontal-stretch-plotly-fallback"):
+    # 320 is not Plotly's 450px default, so the test can tell them apart.
+    plotly_figure = px.line(df, x="x", y="y")
+    plotly_figure.update_layout(height=320)
+    st.plotly_chart(plotly_figure, height="stretch")
+    st.button("Plotly neighbor")
+
+# A multi-view chart has no single height to fall back to. In a content-height
+# row it must stay empty instead of reserving one panel and painting the rest
+# over the elements below.
+_vconcat_spec = {
+    "vconcat": [
+        {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "x", "type": "quantitative"},
+                "y": {"field": "y", "type": "quantitative"},
+            },
+        },
+        {
+            "mark": "line",
+            "encoding": {
+                "x": {"field": "x", "type": "quantitative"},
+                "y": {"field": "y", "type": "quantitative"},
+            },
+        },
+    ]
+}
+with st.container(horizontal=True, key="container-horizontal-stretch-composition"):
+    st.vega_lite_chart(df, _vconcat_spec, height="stretch")
+    st.button("Composition neighbor")
+
+with st.container(key="below-stretch-composition"):
+    st.markdown("Below the composition")
+
+# In a container with a definite height, stretch charts shrink to fit their
+# siblings instead of claiming their default height.
+with st.container(height=300, border=True, key="fixed-card-title-and-chart"):
+    st.subheader("Revenue")
+    st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(horizontal=True, height=250, key="fixed-row-stretch-kpi-cards"):
+    for index in range(2):
+        with st.container(
+            border=True, height="stretch", key=f"stretch-kpi-card-{index}"
+        ):
+            st.metric(f"KPI {index}", index)
+            st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(key="fixed-tabs-title-and-chart"):
+    with st.tabs(["Revenue tab"], height=300)[0]:
+        st.subheader("Revenue")
+        st.line_chart(df, x="x", y="y", height="stretch")
+
+# Vega renders parameter-binding controls inside the chart, below the plot.
+bindings_chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(x="x", y="y")
+    .add_params(
+        alt.param(
+            name="line_width",
+            value=2,
+            bind=alt.binding_range(min=1, max=5, step=1, name="Line width"),
+        )
+    )
+)
+with st.container(height=300, border=True, key="fixed-card-chart-with-bindings"):
+    st.altair_chart(bindings_chart, height="stretch")
+
+tall_card = st.toggle("Tall card", value=True)
+with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
+    with st.container(border=True, key="stretch-chart-shrink-card"):
+        for line in range(12 if tall_card else 2):
+            st.write(f"Line {line}")
+    st.line_chart(df, x="x", y="y", height="stretch")
+
+# Stretch containers and forms grow to fit content taller than their
+# fixed-height parent, while stretch tabs scroll inside their panel.
+with st.container(height=250, key="fixed-parent-stretch-form"):
+    with st.form("stretch_form", height="stretch"):
+        for index in range(5):
+            st.text_input(f"Form input {index}")
+        st.form_submit_button("Submit")
+
+with st.container(horizontal=True, height=250, key="fixed-row-stretch-card"):
+    with st.container(border=True, height="stretch", key="stretch-card-overflow"):
+        for line in range(12):
+            st.write(f"Line {line}")
+    st.write("Side")
+
+with st.container(height=250, key="fixed-parent-stretch-tabs"):
+    stretch_tabs = st.tabs(["Tab A", "Tab B"], height="stretch")
+    with stretch_tabs[0]:
+        for line in range(12):
+            st.write(f"Tab line {line}")
+
+# Short stretch blocks still fill the fixed parent. A stretch code block
+# scrolls inside the card instead of growing it to the full source.
+with st.container(height=250, key="fixed-parent-short-stretch-form"):
+    with st.form("short_stretch_form", height="stretch"):
+        st.text_input("Short form input")
+
+with st.container(height=250, key="fixed-parent-short-stretch-card"):
+    with st.container(border=True, height="stretch", key="short-stretch-card"):
+        st.write("One line")
+
+with st.container(height=300, key="fixed-parent-stretch-code"):
+    with st.container(border=True, height="stretch", key="stretch-code-card"):
+        st.code("\n".join(str(line) for line in range(80)), height="stretch")
+
+with st.container(horizontal=True, key="container-horizontal-stretch-graphviz"):
+    st.graphviz_chart(
+        "digraph { run -> intr; intr -> runbl; runbl -> run }", height="stretch"
+    )
+    st.button("Graph neighbor")
+
+with st.container(
+    horizontal=True,
+    vertical_alignment="distribute",
+    key="container-horizontal-distribute-text-area",
+):
+    st.text_area("Distribute text area")
+    with st.container(border=True):
+        for line in range(8):
+            st.write(f"Line {line}")

@@ -368,7 +368,11 @@ function TimeInput({
       if (match) {
         const hours = Number(match[1])
         const minutes = Number(match[2])
-        const seconds = match[3] !== undefined ? Number(match[3]) : 0
+        // HH:MM and digit-only matches have no seconds group. TypeScript still
+        // types every capture as string, so at(3) is what makes a missing
+        // group undefined.
+        const secondsGroup = match.at(3)
+        const seconds = secondsGroup !== undefined ? Number(secondsGroup) : 0
         e.preventDefault()
         if (hours > 23 || minutes > 59 || seconds > 59) {
           setPasteOverride({
@@ -782,11 +786,7 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TimeInputProto
 ): string | null | undefined {
-  const storedValue = widgetMgr.getStringValue(element)
-  if (storedValue === undefined) {
-    return undefined
-  }
-  return storedValue ?? null
+  return widgetMgr.getStringValue(element)
 }
 
 function getDefaultStateFromProto(element: TimeInputProto): string | null {
