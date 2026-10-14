@@ -240,6 +240,18 @@ def test_disabled_budget_does_not_track_entries() -> None:
     assert stats[0].value == 0
 
 
+def test_disabled_budget_skips_storage_version_bookkeeping() -> None:
+    """Default-disabled budgets leave hit and write version maps empty."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "disabled")
+
+    storage.set("key", b"value")
+    assert storage.get("key") == b"value"
+
+    assert storage._generations == {}
+    assert storage._access_versions == {}
+
+
 def test_global_budget_warning_is_emitted_once() -> None:
     """Only uncontainable writes warn, and they warn once."""
     budget = GlobalCacheBudget(max_bytes=2)

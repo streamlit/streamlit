@@ -95,6 +95,11 @@ class GlobalCacheBudget(StatsProvider):
         return (CACHE_DATA_EVICTIONS_FAMILY,)
 
     @property
+    def is_enabled(self) -> bool:
+        """Whether the process-wide byte budget is enabled."""
+        return self._max_bytes is not None
+
+    @property
     def total_bytes(self) -> int:
         with self._lock:
             self._drain_pending_unregisters_locked()
@@ -329,8 +334,9 @@ class GlobalCacheBudget(StatsProvider):
                     with self._lock:
                         self._global_evictions += 1
                 else:
-                    # A concurrent read changed this entry after selection. Leave it
-                    # cached; the next write enforces against a fresh LRU snapshot.
+                    # A concurrent read, rewrite, delete, or expiry changed this entry
+                    # after selection. Leave it cached; the next write enforces against
+                    # a fresh LRU snapshot.
                     continue
 
     def get_stats(
@@ -354,6 +360,8 @@ class GlobalCacheBudget(StatsProvider):
 
 
 class _GlobalCacheBudgetHolder:
+    """Mutable holder for resetting the lazily created budget in tests."""
+
     budget: GlobalCacheBudget | None = None
 
 

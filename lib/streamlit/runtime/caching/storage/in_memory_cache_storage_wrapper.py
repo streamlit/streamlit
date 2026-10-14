@@ -211,16 +211,17 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     "Key not found in mem cache"
                 ) from None
             else:
-                generation = self._generations[key]
-                self._next_access_version += 1
-                access_version = self._next_access_version
-                self._access_versions[key] = access_version
-                self._global_budget.record_read(
-                    self._global_storage_id,
-                    key,
-                    generation,
-                    access_version,
-                )
+                if self._global_budget.is_enabled:
+                    generation = self._generations[key]
+                    self._next_access_version += 1
+                    access_version = self._next_access_version
+                    self._access_versions[key] = access_version
+                    self._global_budget.record_read(
+                        self._global_storage_id,
+                        key,
+                        generation,
+                        access_version,
+                    )
                 _LOGGER.debug("Memory cache HIT: %s", key)
 
         return entry
@@ -243,21 +244,22 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     self._oversized_warning_emitted = True
                     should_warn = True
                 self._mem_cache[key] = entry_bytes
-                self._next_generation += 1
-                generation = self._next_generation
-                self._generations[key] = generation
-                self._next_access_version += 1
-                access_version = self._next_access_version
-                self._access_versions[key] = access_version
-                removals = self._take_pending_removals()
-                self._report_removals(removals)
-                self._global_budget.record_write(
-                    self._global_storage_id,
-                    key,
-                    len(entry_bytes),
-                    generation,
-                    access_version,
-                )
+                if self._global_budget.is_enabled:
+                    self._next_generation += 1
+                    generation = self._next_generation
+                    self._generations[key] = generation
+                    self._next_access_version += 1
+                    access_version = self._next_access_version
+                    self._access_versions[key] = access_version
+                    removals = self._take_pending_removals()
+                    self._report_removals(removals)
+                    self._global_budget.record_write(
+                        self._global_storage_id,
+                        key,
+                        len(entry_bytes),
+                        generation,
+                        access_version,
+                    )
             self._global_budget.enforce_budget((self._global_storage_id, key))
         if should_warn:
             _LOGGER.warning(
@@ -304,7 +306,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         expected_generation: int,
         expected_access_version: int,
     ) -> bool:
-        """Remove one in-memory entry without touching persistent storage."""
+        """Remove the selected generation without touching persistent storage.
+
+        Returns ``False`` if the entry changed or disappeared after selection.
+        """
         with self._mem_cache_lock:
             if (
                 self._generations.get(key) != expected_generation

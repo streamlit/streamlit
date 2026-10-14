@@ -839,6 +839,8 @@ class CachedFunc(Generic[P, R]):
                 # below.
                 pass
 
+            invalidation_token = cache.capture_invalidation_token(value_key)
+
             # We acquired the lock before any other thread. Compute the value!
             with self._info.cached_message_replay_ctx.calling_cached_function(
                 self._info.func
@@ -848,7 +850,12 @@ class CachedFunc(Generic[P, R]):
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, computed_value
             )
-            return self._store_computed_value(cache, value_key, computed_value)
+            return self._store_computed_value(
+                cache,
+                value_key,
+                computed_value,
+                invalidation_token=invalidation_token,
+            )
 
     def _store_computed_value(
         self,

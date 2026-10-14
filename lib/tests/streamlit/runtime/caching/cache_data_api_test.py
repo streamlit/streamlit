@@ -286,6 +286,56 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
+    def test_clear_invalidates_inflight_sync_write(self) -> None:
+        """A clear during synchronous computation discards the older write."""
+        compute_started = threading.Event()
+        continue_compute = threading.Event()
+        calls = 0
+
+        @st.cache_data
+        def foo() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                compute_started.set()
+                assert continue_compute.wait(timeout=5)
+            return calls
+
+        def clear_during_compute() -> None:
+            assert compute_started.wait(timeout=5)
+            foo.clear()
+            continue_compute.set()
+
+        clearer = threading.Thread(target=clear_during_compute)
+        clearer.start()
+        assert foo() == 1
+        clearer.join(timeout=5)
+
+        assert not clearer.is_alive()
+        assert foo() == 2
+        assert foo() == 2
+
+    def test_clear_all_closes_storage_when_manager_clear_fails(self) -> None:
+        """Storage closes even when the manager cannot clear persistent data."""
+        cache = _data_caches.get_cache(
+            key="clear_failure",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="clear_failure",
+        )
+        cache.write_result("vk", 1, [])
+        manager = _data_caches.get_storage_manager()
+
+        with (
+            patch.object(manager, "clear_all", side_effect=OSError("clear failed")),
+            patch.object(cache.storage, "close", wraps=cache.storage.close) as close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            _data_caches.clear_all()
+
+        close.assert_called_once_with()
+
     def test_cached_class_method_clear_args(self):
         self.x = 0
 
@@ -1307,7 +1357,13 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         self,
     ) -> None:
         """A refresh finishing after memory eviction leaves the key absent."""
-        cache = self._background_cache("bg_global_eviction")
+        budget = GlobalCacheBudget(max_bytes=1024)
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            cache = self._background_cache("bg_global_eviction")
         storage = cache.storage
         assert isinstance(storage, InMemoryCacheStorageWrapper)
         expected_generation = cache.generation

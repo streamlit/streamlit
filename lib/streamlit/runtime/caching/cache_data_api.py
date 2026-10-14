@@ -354,16 +354,18 @@ class DataCaches(StatsProvider):
             for data_cache in all_caches:
                 data_cache.mark_detached()
             try:
-                # try to remove in optimal way if such ability provided by
-                # storage manager clear_all method;
-                # if not implemented, fallback to remove all
-                # available storages one by one
-                self.get_storage_manager().clear_all()
-            except NotImplementedError:
+                try:
+                    # try to remove in optimal way if such ability provided by
+                    # storage manager clear_all method;
+                    # if not implemented, fallback to remove all
+                    # available storages one by one
+                    self.get_storage_manager().clear_all()
+                except NotImplementedError:
+                    for data_cache in all_caches:
+                        data_cache.clear()
+            finally:
                 for data_cache in all_caches:
-                    data_cache.clear()
-            for data_cache in all_caches:
-                data_cache.storage.close()
+                    data_cache.storage.close()
 
     def get_stats(
         self,
