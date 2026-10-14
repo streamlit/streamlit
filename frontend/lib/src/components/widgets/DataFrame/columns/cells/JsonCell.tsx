@@ -84,16 +84,12 @@ const renderer: CustomRenderer<JsonCell> = {
     (c.data as Record<string, unknown>).kind === "json-cell",
   draw: (args, cell) => {
     const { value, displayValue } = cell.data
-    drawTextCell(
-      args,
-      displayValue ?? toJsonString(value) ?? "",
-      cell.contentAlign
-    )
+    drawTextCell(args, displayValue ?? toJsonString(value), cell.contentAlign)
     return true
   },
   measure: (ctx, cell, theme) => {
     const { value, displayValue } = cell.data
-    const displayText = displayValue ?? toJsonString(value) ?? ""
+    const displayText = displayValue ?? toJsonString(value)
     return (
       (displayText ? ctx.measureText(displayText).width : 0) +
       theme.cellHorizontalPadding * 2

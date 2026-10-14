@@ -247,9 +247,22 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page.
+Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script.
 
 ```python
+# BAD: Blocks the script in an endless loop
+placeholder = st.empty()
+while True:
+    placeholder.metric("Active users", get_active_user_count())
+    time.sleep(30)
+
+# BAD: Reruns the entire app on a timer
+st.metric("Active users", get_active_user_count())
+time.sleep(30)
+st.rerun()
+
+
+# GOOD: Only the fragment reruns on a timer
 @st.fragment(run_every="30s")
 def live_metrics():
     st.metric("Active users", get_active_user_count())
@@ -277,6 +290,8 @@ if submitted:
 ```
 
 For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
+
+If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form. This is an advanced pattern; see "Skip reruns on individual widgets" in `performance.md` for an example and caveats.
 
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 
@@ -375,6 +390,18 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+Keep keys unique across all elements created in a run. In loops, derive them from a stable item ID.
+
+```python
+# BAD: Repeated key raises StreamlitDuplicateElementKey
+for item in items:
+    st.checkbox(item.name, key="done")
+
+# GOOD: Unique, stable key per item
+for item in items:
+    st.checkbox(item.name, key=f"done_{item.id}")
 ```
 
 Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.

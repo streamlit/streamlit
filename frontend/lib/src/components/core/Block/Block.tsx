@@ -131,12 +131,49 @@ const COLUMN_CONTENT_JUSTIFY: Partial<
     BlockProto.FlexContainer.Justify.JUSTIFY_END,
 }
 
+/**
+ * Layout wrapper overrides for a stretch-height container or form, keyed by
+ * its parent's direction. The block fills its parent but grows to fit taller
+ * content instead of letting it spill past its border. Tabs don't use these
+ * because they scroll inside the active panel instead.
+ */
+const STRETCH_BLOCK_WRAPPER_STYLES = {
+  /**
+   * Replaces the `height: 100%` from `useLayoutStyles` with a flex basis, so
+   * the block's automatic minimum size is its content height. The flexed size
+   * still counts as definite for nested stretch children.
+   */
+  [Direction.VERTICAL]: { height: "auto", flex: "0 1 100%" },
+  /**
+   * Drops the `maxHeight: 100%` from `useLayoutStyles`, so taller content can
+   * grow the block past a fixed-height row. In a single-line row
+   * (`wrap=False`), `align-self: stretch` keeps the wrapper at the row height,
+   * so the inner block grows by overflowing it and the row scrolls to it.
+   */
+  [Direction.HORIZONTAL]: { maxHeight: undefined },
+} as const
+
+/** Derives a block's FlexContextProvider height props from its height config. */
+const getHeightContextProps = (
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
+): { hasFixedHeight: boolean; hasStretchHeight: boolean } => ({
+  hasFixedHeight:
+    (heightConfig?.pixelHeight ?? 0) > 0 || (heightConfig?.remHeight ?? 0) > 0,
+  hasStretchHeight: heightConfig?.useStretch ?? false,
+})
+
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
   /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
   padContentEnd?: boolean
+  /**
+   * Height config that decides whether stretch-height children get a
+   * definite height. Defaults to the node's own config. Tab panels pass the
+   * tab container's config because the tab nodes have none.
+   */
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export const ContainerContentsWrapper = (
@@ -167,6 +204,9 @@ export const ContainerContentsWrapper = (
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
       // resets the same way because FlexBoxContainer omits this prop.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
+      {...getHeightContextProps(
+        props.heightConfig ?? props.node.deltaBlock.heightConfig
+      )}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -226,11 +266,10 @@ export const FlexBoxContainer = (
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // Block height:
     // - pixel: set here so the block can scroll.
-    // - stretch: always fill the LayoutWrapper, which does the sizing (in a
-    //   horizontal parent it stretches via align-self and layout_styles.height
-    //   is "auto").
+    // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
+    //   auto height lets taller content grow the wrapper instead of overflowing.
     height: props.node.deltaBlock.heightConfig?.useStretch
-      ? "100%"
+      ? "auto"
       : layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
@@ -258,6 +297,7 @@ export const FlexBoxContainer = (
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
+      {...getHeightContextProps(props.node.deltaBlock.heightConfig)}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -371,6 +411,13 @@ export const BlockNodeRenderer = (
   const isStepBlock =
     node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
 
+  const isStretchHeight = node.deltaBlock.heightConfig?.useStretch ?? false
+  const stretchWrapperStyles = isStretchHeight
+    ? STRETCH_BLOCK_WRAPPER_STYLES[
+        flexContext?.direction ?? Direction.VERTICAL
+      ]
+    : undefined
+
   const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
@@ -469,6 +516,7 @@ export const BlockNodeRenderer = (
         widgetMgr={props.widgetMgr}
         border={border}
         overflow={styles.overflow}
+        isStretchHeight={isStretchHeight}
       >
         {child}
       </Form>
@@ -523,6 +571,7 @@ export const BlockNodeRenderer = (
         <ContainerContentsWrapper
           {...mappedChildProps}
           height={contentHeight}
+          heightConfig={heightConfig}
         />
       )
     }
@@ -553,6 +602,7 @@ export const BlockNodeRenderer = (
           keyClassOnWrapper ? userKey : undefined
         )}
         {...styles}
+        {...stretchWrapperStyles}
       >
         {containerElement}
       </StyledLayoutWrapper>

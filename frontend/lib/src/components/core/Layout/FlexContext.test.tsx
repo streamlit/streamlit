@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest"
 import {
   FlexContext,
   FlexContextProvider,
+  hasStretchHeightFallback,
   type IFlexContext,
 } from "./FlexContext"
 import { Direction } from "./utils"
@@ -46,6 +47,12 @@ const ContextConsumer: FC = () => {
       <div data-testid="isInContentWidthContainer">
         {String(context?.isInContentWidthContainer)}
       </div>
+      <div data-testid="hasDefiniteHeight">
+        {String(context?.hasDefiniteHeight)}
+      </div>
+      <div data-testid="hasStretchHeightFallback">
+        {String(hasStretchHeightFallback(context))}
+      </div>
     </div>
   )
 }
@@ -55,14 +62,25 @@ const NestedProvider: FC<{
   direction: Direction
   hasContentWidth?: boolean
   hasFixedWidth?: boolean
+  hasFixedHeight?: boolean
+  hasStretchHeight?: boolean
   children: ReactNode
-}> = ({ direction, hasContentWidth, hasFixedWidth, children }) => {
+}> = ({
+  direction,
+  hasContentWidth,
+  hasFixedWidth,
+  hasFixedHeight,
+  hasStretchHeight,
+  children,
+}) => {
   const parentContext = useContext(FlexContext)
   return (
     <FlexContextProvider
       direction={direction}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
+      hasFixedHeight={hasFixedHeight}
+      hasStretchHeight={hasStretchHeight}
       parentContext={parentContext}
     >
       {children}
@@ -356,6 +374,77 @@ describe("FlexContextProvider", () => {
       expect(screen.getByTestId("isInContentWidthContainer").textContent).toBe(
         "false"
       )
+    })
+  })
+
+  describe("hasDefiniteHeight", () => {
+    it.each([
+      ["a pixel-height container", { hasFixedHeight: true }, "true", "false"],
+      ["a content-height container", {}, "false", "true"],
+      [
+        "a stretch-height container without a definite parent",
+        { hasStretchHeight: true },
+        "false",
+        "true",
+      ],
+    ])(
+      "is computed for %s",
+      (_label, heightProps, expectedDefinite, expectedFallback) => {
+        render(
+          <NestedProvider direction={Direction.VERTICAL} {...heightProps}>
+            <ContextConsumer />
+          </NestedProvider>
+        )
+
+        expect(screen.getByTestId("hasDefiniteHeight").textContent).toBe(
+          expectedDefinite
+        )
+        expect(
+          screen.getByTestId("hasStretchHeightFallback").textContent
+        ).toBe(expectedFallback)
+      }
+    )
+
+    it("propagates through stretch-height containers inside a pixel-height container", () => {
+      render(
+        <NestedProvider direction={Direction.VERTICAL} hasFixedHeight={true}>
+          <NestedProvider
+            direction={Direction.HORIZONTAL}
+            hasStretchHeight={true}
+          >
+            <ContextConsumer />
+          </NestedProvider>
+        </NestedProvider>
+      )
+
+      expect(screen.getByTestId("hasDefiniteHeight").textContent).toBe("true")
+      expect(screen.getByTestId("hasStretchHeightFallback").textContent).toBe(
+        "false"
+      )
+    })
+
+    it("stops propagating at a content-height container", () => {
+      render(
+        <NestedProvider direction={Direction.VERTICAL} hasFixedHeight={true}>
+          <NestedProvider direction={Direction.VERTICAL}>
+            <NestedProvider
+              direction={Direction.VERTICAL}
+              hasStretchHeight={true}
+            >
+              <ContextConsumer />
+            </NestedProvider>
+          </NestedProvider>
+        </NestedProvider>
+      )
+
+      expect(screen.getByTestId("hasDefiniteHeight").textContent).toBe("false")
+      expect(screen.getByTestId("hasStretchHeightFallback").textContent).toBe(
+        "true"
+      )
+    })
+
+    it("keeps the fallback height without a provider", () => {
+      expect(hasStretchHeightFallback(null)).toBe(true)
     })
   })
 

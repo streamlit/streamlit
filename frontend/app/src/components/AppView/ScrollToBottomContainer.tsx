@@ -25,15 +25,18 @@ interface Props {
   tabIndex: number
   isEmbedded: boolean
   disableScrolling: boolean
+  id?: string
   children: ReactNode
 }
 
 export default function ScrollToBottomContainer(props: Props): ReactElement {
-  const { className, tabIndex, children, isEmbedded, disableScrolling } = props
+  const { className, tabIndex, children, isEmbedded, disableScrolling, id } =
+    props
   const scrollContainerRef = useScrollToBottom(true)
 
   return (
     <StyledAppViewMain
+      id={id}
       tabIndex={tabIndex}
       className={className}
       isEmbedded={isEmbedded}

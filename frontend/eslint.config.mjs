@@ -664,6 +664,16 @@ export default defineConfig([
       "@typescript-eslint/prefer-nullish-coalescing": "error",
     },
   },
+  // Flags redundant optional chains and always-true checks.
+  // Tests stay off until production source is clean. Elements and non-widget
+  // packages stay off until those directories are cleaned.
+  {
+    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],

@@ -364,5 +364,6 @@ describe("ChartColumn", () => {
     const mockColumn = getLineChartColumn()
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
+    expect(mockColumn.getCellValue(cell)).toBeNull()
   })
 })

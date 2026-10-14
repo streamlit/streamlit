@@ -433,10 +433,6 @@ export function useRegisterShortcut({
       keyboardEvent: KeyboardEvent,
       _event: HotkeysEvent
     ): void => {
-      if (disabled) {
-        return
-      }
-
       if (shouldBlockShortcutInInput(parsedShortcut, keyboardEvent)) {
         return
       }

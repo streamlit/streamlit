@@ -66,6 +66,11 @@ message Dataframe {
   // cell-level accessibility tree regardless.
   optional string alt = 15;
 
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Inside a form, this flag has no effect because the form
+  // batches values until submit.
+  bool ignore_rerun = 16;
+
   // Available editing modes:
   enum EditingMode {
     READ_ONLY = 0; // Read-only table.

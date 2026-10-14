@@ -1663,6 +1663,10 @@ describe("Multiselect tag accessibility", () => {
     act(() => tags[0].focus())
     expect(tags[0]).toHaveFocus()
 
+    // ArrowLeft on the first tag does not wrap to the last tag.
+    await user.keyboard("{ArrowLeft}")
+    expect(tags[0]).toHaveFocus()
+
     // ArrowRight moves to next
     await user.keyboard("{ArrowRight}")
     expect(tags[1]).toHaveFocus()
