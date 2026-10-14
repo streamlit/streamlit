@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -48,6 +48,28 @@ const getProps = (
   widgetMgr: createWidgetMgr(),
   ...props,
 })
+
+/**
+ * Render and open a popover inside a panel the test can hide.
+ * `insideDetails` wraps that panel in `<details>`, which is what makes
+ * expander `inert` count as hidden.
+ */
+async function renderOpenPopoverInPanel(
+  props?: PopoverProps,
+  options?: { insideDetails?: boolean }
+): Promise<HTMLElement> {
+  const user = userEvent.setup()
+  const panel = (
+    <div data-testid="panel">
+      <Popover {...(props ?? getProps())}>
+        <div>popover content</div>
+      </Popover>
+    </div>
+  )
+  render(options?.insideDetails ? <details open>{panel}</details> : panel)
+  await user.click(screen.getByText("label"))
+  return screen.getByTestId("panel")
+}
 
 describe("Popover container", () => {
   it("renders without crashing", () => {
@@ -169,6 +191,89 @@ describe("Popover container", () => {
 
     await user.click(screen.getByText("outside"))
     expect(screen.queryByText("test")).not.toBeInTheDocument()
+  })
+
+  it("closes when an expander panel becomes inert", async () => {
+    // A collapsed expander sets inert on its panel inside <details>.
+    // checkVisibility ignores inert, and the toggle does not always reach
+    // the document click handler.
+    const panel = await renderOpenPopoverInPanel(undefined, {
+      insideDetails: true,
+    })
+    expect(screen.getByText("popover content")).toBeVisible()
+
+    panel.setAttribute("inert", "")
+
+    await waitFor(() => {
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    )
+  })
+
+  it("stays open when a dialog marks an ancestor inert", async () => {
+    // A modal dialog sets inert on the app root, outside <details>. The
+    // trigger is still shown, so the popover must stay open and must not
+    // record a user close (that rerun would dismiss the dialog).
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+
+    render(
+      <div data-testid="app-root">
+        <Popover {...getProps({ id: widgetId }, { widgetMgr, fragmentId })}>
+          <div>popover content</div>
+        </Popover>
+      </div>
+    )
+    await user.click(screen.getByText("label"))
+    expect(screen.getByText("popover content")).toBeVisible()
+    setBoolValueSpy.mockClear()
+
+    screen.getByTestId("app-root").setAttribute("inert", "")
+    // The observer callback is a microtask. A macrotask waits for it.
+    await new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
+
+    expect(screen.getByText("popover content")).toBeVisible()
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("closes when checkVisibility reports the trigger hidden", async () => {
+    // Inactive tabs hide the panel with display: none, which checkVisibility
+    // reports. jsdom lacks that API, so this stubs it. The class change only
+    // wakes the observer.
+    let visible = true
+    // HTMLElement declares checkVisibility as required, so intersecting with
+    // it would make `delete` illegal. This narrower cast keeps it optional.
+    const proto = HTMLElement.prototype as {
+      checkVisibility?: () => boolean
+    }
+    const original = proto.checkVisibility
+    proto.checkVisibility = () => visible
+
+    try {
+      const panel = await renderOpenPopoverInPanel()
+      expect(screen.getByText("popover content")).toBeVisible()
+
+      visible = false
+      panel.classList.add("is-hidden")
+
+      await waitFor(() => {
+        expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      })
+    } finally {
+      if (original) {
+        proto.checkVisibility = original
+      } else {
+        delete proto.checkVisibility
+      }
+    }
   })
 
   it("stays open when interacting with a Streamlit overlay root", async () => {
@@ -436,6 +541,65 @@ describe("Dynamic popover (widget mode)", () => {
       formId: undefined,
       fragmentId,
       fromUser: true,
+    })
+  })
+
+  it("records a user close when the trigger is hidden", async () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+
+    const panel = await renderOpenPopoverInPanel(
+      getProps({ id: widgetId }, { widgetMgr, fragmentId }),
+      { insideDetails: true }
+    )
+    panel.setAttribute("inert", "")
+
+    await waitFor(() => {
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    })
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: true,
+    })
+  })
+
+  it("does not record a user close when it mounts already hidden", () => {
+    // Restored open inside a collapsed expander. The user never saw it, so
+    // the close must not use fromUser and must not start a rerun.
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+
+    render(
+      <details open>
+        {/* React 18 drops an unknown boolean prop, so set inert as a string. */}
+        <div {...{ inert: "" }}>
+          <Popover
+            {...getProps(
+              { id: widgetId, open: true },
+              { widgetMgr, fragmentId }
+            )}
+          >
+            <div>popover content</div>
+          </Popover>
+        </div>
+      </details>
+    )
+
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+      widgetId,
+      false,
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId,
+      fromUser: false,
     })
   })
 
@@ -717,6 +881,24 @@ describe("passive state persistence", () => {
     await user.click(screen.getByText("label"))
 
     expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
+  })
+
+  it("persists closed state when the trigger is hidden", async () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const panel = await renderOpenPopoverInPanel(
+      getProps({}, { widgetMgr, blockId }),
+      { insideDetails: true }
+    )
+    expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
+
+    panel.setAttribute("inert", "")
+
+    await waitFor(() => {
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    })
+    expect(widgetMgr.getElementState(blockId, "open")).toBe(false)
   })
 
   it("persists closed state when Escape closes a passively keyed popover", async () => {

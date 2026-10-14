@@ -40,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(30)
+    expect(popover_elements).to_have_count(32)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -730,3 +730,42 @@ def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
         )
     ).to_be_visible()
     expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")
+
+
+def test_popover_closes_when_its_trigger_is_hidden(app: Page):
+    """An open popover closes when its trigger is hidden, and stays closed
+    when that trigger is shown again.
+
+    Covers an inactive tab and a collapsed expander. Both hide the trigger
+    without unmounting the portaled popover body.
+    """
+    # Inactive tab panel (display: none).
+    popover_body = open_popover(app, "Popover in tab")
+    expect(popover_body).to_be_visible()
+    expect_markdown(popover_body, "Popover in tab content")
+
+    app.get_by_role("tab", name="Tab without popover").click()
+
+    expect(app.get_by_test_id("stPopoverBody")).to_have_count(0)
+    expect(app.get_by_text("Tab without popover content")).to_be_visible()
+
+    # Returning to the tab leaves the popover closed.
+    app.get_by_role("tab", name="Tab with popover").click()
+    expect(app.get_by_text("Popover in tab content")).not_to_be_visible()
+    expect(get_popover(app, "Popover in tab").get_by_role("button")).to_have_attribute(
+        "aria-expanded", "false"
+    )
+
+    # Collapsed expander (inert). The body is portaled outside the expander,
+    # so it has to be looked up from the page.
+    expander = app.get_by_test_id("stExpander").filter(has_text="Expander with popover")
+    popover_body = open_popover(app, "Popover in expander")
+    expect(popover_body).to_be_visible()
+    expect_markdown(popover_body, "Popover in expander content")
+
+    expander.locator("summary").click()
+
+    expect(app.get_by_test_id("stPopoverBody")).to_have_count(0)
+    # Reopening the expander leaves the popover closed.
+    expander.locator("summary").click()
+    expect(app.get_by_text("Popover in expander content")).not_to_be_visible()

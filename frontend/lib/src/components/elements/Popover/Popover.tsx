@@ -20,6 +20,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -101,6 +102,45 @@ export interface PopoverProps {
   /** Block-level ID for CSS key styling and passive persistence. */
   blockId?: string
   fragmentId?: string
+}
+
+/**
+ * Attributes the observer watches. A change only closes the popover when
+ * `isPopoverTriggerHidden` then reports the trigger as hidden.
+ */
+const TRIGGER_VISIBILITY_ATTRIBUTES = [
+  "inert",
+  "class",
+  "style",
+  "hidden",
+  "open",
+]
+
+/**
+ * Whether `trigger` is hidden from the user.
+ *
+ * `checkVisibility()` catches `display: none` (inactive tabs) but ignores
+ * `inert`. Expander collapse sets `inert` on the panel inside `<details>`
+ * before the height animation finishes, so that `inert` counts. A dialog's
+ * modal `inert` sits on an ancestor outside `<details>` and must not close
+ * the popover. When `checkVisibility` is missing (jsdom does no layout), only
+ * that expander `inert` and the `hidden` attribute count, so unit tests opt
+ * in with those or a mock.
+ */
+function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
+  // Only expander inert. A dialog marks an ancestor outside `<details>` inert
+  // while the trigger is still shown.
+  const inertHost = trigger.closest("[inert]")
+  if (inertHost?.closest("details")) {
+    return true
+  }
+  if (trigger.closest("[hidden]") !== null) {
+    return true
+  }
+  if (typeof trigger.checkVisibility === "function") {
+    return !trigger.checkVisibility()
+  }
+  return false
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -191,19 +231,31 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
-  const handleClose = useCallback((): void => {
-    setOpen(false)
+  // `fromUser` is false when the popover mounts already hidden: the user
+  // never saw it, so this must not start a rerun. A later hide (tab switch,
+  // expander collapse) is a user action and passes true.
+  const closePopover = useCallback(
+    (fromUser: boolean): void => {
+      setOpen(false)
 
-    if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, false, {
-        formId: undefined,
-        fragmentId,
-        fromUser: true,
-      })
-    } else if (isPassivelyKeyed) {
-      setStoredOpen(false)
-    }
-  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
+      if (widgetId) {
+        widgetMgr?.setBoolValue(widgetId, false, {
+          formId: undefined,
+          fragmentId,
+          fromUser,
+        })
+      } else if (isPassivelyKeyed) {
+        // Passive popover (keyed but no on_change): persist the closed state
+        // so it survives reruns triggered by other widgets, without a rerun.
+        setStoredOpen(false)
+      }
+    },
+    [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen]
+  )
+
+  const handleClose = useCallback((): void => {
+    closePopover(true)
+  }, [closePopover])
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -413,6 +465,45 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       document.removeEventListener("keydown", handleKeyDown, true)
     }
   }, [open, handleClose])
+
+  // Close when the trigger is hidden, before paint. The body is portaled, so
+  // hiding the trigger does not unmount it and Floating UI would pin it to the
+  // viewport corner:
+  // - an inactive tab sets `display: none` (its click never bubbles)
+  // - a collapsed expander sets `inert` before the animation ends
+  // The first check covers a trigger that mounted already hidden, and that
+  // close is not a user action.
+  useLayoutEffect(() => {
+    if (!open) return
+    const trigger = triggerRef.current
+    if (!trigger) return
+
+    const closeIfHidden = (fromUser: boolean): void => {
+      if (isPopoverTriggerHidden(trigger)) {
+        closePopover(fromUser)
+      }
+    }
+
+    // An already-hidden trigger produces no later mutation, for example a
+    // popover restored open inside an inactive tab.
+    closeIfHidden(false)
+
+    // The tab panel or expander is the node that changes. MutationObserver
+    // does not bubble, so observe each ancestor.
+    const observer = new MutationObserver(() => {
+      closeIfHidden(true)
+    })
+    let node: HTMLElement | null = trigger
+    while (node) {
+      observer.observe(node, {
+        attributes: true,
+        attributeFilter: TRIGGER_VISIBILITY_ATTRIBUTES,
+      })
+      node = node.parentElement
+    }
+
+    return () => observer.disconnect()
+  }, [open, closePopover])
 
   // Merge the floating ref with our local popoverBodyRef for dismissal logic.
   const setFloatingRef = useCallback(
