@@ -37,7 +37,7 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
-A `key` keeps the value while the widget is rendered; the value is dropped on a run that does not render the widget unless [`persist_state` is set](#persisting-widget-values-persist_state).
+By default, a keyed widget's value is dropped when the widget stops being rendered. Use [`persist_state`](#persisting-widget-values-persist_state) to keep it without exposing it in the URL; `bind="query-params"` also preserves the value.
 
 ## Syncing a widget to the URL (shareable links)
 
