@@ -573,11 +573,12 @@ class AppTest:
         return self
 
     def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
-        """Register bytes for file-upload widgets with the file manager.
+        """Register bytes for widgets that upload files.
 
-        Covers ``st.file_uploader``, ``st.audio_input``, and ``st.camera_input``.
-        These widgets deserialize ``file_uploader_state_value`` through
-        ``MemoryUploadedFileManager``.
+        Covers ``st.file_uploader``, ``st.audio_input``, ``st.camera_input``,
+        and files attached to ``st.chat_input``. Those widgets read the bytes
+        back from ``MemoryUploadedFileManager`` while deserializing widget
+        state.
         """
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
@@ -587,6 +588,7 @@ class AppTest:
             *self._tree.file_uploader,
             *self._tree.audio_input,
             *self._tree.camera_input,
+            *self._tree.chat_input,
         ):
             form_id = _widget_form_id(widget)
             saved_files = widget._files
