@@ -566,9 +566,9 @@ class CacheDataAPI:
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
 
-        Streamlit limits the combined pickled size of in-memory ``st.cache_data``
-        entries with ``server.maxCachedDataSize`` (2 GiB by default). Set that
-        option to ``"0"`` to disable the process-wide budget.
+        To limit the combined pickled size of all in-memory ``st.cache_data``
+        entries, configure ``server.maxCachedDataSize`` with a binary-unit
+        string such as ``"2gb"``. The process-wide budget is disabled by default.
 
         A function's arguments must be hashable to cache it. Streamlit makes a
         best effort to hash a variety of objects, but the fallback hashing method
@@ -624,8 +624,8 @@ class CacheDataAPI:
             The maximum number of entries to keep in this function's cache, or
             ``None`` (default) for no entry-count limit. When a new entry is added
             to a full cache, Streamlit removes the least-recently-used entry.
-            ``None`` does not disable the process-wide
-            ``server.maxCachedDataSize`` budget.
+            An explicitly configured process-wide ``server.maxCachedDataSize``
+            budget applies independently.
 
         max_size : int, str, or None
             The maximum serialized (pickled) size of this function's in-memory
@@ -633,7 +633,8 @@ class CacheDataAPI:
             string, it must include a unit, like ``"500MB"`` or ``"1.5GiB"``.
             Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are equivalent.
             If this is ``None`` (default), this function has no per-function limit.
-            The process-wide ``server.maxCachedDataSize`` budget applies.
+            An explicitly configured process-wide ``server.maxCachedDataSize``
+            budget applies independently.
             Reading a cached value refreshes its recency, so a value that is still
             used is evicted after values that are not.
 
@@ -644,7 +645,8 @@ class CacheDataAPI:
             only the in-memory copy is dropped; a later read can load the disk copy
             again. This limits pickled bytes, not the total memory used by the Python
             process. With ``scope="session"``, the limit applies separately to each
-            session's cache, while ``server.maxCachedDataSize`` counts every session.
+            session's cache. If configured, ``server.maxCachedDataSize`` counts every
+            session.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is

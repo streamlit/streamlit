@@ -124,10 +124,9 @@ dataframes, and config.
 
 ### Bound cache growth
 
-By default, Streamlit applies a 2 GiB process-wide budget to the combined serialized
-size of in-memory `st.cache_data` entries. For any cached function that stores changing
-objects (user-specific data, parameterized queries), set a tighter limit that matches
-its workload:
+By default, `st.cache_data` has no serialized-byte limit. For any cached function that
+stores changing objects (user-specific data, parameterized queries), set a limit that
+matches its workload:
 
 ```python
 # BAD: No workload-specific limit
@@ -161,10 +160,11 @@ age. `max_size` measures serialized bytes, not live Python heap size or process 
 A single value larger than `max_size` is retained and logs a warning.
 
 The process-wide `server.maxCachedDataSize` setting covers global and session-scoped
-data caches. Set it to a binary unit string such as `"4gb"` (powers of 1024, so `"gb"`
-and `"gib"` are equivalent), or to `"0"` to disable the safety net. It also retains a
-newly written value if that value alone exceeds the budget. With `persist="disk"`,
-both byte limits evict only the in-memory copy and do not bound disk usage.
+data caches and is disabled by default. Enable it with a binary unit string such as
+`"4gb"` (powers of 1024, so `"gb"` and `"gib"` are equivalent), or set it to `"0"` to
+disable the budget. It retains a newly written value if that value alone exceeds the
+budget. With `persist="disk"`, both byte limits evict only the in-memory copy and do
+not bound disk usage.
 
 ## Fragments
 

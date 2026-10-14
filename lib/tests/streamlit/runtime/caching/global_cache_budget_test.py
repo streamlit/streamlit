@@ -90,6 +90,13 @@ def test_budget_from_config_uses_configured_limit() -> None:
     assert budget._max_bytes == 1024
 
 
+def test_budget_from_default_config_is_disabled() -> None:
+    """The default config does not create a process-wide byte limit."""
+    budget = GlobalCacheBudget.from_config()
+
+    assert budget._max_bytes is None
+
+
 def test_budget_evicts_globally_least_recently_used_entry() -> None:
     """A write over budget evicts the globally least-recently-used entry."""
     budget = GlobalCacheBudget(max_bytes=6)
@@ -214,14 +221,23 @@ def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
 
 
 def test_disabled_budget_does_not_track_entries() -> None:
-    """A disabled budget neither tracks nor evicts cache entries."""
+    """A disabled budget neither tracks, evicts, nor warns about cache entries."""
     budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "disabled")
 
-    storage.set("key", b"value")
+    with patch(
+        "streamlit.runtime.caching.global_cache_budget._LOGGER.warning"
+    ) as warning:
+        storage.set("first", b"value")
+        storage.set("second", b"another value")
 
     assert budget.total_bytes == 0
-    assert storage.get("key") == b"value"
+    assert storage.get("first") == b"value"
+    assert storage.get("second") == b"another value"
+    warning.assert_not_called()
+    stats = budget.get_stats()[CACHE_DATA_EVICTIONS_FAMILY]
+    assert isinstance(stats[0], CounterStat)
+    assert stats[0].value == 0
 
 
 def test_global_budget_warning_is_emitted_once() -> None:
