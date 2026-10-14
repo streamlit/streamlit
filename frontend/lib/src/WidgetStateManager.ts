@@ -954,9 +954,12 @@ export class WidgetStateManager {
     )
   }
 
-  /** The forms the user has submitted while they have been on the page. */
-  public getSubmittedFormIds(): ReadonlySet<string> {
-    return new Set(this.submittedForms.keys())
+  /**
+   * The forms the user has submitted while they have been on the page, each
+   * mapped to the ID of the submit button that submitted it last.
+   */
+  public getSubmittedForms(): ReadonlyMap<string, string> {
+    return new Map(this.submittedForms)
   }
 
   public getActiveWidgetStates(activeIds: Set<string>): WidgetStates {

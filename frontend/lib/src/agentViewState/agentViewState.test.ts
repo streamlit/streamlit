@@ -43,8 +43,10 @@ import {
   type AgentViewState,
   AgentViewStatePublisher,
   buildAgentViewState,
+  DEFAULT_MAX_LENGTH,
   indexWidgets,
   toScriptSafeJson,
+  writeAgentViewState,
 } from "./agentViewState"
 
 // WidgetStateManager keeps its forms data in an Immer-produced Map.
@@ -82,29 +84,46 @@ function appRoot(main: AppNode[], sidebar: AppNode[] = []): AppRoot {
   } as unknown as AppRoot
 }
 
-function build(
+interface BuildOptions {
+  submittedForms?: Map<string, string>
+  page?: string
+  queryString?: string
+  maxLength?: number
+}
+
+function buildOrNull(
   tree: AppRoot,
   states: WidgetState.$Properties[],
   {
-    submittedFormIds = new Set<string>(),
+    submittedForms = new Map<string, string>(),
     page = "",
     queryString = "",
-  }: {
-    submittedFormIds?: Set<string>
-    page?: string
-    queryString?: string
-  } = {}
-): AgentViewState {
+    maxLength = DEFAULT_MAX_LENGTH,
+  }: BuildOptions = {}
+): AgentViewState | null {
   const committed = new Map(
     states.map(state => [state.id as string, new WidgetState(state)])
   )
   return buildAgentViewState({
     index: indexWidgets(tree),
     committed,
-    submittedFormIds,
+    submittedForms,
     page,
     queryString,
+    maxLength,
   })
+}
+
+function build(
+  tree: AppRoot,
+  states: WidgetState.$Properties[],
+  options: BuildOptions = {}
+): AgentViewState {
+  const state = buildOrNull(tree, states, options)
+  if (!state) {
+    throw new Error("No document fits the budget")
+  }
+  return state
 }
 
 describe("agentKeyFromElementId", () => {
@@ -325,27 +344,156 @@ describe("buildAgentViewState", () => {
     expect(state.omitted).toEqual({ notes: "too_large" })
   })
 
-  it("stops adding values once the total budget is spent", () => {
-    const fields = Array.from({ length: 12 }, (_, i) => `note_${i}`)
-    const tree = appRoot(
-      fields.map(field => element({ textArea: { id: id(field) } }))
-    )
+  it("counts a value's escapes against the per-value limit", () => {
+    const tree = appRoot([element({ textArea: { id: id("markup") } })])
 
-    const state = build(
-      tree,
-      fields.map(field => ({ id: id(field), stringValue: "x".repeat(3000) }))
-    )
+    // 1,002 characters as JSON, but 6,002 once every `<` is escaped.
+    const state = build(tree, [
+      { id: id("markup"), stringValue: "<".repeat(1000) },
+    ])
 
-    // Ten 3002-character values fit in 32768 characters; the rest do not.
-    expect(Object.keys(state.widget_state)).toEqual(fields.slice(0, 10))
-    expect(state.omitted).toEqual({
-      note_10: "too_large",
-      note_11: "too_large",
+    expect(state.widget_state).toEqual({})
+    expect(state.omitted).toEqual({ markup: "too_large" })
+  })
+
+  describe("length budget", () => {
+    const keyless = (index: number): string =>
+      `$$ID-${String(index).padStart(32, "0")}-None`
+
+    /** Keyless widgets, markup to escape, a form, and omitted values. */
+    const mixedTree = (): AppRoot =>
+      appRoot(
+        [
+          ...Array.from({ length: 40 }, (_, i) =>
+            element({ checkbox: { id: keyless(i) } })
+          ),
+          element({ textArea: { id: id("notes") } }),
+          element({ fileUploader: { id: id("upload") } }),
+          container({ form: { formId: "f" } }, [
+            element({ textInput: { id: id("q"), formId: "f" } }),
+            element({
+              button: {
+                id: id("FormSubmitter:f-Go"),
+                formId: "f",
+                isFormSubmitter: true,
+              },
+            }),
+          ]),
+          element({ selectbox: { id: id("last") } }),
+        ],
+        [element({ selectbox: { id: id("region") } })]
+      )
+    const mixedStates: WidgetState.$Properties[] = [
+      { id: id("region"), stringValue: "<EU & \u2028 more>" },
+      ...Array.from({ length: 40 }, (_, i) => ({
+        id: keyless(i),
+        boolValue: i % 2 === 0,
+      })),
+      { id: id("notes"), stringValue: "</script>".repeat(30) },
+      { id: id("upload"), fileUploaderStateValue: {} },
+      { id: id("q"), stringValue: "a<b" },
+      { id: id("last"), stringValue: "end" },
+    ]
+    const mixedOptions = {
+      submittedForms: new Map([["f", id("FormSubmitter:f-Go")]]),
+      queryString: "?ref=<mail>",
+    }
+
+    it("never writes more than the budget, counting keys and escapes", () => {
+      const overBudget: number[] = []
+      for (let maxLength = 150; maxLength <= 4000; maxLength += 17) {
+        const state = buildOrNull(mixedTree(), mixedStates, {
+          ...mixedOptions,
+          maxLength,
+        })
+        if (state && toScriptSafeJson(state).length > maxLength) {
+          overBudget.push(maxLength)
+        }
+      }
+
+      expect(overBudget).toEqual([])
+    })
+
+    it("counts the length exactly, so a full document fits its own length", () => {
+      const full = build(mixedTree(), mixedStates, {
+        ...mixedOptions,
+        maxLength: 1_000_000,
+      })
+      expect(full.complete).toBe(true)
+      expect(full.forms).toHaveLength(1)
+      expect(full.omitted).toEqual({ upload: "binary" })
+      // Written with `complete: false`, the longer form the budget reserves.
+      const length = toScriptSafeJson({ ...full, complete: false }).length
+
+      const atLength = build(mixedTree(), mixedStates, {
+        ...mixedOptions,
+        maxLength: length,
+      })
+      const oneShort = build(mixedTree(), mixedStates, {
+        ...mixedOptions,
+        maxLength: length - 1,
+      })
+
+      expect(atLength).toEqual(full)
+      expect(oneShort.complete).toBe(false)
+      expect(Object.keys(oneShort.widget_state)).not.toContain("last")
+    })
+
+    it("keeps the widgets before the first one that does not fit", () => {
+      const tree = appRoot([
+        element({ selectbox: { id: id("first") } }),
+        element({ textArea: { id: id("long") } }),
+        element({ selectbox: { id: id("after") } }),
+      ])
+      const states = [
+        { id: id("first"), stringValue: "a" },
+        { id: id("long"), stringValue: "x".repeat(300) },
+        { id: id("after"), stringValue: "b" },
+      ]
+
+      const state = build(tree, states, { maxLength: 250 })
+
+      // "after" would fit on its own, but a value after a gap could depend on
+      // the one that is missing.
+      expect(state.widget_state).toEqual({ first: "a" })
+      expect(state.omitted).toEqual({})
+      expect(state.complete).toBe(false)
+    })
+
+    it("drops the query parameters when they alone do not fit", () => {
+      const state = build(appRoot([]), [], {
+        queryString: `?q=${"x".repeat(500)}`,
+        maxLength: 200,
+      })
+
+      expect(state.query_params).toEqual({})
+      expect(state.complete).toBe(false)
+    })
+
+    it("writes nothing when not even an empty document fits", () => {
+      const args = {
+        index: indexWidgets(appRoot([])),
+        committed: new Map<string, WidgetState>(),
+        submittedForms: new Map<string, string>(),
+        page: "sales",
+        queryString: "",
+      }
+
+      expect(writeAgentViewState({ ...args, maxLength: 20 })).toBeNull()
+      expect(
+        JSON.parse(writeAgentViewState({ ...args, maxLength: 200 }) ?? "")
+      ).toMatchObject({ page: "sales", complete: true })
     })
   })
 
   describe("forms", () => {
-    const formTree = (submitDisabled = false): AppRoot =>
+    const APPLY = id("FormSubmitter:filters-Apply")
+    const RESET = id("FormSubmitter:filters-Reset")
+
+    const formTree = (
+      submitDisabled = false,
+      resetDisabled = false
+    ): AppRoot =>
       appRoot([
         container({ form: { formId: "filters" } }, [
           element({ selectbox: { id: id("region"), formId: "filters" } }),
@@ -356,6 +504,14 @@ describe("buildAgentViewState", () => {
               formId: "filters",
               isFormSubmitter: true,
               disabled: submitDisabled,
+            },
+          }),
+          element({
+            button: {
+              id: RESET,
+              formId: "filters",
+              isFormSubmitter: true,
+              disabled: resetDisabled,
             },
           }),
         ]),
@@ -370,7 +526,7 @@ describe("buildAgentViewState", () => {
 
     it("pairs a submitted form's fields with its submit trigger", () => {
       const state = build(formTree(), formStates, {
-        submittedFormIds: new Set(["filters"]),
+        submittedForms: new Map([["filters", APPLY]]),
       })
 
       expect(state.widget_state).toEqual({ outside: true })
@@ -390,9 +546,31 @@ describe("buildAgentViewState", () => {
       expect(state.omitted).toEqual({})
     })
 
+    it("fires the submit button the user used, not the first one", () => {
+      const state = build(formTree(), formStates, {
+        submittedForms: new Map([["filters", RESET]]),
+      })
+
+      expect(state.forms.map(form => form.trigger)).toEqual([
+        { key: "FormSubmitter:filters-Reset" },
+      ])
+    })
+
+    it("does not fire another button when the one the user used is disabled", () => {
+      const state = build(formTree(false, true), formStates, {
+        submittedForms: new Map([["filters", RESET]]),
+      })
+
+      expect(state.forms).toEqual([])
+      expect(state.omitted).toEqual({
+        region: "no_submit_button",
+        [id("None")]: "no_submit_button",
+      })
+    })
+
     it("marks fields that have no enabled submit button to go with", () => {
       const state = build(formTree(true), formStates, {
-        submittedFormIds: new Set(["filters"]),
+        submittedForms: new Map([["filters", APPLY]]),
       })
 
       expect(state.forms).toEqual([])
@@ -470,7 +648,10 @@ describe("AgentViewStatePublisher", () => {
     publisher?.dispose()
   })
 
-  function setUp(initialTree: AppRoot = formTree()): WidgetStateManager {
+  function setUp(
+    initialTree: AppRoot = formTree(),
+    { enabled = true }: { enabled?: boolean } = {}
+  ): WidgetStateManager {
     tree = initialTree
     const widgetMgr: WidgetStateManager = new WidgetStateManager({
       sendRerunBackMsg: vi.fn(),
@@ -482,6 +663,7 @@ describe("AgentViewStatePublisher", () => {
       getAppRoot: () => tree,
       getLocation: () => ({ page: "sales", queryString: "?year=2024" }),
     })
+    publisher.setEnabled(enabled)
     publisher.scheduleUpdate()
     return widgetMgr
   }
@@ -500,7 +682,94 @@ describe("AgentViewStatePublisher", () => {
       widget_state: {},
       forms: [],
       omitted: {},
+      complete: true,
     })
+  })
+
+  it("writes nothing, and defines no function, until the agent API is on", async () => {
+    const widgetMgr = setUp(formTree(), { enabled: false })
+    widgetMgr.setStringValue(id("region"), "EU", outsideForm)
+    await Promise.resolve()
+
+    expect(document.getElementById(AGENT_VIEW_STATE_ELEMENT_ID)).toBeNull()
+    expect(window.streamlitAgentViewState).toBeUndefined()
+
+    publisher?.setEnabled(true)
+    await Promise.resolve()
+
+    expect(readDocument()?.widget_state).toEqual({ region: "EU" })
+    expect(window.streamlitAgentViewState).toBeTypeOf("function")
+  })
+
+  it("removes the element and the function when the agent API turns off", async () => {
+    const widgetMgr = setUp()
+    widgetMgr.setStringValue(id("region"), "EU", outsideForm)
+    await Promise.resolve()
+    expect(readDocument()).not.toBeNull()
+
+    publisher?.setEnabled(false)
+    widgetMgr.setStringValue(id("region"), "US", outsideForm)
+    await Promise.resolve()
+
+    expect(document.getElementById(AGENT_VIEW_STATE_ELEMENT_ID)).toBeNull()
+    expect(window.streamlitAgentViewState).toBeUndefined()
+  })
+
+  it("computes the document when the function is called, within its budget", () => {
+    const widgetMgr = setUp(
+      appRoot([
+        element({ textInput: { id: id("secret") } }),
+        element({ textArea: { id: id("notes") } }),
+      ])
+    )
+    widgetMgr.setStringValue(id("secret"), "visible", outsideForm)
+    widgetMgr.setStringValue(id("notes"), "x".repeat(300), outsideForm)
+
+    // The same widget re-rendered as a password field, with no value change
+    // since and before the element is rewritten.
+    tree = appRoot([
+      element({
+        textInput: { id: id("secret"), type: TextInputProto.Type.PASSWORD },
+      }),
+      element({ textArea: { id: id("notes") } }),
+    ])
+    const json = window.streamlitAgentViewState?.({ maxLength: 200 }) ?? ""
+
+    expect(json.length).toBeLessThanOrEqual(200)
+    expect(json).not.toContain("visible")
+    expect(JSON.parse(json)).toMatchObject({
+      omitted: { secret: "sensitive" },
+      widget_state: {},
+      complete: false,
+    })
+    expect(JSON.parse(window.streamlitAgentViewState?.() ?? "")).toMatchObject(
+      { widget_state: { notes: "x".repeat(300) } }
+    )
+  })
+
+  it("is found by ID before an element with the same ID in the app", async () => {
+    // As `st.markdown(..., unsafe_allow_html=True)` could render.
+    const app = document.createElement("div")
+    app.innerHTML = `<div id="${AGENT_VIEW_STATE_ELEMENT_ID}">{"version":1}</div><script type="application/json" id="${AGENT_VIEW_STATE_ELEMENT_ID}">{}</script>`
+    document.body.appendChild(app)
+    const appScript = app.querySelector("script")
+    try {
+      const widgetMgr = setUp()
+      widgetMgr.setStringValue(id("region"), "EU", outsideForm)
+      await Promise.resolve()
+
+      // First in tree order, which is what a browser's `getElementById`
+      // returns. jsdom's returns the first one inserted instead.
+      const found = document.querySelector(`#${AGENT_VIEW_STATE_ELEMENT_ID}`)
+      expect(found).toBe(document.body.firstElementChild)
+      expect(JSON.parse(found?.textContent ?? "")).toMatchObject({
+        widget_state: { region: "EU" },
+      })
+      // The app's own element is left as the app rendered it.
+      expect(appScript?.textContent).toBe("{}")
+    } finally {
+      app.remove()
+    }
   })
 
   it("updates on a value change, without waiting for a rerun", async () => {
@@ -561,5 +830,6 @@ describe("AgentViewStatePublisher", () => {
     await Promise.resolve()
 
     expect(document.getElementById(AGENT_VIEW_STATE_ELEMENT_ID)).toBeNull()
+    expect(window.streamlitAgentViewState).toBeUndefined()
   })
 })
