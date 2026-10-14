@@ -318,9 +318,10 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
   a run the client did not ask for.
-- **From the request:** `st.context.headers` are the request's, minus `Cookie` and
-  `Authorization`, refreshed on every interaction, as a browser session's are its
-  WebSocket handshake's. Apps act on headers — identity a proxy set, or the short-lived
+- **From the request:** `st.context.headers` are the request's, minus `Cookie` and the
+  credentials meant for whatever fronts the app (`Authorization`,
+  `Proxy-Authorization`), refreshed on every interaction, and only when a run starts,
+  as a browser session's are its WebSocket handshake's. Apps act on headers — identity a proxy set, or the short-lived
   caller's-rights token a Snowflake app connects with — so empty ones would make an
   app behave differently for an agent, or fail. This grants nothing new: any client
   that reaches the WebSocket can send arbitrary handshake headers, so a header is only
@@ -792,7 +793,8 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   the schema stricter than v1, which resets an out-of-range number rather than refusing
   it.
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
-  `null` clears a widget that can be empty and resets one that cannot to its default.
+  `null` clears a widget whose empty value is `null` and resets any other to its
+  default, so a list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
@@ -807,9 +809,11 @@ refused with `invalid_value`:
   where it names an option, and dates and times are ISO text, even for a slider that
   carries them as microseconds. A date-time or time input takes any ISO 8601 form
   without an offset and stores it in the layout it reads, since its own parser would
-  silently replace any other form with the default. The server is a little more
-  lenient than the schema: a single value and a one-item list are interchangeable,
-  because single-select button groups and single sliders carry one value in a list.
+  silently replace any other form with the default. A list longer than the schema's
+  `maxItems`, such as a third date for a range, is refused, since the app would get a
+  value it cannot unpack. The server is a little more lenient than the schema
+  otherwise: a single value and a one-item list are interchangeable, because
+  single-select button groups and single sliders carry one value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values. A widget with `accept_new_options` also
   takes new text, as it does in the browser.
@@ -817,8 +821,8 @@ refused with `invalid_value`:
   one it cannot read raises in the app's run, and on every later run too.
 
 Everything else shows in the next snapshot's `value`: an out-of-range number, a
-malformed date, time, or color string, or a slider range with the wrong number of values
-is reset to the default, a fraction sent to an integer input is truncated, and text past
+malformed date, time, or color string, or a slider range with too few values is reset
+to the default, a fraction sent to an integer input is truncated, and text past
 `max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
 values lowest first. A per-key note saying how each value landed is a potential
 follow-up.
@@ -973,7 +977,7 @@ back to a browser rather than mistake it for missing content:
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
 | Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
-| Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie` and `Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
 | Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
@@ -1301,7 +1305,7 @@ Smaller potential follow-ups and alternatives considered while building the prot
 
 - **Values:** a per-key note on how each sent value landed, including a key the batch
   itself removed; refusing values that do not match `value_schema` — a fraction for a
-  whole number, a malformed date, a wrong-length or reversed range — rather than letting
+  whole number, a malformed date, a too-short or reversed range — rather than letting
   the widget adjust them; widget constraints checked server-side
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and integers beyond
   ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
