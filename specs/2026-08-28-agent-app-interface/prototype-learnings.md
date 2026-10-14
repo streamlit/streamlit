@@ -1329,8 +1329,9 @@ elements, since every key went through the element-ID parser. Idle sessions were
 reclaimed when another request arrived, so a server whose agent traffic stopped kept
 them. Other fixes:
 
-- A Vega-Lite chart whose specification loads its data from a URL now says
-  `complete`.
+- A Vega-Lite chart whose specification loads its data from a URL said nothing about
+  completeness. It now says `complete: false` with `unavailable: "external_url"`,
+  since the data is not in the response.
 - A table replayed from a cache a browser filled now says `undescribed`, not
   `too_large_to_serve`.
 - An unfilled `st.skeleton` is left out.

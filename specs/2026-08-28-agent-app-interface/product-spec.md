@@ -620,8 +620,10 @@ Rules:
   authored `key` where the element has one, is the identity.
 - **The `actions` list is an index that names its entries.** It lists the key of every
   element that can be set (`value`) or fired (`trigger`) right now, with its `type` and
-  `label`, so a model can see the action space at a glance and match a generated key
-  without walking the tree; `value_schema` and constraints are read from the element.
+  its `label` when it has one, so a model can see the action space at a glance and match
+  a generated key without walking the tree; `value_schema` and constraints are read
+  from the element. An element without a label, such as `st.feedback` or
+  `st.chat_input`, has no `label` in its entry rather than an empty or borrowed one.
   A `disabled` widget, or one with a `support` reason, appears in the tree but not in
   `actions`. Form membership is visible from nesting, and each keyed element in a form
   carries the form's `form_id`.
@@ -659,8 +661,9 @@ Rules:
   of it as data, not instructions. Only the envelope — `schema_version`, `session_id`,
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
-  settled and the page shows no uncaught exception, including one an earlier full run
-  left outside a fragment that reran since. See [When a run fails](#when-a-run-fails).
+  settled, the runtime did not mark the run failed, and the page shows no uncaught
+  exception, including one an earlier full run left outside a fragment that reran since.
+  Both signals are needed; see [When a run fails](#when-a-run-fails).
 - **Versioned, and self-describing.** Additive optional fields are compatible within
   `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
   rest moves with Streamlit: each app serves the OpenAPI document for its own version,
@@ -939,8 +942,10 @@ Charts and maps:
 
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
-  and an `st.vega_lite_chart` whose specification loads its data from a URL carries
-  that URL, so there is no table to serve and a client should stop looking for one. Plotly's theme
+  so there is no table to serve and a client should stop looking for one. The
+  exception is an `st.vega_lite_chart` whose specification loads its data from a URL:
+  the browser fetches it and this interface does not, so it reports `complete: false`
+  with `unavailable: "external_url"`, and the URL stays in `spec`. Plotly's theme
   styling is about nine tenths of a small figure, so it is dropped and named in
   `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
@@ -996,6 +1001,7 @@ back to a browser rather than mistake it for missing content:
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
+| Chart data loaded from a URL                                               | A Vega-Lite specification that loads its data from a URL reports `data.unavailable: external_url`; the URL stays in `spec`, and the interface does not fetch it. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |

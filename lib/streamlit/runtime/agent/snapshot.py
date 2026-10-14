@@ -684,15 +684,19 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
 
     if proto_field == "vega_lite_chart":
         buffers = agent_spec.vega_arrow_buffers(payload)
+        spec = _parse_json(payload.spec)
         if len(buffers) > 1:
             data = {"complete": False, "unavailable": "multiple_datasets"}
         elif buffers:
             data = summarize_arrow(buffers[0]) or {}
+        elif _loads_from_url(spec):
+            # The browser fetches it from the URL in the specification; nothing
+            # here holds it.
+            data = {"complete": False, "unavailable": "external_url"}
         else:
-            # Inline values travel as Arrow, so a chart with none has its data
-            # in the specification itself, such as a URL the browser loads.
+            # Inline values travel as Arrow, so what is left in the
+            # specification, such as GeoJSON, is all of it.
             data = {"complete": True}
-        spec = _parse_json(payload.spec)
         if isinstance(spec, dict):
             # The built-in charts write 0 for a size the author left unset,
             # which means "fill the container", not a size.
@@ -722,6 +726,20 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         return map_data
 
     return None
+
+
+def _loads_from_url(spec: Any) -> bool:
+    """Whether a Vega-Lite specification loads any of its data from a URL,
+    at the top level, in a layer, or in a lookup.
+    """
+    if isinstance(spec, dict):
+        data = spec.get("data")
+        if isinstance(data, dict) and "url" in data:
+            return True
+        return any(_loads_from_url(value) for value in spec.values())
+    if isinstance(spec, list):
+        return any(_loads_from_url(item) for item in spec)
+    return False
 
 
 def _figure_data(spec: Any) -> dict[str, Any] | None:

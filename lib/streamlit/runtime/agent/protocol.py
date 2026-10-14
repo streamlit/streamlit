@@ -1096,6 +1096,7 @@ def schemas() -> dict[str, Any]:
                         "multiple_datasets",
                         "lazy_loading",
                         "undescribed",
+                        "external_url",
                     ],
                     "description": (
                         "Why incomplete data has no `url`. Present only when "
@@ -1115,7 +1116,11 @@ def schemas() -> dict[str, Any]:
                         "- `undescribed`: the element is listed in "
                         "`undescribed_types`, such as one replayed from a cache "
                         "a browser session filled, so nothing registered its "
-                        "data; only the preview is available."
+                        "data; only the preview is available.\n"
+                        "- `external_url`: the chart's `spec` loads its data "
+                        "from a URL, which the browser fetches and this "
+                        "interface does not. Fetch it from there if you can "
+                        "reach it."
                     ),
                 },
                 "spec": {
