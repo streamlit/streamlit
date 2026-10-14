@@ -542,6 +542,11 @@ fires once. The same request again also collects it, except after a creating \
 call, where sending `{}` again would create another session. Any other request \
 gets `session_busy` until the run finishes.
 
+If a request fails without any response, retry the same way, with only \
+`session_id`: it collects the run if one is still going, and otherwise reruns \
+without re-applying anything, so check the result before sending your changes \
+again.
+
 Reuse one session for a sequence of interactions rather than creating one per \
 request. Each creating call runs the app from the start and holds a session \
 until it has been idle for `server.agentSessionTTL`, and the server caps how \

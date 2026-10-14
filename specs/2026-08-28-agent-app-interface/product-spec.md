@@ -1273,8 +1273,9 @@ numbered for reference rather than ranked.
    pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
    call takes the same path as an `interact` request, so its HTTP request's headers
    supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most AI applications connect to tools, so this belongs in
-   the same release cycle as v1 if possible, together with #9.
+   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most
+   AI applications connect to tools, so this belongs in the same release cycle as v1 if
+   possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1305,8 +1306,8 @@ numbered for reference rather than ranked.
    Markdown document shown twice can pass half a megabyte. Through MCP every one of
    those bytes lands in a model's context, and a response over a client's tool-result
    limit is lost to the model, which makes this, with #6, the first follow-up to take
-   after v1. Until then a cheap guard is to leave Plotly's base64 `bdata` arrays
-   compressed above a size threshold, which loses nothing.
+   after v1. A cheap first step is to leave Plotly's base64 `bdata` arrays unexpanded
+   above a size threshold, which keeps every value, though not in a form a model reads.
 10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
     agents its signed-out state: its identity is a signed cookie the browser gets at
     the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
