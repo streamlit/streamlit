@@ -1675,10 +1675,9 @@ const setSidebarHeadingFontSizes = (
 }
 
 /**
- * Picks the light or dark stock sidebar pair for `activeTheme`.
- * Named custom light and dark themes keep that section even when
- * background luminance would imply the other pair. Other themes use
- * main background luminance.
+ * Resolves the main theme's light/dark base. Named custom light and dark
+ * themes keep that base even when main-background luminance would imply the
+ * other one. Every other theme is classified by main-background luminance.
  */
 const getActiveThemeBase = (
   activeTheme: ThemeConfig
@@ -1698,12 +1697,12 @@ const getActiveThemeBase = (
 /** Built-in main page surfaces used to decide stock vs swapped sidebar fallbacks. */
 const stockMainSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
-    bgColor: "#FFFFFF",
-    secondaryBg: "#F8F8F7",
+    bgColor: lightTheme.emotion.colors.bgColor,
+    secondaryBg: lightTheme.emotion.colors.secondaryBg,
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
-    bgColor: "#171614",
-    secondaryBg: "#2D2B27",
+    bgColor: darkTheme.emotion.colors.bgColor,
+    secondaryBg: darkTheme.emotion.colors.secondaryBg,
   },
 } as const
 
@@ -1744,8 +1743,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const mainThemeBase = getActiveThemeBase(activeTheme)
   const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
 
-  // Built-in main surfaces → stock sidebar pair. Customized main surfaces →
-  // classic swap (sidebar bg = main secondary, sidebar secondary = main bg).
+  // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
+  // (sidebar bg = main secondary, sidebar secondary = main bg).
   const useStockSidebarSurfaces = mainSurfacesAreStock(
     activeTheme,
     mainThemeBase
@@ -1757,7 +1756,6 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     ? stockSurfaces.secondaryBackgroundColor
     : bgColor
 
-  // Unset sidebar backgrounds use the stock or swapped fallback above.
   const sidebarBackground =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
     sidebarThemeInput?.backgroundColor || fallbackBackground
@@ -1771,8 +1769,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     sidebarThemeInput?.headingFontSizes
   )
 
-  // Custom light/dark themes keep their section base; otherwise derive from
-  // the resolved sidebar background luminance.
+  // Named custom light/dark themes keep that base. Other themes follow
+  // the resolved sidebar background's luminance.
   const baseTheme =
     activeTheme.name === CUSTOM_THEME_LIGHT_NAME ||
     activeTheme.name === CUSTOM_THEME_DARK_NAME

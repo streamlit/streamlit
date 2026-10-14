@@ -106,10 +106,10 @@ Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
 Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
-Unset sidebar surfaces depend on whether the resolved main page still uses the built-in light/dark backgrounds:
+Unset sidebar surfaces depend on whether the resolved main backgrounds still match the built-in light/dark pair:
 
-- **Built-in main surfaces:** stock sidebar pair — light `#F8F8F7` / `#F1F0EE`, dark `#21201D` / `#2D2B27`.
-- **Customized main `backgroundColor` or `secondaryBackgroundColor`:** classic swap — unset sidebar `backgroundColor` → main `secondaryBackgroundColor`, unset sidebar `secondaryBackgroundColor` → main `backgroundColor`.
+- **Built-in main backgrounds:** light sidebar `#F8F8F7` / `#F1F0EE`, dark sidebar `#21201D` / `#2D2B27`.
+- **Either resolved main surface differs from that built-in pair:** unset sidebar background uses the main secondary background, and unset sidebar secondary uses the main background.
 
 Set both sidebar surfaces explicitly when the sidebar should use another custom pair.
 
@@ -357,7 +357,7 @@ linkColor = "#38bdf8"
 showWidgetBorder = true
 ```
 
-Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use the stock pair for built-in mains, or the classic main-surface swap when main backgrounds were customized (see [Section merge order](#section-merge-order)).
+Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use Streamlit's default sidebar colors when the main backgrounds still match the built-in pair; otherwise they swap the main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
 
 When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
 

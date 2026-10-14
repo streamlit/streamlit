@@ -4833,6 +4833,24 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
+    it("keeps stock sidebar secondary when only sidebar backgroundColor is set on a built-in main", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        // Leave main surfaces on the built-in light pair.
+        sidebar: {
+          backgroundColor: "darkblue",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("darkblue")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe(
+        stockLight.secondaryBackgroundColor
+      )
+    })
+
     it("treats a blank sidebar backgroundColor as unset", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",

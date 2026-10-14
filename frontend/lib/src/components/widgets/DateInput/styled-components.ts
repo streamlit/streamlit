@@ -384,7 +384,7 @@ export const StyledQuickSelectTrigger = styled(Button, {
 /** Popover shell shared by quick-select and calendar header pickers. */
 export const StyledDropdownPopover = styled(Popover)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
-  // Same sidebar swap as StyledCalendarPopover — use "main panel" white.
+  // Same as StyledCalendarPopover: sidebar overlays use the widget surface.
   backgroundColor: theme.inSidebar
     ? theme.colors.secondaryBg
     : theme.colors.bgColor,
