@@ -52,12 +52,12 @@ export interface Props {
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
 
 /**
- * rc-overflow item host. Overflowed items stay mounted with opacity:0 and
- * aria-hidden, but anchors/buttons inside remain in the native tab order.
- * Mark those hosts inert so Tab skips them (same idea as collapsed expanders).
+ * Set `inert` on collapsed rc-overflow hosts so Tab skips their links.
  *
- * Pass `inert=""` rather than `true`: React 18 drops an unknown boolean prop,
- * and jsdom only sees the attribute when it is a string.
+ * rc-overflow keeps those items mounted with `aria-hidden`, which leaves
+ * their links in the native tab order. Same approach as collapsed expanders.
+ *
+ * Pass `inert=""` rather than `true`: React 18 drops an unknown boolean prop.
  */
 export const TopNavOverflowItem = forwardRef<
   HTMLDivElement,
