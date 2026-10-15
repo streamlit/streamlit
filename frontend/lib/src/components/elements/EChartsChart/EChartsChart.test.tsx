@@ -897,6 +897,19 @@ describe("EChartsChart", () => {
       expect(rested).not.toHaveBeenCalled()
     })
 
+    it("lets a pinch reach geo roam before the pointer has rested", () => {
+      const chart = renderChart(
+        [{ type: "inside", zoomOnMouseWheel: false }],
+        {
+          geo: { roam: true },
+        }
+      )
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      const pinch = dispatchWheel(chart, { ctrlKey: true })
+      expect(pinch).not.toHaveBeenCalled()
+    })
+
     it("keeps stopping wheels when roam is drag-only", () => {
       const chart = renderChart(
         [{ type: "inside", zoomOnMouseWheel: false }],

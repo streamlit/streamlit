@@ -30,6 +30,7 @@ import {
   insideDataZoomWheelSkipsSettle,
   optionHasWheelRoam,
   STREAMLIT_THEME,
+  wheelRoamSkipsSettle,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
 
@@ -1184,6 +1185,16 @@ describe("optionHasWheelRoam", () => {
       })
     ).toBe(false)
     expect(optionHasWheelRoam({ dataZoom: [{ type: "inside" }] })).toBe(false)
+  })
+
+  it("skips settle only for a pinch", () => {
+    const roam = { geo: { roam: true } }
+    const pinch = { shiftKey: false, ctrlKey: true, altKey: false }
+    const plain = { shiftKey: false, ctrlKey: false, altKey: false }
+    expect(wheelRoamSkipsSettle(roam, pinch)).toBe(true)
+    expect(wheelRoamSkipsSettle(roam, plain)).toBe(false)
+    expect(wheelRoamSkipsSettle({ geo: { roam: "move" } }, pinch)).toBe(false)
+    expect(wheelRoamSkipsSettle(null, pinch)).toBe(false)
   })
 })
 

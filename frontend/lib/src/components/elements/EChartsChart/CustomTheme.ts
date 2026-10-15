@@ -840,6 +840,19 @@ export function optionHasWheelRoam(
 }
 
 /**
+ * True when a pinch should roam immediately.
+ *
+ * Wheel roam defaults ``zoomOnMouseWheel`` to ``true``, so a pinch
+ * (``ctrlKey``) skips the rest timer. An ordinary wheel still waits.
+ */
+export function wheelRoamSkipsSettle(
+  option: EChartsOptionObject | null,
+  event: WheelModifierEvent
+): boolean {
+  return optionHasWheelRoam(option) && event.ctrlKey
+}
+
+/**
  * True when the user is pinching or holding the configured modifier, so the
  * chart zooms or pans without waiting for the pointer to rest.
  *

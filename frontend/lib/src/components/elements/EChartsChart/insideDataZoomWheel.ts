@@ -22,6 +22,7 @@ import {
   insideDataZoomConsumesWheelEvent,
   insideDataZoomWheelSkipsSettle,
   optionHasWheelRoam,
+  wheelRoamSkipsSettle,
 } from "./CustomTheme"
 
 /**
@@ -221,7 +222,9 @@ export function useInsideDataZoomWheelGuard(
         consumes:
           insideDataZoomConsumesWheelEvent(current, event) ||
           optionHasWheelRoam(current),
-        explicitGesture: insideDataZoomWheelSkipsSettle(current, event),
+        explicitGesture:
+          insideDataZoomWheelSkipsSettle(current, event) ||
+          wheelRoamSkipsSettle(current, event),
       })
       if (passToPage) {
         event.stopImmediatePropagation()
