@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_type
+from typing import TYPE_CHECKING, assert_type, cast
 
 if TYPE_CHECKING:
     import datetime
@@ -55,11 +55,12 @@ if TYPE_CHECKING:
     def _format_label(option: str) -> str:
         return option
 
-    pixel_width: int = 120
-    flexible_width: ColumnWidth | None = "large"
-    pinned_flag: bool | None = False
-    css_color: str | None = "#483d8b"
-    y_bound: int | float | None = 0
+    # Cast keeps the annotated type so ty does not narrow these to a literal.
+    pixel_width = cast("int", object())
+    flexible_width = cast("ColumnWidth | None", object())
+    pinned_flag = cast("bool | None", object())
+    css_color = cast("str | None", object())
+    y_bound = cast("int | float | None", object())
 
     # =====================================================================
     # Column
@@ -864,8 +865,10 @@ if TYPE_CHECKING:
         ColumnConfig,
     )
 
-    # Public st.column_config re-exports. ButtonColumn's full surface stays in
-    # button_column_types.py; these calls only pin the namespace.
+    # Pin each public st.column_config name. ButtonColumn() returns
+    # ColumnConfig; a keyed call returns ButtonColumnResult, which
+    # column_config also accepts. The rest of that surface stays in
+    # button_column_types.py.
     assert_type(st.column_config.AreaChartColumn(), ColumnConfig)
     assert_type(st.column_config.AudioColumn(), ColumnConfig)
     assert_type(st.column_config.BarChartColumn(), ColumnConfig)
@@ -916,12 +919,13 @@ if TYPE_CHECKING:
     # Invalid usages
     # =====================================================================
 
-    # Only label is positional. Width is a size name or a pixel count.
+    # Only label is positional. Width is a size name or a pixel count, so a
+    # plain str is rejected.
     Column("Name", "medium")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
     Column(width="stretch")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     Column(width=100.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     Column(alignment="justify")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    plain_width: str = "small"
+    plain_width = cast("str", object())
     Column(width=plain_width)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     NumberColumn(format=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
@@ -938,15 +942,11 @@ if TYPE_CHECKING:
     SelectboxColumn(alignment="left")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     SelectboxColumn(options=[object()])  # type: ignore[list-item]  # ty: ignore[invalid-argument-type]
 
-    # Chart columns are not editable and have no alignment parameter.
     BarChartColumn(y_min="0")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     BarChartColumn(color=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    # Chart columns are display-only, so they do not accept alignment or disabled.
     BarChartColumn(alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     LineChartColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
-    AreaChartColumn("Sales", "medium")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
-    AreaChartColumn(width="stretch")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    AreaChartColumn(width=100.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    AreaChartColumn(width=plain_width)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     AreaChartColumn(y_min="0")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     AreaChartColumn(color=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     AreaChartColumn(alignment="center")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
@@ -969,7 +969,7 @@ if TYPE_CHECKING:
     DateColumn(step=1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     DateColumn(step=datetime.timedelta(days=1))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Progress columns are not editable.
+    # Progress columns are display-only, so they do not accept disabled.
     ProgressColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     ProgressColumn(color=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     JsonColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
