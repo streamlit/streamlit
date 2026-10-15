@@ -83,8 +83,8 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
                 "max_size",
                 ["a positive byte size"],
                 detail=(
-                    "Use a positive value with an explicit unit, such as "
-                    '"500MB", "1.5GB", or "200KiB".'
+                    "Use an integer number of bytes or a positive value with an "
+                    'explicit unit, such as "500MB", "1.5GB", or "200KiB".'
                 ),
             )
         value_text = match.group("value")

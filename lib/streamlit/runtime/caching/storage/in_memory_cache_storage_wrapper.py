@@ -327,9 +327,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._global_budget.enforce_budget((self._global_storage_id, key))
         if should_warn:
             _LOGGER.warning(
-                "A value from %s is larger than max_size. Streamlit kept that value; "
-                "any other in-memory entries for that function are evicted. Increase "
-                "max_size to cache more than one value.",
+                "A value from %s is larger than its max_size. Streamlit cached only "
+                "this value and evicted the function's other in-memory entries. "
+                "Increase max_size to cache more than one value.",
                 self.function_display_name,
                 stack_info=True,
             )

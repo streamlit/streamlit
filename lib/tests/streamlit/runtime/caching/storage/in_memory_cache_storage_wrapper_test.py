@@ -346,6 +346,13 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert wrapped_storage._read_from_mem_cache("b") == b"bb"
         assert wrapped_storage._read_from_mem_cache("c") == b"c"
 
+        # Updating an existing key keeps the entry count at two but exceeds the
+        # byte limit, so the other entry must be evicted.
+        wrapped_storage.set("c", b"ccccc")
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("b")
+        assert wrapped_storage._read_from_mem_cache("c") == b"ccccc"
+
     def test_oversized_entry_is_retained_and_warns_once(self) -> None:
         """A lone oversized entry is retained and warns only once."""
         context = CacheStorageContext(
