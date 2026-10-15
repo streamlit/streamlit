@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, assert_type, cast
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
 
     import streamlit as st
     from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
@@ -608,7 +608,7 @@ if TYPE_CHECKING:
     # DatetimeColumn
     # =====================================================================
 
-    _when = datetime.datetime(2024, 2, 5, 12, 30)
+    _when = dt.datetime(2024, 2, 5, 12, 30)
     assert_type(DatetimeColumn(), ColumnConfig)
     assert_type(DatetimeColumn("When"), ColumnConfig)
     assert_type(DatetimeColumn(label=None), ColumnConfig)
@@ -637,7 +637,7 @@ if TYPE_CHECKING:
     assert_type(DatetimeColumn(step=None), ColumnConfig)
     assert_type(DatetimeColumn(step=60), ColumnConfig)
     assert_type(DatetimeColumn(step=0.5), ColumnConfig)
-    assert_type(DatetimeColumn(step=datetime.timedelta(minutes=15)), ColumnConfig)
+    assert_type(DatetimeColumn(step=dt.timedelta(minutes=15)), ColumnConfig)
     assert_type(DatetimeColumn(timezone=None), ColumnConfig)
     assert_type(DatetimeColumn(timezone="UTC"), ColumnConfig)
     assert_type(
@@ -653,7 +653,7 @@ if TYPE_CHECKING:
             format="localized",
             min_value=_when,
             max_value=_when,
-            step=datetime.timedelta(minutes=15),
+            step=dt.timedelta(minutes=15),
             timezone="America/Los_Angeles",
         ),
         ColumnConfig,
@@ -663,7 +663,7 @@ if TYPE_CHECKING:
     # TimeColumn
     # =====================================================================
 
-    _clock = datetime.time(8, 30)
+    _clock = dt.time(8, 30)
     assert_type(TimeColumn(), ColumnConfig)
     assert_type(TimeColumn("Start"), ColumnConfig)
     assert_type(TimeColumn(label=None), ColumnConfig)
@@ -690,7 +690,7 @@ if TYPE_CHECKING:
     assert_type(TimeColumn(step=None), ColumnConfig)
     assert_type(TimeColumn(step=60), ColumnConfig)
     assert_type(TimeColumn(step=0.5), ColumnConfig)
-    assert_type(TimeColumn(step=datetime.timedelta(seconds=30)), ColumnConfig)
+    assert_type(TimeColumn(step=dt.timedelta(seconds=30)), ColumnConfig)
     assert_type(
         TimeColumn(
             "Start",
@@ -703,7 +703,7 @@ if TYPE_CHECKING:
             default=_clock,
             format="iso8601",
             min_value=_clock,
-            max_value=datetime.time(18, 0),
+            max_value=dt.time(18, 0),
             step=60,
         ),
         ColumnConfig,
@@ -713,7 +713,7 @@ if TYPE_CHECKING:
     # DateColumn
     # =====================================================================
 
-    _day = datetime.date(2024, 2, 5)
+    _day = dt.date(2024, 2, 5)
     assert_type(DateColumn(), ColumnConfig)
     assert_type(DateColumn("Day"), ColumnConfig)
     assert_type(DateColumn(label=None), ColumnConfig)
@@ -751,7 +751,7 @@ if TYPE_CHECKING:
             alignment="left",
             default=_day,
             format="localized",
-            min_value=datetime.date(1900, 1, 1),
+            min_value=dt.date(1900, 1, 1),
             max_value=_day,
             step=1,
         ),
@@ -967,7 +967,7 @@ if TYPE_CHECKING:
     TimeColumn(default=_day)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     # Date steps are whole days, not durations.
     DateColumn(step=1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-    DateColumn(step=datetime.timedelta(days=1))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    DateColumn(step=dt.timedelta(days=1))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Progress columns are display-only, so they do not accept disabled.
     ProgressColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
