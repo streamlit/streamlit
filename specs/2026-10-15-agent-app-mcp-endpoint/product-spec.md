@@ -115,6 +115,9 @@ Which clients can reach which apps:
 | Behind an authenticating proxy | Clients that can send the proxy's credentials as headers, which most desktop clients let a user configure. Hosted clients expect MCP's OAuth flow instead.                       |
 | Behind `st.login`              | Any client that can reach it, but signed out, as over HTTP. Agent sign-in is the parent spec's follow-up #10.                                                                    |
 
+How much of ChatGPT's current connector policy belongs in that table is
+[open](#open-questions).
+
 ### The tools
 
 MCP requires a server's tool list not to change during a connection: `tools/list` "MUST
@@ -228,7 +231,8 @@ Reads a media file the session's latest result references:
   continue, and a page always holds at least one row.
 - **Other files** come back as themselves, typed by MIME type: images and audio as MCP
   image and audio content, text and JSON as text, and anything else, such as a PDF, as
-  an embedded resource.
+  an embedded resource. Whether text and JSON should be paged like tables, instead of
+  returned whole, is [open](#open-questions).
 - **Size:** at most 5 MB of encoded JSON-RPC response. Image, audio, and
   embedded-resource payloads are base64, about four-thirds of the file, so a binary
   file is refused when that encoded response would pass 5 MB, not when the raw file
@@ -238,7 +242,8 @@ Reads a media file the session's latest result references:
   parent spec's fetch-now rule and the session's identity binding. An id outside that
   set, an external, `data:`, or static URL, or a file no longer stored, is
   `unknown_file`. Both tool descriptions say so, so a model reads the data it needs
-  before its next `interact` call replaces the result.
+  before its next `interact` call replaces the result. Which result that is while
+  `interact` is in flight, or after `run_timed_out`, is [open](#open-questions).
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
   `idempotentHint: true`, and `openWorldHint: false`. It runs no app code, so a client
   that confirms writes can call it without asking.
@@ -350,7 +355,9 @@ Nothing new beyond the parent spec's rules, applied to one more route:
   `get_data` too. `st.context.headers` are the request's minus `Cookie`,
   `Authorization`, and `Proxy-Authorization`, which matters here because MCP clients
   send their bearer tokens in `Authorization`. One interaction in flight per session
-  and `server.agentMaxSessions` apply as over HTTP.
+  and `server.agentMaxSessions` apply as over HTTP. Whether `get_data` takes that
+  in-flight lock, and what an offset past the end of a table returns, is
+  [open](#open-questions).
 - **`Origin` is validated, as the MCP transport requires** against DNS rebinding. A
   request carrying an `Origin` not listed in `server.corsAllowedOrigins` gets `403`.
   Browsers send `Origin` on every `POST`, and MCP clients that run outside a browser
@@ -538,6 +545,44 @@ exactly as the result shows it.
    path redirects to the platform's login page. That works but is hard to discover. The
    platform change the parent spec already asks for, so that discovery works on the
    public URL, would fix this too.
+4. **Should `get_data` page text and JSON, or return them whole?** Tables end a page at
+   about 40,000 characters so it stays in the model's context. Text and JSON come back
+   whole, up to the 5 MB encoded-response cap. A file of that size is on the order of a
+   million tokens, and Claude Code moves a text result over 50,000 characters into a
+   file the model has to read back. Paging those files by character offset, with the
+   same `offset` and `next_offset`, or refusing them past the table budget with
+   `result_too_large`, changes the contract. Images stay whole or are refused: a
+   cut-off image is useless.
+5. **Which result does `get_data` read while `interact` is in flight, or after
+   `run_timed_out`?** The tool reads media files the session's latest result
+   references, and the next `interact` replaces that result. A timeout returns `code`
+   and `message`, not a snapshot. If that drops the files from the previous result, a
+   model paging a table loses the remaining pages until the run is collected. Proposal:
+   keep serving the previous completed snapshot until a new one exists.
+6. **How much of ChatGPT's custom-connector policy belongs in the reachability table?**
+   The table says a public app is reachable from custom connectors in the Claude and
+   ChatGPT apps. OpenAI's current docs allow arbitrary tools, including writes, for
+   custom MCP apps on Business, Enterprise, and Edu (beta). Company knowledge still
+   includes only apps that expose `search` and `fetch`, deep research uses read and
+   fetch tools only, agent mode does not use custom apps, and Pro is more limited and
+   still uses developer mode. That policy changes often. The table can stay as broad as
+   it is, or name these limits.
+   [Creating custom MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-creating-custom-mcp-apps-in-chatgpt).
+7. **Which usage metrics does this endpoint collect?** The checklist records none for
+   now: the parent spec defers agent usage metrics until they have a channel that does
+   not depend on the browser, and the transport and the negotiated protocol version are
+   the fields to add once that channel exists. The parent spec's own checklist already
+   requires enablement, session opens, action kinds, outcome classes, latency, response
+   sizes, and unsupported-capability hits. Those two rows disagree. `clientInfo.name`
+   is not a per-call field in the revisions this server speaks: it arrives only on
+   `initialize`.
+8. **Does `get_data` take the one-in-flight lock, and what does an offset past the end
+   return?** One interaction in flight per session applies as over HTTP, and `get_data`
+   runs no app code. MCP clients often issue tool calls in parallel. Sharing
+   `interact`'s lock makes a parallel read return `session_busy`, which a model may not
+   retry. The spec also does not say which existing errors a read reuses, such as
+   `unknown_session` and an identity mismatch, or whether an `offset` past `row_count`
+   is an empty page with `next_offset: null` or an error.
 
 ## Checklist
 
@@ -546,7 +591,7 @@ exactly as the result shows it.
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
 | No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and two MCP-only error codes, and one sentence in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                              |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
-| Metrics collected          | None, as for the HTTP API: the parent spec defers agent usage metrics until they have a channel that does not depend on the browser. Once they do, the transport each interaction came through and the negotiated protocol version are worth recording.                                                                                                                          |
+| Metrics collected          | None, as for the HTTP API: the parent spec defers agent usage metrics until they have a channel that does not depend on the browser. Once they do, the transport each interaction came through and the negotiated protocol version are worth recording. This disagrees with the parent checklist, which already requires enablement, session opens, outcomes, latency, and response sizes. Which row to follow is an [open question](#open-questions). |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host and `Origin` checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is narrower than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                     |
 | Any docs changes needed?   | A guide to connecting an app to AI applications: the URL, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too.                                                    |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
