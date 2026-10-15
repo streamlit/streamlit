@@ -1205,6 +1205,88 @@ describe("Dynamic popover (widget mode)", () => {
     })
   })
 
+  it("does not keep suppressing clicks after the reveal press is canceled", async () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+
+    render(
+      <div>
+        <button type="button">outside</button>
+        <details open>
+          <div data-testid="panel" {...{ inert: "" }}>
+            <Popover
+              {...getProps({ id: widgetId, open: true }, { widgetMgr })}
+            >
+              <div>popover content</div>
+            </Popover>
+          </div>
+        </details>
+      </div>
+    )
+    await flushPopoverVisibilityCheck()
+
+    const outside = screen.getByRole("button", { name: "outside" })
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    screen.getByTestId("panel").removeAttribute("inert")
+    await flushPopoverVisibilityCheck()
+    expect(screen.getByText("popover content")).toBeVisible()
+
+    // A touch that turns into a scroll cancels the press and never clicks.
+    document.dispatchEvent(new Event("pointercancel", { bubbles: true }))
+    act(() => {
+      outside.click()
+    })
+
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("lets the next press close a popover after a reveal press with no click", async () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+
+    render(
+      <div>
+        <button type="button">outside</button>
+        <details open>
+          <div data-testid="panel" {...{ inert: "" }}>
+            <Popover
+              {...getProps({ id: widgetId, open: true }, { widgetMgr })}
+            >
+              <div>popover content</div>
+            </Popover>
+          </div>
+        </details>
+      </div>
+    )
+    await flushPopoverVisibilityCheck()
+
+    const outside = screen.getByRole("button", { name: "outside" })
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    screen.getByTestId("panel").removeAttribute("inert")
+    await flushPopoverVisibilityCheck()
+    expect(screen.getByText("popover content")).toBeVisible()
+
+    // The reveal press never clicked. The next press is a normal dismiss.
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    act(() => {
+      outside.click()
+    })
+
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
   it("does not mount a script-opened body before the trigger is checked", async () => {
     let mounts = 0
     function Child(): ReactElement {

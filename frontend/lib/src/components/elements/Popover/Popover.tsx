@@ -454,6 +454,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
 
     const handlePointerDown = (e: PointerEvent): void => {
+      // A new press. A suppress left by a press that never clicked (a touch
+      // that turned into a scroll) must not swallow this one.
+      suppressRevealClickRef.current = false
       const inside = isInsidePopoverOrOverlay(e.target as Node)
       interactionInsideRef.current = inside
       // A tab click selects on pointerdown and can move focus before the
@@ -517,13 +520,19 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
+    const handlePointerCancel = (): void => {
+      suppressRevealClickRef.current = false
+    }
+
     // Capture phase so we record the target before an overlay's own handler
     // can select-and-close (which detaches the node).
     document.addEventListener("pointerdown", handlePointerDown, true)
+    document.addEventListener("pointercancel", handlePointerCancel, true)
     document.addEventListener("click", handleClick)
     document.addEventListener("keydown", handleKeyDown, true)
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown, true)
+      document.removeEventListener("pointercancel", handlePointerCancel, true)
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
@@ -541,13 +550,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     const onClick = (): void => {
       pressStartedHiddenRef.current = false
     }
+    const onPointerCancel = (): void => {
+      pressStartedHiddenRef.current = false
+    }
     // pointerdown is capture so the mark is set before a tab's own
     // pointerdown reveals the trigger. The click clear is bubble so a
     // summary handler can reveal first and keep the mark.
     document.addEventListener("pointerdown", onPointerDown, true)
+    document.addEventListener("pointercancel", onPointerCancel, true)
     document.addEventListener("click", onClick)
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true)
+      document.removeEventListener("pointercancel", onPointerCancel, true)
       document.removeEventListener("click", onClick)
     }
   }, [open, deferBody])
