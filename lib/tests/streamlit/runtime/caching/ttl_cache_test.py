@@ -400,6 +400,7 @@ def test_currsize_reflects_non_expired_entries() -> None:
     cache["a"] = 1
     cache["b"] = 2
     assert cache.currsize == 2
+    assert cache._sizes is None
 
     clock.now = 10
     assert cache.currsize == 0
@@ -471,3 +472,81 @@ def test_get_and_pop_return_default_for_expired_keys() -> None:
     # pop() without a default raises for an expired entry.
     with pytest.raises(KeyError):
         cache.pop("a")
+
+
+def test_byte_sizing_evicts_lru_and_tracks_current_size() -> None:
+    """Byte sizing evicts the LRU entry and maintains the current size."""
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=6, ttl=100, timer=_FakeClock(), getsizeof=len
+    )
+    cache["a"] = b"aa"
+    cache["b"] = b"bbb"
+    assert cache.currsize == 5
+    assert repr(cache) == "TTLCache(maxsize=6, ttl=100, currsize=5)"
+
+    assert cache["a"] == b"aa"
+    cache["c"] = b"cc"
+
+    assert "b" not in cache
+    assert set(cache) == {"a", "c"}
+    assert cache.currsize == 4
+
+
+def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
+    """Byte and entry-count limits are enforced together."""
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=100,
+        max_count=2,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
+    )
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+    cache["c"] = b"c"
+
+    assert set(cache) == {"b", "c"}
+    assert cache.currsize == 2
+
+
+def test_byte_sizing_retains_one_oversized_entry() -> None:
+    """A lone value larger than the byte limit remains cached."""
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=3, ttl=100, timer=_FakeClock(), getsizeof=len
+    )
+    cache["small"] = b"aa"
+    cache["large"] = b"oversized"
+
+    assert list(cache.items()) == [("large", b"oversized")]
+    assert cache.currsize == len(b"oversized")
+
+
+def test_byte_size_is_updated_by_all_removal_paths() -> None:
+    """Every removal path updates byte size and invokes the callback."""
+    clock = _FakeClock()
+    removed: list[str] = []
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=100,
+        ttl=10,
+        timer=clock,
+        getsizeof=len,
+        on_remove=lambda key, _value: removed.append(key),
+    )
+    cache["a"] = b"aaaa"
+    cache["b"] = b"bb"
+    cache["a"] = b"a"
+    assert cache.currsize == 3
+    assert removed == ["a"]
+
+    assert cache.pop("b") == b"bb"
+    assert cache.currsize == 1
+    clock.now = 10
+    assert cache.currsize == 0
+    assert removed == ["a", "b", "a"]
+
+    cache["c"] = b"ccc"
+    del cache["c"]
+    cache["d"] = b"dddd"
+    cache.clear()
+    assert cache.currsize == 0
+    assert removed[-2:] == ["c", "d"]

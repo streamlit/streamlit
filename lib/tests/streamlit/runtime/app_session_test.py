@@ -189,6 +189,23 @@ class AppSessionTest(unittest.TestCase):
         session.shutdown()
         mock_scriptrunner.request_stop.assert_not_called()
 
+    def test_shutdown_releases_cache_lifecycle_when_clear_fails(self) -> None:
+        """Final lifecycle state is released even if cache cleanup raises."""
+        session = _create_test_session()
+
+        with (
+            patch.object(
+                session,
+                "clear_session_caches",
+                side_effect=OSError("clear failed"),
+            ),
+            patch.object(caching, "release_session_data_cache") as release,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            session.shutdown()
+
+        release.assert_called_once_with(session.id)
+
     def test_request_script_stop(self):
         """Verify that request_script_stop forwards the request to the scriptrunner."""
         session = _create_test_session()
@@ -390,6 +407,7 @@ class AppSessionTest(unittest.TestCase):
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
             event_loop=session._script_event_loop,
+            session_cache_lifecycle=session._session_cache_lifecycle,
         )
 
         assert session._scriptrunner is not None
@@ -520,6 +538,36 @@ class AppSessionTest(unittest.TestCase):
         assert loop.is_closed()
         assert session._scriptrunner is None
         assert session._client_state is original_client_state
+
+    def test_runner_shutdown_releases_cache_lifecycle_when_clear_fails(self) -> None:
+        """Runner teardown releases lifecycle state when cache cleanup raises."""
+        session = _create_test_session()
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._state = AppSessionState.SHUTDOWN_REQUESTED
+
+        with (
+            patch(
+                "streamlit.runtime.app_session.asyncio.get_running_loop",
+                return_value=session._event_loop,
+            ),
+            patch.object(
+                session,
+                "clear_session_caches",
+                side_effect=OSError("clear failed"),
+            ),
+            patch.object(caching, "release_session_data_cache") as release,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SHUTDOWN,
+                client_state=None,
+            )
+
+        release.assert_called_once_with(session.id)
+        assert session._scriptrunner is None
+        session._script_event_loop.close()
 
     def test_shutdown_defers_closure_while_script_loop_is_running(self):
         """SHUTDOWN releases the runner without closing a loop in use elsewhere."""

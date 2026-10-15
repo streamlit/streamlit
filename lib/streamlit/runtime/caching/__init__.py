@@ -22,7 +22,13 @@ from streamlit.runtime.caching.cache_data_api import (
     get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_data_api import (
+    activate_session_cache as activate_session_data_cache,
+)
+from streamlit.runtime.caching.cache_data_api import (
     clear_session_cache as clear_session_data_cache,
+)
+from streamlit.runtime.caching.cache_data_api import (
+    release_session_cache as release_session_data_cache,
 )
 from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
@@ -101,12 +107,14 @@ cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
 
 __all__ = [
     "CACHE_DOCS_URL",
+    "activate_session_data_cache",
     "cache_data",
     "cache_resource",
     "clear_session_data_cache",
     "clear_session_resource_cache",
     "get_data_cache_stats_provider",
     "get_resource_cache_stats_provider",
+    "release_session_data_cache",
     "save_block_message",
     "save_element_message",
     "save_media_data",

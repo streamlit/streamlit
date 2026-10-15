@@ -103,6 +103,11 @@ class CacheStorageContext:
         Legacy parameter, that used in Streamlit current cache storage implementation.
         Could be ignored by cache storage implementation, if storage does not support
         persistence or it persistent by default.
+
+    max_size_bytes : int or None
+        The maximum serialized size of the in-memory cache in bytes.
+        If None, the cache storage will not limit its byte size. Custom storage
+        implementations are responsible for honoring this limit.
     """
 
     function_key: str
@@ -110,6 +115,7 @@ class CacheStorageContext:
     ttl_seconds: float | None = None
     max_entries: int | None = None
     persist: Literal["disk"] | None = None
+    max_size_bytes: int | None = None
 
 
 class CacheStorage(Protocol):

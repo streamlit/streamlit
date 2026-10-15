@@ -76,9 +76,7 @@ class TTLCleanupCache(TTLCache[K, V]):
 
     @override
     def clear(self) -> None:
-        # The base TTLCache.clear() is O(1) and bypasses popitem(), so it would
-        # not invoke our release hooks. Clear via popitem() instead to ensure
-        # on_release is called for every entry.
+        # Clear via this subclass's popitem() so on_release runs for every entry.
         while True:
             try:
                 self.popitem()
