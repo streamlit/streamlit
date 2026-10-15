@@ -67,6 +67,9 @@ class GlobalCacheBudget(StatsProvider):
     def __init__(self, max_bytes: int | None) -> None:
         self._max_bytes = max_bytes
         self._reconfiguring = False
+        # Serialize registration and configuration so activation sees every
+        # published storage before taking their mutation locks.
+        self._configuration_lock = threading.Lock()
         self._lock = threading.Lock()
         # Serialize insertion accounting and enforcement so an entry cannot become
         # eligible for another writer's eviction before its own write is enforced.
@@ -112,7 +115,7 @@ class GlobalCacheBudget(StatsProvider):
             return self._total_bytes
 
     def register(self, storage: InMemoryCacheStorageWrapper) -> int:
-        with self._enforcement_lock, self._lock:
+        with self._configuration_lock, self._enforcement_lock, self._lock:
             self._drain_pending_unregisters_locked()
             storage_id = self._next_storage_id
             self._next_storage_id += 1
@@ -140,61 +143,53 @@ class GlobalCacheBudget(StatsProvider):
 
     def reconfigure(self, max_bytes: int | None) -> None:
         """Apply a server-start budget to this process and existing storages."""
-        with self._reconfiguration():
+        with self._configuration_lock:
             with self._lock:
                 current_max_bytes = self._max_bytes
                 if current_max_bytes == max_bytes:
                     return
-                if current_max_bytes is not None:
-                    self._max_bytes = max_bytes
-                    if max_bytes is None:
-                        self._entries.clear()
-                        self._total_bytes = 0
-                        for storage_entries in self._storage_entries.values():
-                            storage_entries.clear()
                 storages = [
                     storage
                     for storage_ref in self._storages.values()
                     if (storage := storage_ref()) is not None
                 ]
 
-            if current_max_bytes is not None:
+            if current_max_bytes is None:
+                # Writers already take mutation before enforcement. Keep that order
+                # during activation so a cache miss cannot deadlock startup.
+                with ExitStack() as stack:
+                    for storage in storages:
+                        stack.enter_context(storage._mutation_lock)
+
+                    with self._reconfiguration():
+                        with self._lock:
+                            self._max_bytes = max_bytes
+                            self._entries.clear()
+                            self._total_bytes = 0
+                            for storage_entries in self._storage_entries.values():
+                                storage_entries.clear()
+
+                        for storage in storages:
+                            storage._activate_global_budget_entries()
+
+                        # Pre-activation entries are ordered first by storage
+                        # registration and then by each storage's local LRU. Exact
+                        # cross-storage recency begins when the budget is enabled.
+                        self.enforce_budget(None)
+                return
+
+            with self._reconfiguration():
+                with self._lock:
+                    self._max_bytes = max_bytes
+                    if max_bytes is None:
+                        self._entries.clear()
+                        self._total_bytes = 0
+                        for storage_entries in self._storage_entries.values():
+                            storage_entries.clear()
                 if max_bytes is not None:
                     # Existing accounting already contains exact cross-storage
                     # recency, so resizing only needs to enforce the new limit.
                     self.enforce_budget(None)
-                return
-
-            # When activation starts from disabled, writes do not yet take the
-            # enforcement lock. Hold every mutation lock until generations and
-            # accounting are published together.
-            with ExitStack() as stack:
-                for storage in storages:
-                    stack.enter_context(storage._mutation_lock)
-
-                snapshots = [
-                    (storage, storage._snapshot_entries_for_budget())
-                    for storage in storages
-                ]
-                with self._lock:
-                    self._max_bytes = max_bytes
-                    self._entries.clear()
-                    self._total_bytes = 0
-                    for storage_entries in self._storage_entries.values():
-                        storage_entries.clear()
-
-                for storage, entries in snapshots:
-                    for key, value_size, generation in entries:
-                        self.record_write(
-                            storage._global_storage_id,
-                            key,
-                            value_size,
-                            generation,
-                        )
-
-                # The enforcement and mutation locks keep writes out of the
-                # snapshot-to-eviction window. Every existing entry is eligible.
-                self.enforce_budget(None)
 
     def _drain_pending_unregisters_locked(self) -> None:
         while not self._pending_unregisters.empty():
@@ -388,7 +383,8 @@ class GlobalCacheBudget(StatsProvider):
             if self.total_bytes <= self._max_bytes:
                 return
             # TTL expiry is local to each memory cache. Reconcile all expired entries
-            # before selecting from the remaining live global LRU.
+            # before selecting from the remaining live global LRU. This exact sweep
+            # makes over-budget enforcement proportional to finite-TTL storages.
             self._reap_expired_entries()
             attempted: set[tuple[int, str]] = set()
             while True:

@@ -46,8 +46,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     automatically removed if a given time to live (TTL) has passed.
 
     The in-memory cache uses LRU eviction for a configured entry-count or
-    serialized-byte limit. A process-wide data-cache budget can also evict
-    entries across wrappers.
+    serialized-byte limit. The ``server.maxCachedDataSize`` configuration
+    option can also enable a process-wide data-cache budget across wrappers.
 
     If ``persist_storage`` implements its own maxsize strategy, it is recommended
     (but not necessary) that it implement the same LRU strategy,
@@ -59,8 +59,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     ``_mem_cache_lock`` guards the TTL cache and entry generations.
     ``_mutation_lock`` guards mutations, close, read-through promotion, and
     underlying storage writes. Memory reads do not take ``_mutation_lock``.
-    When the process-wide budget is enabled, memory reads and writes take its
-    enforcement lock before ``_mem_cache_lock``.
+    This deliberately serializes persistent I/O for one wrapper so clear,
+    close, and read-through promotion cannot publish stale values.
+    When ``server.maxCachedDataSize`` enables the process-wide budget, memory reads
+    and writes take its enforcement lock before ``_mem_cache_lock``.
     """
 
     def __init__(
@@ -379,18 +381,21 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             removals = self._take_pending_removals()
             self._report_removals(removals)
 
-    def _snapshot_entries_for_budget(self) -> list[tuple[str, int, int]]:
-        """Register generations for entries cached before the budget was enabled."""
+    def _activate_global_budget_entries(self) -> None:
+        """Publish live pre-activation entries while holding their memory lock."""
         with self._mem_cache_lock:
             self._mem_cache.expire()
             self._take_pending_removals()
-            entries: list[tuple[str, int, int]] = []
             for key, value in self._mem_cache.lru_items():
                 self._next_generation += 1
                 generation = self._next_generation
                 self._generations[key] = generation
-                entries.append((key, len(value), generation))
-            return entries
+                self._global_budget.record_write(
+                    self._global_storage_id,
+                    key,
+                    len(value),
+                    generation,
+                )
 
     def _evict_from_mem_cache(
         self,

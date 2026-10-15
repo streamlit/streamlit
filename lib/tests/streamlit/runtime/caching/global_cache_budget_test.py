@@ -20,6 +20,7 @@ import math
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import pytest
@@ -63,6 +64,22 @@ class _DictStorage:
 
     def close(self) -> None:
         pass
+
+
+class _ObservedLock:
+    """A lock that reports when another thread tries to acquire it."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.contended = threading.Event()
+
+    def __enter__(self) -> None:
+        if self._lock.locked():
+            self.contended.set()
+        self._lock.acquire()
+
+    def __exit__(self, *args: object) -> None:
+        self._lock.release()
 
 
 def _create_storage(
@@ -130,6 +147,22 @@ def test_reconfigure_preserves_existing_storage_lru() -> None:
     assert budget.total_bytes == 3
 
 
+def test_activation_orders_existing_storages_by_registration() -> None:
+    """Cross-storage recency starts with deterministic registration order."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    first = _create_storage(budget, "first")
+    second = _create_storage(budget, "second")
+    first.set("first-key", b"aaa")
+    second.set("second-key", b"bbb")
+    assert first.get("first-key") == b"aaa"
+
+    budget.reconfigure(max_bytes=3)
+
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        first.get("first-key")
+    assert second.get("second-key") == b"bbb"
+
+
 def test_enabled_resize_preserves_cross_storage_lru() -> None:
     """Shrinking an enabled budget retains exact global read recency."""
     budget = GlobalCacheBudget(max_bytes=6)
@@ -141,7 +174,7 @@ def test_enabled_resize_preserves_cross_storage_lru() -> None:
 
     with patch.object(
         first,
-        "_snapshot_entries_for_budget",
+        "_activate_global_budget_entries",
         side_effect=AssertionError("enabled resize must not rebuild accounting"),
     ):
         budget.reconfigure(max_bytes=3)
@@ -150,6 +183,95 @@ def test_enabled_resize_preserves_cross_storage_lru() -> None:
     with pytest.raises(CacheStorageKeyNotFoundError):
         second.get("old")
     assert budget.total_bytes == 3
+
+
+def test_activation_does_not_deadlock_memory_miss() -> None:
+    """Activation waits for a cache miss without reversing the lock order."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "raw-mode")
+    persist_storage = _DictStorage()
+    persist_storage.set("disk-key", b"value")
+    storage._persist_storage = persist_storage
+    observed_mutation_lock = _ObservedLock()
+    storage._mutation_lock = cast("Any", observed_mutation_lock)
+    read_paused = threading.Event()
+    continue_read = threading.Event()
+    result: list[bytes] = []
+    errors: list[BaseException] = []
+    read_count = 0
+    original_read = storage._read_from_mem_cache
+
+    def paused_read(key: str) -> bytes:
+        nonlocal read_count
+        read_count += 1
+        if read_count == 2:
+            read_paused.set()
+            assert continue_read.wait(timeout=5)
+        return original_read(key)
+
+    def read() -> None:
+        try:
+            result.append(storage.get("disk-key"))
+        except BaseException as ex:
+            errors.append(ex)
+
+    reader = threading.Thread(target=read, daemon=True)
+    with patch.object(storage, "_read_from_mem_cache", side_effect=paused_read):
+        reader.start()
+        assert read_paused.wait(timeout=5)
+        activation = threading.Thread(
+            target=lambda: budget.reconfigure(max_bytes=10),
+            daemon=True,
+        )
+        activation.start()
+        assert observed_mutation_lock.contended.wait(timeout=5)
+        continue_read.set()
+        reader.join(timeout=5)
+        activation.join(timeout=5)
+
+    assert not reader.is_alive()
+    assert not activation.is_alive()
+    assert errors == []
+    assert result == [b"value"]
+    assert budget.total_bytes == len(b"value")
+
+
+def test_activation_does_not_publish_entry_expired_by_stats() -> None:
+    """Stats expiry cannot fall between activation snapshot and accounting."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "expiring", ttl_seconds=1)
+    now = 0.0
+    storage._mem_cache._timer = lambda: now
+    storage.set("key", b"aaa")
+    observed_mem_lock = _ObservedLock()
+    storage._mem_cache_lock = cast("Any", observed_mem_lock)
+    stats_done = threading.Event()
+    original_record_write = budget.record_write
+
+    def get_stats() -> None:
+        storage.get_stats()
+        stats_done.set()
+
+    def record_write(
+        storage_id: int,
+        key: str,
+        size: int,
+        generation: int,
+    ) -> None:
+        nonlocal now
+        now = 2.0
+        stats_reader = threading.Thread(target=get_stats, daemon=True)
+        stats_reader.start()
+        assert observed_mem_lock.contended.wait(timeout=5) or stats_done.wait(timeout=5)
+        original_record_write(storage_id, key, size, generation)
+
+    with patch.object(budget, "record_write", side_effect=record_write):
+        budget.reconfigure(max_bytes=10)
+
+    assert stats_done.wait(timeout=5)
+    assert budget.total_bytes == 0
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        storage.get("key")
 
 
 def test_read_that_observed_disabled_budget_survives_activation() -> None:

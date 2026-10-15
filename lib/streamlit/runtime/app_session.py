@@ -67,6 +67,7 @@ if TYPE_CHECKING:
         BackendOperationRequest,
         BackMsg,
     )
+    from streamlit.runtime.caching.cache_data_api import _SessionCacheLifecycle
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -359,7 +360,9 @@ class AppSession:
 
     def activate_session_caches(self) -> None:
         """Allow session cache creation for a new connection."""
-        self._session_cache_lifecycle = caching.activate_session_data_cache(self.id)
+        self._session_cache_lifecycle: _SessionCacheLifecycle = (
+            caching.activate_session_data_cache(self.id)
+        )
 
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.

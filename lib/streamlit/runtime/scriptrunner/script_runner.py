@@ -65,6 +65,7 @@ from streamlit.source_util import page_sort_key
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from streamlit.runtime.caching.cache_data_api import _SessionCacheLifecycle
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -195,7 +196,7 @@ class ScriptRunner:
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
-        session_cache_lifecycle: object | None = None,
+        session_cache_lifecycle: _SessionCacheLifecycle | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 

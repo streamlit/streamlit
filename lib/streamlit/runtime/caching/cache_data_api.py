@@ -242,8 +242,7 @@ class DataCaches(StatsProvider):
         ctx = get_script_run_ctx(suppress_warning=True)
         if ctx is None or ctx.session_id != session_id:
             return None
-        lifecycle = ctx.session_cache_lifecycle
-        return lifecycle if isinstance(lifecycle, _SessionCacheLifecycle) else None
+        return ctx.session_cache_lifecycle
 
     def get_cache(
         self,
@@ -584,7 +583,7 @@ def clear_session_cache(session_id: str) -> None:
     _data_caches.clear_session(session_id)
 
 
-def activate_session_cache(session_id: str) -> object:
+def activate_session_cache(session_id: str) -> _SessionCacheLifecycle:
     """Prepare session cache lifecycle state for a new connection."""
     return _data_caches.activate_session(session_id)
 
