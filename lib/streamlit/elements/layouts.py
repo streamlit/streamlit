@@ -651,13 +651,13 @@ class LayoutsMixin:
         list of containers
             A list of container objects.
 
-            When a type checker treats ``spec`` as exactly one of the
-            literals 1 through 6, including a variable that still has that
-            literal type, it sees a tuple of that length and checks the
-            unpack. ``a, b = st.columns(3)`` is an error. Any other integer
-            type, an integer outside that range, or a sequence of column
-            widths is a list of unknown length. Those two results are not
-            interchangeable. The value is always a list at runtime.
+            Type checkers see a fixed-length tuple when ``spec`` is a
+            literal integer from ``1`` to ``6``, including a variable that
+            still has that literal type, so they report mismatched unpacking
+            such as ``a, b = st.columns(3)``. Every other ``spec`` is a list.
+            The returned value is always a list, so tuple-only operations are
+            not valid. To annotate a variable or parameter that holds columns
+            from any ``spec``, use ``Sequence[DeltaGenerator]``.
 
         Examples
         --------

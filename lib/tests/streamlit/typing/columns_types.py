@@ -81,13 +81,15 @@ if TYPE_CHECKING:
     widths: Sequence[int | float] = [1, 2]
     assert_type(columns(widths), list[DeltaGenerator])
 
-    # A literal count is not a list.
+    # A literal count is not typed as a list.
     _as_list: list[DeltaGenerator] = columns(2)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
     # One name cannot hold specs that infer different types. ty rebinds the
     # name to the second assignment instead of reporting an error.
     shared_columns = columns(2)
     shared_columns = columns([3, 1])  # type: ignore[assignment]
+    shared_lengths = columns(2)
+    shared_lengths = columns(3)  # type: ignore[assignment]
 
     # Widen gap, alignment, and width the same way as the count. An
     # annotated literal such as `gap: Gap | None = "medium"` stays
@@ -98,6 +100,19 @@ if TYPE_CHECKING:
     vertical_alignment = alignments[0]
     column_widths: list[WidthWithoutContent] = ["stretch"]
     width = column_widths[0]
+    # Every literal overload must accept these keywords. If one drops a
+    # parameter, the call falls through to the list overload.
+    assert_type(
+        columns(
+            1,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+            border=True,
+            width=width,
+            wrap=False,
+        ),
+        tuple[DeltaGenerator],
+    )
     assert_type(
         columns(
             2,
@@ -111,6 +126,63 @@ if TYPE_CHECKING:
     )
     assert_type(
         columns(
+            3,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+            border=True,
+            width=width,
+            wrap=False,
+        ),
+        tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator],
+    )
+    assert_type(
+        columns(
+            4,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+            border=True,
+            width=width,
+            wrap=False,
+        ),
+        tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator],
+    )
+    assert_type(
+        columns(
+            5,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+            border=True,
+            width=width,
+            wrap=False,
+        ),
+        tuple[
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+        ],
+    )
+    assert_type(
+        columns(
+            6,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+            border=True,
+            width=width,
+            wrap=False,
+        ),
+        tuple[
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+            DeltaGenerator,
+        ],
+    )
+    assert_type(
+        columns(
             column_count,
             gap=gap,
             vertical_alignment=vertical_alignment,
@@ -121,7 +193,7 @@ if TYPE_CHECKING:
         list[DeltaGenerator],
     )
 
-    # st.container accepts the same range of gap values.
+    # st.container accepts gap size strings, None, and pixel integers.
     assert_type(container(gap="small"), DeltaGenerator)
     assert_type(container(gap="medium"), DeltaGenerator)
     assert_type(container(gap=None), DeltaGenerator)
