@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -299,13 +300,69 @@ class MapMixin:
             map_proto.alt = normalized_alt
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            agent_props=_agent_description(
+                latitude=latitude,
+                longitude=longitude,
+                size=size,
+                color=color,
+                zoom=zoom,
+                alt=agent_spec.proto_alt(map_proto),
+            ),
         )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _agent_description(
+    *,
+    latitude: str | None,
+    longitude: str | None,
+    size: str | float | None,
+    color: str | Collection[float] | None,
+    **props: Any,
+) -> str | None:
+    """Describe a map for the agent API.
+
+    st.map and st.pydeck_chart share a proto. The plotted table is not a
+    command parameter, so it stays out of this description.
+    """
+    if not agent_spec.is_recording():
+        return None
+
+    return agent_spec.element(
+        "map",
+        latitude=latitude,
+        longitude=longitude,
+        size=size if isinstance(size, str) else None,
+        color=color if isinstance(color, str) else None,
+        **props,
+    )
+
+
+def _plotted_columns(
+    df: DataFrame,
+    lat: str | None,
+    lon: str | None,
+    size: str | float | None,
+    color: str | Collection[float] | None,
+) -> list[str]:
+    """The columns a map plots, which are the only ones sent to its browser.
+
+    Sorted, so the generated spec is stable for tests.
+    """
+    names = {
+        _get_lat_or_lon_col_name(df, "latitude", lat, _DEFAULT_LAT_COL_NAMES),
+        _get_lat_or_lon_col_name(df, "longitude", lon, _DEFAULT_LON_COL_NAMES),
+        _get_value_and_col_name(df, size, _DEFAULT_SIZE)[1],
+        _get_value_and_col_name(df, color, _DEFAULT_COLOR)[1],
+    }
+    return sorted(name for name in names if name is not None)
 
 
 def to_deckgl_json(
@@ -331,19 +388,10 @@ def to_deckgl_json(
     lon_col_name = _get_lat_or_lon_col_name(
         df, "longitude", lon, _DEFAULT_LON_COL_NAMES
     )
-    size_arg, size_col_name = _get_value_and_col_name(df, size, _DEFAULT_SIZE)
+    size_arg, _ = _get_value_and_col_name(df, size, _DEFAULT_SIZE)
     color_arg, color_col_name = _get_value_and_col_name(df, color, _DEFAULT_COLOR)
 
-    # Drop columns we're not using.
-    # (Sort for tests)
-    used_columns = sorted(
-        [
-            c
-            for c in {lat_col_name, lon_col_name, size_col_name, color_col_name}
-            if c is not None
-        ]
-    )
-    df = df[used_columns].copy()
+    df = df[_plotted_columns(df, lat, lon, size, color)].copy()
 
     converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 

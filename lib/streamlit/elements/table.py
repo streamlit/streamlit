@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.utils import normalize_alt
@@ -411,7 +412,23 @@ class TableMixin:
         if normalized_alt is not None:
             proto.alt = normalized_alt
 
-        return self.dg._enqueue("table", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "table",
+            proto,
+            layout_config=layout_config,
+            # The schema and row preview are derived facts about the payload,
+            # not command parameters.
+            agent_props=agent_spec.element(
+                "table",
+                # `border` is surface styling; `hide_index` and `hide_header`
+                # stay because they change which data is presented.
+                hide_index=hide_index,
+                hide_header=hide_header,
+                alt=normalized_alt,
+            )
+            if agent_spec.is_recording()
+            else None,
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
