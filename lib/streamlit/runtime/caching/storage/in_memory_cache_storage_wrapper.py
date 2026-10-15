@@ -90,11 +90,14 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             max_count=None if self._max_size_bytes is None else self._max_entries,
             on_remove=self._on_mem_cache_remove,
         )
-        # _close_lock orders set() against close() so no write lands after close().
-        # _mem_cache_lock guards the memory cache and generation dictionary.
+        # _close_lock serializes mutations and read-through promotion.
+        # _mem_cache_lock guards the memory cache and entry versions.
         self._close_lock = threading.Lock()
         self._mem_cache_lock = threading.Lock()
-        self._mutation_generation = 0
+        self._invalidation_generation = 0
+        # Track key mutations only while a persistent read is active. This avoids
+        # retaining one version per key while letting unrelated writes proceed.
+        self._active_persistent_reads: dict[str, tuple[int, int]] = {}
         self._closed = False
         self._persist_storage = persist_storage
         # Publish the storage only after every callback-visible attribute exists.
@@ -133,8 +136,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         except CacheStorageKeyNotFoundError:
             pass
 
-        # Capture mutations around the slow persistent read so a concurrent write,
-        # delete, clear, or close prevents stale read-through promotion.
+        # Record invalidations around the slow persistent read. If this key changes
+        # meanwhile, don't copy disk bytes into memory because they may be stale.
         with self._close_lock:
             if self._closed:
                 raise CacheStorageKeyNotFoundError("Cache storage is closed")
@@ -142,12 +145,23 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 return self._read_from_mem_cache(key)
             except CacheStorageKeyNotFoundError:
                 pass
-            mutation_generation = self._mutation_generation
+            invalidation_generation = self._invalidation_generation
+            key_version = self._begin_persistent_read(key)
 
-        entry_bytes = self._persist_storage.get(key)
+        try:
+            entry_bytes = self._persist_storage.get(key)
+        except BaseException:
+            with self._close_lock:
+                self._finish_persistent_read(key, key_version)
+            raise
 
         with self._close_lock:
-            if self._closed or mutation_generation != self._mutation_generation:
+            key_is_current = self._finish_persistent_read(key, key_version)
+            if (
+                self._closed
+                or invalidation_generation != self._invalidation_generation
+                or not key_is_current
+            ):
                 try:
                     return self._read_from_mem_cache(key)
                 except CacheStorageKeyNotFoundError:
@@ -166,7 +180,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         with self._close_lock:
             if self._closed:
                 return
-            self._mutation_generation += 1
+            self._invalidate_persistent_reads(key)
             self._write_to_mem_cache(key, value)
             self._persist_storage.set(key, value)
 
@@ -177,21 +191,21 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 return False
             written = self._write_to_mem_cache(key, value, require_present=True)
             if written:
-                self._mutation_generation += 1
+                self._invalidate_persistent_reads(key)
                 self._persist_storage.set(key, value)
             return written
 
     def delete(self, key: str) -> None:
         """Delete a given key."""
         with self._close_lock:
-            self._mutation_generation += 1
+            self._invalidate_persistent_reads(key)
             self._remove_from_mem_cache(key)
             self._persist_storage.delete(key)
 
     def clear(self) -> None:
         """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._close_lock:
-            self._mutation_generation += 1
+            self._invalidation_generation += 1
             with self._mem_cache_lock:
                 self._mem_cache.clear()
                 removals = self._take_pending_removals()
@@ -227,13 +241,35 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             if self._closed:
                 return
             with self._mem_cache_lock:
-                self._mutation_generation += 1
+                self._invalidation_generation += 1
                 self._closed = True
                 self._mem_cache.clear()
                 removals = self._take_pending_removals()
                 self._report_removals(removals)
             self._global_budget.unregister(self._global_storage_id)
             self._persist_storage.close()
+
+    def _begin_persistent_read(self, key: str) -> int:
+        """Register an active read and return the key's current mutation version."""
+        count, version = self._active_persistent_reads.get(key, (0, 0))
+        self._active_persistent_reads[key] = (count + 1, version)
+        return version
+
+    def _finish_persistent_read(self, key: str, expected_version: int) -> bool:
+        """Unregister an active read and report whether its key stayed current."""
+        count, version = self._active_persistent_reads[key]
+        if count == 1:
+            del self._active_persistent_reads[key]
+        else:
+            self._active_persistent_reads[key] = (count - 1, version)
+        return version == expected_version
+
+    def _invalidate_persistent_reads(self, key: str) -> None:
+        """Mark active persistent reads for one key as stale."""
+        state = self._active_persistent_reads.get(key)
+        if state is not None:
+            count, version = state
+            self._active_persistent_reads[key] = (count, version + 1)
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         # Enabled-budget reads share the enforcement lock with writes so their LRU

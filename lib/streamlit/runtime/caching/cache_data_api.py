@@ -174,7 +174,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
 
 
 class _SessionCacheLifecycle:
-    """Coordinate cache creation and teardown for one session."""
+    """Stop an in-flight lookup from registering a cache after session teardown."""
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -190,7 +190,8 @@ class DataCaches(StatsProvider):
         # holding the registry lock across storage I/O.
         self._lifecycle_lock = threading.Lock()
         # Session cleanup waits only for lifecycle work in the same session. Weak
-        # values avoid retaining one state object for every disconnected session.
+        # values avoid retaining state for disconnected sessions; invalidation only
+        # needs to protect lookups that already hold this state when cleanup begins.
         self._session_lifecycles: weakref.WeakValueDictionary[
             str, _SessionCacheLifecycle
         ] = weakref.WeakValueDictionary()

@@ -106,7 +106,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_called_once()
 
-    def test_clear_waits_for_persistent_read_through(self) -> None:
+    def test_clear_invalidates_persistent_read_through(self) -> None:
         """A persistent read cannot promote stale bytes after clear returns."""
         context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
@@ -159,6 +159,42 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert len(read_errors) == 1
         with pytest.raises(CacheStorageKeyNotFoundError):
             wrapped_storage.get("some-key")
+
+    def test_unrelated_write_does_not_invalidate_persistent_read(self) -> None:
+        """A write to another key does not cause a spurious read-through miss."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("target", b"target-value")
+        wrapped_storage._remove_from_mem_cache("target")
+
+        read_started = threading.Event()
+        continue_read = threading.Event()
+        read_results: list[bytes] = []
+        original_get = persist_storage.get
+
+        def delayed_get(key: str) -> bytes:
+            value = original_get(key)
+            read_started.set()
+            assert continue_read.wait(timeout=5)
+            return value
+
+        with patch.object(persist_storage, "get", side_effect=delayed_get):
+            reader = threading.Thread(
+                target=lambda: read_results.append(wrapped_storage.get("target"))
+            )
+            reader.start()
+            assert read_started.wait(timeout=5)
+
+            wrapped_storage.set("other", b"other-value")
+            continue_read.set()
+            reader.join(timeout=5)
+
+        assert not reader.is_alive()
+        assert read_results == [b"target-value"]
+        assert wrapped_storage.get("target") == b"target-value"
 
     def test_in_memory_cache_storage_wrapper_get_key_in_memory_storage(self):
         """
