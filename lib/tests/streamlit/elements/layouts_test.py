@@ -73,6 +73,10 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.weight == 1.0 / 3
         assert columns_blocks[2].add_block.column.weight == 1.0 / 3
 
+    def test_literal_count_returns_a_list(self) -> None:
+        """A small literal count is a tuple to type checkers and a list at runtime."""
+        assert isinstance(st.columns(2), list)
+
     def test_numpy_integer_spec(self):
         """numpy integer specs are treated as a column count, like Python ints."""
         columns = st.columns(np.int64(3))
