@@ -687,6 +687,7 @@ export default defineConfig([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
     "vitest.config.mts",
+    "vitest.jsdom-env.ts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",
