@@ -1400,8 +1400,10 @@ Two leftovers from earlier rounds closed after that:
 
 - **Disconnect during the snapshot build:** the build is now kept for the retry that
   collects the interaction. The session stays claimed while the build finishes, so
-  nothing runs in between and the snapshot is still current. A retry used to build it
-  again: a 3.5-second build took 7.3 seconds to collect, and now takes 3.7.
+  nothing runs in between and the snapshot is still current. That retry also waits for
+  the build rather than getting `session_busy`, as a retry waits for a timed-out run;
+  any other request is still refused. A 3.5-second build used to take 7.3 seconds to
+  collect, with a refusal in between. It now takes 3.7, in one request.
 - **Datetime sliders:** they take a date alone as its midnight in the slider's own time
   zone, as `st.datetime_input` does.
 

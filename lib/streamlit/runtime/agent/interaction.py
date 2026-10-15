@@ -353,6 +353,9 @@ class AgentSession:
     pages: list[dict[str, Any]] = field(default_factory=list)
     # Set while an interaction is in flight; a second one is refused, not queued.
     busy: bool = False
+    # Set whenever `busy` is not, so the retry that collects an interaction
+    # whose client left can wait for the session to free up.
+    released: asyncio.Event = field(default_factory=lambda: _set(asyncio.Event()))
     # An interaction that outlasted the run timeout and whose result nobody has
     # collected yet. Its run keeps going, and a retry waits for it.
     timed_out: _Interaction | None = None
@@ -509,6 +512,16 @@ async def interact(
             raise AgentRequestError("invalid_request", "`session_id` must be a string.")
         session = registry.get(handle, user_info)
 
+    if session.busy and _collects(session, request):
+        # What is in flight is an interaction whose client left, still building
+        # its snapshot, and this request collects it. Wait for that, as a retry
+        # waits for a timed-out run, rather than refusing the one request the
+        # session is waiting for.
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(
+                session.released.wait(),
+                float(config.get_option("server.agentRunTimeout")),
+            )
     # Checked and claimed with no await in between, so a second request on the
     # event loop always sees the claim. A lock would wait instead of refusing,
     # and could start the second interaction after its client had given up.
@@ -520,6 +533,7 @@ async def interact(
             "collect it.",
         )
     session.busy = True
+    session.released.clear()
     try:
         document = await _run_interaction(
             runtime,
@@ -541,6 +555,28 @@ async def interact(
         raise
     finally:
         session.busy = False
+        session.released.set()
+
+
+def _set(event: asyncio.Event) -> asyncio.Event:
+    event.set()
+    return event
+
+
+def _action_of(request: dict[str, Any]) -> dict[str, Any]:
+    """What a request asks to do: its action fields that are present."""
+    return {
+        name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
+    }
+
+
+def _collects(session: AgentSession, request: dict[str, Any]) -> bool:
+    """Whether a request is a retry of the session's timed-out interaction:
+    only `session_id`, or the same request again.
+    """
+    pending = session.timed_out
+    action = _action_of(request)
+    return pending is not None and (not action or action == pending.action)
 
 
 async def _run_interaction(
@@ -553,11 +589,9 @@ async def _run_interaction(
 ) -> dict[str, Any]:
     app_session = _app_session(runtime, session)
 
-    action = {
-        name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
-    }
+    action = _action_of(request)
     pending = session.timed_out
-    if pending is not None and (not action or action == pending.action):
+    if pending is not None and _collects(session, request):
         # A retry of an interaction that outlasted the timeout. Starting another
         # run would interrupt the one doing the work, so a run that always took
         # longer than the timeout could never finish, and sending a trigger

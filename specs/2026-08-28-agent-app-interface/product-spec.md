@@ -270,8 +270,8 @@ calls are unaffected:
 A result is collected once; after that, the same request is a new interaction. Only
 `session_id` is the retry that always works, and the one the timeout message names:
 after a creating call, the same request, `{}`, would create another session. A client
-that disconnects while waiting is treated as timed out, so its retry collects the run
-too. Where a browser interaction would interrupt a running run, v1 answers
+that disconnects while waiting, even while its snapshot is being built, is treated as
+timed out, so its retry waits for the run and collects it too. Where a browser interaction would interrupt a running run, v1 answers
 `session_busy`, because the client may still come back for the result.
 
 The limits of that guarantee:
