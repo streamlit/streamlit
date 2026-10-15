@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import pickle  # noqa: S403
 import threading
+import weakref
+from contextlib import nullcontext
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -176,9 +178,14 @@ class DataCaches(StatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        # Serialize cache creation, replacement, and clearing without holding the
-        # registry lock across storage I/O.
+        # Serialize cache creation, replacement, and process-wide clearing without
+        # holding the registry lock across storage I/O.
         self._lifecycle_lock = threading.Lock()
+        # Session cleanup waits only for lifecycle work in the same session. Weak
+        # values avoid retaining one lock for every disconnected session.
+        self._session_lifecycle_locks: weakref.WeakValueDictionary[
+            str, threading.Lock
+        ] = weakref.WeakValueDictionary()
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
 
@@ -204,6 +211,14 @@ class DataCaches(StatsProvider):
             and cache.persist == persist
             and cache.refresh_mode == refresh_mode
         )
+
+    def _get_session_lifecycle_lock(self, session_id: str) -> threading.Lock:
+        with self._caches_lock:
+            lock = self._session_lifecycle_locks.get(session_id)
+            if lock is None:
+                lock = threading.Lock()
+                self._session_lifecycle_locks[session_id] = lock
+            return lock
 
     def get_cache(
         self,
@@ -254,7 +269,12 @@ class DataCaches(StatsProvider):
 
         # Cache creation and replacement are serialized. Re-check after taking the
         # lifecycle lock because another thread may have installed the cache.
-        with self._lifecycle_lock:
+        session_lifecycle = (
+            nullcontext()
+            if session_id is None
+            else self._get_session_lifecycle_lock(session_id)
+        )
+        with self._lifecycle_lock, session_lifecycle:
             with self._caches_lock:
                 session_caches = self._function_caches.setdefault(session_id, {})
                 cache = session_caches.get(key)
@@ -327,7 +347,9 @@ class DataCaches(StatsProvider):
 
     def clear_session(self, session_id: str) -> None:
         """Clears all caches for the given session ID."""
-        with self._lifecycle_lock:
+        # Do not take the process-wide lifecycle lock on the event-loop disconnect
+        # path. Only same-session creation or replacement must finish first.
+        with self._get_session_lifecycle_lock(session_id):
             # Hold the registry lock while removing the cache, but release it before
             # waiting for writes or touching storage.
             with self._caches_lock:
@@ -337,24 +359,31 @@ class DataCaches(StatsProvider):
                 caches = list(session_caches.values())
                 for cache in caches:
                     cache.mark_detached()
-                try:
-                    for cache in caches:
-                        cache.clear()
-                finally:
-                    self._close_storages(caches)
+                clear_error = self._apply_to_storages(
+                    caches, lambda cache: cache.clear()
+                )
+                close_error = self._apply_to_storages(
+                    caches, lambda cache: cache.storage.close()
+                )
+                if clear_error is not None:
+                    raise clear_error
+                if close_error is not None:
+                    raise close_error
 
     @staticmethod
-    def _close_storages(caches: list[DataCache[Any]]) -> None:
-        """Attempt every storage close, then raise the first failure."""
-        first_error: Exception | None = None
+    def _apply_to_storages(
+        caches: list[DataCache[Any]],
+        operation: Callable[[DataCache[Any]], None],
+    ) -> BaseException | None:
+        """Apply a cleanup operation to every cache and retain its first failure."""
+        first_error: BaseException | None = None
         for cache in caches:
             try:
-                cache.storage.close()
-            except Exception as ex:
+                operation(cache)
+            except BaseException as ex:
                 if first_error is None:
                     first_error = ex
-        if first_error is not None:
-            raise first_error
+        return first_error
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -371,18 +400,27 @@ class DataCaches(StatsProvider):
             # reject later writes, neither memory nor disk can be restored afterward.
             for data_cache in all_caches:
                 data_cache.mark_detached()
+            clear_error: BaseException | None = None
             try:
-                try:
-                    # try to remove in optimal way if such ability provided by
-                    # storage manager clear_all method;
-                    # if not implemented, fallback to remove all
-                    # available storages one by one
-                    self.get_storage_manager().clear_all()
-                except NotImplementedError:
-                    for data_cache in all_caches:
-                        data_cache.clear()
-            finally:
-                self._close_storages(all_caches)
+                # try to remove in optimal way if such ability provided by
+                # storage manager clear_all method;
+                # if not implemented, fallback to remove all
+                # available storages one by one
+                self.get_storage_manager().clear_all()
+            except NotImplementedError:
+                clear_error = self._apply_to_storages(
+                    all_caches, lambda cache: cache.clear()
+                )
+            except BaseException as ex:
+                clear_error = ex
+
+            close_error = self._apply_to_storages(
+                all_caches, lambda cache: cache.storage.close()
+            )
+            if clear_error is not None:
+                raise clear_error
+            if close_error is not None:
+                raise close_error
 
     def get_stats(
         self,

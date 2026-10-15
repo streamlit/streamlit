@@ -329,7 +329,9 @@ If you think this is actually a Streamlit bug, please
 
         with (
             patch.object(manager, "clear_all", side_effect=OSError("clear failed")),
-            patch.object(cache.storage, "close", wraps=cache.storage.close) as close,
+            patch.object(
+                cache.storage, "close", side_effect=OSError("close failed")
+            ) as close,
             pytest.raises(OSError, match="clear failed"),
         ):
             _data_caches.clear_all()
@@ -364,6 +366,39 @@ If you think this is actually a Streamlit bug, please
 
         second_close.assert_called_once_with()
 
+    def test_clear_all_attempts_all_fallback_cleanup_after_failure(self) -> None:
+        """Fallback cleanup attempts every clear and preserves its first failure."""
+        first = _data_caches.get_cache(
+            key="first",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="first",
+        )
+        second = _data_caches.get_cache(
+            key="second",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="second",
+        )
+        manager = _data_caches.get_storage_manager()
+
+        with (
+            patch.object(manager, "clear_all", side_effect=NotImplementedError),
+            patch.object(first, "clear", side_effect=OSError("clear failed")),
+            patch.object(second, "clear", wraps=second.clear) as second_clear,
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            _data_caches.clear_all()
+
+        second_clear.assert_called_once_with()
+        second_close.assert_called_once_with()
+
     def test_clear_session_closes_all_storages_when_clear_fails(self) -> None:
         """A failed cache clear still closes every storage in the session."""
         with patch(
@@ -389,6 +424,7 @@ If you think this is actually a Streamlit bug, please
 
         with (
             patch.object(first, "clear", side_effect=OSError("clear failed")),
+            patch.object(second, "clear", wraps=second.clear) as second_clear,
             patch.object(
                 first.storage, "close", wraps=first.storage.close
             ) as first_close,
@@ -399,6 +435,7 @@ If you think this is actually a Streamlit bug, please
         ):
             clear_session_cache("session")
 
+        second_clear.assert_called_once_with()
         first_close.assert_called_once_with()
         second_close.assert_called_once_with()
 
@@ -560,6 +597,34 @@ If you think this is actually a Streamlit bug, please
 
         assert completed_without_lifecycle_lock
         assert returned == [cache]
+
+    def test_clear_session_does_not_wait_for_process_lifecycle_lock(self) -> None:
+        """Session disconnect cleanup is not blocked by unrelated lifecycle work."""
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(
+                key="session_cache",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="session_cache",
+                scope="session",
+            )
+
+        _data_caches._lifecycle_lock.acquire()
+        try:
+            clearer = threading.Thread(target=clear_session_cache, args=("session",))
+            clearer.start()
+            clearer.join(timeout=1)
+            completed_without_process_lock = not clearer.is_alive()
+        finally:
+            _data_caches._lifecycle_lock.release()
+        clearer.join(timeout=5)
+
+        assert completed_without_process_lock
+        assert cache.is_active is False
 
     @parameterized.expand(
         [

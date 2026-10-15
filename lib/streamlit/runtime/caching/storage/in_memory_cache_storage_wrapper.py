@@ -49,8 +49,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     serialized-byte limit. A process-wide data-cache budget can also evict
     entries across wrappers.
 
-    If the storage implements its strategy for maxsize, it is recommended
-    (but not necessary) that the storage implement the same LRU strategy,
+    If ``persist_storage`` implements its own maxsize strategy, it is recommended
+    (but not necessary) that it implement the same LRU strategy,
     otherwise a situation may arise when different items are deleted from
     the memory cache and from the storage.
 
@@ -128,8 +128,19 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         the key is not found.
         """
         try:
-            entry_bytes = self._read_from_mem_cache(key)
+            return self._read_from_mem_cache(key)
         except CacheStorageKeyNotFoundError:
+            pass
+
+        # Serialize persistent read-through promotion with clear(), delete(), and
+        # close() so stale bytes cannot repopulate memory after invalidation.
+        with self._close_lock:
+            if self._closed:
+                raise CacheStorageKeyNotFoundError("Cache storage is closed")
+            try:
+                return self._read_from_mem_cache(key)
+            except CacheStorageKeyNotFoundError:
+                pass
             entry_bytes = self._persist_storage.get(key)
             self._write_to_mem_cache(key, entry_bytes)
         return entry_bytes
@@ -154,16 +165,18 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def delete(self, key: str) -> None:
         """Delete a given key."""
-        self._remove_from_mem_cache(key)
-        self._persist_storage.delete(key)
+        with self._close_lock:
+            self._remove_from_mem_cache(key)
+            self._persist_storage.delete(key)
 
     def clear(self) -> None:
         """Delete all keys for the in memory cache, and also the persistent storage."""
-        with self._mem_cache_lock:
-            self._mem_cache.clear()
-            removals = self._take_pending_removals()
-            self._report_removals(removals)
-        self._persist_storage.clear()
+        with self._close_lock:
+            with self._mem_cache_lock:
+                self._mem_cache.clear()
+                removals = self._take_pending_removals()
+                self._report_removals(removals)
+            self._persist_storage.clear()
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -206,7 +219,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         # update cannot invalidate a selected victim and leave the budget exceeded.
         with self._global_budget.read_enforcement(), self._mem_cache_lock:
             try:
-                entry = bytes(self._mem_cache[key])
+                entry = self._mem_cache[key]
             except KeyError:
                 _LOGGER.debug("Memory cache MISS: %s", key)
                 raise CacheStorageKeyNotFoundError(
@@ -222,7 +235,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     )
                 _LOGGER.debug("Memory cache HIT: %s", key)
 
-        return entry
+        return bytes(entry)
 
     def _write_to_mem_cache(
         self, key: str, entry_bytes: bytes, *, require_present: bool = False

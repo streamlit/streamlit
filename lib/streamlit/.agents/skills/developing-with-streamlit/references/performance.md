@@ -101,9 +101,10 @@ Do not cache live async clients or connections bound to the event loop that crea
 
 ### Bound cache growth
 
-By default, `st.cache_data` has no serialized-byte limit. Combine `ttl` for
-time-based expiration, `max_entries` for a count limit, and `max_size` for a
-serialized-byte limit when values vary substantially in size:
+**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
+For functions that cache changing values, set `ttl`, `max_entries`, and/or (for
+`st.cache_data`) `max_size`. Use `max_size` when values vary substantially in
+serialized size:
 
 ```python
 @st.cache_data(ttl="1h", max_size="500MB")

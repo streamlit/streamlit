@@ -220,7 +220,8 @@ class GlobalCacheBudget(StatsProvider):
             "A value from %s is larger than server.maxCachedDataSize. Streamlit "
             "kept that value and evicted every other in-memory st.cache_data entry. "
             "Raise server.maxCachedDataSize, or set it to "
-            '"0" to disable the process-wide budget.',
+            '"0" to disable the process-wide budget. This warning is logged once '
+            "per process.",
             function_display_name,
             stack_info=True,
         )
@@ -254,7 +255,7 @@ class GlobalCacheBudget(StatsProvider):
         protected: tuple[int, str],
         excluded: set[tuple[int, str]],
     ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
-        """Select the global LRU candidate, excluding protected and tried entries."""
+        """Select the global LRU, excluding the protected write and tried victims."""
         with self._lock:
             self._drain_pending_unregisters_locked()
             if self._max_bytes is None or self._total_bytes <= self._max_bytes:

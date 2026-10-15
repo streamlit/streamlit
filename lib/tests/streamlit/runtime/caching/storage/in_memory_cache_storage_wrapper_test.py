@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import threading
 import unittest
 from unittest.mock import Mock, patch
 
@@ -104,6 +105,56 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             # Call get again to make that underlying storage is not called again
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_called_once()
+
+    def test_clear_waits_for_persistent_read_through(self) -> None:
+        """A persistent read cannot promote stale bytes after clear returns."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("some-key", b"some-value")
+        wrapped_storage._remove_from_mem_cache("some-key")
+
+        read_started = threading.Event()
+        continue_read = threading.Event()
+        clear_started = threading.Event()
+        clear_finished = threading.Event()
+        read_results: list[bytes] = []
+        original_get = persist_storage.get
+
+        def delayed_get(key: str) -> bytes:
+            value = original_get(key)
+            read_started.set()
+            assert continue_read.wait(timeout=5)
+            return value
+
+        def clear_storage() -> None:
+            clear_started.set()
+            wrapped_storage.clear()
+            clear_finished.set()
+
+        with patch.object(persist_storage, "get", side_effect=delayed_get):
+            reader = threading.Thread(
+                target=lambda: read_results.append(wrapped_storage.get("some-key"))
+            )
+            reader.start()
+            assert read_started.wait(timeout=5)
+
+            clearer = threading.Thread(target=clear_storage)
+            clearer.start()
+            assert clear_started.wait(timeout=5)
+            assert not clear_finished.wait(timeout=0.1)
+
+            continue_read.set()
+            reader.join(timeout=5)
+            clearer.join(timeout=5)
+
+        assert not reader.is_alive()
+        assert not clearer.is_alive()
+        assert read_results == [b"some-value"]
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage.get("some-key")
 
     def test_in_memory_cache_storage_wrapper_get_key_in_memory_storage(self):
         """
