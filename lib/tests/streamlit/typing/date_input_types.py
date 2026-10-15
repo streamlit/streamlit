@@ -187,3 +187,28 @@ if TYPE_CHECKING:
         DateWidgetRangeReturn,
     )
     assert_type(date_input("foo", date(2024, 1, 1), key="my_key", bind=None), date)
+
+    # Test required parameter (keyword-only). Return types do not narrow.
+    assert_type(date_input("foo", required=True), date)
+    assert_type(date_input("foo", required=False), date)
+    assert_type(date_input("foo", value=None, required=True), date | None)
+    assert_type(
+        date_input("foo", (date(2024, 1, 1), date(2024, 1, 31)), required=True),
+        DateWidgetRangeReturn,
+    )
+
+    assert_type(
+        date_input(
+            "foo",
+            date(2024, 1, 1),
+            key="required_date",
+            help="Pick a date",
+            on_change=on_change_callback,
+            disabled=False,
+            required=True,
+            label_visibility="visible",
+            width=240,
+            persist_state="page",
+        ),
+        date,
+    )
