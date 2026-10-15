@@ -962,8 +962,9 @@ _create_option(
         "500mb" (units are powers of 1024). "0" (default) disables the limit.
         When the total exceeds the limit, Streamlit evicts the least-recently-used
         in-memory entries; persisted disk entries are not deleted. A single value
-        larger than the limit is still cached. Streamlit reads this value when the
-        server starts.
+        larger than the limit is still cached. Exact LRU coordination serializes
+        in-memory cache reads and writes process-wide. Streamlit reads this value
+        when the server starts.
     """,
     default_val="0",
     type_=str,

@@ -626,6 +626,55 @@ If you think this is actually a Streamlit bug, please
         assert completed_without_process_lock
         assert cache.is_active is False
 
+    def test_slow_lookup_cannot_install_cache_after_session_clear(self) -> None:
+        """A lookup already waiting on lifecycle work observes session teardown."""
+        lookup_started = threading.Event()
+        returned: list[DataCache[Any]] = []
+        original_get_lifecycle = _data_caches._get_session_lifecycle
+
+        def observed_get_lifecycle(session_id: str) -> Any:
+            lifecycle = original_get_lifecycle(session_id)
+            lookup_started.set()
+            return lifecycle
+
+        def get_session_cache() -> None:
+            returned.append(
+                _data_caches.get_cache(
+                    key="late_session_cache",
+                    persist=None,
+                    max_entries=None,
+                    ttl=None,
+                    display_name="late_session_cache",
+                    scope="session",
+                )
+            )
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ),
+            patch.object(
+                _data_caches,
+                "_get_session_lifecycle",
+                side_effect=observed_get_lifecycle,
+            ),
+        ):
+            _data_caches._lifecycle_lock.acquire()
+            try:
+                lookup = threading.Thread(target=get_session_cache)
+                lookup.start()
+                assert lookup_started.wait(timeout=5)
+                clear_session_cache("session")
+            finally:
+                _data_caches._lifecycle_lock.release()
+            lookup.join(timeout=5)
+
+        assert not lookup.is_alive()
+        assert len(returned) == 1
+        assert returned[0].is_active is False
+        assert "session" not in _data_caches._function_caches
+
     @parameterized.expand(
         [
             ("boolean", True),

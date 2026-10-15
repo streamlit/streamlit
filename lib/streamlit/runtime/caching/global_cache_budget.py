@@ -140,14 +140,8 @@ class GlobalCacheBudget(StatsProvider):
             if record is not None:
                 self._total_bytes -= record.size
 
-    def write_enforcement(self) -> AbstractContextManager[object]:
-        """Serialize a storage write with its process-wide budget enforcement."""
-        if self._max_bytes is None:
-            return _NO_ENFORCEMENT
-        return self._enforcement_lock
-
-    def read_enforcement(self) -> AbstractContextManager[object]:
-        """Keep an enabled-budget read from racing victim enforcement."""
+    def enforcement_lock(self) -> AbstractContextManager[object]:
+        """Serialize enabled-budget LRU reads, writes, and eviction."""
         if self._max_bytes is None:
             return _NO_ENFORCEMENT
         return self._enforcement_lock
@@ -283,6 +277,8 @@ class GlobalCacheBudget(StatsProvider):
                     )
                 if stale_storage_id is None:
                     return None
+                # Restart after dropping a garbage-collected storage because its
+                # entries may account for all bytes above the budget.
                 self._unregister_locked(stale_storage_id)
                 if self._total_bytes <= self._max_bytes:
                     return None

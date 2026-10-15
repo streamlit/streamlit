@@ -173,6 +173,14 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
+class _SessionCacheLifecycle:
+    """Coordinate cache creation and teardown for one session."""
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.invalidated = False
+
+
 class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
@@ -182,9 +190,9 @@ class DataCaches(StatsProvider):
         # holding the registry lock across storage I/O.
         self._lifecycle_lock = threading.Lock()
         # Session cleanup waits only for lifecycle work in the same session. Weak
-        # values avoid retaining one lock for every disconnected session.
-        self._session_lifecycle_locks: weakref.WeakValueDictionary[
-            str, threading.Lock
+        # values avoid retaining one state object for every disconnected session.
+        self._session_lifecycles: weakref.WeakValueDictionary[
+            str, _SessionCacheLifecycle
         ] = weakref.WeakValueDictionary()
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
@@ -212,13 +220,13 @@ class DataCaches(StatsProvider):
             and cache.refresh_mode == refresh_mode
         )
 
-    def _get_session_lifecycle_lock(self, session_id: str) -> threading.Lock:
+    def _get_session_lifecycle(self, session_id: str) -> _SessionCacheLifecycle:
         with self._caches_lock:
-            lock = self._session_lifecycle_locks.get(session_id)
-            if lock is None:
-                lock = threading.Lock()
-                self._session_lifecycle_locks[session_id] = lock
-            return lock
+            lifecycle = self._session_lifecycles.get(session_id)
+            if lifecycle is None:
+                lifecycle = _SessionCacheLifecycle()
+                self._session_lifecycles[session_id] = lifecycle
+            return lifecycle
 
     def get_cache(
         self,
@@ -270,15 +278,19 @@ class DataCaches(StatsProvider):
         # Cache creation and replacement are serialized. Re-check after taking the
         # lifecycle lock because another thread may have installed the cache.
         session_lifecycle = (
-            nullcontext()
-            if session_id is None
-            else self._get_session_lifecycle_lock(session_id)
+            None if session_id is None else self._get_session_lifecycle(session_id)
         )
-        with self._lifecycle_lock, session_lifecycle:
+        with (
+            self._lifecycle_lock,
+            nullcontext() if session_lifecycle is None else session_lifecycle.lock,
+        ):
+            session_invalidated = (
+                session_lifecycle is not None and session_lifecycle.invalidated
+            )
             with self._caches_lock:
-                session_caches = self._function_caches.setdefault(session_id, {})
-                cache = session_caches.get(key)
-                if self._cache_matches(
+                session_caches = self._function_caches.get(session_id)
+                cache = None if session_caches is None else session_caches.get(key)
+                if not session_invalidated and self._cache_matches(
                     cache,
                     fresh_ttl_seconds=fresh_ttl_seconds,
                     max_entries=max_entries,
@@ -287,7 +299,7 @@ class DataCaches(StatsProvider):
                     refresh_mode=refresh_mode,
                 ):
                     return cache
-                if cache is not None:
+                if cache is not None and session_caches is not None:
                     del session_caches[key]
 
             if cache is not None:
@@ -341,6 +353,10 @@ class DataCaches(StatsProvider):
                 display_name=display_name,
                 refresh_mode=refresh_mode,
             )
+            if session_invalidated:
+                cache.mark_detached()
+                cache.storage.close()
+                return cache
             with self._caches_lock:
                 self._function_caches.setdefault(session_id, {})[key] = cache
             return cache
@@ -349,7 +365,9 @@ class DataCaches(StatsProvider):
         """Clears all caches for the given session ID."""
         # Do not take the process-wide lifecycle lock on the event-loop disconnect
         # path. Only same-session creation or replacement must finish first.
-        with self._get_session_lifecycle_lock(session_id):
+        session_lifecycle = self._get_session_lifecycle(session_id)
+        with session_lifecycle.lock:
+            session_lifecycle.invalidated = True
             # Hold the registry lock while removing the cache, but release it before
             # waiting for writes or touching storage.
             with self._caches_lock:
@@ -359,19 +377,20 @@ class DataCaches(StatsProvider):
                 caches = list(session_caches.values())
                 for cache in caches:
                     cache.mark_detached()
-                clear_error = self._apply_to_storages(
-                    caches, lambda cache: cache.clear()
-                )
-                close_error = self._apply_to_storages(
+                clear_error = self._apply_to_caches(caches, lambda cache: cache.clear())
+                close_error = self._apply_to_caches(
                     caches, lambda cache: cache.storage.close()
                 )
+                with self._caches_lock:
+                    if self._session_lifecycles.get(session_id) is session_lifecycle:
+                        del self._session_lifecycles[session_id]
                 if clear_error is not None:
                     raise clear_error
                 if close_error is not None:
                     raise close_error
 
     @staticmethod
-    def _apply_to_storages(
+    def _apply_to_caches(
         caches: list[DataCache[Any]],
         operation: Callable[[DataCache[Any]], None],
     ) -> BaseException | None:
@@ -408,13 +427,13 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                clear_error = self._apply_to_storages(
+                clear_error = self._apply_to_caches(
                     all_caches, lambda cache: cache.clear()
                 )
             except BaseException as ex:
                 clear_error = ex
 
-            close_error = self._apply_to_storages(
+            close_error = self._apply_to_caches(
                 all_caches, lambda cache: cache.storage.close()
             )
             if clear_error is not None:

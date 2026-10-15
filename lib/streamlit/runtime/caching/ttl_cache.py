@@ -82,7 +82,7 @@ class TTLCache(MutableMapping[K, V]):
         self._max_count = max_count
         self._on_remove = on_remove
         self._currsize = 0
-        self._sizes: dict[K, int] = {}
+        self._sizes: dict[K, int] | None = {} if self._size_mode else None
         self._ttl = ttl
         self._timer = timer
         # Maps key -> value in least-recently-used order (oldest first). The LRU
@@ -143,6 +143,8 @@ class TTLCache(MutableMapping[K, V]):
         return self._data[key]
 
     def __setitem__(self, key: K, value: V) -> None:
+        # Count mode must hold at least one entry. Size mode permits a limit smaller
+        # than one value because Streamlit retains a single oversized cache entry.
         if (not self._size_mode and self._maxsize < 1) or (
             self._max_count is not None and self._max_count < 1
         ):
@@ -161,7 +163,8 @@ class TTLCache(MutableMapping[K, V]):
             # can run their release hooks for automatic capacity evictions.
             self.popitem()
         self._data[key] = value
-        self._sizes[key] = size
+        if self._sizes is not None:
+            self._sizes[key] = size
         self._currsize += size
         self._data.move_to_end(key)
         self._expirations[key] = now + self._ttl
@@ -245,7 +248,7 @@ class TTLCache(MutableMapping[K, V]):
     def _remove(self, key: K) -> V:
         value = self._data.pop(key)
         del self._expirations[key]
-        self._currsize -= self._sizes.pop(key)
+        self._currsize -= 1 if self._sizes is None else self._sizes.pop(key)
         if self._on_remove is not None:
             self._on_remove(key, value)
         return value

@@ -120,7 +120,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         continue_read = threading.Event()
         clear_started = threading.Event()
         clear_finished = threading.Event()
-        read_results: list[bytes] = []
+        read_errors: list[CacheStorageKeyNotFoundError] = []
         original_get = persist_storage.get
 
         def delayed_get(key: str) -> bytes:
@@ -134,17 +134,21 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.clear()
             clear_finished.set()
 
+        def read_storage() -> None:
+            try:
+                wrapped_storage.get("some-key")
+            except CacheStorageKeyNotFoundError as ex:
+                read_errors.append(ex)
+
         with patch.object(persist_storage, "get", side_effect=delayed_get):
-            reader = threading.Thread(
-                target=lambda: read_results.append(wrapped_storage.get("some-key"))
-            )
+            reader = threading.Thread(target=read_storage)
             reader.start()
             assert read_started.wait(timeout=5)
 
             clearer = threading.Thread(target=clear_storage)
             clearer.start()
             assert clear_started.wait(timeout=5)
-            assert not clear_finished.wait(timeout=0.1)
+            assert clear_finished.wait(timeout=5)
 
             continue_read.set()
             reader.join(timeout=5)
@@ -152,7 +156,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
 
         assert not reader.is_alive()
         assert not clearer.is_alive()
-        assert read_results == [b"some-value"]
+        assert len(read_errors) == 1
         with pytest.raises(CacheStorageKeyNotFoundError):
             wrapped_storage.get("some-key")
 

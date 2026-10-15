@@ -94,6 +94,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         # _mem_cache_lock guards the memory cache and generation dictionary.
         self._close_lock = threading.Lock()
         self._mem_cache_lock = threading.Lock()
+        self._mutation_generation = 0
         self._closed = False
         self._persist_storage = persist_storage
         # Publish the storage only after every callback-visible attribute exists.
@@ -132,8 +133,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         except CacheStorageKeyNotFoundError:
             pass
 
-        # Serialize persistent read-through promotion with clear(), delete(), and
-        # close() so stale bytes cannot repopulate memory after invalidation.
+        # Capture mutations around the slow persistent read so a concurrent write,
+        # delete, clear, or close prevents stale read-through promotion.
         with self._close_lock:
             if self._closed:
                 raise CacheStorageKeyNotFoundError("Cache storage is closed")
@@ -141,7 +142,22 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 return self._read_from_mem_cache(key)
             except CacheStorageKeyNotFoundError:
                 pass
-            entry_bytes = self._persist_storage.get(key)
+            mutation_generation = self._mutation_generation
+
+        entry_bytes = self._persist_storage.get(key)
+
+        with self._close_lock:
+            if self._closed or mutation_generation != self._mutation_generation:
+                try:
+                    return self._read_from_mem_cache(key)
+                except CacheStorageKeyNotFoundError:
+                    raise CacheStorageKeyNotFoundError(
+                        "Cache entry changed during persistent read"
+                    ) from None
+            try:
+                return self._read_from_mem_cache(key)
+            except CacheStorageKeyNotFoundError:
+                pass
             self._write_to_mem_cache(key, entry_bytes)
         return entry_bytes
 
@@ -150,6 +166,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         with self._close_lock:
             if self._closed:
                 return
+            self._mutation_generation += 1
             self._write_to_mem_cache(key, value)
             self._persist_storage.set(key, value)
 
@@ -160,18 +177,21 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 return False
             written = self._write_to_mem_cache(key, value, require_present=True)
             if written:
+                self._mutation_generation += 1
                 self._persist_storage.set(key, value)
             return written
 
     def delete(self, key: str) -> None:
         """Delete a given key."""
         with self._close_lock:
+            self._mutation_generation += 1
             self._remove_from_mem_cache(key)
             self._persist_storage.delete(key)
 
     def clear(self) -> None:
         """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._close_lock:
+            self._mutation_generation += 1
             with self._mem_cache_lock:
                 self._mem_cache.clear()
                 removals = self._take_pending_removals()
@@ -207,6 +227,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             if self._closed:
                 return
             with self._mem_cache_lock:
+                self._mutation_generation += 1
                 self._closed = True
                 self._mem_cache.clear()
                 removals = self._take_pending_removals()
@@ -217,7 +238,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def _read_from_mem_cache(self, key: str) -> bytes:
         # Enabled-budget reads share the enforcement lock with writes so their LRU
         # update cannot invalidate a selected victim and leave the budget exceeded.
-        with self._global_budget.read_enforcement(), self._mem_cache_lock:
+        with self._global_budget.enforcement_lock(), self._mem_cache_lock:
             try:
                 entry = self._mem_cache[key]
             except KeyError:
@@ -241,7 +262,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self, key: str, entry_bytes: bytes, *, require_present: bool = False
     ) -> bool:
         should_warn = False
-        with self._global_budget.write_enforcement():
+        with self._global_budget.enforcement_lock():
             with self._mem_cache_lock:
                 if self._closed:
                     return False
@@ -318,16 +339,11 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         with self._mem_cache_lock:
             if self._generations.get(key) != expected_generation:
                 return False
-            if key not in self._mem_cache:
-                # An expired entry is hidden from "in" but still counted by the
-                # global budget. Delete it so its bytes are released.
-                with contextlib.suppress(KeyError):
-                    del self._mem_cache[key]
-                removals = self._take_pending_removals()
-                self._report_removals(removals)
-                return False
+            is_live = key in self._mem_cache
+            # Release an expired entry that the global budget still counts.
+            # TTLCache hides expired keys from "in", so delete it explicitly.
             with contextlib.suppress(KeyError):
                 del self._mem_cache[key]
             removals = self._take_pending_removals()
             self._report_removals(removals)
-        return True
+        return is_live

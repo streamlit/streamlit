@@ -355,9 +355,9 @@ class Cache(Generic[R]):
         # cache is replaced (param change), or when the owning session / all caches
         # are cleared. In-flight writes to a detached cache are discarded.
         self._active = True
-        # Bumped whenever the *whole* cache is cleared. An async foreground computation
-        # or background refresh captures the generation before running user code and
-        # discards its write if the generation changed.
+        # Bumped whenever the *whole* cache is cleared. An in-flight computation or
+        # background refresh captures the generation before running user code and
+        # discards its write if the generation changes.
         self._generation = 0
         # Maps value_key -> a counter bumped each time that key is individually cleared
         # (func.clear(*args)). In-flight writes capture the counter before running user
@@ -462,7 +462,7 @@ class Cache(Generic[R]):
         *,
         invalidation_token: CacheInvalidationToken,
     ) -> bool:
-        """Write a foreground result only if its invalidation token is still current.
+        """Write a computed result only if its invalidation token is still current.
 
         The token check and write must be atomic with respect to cache clearing.
         Returns whether the result was written.
@@ -892,7 +892,7 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         computed_value: R,
         *,
-        invalidation_token: CacheInvalidationToken | None = None,
+        invalidation_token: CacheInvalidationToken,
     ) -> R:
         """Write a freshly computed value back to the cache and return it.
 
@@ -915,16 +915,12 @@ class CachedFunc(Generic[P, R]):
         else:
             messages = captured_messages
         try:
-            if invalidation_token is None:
-                cache.write_result(value_key, computed_value, messages)
-                was_written = True
-            else:
-                was_written = cache.write_result_if_current(
-                    value_key,
-                    computed_value,
-                    messages,
-                    invalidation_token=invalidation_token,
-                )
+            was_written = cache.write_result_if_current(
+                value_key,
+                computed_value,
+                messages,
+                invalidation_token=invalidation_token,
+            )
             if not was_written:
                 return computed_value
             # A successful (re)compute clears any prior background-refresh failure

@@ -435,7 +435,7 @@ def test_overlapping_writes_are_serialized_through_enforcement() -> None:
     allow_first_return = threading.Event()
     second_attempted = threading.Event()
     original_enforce = budget.enforce_budget
-    original_write_enforcement = budget.write_enforcement
+    original_enforcement_lock = budget.enforcement_lock
 
     def delayed_enforce(protected: tuple[int, str]) -> None:
         if protected[0] == first._global_storage_id:
@@ -447,17 +447,17 @@ def test_overlapping_writes_are_serialized_through_enforcement() -> None:
         else:
             original_enforce(protected)
 
-    def observe_write_enforcement() -> object:
+    def observe_enforcement_lock() -> object:
         if threading.current_thread().name == "second-writer":
             second_attempted.set()
-        return original_write_enforcement()
+        return original_enforcement_lock()
 
     with (
         patch.object(budget, "enforce_budget", side_effect=delayed_enforce),
         patch.object(
             budget,
-            "write_enforcement",
-            side_effect=observe_write_enforcement,
+            "enforcement_lock",
+            side_effect=observe_enforcement_lock,
         ),
     ):
         first_writer = threading.Thread(target=first.set, args=("older", b"aaaaaa"))

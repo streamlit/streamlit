@@ -400,6 +400,7 @@ def test_currsize_reflects_non_expired_entries() -> None:
     cache["a"] = 1
     cache["b"] = 2
     assert cache.currsize == 2
+    assert cache._sizes is None
 
     clock.now = 10
     assert cache.currsize == 0
