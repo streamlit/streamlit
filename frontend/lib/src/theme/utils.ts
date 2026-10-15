@@ -1806,10 +1806,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
 
   // Stock sidebar chrome only when main surfaces are stock and sidebar left the
   // key unset (blank). Custom main surfaces inherit main chrome as before.
+  // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
   const stockChromeFallbacks = useStockSidebarSurfaces
     ? {
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-        borderColor: sidebarThemeInput?.borderColor || stockChrome.borderColor,
+        borderColor:
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+          sidebarThemeInput?.borderColor || stockChrome.borderColor,
         dataframeBorderColor:
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
           sidebarThemeInput?.dataframeBorderColor ||
@@ -1822,8 +1824,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
           sidebarThemeInput?.codeBackgroundColor ||
           stockChrome.codeBackgroundColor,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
         codeTextColor:
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
           sidebarThemeInput?.codeTextColor || stockChrome.codeTextColor,
       }
     : {}
