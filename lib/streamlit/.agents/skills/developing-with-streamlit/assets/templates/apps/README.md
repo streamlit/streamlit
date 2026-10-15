@@ -50,6 +50,8 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
+
 ## Canonical Patterns
 
 When creating new templates or adapting existing ones, follow these patterns for consistency.

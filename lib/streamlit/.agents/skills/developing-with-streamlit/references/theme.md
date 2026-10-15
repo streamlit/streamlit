@@ -12,13 +12,13 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 
 ## Choose a config shape
 
-| Goal | Use |
-|------|-----|
-| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
-| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) |
-| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) |
-| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
-| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
+| Goal | Use | Start from |
+|------|-----|------------|
+| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` | Adapt a template into the shared file |
+| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) | `shadcn` (light) or `vscode` (dark) |
+| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) | `shadcn-dual` |
+| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` — full contrast set, not only `backgroundColor` | `shadcn-dual` |
+| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) | `dense-dashboard` |
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
@@ -28,6 +28,19 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See the `shadcn-dual` template
 3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
 4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
+
+## Cheat sheet: common customization intents
+
+Map common polish and brand requests to config keys. For mode and layout choices, use **Choose a config shape** above.
+
+| Intent | Put in `config.toml` | Start from |
+|--------|----------------------|------------|
+| Brand accent (buttons, links) | `primaryColor`, usually also `linkColor` | Any template; retint primary |
+| Page / panel surfaces | `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `borderColor` | `shadcn` / `shadcn-dual` |
+| Chart / dataframe brand | `chartCategoricalColors`; sequential/diverging must be exactly 10 colors; `dataframe*` | `dense-dashboard` |
+| Fonts, radii, widget borders | `font` / `headingFont` / `codeFont`, `baseRadius`, `showWidgetBorder` | Most templates |
+
+Prefer these over CSS. Full detail below; inventory via `streamlit config show`.
 
 ## Valid theme sections
 
@@ -452,11 +465,11 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose a single- or dual-mode template based on whether users should control appearance; use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Picker defaults and dual vs locked guidance live in `assets/templates/themes/README.md` — use dual mode only when the settings appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Dual-mode + sidebars when users should toggle appearance |
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Default dual-mode + sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |
