@@ -911,6 +911,94 @@ def test_range_date_active_calendar_keyboard_navigation(app: Page):
     expect(last_segment).to_be_focused()
 
 
+def test_single_date_field_has_one_tab_stop(app: Page):
+    """Each date field is one Tab stop; arrows move between segments."""
+    date_input = get_date_input(app, "Single date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    segments = date_field.get_by_role("spinbutton")
+    first = segments.nth(0)
+    second = segments.nth(1)
+    calendar_button = date_input.get_by_test_id("stDateInputCalendarButton")
+
+    expect(first).to_have_attribute("tabindex", "0")
+    expect(second).to_have_attribute("tabindex", "-1")
+    expect(segments.nth(2)).to_have_attribute("tabindex", "-1")
+
+    first.click()
+    app.keyboard.press("ArrowRight")
+    expect(second).to_be_focused()
+    expect(second).to_have_attribute("tabindex", "0")
+    expect(first).to_have_attribute("tabindex", "-1")
+
+    # Tab leaves the field (does not stop on the third segment).
+    app.keyboard.press("Tab")
+    expect(calendar_button).to_be_focused()
+
+
+def test_separator_click_focuses_segment_before_separator(app: Page):
+    """Separator presses must reach focusLast while every segment is tabbable.
+
+    React Aria's group press walks `{ tabbable: true }` and focuses the
+    segment before the click target. With a single Tab stop, only one
+    segment is tabbable, so a later separator would focus that stop instead
+    of the preceding segment unless pointer exposure survives until
+    focusLast runs.
+    """
+    date_input = get_date_input(app, "Single date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    segments = date_field.get_by_role("spinbutton")
+    year = segments.nth(0)
+    month = segments.nth(1)
+
+    expect(year).to_have_attribute("tabindex", "0")
+    expect(month).to_have_attribute("tabindex", "-1")
+
+    # Second literal sits between month and day.
+    date_field.locator("[data-type='literal']").nth(1).click()
+    expect(month).to_be_focused()
+
+
+def test_range_date_tabs_start_end_then_calendar(app: Page):
+    """Range Tab order is start field → end field → calendar button."""
+    date_input = get_date_input(app, "Range, two dates")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    # Start year/month/day then end year/month/day (six spinbuttons).
+    segments = date_field.get_by_role("spinbutton")
+    start_first = segments.nth(0)
+    start_second = segments.nth(1)
+    end_first = segments.nth(3)
+    calendar_button = date_input.get_by_test_id("stDateInputCalendarButton")
+
+    expect(start_first).to_have_attribute("tabindex", "0")
+    expect(start_second).to_have_attribute("tabindex", "-1")
+    expect(end_first).to_have_attribute("tabindex", "0")
+    expect(segments.nth(4)).to_have_attribute("tabindex", "-1")
+
+    start_first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    app.keyboard.press("Tab")
+    expect(end_first).to_be_focused()
+    expect(calendar).to_be_visible()
+    app.keyboard.press("Shift+Tab")
+    expect(start_first).to_be_focused()
+    expect(calendar).to_be_visible()
+    app.keyboard.press("Tab")
+    expect(end_first).to_be_focused()
+    app.keyboard.press("Tab")
+    expect(calendar_button).to_be_focused()
+
+
+def test_disabled_date_field_is_not_a_tab_stop(app: Page):
+    """Disabled date segments stay out of the tab order."""
+    # "Disabled, no date" uses value=[] so it is an empty range (six segments).
+    date_input = get_date_input(app, "Disabled, no date")
+    segments = date_input.get_by_test_id("stDateInputField").get_by_role("spinbutton")
+    expect(segments).to_have_count(6)
+    for i in range(6):
+        expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
+
+
 def test_year_picker_does_not_revert_month(app: Page):
     """Changing the year after changing the month must not revert the month."""
     # "Single datetime" starts at July 6, 2019

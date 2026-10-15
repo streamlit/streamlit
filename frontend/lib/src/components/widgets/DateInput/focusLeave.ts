@@ -75,10 +75,18 @@ export type PassivePreviewTabLeave = {
 }
 
 /**
- * Routes Tab while the passive preview is open. Returns true when handled.
- * Does not preventDefault. Last-segment Tab waits one frame (Safari/Firefox may
- * skip the icon button); focus that lands in the still-open grid is moved to
- * the calendar button. Use a `data-type` segmentSelector (iOS uses textboxes).
+ * Handles Tab while the passive preview is open. Returns true when this
+ * helper handled the key. Does not call `preventDefault`.
+ *
+ * Forward Tab, and Shift+Tab from any segment except the first, wait one
+ * frame so the caller can tell these apart:
+ * - Focus moved to another segment (range start → end): keep the preview
+ * - Focus moved to the calendar button: keep the preview
+ * - Focus landed in the grid (Safari/Firefox skip the button): move it to the button
+ * - Focus left the widget: close the preview
+ *
+ * `segmentSelector` must match `data-type` segments. On iOS those segments
+ * are textboxes.
  */
 export function handlePassivePreviewFieldTab(
   e: Pick<KeyboardEvent, "key" | "shiftKey" | "target">,
@@ -99,50 +107,59 @@ export function handlePassivePreviewFieldTab(
   }
 
   if (!ctx.field) return false
+  const target = e.target
+  if (!(target instanceof Node)) return false
   const segments = Array.from(
     ctx.field.querySelectorAll<HTMLElement>(ctx.segmentSelector)
   )
+  const fromSegment = segments.some(
+    segment => segment === target || segment.contains(target)
+  )
+  if (!fromSegment) return false
 
-  if (e.shiftKey && e.target === segments[0]) {
+  // Shift+Tab from the first segment always leaves the widget, so close now.
+  // Any other Tab can stay inside (range start → end, or Shift+Tab onto the
+  // start field) or leave (Shift+Tab from a later segment of a single field).
+  // Wait one frame and close only if focus left.
+  if (
+    e.shiftKey &&
+    (target === segments[0] || segments[0]?.contains(target))
+  ) {
     leave.immediate()
     return true
   }
 
-  if (!e.shiftKey && e.target === segments.at(-1)) {
-    leave.beforeFocusSettles?.()
-    requestAnimationFrame(() => {
-      const active = document.activeElement
-      // Browsers that skip buttons can Tab into the open grid — move to the button.
-      if (
-        active instanceof Node &&
-        ctx.popover?.contains(active) &&
-        !(
-          ctx.calendarButton instanceof Node &&
-          ctx.calendarButton.contains(active)
-        )
-      ) {
-        if (ctx.calendarButton instanceof HTMLElement) {
-          ctx.calendarButton.focus()
-        }
-        leave.focusStayedInside?.()
-        return
+  leave.beforeFocusSettles?.()
+  requestAnimationFrame(() => {
+    const active = document.activeElement
+    // Browsers that skip buttons can Tab into the open grid — move to the button.
+    if (
+      active instanceof Node &&
+      ctx.popover?.contains(active) &&
+      !(
+        ctx.calendarButton instanceof Node &&
+        ctx.calendarButton.contains(active)
+      )
+    ) {
+      if (ctx.calendarButton instanceof HTMLElement) {
+        ctx.calendarButton.focus()
       }
-      if (
-        isFocusInsideWidget(active, {
-          field: ctx.field,
-          popover: ctx.popover,
-          excludeSelectors: ctx.excludeSelectors,
-        })
-      ) {
-        leave.focusStayedInside?.()
-        return
-      }
-      leave.afterFocusSettles()
-    })
-    return true
-  }
-
-  return false
+      leave.focusStayedInside?.()
+      return
+    }
+    if (
+      isFocusInsideWidget(active, {
+        field: ctx.field,
+        popover: ctx.popover,
+        excludeSelectors: ctx.excludeSelectors,
+      })
+    ) {
+      leave.focusStayedInside?.()
+      return
+    }
+    leave.afterFocusSettles()
+  })
+  return true
 }
 
 /**

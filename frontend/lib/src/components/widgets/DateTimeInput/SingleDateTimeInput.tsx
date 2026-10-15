@@ -711,7 +711,8 @@ function SingleDateTimeInput({
         return
       }
 
-      if (e.key !== "Tab" || !isOpen) return
+      // Active calendar owns Tab (popover focus trap). See SingleDateInput.
+      if (e.key !== "Tab" || !isOpen || isCalendarActiveRef.current) return
 
       // Commit while mounted (popover-only time); skip the following blur commit.
       const leaveAndCommit = (): void => {

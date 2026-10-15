@@ -537,7 +537,10 @@ function SingleDateInput({
         return
       }
 
-      if (e.key !== "Tab" || !isOpen) return
+      // While the active calendar is open, the popover's focus trap handles Tab.
+      // Skip the passive-preview leave logic so a Tab pressed before focus
+      // reaches the grid does not close the calendar.
+      if (e.key !== "Tab" || !isOpen || isCalendarActiveRef.current) return
 
       const closePreview = (): void => {
         setIsOpen(false)

@@ -19,6 +19,7 @@ import { type ReactElement, useContext } from "react"
 import { DateFieldStateContext } from "react-aria-components"
 import type { DateSegment as IDateSegment } from "react-stately"
 
+import { useDateFieldSingleTabStop } from "./dateFieldTabStop"
 import { reorderSegments } from "./dateInputUtils"
 import { StyledDateFieldInput, StyledDateSegment } from "./styled-components"
 
@@ -71,6 +72,8 @@ export function ReorderedSegments({
   includeTime?: boolean
 }): ReactElement | null {
   const state = useContext(DateFieldStateContext)
+  const fieldInputRef = useDateFieldSingleTabStop()
+
   if (!state) return null
 
   const segments = includeTime
@@ -78,7 +81,7 @@ export function ReorderedSegments({
     : reorderSegments(state.segments, format)
 
   return (
-    <StyledDateFieldInput $isRange={isRange}>
+    <StyledDateFieldInput ref={fieldInputRef} $isRange={isRange}>
       {segments.map((segment, i) => (
         // Index key is safe: segments is a fixed-length, fixed-order array derived from format.
         // eslint-disable-next-line @eslint-react/no-array-index-key

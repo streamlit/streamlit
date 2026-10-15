@@ -638,3 +638,39 @@ def test_datetime_input_on_change_ignore(app: Page):
     expect(spinbuttons.nth(2)).to_have_text("01")
     expect(spinbuttons.nth(3)).to_have_text("08")
     expect(spinbuttons.nth(4)).to_have_text("15")
+
+
+def test_datetime_field_has_one_tab_stop(app: Page):
+    """The datetime field is one Tab stop across date and time segments."""
+    datetime_input = get_datetime_input(app, "Datetime input 1 (base)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    segments = datetime_field.get_by_role("spinbutton")
+    first = segments.nth(0)
+    second = segments.nth(1)
+    calendar_button = datetime_input.get_by_test_id("stDateTimeInputCalendarButton")
+
+    expect(first).to_have_attribute("tabindex", "0")
+    expect(second).to_have_attribute("tabindex", "-1")
+    # Date + time segments share one stop (more than three spinbuttons).
+    expect(segments).to_have_count(5)
+    expect(segments.nth(4)).to_have_attribute("tabindex", "-1")
+
+    first.click()
+    app.keyboard.press("ArrowRight")
+    expect(second).to_be_focused()
+    expect(second).to_have_attribute("tabindex", "0")
+    expect(first).to_have_attribute("tabindex", "-1")
+
+    app.keyboard.press("Tab")
+    expect(calendar_button).to_be_focused()
+
+
+def test_disabled_datetime_field_is_not_a_tab_stop(app: Page):
+    """Disabled datetime segments stay out of the tab order."""
+    datetime_input = get_datetime_input(app, "Datetime input 3 (disabled)")
+    segments = datetime_input.get_by_test_id("stDateTimeInputField").get_by_role(
+        "spinbutton"
+    )
+    expect(segments).to_have_count(5)
+    for i in range(5):
+        expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
