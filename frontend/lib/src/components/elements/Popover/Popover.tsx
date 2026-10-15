@@ -236,10 +236,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 
-  // Timestamp of the last open action — used by the outside-click handler to
-  // ignore clicks that occur in the same tick as opening. In production
-  // browsers useEffect is async so the listener isn't live during the opening
-  // click, but in JSDOM act() flushes synchronously within the same event.
+  // Timestamp of the last open or reveal. The outside-click handler ignores
+  // a click in that same moment: the opening click, and the expander click
+  // that mounts a body which was withheld until the trigger was shown.
   const openedAtRef = useRef(0)
   const userOpenedRef = useRef(false)
 
@@ -570,6 +569,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       if (cancelled) return
       if (!isPopoverTriggerHidden(trigger)) {
         if (waitForParentRef.current) return
+        // The click that reveals a collapsed expander is still bubbling.
+        // Treat it like the click that opened the popover so it does not
+        // dismiss the body that this reveal just mounted.
+        if (deferBodyRef.current) {
+          openedAtRef.current = Date.now()
+        }
         seenRef.current = true
         setBodyDeferred(false)
         return

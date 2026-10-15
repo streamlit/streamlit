@@ -1137,6 +1137,67 @@ describe("Dynamic popover (widget mode)", () => {
     )
   })
 
+  it("ignores the click that reveals a never-shown popover", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000)
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+
+    render(
+      <div>
+        <button type="button">outside</button>
+        <details open>
+          <div data-testid="panel" {...{ inert: "" }}>
+            <Popover
+              {...getProps({ id: widgetId, open: true }, { widgetMgr })}
+            >
+              <div>popover content</div>
+            </Popover>
+          </div>
+        </details>
+      </div>
+    )
+    try {
+      await flushPopoverVisibilityCheck()
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+
+      // Reveal, then deliver the click that is still in progress in the browser.
+      now.mockReturnValue(2_000_000)
+      screen.getByTestId("panel").removeAttribute("inert")
+      await flushPopoverVisibilityCheck()
+      expect(screen.getByText("popover content")).toBeVisible()
+
+      act(() => {
+        screen.getByRole("button", { name: "outside" }).click()
+      })
+
+      expect(screen.getByText("popover content")).toBeVisible()
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+
+      now.mockReturnValue(2_000_100)
+      act(() => {
+        screen.getByRole("button", { name: "outside" }).click()
+      })
+
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+        formId: undefined,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    } finally {
+      now.mockRestore()
+    }
+  })
+
   it("does not record a close when it mounts already hidden", async () => {
     // Restored open inside a collapsed expander. The user never saw it, so
     // writing false would run on_change on the next unrelated rerun.

@@ -336,3 +336,25 @@ with hidden_open_tab:
         st.write("Hidden open popover content")
 
 st.write(f"Hidden popover callback count: {st.session_state.hidden_open_cb}")
+
+# Same case inside a collapsed expander. Opening the expander must show the
+# popover. The summary click must not record a close.
+if "hidden_exp_cb" not in st.session_state:
+    st.session_state.hidden_exp_cb = 0
+    st.session_state.hidden_exp_pop = True
+
+
+def hidden_exp_callback() -> None:
+    st.session_state.hidden_exp_cb += 1
+
+
+with st.expander("Collapsed expander", expanded=False):
+    hidden_exp_pop = st.popover(
+        "Popover open in collapsed expander",
+        key="hidden_exp_pop",
+        on_change=hidden_exp_callback,
+    )
+    with hidden_exp_pop:
+        st.write("Collapsed expander popover content")
+
+st.write(f"Hidden expander callback count: {st.session_state.hidden_exp_cb}")

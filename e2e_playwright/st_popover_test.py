@@ -41,7 +41,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(33)
+    expect(popover_elements).to_have_count(34)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -813,3 +813,21 @@ def test_popover_opened_while_hidden_does_not_run_on_change(app: Page):
     ).to_have_attribute("aria-expanded", "true")
     expect(app.get_by_test_id("stPopoverBody")).to_be_visible()
     expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+
+
+def test_popover_opened_in_collapsed_expander_stays_open(app: Page):
+    """A popover that mounts open in a collapsed expander stays open.
+
+    The summary click reveals the trigger. That same click must not dismiss
+    the body that was withheld until the expander opened.
+    """
+    expect(app.get_by_text("Hidden expander callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Collapsed expander popover content")).not_to_be_visible()
+
+    get_expander(app, "Collapsed expander").locator("summary").click()
+
+    expect(app.get_by_text("Collapsed expander popover content")).to_be_visible()
+    expect(
+        get_popover(app, "Popover open in collapsed expander").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_text("Hidden expander callback count: 0")).to_be_visible()
