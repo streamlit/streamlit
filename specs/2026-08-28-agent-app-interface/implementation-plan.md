@@ -35,8 +35,10 @@ until its own PR. Sizes are estimates measured from the prototype.
   manager so a custom media storage works.
 - **The spec goes first, on its own.** `product-spec.md` and `potential-follow-ups.md`
   land on `develop` in a spec-only PR before PR 1, as the specs process requires.
-  `mcp-support.md` waits for the MCP PR. `prototype-feedback.md` and
-  `prototype-learnings.md` move to the agent wiki instead of the repository.
+  `mcp-support.md` waits for the MCP PR. The prototype's trial
+  [feedback](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/16930/prototype-feedback.md)
+  and [learnings](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/16930/prototype-learnings.md)
+  live in the agent wiki instead of the repository.
 
 ## The stack
 
