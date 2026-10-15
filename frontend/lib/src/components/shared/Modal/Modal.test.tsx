@@ -248,7 +248,67 @@ describe("Modal subcomponents", () => {
     )
     // React Aria portals the dialog into document.body, so query from document.
     const panel = document.querySelector("[role='dialog']")?.parentElement
-    expect(panel).toHaveStyle({ width: "80vw" })
+    expect(panel).toHaveStyle({
+      width: "80vw",
+      minWidth: "min(20rem, calc(100% - 1rem - 1rem))",
+    })
+  })
+
+  it("keeps the centered preset floor for an explicit width without relaxMinWidth", () => {
+    render(
+      <Modal isOpen size="default" width="12.5rem">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      width: "12.5rem",
+      minWidth: "min(20rem, calc(100% - 1rem - 1rem))",
+    })
+  })
+
+  it("lowers the centered min-width floor to the sidebar width when relaxMinWidth is true", () => {
+    render(
+      <Modal isOpen size="default" width="12.5rem" relaxMinWidth>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      width: "12.5rem",
+      minWidth: "min(12.5rem, calc(100% - 1rem - 1rem))",
+    })
+  })
+
+  it("floors a centered width below the drag minimum at the sidebar width", () => {
+    render(
+      <Modal isOpen size="default" width="6.25rem" relaxMinWidth>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      width: "6.25rem",
+      minWidth: "min(12.5rem, calc(100% - 1rem - 1rem))",
+    })
+  })
+
+  it("floors a side-drawer width below the drag minimum at the sidebar width", () => {
+    render(
+      <Modal isOpen position="left" width="6.25rem" relaxMinWidth>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      width: "6.25rem",
+      minWidth: "min(12.5rem, calc(100% - 1.5rem))",
+      maxWidth: "calc(100% - 1.5rem)",
+    })
   })
 
   it("keeps a viewport gutter around the dialog panel", () => {
