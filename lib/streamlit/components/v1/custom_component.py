@@ -48,8 +48,8 @@ class MarshallComponentException(StreamlitAPIException):
 class CustomComponent(BaseCustomComponent):
     """A Custom Component declaration."""
 
-    # Repeat the base overloads. Overriding this method would otherwise
-    # replace them with ``*args: Any``, which accepts positional calls.
+    # Repeat the base overloads. Overriding ``create_instance`` would
+    # otherwise replace them with ``*args: Any``, which accepts positional calls.
     @overload
     def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
 

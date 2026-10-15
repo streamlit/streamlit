@@ -50,10 +50,11 @@ def _get_module_name(caller_frame: FrameType) -> str:
     return module_name
 
 
-# Reject a call that passes neither path nor url. A str | None path still
-# type-checks, because the value may be a string at runtime:
+# Reject a call that passes neither path nor url. A str | None path or url
+# still type-checks, because the value may be a string at runtime:
 # - Required ``path: str | Path`` rejects a call with neither argument.
-# - Keyword-only ``url: str`` accepts a url and no path.
+# - Keyword-only ``url: str | None`` accepts a url and no path. Explicit
+#   ``url=None`` with no path matches this overload too.
 # - Required ``path: str | Path | None`` accepts a dynamic path. Explicit
 #   ``path=None`` with no url matches this overload too.
 @overload
@@ -69,7 +70,7 @@ def declare_component(
     name: str,
     path: str | Path | None = ...,
     *,
-    url: str,
+    url: str | None,
 ) -> CustomComponent: ...
 
 

@@ -161,6 +161,8 @@ if TYPE_CHECKING:
     assert_type(
         declare_component("slider", component_path, component_url), CustomComponent
     )
+    # A str | None url and no path stays valid. os.getenv returns that type.
+    assert_type(declare_component("slider", url=component_url), CustomComponent)
 
     slider = declare_component("slider", url="http://localhost:3001")
     assert_type(slider, CustomComponent)
@@ -197,15 +199,16 @@ if TYPE_CHECKING:
     # Either path or url is required.
     declare_component("slider")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
     declare_component("slider", path=1)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
-    # Literal path=None with no url matches the dynamic-path overload, so it
-    # type-checks. Runtime still raises. A str | None path must stay valid.
+    # Literal path=None or url=None matches the dynamic overload, so it
+    # type-checks. Runtime still raises. A str | None path or url must stay valid.
     declare_component("slider", path=None)
+    declare_component("slider", url=None)
 
     # Positional arguments match *args: Never. mypy reports no matching
     # overload; ty reports an invalid argument type.
     slider("value")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
     slider.create_instance("value")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
-    # Keys are strings.
+    # v1 component keys are strings. Integers are rejected.
     slider(key=123)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
     slider(tab_index="0")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 

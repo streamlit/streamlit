@@ -53,9 +53,8 @@ class BaseCustomComponent(ABC):
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    # Positional calls raise MarshallComponentException. ``*args: Never``
-    # reports that at type-check time. The implementation still accepts
-    # ``*args`` so the runtime exception stays the same.
+    # Type checkers reject positional calls. Runtime still accepts ``*args``
+    # and raises ``MarshallComponentException``.
     @overload
     def __call__(self, *args: Never, **kwargs: Never) -> Any: ...
 
@@ -127,7 +126,8 @@ class BaseCustomComponent(ABC):
         """Inequality operator."""
         return NotImplemented
 
-    # Same positional-call rule as ``__call__``.
+    # Type checkers reject positional calls here too. Runtime still raises
+    # ``MarshallComponentException``.
     @overload
     def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
 
