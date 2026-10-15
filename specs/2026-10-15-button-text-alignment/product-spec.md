@@ -52,8 +52,8 @@ lines), users can't change the alignment.
 ### Use cases
 
 1. **Sidebar action menus.** A stack of full-width tertiary or secondary buttons with
-   icons that reads like a navigation list and lines up with the left-aligned
-   `st.navigation` and `st.page_link` rows around it.
+   icons that reads like a navigation list, matching the left-aligned `st.navigation`
+   and `st.page_link` rows around it.
 2. **List rows.** Full-width buttons that act as selectable list items (chat history,
    saved queries, files), where long labels should start at the left edge and wrap or
    truncate there.
@@ -135,7 +135,7 @@ alignment vocabulary that the public API already uses.
 | `horizontal_alignment` | `st.container` | Child elements along the horizontal axis | `"left"` (default), `"center"`, `"right"`, `"distribute"` |
 | `vertical_alignment` | `st.container`, `st.columns` | Child elements along the vertical axis | `"top"` (default), `"center"`, `"bottom"`, plus `"distribute"` on `st.container` only |
 | `alignment` | `st.column_config.*Column` | Cell content in a dataframe column | `"left"`, `"center"`, `"right"`, `None` |
-| `icon_position` | Button family and `st.page_link` | Which side of the label the icon is on | `"left"` (default), `"right"` |
+| `icon_position` | `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`, `st.page_link` | Which side of the label the icon is on | `"left"` (default), `"right"` |
 | `position` | `@st.dialog`, `st.navigation` | Placement of the element itself | Per command |
 
 These names follow three rules:
@@ -143,9 +143,9 @@ These names follow three rules:
 - **Alignment parameters are nouns ending in `_alignment`**, qualified by what they
   align (`text_`) or by axis (`horizontal_`, `vertical_`). A bare `alignment` exists only
   inside `st.column_config`. No public parameter is called `align`.
-- **Axis-qualified names arrange child elements of layout containers**, while
-  `text_alignment` aligns the content of a single element. Aligning a button's content
-  is the second kind.
+- **Content alignment and layout alignment use different names.** `text_alignment`
+  aligns the content of a single element, while axis-qualified names arrange the child
+  elements of layout containers. Aligning a button's content is the first kind.
 - **`*_position` places an element or a sub-part of one** (`icon_position`), not its
   content.
 
@@ -273,10 +273,9 @@ so it would map to `horizontal_alignment`, not `text_alignment`.
   `st.popover` and `st.menu_button`) the chevron stay together and align as a unit.
   `icon_position` still decides which side of the label the icon is on. Button padding
   is unchanged, so content aligns to the inner padding edge.
-- **The chevron stays next to the label.** We considered pinning the
-  `st.popover` / `st.menu_button` chevron to the far edge with `"left"`, but rejected it
-  for v1. It makes the trigger look like an `st.selectbox`, and it would mix two
-  alignments under one value.
+- **The chevron stays next to the label.** `"left"` doesn't pin the `st.popover` /
+  `st.menu_button` chevron to the far edge. That would make the trigger look like an
+  `st.selectbox` and mix two alignments under one value.
 - **The effect needs spare horizontal space.** The alignment is visible with
   `width="stretch"`, a pixel width, or a label that wraps onto multiple lines, where each
   line follows the alignment. With the default `width="content"` and a single-line label,
@@ -301,9 +300,10 @@ so it would map to `horizontal_alignment`, not `text_alignment`.
 - **Unchanged:** the clickable area, hover, focus, and disabled styles, the `help`
   tooltip, return values, callbacks, and form, download, link, page navigation, and
   popover behavior.
-- **Not part of widget identity.** Like `wrap`, `text_alignment` is excluded from the
-  element ID. Changing it at runtime doesn't reset an unkeyed widget, including the open
-  state of a stateful `st.popover`.
+- **Not part of widget identity.** Like `wrap`, and unlike `width` and `icon_position`,
+  `text_alignment` is excluded from the element ID. Changing it at runtime doesn't reset
+  the widget. This includes a keyed stateful `st.popover`, whose ID hashes its other
+  arguments even when a key is set.
 
 ### Examples
 
@@ -335,7 +335,7 @@ with st.sidebar:
         text_alignment="left",
     ):
         st.button("Sign out")
-    # Page links are left-aligned by default, so they line up with the buttons above.
+    # Page links are left-aligned by default.
     st.page_link("settings.py", label="Settings", icon=":material/settings:")
 ```
 
@@ -378,20 +378,24 @@ forward.button(
   here. Blocks don't have it, so `st.popover` needs its own field either way. It also
   only sets CSS `text-align` on the element wrapper, which doesn't reach the button's
   inner flex layout.
-- **Frontend.** Pass the alignment to the shared button label component and to the
-  popover and menu-button trigger label containers. There, map it to `justify-content`
-  (for the single-row group) and `text-align` (for wrapped lines). `st.page_link` renders
-  its own link row, which already sets `justify-content`. Map the value there too. When
-  the field is unset, fall back to each element's current alignment (`"center"` for
-  buttons, `"left"` for page links), so older backends render unchanged.
+- **Frontend.** Map the value to `justify-content` (for the single-row group) and
+  `text-align` (for wrapped lines) where each element centers its content today. For
+  regular buttons, that's the full-width shared label row. For popover and menu-button
+  triggers, it's the button itself, because their label containers shrink to their
+  content. `st.page_link` renders its own link row, which already sets
+  `justify-content`. Map the value there too. When the field is unset, fall back to each
+  element's current alignment (`"center"` for buttons, `"left"` for page links), so
+  older backends render unchanged.
 - **Backend.** Add a button-specific `Literal["left", "center", "right"]` type alias and
   validator. Don't reuse `validate_text_alignment`, which accepts `"justify"`.
-- **Tests and AppTest.** Add typing tests for all seven commands and expose
-  `text_alignment` on the AppTest `Button`, `DownloadButton`, `LinkButton`,
-  `MenuButton`, and `PageLink` nodes. `st.form_submit_button` uses the `Button` node,
-  and `st.popover` has no typed node. Add E2E snapshots for each value with a stretched
-  button, a wrapped label, `icon_position="right"`, a keyboard shortcut, a popover or
-  menu-button chevron, and a stretched page link.
+- **Tests and AppTest.** Add typing tests for all seven commands, and unit tests that
+  changing `text_alignment` doesn't change the element ID of an unkeyed `st.button` or
+  a keyed stateful `st.popover`. Expose `text_alignment` on the AppTest `Button`,
+  `DownloadButton`, `LinkButton`, `MenuButton`, and `PageLink` nodes.
+  `st.form_submit_button` uses the `Button` node, and `st.popover` has no typed node.
+  Add E2E snapshots for each value with a stretched button, a wrapped label,
+  `icon_position="right"`, a keyboard shortcut, a popover or menu-button chevron, and a
+  stretched page link.
 
 ## Alternatives considered
 
@@ -439,8 +443,9 @@ Streamlit choose left in menu-like layouts and center elsewhere, like `wrap=None
   softened only by the override. It is also harder to document, since the default
   depends on where the button is placed.
 
-**Recommendation:** Option A for v1. It doesn't block Option C. The default can later
-change from `"center"` to an automatic `None` without breaking code that passes a value.
+**Recommendation:** Option A for v1. It doesn't block Option C: the default could later
+change from `"center"` to an automatic `None`. That change is API-compatible, but it
+restyles apps that omit the parameter, so it needs the same scrutiny as Option B.
 Revisit this if feedback shows that authors set the same alignment in the same layout
 almost every time (for example, tertiary stretched buttons in the sidebar). That would
 support a narrow automatic rule that is very unlikely to pick wrongly.
