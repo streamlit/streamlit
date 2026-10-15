@@ -107,7 +107,7 @@ For functions that cache changing values, set `ttl`, `max_entries`, and/or (for
 serialized size:
 
 ```python
-@st.cache_data(ttl="1h", max_size="500MB")
+@st.cache_data(ttl="1h", max_entries=100, max_size="500MB")
 def get_large_report(report_id):
     return build_report(report_id)
 ```
