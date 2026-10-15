@@ -595,12 +595,14 @@ Rules:
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
   `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
   and is auto-derived from the filename when the author does not set it (`""` for the
-  default page). The internal page script hash stays internal.
+  default page). The internal page script hash stays internal. A single-page app has one
+  page, its script, titled after the file name, so `page` and `pages` are always
+  present.
 - **There is no app title.** `st.set_page_config(page_title=...)` titles the browser
-  tab, which is the app's name in an app that sets it once, the page's in one that sets
-  it per page, and the script's file name in one that sets none, so a client could not
-  tell which it was reading. `page.title` names the page, and the URL a client called
-  identifies the app. An authored app title is follow-up #2.
+  tab: the app's name in an app that sets it once, the page's in one that sets it per
+  page, and an app that sets none shows `page.title` there. A client could not tell
+  which of those it was reading, so v1 reports none; the URL a client called identifies
+  the app, and an authored app title is follow-up #2.
 - **`query_params` is URL state, reported as the app has it.** The interface holds the
   query string the way a browser holds its address bar: sent with each rerun, and
   replaced when the app changes it. A page change keeps what a browser keeps — embed

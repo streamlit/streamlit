@@ -713,7 +713,10 @@ def schemas() -> dict[str, Any]:
                 "pages": {
                     "type": "array",
                     "items": {"$ref": "#/components/schemas/Page"},
-                    "description": "Every page this app declares.",
+                    "description": (
+                        "Every page of the app. A single-page app has one, named "
+                        "after its script."
+                    ),
                 },
                 "query_params": {
                     "type": "object",
