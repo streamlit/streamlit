@@ -935,5 +935,63 @@ describe("EChartsChart", () => {
       const stopped = dispatchWheel(chart)
       expect(stopped).not.toHaveBeenCalled()
     })
+
+    it("waits again after the pointer leaves and re-enters", () => {
+      const chart = renderChart([{ type: "inside" }])
+      chart.dispatchEvent(new Event("pointerenter"))
+      now += 1_000
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+
+      chart.dispatchEvent(new Event("pointerleave"))
+      chart.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(chart)).toHaveBeenCalled()
+
+      now += 1_000
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
+    it("attaches the guard when an inside dataZoom is added", () => {
+      const view = render(<Wrapper element={createElement()} />)
+      const chart = screen.getByTestId("stEChartsChart")
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+
+      view.rerender(
+        <Wrapper
+          element={createElement({ spec: spec([{ type: "inside" }]) })}
+        />
+      )
+      const next = screen.getByTestId("stEChartsChart")
+      next.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(next)).toHaveBeenCalled()
+    })
+
+    it("drops the page-wheel clock only after the last guarded chart unmounts", () => {
+      const add = vi.spyOn(window, "addEventListener")
+      const remove = vi.spyOn(window, "removeEventListener")
+      const inside = createElement({ spec: spec([{ type: "inside" }]) })
+      const charts = (count: number): ReactElement => (
+        <>
+          {Array.from({ length: count }, (_, index) => (
+            <Wrapper key={index} element={inside} />
+          ))}
+        </>
+      )
+      const view = render(charts(2))
+      const captureWheels = (spy: typeof add): unknown[][] =>
+        spy.mock.calls.filter(
+          call =>
+            call[0] === "wheel" &&
+            (call[2] as { capture?: boolean } | undefined)?.capture === true
+        )
+      expect(captureWheels(add)).toHaveLength(1)
+
+      view.rerender(charts(1))
+      expect(captureWheels(remove)).toHaveLength(0)
+
+      view.unmount()
+      expect(captureWheels(remove)).toHaveLength(1)
+      add.mockRestore()
+      remove.mockRestore()
+    })
   })
 })

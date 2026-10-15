@@ -235,6 +235,10 @@ export function useInsideDataZoomWheelGuard(
     // Capture on this ancestor runs before zrender's wheel listener on its
     // inner viewport. Passive: we never call preventDefault, so a stopped
     // wheel still scrolls the page.
+    // stopImmediatePropagation also skips bubble listeners above this node.
+    // A wheel over the chart then misses the dataframe column menu's document
+    // listener and the autoscroll cancel on the scroll container. Both are
+    // uncommon. Stopping the event here is what lets the page keep scrolling.
     dom.addEventListener("wheel", handleWheel, {
       capture: true,
       passive: true,
