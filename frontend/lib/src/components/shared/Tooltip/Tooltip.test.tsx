@@ -24,6 +24,7 @@ import {
 import { userEvent } from "@testing-library/user-event"
 import { useFocusVisible } from "react-aria"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { render } from "~lib/test_util"
 
 import Tooltip, { Placement, type TooltipProps } from "./Tooltip"
@@ -54,10 +55,10 @@ const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
 //
 // Fake timers: React Aria's TooltipTrigger open-delay is a setTimeout.  With
 // vi.useFakeTimers() we control when that timer fires by calling
-// vi.advanceTimersByTime() inside act().  This also keeps the
-// useOverlayPosition requestAnimationFrame (which becomes a fake setTimeout)
-// within act(), preventing the "not wrapped in act" guard in vitest.setup.ts
-// from throwing and crashing the React scheduler.
+// vi.advanceTimersByTime() inside act().  This also keeps Floating UI's
+// autoUpdate requestAnimationFrame (which becomes a fake setTimeout) within
+// act(), preventing the "not wrapped in act" guard in vitest.setup.ts from
+// throwing and crashing the React scheduler.
 //
 // userEvent is configured with advanceTimers so it properly drives the fake
 // timer queue during its own async event scheduling.
@@ -83,6 +84,9 @@ describe("Tooltip element", () => {
     act(() => {
       cleanup()
     })
+    // FloatingPortal creates this host when PortalProvider is absent. Remove
+    // it so a later test can attach its own.
+    document.getElementById(FLOATING_OVERLAY_PORTAL_ID)?.remove()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -101,6 +105,98 @@ describe("Tooltip element", () => {
 
     const tooltipContent = screen.getByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("Tooltip content text.")
+    expect(tooltipContent).toBeVisible()
+
+    const tooltip = screen.getByRole("tooltip")
+    expect(tooltip).toContainElement(tooltipContent)
+    expect(tooltip.style.opacity).toBe("")
+    expect(tooltip.style.clipPath).toBe("")
+    expect(tooltipTarget).toHaveAttribute("aria-describedby", tooltip.id)
+  })
+
+  it("portals an open tooltip into the shared overlay host", async () => {
+    document.getElementById(FLOATING_OVERLAY_PORTAL_ID)?.remove()
+    const host = document.createElement("div")
+    host.id = FLOATING_OVERLAY_PORTAL_ID
+    host.setAttribute("data-react-aria-top-layer", "true")
+    document.body.appendChild(host)
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip()
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+
+    await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    const tooltip = screen.getByRole("tooltip")
+    expect(host.contains(tooltip)).toBe(true)
+    expect(tooltip).toBeVisible()
+  })
+
+  it("stays open while the pointer is over an interactive tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip({ closeDelay: 300 })
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    const tooltipContent = screen.getByTestId("stTooltipContent")
+    await user.unhover(tooltipTarget)
+    await user.hover(tooltipContent)
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(tooltipContent).toBeVisible()
+  })
+
+  it("closes when the pointer moves onto a non-interactive tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip({ closeDelay: 300, interactive: false })
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    const tooltipContent = screen.getByTestId("stTooltipContent")
+    await user.unhover(tooltipTarget)
+    await user.hover(tooltipContent)
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+  })
+
+  it("closes after the pointer leaves the trigger and the tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip({ closeDelay: 300 })
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+    expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+    await user.unhover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(299)
+    })
+    expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
   })
 
   it("renders its children", () => {

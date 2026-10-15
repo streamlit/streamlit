@@ -709,21 +709,21 @@ class CacheDataAPI:
         function (``lambda dt: dt.isoformat()``) like this:
 
         >>> import streamlit as st
-        >>> import datetime
+        >>> from datetime import datetime, timezone
         >>>
-        >>> @st.cache_data(hash_funcs={datetime.datetime: lambda dt: dt.isoformat()})
-        ... def convert_to_utc(dt: datetime.datetime):
-        ...     return dt.astimezone(datetime.timezone.utc)
+        >>> @st.cache_data(hash_funcs={datetime: lambda dt: dt.isoformat()})
+        ... def convert_to_utc(dt: datetime):
+        ...     return dt.astimezone(timezone.utc)
 
         Alternatively, you can map the type's fully-qualified name
         (e.g. ``"datetime.datetime"``) to the hash function instead:
 
         >>> import streamlit as st
-        >>> import datetime
+        >>> from datetime import datetime, timezone
         >>>
         >>> @st.cache_data(hash_funcs={"datetime.datetime": lambda dt: dt.isoformat()})
-        ... def convert_to_utc(dt: datetime.datetime):
-        ...     return dt.astimezone(datetime.timezone.utc)
+        ... def convert_to_utc(dt: datetime):
+        ...     return dt.astimezone(timezone.utc)
 
         """
 

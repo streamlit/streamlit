@@ -53,6 +53,7 @@ from streamlit.elements.widgets.time_widgets import (
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -70,7 +71,6 @@ if TYPE_CHECKING:
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.DownloadButton_pb2 import (
@@ -110,6 +110,17 @@ if TYPE_CHECKING:
     from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+# Public ``Dataframe.editing_mode`` strings. ``ADD_ONLY`` and ``DELETE_ONLY``
+# match ``num_rows`` (``"add"`` and ``"delete"``), not the proto names.
+_DATAFRAME_EDITING_MODE_NAMES: Final[dict[int, str]] = {
+    DataframeProto.EditingMode.READ_ONLY: "read_only",
+    DataframeProto.EditingMode.FIXED: "fixed",
+    DataframeProto.EditingMode.DYNAMIC: "dynamic",
+    DataframeProto.EditingMode.ADD_ONLY: "add",
+    DataframeProto.EditingMode.DELETE_ONLY: "delete",
+}
+
 
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
@@ -1111,6 +1122,14 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
+    """A representation of ``st.dataframe`` and ``st.data_editor``.
+
+    ``.value`` is the input table as a pandas DataFrame, without cell edits.
+    ``set_value()`` raises ``AppTestError`` and leaves that table unchanged.
+    Tables whose ``editing_mode`` is not ``"read_only"`` are also listed on
+    ``AppTest.data_editor``.
+    """
+
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
@@ -1119,6 +1138,48 @@ class Dataframe(Element):
         self.type = "dataframe"
         # Extract user key from the element id if present
         self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def editing_mode(self) -> str:
+        """Configured row-editing mode.
+
+        - ``"read_only"``: ``st.dataframe``.
+        - ``"fixed"``, ``"dynamic"``, ``"add"``, or ``"delete"``: ``st.data_editor``,
+          matching its ``num_rows`` value. Disabled editors keep their mode.
+        """
+        mode = self.proto.editing_mode
+        name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
+        if name is not None:
+            return name
+        # Unmapped values stay readable: a known enum uses its lowercase proto
+        # name, and any other number stays decimal text. The name branch is
+        # unreachable while the map lists every current enum value.
+        try:
+            return DataframeProto.EditingMode.Name(
+                mode
+            ).lower()  # pragma: no cover - defensive
+        except ValueError:
+            return str(mode)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        # Read-only dataframes keep the generic message, which points to session
+        # state (selection state accepts writes). Editors cannot use set_value();
+        # a keyed editor is seeded by assigning its edit state before run().
+        if self.editing_mode == "read_only":
+            super()._raise_unsupported_interaction(method)
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if self.key:
+            session_state_note = (
+                " Assign the edit state (edited_rows, added_rows, deleted_rows)"
+                " on at.session_state before run()."
+            )
+        else:
+            session_state_note = " Use a Playwright e2e test."
+        raise AppTestError(
+            f"{method}() is not supported for data_editor{key_part}. "
+            "AppTest can read the table and editing_mode, but it does not "
+            f"apply cell edits through {method}().{session_state_note}"
+        )
 
     @property
     def value(self) -> PandasDataframe:
@@ -2205,10 +2266,7 @@ class FileUploader(Widget):
             self._files = None
         elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
             # Single file as tuple (filename, content, mime_type)
-            single_file = cast(  # type: ignore[redundant-cast]
-                "tuple[str, bytes, str]", files
-            )
-            filename, content, mime_type = single_file
+            filename, content, mime_type = files
             self._files = [(str(uuid4()), filename, content, mime_type)]
         else:
             # Multiple files
@@ -3381,6 +3439,21 @@ class Block:
         return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """``st.data_editor`` elements (dataframes that are not read-only).
+
+        ``dataframe`` includes these elements too. AppTest does not apply cell
+        edits.
+        """
+        return ElementList(
+            [
+                dataframe
+                for dataframe in self.dataframe
+                if dataframe.editing_mode != "read_only"
+            ]
+        )
+
+    @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
 
@@ -3583,9 +3656,9 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
-        ``status`` / ``chat_message`` use the same filtering as the matching
-        attributes.
+        ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
+        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
+        the matching attributes.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -3597,6 +3670,8 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "data_editor":
+            return list(self.data_editor)
         if element_type == "chat_message":
             return list(self.chat_message)
         if element_type in {"columns", "column"}:

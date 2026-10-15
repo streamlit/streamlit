@@ -14,6 +14,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 - [Data and charts](#data-and-charts)
 - [Widgets and state](#widgets-and-state)
 - [Secrets and queries](#secrets-and-queries)
+- [Type checking](#type-checking)
 
 ## Styling and copy
 
@@ -247,9 +248,22 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page.
+Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script.
 
 ```python
+# BAD: Blocks the script in an endless loop
+placeholder = st.empty()
+while True:
+    placeholder.metric("Active users", get_active_user_count())
+    time.sleep(30)
+
+# BAD: Reruns the entire app on a timer
+st.metric("Active users", get_active_user_count())
+time.sleep(30)
+st.rerun()
+
+
+# GOOD: Only the fragment reruns on a timer
 @st.fragment(run_every="30s")
 def live_metrics():
     st.metric("Active users", get_active_user_count())
@@ -379,6 +393,18 @@ query = st.text_input(f"Search {category}")
 query = st.text_input(f"Search {category}", key="search_query")
 ```
 
+Keep keys unique across all elements created in a run. In loops, derive them from a stable item ID.
+
+```python
+# BAD: Repeated key raises StreamlitDuplicateElementKey
+for item in items:
+    st.checkbox(item.name, key="done")
+
+# GOOD: Unique, stable key per item
+for item in items:
+    st.checkbox(item.name, key=f"done_{item.id}")
+```
+
 Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
 
 ```python
@@ -414,3 +440,17 @@ df = conn.query(
 # GOOD: Keep local secrets out of source control
 .streamlit/secrets.toml
 ```
+
+## Type checking
+
+Type-check edited Python with `ty` (recommended) or `mypy` so wrong Streamlit API use is reported while editing, before the app runs. See [environment-setup.md](environment-setup.md).
+
+```python
+# BAD: `maximum` is not a parameter
+st.slider("Count", min_value=0, maximum=10)
+
+# GOOD
+st.slider("Count", min_value=0, max_value=10)
+```
+
+When a helper needs a Streamlit-owned type, import it from `streamlit.typing`. The list is in [api-reference.md](api-reference.md#public-annotation-types).

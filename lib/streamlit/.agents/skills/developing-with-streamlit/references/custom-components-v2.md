@@ -95,7 +95,7 @@ export default function (component) {
 def my_component(
     label: str,
     *,
-    key: str | None = None,
+    key: str | int | None = None,
     on_value_change: Callable[[], None] | None = None,
     on_submitted_change: Callable[[], None] | None = None,
 ):

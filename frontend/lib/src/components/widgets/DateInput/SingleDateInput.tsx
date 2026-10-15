@@ -59,10 +59,13 @@ import {
 } from "./CalendarPopoverHeader"
 import {
   applyPartialSegmentToDate,
+  calendarDateToIso,
   datesEqual,
   getSafeLocale,
+  isSegmentCleared,
   isValidSegmentValue,
   parseDateFieldPaste,
+  readCalendarDateFromField,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import {
@@ -100,6 +103,14 @@ interface SingleDateInputProps {
   format: string
   disabled: boolean
   clearable: boolean
+  /** When true, a full keyboard clear notifies the parent instead of reverting.
+   * True for empty defaults that are not disabled, including required fields. */
+  allowEmptyCommit: boolean
+  required: boolean
+  /** Skip parent→display sync while dirty so a sibling rerun does not restore
+   * the last accepted date over an in-progress edit. */
+  suppressCommittedSync: boolean
+  onEdit: (isoValues: string[]) => void
   label: string
   error: string | null
   /** App-wide locale (`LibConfigContext`), used only to localize the
@@ -113,18 +124,63 @@ interface SingleDateInputProps {
    * committing the value to widget state. Used for real-time error
    * feedback during segment editing. */
   onValidate: (date: CalendarDate | null) => void
-  /** Called when close requires parent-level cleanup (segments left in
-   * placeholder state after an edit). Parent clears the validation error;
-   * the display revert is handled locally. */
+  /** Called when close/blur leaves placeholder segments. The parent
+   * discards the pending edit (restore last written ISO, clear dirty) and
+   * the validation error; display revert is local. */
   onClose: (shouldClearError: boolean) => void
-  /** When inside a form, writes the pending value to WidgetStateManager
-   * synchronously on blur so a concurrent form submit reads the correct
-   * value. Undefined when not in a form. */
+  /** In a form, commit the pending value with the same required/range rules
+   * as `onChange`, including a synchronous WidgetStateManager write so
+   * submit sees the staged value. Undefined when not in a form. */
   formCommit?: (value: CalendarDate | null) => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
   formResetKey: number
+}
+
+/** True when close/blur should notify the parent, including a full clear
+ * that matches an already-empty committed value after a real edit.
+ * Callers must clear `hasEdited` after the pending edit is committed or
+ * discarded so later empty blurs do not notify again. */
+/** Close/blur view of one date field. A segment with painted digits is not
+ * cleared, even when `data-placeholder` is still set. */
+function readSingleFieldOnLeave(
+  container: HTMLElement | null,
+  display: CalendarDate | null
+): {
+  partial: boolean
+  cleared: boolean
+  pending: CalendarDate | null
+} {
+  const segments = container?.querySelectorAll('[role="spinbutton"]')
+  if (!segments || segments.length === 0) {
+    return { partial: false, cleared: false, pending: display }
+  }
+  const clearedCount = Array.from(segments).filter(isSegmentCleared).length
+  if (clearedCount === segments.length) {
+    return { partial: false, cleared: true, pending: null }
+  }
+  if (clearedCount > 0) {
+    return { partial: true, cleared: false, pending: null }
+  }
+  const fromDom = readCalendarDateFromField(container)
+  if (!fromDom) {
+    return { partial: true, cleared: false, pending: null }
+  }
+  return { partial: false, cleared: false, pending: fromDom }
+}
+
+function shouldNotifySinglePending(
+  pending: CalendarDate | null,
+  committed: CalendarDate | null,
+  isFullyCleared: boolean,
+  hasEdited: boolean,
+  allowEmptyCommit: boolean
+): boolean {
+  return (
+    !datesEqual(pending, committed) ||
+    (isFullyCleared && hasEdited && allowEmptyCommit)
+  )
 }
 
 function SingleDateInput({
@@ -135,6 +191,10 @@ function SingleDateInput({
   format,
   disabled,
   clearable,
+  allowEmptyCommit,
+  required,
+  suppressCommittedSync,
+  onEdit,
   label,
   error,
   locale,
@@ -162,6 +222,9 @@ function SingleDateInput({
   // via onChange, the close-detection effect should skip its own commit to
   // avoid a redundant write + backend rerun.
   const skipCloseCommitRef = useRef(false)
+  // Segment typing that returns to empty still needs to notify the parent so
+  // a required field can paint, even though pending equals the empty default.
+  const hasEditedRef = useRef(false)
 
   // Dual-mode state: passive (visual aid) vs active (keyboard-modal).
   const [isCalendarActive, setIsCalendarActive] = useState(false)
@@ -178,16 +241,29 @@ function SingleDateInput({
   // the popover closes. This prevents intermediate backspace states from
   // triggering backend reruns and on_change callbacks.
   const [displayValue, setDisplayValue] = useState<CalendarDate | null>(value)
+  // Remount the field when a revert must repaint segments but the controlled
+  // date did not change. React Aria keeps incomplete text in that case.
+  // The bump is deferred so it does not run inside overlay pointerdown/Escape.
+  const [fieldGeneration, setFieldGeneration] = useState(0)
+  const [remountField, setRemountField] = useState(false)
 
   // Sync from parent when value changes externally (session_state, form
   // clear, close-commit, calendar click). Render-time adjustment pattern per
-  // React docs. Always accept the parent's value — during editing the parent
-  // doesn't change (we buffer locally), so this only fires on real external
-  // updates.
+  // React docs. Identity-only echoes while dirty are ignored so a sibling
+  // rerun does not clobber an in-progress edit; a real date change still
+  // updates display.
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
-    setPrevValue(value)
-    setDisplayValue(value)
+    // Skip identity-only echoes and null staging writes while dirty so an
+    // in-progress edit stays visible. Do not advance prevValue in that
+    // case: a later empty setValue can still sync once dirty clears.
+    const applyDisplay =
+      !suppressCommittedSync ||
+      (value !== null && !datesEqual(prevValue, value))
+    if (applyDisplay) {
+      setPrevValue(value)
+      setDisplayValue(value)
+    }
   }
 
   // Capture whether the remount must restore focus. By effect time, the
@@ -202,6 +278,7 @@ function SingleDateInput({
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
     activeOriginRef.current = null
+    hasEditedRef.current = false
     // Reading the DOM during render is safe here because this write sits inside
     // the same condition that advances `prevResetKey`: a discarded render
     // retries against live focus rather than keeping a stale `true`. Strict
@@ -237,42 +314,55 @@ function SingleDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+        const field = readSingleFieldOnLeave(
+          triggerRef.current,
+          displayValueRef.current
         )
-        const placeholders = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"][data-placeholder="true"]'
-        )
-        const isPartiallyTyped =
-          segments &&
-          placeholders &&
-          placeholders.length > 0 &&
-          placeholders.length < segments.length
-        const allCleared =
-          segments &&
-          segments.length > 0 &&
-          placeholders?.length === segments.length
 
-        if (isPartiallyTyped || (allCleared && !clearable)) {
-          // User left segments incomplete, or fully cleared a non-clearable
-          // widget — revert display to the committed value directly. We can't
-          // go through the parent round-trip because the widget state might
-          // already be at default (segment edits were buffered), making the
-          // parent's revert a no-op.
-          setDisplayValue(value)
+        if (field.partial || (field.cleared && !allowEmptyCommit)) {
+          // Incomplete segments, or a full clear when the default is
+          // non-empty: revert display to the committed value. Empty-default
+          // fields notify the parent so required can paint.
+          if (datesEqual(displayValueRef.current, value)) {
+            setRemountField(true)
+          } else {
+            setDisplayValue(value)
+          }
+          hasEditedRef.current = false
           onCloseRef.current(true /* shouldClearError */)
         } else {
-          const pending = allCleared ? null : displayValueRef.current
-          if (!datesEqual(pending, value)) {
+          const pending = field.pending
+          if (
+            shouldNotifySinglePending(
+              pending,
+              value,
+              field.cleared,
+              hasEditedRef.current,
+              allowEmptyCommit
+            )
+          ) {
+            hasEditedRef.current = false
             onChangeRef.current(pending)
           }
         }
       }
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, value, clearable])
+  }, [isOpen, value, allowEmptyCommit])
 
-  // Restore focus to the first editable segment after the form-reset remount.
+  // Apply a deferred remount after the dismissal event. Escape has already
+  // restored focus onto the old segments; record that so the next commit can
+  // put it back. An outside click has moved focus away, so leave it there.
+  useEffect(() => {
+    if (!remountField) return
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
+    setRemountField(false)
+    setFieldGeneration(generation => generation + 1)
+  }, [remountField])
+
+  // Restore focus to the first editable segment after a remount.
   // Suppress handleFocus while focusin dispatches synchronously so the calendar
   // does not reopen; clearing the guard after a frame could stall in hidden tabs.
   useEffect(() => {
@@ -281,7 +371,7 @@ function SingleDateInput({
     isRestoringFocusRef.current = true
     triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
     isRestoringFocusRef.current = false
-  }, [formResetKey])
+  }, [formResetKey, fieldGeneration])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -340,9 +430,10 @@ function SingleDateInput({
         }
       }
     }
-    requestAnimationFrame(() => {
-      isRestoringFocusRef.current = false
-    })
+    // focus() dispatches focusin synchronously. Clear the guard immediately so
+    // a later click can reopen the calendar. Waiting a frame can stall in a
+    // hidden tab and swallow that click.
+    isRestoringFocusRef.current = false
   }, [])
 
   const { setFloatingRef: setDismissalFloatingRef, setReferenceRef } =
@@ -354,27 +445,34 @@ function SingleDateInput({
         // Synchronous form commit: outside-click dismiss can race form submit
         // (the close-commit effect fires after paint). Mirrors handleBlur.
         if (formCommit) {
-          const segments = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"]'
+          const field = readSingleFieldOnLeave(
+            triggerRef.current,
+            displayValueRef.current
           )
-          const placeholders = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"][data-placeholder="true"]'
-          )
-          const isPartiallyTyped =
-            segments &&
-            placeholders &&
-            placeholders.length > 0 &&
-            placeholders.length < segments.length
-          const isFullyCleared =
-            segments &&
-            segments.length > 0 &&
-            placeholders?.length === segments.length
-          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+          if (field.partial || (field.cleared && !allowEmptyCommit)) {
             // Will revert on next render — don't commit stale/invalid state.
+            // Clear pending now so a concurrent form submit does not use it.
+            if (datesEqual(displayValueRef.current, value)) {
+              setRemountField(true)
+            } else {
+              setDisplayValue(value)
+            }
+            hasEditedRef.current = false
+            onCloseRef.current(true)
           } else {
-            const pending = isFullyCleared ? null : displayValueRef.current
-            if (!datesEqual(pending, value)) {
+            const pending = field.pending
+            if (
+              shouldNotifySinglePending(
+                pending,
+                value,
+                field.cleared,
+                hasEditedRef.current,
+                allowEmptyCommit
+              )
+            ) {
+              hasEditedRef.current = false
               formCommit(pending)
+              skipCloseCommitRef.current = true
             }
           }
         }
@@ -408,19 +506,23 @@ function SingleDateInput({
   // errors in real-time — but do NOT commit to widget state.
   const handleFieldChange = useCallback(
     (date: CalendarDate | null): void => {
+      displayValueRef.current = date
       setDisplayValue(date)
+      hasEditedRef.current = true
+      onEdit(date ? [calendarDateToIso(date)] : [])
       onValidate(date)
       if (date) {
         onFocusChange(date)
       }
     },
-    [onFocusChange, onValidate]
+    [onEdit, onFocusChange, onValidate]
   )
 
   // Selecting a date commits immediately and closes the popover.
   const handleCalendarChange = useCallback(
     (date: CalendarDate): void => {
       setDisplayValue(date)
+      hasEditedRef.current = false
       onChange(date)
       skipCloseCommitRef.current = true
       setIsOpen(false)
@@ -458,6 +560,7 @@ function SingleDateInput({
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
+    hasEditedRef.current = false
     onChange(null)
   }, [onChange])
 
@@ -508,6 +611,7 @@ function SingleDateInput({
 
       if (parsed.kind === "date") {
         setDisplayValue(parsed.date)
+        hasEditedRef.current = false
         onChange(parsed.date)
         return
       }
@@ -520,6 +624,7 @@ function SingleDateInput({
       const newDate = applyPartialSegmentToDate(base, parsed)
       if (!newDate) return
       setDisplayValue(newDate)
+      hasEditedRef.current = false
       onChange(newDate)
     },
     [disabled, format, onChange, displayValue, minDate]
@@ -630,28 +735,47 @@ function SingleDateInput({
           return
         }
       }
-      const segments = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"]'
+      const field = readSingleFieldOnLeave(
+        triggerRef.current,
+        displayValueRef.current
       )
-      const placeholders = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"][data-placeholder="true"]'
-      )
-      if (segments && placeholders) {
-        const isPartiallyTyped =
-          placeholders.length > 0 && placeholders.length < segments.length
-        if (isPartiallyTyped) return
-        const isFullyCleared = placeholders.length === segments.length
-        if (isFullyCleared && !clearable) return
+      if (field.partial || (field.cleared && !allowEmptyCommit)) {
+        // The calendar may already be closed, so the close effect will not
+        // restore the field. Reset the display here.
+        if (datesEqual(displayValueRef.current, value)) {
+          setRemountField(true)
+        } else {
+          setDisplayValue(value)
+        }
+        hasEditedRef.current = false
+        onCloseRef.current(true)
+        return
       }
-      const pending = displayValueRef.current
-      if (datesEqual(pending, value)) return
+      const pending = field.pending
+      if (
+        !shouldNotifySinglePending(
+          pending,
+          value,
+          field.cleared,
+          hasEditedRef.current,
+          allowEmptyCommit
+        )
+      ) {
+        return
+      }
+      hasEditedRef.current = false
       if (closedByBlur) {
+        // This blur closed the popover. Skip the close-effect commit so an
+        // optional empty-default field does not write twice.
         skipCloseCommitRef.current = true
       }
-      onChangeRef.current(pending)
-      formCommit?.(pending)
+      if (formCommit) {
+        formCommit(pending)
+      } else {
+        onChangeRef.current(pending)
+      }
     },
-    [formCommit, value, clearable, isOpen, popoverInteractionRef]
+    [formCommit, isOpen, value, allowEmptyCommit, popoverInteractionRef]
   )
 
   return (
@@ -662,6 +786,7 @@ function SingleDateInput({
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
+        aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
@@ -674,10 +799,15 @@ function SingleDateInput({
               <DateField
                 // Remount on form clear because React Aria retains incomplete
                 // segment text when the controlled value has not changed.
-                key={formResetKey}
+                key={`${formResetKey}-${fieldGeneration}`}
                 aria-label={label}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}
+                // Keep invalid state tied to Streamlit's error, not native
+                // constraint validation. Required is exposed on the field
+                // group that contains the focused segments, not via RAC
+                // `isRequired` (which would mark empty as invalid).
+                validationBehavior="aria"
                 value={displayValue}
                 onChange={handleFieldChange}
                 minValue={minDate}
@@ -685,7 +815,7 @@ function SingleDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedSegments format={format} />
+                <ReorderedSegments format={format} required={required} />
               </DateField>
             </StyledDateField>
           </I18nProvider>

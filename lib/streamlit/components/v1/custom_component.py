@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never, overload
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
@@ -49,24 +49,21 @@ class MarshallComponentException(StreamlitAPIException):
 class CustomComponent(BaseCustomComponent):
     """A Custom Component declaration."""
 
-    def __call__(
+    # Repeat the base overloads. Overriding ``create_instance`` would
+    # otherwise replace them with ``*args: Any``, which accepts positional calls.
+    @overload
+    def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def create_instance(
         self,
-        *args: Any,
-        default: Any = None,
-        key: str | None = None,
-        on_change: WidgetCallback | None = None,
-        tab_index: int | None = None,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
         **kwargs: Any,
-    ) -> Any:
-        """An alias for create_instance."""
-        return self.create_instance(
-            *args,
-            default=default,
-            key=key,
-            on_change=on_change,
-            tab_index=tab_index,
-            **kwargs,
-        )
+    ) -> Any: ...
 
     @gather_metrics("create_instance")
     def create_instance(

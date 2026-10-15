@@ -53,9 +53,13 @@ if TYPE_CHECKING:
     @dialog("Large", width="large")
     def large_dialog() -> None: ...
 
+    @dialog("Pixels", width=400)
+    def pixel_dialog() -> None: ...
+
     assert_type(small_dialog(), None)
     assert_type(medium_dialog(), None)
     assert_type(large_dialog(), None)
+    assert_type(pixel_dialog(), None)
 
     # position - each literal option.
     @dialog("Left", position="left")
@@ -134,8 +138,11 @@ if TYPE_CHECKING:
     # Invalid usages - should NOT type check
     # =====================================================================
 
-    # width only accepts "small", "medium", or "large".
+    # width accepts "small", "medium", "large", or an int.
     dialog("Bad width", width="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    dialog("Stretch width", width="stretch")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    dialog("Content width", width="content")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    dialog("Float width", width=1.5)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # position only accepts "left", "center", or "right".
     dialog("Bad position", position="top")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

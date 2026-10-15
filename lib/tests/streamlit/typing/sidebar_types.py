@@ -44,7 +44,8 @@ if TYPE_CHECKING:
     assert_type(st.sidebar.slider("Value"), int)
 
     assert_type(st.sidebar.container(), DeltaGenerator)
-    assert_type(st.sidebar.columns(2), list[DeltaGenerator])
+    assert_type(st.sidebar.columns(2), tuple[DeltaGenerator, DeltaGenerator])
+    assert_type(st.sidebar.columns((1, 2)), tuple[DeltaGenerator, DeltaGenerator])
     assert_type(st.sidebar.columns([0.7, 0.3]), list[DeltaGenerator])
 
     assert_type(st.sidebar.form("filters"), DeltaGenerator)

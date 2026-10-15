@@ -21,6 +21,7 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import {
   applyPartialSegmentToDate,
+  calendarDateFromSegments,
   calendarDateToIso,
   createDateErrorMessage,
   formatCalendarDate,
@@ -31,6 +32,7 @@ import {
   getQuickSelectPresets,
   isOlderThanTwoYears,
   isoToCalendarDate,
+  isRequiredEmptyDateValue,
   isValidSegmentValue,
   normalizeRangeOrder,
   parseDateFieldPaste,
@@ -38,6 +40,7 @@ import {
   parsePartialSegmentPaste,
   parsePastedDate,
   parsePastedDateRange,
+  readCalendarDateFromField,
   reorderSegments,
   validateDate,
 } from "./dateInputUtils"
@@ -625,5 +628,135 @@ describe("normalizeRangeOrder", () => {
 
   it("no-op for empty array", () => {
     expect(normalizeRangeOrder([])).toEqual([])
+  })
+})
+
+describe("isRequiredEmptyDateValue", () => {
+  it.each([
+    ["empty single", [], false, true],
+    ["one-element single", ["2024-03-06"], false, false],
+    ["empty range", [], true, true],
+    ["one-element range", ["2024-03-06"], true, true],
+    ["two-element range", ["2024-03-06", "2024-03-08"], true, false],
+  ] as const)("%s", (_label, isoValues, isRange, expected) => {
+    expect(isRequiredEmptyDateValue([...isoValues], isRange)).toBe(expected)
+  })
+})
+
+describe("readCalendarDateFromField", () => {
+  const makeField = (
+    parts: { type: string; text: string; placeholder?: boolean }[]
+  ): HTMLElement => {
+    const field = document.createElement("div")
+    for (const part of parts) {
+      const segment = document.createElement("span")
+      segment.setAttribute("data-type", part.type)
+      if (part.placeholder) {
+        segment.setAttribute("data-placeholder", "true")
+      }
+      segment.textContent = part.text
+      field.appendChild(segment)
+    }
+    return field
+  }
+
+  it("reads a complete date", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020" },
+          { type: "month", text: "01" },
+          { type: "day", text: "10" },
+        ])
+      )?.toString()
+    ).toBe("2020-01-10")
+  })
+
+  it("reads a complete date even when data-placeholder is still set", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020", placeholder: true },
+          { type: "month", text: "01", placeholder: true },
+          { type: "day", text: "10", placeholder: true },
+        ])
+      )?.toString()
+    ).toBe("2020-01-10")
+  })
+
+  it("returns null when a segment is still a placeholder", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020" },
+          { type: "month", text: "01" },
+          { type: "day", text: "dd", placeholder: true },
+        ])
+      )
+    ).toBeNull()
+  })
+
+  it("returns null for an incomplete year", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "20" },
+          { type: "month", text: "01" },
+          { type: "day", text: "10" },
+        ])
+      )
+    ).toBeNull()
+  })
+
+  it("returns null for a missing field", () => {
+    expect(readCalendarDateFromField(null)).toBeNull()
+  })
+})
+
+describe("calendarDateFromSegments", () => {
+  const makeSegment = (
+    type: string,
+    text: string,
+    role = "spinbutton"
+  ): HTMLElement => {
+    const segment = document.createElement("span")
+    segment.setAttribute("data-type", type)
+    segment.setAttribute("role", role)
+    segment.textContent = text
+    return segment
+  }
+
+  it("reads a complete date in strict mode", () => {
+    expect(
+      calendarDateFromSegments([
+        makeSegment("year", "2020"),
+        makeSegment("month", "01"),
+        makeSegment("day", "10"),
+      ])?.toString()
+    ).toBe("2020-01-10")
+  })
+
+  it("skips non-numeric nodes in lenient mode so extra wrappers do not abort", () => {
+    expect(
+      calendarDateFromSegments(
+        [
+          makeSegment("year", "2020"),
+          makeSegment("literal", "/", "none"),
+          makeSegment("month", "01"),
+          makeSegment("day", "10"),
+        ],
+        { lenient: true }
+      )?.toString()
+    ).toBe("2020-01-10")
+  })
+
+  it("aborts on a non-numeric segment in strict mode", () => {
+    expect(
+      calendarDateFromSegments([
+        makeSegment("year", "2020"),
+        makeSegment("month", "mm"),
+        makeSegment("day", "10"),
+      ])
+    ).toBeNull()
   })
 })

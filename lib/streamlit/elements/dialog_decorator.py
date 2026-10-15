@@ -232,13 +232,19 @@ def dialog_decorator(
         .. |st.markdown| replace:: ``st.markdown``
         .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-    width : "small", "medium", "large"
+    width : "small", "medium", "large", or int
         The width of the modal dialog. This can be one of the following:
 
         - ``"small"`` (default): The modal dialog will be a maximum of 500
           pixels wide.
         - ``"medium"``: The modal dialog will be up to 750 pixels wide.
         - ``"large"``: The modal dialog will be up to 1280 pixels wide.
+        - An integer specifying the width in pixels: The modal dialog has a
+          fixed width. If the specified width is greater than the width of
+          the viewport, the dialog shrinks to fit. The dialog is never
+          narrower than 200 pixels (scaled by the theme's ``baseFontSize``)
+          unless the viewport is narrower. If ``position`` is ``"left"`` or
+          ``"right"``, this is the drawer's initial width.
 
     position : "center", "left", "right"
         The position of the modal dialog. This can be one of the following:
