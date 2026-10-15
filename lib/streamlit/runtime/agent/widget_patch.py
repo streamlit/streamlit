@@ -512,6 +512,17 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
             f"The value for {key!r} must be ISO dates or times, like the "
             "snapshot reports.",
         )
+    default = _slider_default(metadata)
+    if isinstance(default, datetime.datetime):
+        # A date alone means its midnight, as `st.datetime_input` reads it, in
+        # the slider's own time zone.
+        parsed = [
+            datetime.datetime.combine(item, datetime.time(), tzinfo=default.tzinfo)
+            if isinstance(item, datetime.date)
+            and not isinstance(item, datetime.datetime)
+            else item
+            for item in parsed
+        ]
     _check_slider_offsets(key, metadata, parsed)
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])

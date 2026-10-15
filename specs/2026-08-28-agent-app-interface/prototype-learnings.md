@@ -1370,10 +1370,6 @@ QA round 6 found the remaining gaps small, and all were fixed:
   - A stateful popover reports its state once.
   - Feedback errors list its options as numbers.
   - The agent options refuse zero or below, which had made the idle sweeper spin.
-
-Still open: a client that leaves during the snapshot build waits for it and then pays
-for a second build. The click still fires once.
-
 QA round 7 found the `null` fix overreaching. Sending an empty list to every single-value
 widget on a list wire also emptied a `required` group and a date input with a default.
 Neither can be emptied in a browser, and both are typed to never return `None`. So `null`
@@ -1399,6 +1395,15 @@ The same round also fixed these:
 - **Smaller ones:**
   - A chart with URL data no longer registers Arrow bytes nothing serves.
   - `OPTIONS` gets the routes' own `405` with `Allow: POST`.
+
+Two leftovers from earlier rounds closed after that:
+
+- **Disconnect during the snapshot build:** the build is now kept for the retry that
+  collects the interaction. The session stays claimed while the build finishes, so
+  nothing runs in between and the snapshot is still current. A retry used to build it
+  again: a 3.5-second build took 7.3 seconds to collect, and now takes 3.7.
+- **Datetime sliders:** they take a date alone as its midnight in the slider's own time
+  zone, as `st.datetime_input` does.
 
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview

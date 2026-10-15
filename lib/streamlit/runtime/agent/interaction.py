@@ -322,6 +322,9 @@ class _Interaction:
     # When the run was sent, so a retry that times out again can say how long
     # it has been running.
     started: float = field(default_factory=time.monotonic)
+    # The snapshot built for a client that left while it was being built, so
+    # the retry that collects the interaction does not build it again.
+    built: snapshot_module.Snapshot | None = None
 
 
 @dataclass
@@ -677,7 +680,26 @@ async def _run_interaction(
 async def _settle(
     app_session: Any, session: AgentSession, interaction: _Interaction
 ) -> dict[str, Any]:
-    """Wait for a sent interaction's run chain to settle, then snapshot it."""
+    """Wait for a sent interaction's run chain to settle, then snapshot it.
+
+    A snapshot already built for a client that left is used as it is: the
+    session stayed claimed while it was built, so nothing has run since.
+    """
+    if interaction.built is None:
+        interaction.built = await _wait_and_build(app_session, session, interaction)
+    result = interaction.built
+    session.element_states = result.element_states
+    session.pages = result.document.get("pages", [])
+    session.last_used = time.monotonic()
+
+    if interaction.unverified_page is not None:
+        _verify_page_exists(interaction.unverified_page, result.document, session)
+    return result.document
+
+
+async def _wait_and_build(
+    app_session: Any, session: AgentSession, interaction: _Interaction
+) -> snapshot_module.Snapshot:
     timeout = float(config.get_option("server.agentRunTimeout"))
     try:
         await session.client.wait_until_settled(timeout)
@@ -732,23 +754,17 @@ async def _settle(
         )
     )
     try:
-        result = await asyncio.shield(build)
+        return await asyncio.shield(build)
     except asyncio.CancelledError:
         # The client left while the snapshot was built. The run has settled, so
         # its retry collects it, exactly as for a client that left earlier. The
         # thread cannot be stopped and reads session state, so the session stays
         # claimed until it finishes: a new interaction must not run under it.
+        # Its result is kept for that retry.
         session.timed_out = interaction
         with contextlib.suppress(Exception):
-            await build
+            interaction.built = await build
         raise
-    session.element_states = result.element_states
-    session.pages = result.document.get("pages", [])
-    session.last_used = time.monotonic()
-
-    if interaction.unverified_page is not None:
-        _verify_page_exists(interaction.unverified_page, result.document, session)
-    return result.document
 
 
 def _script_context(app_session: Any, session: AgentSession) -> ScriptRunContext:
