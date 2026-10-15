@@ -14,6 +14,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 - [Data and charts](#data-and-charts)
 - [Widgets and state](#widgets-and-state)
 - [Secrets and queries](#secrets-and-queries)
+- [Type checking](#type-checking)
 
 ## Styling and copy
 
@@ -438,4 +439,21 @@ df = conn.query(
 ```gitignore
 # GOOD: Keep local secrets out of source control
 .streamlit/secrets.toml
+```
+
+## Type checking
+
+Annotate Streamlit-owned values with `streamlit.typing` and handle `None` before use. Type-check with `ty` (recommended) or `mypy`; see [environment-setup.md](environment-setup.md).
+
+```python
+from streamlit.typing import UploadedFile
+
+
+def upload_label(upload: UploadedFile) -> str:
+    return f"{upload.name} ({upload.size} bytes)"
+
+
+uploaded = st.file_uploader("Upload a file")
+if uploaded is not None:
+    st.write(upload_label(uploaded))
 ```

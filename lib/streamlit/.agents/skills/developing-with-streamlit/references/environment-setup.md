@@ -114,8 +114,27 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "ty",
 ]
 ```
+
+## Type checking
+
+After editing app Python, type-check the changed files. Streamlit's public API is typed, so a checker catches invalid parameters and misused return values before the app runs. Use `ty` (recommended). Use `mypy` when the project already uses it, or when `ty` is not available. If the project configures a checker, use that one.
+
+```bash
+# Recommended
+uv add --dev ty
+uv run ty check streamlit_app.py
+
+# Fallback
+uv add --dev mypy
+uv run mypy streamlit_app.py
+```
+
+`uv run ty check` with no paths checks the project. Pass the edited files when you only want those. With a plain virtual environment, install the checker the same way as other tools (`uv pip install ty` or `uv pip install mypy`) and run `ty check` or `mypy`.
+
+Annotate Streamlit-owned values with types from `streamlit.typing`. See [best-practices.md](best-practices.md).
 
 ## References
 
