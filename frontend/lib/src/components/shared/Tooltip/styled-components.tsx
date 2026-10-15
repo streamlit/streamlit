@@ -16,9 +16,7 @@
 
 import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
-import { Tooltip as RATooltip } from "react-aria-components"
 
-import { getOverlayZIndex } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 const tooltipFadeIn = keyframes`
@@ -26,31 +24,17 @@ const tooltipFadeIn = keyframes`
   to   { opacity: 1 }
 `
 
-// Pin the overlay to the viewport origin so React Aria's inline left/top
-// values have no visual effect. Floating UI positions via transform: translate()
-// applied through the style prop, overriding RAC's useOverlayPosition.
-//
-// React Aria also hides the tooltip (opacity, clip, clip-path, mask-image)
-// until useOverlayPosition reports a placement. The trigger ref passed to RAC
-// is always null so Floating UI owns positioning, which means that placement
-// never arrives and the hide styles would otherwise stick for the tooltip's
-// whole lifetime.
-/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- !important overrides React Aria's inline styles */
-export const StyledTooltip = styled(RATooltip)<{ id?: string }>(
-  ({ theme }) => ({
-    position: "fixed !important" as "fixed",
-    left: "0 !important",
-    top: "0 !important",
-    opacity: "1 !important" as "1",
-    clip: "auto !important" as "auto",
-    clipPath: "none !important" as "none",
-    maskImage: "none !important" as "none",
-    width: "max-content",
-    zIndex: getOverlayZIndex(theme),
-    pointerEvents: "none",
-  })
-)
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+// Fixed positioning is the pre-measurement fallback. Floating UI's inline
+// styles (also fixed, plus a translate) override top/left once the tooltip
+// has been measured. pointer-events stay off here so the positioning box
+// does not block the page; the content wrapper turns them back on.
+export const StyledTooltip = styled.div(({ theme }) => ({
+  position: "fixed",
+  top: 0,
+  left: 0,
+  zIndex: theme.zIndices.popup,
+  pointerEvents: "none",
+}))
 
 export const StyledWrapper = styled.div({
   display: "table",
