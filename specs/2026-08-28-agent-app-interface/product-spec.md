@@ -427,7 +427,6 @@ right now. Naming follows the public API, for the reason above:
   "session_id": "s_7f3a",
   "status": "ready",
   "observed_at": "2026-09-06T10:00:00Z",
-  "app_title": "Finance",
   "page": {
     "url_path": "",
     "title": "Regional revenue",
@@ -597,13 +596,11 @@ Rules:
   `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
   and is auto-derived from the filename when the author does not set it (`""` for the
   default page). The internal page script hash stays internal.
-- **The app's title and the page's title are separate fields.** `page.title` is the
-  current page; a top-level `app_title` carries what `st.set_page_config(page_title=...)`
-  set, usually the app's name, or the script's name when nothing set one, as in the
-  browser tab, so a report can cite both without confusing them. An app
-  that calls `st.set_page_config` on each page makes `app_title` follow the page, since
-  that is what it asked the browser tab to say; `page.url_path` is the reliable identity
-  of where a client is.
+- **There is no app title.** `st.set_page_config(page_title=...)` titles the browser
+  tab, which is the app's name in an app that sets it once, the page's in one that sets
+  it per page, and the script's file name in one that sets none, so a client could not
+  tell which it was reading. `page.title` names the page, and the URL a client called
+  identifies the app. An authored app title is follow-up #2.
 - **`query_params` is URL state, reported as the app has it.** The interface holds the
   query string the way a browser holds its address bar: sent with each rerun, and
   replaced when the app changes it. A page change keeps what a browser keeps — embed
@@ -1279,9 +1276,10 @@ than ranked, and say where one builds on another.
    images, `st.pyplot`, tables, dataframes, the data editor, charts, maps, Mermaid and
    Graphviz diagrams, audio, video, and iframes, and the snapshot reports it as
    `props.alt` — exactly the author-written meaning this interface exists to surface.
-   What remains is the app and page level: static `app_title`/`app_description` on
-   `st.App`, `page_description` on `st.set_page_config` and optionally `st.Page`
-   ([#16878](https://github.com/streamlit/streamlit/issues/16878)), and `help` on media
+   What remains is the app and page level, for the snapshot to report: static
+   `app_title`/`app_description` on `st.App`, the one reliable source of an app title;
+   `page_description` on `st.set_page_config` and optionally `st.Page`
+   ([#16878](https://github.com/streamlit/streamlit/issues/16878)); and `help` on media
    ([#3133](https://github.com/streamlit/streamlit/issues/3133)).
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
    machinery and its limits rather than building a query API.

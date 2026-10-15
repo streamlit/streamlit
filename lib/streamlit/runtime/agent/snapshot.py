@@ -1048,7 +1048,6 @@ def build_snapshot(
         "observed_at": datetime.datetime.now(datetime.UTC)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
-        "app_title": _app_title(messages, new_session),
         "page": current_page,
         "pages": pages,
         "query_params": query_params,
@@ -1114,19 +1113,6 @@ def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | Non
         if msg.WhichOneof("type") == msg_type:
             return msg
     return None
-
-
-def _app_title(messages: list[ForwardMsg], new_session: ForwardMsg | None) -> str:
-    """The whole app's title, from ``st.set_page_config(page_title=...)``.
-
-    Kept separate from the current page's title. They are different things and
-    conflating them makes ``page.title`` answer "which app am I in?" when every
-    caller reads it as "which page am I on?".
-    """
-    page_config = _last_message(messages, "page_config_changed")
-    if page_config is not None and page_config.page_config_changed.title:
-        return str(page_config.page_config_changed.title)
-    return str(new_session.new_session.name) if new_session is not None else ""
 
 
 def _pages(

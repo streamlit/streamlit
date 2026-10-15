@@ -92,8 +92,8 @@ state: no sessions, no HTTP.
 - `merge_deltas` into the four root containers, and the serializer: `type`, `key`,
   `props`, `value` through each widget's serializer, `actions`, `support`, and the
   `ElementState` the next request is checked against.
-- The fallback for undescribed elements and `undescribed_types`; pages, `app_title`,
-  `status` and uncaught exceptions; password values never reported.
+- The fallback for undescribed elements and `undescribed_types`; pages, `status` and
+  uncaught exceptions; password values never reported.
 - Inline table previews from the Arrow already in the payload (`summarize_arrow`, the
   hidden `server.agentPreviewRows`), and `rebase_media_urls` for relative media URLs.
 

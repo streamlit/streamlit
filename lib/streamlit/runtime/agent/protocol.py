@@ -668,7 +668,6 @@ def schemas() -> dict[str, Any]:
                 "session_id",
                 "status",
                 "observed_at",
-                "app_title",
                 "page",
                 "pages",
                 "query_params",
@@ -705,14 +704,6 @@ def schemas() -> dict[str, Any]:
                         "When this snapshot was assembled, for citing an "
                         "answer. After a fragment rerun, content outside the "
                         "fragment is as an earlier run left it, as in a browser."
-                    ),
-                },
-                "app_title": {
-                    "type": "string",
-                    "description": (
-                        "The app's title from `st.set_page_config`, or the "
-                        "script's name. An app that sets it on every page makes "
-                        "it follow the page, so `page.url_path` is where you are."
                     ),
                 },
                 "page": {
