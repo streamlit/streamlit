@@ -223,11 +223,15 @@ class DataCaches(StatsProvider):
 
     def _get_session_lifecycle(self, session_id: str) -> _SessionCacheLifecycle:
         with self._caches_lock:
-            lifecycle = self._session_lifecycles.get(session_id)
-            if lifecycle is None:
-                lifecycle = _SessionCacheLifecycle()
-                self._session_lifecycles[session_id] = lifecycle
-            return lifecycle
+            return self._get_session_lifecycle_locked(session_id)
+
+    def _get_session_lifecycle_locked(self, session_id: str) -> _SessionCacheLifecycle:
+        """Return lifecycle state while the caller holds ``_caches_lock``."""
+        lifecycle = self._session_lifecycles.get(session_id)
+        if lifecycle is None:
+            lifecycle = _SessionCacheLifecycle()
+            self._session_lifecycles[session_id] = lifecycle
+        return lifecycle
 
     def get_cache(
         self,
@@ -275,12 +279,17 @@ class DataCaches(StatsProvider):
                 refresh_mode=refresh_mode,
             ):
                 return cache
+            # Capture lifecycle state in the same critical section as the miss.
+            # Session teardown can then invalidate this exact object before the
+            # lookup installs a cache, even if teardown removes it from the map.
+            session_lifecycle = (
+                None
+                if session_id is None
+                else self._get_session_lifecycle_locked(session_id)
+            )
 
         # Cache creation and replacement are serialized. Re-check after taking the
         # lifecycle lock because another thread may have installed the cache.
-        session_lifecycle = (
-            None if session_id is None else self._get_session_lifecycle(session_id)
-        )
         with (
             self._lifecycle_lock,
             nullcontext() if session_lifecycle is None else session_lifecycle.lock,

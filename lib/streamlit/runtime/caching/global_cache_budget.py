@@ -123,6 +123,42 @@ class GlobalCacheBudget(StatsProvider):
             self._drain_pending_unregisters_locked()
             self._unregister_locked(storage_id)
 
+    def reconfigure(self, max_bytes: int | None) -> None:
+        """Apply a server-start budget to this process and existing storages."""
+        with self._enforcement_lock:
+            with self._lock:
+                self._max_bytes = max_bytes
+                self._entries.clear()
+                self._total_bytes = 0
+                for storage_entries in self._storage_entries.values():
+                    storage_entries.clear()
+                storages = [
+                    storage
+                    for storage_ref in self._storages.values()
+                    if (storage := storage_ref()) is not None
+                ]
+
+            if max_bytes is None:
+                return
+
+            protected: tuple[int, str] | None = None
+            for storage in storages:
+                for (
+                    key,
+                    value_size,
+                    generation,
+                ) in storage._snapshot_entries_for_budget():
+                    self.record_write(
+                        storage._global_storage_id,
+                        key,
+                        value_size,
+                        generation,
+                    )
+                    protected = (storage._global_storage_id, key)
+
+            if protected is not None:
+                self.enforce_budget(protected)
+
     def _drain_pending_unregisters_locked(self) -> None:
         while not self._pending_unregisters.empty():
             try:
@@ -239,7 +275,7 @@ class GlobalCacheBudget(StatsProvider):
                 storage
                 for storage_ref in self._storages.values()
                 if (storage := storage_ref()) is not None
-                and math.isfinite(storage.ttl_seconds)
+                and storage.ttl_seconds != math.inf
             ]
         for storage in storages:
             storage._reap_expired_entries()
@@ -369,3 +405,15 @@ def get_global_cache_budget() -> GlobalCacheBudget:
                 budget = GlobalCacheBudget.from_config()
                 _GLOBAL_CACHE_BUDGET_HOLDER.budget = budget
     return budget
+
+
+def reconfigure_global_cache_budget_from_config() -> None:
+    """Refresh an already-created budget after server config is loaded."""
+    with _GLOBAL_CACHE_BUDGET_LOCK:
+        budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
+        if budget is not None:
+            budget.reconfigure(
+                config_max_cached_data_size_to_bytes(
+                    config.get_option("server.maxCachedDataSize")
+                )
+            )

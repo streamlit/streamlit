@@ -363,6 +363,19 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             removals = self._take_pending_removals()
             self._report_removals(removals)
 
+    def _snapshot_entries_for_budget(self) -> list[tuple[str, int, int]]:
+        """Register generations for entries cached before the budget was enabled."""
+        with self._mem_cache_lock:
+            self._mem_cache.expire()
+            self._take_pending_removals()
+            entries: list[tuple[str, int, int]] = []
+            for key, value in self._mem_cache.items():
+                self._next_generation += 1
+                generation = self._next_generation
+                self._generations[key] = generation
+                entries.append((key, len(value), generation))
+            return entries
+
     def _evict_from_mem_cache(
         self,
         key: str,

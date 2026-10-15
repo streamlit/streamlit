@@ -630,7 +630,7 @@ If you think this is actually a Streamlit bug, please
         """A lookup already waiting on lifecycle work observes session teardown."""
         lookup_started = threading.Event()
         returned: list[DataCache[Any]] = []
-        original_get_lifecycle = _data_caches._get_session_lifecycle
+        original_get_lifecycle = _data_caches._get_session_lifecycle_locked
 
         def observed_get_lifecycle(session_id: str) -> Any:
             lifecycle = original_get_lifecycle(session_id)
@@ -656,7 +656,7 @@ If you think this is actually a Streamlit bug, please
             ),
             patch.object(
                 _data_caches,
-                "_get_session_lifecycle",
+                "_get_session_lifecycle_locked",
                 side_effect=observed_get_lifecycle,
             ),
         ):

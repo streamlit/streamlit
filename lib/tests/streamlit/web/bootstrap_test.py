@@ -470,7 +470,13 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         mock_are_skills_installed.assert_not_called()
 
     @patch("streamlit.config.get_config_options")
-    def test_load_config_options(self, patched_get_config_options):
+    @patch(
+        "streamlit.runtime.caching.global_cache_budget."
+        "reconfigure_global_cache_budget_from_config"
+    )
+    def test_load_config_options(
+        self, reconfigure_cache_budget, patched_get_config_options
+    ):
         """Test that bootstrap.load_config_options parses the keys properly and
         passes down the parameters.
         """
@@ -495,6 +501,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "logger.level": "error",
             },
         )
+        reconfigure_cache_budget.assert_called_once_with()
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
@@ -520,8 +527,15 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
+    @patch(
+        "streamlit.runtime.caching.global_cache_budget."
+        "reconfigure_global_cache_budget_from_config"
+    )
     def test_install_config_watcher(
-        self, patched_watch_file: Mock, patched_get_config_options: Mock
+        self,
+        reconfigure_cache_budget: Mock,
+        patched_watch_file: Mock,
+        patched_get_config_options: Mock,
     ) -> None:
         """Test that config watchers are installed for all config file locations."""
         bootstrap._install_config_watchers(flag_options={"server_port": 8502})
@@ -546,6 +560,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.port": 8502,
             },
         )
+        reconfigure_cache_budget.assert_called_once_with()
 
 
 class BootstrapSecretsLoadTest(TestCase):

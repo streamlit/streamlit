@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import gc
+import math
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
@@ -97,6 +98,21 @@ def test_budget_from_default_config_is_disabled() -> None:
     assert budget._max_bytes is None
 
 
+def test_reconfigure_applies_budget_to_existing_storage() -> None:
+    """A server-start limit accounts for values cached earlier in raw mode."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "raw-mode")
+    storage.set("before-config", b"aaa")
+
+    budget.reconfigure(max_bytes=3)
+    storage.set("after-config", b"bbb")
+
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        storage.get("before-config")
+    assert storage.get("after-config") == b"bbb"
+    assert budget.total_bytes == 3
+
+
 def test_budget_evicts_globally_least_recently_used_entry() -> None:
     """A write over budget evicts the globally least-recently-used entry."""
     budget = GlobalCacheBudget(max_bytes=6)
@@ -140,6 +156,27 @@ def test_budget_reaps_newer_expired_entry_before_evicting_live_lru() -> None:
     assert live.get("older-live") == b"aaa"
     with pytest.raises(CacheStorageKeyNotFoundError):
         expiring.get("newer-expired")
+    assert writer.get("new") == b"c"
+    assert budget.total_bytes == 4
+
+
+@pytest.mark.parametrize("ttl_seconds", [math.nan, -math.inf])
+def test_budget_reaps_nonfinite_expired_entry_before_live_lru(
+    ttl_seconds: float,
+) -> None:
+    """NaN and negative-infinite TTLs expire immediately and are reaped."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    live = _create_storage(budget, "live")
+    expired = _create_storage(budget, "expired", ttl_seconds=ttl_seconds)
+    writer = _create_storage(budget, "writer")
+
+    live.set("older-live", b"aaa")
+    expired.set("newer-expired", b"bbb")
+    writer.set("new", b"c")
+
+    assert live.get("older-live") == b"aaa"
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        expired.get("newer-expired")
     assert writer.get("new") == b"c"
     assert budget.total_bytes == 4
 
