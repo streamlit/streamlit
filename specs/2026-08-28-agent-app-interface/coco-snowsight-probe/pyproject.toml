@@ -1,0 +1,15 @@
+[project]
+name = "agent-api-probe"
+version = "0.0.1"
+requires-python = "~=3.11.0"
+dependencies = [
+    "numpy",
+    "pandas",
+    "plotly",
+    "streamlit",
+    "streamlit-pdf",
+]
+
+[tool.uv.sources]
+# The agent API prototype wheel, downloaded next to this file. See README.md.
+streamlit = { path = "streamlit-1.65.0-py3-none-any.whl" }
