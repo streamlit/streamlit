@@ -184,15 +184,15 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       } as DropdownCellType
     },
     getCellValue(cell: DropdownCellType): string | number | boolean | null {
-      if (isNullOrUndefined(cell.data?.value) || cell.data?.value === "") {
+      if (isNullOrUndefined(cell.data.value) || cell.data.value === "") {
         return null
       }
       if (dataType === "number") {
-        return toSafeNumber(cell.data?.value) ?? null
+        return toSafeNumber(cell.data.value) ?? null
       } else if (dataType === "boolean") {
-        return toSafeBoolean(cell.data?.value) ?? null
+        return toSafeBoolean(cell.data.value) ?? null
       }
-      return cell.data?.value
+      return cell.data.value
     },
   }
 }

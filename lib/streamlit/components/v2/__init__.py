@@ -28,12 +28,8 @@ from streamlit.components.v2.get_bidi_component_manager import (
 from streamlit.errors import StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.types import ComponentRenderer
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from streamlit.components.v2.bidi_component import ComponentResult
+    from streamlit.components.v2.types import BidiComponentKey, ComponentRenderer
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
@@ -145,7 +141,7 @@ def _create_component_callable(
     css: str | None = None,
     js: str | None = None,
     isolate_styles: bool = True,
-) -> Callable[..., Any]:
+) -> ComponentRenderer:
     """Create a component callable, handling both lookup and registration cases.
 
     Parameters
@@ -166,7 +162,7 @@ def _create_component_callable(
 
     Returns
     -------
-    Callable[..., Any]
+    ComponentRenderer
         A function that, when called inside a Streamlit script, mounts the
         component and returns its state.
 
@@ -180,7 +176,7 @@ def _create_component_callable(
     # The inner callable that mounts the component.
     def _mount_component(
         *,
-        key: str | None = None,
+        key: BidiComponentKey = None,
         data: Any | None = None,
         default: dict[str, Any] | None = None,
         width: Width = "stretch",
@@ -191,8 +187,9 @@ def _create_component_callable(
 
         Parameters
         ----------
-        key : str or None
-            An optional string to use as the unique key for the component.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for the
+            component.
         data : Any or None
             Data to pass to the component (JSON-serializable).
         default : dict[str, Any] or None

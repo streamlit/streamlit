@@ -665,11 +665,11 @@ export default defineConfig([
     },
   },
   // Flags redundant optional chains and always-true checks.
-  // DataFrame stays excluded: index access and casts there still hide missing values.
-  // Tests stay excluded until a later slice. This queue only covers production source.
+  // Tests stay off until production source is clean. Elements and non-widget
+  // packages stay off until those directories are cleaned.
   {
     files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
-    ignores: ["**/*.test.ts", "**/*.test.tsx", "**/widgets/DataFrame/**"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-unnecessary-condition": "error",
     },
@@ -687,6 +687,7 @@ export default defineConfig([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
     "vitest.config.mts",
+    "vitest.jsdom-env.ts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

@@ -25,29 +25,9 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 **Where to put keys** (placement the table above leaves out)
 
 1. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
-2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See `shadcn-dual` or the dual-mode example below
+2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See the `shadcn-dual` template
 3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
 4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
-
-## Contents
-
-- [Valid theme sections](#valid-theme-sections)
-- [How theme config is applied](#how-theme-config-is-applied)
-- [Shared base themes across apps](#shared-base-themes-across-apps)
-- [Options agents often miss](#options-agents-often-miss)
-- [Color configuration](#color-configuration)
-- [Typography](#typography)
-- [Border and radius](#border-and-radius)
-- [Content padding](#content-padding)
-- [Sidebar customization](#sidebar-customization)
-- [Light and dark modes](#light-and-dark-modes)
-- [Design principles](#design-principles)
-- [Example: dual light/dark with sidebars](#example-dual-lightdark-with-sidebars)
-- [Common mistakes](#common-mistakes)
-- [IMPORTANT: No custom CSS unless explicitly requested](#important-no-custom-css-unless-explicitly-requested)
-- [Development workflow](#development-workflow)
-- [Theme templates](#theme-templates)
-- [References](#references)
 
 ## Valid theme sections
 
@@ -380,52 +360,7 @@ st.image(logo, alt="Company logo")
 
 ## Example: dual light/dark with sidebars
 
-```toml
-[theme]
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
-baseRadius = "0.5rem"
-buttonRadius = "0.5rem"
-showWidgetBorder = true
-showSidebarBorder = true
-linkUnderline = false
-
-[theme.light]
-primaryColor = "#0969da"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f6f8fa"
-textColor = "#1F2328"
-borderColor = "#d0d7de"
-codeBackgroundColor = "#f6f8fa"
-chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e", "#bf8700", "#57606a"]
-
-[theme.dark]
-primaryColor = "#1f6feb"
-backgroundColor = "#0d1117"
-secondaryBackgroundColor = "#161b22"
-textColor = "#e6edf3"
-borderColor = "#30363d"
-codeBackgroundColor = "#161b22"
-linkColor = "#58a6ff"
-chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
-
-[theme.light.sidebar]
-backgroundColor = "#f6f8fa"
-secondaryBackgroundColor = "#eaeef2"
-codeBackgroundColor = "#eaeef2"
-textColor = "#1F2328"
-borderColor = "#d0d7de"
-primaryColor = "#0969da"
-linkColor = "#0969da"
-
-[theme.dark.sidebar]
-backgroundColor = "#010409"
-secondaryBackgroundColor = "#161b22"
-textColor = "#e6edf3"
-borderColor = "#30363d"
-primaryColor = "#1f6feb"
-linkColor = "#58a6ff"
-```
+For a complete dual-mode config, copy `assets/templates/themes/configs/shadcn-dual.toml`: a shared `[theme]`, then `[theme.light]` and `[theme.dark]`, each with its own `.sidebar`.
 
 For a single locked dark theme, see the **vscode** template under `assets/templates/themes/configs/`.
 
@@ -536,7 +471,7 @@ Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config
 | **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono | |
 | **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code | |
 
-See `assets/templates/themes/README.md`. To support the toggle with a single-mode template, split it into `[theme.light]` / `[theme.dark]` following the dual-mode example above.
+See `assets/templates/themes/README.md`. To support the toggle with a single-mode template, split it into `[theme.light]` / `[theme.dark]` following `shadcn-dual.toml`.
 
 ## References
 

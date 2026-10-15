@@ -279,7 +279,8 @@ function isWithinButton(
 export function isButtonCell(cell: GridCell): cell is ButtonCell {
   return (
     cell.kind === GridCellKind.Custom &&
-    (cell.data as Record<string, unknown>)?.kind === "button-cell"
+    (cell.data as { kind?: unknown } | null | undefined)?.kind ===
+      "button-cell"
   )
 }
 

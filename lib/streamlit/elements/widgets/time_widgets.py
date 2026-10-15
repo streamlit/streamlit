@@ -992,10 +992,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import time
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input("Set an alarm for", datetime.time(8, 45))
+        >>> t = st.time_input("Set an alarm for", time(8, 45))
         >>> st.write("Alarm is set for", t)
 
         .. output::
@@ -1006,7 +1006,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty time input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> t = st.time_input("Set an alarm for", value=None)
@@ -1445,12 +1444,12 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input(
         ...     "Schedule your event",
-        ...     datetime.datetime(2025, 11, 19, 16, 45),
+        ...     datetime(2025, 11, 19, 16, 45),
         ... )
         >>> st.write("Event scheduled for", event_time)
 
@@ -1462,7 +1461,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty datetime input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input("Schedule your event", value=None)
@@ -1993,10 +1991,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import date
         >>> import streamlit as st
         >>>
-        >>> d = st.date_input("When's your birthday", datetime.date(2019, 7, 6))
+        >>> d = st.date_input("When's your birthday", date(2019, 7, 6))
         >>> st.write("Your birthday is:", d)
 
         .. output::
@@ -2005,17 +2003,17 @@ class TimeWidgetsMixin:
 
         **Example 2: Date range**
 
-        >>> import datetime
+        >>> from datetime import date, datetime
         >>> import streamlit as st
         >>>
-        >>> today = datetime.datetime.now()
+        >>> today = datetime.now()
         >>> next_year = today.year + 1
-        >>> jan_1 = datetime.date(next_year, 1, 1)
-        >>> dec_31 = datetime.date(next_year, 12, 31)
+        >>> jan_1 = date(next_year, 1, 1)
+        >>> dec_31 = date(next_year, 12, 31)
         >>>
         >>> d = st.date_input(
         ...     "Select your vacation for next year",
-        ...     (jan_1, datetime.date(next_year, 1, 7)),
+        ...     (jan_1, date(next_year, 1, 7)),
         ...     jan_1,
         ...     dec_31,
         ...     format="MM.DD.YYYY",
@@ -2030,7 +2028,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty date input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", value=None)

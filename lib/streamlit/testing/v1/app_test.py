@@ -976,17 +976,47 @@ class AppTest:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        """Sequence of all ``st.dataframe`` elements.
+        """Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+
+        ``st.data_editor`` elements are also available from ``at.data_editor``.
 
         Returns
         -------
         ElementList of Dataframe
-            Sequence of all ``st.dataframe`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.dataframe[0]`` for the first element. Dataframe is an
-            extension of the Element class.
+            Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+            Individual elements can be accessed from an ElementList by index
+            (order on the page) or, when the element has a key, by key. For
+            example, ``at.dataframe[0]`` for the first element or
+            ``at.dataframe(key="editor")`` for an element with a given key.
+            Dataframe is an extension of the Element class.
         """
         return self._tree.dataframe
+
+    @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """Sequence of all ``st.data_editor`` elements.
+
+        ``at.dataframe`` includes these elements too. A table is included here
+        when ``editing_mode`` is not ``"read_only"``.
+
+        - ``.value`` is the table passed to the editor, without cell edits.
+        - ``set_value()`` raises ``AppTestError``.
+        - A keyed editor's session state value is the edit state
+          (``edited_rows``, ``added_rows``, ``deleted_rows``). Assigning
+          that state on ``at.session_state`` before ``.run()`` changes the
+          table the script receives. ``.value`` stays the input table.
+        - The script rejects ``st.session_state`` writes to that key.
+
+        Returns
+        -------
+        ElementList of Dataframe
+            Sequence of all ``st.data_editor`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.data_editor[0]`` for the first element
+            or ``at.data_editor(key="editor")`` for an element with a given
+            key.
+        """
+        return self._tree.data_editor
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1653,6 +1683,7 @@ class AppTest:
             Internal node type names such as ``"date_time_input"`` and
             ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
+            ``"data_editor"`` selects dataframes that are not read-only.
 
         Returns
         -------

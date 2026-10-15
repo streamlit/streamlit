@@ -77,7 +77,7 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: JsonCell): string | object | null {
-      return cell.data?.value ?? null
+      return cell.data.value ?? null
     },
     valuesEqual(a: unknown, b: unknown): boolean {
       // Treat two JSON values as equal when their serialized form matches.
