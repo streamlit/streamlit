@@ -76,7 +76,9 @@ Changes to these high-fan-out internals can affect every command, message, sessi
 
 ## Agent API element descriptions
 
-Every `st.*` command that emits an element or container describes itself for the agent API: it builds `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto and passes it as `agent_props=`. Details are in `elements/lib/agent_spec.py`; `lib/tests/streamlit/elements/lib/agent_spec_coverage_test.py` holds each description to the command's signature.
+An `st.*` command that emits an element or container describes itself for the agent API, unless the coverage test lists it in `_NOT_DESCRIBED` (it delegates to another command, or it never joins the element tree). It builds `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto and passes it as `agent_props=`. Details are in `elements/lib/agent_spec.py`; `lib/tests/streamlit/elements/lib/agent_spec_coverage_test.py` holds each description to the command's signature.
+
+The JSON is stored on `ForwardMsg.metadata.agent_props` and encoded by `runtime/agent/json_encoding.py`. The builders return `None` unless `register_agent_session` marked the session. The server does not register sessions, and there is no agent HTTP route.
 
 - **Public names only:** the first argument is the public command name; each keyword is one of the command's parameter names, never a proto field name or synonym. Pass `key=element_id` for an element with an identity.
 - **Report what changes meaning or use, omit presentation:** pass effective values (`disabled=False`, resolved `options`, bounds, `label_visibility`) and `None` for an unset optional parameter, which is dropped. Leave out width, height, gaps, alignment, colors, and other styling.
@@ -84,7 +86,7 @@ Every `st.*` command that emits an element or container describes itself for the
 - **Arguments are evaluated in every session, browsers included.** They must never raise for an input the command accepts (never truth-test a sequence parameter: a NumPy array or pandas Series has no truth value), and expensive preparation belongs behind `agent_spec.is_recording()`.
 - **Publish nothing the browser does not receive:** report the form the proto carries (a rounded value, normalized captions), and never export data the frontend never gets, such as a dataframe index it drops.
 - **Gaps are explicit:** set `support="browser_required"` when rendering depends on JavaScript the agent API does not run, and `support="read_only_in_v1"` when some input cannot be sent yet.
-- **Every parameter is decided:** a new parameter is either reported or listed in the coverage test's `_OMITTED` (with the reason) or `_DERIVED_PROPS`, and the test fails until one is done.
+- **Every parameter is decided:** report it, or list it in the coverage test's `_OMITTED_EVERYWHERE` or `_OMITTED` with the reason. A reported name that is not a parameter goes in `_DERIVED_PROPS`. The test fails until one of these is done.
 
 ## Embedded agent skills
 

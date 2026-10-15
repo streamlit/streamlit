@@ -125,10 +125,12 @@ The `st` object users interact with.
 ```
 st.button("Click")
   -> ButtonMixin.button()
-  -> _enqueue("button", ButtonProto(...))
-  -> ForwardMsg with delta path
+  -> _enqueue("button", ButtonProto(...), agent_props=...)
+  -> ForwardMsg with delta path; agent_props on metadata when set
   -> ScriptRunContext.enqueue()
 ```
+
+`agent_props` is the command's JSON description, or `None` for a session that is not recording. See [communication.md](communication.md#agent-command-descriptions).
 
 ## SessionState (`lib/streamlit/runtime/state/session_state.py`)
 
@@ -168,6 +170,8 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry.
+
 ## Web server (`lib/streamlit/web/server/`)
 
 **Key endpoints**:
@@ -177,6 +181,8 @@ register_widget(
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
+
+There is no `/_stcore/agent` route. Command descriptions travel only as `ForwardMsg.metadata.agent_props`.
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```

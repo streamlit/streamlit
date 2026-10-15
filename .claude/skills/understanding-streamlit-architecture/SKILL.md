@@ -150,6 +150,8 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/communication.md#delta-ui-changes`
 - **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.
   - Deep dive: `references/communication.md#forwardmsg-metadata-active_script_hash`
+- **Agent element descriptions**: A command can attach JSON on `ForwardMsg.metadata.agent_props`. Nothing registers an agent session, and there is no agent HTTP route.
+  - Deep dive: `references/communication.md#agent-command-descriptions`
 - **Element tree structure**: Frontend `AppRoot` maintains `main`, `sidebar`, `event`, and `bottom` containers with `BlockNode`/`ElementNode`.
   - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
 - **Element identity semantics**: Delta paths decide where a node lives; element IDs decide whether stateful elements can reconnect to prior state after remounts.
@@ -180,7 +182,7 @@ Deep dive: `references/element-identity.md`
 
 1. **Proto definition**: `proto/streamlit/proto/<Element>.proto`
 2. **Register in Element.proto**: Add to `oneof type`
-3. **Backend mixin**: `lib/streamlit/elements/<element>.py`
+3. **Backend mixin**: `lib/streamlit/elements/<element>.py`, including an `agent_spec.element(...)` or `agent_spec.block(...)` description passed as `agent_props=`
 4. **Frontend component**: `frontend/lib/src/components/elements/<Element>/` or `frontend/lib/src/components/widgets/<Element>/` (depending on element vs widget)
 5. **Register in ElementNodeRenderer**: Add case to switch statement
 6. **Compile protos**: `make protobuf`

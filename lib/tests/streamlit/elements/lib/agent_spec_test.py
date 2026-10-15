@@ -28,7 +28,7 @@ from streamlit.proto.Image_pb2 import Image as ImageProto
 
 
 def _recorded(command: str, **props: Any) -> dict[str, Any]:
-    """Encode one description with recording forced on."""
+    """Encode one description. The module fixture turns recording on."""
     encoded = agent_spec.element(command, **props)
     assert encoded is not None
     decoded = json.loads(encoded)
@@ -38,23 +38,23 @@ def _recorded(command: str, **props: Any) -> dict[str, Any]:
 
 @pytest.fixture(autouse=True)
 def _force_recording(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Describe every element in this module. Session gating is tested separately."""
+    """Record in this module. The one test that checks the off switch disables it."""
+    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
+
+
+def test_recording_off_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A session that is not recording builds no description."""
     monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
 
-
-def test_recording_off_returns_none() -> None:
-    """A session that is not recording builds no description."""
     assert agent_spec.element("markdown", body="hello") is None
     assert agent_spec.block("container", border=False) is None
 
 
-def test_drops_unset_parameters_at_any_depth(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_drops_unset_parameters_at_any_depth() -> None:
     """None means an unset parameter, including inside a nested object.
 
     A null inside a list stays, because position in a list is meaningful.
     """
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
     decoded = _recorded(
         "dataframe",
         help=None,
@@ -69,10 +69,8 @@ def test_drops_unset_parameters_at_any_depth(monkeypatch: pytest.MonkeyPatch) ->
     assert decoded["props"]["options"] == ["a", None]
 
 
-def test_content_keeps_nulls(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_content_keeps_nulls() -> None:
     """A null in an element's body is data, not an unset parameter."""
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
     decoded = _recorded(
         "json",
         body=agent_spec.Content({"a": None, "nested": {"b": None}}),
@@ -83,18 +81,14 @@ def test_content_keeps_nulls(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "expanded" not in decoded["props"]
 
 
-def test_nan_prop_becomes_null(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_nan_prop_becomes_null() -> None:
     """A non-finite number has no JSON form, so it is reported as null."""
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
     decoded = _recorded("metric", value=math.nan)
     assert decoded["props"]["value"] is None
 
 
-def test_command_type_parameter_is_a_prop(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_command_type_parameter_is_a_prop() -> None:
     """``type`` is keyword-only on the helper so a button can pass its own."""
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
     decoded = _recorded("button", type="primary", action="trigger")
     assert decoded["type"] == "button"
     assert decoded["action"] == "trigger"
@@ -113,13 +107,11 @@ def test_value_schema_shapes() -> None:
         "minItems": 2,
         "maxItems": 2,
     }
-    partial = agent_spec.range_of(agent_spec.DATE, partial=True)
-    assert partial == {
+    assert agent_spec.range_of(agent_spec.DATE, partial=True) == {
         "type": "array",
         "items": {"type": "string", "format": "date"},
         "maxItems": 2,
     }
-    assert "minItems" not in partial
 
 
 def test_described_column_config_drops_presentation_and_index() -> None:
@@ -154,19 +146,10 @@ def test_proto_alt_distinguishes_missing_from_empty() -> None:
     assert agent_spec.proto_alt(image) == ""
 
 
-def test_block_marks_a_transparent_wrapper(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_block_marks_a_transparent_wrapper() -> None:
     """An internal wrapper says so, and carries no public parameters."""
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
     encoded = agent_spec.block("container", transparent=True, border=None)
     assert encoded is not None
     decoded = json.loads(encoded)
     assert decoded["transparent"] is True
     assert decoded["props"] == {}
-
-
-def test_decode_ignores_malformed_input() -> None:
-    """A description that is not a JSON object decodes as nothing."""
-    assert agent_spec.decode('{"type": "markdown"}') == {"type": "markdown"}
-    assert agent_spec.decode("not-json") == {}
-    assert agent_spec.decode("[]") == {}

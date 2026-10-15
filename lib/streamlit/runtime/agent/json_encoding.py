@@ -14,10 +14,9 @@
 
 """JSON encodings for values that leave the app through the agent API.
 
-Widget values and dataframe cells are arbitrary Python objects, so the wire
-form has to be pinned, and it is pinned here. An object without an encoding
-becomes ``str(value)``, so one odd cell does not fail the snapshot. The spec
-lists settling these encodings as a prerequisite for shipping v1.
+Widget values and element props are arbitrary Python objects. This module pins
+their JSON form. An object without an encoding becomes ``str(value)``, so one
+odd cell does not fail the whole description.
 """
 
 from __future__ import annotations
@@ -45,8 +44,8 @@ def to_json_value(value: Any) -> Any:
         return value if math.isfinite(value) else None
 
     if isinstance(value, bytes):
-        # Bytes are never app-authored meaning; report the size instead of
-        # base64-inflating a model's context.
+        # Report the length. Base64 would spend the reader's context on bytes
+        # the author did not write as text.
         return {"bytes": len(value)}
 
     if isinstance(value, enum.Enum):
@@ -78,11 +77,10 @@ def to_json_value(value: Any) -> Any:
 
     # Protobuf repeated fields, pandas Index, and other sequences. Several of
     # these are not list subclasses and do not expose ``__iter__`` as an
-    # attribute, so ask ``iter()`` rather than checking for one.
+    # attribute, so ask ``list()`` rather than checking for one. Anything that
+    # cannot be listed is reported as text.
     try:
         items = list(value)
-    except TypeError:
-        return str(value)
     except Exception:
         return str(value)
     return [to_json_value(item) for item in items]

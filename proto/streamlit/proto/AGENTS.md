@@ -20,7 +20,7 @@ make protobuf
 
 ## Important Files
 
-- `ForwardMsg.proto`: Root message used to send information from the server to the frontend/browser.
+- `ForwardMsg.proto`: Root message used to send information from the server to the frontend/browser. `ForwardMsgMetadata.agent_props` is the emitting command's JSON description for the agent API and is excluded from the cache hash.
 - `BackMsg.proto`: Root message sent from the browser to the server, e.g. script rerun requests.
 - `NewSession.proto`: First message that is sent to the browser on every rerun.
 - `Block.proto`: Contains all block types. A block is a layout container for elements (e.g. columns, tabs, popovers, etc.).

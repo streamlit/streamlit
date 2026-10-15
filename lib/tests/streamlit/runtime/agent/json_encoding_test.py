@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""One fixture per row of the agent API's JSON encoding table."""
+"""JSON forms for the values an agent-API description can carry."""
 
 from __future__ import annotations
 

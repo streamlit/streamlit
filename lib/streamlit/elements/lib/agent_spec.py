@@ -110,7 +110,7 @@ DATE: Final[dict[str, Any]] = {"type": "string", "format": "date"}
 
 
 def list_of(items: dict[str, Any]) -> dict[str, Any]:
-    """Any number of values, such as a multiselect's."""
+    """JSON Schema for any number of values, such as a multiselect."""
     return {"type": "array", "items": items}
 
 
@@ -178,7 +178,8 @@ def _json_description(
     key: str | None,
     action: ActionKind | None,
     support: SupportReason | None,
-    extra: dict[str, Any] | None = None,
+    value_schema: dict[str, Any] | None = None,
+    transparent: bool = False,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -191,8 +192,10 @@ def _json_description(
         description[_ACTION_KEY] = action
     if support is not None:
         description[_SUPPORT_KEY] = support
-    if extra:
-        description.update(extra)
+    if transparent:
+        description[_TRANSPARENT_KEY] = True
+    if value_schema is not None:
+        description[_VALUE_SCHEMA_KEY] = value_schema
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
@@ -236,11 +239,13 @@ def element(
         Pass an effective value (``disabled=False``) for any parameter whose
         value changes what the element means, so "absent" is never ambiguous.
     """
-    extra: dict[str, Any] = {}
-    if value_schema is not None:
-        extra[_VALUE_SCHEMA_KEY] = value_schema
     return _json_description(
-        command, props, key=key, action=action, support=support, extra=extra
+        command,
+        props,
+        key=key,
+        action=action,
+        support=support,
+        value_schema=value_schema,
     )
 
 
@@ -364,20 +369,12 @@ def block(
     own right, such as ``st.tabs(on_change="rerun")``, whose value is the open
     tab.
     """
-    extra: dict[str, Any] = {}
-    if transparent:
-        extra[_TRANSPARENT_KEY] = True
-    if value_schema is not None:
-        extra[_VALUE_SCHEMA_KEY] = value_schema
     return _json_description(
-        command, props, key=key, action=action, support=support, extra=extra
+        command,
+        props,
+        key=key,
+        action=action,
+        support=support,
+        value_schema=value_schema,
+        transparent=transparent,
     )
-
-
-def decode(agent_props: str) -> dict[str, Any]:
-    """Decode a command's description. Malformed input is ignored."""
-    try:
-        decoded = json.loads(agent_props)
-    except json.JSONDecodeError:
-        return {}
-    return decoded if isinstance(decoded, dict) else {}

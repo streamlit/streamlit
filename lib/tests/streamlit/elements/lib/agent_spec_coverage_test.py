@@ -56,15 +56,7 @@ if TYPE_CHECKING:
 
 # Keywords of `agent_spec.element` and `agent_spec.block` that are not props.
 _RESERVED_KEYWORDS = frozenset(
-    {
-        "key",
-        "action",
-        "value_schema",
-        "support",
-        "data_url",
-        "data_summary",
-        "transparent",
-    }
+    {"key", "action", "value_schema", "support", "transparent"}
 )
 
 # Why a parameter is not in its command's `props`.
