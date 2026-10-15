@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import json
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
@@ -24,7 +23,6 @@ from google.protobuf.message import Message
 
 from streamlit import util
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime import runtime_util
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -132,41 +130,20 @@ def _coalesce_widget_states(
     """Merge an older ``WidgetStates`` into a newer one.
 
     The client clears a trigger as soon as it sends the rerun, so a later request
-    often omits it. The merge keeps active triggers from ``old_states``:
-
-    - The newer value wins for ordinary widgets and for a changed value type.
-    - A newer active button, chat input, or string trigger replaces the older one.
-    - Two active ``json_trigger_value`` batches for the same widget ID are
-      concatenated, oldest events first.
-    """
-    coalesced, pending_events = _coalesce_widget_states_with_json_trigger_events(
-        old_states, new_states, {}
-    )
-    if coalesced is None or not pending_events:
-        return coalesced
-    return _materialize_json_trigger_states(coalesced, pending_events)
-
-
-def _coalesce_widget_states_with_json_trigger_events(
-    old_states: WidgetStates | None,
-    new_states: WidgetStates | None,
-    pending_json_trigger_events: Mapping[str, _PendingJsonTriggerEvents],
-) -> tuple[WidgetStates | None, dict[str, _PendingJsonTriggerEvents]]:
-    """Coalesce widget states while keeping combined JSON triggers lazy.
-
-    ``pending_json_trigger_events`` contains normalized batches per widget ID.
+    often omits it. The merge keeps active triggers from ``old_states``. The newer
+    value still wins for ordinary widgets, for a different value type, and for a
+    newer active trigger.
     """
     if not old_states and not new_states:
-        return None, {}
+        return None
     if not old_states:
-        return new_states, {}
+        return new_states
     if not new_states:
-        return old_states, dict(pending_json_trigger_events)
+        return old_states
 
     states_by_id: dict[str, WidgetState] = {
         wstate.id: wstate for wstate in new_states.widgets
     }
-    coalesced_json_trigger_events = dict(pending_json_trigger_events)
 
     for old_state in old_states.widgets:
         if not _has_active_trigger_value(old_state):
@@ -181,221 +158,16 @@ def _coalesce_widget_states_with_json_trigger_events(
         # A changed value type means the widget ID now belongs to a different
         # kind of widget, so the newer state remains authoritative.
         if new_state.WhichOneof("value") != old_trigger_type:
-            coalesced_json_trigger_events.pop(old_state.id, None)
             continue
 
-        # An inactive newer trigger yields to the older active one. Two active JSON
-        # triggers merge their events; for other trigger types the newer one is kept.
+        # A newer active trigger replaces the older one.
         if not _has_active_trigger_value(new_state):
             states_by_id[old_state.id] = old_state
-        elif old_trigger_type == "json_trigger_value":
-            (
-                states_by_id[old_state.id],
-                coalesced_json_trigger_events[old_state.id],
-            ) = _merge_json_trigger_states(
-                old_state,
-                new_state,
-                pending_json_trigger_events.get(old_state.id),
-            )
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
 
-    return coalesced, coalesced_json_trigger_events
-
-
-@dataclass(frozen=True)
-class _PendingJsonTriggerEvents:
-    """One batch in an immutable chain with cumulative byte sizes."""
-
-    previous: _PendingJsonTriggerEvents | None
-    encoded_events: str
-    raw_size_bytes: int
-    json_size_bytes: int
-    has_events: bool
-
-
-def _normalize_json_trigger_events(payload: str) -> list[Any]:
-    """Return one Custom Components v2 trigger payload as a list of events.
-
-    A JSON array is returned as that list. Any other JSON value, or text that
-    cannot be parsed safely as JSON, becomes one opaque entry so a bad batch
-    does not drop neighboring events.
-    """
-    try:
-        events = json.loads(payload)
-    except (ValueError, RecursionError):
-        return [payload]
-    return events if isinstance(events, list) else [events]
-
-
-def _append_json_trigger_events(
-    previous: _PendingJsonTriggerEvents | None, payload: str
-) -> _PendingJsonTriggerEvents:
-    """Size-check, normalize, and append one raw batch in constant time."""
-    raw_size_bytes = len(payload.encode("utf-8"))
-    if previous is not None:
-        raw_size_bytes += previous.raw_size_bytes
-    if raw_size_bytes > runtime_util.get_max_widget_state_size_bytes():
-        raise runtime_util.WidgetStateSizeError(raw_size_bytes)
-
-    encoded_batch = json.dumps(_normalize_json_trigger_events(payload))
-    encoded_events = encoded_batch[1:-1]
-    has_events = bool(encoded_events)
-    has_any_events = has_events or (previous is not None and previous.has_events)
-    encoded_events_size = len(encoded_events.encode("utf-8"))
-    json_size_bytes = 2 + encoded_events_size
-    if previous is not None:
-        json_size_bytes = (
-            previous.json_size_bytes
-            + encoded_events_size
-            + (2 if previous.has_events and has_events else 0)
-        )
-
-    return _PendingJsonTriggerEvents(
-        previous=previous,
-        encoded_events=encoded_events,
-        raw_size_bytes=raw_size_bytes,
-        json_size_bytes=json_size_bytes,
-        has_events=has_any_events,
-    )
-
-
-def _merge_json_trigger_states(
-    old_state: WidgetState,
-    new_state: WidgetState,
-    pending_events: _PendingJsonTriggerEvents | None,
-) -> tuple[WidgetState, _PendingJsonTriggerEvents]:
-    """Copy ``new_state`` and queue old-before-new events for its widget ID.
-
-    The copied state remains a small placeholder until the pending request is
-    handed to ScriptRunner. Each raw batch is normalized here at most once.
-    """
-    if pending_events is None:
-        raw_size_bytes = len(old_state.json_trigger_value.encode("utf-8")) + len(
-            new_state.json_trigger_value.encode("utf-8")
-        )
-        if raw_size_bytes > runtime_util.get_max_widget_state_size_bytes():
-            raise runtime_util.WidgetStateSizeError(raw_size_bytes)
-
-    merged = WidgetState()
-    merged.CopyFrom(new_state)
-    if pending_events is None:
-        pending_events = _append_json_trigger_events(None, old_state.json_trigger_value)
-    return merged, _append_json_trigger_events(
-        pending_events, new_state.json_trigger_value
-    )
-
-
-def _materialize_json_trigger_events(events: _PendingJsonTriggerEvents) -> str:
-    """Materialize one widget ID's pending event chain as a JSON array."""
-    encoded_batches: list[str] = []
-    current: _PendingJsonTriggerEvents | None = events
-    while current is not None:
-        if current.encoded_events:
-            encoded_batches.append(current.encoded_events)
-        current = current.previous
-    encoded_batches.reverse()
-    return f"[{', '.join(encoded_batches)}]"
-
-
-def _materialize_json_trigger_states(
-    states: WidgetStates,
-    pending_events: Mapping[str, _PendingJsonTriggerEvents],
-) -> WidgetStates:
-    """Copy widget states and materialize every pending JSON trigger once."""
-    materialized = WidgetStates()
-    materialized.CopyFrom(states)
-    for state in materialized.widgets:
-        events = pending_events.get(state.id)
-        if events is not None:
-            state.json_trigger_value = _materialize_json_trigger_events(events)
-    return materialized
-
-
-_JSON_TRIGGER_FIELD_NUMBER = WidgetState.DESCRIPTOR.fields_by_name[
-    "json_trigger_value"
-].number
-_WIDGETS_FIELD_NUMBER = WidgetStates.DESCRIPTOR.fields_by_name["widgets"].number
-
-
-def _varint_size(value: int) -> int:
-    """Return the protobuf varint size of a non-negative integer."""
-    return max(1, (value.bit_length() + 6) // 7)
-
-
-def _length_delimited_field_size(field_number: int, payload_size: int) -> int:
-    """Return the protobuf wire size of a length-delimited field."""
-    return (
-        _varint_size((field_number << 3) | 2)
-        + _varint_size(payload_size)
-        + payload_size
-    )
-
-
-def _widget_states_size_with_pending_json_triggers(
-    states: WidgetStates,
-    pending_events: Mapping[str, _PendingJsonTriggerEvents],
-) -> int:
-    """Return the exact materialized ``WidgetStates`` protobuf size."""
-    projected_size = states.ByteSize()
-    for state in states.widgets:
-        events = pending_events.get(state.id)
-        if events is None:
-            continue
-
-        current_widget_size = state.ByteSize()
-        current_json_size = len(state.json_trigger_value.encode("utf-8"))
-        materialized_widget_size = (
-            current_widget_size
-            - _length_delimited_field_size(
-                _JSON_TRIGGER_FIELD_NUMBER, current_json_size
-            )
-            + _length_delimited_field_size(
-                _JSON_TRIGGER_FIELD_NUMBER, events.json_size_bytes
-            )
-        )
-        projected_size += _length_delimited_field_size(
-            _WIDGETS_FIELD_NUMBER, materialized_widget_size
-        ) - _length_delimited_field_size(_WIDGETS_FIELD_NUMBER, current_widget_size)
-    return projected_size
-
-
-def _widget_states_minimum_size(states: WidgetStates) -> int:
-    """Return a lower bound with JSON trigger payload text removed."""
-    minimum_size = states.ByteSize()
-    for state in states.widgets:
-        if state.WhichOneof("value") != "json_trigger_value":
-            continue
-
-        current_widget_size = state.ByteSize()
-        current_json_size = len(state.json_trigger_value.encode("utf-8"))
-        minimum_widget_size = (
-            current_widget_size
-            - _length_delimited_field_size(
-                _JSON_TRIGGER_FIELD_NUMBER, current_json_size
-            )
-            + _length_delimited_field_size(_JSON_TRIGGER_FIELD_NUMBER, 0)
-        )
-        minimum_size += _length_delimited_field_size(
-            _WIDGETS_FIELD_NUMBER, minimum_widget_size
-        ) - _length_delimited_field_size(_WIDGETS_FIELD_NUMBER, current_widget_size)
-    return minimum_size
-
-
-def _raise_if_widget_states_too_large(
-    states: WidgetStates | None,
-    pending_events: Mapping[str, _PendingJsonTriggerEvents],
-) -> None:
-    """Raise when the materialized widget-state aggregate exceeds its limit."""
-    if states is None:
-        return
-
-    widget_states_size = _widget_states_size_with_pending_json_triggers(
-        states, pending_events
-    )
-    if widget_states_size > runtime_util.get_max_widget_state_size_bytes():
-        raise runtime_util.WidgetStateSizeError(widget_states_size)
+    return coalesced
 
 
 _TRIGGER_PROTO_FIELDS = frozenset(
@@ -505,7 +277,6 @@ class ScriptRequests:
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
-        self._pending_json_trigger_events: dict[str, _PendingJsonTriggerEvents] = {}
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -513,7 +284,6 @@ class ScriptRequests:
         """
         with self._lock:
             self._state = ScriptRequestType.STOP
-            self._pending_json_trigger_events = {}
             # Release hydrated chat values so stopped work cannot retain
             # UploadedFile or audio buffers.
             if self._rerun_data.replay_trigger_values is not None:
@@ -547,12 +317,9 @@ class ScriptRequests:
         if self._state == ScriptRequestType.STOP:
             return False
 
-        if new_data.widget_states is not None:
-            minimum_size = _widget_states_minimum_size(new_data.widget_states)
-            if minimum_size > runtime_util.get_max_widget_state_size_bytes():
-                raise runtime_util.WidgetStateSizeError(minimum_size)
-
         if self._state == ScriptRequestType.CONTINUE:
+            self._state = ScriptRequestType.RERUN
+
             if new_data.fragment_id:
                 new_data = replace(
                     new_data,
@@ -573,23 +340,13 @@ class ScriptRequests:
                     coalesced_states=coalesced_replay_states,
                 ),
             )
-            _raise_if_widget_states_too_large(new_data.widget_states, {})
-            self._state = ScriptRequestType.RERUN
             self._rerun_data = new_data
-            self._pending_json_trigger_events = {}
             return True
 
         if self._state == ScriptRequestType.RERUN:
-            (
-                coalesced_states,
-                coalesced_json_trigger_events,
-            ) = _coalesce_widget_states_with_json_trigger_events(
+            coalesced_states = _coalesce_widget_states(
                 self._rerun_data.widget_states,
                 new_data.widget_states,
-                self._pending_json_trigger_events,
-            )
-            _raise_if_widget_states_too_large(
-                coalesced_states, coalesced_json_trigger_events
             )
             coalesced_replay_states = _coalesce_replay_trigger_states(
                 self._rerun_data.replay_trigger_states,
@@ -664,33 +421,11 @@ class ScriptRequests:
                 replay_trigger_values=coalesced_replay_values,
                 context_info=new_data.context_info,
             )
-            self._pending_json_trigger_events = coalesced_json_trigger_events
 
             return True
 
         # STOP, CONTINUE, and RERUN are all handled above.
         raise RuntimeError(f"Unrecognized ScriptRunnerState: {self._state}")
-
-    def _consume_rerun_data_locked(self) -> RerunData:
-        """Materialize and transfer the pending rerun while holding the lock."""
-        rerun_data = self._rerun_data
-        if self._pending_json_trigger_events:
-            if rerun_data.widget_states is None:  # pragma: no cover - defensive
-                raise RuntimeError("Pending JSON triggers require widget states.")
-            rerun_data = replace(
-                rerun_data,
-                widget_states=_materialize_json_trigger_states(
-                    rerun_data.widget_states,
-                    self._pending_json_trigger_events,
-                ),
-            )
-        self._pending_json_trigger_events = {}
-
-        # The consumed snapshot retains execution's hydrated values; release the
-        # queue's obsolete reference.
-        if self._rerun_data.replay_trigger_values is not None:
-            self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
-        return rerun_data
 
     def on_scriptrunner_yield(self) -> ScriptRequest | None:
         """Called by the ScriptRunner when it's at a yield point.
@@ -727,7 +462,11 @@ class ScriptRequests:
                     return None
 
                 self._state = ScriptRequestType.CONTINUE
-                rerun_data = self._consume_rerun_data_locked()
+                rerun_data = self._rerun_data
+                # The preempting snapshot retains execution's hydrated values;
+                # release the queue's obsolete reference.
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
                 return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             if self._state != ScriptRequestType.STOP:  # pragma: no cover - defensive
@@ -751,13 +490,14 @@ class ScriptRequests:
             # Whether consumed or abandoned below, the queue releases its copy.
             if self._state == ScriptRequestType.RERUN:
                 self._state = ScriptRequestType.CONTINUE
-                rerun_data = self._consume_rerun_data_locked()
+                rerun_data = self._rerun_data
+                if rerun_data.replay_trigger_values is not None:
+                    self._rerun_data = replace(rerun_data, replay_trigger_values=None)
                 return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
 
             # If we don't have a rerun request, unconditionally change our
             # state to STOP.
             self._state = ScriptRequestType.STOP
-            self._pending_json_trigger_events = {}
             if self._rerun_data.replay_trigger_values is not None:
                 self._rerun_data = replace(self._rerun_data, replay_trigger_values=None)
             return ScriptRequest(ScriptRequestType.STOP)

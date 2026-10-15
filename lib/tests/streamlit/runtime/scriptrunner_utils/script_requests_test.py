@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -22,9 +21,6 @@ import pytest
 
 from streamlit.proto.Common_pb2 import ChatInputValue, StringTriggerValue
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
-from streamlit.runtime import runtime_util
-from streamlit.runtime.runtime_util import WidgetStateSizeError
-from streamlit.runtime.scriptrunner_utils import script_requests
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequest,
@@ -78,24 +74,9 @@ def _queue_and_get_coalesced_widget_states(
     reqs = ScriptRequests()
     reqs.request_rerun(RerunData(widget_states=old_states))
     reqs.request_rerun(RerunData(widget_states=new_states))
-    result = reqs.on_scriptrunner_ready().rerun_data.widget_states
+    result = reqs._rerun_data.widget_states
     assert result is not None
     return result
-
-
-def _coalesce_json_trigger_values(old_payload: str, new_payload: str) -> list[object]:
-    """Coalesce two JSON trigger payloads and return their decoded events."""
-    old_states = WidgetStates()
-    _create_widget("component", old_states).json_trigger_value = old_payload
-    new_states = WidgetStates()
-    _create_widget("component", new_states).json_trigger_value = new_payload
-
-    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
-    component = _get_widget("component", result)
-    assert component is not None
-    events = json.loads(component.json_trigger_value)
-    assert isinstance(events, list)
-    return events
 
 
 class ScriptRequestsTest(unittest.TestCase):
@@ -777,13 +758,14 @@ def test_older_active_trigger_replaces_newer_inactive_trigger(
         ("trigger_value", "unused-old", "unused-new"),
         ("string_trigger_value", "old-menu-item", "new-menu-item"),
         ("chat_input_value", "old-message", "new-message"),
+        ("json_trigger_value", "old-event", "new-event"),
     ],
-    ids=["boolean", "string", "chat-input"],
+    ids=["boolean", "string", "chat-input", "json"],
 )
-def test_newer_active_non_json_trigger_wins_same_id_collision(
+def test_newer_active_trigger_wins_same_id_collision(
     trigger_field: str, old_value: str, new_value: str
 ) -> None:
-    """Active non-JSON trigger collisions retain the newer state."""
+    """Active trigger collisions retain the newer state."""
     old_states = WidgetStates()
     _set_trigger(
         _create_widget("trigger", old_states),
@@ -831,366 +813,3 @@ def test_inactive_older_trigger_is_not_carried_forward(trigger_field: str) -> No
 
     assert _get_widget("trigger", result) is None
     assert _get_widget("persistent", result).string_value == "new"
-
-
-def test_json_trigger_arrays_are_concatenated_in_order() -> None:
-    """JSON trigger arrays retain old-before-new and within-request ordering."""
-    assert _coalesce_json_trigger_values(
-        '[{"event": "old-1"}, {"event": "old-2"}]',
-        '[{"event": "new-1"}, {"event": "new-2"}]',
-    ) == [
-        {"event": "old-1"},
-        {"event": "old-2"},
-        {"event": "new-1"},
-        {"event": "new-2"},
-    ]
-
-
-@pytest.mark.parametrize(
-    ("old_payload", "new_payload", "expected"),
-    [
-        (
-            '{"event": "old"}',
-            '[{"event": "new"}]',
-            [{"event": "old"}, {"event": "new"}],
-        ),
-        (
-            '[{"event": "old"}]',
-            '{"event": "new"}',
-            [{"event": "old"}, {"event": "new"}],
-        ),
-    ],
-    ids=["old-singleton", "new-singleton"],
-)
-def test_json_trigger_singletons_are_normalized(
-    old_payload: str, new_payload: str, expected: list[object]
-) -> None:
-    """Valid singleton payloads are wrapped before merging with event arrays."""
-    assert _coalesce_json_trigger_values(old_payload, new_payload) == expected
-
-
-@pytest.mark.parametrize(
-    ("old_payload", "new_payload", "expected"),
-    [
-        (
-            "malformed old",
-            '[{"event": "new"}]',
-            ["malformed old", {"event": "new"}],
-        ),
-        (
-            '[{"event": "old"}]',
-            "malformed new",
-            [{"event": "old"}, "malformed new"],
-        ),
-    ],
-    ids=["malformed-old", "malformed-new"],
-)
-def test_malformed_json_trigger_payload_is_preserved(
-    old_payload: str, new_payload: str, expected: list[object]
-) -> None:
-    """Malformed payloads remain opaque items without discarding valid events."""
-    assert _coalesce_json_trigger_values(old_payload, new_payload) == expected
-
-
-def test_unexpected_json_trigger_values_are_preserved_without_flattening() -> None:
-    """Valid scalars and nested lists remain opaque top-level event entries."""
-    assert _coalesce_json_trigger_values(
-        "42", '[null, ["nested"], {"event": "new"}]'
-    ) == [
-        42,
-        None,
-        ["nested"],
-        {"event": "new"},
-    ]
-
-
-def test_json_trigger_merge_does_not_mutate_inputs() -> None:
-    """Merging JSON trigger events leaves both source protobufs unchanged."""
-    old_states = WidgetStates()
-    _create_widget("component", old_states).json_trigger_value = '[{"event": "old"}]'
-    new_states = WidgetStates()
-    _create_widget("component", new_states).json_trigger_value = '[{"event": "new"}]'
-    old_before = old_states.SerializeToString()
-    new_before = new_states.SerializeToString()
-
-    _queue_and_get_coalesced_widget_states(old_states, new_states)
-
-    assert old_states.SerializeToString() == old_before
-    assert new_states.SerializeToString() == new_before
-
-
-def test_repeated_json_trigger_batches_are_each_parsed_once() -> None:
-    """Queued batches are parsed individually without reparsing prior events."""
-    payloads = [json.dumps([{"event": index}]) for index in range(20)]
-    reqs = ScriptRequests()
-
-    with patch.object(
-        script_requests.json, "loads", wraps=json.loads
-    ) as json_loads_mock:
-        for payload in payloads:
-            states = WidgetStates()
-            _create_widget("component", states).json_trigger_value = payload
-            reqs.request_rerun(RerunData(widget_states=states))
-
-        request = reqs.on_scriptrunner_ready()
-
-    assert [call.args[0] for call in json_loads_mock.call_args_list] == payloads
-    component = _get_widget("component", request.rerun_data.widget_states)
-    assert component is not None
-    assert json.loads(component.json_trigger_value) == [
-        {"event": index} for index in range(20)
-    ]
-
-
-def test_json_trigger_aggregate_is_materialized_once_on_consumption() -> None:
-    """The complete JSON array is built once, only when ScriptRunner receives it."""
-    reqs = ScriptRequests()
-    with patch.object(
-        script_requests,
-        "_materialize_json_trigger_events",
-        wraps=script_requests._materialize_json_trigger_events,
-    ) as materialize_mock:
-        for event in ("old", "middle", "new"):
-            states = WidgetStates()
-            _create_widget(
-                "component", states
-            ).json_trigger_value = f'[{{"event": "{event}"}}]'
-            reqs.request_rerun(RerunData(widget_states=states))
-
-        materialize_mock.assert_not_called()
-        request = reqs.on_scriptrunner_ready()
-        materialize_mock.assert_called_once()
-        reqs.on_scriptrunner_ready()
-        materialize_mock.assert_called_once()
-
-    component = _get_widget("component", request.rerun_data.widget_states)
-    assert component is not None
-    assert json.loads(component.json_trigger_value) == [
-        {"event": "old"},
-        {"event": "middle"},
-        {"event": "new"},
-    ]
-
-
-def test_first_json_trigger_collision_is_raw_size_checked_before_parsing() -> None:
-    """An oversized first collision rejects both batches before normalization."""
-    old_payload = " " * 40 + "[1]"
-    new_payload = " " * 80 + "[2]"
-    max_size = len(old_payload.encode("utf-8")) + len(new_payload.encode("utf-8")) - 1
-    old_states = WidgetStates()
-    _create_widget("component", old_states).json_trigger_value = old_payload
-    new_states = WidgetStates()
-    _create_widget("component", new_states).json_trigger_value = new_payload
-    assert old_states.ByteSize() <= max_size
-
-    reqs = ScriptRequests()
-    with patch.object(
-        runtime_util, "get_max_widget_state_size_bytes", return_value=max_size
-    ):
-        reqs.request_rerun(RerunData(query_string="old", widget_states=old_states))
-        pending_before = reqs._rerun_data
-
-        with (
-            patch.object(script_requests.json, "loads") as json_loads_mock,
-            patch.object(script_requests.json, "dumps") as json_dumps_mock,
-            pytest.raises(WidgetStateSizeError),
-        ):
-            reqs.request_rerun(
-                RerunData(query_string="rejected", widget_states=new_states)
-            )
-
-    json_loads_mock.assert_not_called()
-    json_dumps_mock.assert_not_called()
-    assert reqs._rerun_data is pending_before
-    assert reqs._pending_json_trigger_events == {}
-
-
-def test_later_json_trigger_append_is_raw_size_checked_before_parsing() -> None:
-    """A later oversized append is rejected before its batch is normalized."""
-    payload = " " * 30 + "[1]"
-    max_size = 2 * len(payload.encode("utf-8"))
-    reqs = ScriptRequests()
-
-    with patch.object(
-        runtime_util, "get_max_widget_state_size_bytes", return_value=max_size
-    ):
-        for query_string in ("old", "new"):
-            states = WidgetStates()
-            _create_widget("component", states).json_trigger_value = payload
-            reqs.request_rerun(
-                RerunData(query_string=query_string, widget_states=states)
-            )
-
-        pending_before = reqs._rerun_data
-        metadata_before = reqs._pending_json_trigger_events
-        assert metadata_before["component"].raw_size_bytes == max_size
-        rejected_states = WidgetStates()
-        _create_widget("component", rejected_states).json_trigger_value = payload
-
-        with (
-            patch.object(script_requests.json, "loads") as json_loads_mock,
-            patch.object(script_requests.json, "dumps") as json_dumps_mock,
-            pytest.raises(WidgetStateSizeError),
-        ):
-            reqs.request_rerun(
-                RerunData(query_string="rejected", widget_states=rejected_states)
-            )
-
-        json_loads_mock.assert_not_called()
-        json_dumps_mock.assert_not_called()
-        assert reqs._rerun_data is pending_before
-        assert reqs._pending_json_trigger_events is metadata_before
-        request = reqs.on_scriptrunner_ready()
-
-    assert request.rerun_data.query_string == "new"
-    component = _get_widget("component", request.rerun_data.widget_states)
-    assert component is not None
-    assert json.loads(component.json_trigger_value) == [1, 1]
-
-
-def test_oversized_json_trigger_aggregate_preserves_pending_rerun() -> None:
-    """A rejected append does not replace the already accepted pending rerun."""
-    old_payload = '[{"event": "old"}]'
-    middle_payload = '[{"event": "middle"}]'
-    accepted_states = WidgetStates()
-    accepted_component = _create_widget("component", accepted_states)
-    accepted_component.json_trigger_value = json.dumps(
-        [{"event": "old"}, {"event": "middle"}]
-    )
-    max_size = accepted_states.ByteSize()
-
-    reqs = ScriptRequests()
-    with patch.object(
-        runtime_util, "get_max_widget_state_size_bytes", return_value=max_size
-    ):
-        for query_string, payload in (
-            ("old", old_payload),
-            ("middle", middle_payload),
-        ):
-            states = WidgetStates()
-            _create_widget("component", states).json_trigger_value = payload
-            reqs.request_rerun(
-                RerunData(query_string=query_string, widget_states=states)
-            )
-
-        pending_before = reqs._rerun_data
-        metadata_before = reqs._pending_json_trigger_events
-        oversized_states = WidgetStates()
-        _create_widget("component", oversized_states).json_trigger_value = json.dumps(
-            [{"event": "x" * max_size}]
-        )
-
-        with pytest.raises(WidgetStateSizeError):
-            reqs.request_rerun(
-                RerunData(query_string="rejected", widget_states=oversized_states)
-            )
-
-        assert reqs._rerun_data is pending_before
-        assert reqs._pending_json_trigger_events is metadata_before
-        request = reqs.on_scriptrunner_ready()
-
-    assert request.rerun_data.query_string == "middle"
-    component = _get_widget("component", request.rerun_data.widget_states)
-    assert component is not None
-    assert json.loads(component.json_trigger_value) == [
-        {"event": "old"},
-        {"event": "middle"},
-    ]
-
-
-def test_json_trigger_limit_counts_complete_widget_states() -> None:
-    """The size limit covers non-JSON widget state in the coalesced protobuf."""
-    persistent_value = "x" * 200
-    old_states = WidgetStates()
-    _create_widget("persistent", old_states).string_value = persistent_value
-    _create_widget("component", old_states).json_trigger_value = '[{"event": "old"}]'
-    new_states = WidgetStates()
-    _create_widget("persistent", new_states).string_value = persistent_value
-    _create_widget("component", new_states).json_trigger_value = '[{"event": "new"}]'
-
-    materialized = WidgetStates()
-    _create_widget("persistent", materialized).string_value = persistent_value
-    materialized_payload = json.dumps([{"event": "old"}, {"event": "new"}])
-    _create_widget("component", materialized).json_trigger_value = materialized_payload
-    max_size = materialized.ByteSize() - 1
-    assert len(materialized_payload.encode("utf-8")) < max_size
-    assert old_states.ByteSize() <= max_size
-
-    reqs = ScriptRequests()
-    with patch.object(
-        runtime_util, "get_max_widget_state_size_bytes", return_value=max_size
-    ):
-        reqs.request_rerun(RerunData(widget_states=old_states))
-        with pytest.raises(WidgetStateSizeError):
-            reqs.request_rerun(RerunData(widget_states=new_states))
-
-
-def test_structurally_oversized_widget_states_are_rejected_before_json_parse() -> None:
-    """A cheap lower-bound check rejects oversized non-JSON state first."""
-    states = WidgetStates()
-    _create_widget("persistent", states).string_value = "x" * 100
-    _create_widget("component", states).json_trigger_value = "malformed"
-    reqs = ScriptRequests()
-
-    with (
-        patch.object(runtime_util, "get_max_widget_state_size_bytes", return_value=50),
-        patch.object(script_requests.json, "loads") as json_loads_mock,
-        pytest.raises(WidgetStateSizeError),
-    ):
-        reqs.request_rerun(RerunData(widget_states=states))
-
-    json_loads_mock.assert_not_called()
-    assert reqs._state is ScriptRequestType.CONTINUE
-
-
-def test_pending_json_trigger_metadata_is_released() -> None:
-    """Stopping or consuming a rerun drops private JSON trigger metadata."""
-
-    def queue_collision(reqs: ScriptRequests) -> None:
-        for event in ("old", "new"):
-            states = WidgetStates()
-            _create_widget(
-                "component", states
-            ).json_trigger_value = f'[{{"event": "{event}"}}]'
-            reqs.request_rerun(RerunData(widget_states=states))
-
-    stopped_reqs = ScriptRequests()
-    queue_collision(stopped_reqs)
-    assert stopped_reqs._pending_json_trigger_events
-    stopped_reqs.request_stop()
-    assert stopped_reqs._pending_json_trigger_events == {}
-
-    for consume_method in ("on_scriptrunner_ready", "on_scriptrunner_yield"):
-        consumed_reqs = ScriptRequests()
-        queue_collision(consumed_reqs)
-        assert consumed_reqs._pending_json_trigger_events
-        getattr(consumed_reqs, consume_method)()
-        assert consumed_reqs._pending_json_trigger_events == {}
-
-
-def test_huge_integer_json_trigger_is_preserved_as_one_opaque_event() -> None:
-    """Integers rejected by Python's conversion limit remain opaque events."""
-    huge_integer = "1" * 5000
-    assert _coalesce_json_trigger_values(huge_integer, '[{"event": "new"}]') == [
-        huge_integer,
-        {"event": "new"},
-    ]
-
-
-def test_deeply_nested_json_trigger_is_preserved_as_one_opaque_event() -> None:
-    """A recursion-limited JSON payload remains one opaque event."""
-    deeply_nested = "[" * 10_000 + "0" + "]" * 10_000
-    json_loads = json.loads
-
-    def load_with_recursion_limit(payload: str) -> object:
-        if payload == deeply_nested:
-            raise RecursionError
-        return json_loads(payload)
-
-    with patch.object(
-        script_requests.json, "loads", side_effect=load_with_recursion_limit
-    ):
-        assert _coalesce_json_trigger_values(deeply_nested, '[{"event": "new"}]') == [
-            deeply_nested,
-            {"event": "new"},
-        ]
