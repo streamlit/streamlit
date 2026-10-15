@@ -155,9 +155,9 @@ def is_recording() -> bool:
     nothing, so its messages never carry a description and there is nothing to
     strip on the way out.
 
-    The set is checked first: it is empty unless the API is on and has a
-    session, so the normal case costs one truth test per element and never
-    takes the config lock.
+    The set is checked first: it is empty unless the agent API has registered
+    a session, so the normal case costs one truth test per element and never
+    looks up the script-run context.
     """
     session_ids = _agent_session_ids
     if not session_ids:
@@ -210,7 +210,7 @@ def element(
     support: SupportReason | None = None,
     **props: Any,
 ) -> str | None:
-    """Describe an element for the agent API, or return ``None`` when it is off.
+    """Describe an element for the agent API, or return ``None`` when this session is not recording.
 
     ``command`` is positional-only so a command that has its own ``type``
     parameter (``st.button``, ``st.text_input``) can pass it straight through.
@@ -360,7 +360,7 @@ def block(
     transparent: bool = False,
     **props: Any,
 ) -> str | None:
-    """Describe a container for the agent API, or return ``None`` when it is off.
+    """Describe a container for the agent API, or return ``None`` when this session is not recording.
 
     ``transparent`` marks an internal wrapper with no public counterpart, whose
     children belong to the parent container.

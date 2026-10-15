@@ -1565,9 +1565,17 @@ class ButtonGroupMixin:
                 label=label,
                 # The labels the widget accepts, not the proto's display
                 # content, which moves a leading icon into its own field.
-                options=list(string_formatted_options)
-                if string_formatted_options is not None
-                else [option.content for option in proto.options],
+                # Built only while recording: this argument runs before the
+                # gate inside element().
+                options=(
+                    (
+                        list(string_formatted_options)
+                        if string_formatted_options is not None
+                        else [option.content for option in proto.options]
+                    )
+                    if agent_spec.is_recording()
+                    else None
+                ),
                 selection_mode=selection_mode,
                 help=help,
                 required=proto.required,

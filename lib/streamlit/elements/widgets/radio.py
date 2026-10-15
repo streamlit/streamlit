@@ -643,9 +643,11 @@ class RadioMixin:
                 # author's Python objects.
                 options=formatted_options,
                 # The captions as the browser receives them. Never truth-test
-                # `captions`: arguments here are evaluated in every session, and
-                # a NumPy array or pandas Series has no truth value.
-                captions=list(radio_proto.captions) if captions is not None else None,
+                # `captions`: a NumPy array or pandas Series has no truth value.
+                # The copy runs only while recording; the proto already has them.
+                captions=(list(radio_proto.captions) if captions is not None else None)
+                if agent_spec.is_recording()
+                else None,
                 help=help,
                 horizontal=horizontal,
                 disabled=disabled,

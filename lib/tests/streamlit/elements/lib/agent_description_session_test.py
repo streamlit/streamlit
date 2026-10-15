@@ -196,3 +196,34 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         self._record()
         filled_by_browser()
         assert _descriptions(list(self.forward_msg_queue._queue)) == []
+
+    def test_status_update_resends_the_new_state(self) -> None:
+        """``status.update()`` rebuilds the description on the replacement message."""
+        self._record()
+        with st.status("Working", expanded=False) as status:
+            status.update(state="complete", expanded=True)
+
+        statuses = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "status"
+        ]
+        assert statuses[-1]["props"]["state"] == "complete"
+        assert statuses[-1]["props"]["expanded"] is True
+
+    def test_dialog_open_reports_is_open(self) -> None:
+        """A dialog's re-sent block reports that it is open."""
+        self._record()
+
+        @st.dialog("Hello")
+        def my_dialog() -> None:
+            st.write("content")
+
+        my_dialog()
+
+        dialogs = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "dialog"
+        ]
+        assert dialogs[-1]["props"]["is_open"] is True

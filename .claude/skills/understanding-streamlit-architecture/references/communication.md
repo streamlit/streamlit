@@ -210,7 +210,7 @@ ForwardMsgs include `hash` for deduplication:
 
 **Benefit**: Reduces bandwidth for large/unchanged elements.
 
-Metadata, including `agent_props`, is set aside before hashing and restored afterward. A reference message copies that metadata.
+See [Agent command descriptions](#agent-command-descriptions) for how `agent_props` interacts with hashing.
 
 ## Key design decisions
 

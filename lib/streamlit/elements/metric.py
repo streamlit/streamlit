@@ -502,7 +502,13 @@ class MetricMixin:
                 help=help,
                 icon=icon,
                 format=format,
-                chart_data=list(metric_proto.chart_data) or None,
+                # The sparkline is already on the proto. Copy it only while
+                # recording; the gate inside element() runs after this argument.
+                chart_data=(
+                    list(metric_proto.chart_data) or None
+                    if agent_spec.is_recording()
+                    else None
+                ),
                 chart_type=chart_type if metric_proto.chart_data else None,
                 label_visibility=label_visibility,
             ),

@@ -28,6 +28,17 @@ import math
 from typing import Any
 
 
+def _is_pandas_missing(value: Any) -> bool:
+    """True for the pandas missing scalars ``pd.NA`` and ``pd.NaT``."""
+    type_name = type(value).__name__
+    if type_name not in {"NAType", "NaTType"}:
+        return False
+
+    import pandas as pd
+
+    return value is pd.NA or value is pd.NaT
+
+
 def to_json_value(value: Any) -> Any:
     """Convert a Python value into its JSON representation.
 
@@ -53,8 +64,18 @@ def to_json_value(value: Any) -> Any:
 
     if isinstance(value, decimal.Decimal):
         # Strings, because a float round-trip loses the precision that made
-        # someone choose Decimal.
+        # someone choose Decimal. Non-finite values are null, same as float
+        # NaN and infinity: JSON has no other form for them.
+        if not value.is_finite():
+            return None
         return str(value)
+
+    # pd.NaT subclasses datetime, so this identity check has to run before
+    # isoformat(). pd.NA is not a float and would otherwise become "<NA>".
+    # Identity only: pd.isna on an array returns an array and the truth test
+    # raises.
+    if _is_pandas_missing(value):
+        return None
 
     # ISO 8601, which is also what the public API accepts back.
     if isinstance(value, (dt.datetime, dt.date, dt.time)):
@@ -75,10 +96,8 @@ def to_json_value(value: Any) -> Any:
         except Exception:
             return str(value)
 
-    # Protobuf repeated fields, pandas Index, and other sequences. Several of
-    # these are not list subclasses and do not expose ``__iter__`` as an
-    # attribute, so ask ``list()`` rather than checking for one. Anything that
-    # cannot be listed is reported as text.
+    # Protobuf repeated fields and other sequences that are not lists and do
+    # not expose ``tolist``. Anything that cannot be listed is reported as text.
     try:
         items = list(value)
     except Exception:

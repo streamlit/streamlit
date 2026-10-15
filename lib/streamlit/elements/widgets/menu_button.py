@@ -460,7 +460,13 @@ class MenuButtonMixin:
                 action="trigger",
                 value_schema=agent_spec.STRING,
                 label=label,
-                options=list(menu_button_proto.options),
+                # Copied only while recording: this argument runs before the
+                # gate inside element().
+                options=(
+                    list(menu_button_proto.options)
+                    if agent_spec.is_recording()
+                    else None
+                ),
                 help=help,
                 icon=icon,
                 type=type,

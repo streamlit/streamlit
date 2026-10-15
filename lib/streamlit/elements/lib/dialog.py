@@ -74,7 +74,10 @@ def _process_dialog_width_input(
 
 
 def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]:
-    """The agent-API props for a dialog, read from its block proto.
+    """Keywords for ``agent_spec.block`` for this dialog.
+
+    ``key`` and ``action`` are set only when ``on_dismiss`` registered a widget.
+    They are block arguments, separate from props.
 
     A dialog's body is a fragment, so its contents stay drivable as long as an
     interaction targets them: that scopes the rerun to the dialog's fragment,

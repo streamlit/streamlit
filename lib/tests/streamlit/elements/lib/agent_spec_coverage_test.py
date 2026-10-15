@@ -335,6 +335,7 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(_DESCRIBED_COMMANDS)
     def test_description_matches_signature(self, command: str) -> None:
+        """Every described command accounts for every public parameter."""
         described = self._described_names(command)
         assert described is not None, (
             f"st.{command} emitted no agent-API description of its own. Describe "
@@ -395,6 +396,7 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
         )
 
     def test_lists_name_real_commands(self) -> None:
+        """All coverage tables reference commands with element mocks."""
         for name, listing in (
             ("_OMITTED", _OMITTED),
             ("_DERIVED_PROPS", _DERIVED_PROPS),

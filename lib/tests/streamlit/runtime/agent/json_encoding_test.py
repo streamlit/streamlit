@@ -23,6 +23,7 @@ import math
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from streamlit.runtime.agent.json_encoding import to_json_value
@@ -44,8 +45,13 @@ class _Color(enum.Enum):
         (dt.time(9, 30), "09:30:00"),
         (dt.timedelta(hours=1, minutes=30), 5400.0),
         (decimal.Decimal("0.10"), "0.10"),
+        (decimal.Decimal("NaN"), None),
+        (decimal.Decimal("Infinity"), None),
+        (decimal.Decimal("-Infinity"), None),
         (math.nan, None),
         (math.inf, None),
+        (pd.NA, None),
+        (pd.NaT, None),
         (b"abc", {"bytes": 3}),
         (_Color.RED, "red"),
         ((20, 80), [20, 80]),

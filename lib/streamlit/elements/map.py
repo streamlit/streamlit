@@ -330,7 +330,9 @@ def _agent_description(
     """Describe a map for the agent API.
 
     st.map and st.pydeck_chart share a proto. The plotted table is not a
-    command parameter, so it stays out of this description.
+    command parameter, so it stays out of this description. A literal color or
+    pixel size is presentation, and only a column name changes which data is
+    plotted.
     """
     if not agent_spec.is_recording():
         return None
