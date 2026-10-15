@@ -1178,9 +1178,19 @@ def test_huge_integer_json_trigger_is_preserved_as_one_opaque_event() -> None:
 
 
 def test_deeply_nested_json_trigger_is_preserved_as_one_opaque_event() -> None:
-    """JSON beyond Python's recursion limit remains one opaque event."""
+    """A recursion-limited JSON payload remains one opaque event."""
     deeply_nested = "[" * 10_000 + "0" + "]" * 10_000
-    assert _coalesce_json_trigger_values(deeply_nested, '[{"event": "new"}]') == [
-        deeply_nested,
-        {"event": "new"},
-    ]
+    json_loads = json.loads
+
+    def load_with_recursion_limit(payload: str) -> object:
+        if payload == deeply_nested:
+            raise RecursionError
+        return json_loads(payload)
+
+    with patch.object(
+        script_requests.json, "loads", side_effect=load_with_recursion_limit
+    ):
+        assert _coalesce_json_trigger_values(deeply_nested, '[{"event": "new"}]') == [
+            deeply_nested,
+            {"event": "new"},
+        ]
