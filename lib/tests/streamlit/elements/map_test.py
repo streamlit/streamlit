@@ -74,6 +74,27 @@ class StMapTest(DeltaGeneratorTestCase):
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         assert c["layers"][0]["getFillColor"] == "primary"
 
+    def test_mixed_case_primary_color_is_lowercased(self):
+        """Backend lowercases color='Primary' so the frontend sentinel matches."""
+        st.map(mock_df, color="Primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_primary_column_name_wins_over_theme_placeholder(self):
+        """A dataframe column named primary is used as the color accessor."""
+        df = pd.DataFrame(
+            {
+                "lat": [1.0, 2.0],
+                "lon": [10.0, 20.0],
+                "primary": ["#ff0000", "#00ff00"],
+            }
+        )
+        st.map(df, color="primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "@@=primary"
+        assert c["layers"][0]["data"][0]["primary"] == [255, 0, 0, 255]
+        assert c["layers"][0]["data"][1]["primary"] == [0, 255, 0, 255]
+
     def test_explicit_tuple_color_is_not_placeholder(self):
         """Explicit RGBA colors remain concrete int tuples in the Deck JSON."""
         st.map(mock_df, color=(200, 30, 0, 160))

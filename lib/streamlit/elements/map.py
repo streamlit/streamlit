@@ -152,10 +152,12 @@ class MapMixin:
 
             Can be:
 
-            - ``None``, to use the theme's primary color with partial
-              transparency.
-            - ``"primary"``, to use the theme's primary color (same as
-              ``None``). Ignored if a column with that name exists.
+            - ``None`` (default): Markers use the theme primary color, partly
+              transparent so overlapping points stay visible. Customize it with
+              ``theme.primaryColor``.
+            - ``"primary"``: Same fill as ``None``. If the data has a column
+              named ``primary``, Streamlit colors the markers from that column
+              instead.
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to

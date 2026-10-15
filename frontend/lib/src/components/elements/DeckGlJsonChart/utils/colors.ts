@@ -22,6 +22,11 @@ import { parseToRgba } from "color2k"
 import { jsonConverter } from "./jsonConverter"
 
 /**
+ * @file Utilities for determining fill colors for layers based on their
+ *      selection state and the layer's selection color mode.
+ */
+
+/**
  * st.map sends this when it wants the theme primary color. The frontend
  * replaces it with theme.colors.primary at MAP_DEFAULT_MARKER_ALPHA.
  */
@@ -48,11 +53,6 @@ export function resolveMapPrimaryFillColor(
   const [r, g, b] = parseToRgba(primaryCssColor)
   return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
 }
-
-/**
- * @file Utilities for determining fill colors for layers based on their
- *      selection state and the layer's selection color mode.
- */
 
 /**
  * Maps the "@@type" of a layer to the corresponding fill functions.
