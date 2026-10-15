@@ -57,13 +57,6 @@ Don't use too many columns for content layouts—they get cramped. By default
 wide. Pass `wrap=False` to keep columns in one row: they shrink to a usable
 minimum width, then the column group scrolls horizontally instead of stacking.
 
-When the type checker sees a count of exactly 1 through 6, including an
-unannotated `n = 2`, the result is a fixed-length tuple, so
-`left, right = st.columns(2)` is length-checked. Any other integer, and a
-sequence of widths, is a list. Those results are different types, so one
-name cannot hold both `st.columns(2)` and `st.columns([3, 1])`. Runtime
-always returns a list.
-
 ```python
 # GOOD
 col1, col2 = st.columns(2)
