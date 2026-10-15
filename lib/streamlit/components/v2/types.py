@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 
 
 # Individual argument type aliases to make reuse ergonomic across modules.
-BidiComponentKey = str | None
+# Same values as other widget keys: integers are accepted and stringified.
+BidiComponentKey = str | int | None
 BidiComponentData = Any | None
 BidiComponentDefaults = dict[str, Any] | None
 ComponentIsolateStyles = bool
@@ -57,8 +58,8 @@ class ComponentRenderer(Protocol):
 
     Parameters
     ----------
-    key : str or None
-        An optional string to use as the unique key for the
+    key : str, int, or None
+        An optional string or integer to use as the unique key for the
         component instance. If this is omitted, an internal key is generated
         for the component instance based on its mounting parameters. No two
         Streamlit elements may have the same key.

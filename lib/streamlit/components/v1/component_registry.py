@@ -17,7 +17,7 @@ from __future__ import annotations
 import inspect
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
@@ -48,6 +48,37 @@ def _get_module_name(caller_frame: FrameType) -> str:
         module_name, _ = os.path.splitext(filename)
 
     return module_name
+
+
+# Reject a call that passes neither path nor url. A str | None path still
+# type-checks, because the value may be a string at runtime:
+# - Required ``path: str | Path`` rejects a call with neither argument.
+# - Keyword-only ``url: str`` accepts a url and no path.
+# - Required ``path: str | Path | None`` accepts a dynamic path. Explicit
+#   ``path=None`` with no url matches this overload too.
+@overload
+def declare_component(
+    name: str,
+    path: str | Path,
+    url: str | None = ...,
+) -> CustomComponent: ...
+
+
+@overload
+def declare_component(
+    name: str,
+    path: str | Path | None = ...,
+    *,
+    url: str,
+) -> CustomComponent: ...
+
+
+@overload
+def declare_component(
+    name: str,
+    path: str | Path | None,
+    url: str | None = ...,
+) -> CustomComponent: ...
 
 
 def declare_component(

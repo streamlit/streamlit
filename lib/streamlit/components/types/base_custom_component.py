@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never, overload
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
@@ -52,6 +52,23 @@ class BaseCustomComponent(ABC):
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    # Positional calls raise MarshallComponentException. ``*args: Never``
+    # reports that at type-check time. The implementation still accepts
+    # ``*args`` so the runtime exception stays the same.
+    @overload
+    def __call__(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def __call__(
+        self,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
+        **kwargs: Any,
+    ) -> Any: ...
 
     def __call__(
         self,
@@ -109,6 +126,21 @@ class BaseCustomComponent(ABC):
     def __ne__(self, other: object) -> bool:
         """Inequality operator."""
         return NotImplemented
+
+    # Same positional-call rule as ``__call__``.
+    @overload
+    def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def create_instance(
+        self,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
+        **kwargs: Any,
+    ) -> Any: ...
 
     @abstractmethod
     def create_instance(
