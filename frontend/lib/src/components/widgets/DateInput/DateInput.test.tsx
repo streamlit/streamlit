@@ -2187,6 +2187,61 @@ describe("DateInput single-mode keyboard navigation", () => {
     expect(after.day).toHaveTextContent("20")
   })
 
+  it("keeps date focus when Escape discards an incomplete year in a form", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      formId: "form",
+      min: "1970-01-01",
+      max: "2030-12-31",
+    })
+    render(<DateInput {...props} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("2026")
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+      const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+      expect(after.year).toHaveTextContent("yyyy")
+      expect(screen.getByTestId("stDateInputField")).toContainElement(
+        document.activeElement as HTMLElement
+      )
+    })
+  })
+
+  it("still receives a form submit click while an incomplete date is open", async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    const props = getProps({
+      default: [],
+      formId: "form",
+      min: "1970-01-01",
+      max: "2030-12-31",
+    })
+    render(
+      <>
+        <DateInput {...props} />
+        <button type="button" onClick={onSubmit}>
+          Submit
+        </button>
+      </>
+    )
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("2026")
+    await user.click(screen.getByRole("button", { name: "Submit" }))
+
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+  })
+
   it("partially cleared segments revert to committed value on popover close (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()

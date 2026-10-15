@@ -243,7 +243,9 @@ function SingleDateInput({
   const [displayValue, setDisplayValue] = useState<CalendarDate | null>(value)
   // Remount the field when a revert must repaint segments but the controlled
   // date did not change. React Aria keeps incomplete text in that case.
+  // The bump is deferred so it does not run inside overlay pointerdown/Escape.
   const [fieldGeneration, setFieldGeneration] = useState(0)
+  const [remountField, setRemountField] = useState(false)
 
   // Sync from parent when value changes externally (session_state, form
   // clear, close-commit, calendar click). Render-time adjustment pattern per
@@ -321,7 +323,11 @@ function SingleDateInput({
           // Incomplete segments, or a full clear when the default is
           // non-empty: revert display to the committed value. Empty-default
           // fields notify the parent so required can paint.
-          setDisplayValue(value)
+          if (datesEqual(displayValueRef.current, value)) {
+            setRemountField(true)
+          } else {
+            setDisplayValue(value)
+          }
           hasEditedRef.current = false
           onCloseRef.current(true /* shouldClearError */)
         } else {
@@ -344,7 +350,19 @@ function SingleDateInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, allowEmptyCommit])
 
-  // Restore focus to the first editable segment after the form-reset remount.
+  // Apply a deferred remount after the dismissal event. Escape has already
+  // restored focus onto the old segments; record that so the next commit can
+  // put it back. An outside click has moved focus away, so leave it there.
+  useEffect(() => {
+    if (!remountField) return
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
+    setRemountField(false)
+    setFieldGeneration(generation => generation + 1)
+  }, [remountField])
+
+  // Restore focus to the first editable segment after a remount.
   // Suppress handleFocus while focusin dispatches synchronously so the calendar
   // does not reopen; clearing the guard after a frame could stall in hidden tabs.
   useEffect(() => {
@@ -353,7 +371,7 @@ function SingleDateInput({
     isRestoringFocusRef.current = true
     triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
     isRestoringFocusRef.current = false
-  }, [formResetKey])
+  }, [formResetKey, fieldGeneration])
 
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
@@ -435,7 +453,7 @@ function SingleDateInput({
             // Will revert on next render — don't commit stale/invalid state.
             // Clear pending now so a concurrent form submit does not use it.
             if (datesEqual(displayValueRef.current, value)) {
-              setFieldGeneration(generation => generation + 1)
+              setRemountField(true)
             } else {
               setDisplayValue(value)
             }
@@ -725,7 +743,7 @@ function SingleDateInput({
         // The calendar may already be closed, so the close effect will not
         // restore the field. Reset the display here.
         if (datesEqual(displayValueRef.current, value)) {
-          setFieldGeneration(generation => generation + 1)
+          setRemountField(true)
         } else {
           setDisplayValue(value)
         }
