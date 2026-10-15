@@ -223,20 +223,30 @@ def build_widget_states(
             )
 
         state = element_states[element_id]
-        if state.schema_type in {"integer", "number"} and isinstance(sent, str):
+        value = sent
+        if isinstance(value, list) and state.schema_type not in {None, "array"}:
+            # A widget that takes one value may carry it in a list on the wire,
+            # and would read a longer list as no value and reset to its default.
+            if len(value) != 1:
+                raise AgentRequestError(
+                    "invalid_value",
+                    f"{key!r} takes one value, as its `value_schema` says, not a "
+                    "list. Send `null` to clear or reset it.",
+                )
+            value = value[0]
+        if state.schema_type in {"integer", "number"} and isinstance(value, str):
             raise AgentRequestError(
                 "invalid_value",
                 f"{key!r} takes a number, as its `value_schema` says, not text.",
             )
-        # JSON Schema counts 1.0 as an integer, and some JSON writers emit whole
-        # numbers that way; `st.feedback` matches its index as text.
-        value = (
-            int(sent)
-            if state.schema_type == "integer"
-            and isinstance(sent, float)
-            and sent.is_integer()
-            else sent
-        )
+        if (
+            state.schema_type == "integer"
+            and isinstance(value, float)
+            and value.is_integer()
+        ):
+            # JSON Schema counts 1.0 as an integer, and some JSON writers emit
+            # whole numbers that way; `st.feedback` matches its index as text.
+            value = int(value)
         if (
             state.max_items is not None
             and isinstance(value, list)
@@ -547,8 +557,6 @@ def _iso_text_to_wire(
     kind = _ISO_TEXT_INPUTS.get(command)
     if kind is None:
         return value
-    if isinstance(value, list) and len(value) == 1:
-        value = value[0]
     if not isinstance(value, str):
         return value
     what = "date and time" if kind is datetime.datetime else "time"

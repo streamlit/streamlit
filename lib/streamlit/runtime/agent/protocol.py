@@ -339,8 +339,6 @@ def build_openapi_document(
         # that cannot call anything.
         info["x-streamlit-version"] = __version__
 
-    # `dict[str, Any]` rather than inferred, because the MCP path item's schema
-    # uses a list for `type`.
     paths: dict[str, Any] = {
         interact_path: {
             "post": {
@@ -452,18 +450,18 @@ _MCP_PATH_ITEM: Final = {
             "content": {
                 "application/json": {
                     "schema": {
-                        "type": ["object", "array"],
-                        "description": "A JSON-RPC 2.0 message, or a batch of them.",
+                        "type": "object",
+                        "description": (
+                            "One JSON-RPC 2.0 message. Batches are refused."
+                        ),
                     }
                 }
             },
         },
         "responses": {
             "200": {
-                "description": "The JSON-RPC response, or a batch of them.",
-                "content": {
-                    "application/json": {"schema": {"type": ["object", "array"]}}
-                },
+                "description": "The JSON-RPC response.",
+                "content": {"application/json": {"schema": {"type": "object"}}},
             },
             "202": {"description": "A notification, accepted with no response."},
         },
@@ -599,8 +597,9 @@ def schemas() -> dict[str, Any]:
                         "text, a date or time slider's included; a date-time or "
                         "time input takes any ISO 8601 form without an offset, "
                         "and a slider takes no offset its own values lack. "
-                        "A single value and a one-item list are interchangeable "
-                        "for a list-valued element.\n"
+                        "An element whose `value_schema` is a single value reads "
+                        "a one-item list as that value and refuses any other "
+                        "list.\n"
                         "- A value outside the element's `options` or over its "
                         "selection limit.\n"
                         "- A value the widget cannot read.\n\n"
@@ -977,7 +976,8 @@ def schemas() -> dict[str, Any]:
                         "`read_only_in_v1` where what is reported is accurate "
                         "but some input the element accepts cannot be sent yet: "
                         "data editor edits, dataframe and chart selections, "
-                        "uploads and recordings, and deferred downloads. "
+                        "dataframe button columns, uploads and recordings, and "
+                        "deferred downloads. "
                         "Detect these and either explain the gap "
                         "or fall back to browser automation, rather than "
                         "reporting incomplete output as complete."
