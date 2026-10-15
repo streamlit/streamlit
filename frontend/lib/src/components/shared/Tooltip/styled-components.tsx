@@ -26,8 +26,11 @@ const tooltipFadeIn = keyframes`
 
 // Fixed positioning is the pre-measurement fallback. Floating UI's inline
 // styles (also fixed, plus a translate) override top/left once the tooltip
-// has been measured. pointer-events stay off here so the positioning box
-// does not block the page; the content wrapper turns them back on.
+// has been measured. Leave the width shrink-to-fit: a max-content width
+// would let the narrow-screen max-width percentage grow past the viewport
+// instead of wrapping long help text. pointer-events stay off here so the
+// positioning box does not block the page; the content wrapper turns them
+// back on.
 export const StyledTooltip = styled.div(({ theme }) => ({
   position: "fixed",
   top: 0,

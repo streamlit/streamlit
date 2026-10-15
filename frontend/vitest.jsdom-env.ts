@@ -18,7 +18,8 @@
  * React Aria 3.53 installs a test-only `visualViewport` and `screen.orientation`
  * when jsdom does not provide them. Floating UI then measures against that
  * viewport and applies position updates outside `act()`. Defining the missing
- * properties first skips the polyfill and keeps the previous jsdom behavior.
+ * properties first skips the polyfill, so Floating UI keeps measuring against
+ * jsdom's default (absent) viewport.
  * Import this module before any `react-aria` import.
  */
 if (typeof window !== "undefined") {

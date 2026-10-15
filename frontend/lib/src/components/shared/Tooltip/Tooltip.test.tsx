@@ -121,26 +121,19 @@ describe("Tooltip element", () => {
     host.setAttribute("data-react-aria-top-layer", "true")
     document.body.appendChild(host)
 
-    try {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      renderTooltip()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip()
 
-      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
 
-      await user.hover(screen.getByTestId("stTooltipHoverTarget"))
-      act(() => {
-        vi.advanceTimersByTime(0)
-      })
+    await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
 
-      const tooltip = screen.getByRole("tooltip")
-      expect(host.contains(tooltip)).toBe(true)
-      expect(tooltip).toBeVisible()
-    } finally {
-      act(() => {
-        cleanup()
-      })
-      host.remove()
-    }
+    const tooltip = screen.getByRole("tooltip")
+    expect(host.contains(tooltip)).toBe(true)
+    expect(tooltip).toBeVisible()
   })
 
   it("stays open while the pointer is over an interactive tooltip", async () => {
@@ -161,6 +154,26 @@ describe("Tooltip element", () => {
     })
 
     expect(tooltipContent).toBeVisible()
+  })
+
+  it("closes when the pointer moves onto a non-interactive tooltip", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderTooltip({ closeDelay: 300, interactive: false })
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    const tooltipContent = screen.getByTestId("stTooltipContent")
+    await user.unhover(tooltipTarget)
+    await user.hover(tooltipContent)
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
   })
 
   it("closes after the pointer leaves the trigger and the tooltip", async () => {

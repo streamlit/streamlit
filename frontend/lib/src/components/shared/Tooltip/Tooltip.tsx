@@ -317,9 +317,9 @@ function Tooltip({
             {children}
           </TriggerArea>
           {/*
-            FloatingPortal's default tab-order guards set tabindex="-1" on
-            portal contents when focus leaves. Help text can contain links,
-            which stay reachable by pointer and aria-describedby.
+            Disable FloatingPortal's tab-order guards. They set tabindex="-1"
+            on portal content whenever focus leaves it, which would strip
+            links in help text out of the tab order.
           */}
           {!isDisabled && state.isOpen ? (
             <FloatingPortal
