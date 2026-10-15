@@ -458,13 +458,12 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto)
 
-    # Counts 1-6 are fixed-length tuples so `left, right = st.columns(2)` is
-    # length-checked. Any other spec is a list: its length is not known
-    # statically. Runtime always returns a list.
+    # Literal counts 1-6 are fixed-length tuples, so
+    # `left, right = st.columns(2)` is length-checked. Any other spec is a
+    # list. Runtime always returns a list.
     #
-    # Each literal is also an int, so mypy reports overload-overlap when the
-    # tuple returns differ from the list fallback. The ignores mark that
-    # intentional overlap.
+    # Each literal count is also an int, so these overloads overlap the list
+    # fallback. The ignores tell mypy that overlap is intentional.
     @overload
     def columns(  # type: ignore[overload-overlap]
         self,
@@ -562,9 +561,9 @@ class LayoutsMixin:
         wrap: bool = True,
     ) -> list[DeltaGenerator]: ...
 
-    # Sequence is a supertype of the tuple overloads and the list fallback.
-    # Both checkers require that of the implementation. Callers see the
-    # overloads above. Runtime always returns a list.
+    # mypy and ty require the implementation return to be a supertype of
+    # every overload. Sequence covers the tuple overloads and the list
+    # fallback. Callers see the overloads above. Runtime always returns a list.
     @gather_metrics("columns")
     def columns(
         self,
@@ -652,12 +651,14 @@ class LayoutsMixin:
         list of containers
             A list of container objects.
 
-            When ``spec`` is an integer literal from 1 to 6, type checkers
-            treat the return value as a tuple of that length.
-            ``left, right = st.columns(2)`` then types each variable as a
-            container. A non-literal integer, an integer outside that range,
-            or a sequence of widths is typed as a list of unknown length.
-            The value is always a list at runtime.
+            When a type checker treats ``spec`` as exactly one of the
+            literals 1 through 6, including a variable that still has that
+            literal type, it sees a tuple of that length. ``left, right =
+            st.columns(2)`` then types each name as a container. It sees a
+            list of unknown length for any other integer type, an integer
+            outside that range, or a sequence of column widths. Those two
+            results are not interchangeable. The value is always a list at
+            runtime.
 
         Examples
         --------
