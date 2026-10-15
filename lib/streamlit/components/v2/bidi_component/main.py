@@ -291,8 +291,8 @@ class BidiComponentMixin:
             CSS, and JavaScript will be loaded from the registry.
         key
             An optional string or integer to use as the unique key for the
-            component. If this is omitted, a key will be generated based on
-            the component's execution sequence.
+            component. If this is omitted, Streamlit generates an id from the
+            component's mounting parameters.
         isolate_styles
             Whether to isolate the component's styles in a shadow root.
             Defaults to True.

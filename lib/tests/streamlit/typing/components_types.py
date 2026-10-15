@@ -135,7 +135,8 @@ if TYPE_CHECKING:
     my_component(isolate_styles=True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     plain_width: str = "stretch"
-    # A plain str is not a Width. ty accepts it, so only mypy is suppressed.
+    # mypy keeps the declared str type, which is not a Width. ty narrows to
+    # Literal["stretch"] from the assignment, so only mypy errors.
     my_component(width=plain_width)  # type: ignore[arg-type]
 
     # =====================================================================
@@ -198,9 +199,12 @@ if TYPE_CHECKING:
 
     # Either path or url is required.
     declare_component("slider")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
-    declare_component("slider", path=1)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
-    # Literal path=None or url=None matches the dynamic overload, so it
-    # type-checks. Runtime still raises. A str | None path or url must stay valid.
+    # An invalid path matches the required-path overload, so ty reports an
+    # argument type error. mypy reports no matching overload.
+    declare_component("slider", path=1)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    # Literal ``path=None`` or ``url=None`` matches the ``str | None`` overload,
+    # so it type-checks. Runtime still raises when the hidden base-url option is
+    # unset. A ``str | None`` variable must stay valid.
     declare_component("slider", path=None)
     declare_component("slider", url=None)
 

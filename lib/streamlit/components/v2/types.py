@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 # Individual argument type aliases to make reuse ergonomic across modules.
-# Same values as other widget keys: integers are accepted and stringified.
+# Like other widget keys, integers are allowed; to_key converts them to strings.
 BidiComponentKey = str | int | None
 BidiComponentData = Any | None
 BidiComponentDefaults = dict[str, Any] | None
