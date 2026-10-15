@@ -20,7 +20,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -162,48 +161,10 @@ function hasDisplayNone(trigger: HTMLElement): boolean {
   return false
 }
 
-/**
- * Whether focus is in this popover or in a nested overlay opened from it.
- *
- * Nested popover bodies are sibling portals, so `body.contains(active)` is
- * false for a widget inside the inner popover. The inner body points at its
- * trigger, which still lives in this body.
- */
-function focusBelongsToPopover(
-  body: HTMLElement,
-  active: HTMLElement
-): boolean {
-  if (body.contains(active)) {
-    return true
-  }
-  const overlay = active.closest("[data-st-overlay-root]")
-  if (!(overlay instanceof HTMLElement) || overlay === body) {
-    return false
-  }
-  const triggerId = overlay.getAttribute("data-st-popover-for")
-  if (!triggerId) {
-    return false
-  }
-  const trigger = document.getElementById(triggerId)
-  if (!trigger) {
-    return false
-  }
-  return body.contains(trigger) || focusBelongsToPopover(body, trigger)
-}
-
-/**
- * Blur a widget inside the popover body before the body unmounts.
- *
- * A tab switch commits on pointerdown, before the browser moves focus off
- * the widget. Text input commits on blur, so that blur has to run while the
- * body is still mounted.
- */
+/** Blur a focused widget in the body so its value commits before unmount. */
 function blurFocusedPopoverDescendant(body: HTMLElement | null): void {
   const active = document.activeElement
-  if (!(active instanceof HTMLElement) || !body) {
-    return
-  }
-  if (!focusBelongsToPopover(body, active)) {
+  if (!(active instanceof HTMLElement) || !body?.contains(active)) {
     return
   }
   /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
@@ -346,7 +307,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // React to assign the ref to the hidden mobile copy. A single wrapper div
   // outside BaseButtonTooltip is always rendered once and correctly positioned.
   const triggerRef = useRef<HTMLDivElement>(null)
-  const triggerDomId = useId()
 
   const popoverBodyRef = useRef<HTMLDivElement>(null)
 
@@ -558,75 +518,35 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, deferBody, closePopover])
 
-  const sawTriggerVisibleRef = useRef(false)
-  // A script-restored open can look visible until a parent layout or passive
-  // effect hides it. Ignore that first sample. A user click is not waiting.
-  const awaitingInitialVisibilityRef = useRef(false)
-
-  const closeBeforePaint = useCallback((): void => {
-    // Blur while the body is still mounted. Deferring first would unmount it
-    // inside this flush and drop the widget's blur commit.
-    blurFocusedPopoverDescendant(popoverBodyRef.current)
-    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
-     * The body is portaled. Flush so it unmounts before paint instead
-     * of sitting on the viewport corner for a frame.
-     */
-    flushSync(() => {
-      closePopover()
-    })
-  }, [closePopover])
-
-  const noteVisibility = useCallback((): void => {
-    const trigger = triggerRef.current
-    if (!trigger) return
-    if (!isPopoverTriggerHidden(trigger)) {
-      // The initial sample can precede the parent's hide. Only a later
-      // confirmation, or a user click, may mark the trigger as shown.
-      if (!awaitingInitialVisibilityRef.current) {
-        sawTriggerVisibleRef.current = true
-        setBodyDeferred(false)
-      }
+  // True once the trigger has been on screen. A later hide then closes.
+  // Until then the body stays unmounted and `open` is left unchanged.
+  const seenRef = useRef(false)
+  const waitForParentRef = useRef(false)
+  const applyVisibilityRef = useRef<() => void>(() => {})
+  const visibilityTickRef = useRef(0)
+  const restartVisibilityWaitRef = useRef<(delay?: number | null) => void>(
+    () => {}
+  )
+  // Parent effects can still change visibility after this one. The first tick
+  // is too early to trust; the second tick is the read.
+  const finishVisibilityWait = useCallback((): void => {
+    if (visibilityTickRef.current === 0) {
+      visibilityTickRef.current = 1
+      restartVisibilityWaitRef.current(0)
       return
     }
-    if (sawTriggerVisibleRef.current) {
-      closeBeforePaint()
-      return
-    }
-    setBodyDeferred(true)
-  }, [closeBeforePaint, setBodyDeferred])
+    visibilityTickRef.current = 0
+    waitForParentRef.current = false
+    applyVisibilityRef.current()
+  }, [])
+  const { clear: clearVisibilityWait, restart: restartVisibilityWait } =
+    useTimeout(finishVisibilityWait, 0, { autoStart: false })
+  restartVisibilityWaitRef.current = restartVisibilityWait
 
-  // Runs after the parent effect's setState has committed. The first timer is
-  // queued before that commit, so it only arms this one. A trigger that is
-  // still hidden was never shown: leave it open and keep the body withheld.
-  const confirmInitialVisibility = useCallback((): void => {
-    awaitingInitialVisibilityRef.current = false
-    noteVisibility()
-  }, [noteVisibility])
-  const { clear: clearVisibilityConfirm, restart: restartVisibilityConfirm } =
-    useTimeout(confirmInitialVisibility, 0, { autoStart: false })
-  const armVisibilityConfirm = useCallback((): void => {
-    restartVisibilityConfirm(0)
-  }, [restartVisibilityConfirm])
-  const { clear: clearVisibilityArm, restart: restartVisibilityArm } =
-    useTimeout(armVisibilityConfirm, 0, { autoStart: false })
-
-  // Close when a shown trigger is hidden. The body is portaled, so hiding
-  // the trigger would otherwise leave it mounted.
-  //
-  // Do not close a trigger that has never been shown. Tabs and Expander apply
-  // a backend selection in a passive effect, which can land after this layout
-  // effect. Withholding the body until that settles keeps the popover open
-  // across the reveal. Writing `false` before the user has seen it would run
-  // `on_change` on the next unrelated rerun.
-  //
-  // A later hide records a user close:
-  // - an inactive tab sets `display: none`, and React Aria stops the tab
-  //   click before the document click listener
-  // - a collapsed expander sets `inert` before the height animation ends
   useLayoutEffect(() => {
     if (!open) {
-      sawTriggerVisibleRef.current = false
-      awaitingInitialVisibilityRef.current = false
+      seenRef.current = false
+      waitForParentRef.current = false
       userOpenedRef.current = false
       setBodyDeferred(false)
       return
@@ -635,13 +555,34 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     if (!trigger) return
 
     let cancelled = false
-    const userOpened = userOpenedRef.current
+    if (userOpenedRef.current) {
+      seenRef.current = true
+    }
     userOpenedRef.current = false
 
-    const observer = new MutationObserver(() => {
+    const apply = (): void => {
       if (cancelled) return
-      noteVisibility()
-    })
+      if (!isPopoverTriggerHidden(trigger)) {
+        if (waitForParentRef.current) return
+        seenRef.current = true
+        setBodyDeferred(false)
+        return
+      }
+      if (seenRef.current) {
+        blurFocusedPopoverDescendant(popoverBodyRef.current)
+        /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+         * Unmount the portaled body before paint so it cannot sit on the corner.
+         */
+        flushSync(() => {
+          closePopover()
+        })
+        return
+      }
+      setBodyDeferred(true)
+    }
+    applyVisibilityRef.current = apply
+
+    const observer = new MutationObserver(apply)
     let node: HTMLElement | null = trigger
     while (node) {
       observer.observe(node, {
@@ -651,31 +592,26 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       node = node.parentElement
     }
 
-    if (userOpened || sawTriggerVisibleRef.current) {
-      awaitingInitialVisibilityRef.current = false
-      noteVisibility()
+    if (seenRef.current) {
+      apply()
     } else {
-      // Parent layout effects run after this one, and a passive effect's
-      // setState commits on a later macrotask. Withhold the body until the
-      // second timer, which runs after that commit.
-      awaitingInitialVisibilityRef.current = true
+      waitForParentRef.current = true
+      visibilityTickRef.current = 0
       setBodyDeferred(true)
-      restartVisibilityArm(0)
+      restartVisibilityWait(0)
     }
 
     return () => {
       cancelled = true
       observer.disconnect()
-      clearVisibilityArm()
-      clearVisibilityConfirm()
+      clearVisibilityWait()
     }
   }, [
     open,
-    noteVisibility,
+    closePopover,
     setBodyDeferred,
-    clearVisibilityArm,
-    clearVisibilityConfirm,
-    restartVisibilityArm,
+    restartVisibilityWait,
+    clearVisibilityWait,
   ])
 
   // Merge the floating ref with our local popoverBodyRef for dismissal logic.
@@ -701,7 +637,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
-      <div ref={setReferenceRef} id={triggerDomId}>
+      <div ref={setReferenceRef}>
         <BaseButtonTooltip help={element.help} containerWidth={true}>
           <BaseButton
             data-testid="stPopoverButton"
@@ -748,7 +684,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             // widget overlays inside it) doesn't dismiss an enclosing popover
             // whose dismissal logic checks this attribute.
             data-st-overlay-root="true"
-            data-st-popover-for={triggerDomId}
             role="dialog"
             aria-label={element.label}
             style={floatingStyles}

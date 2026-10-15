@@ -281,40 +281,6 @@ describe("Popover container", () => {
     expect(committed).toBe("kept")
   })
 
-  it("blurs a focused widget in a nested popover before the outer body unmounts", async () => {
-    // Nested bodies are sibling portals, so the outer body does not contain
-    // the inner input. Hiding the outer trigger still has to blur it.
-    const user = userEvent.setup()
-    let bodyMountedOnBlur: boolean | null = null
-    render(
-      <details open>
-        <div data-testid="panel">
-          <Popover {...getProps({ label: "outer" })}>
-            <Popover {...getProps({ label: "inner" })}>
-              <input
-                aria-label="inside"
-                onBlur={() => {
-                  bodyMountedOnBlur = Boolean(
-                    screen.queryByRole("textbox", { name: "inside" })
-                  )
-                }}
-              />
-            </Popover>
-          </Popover>
-        </div>
-      </details>
-    )
-    await user.click(screen.getByText("outer"))
-    await user.click(screen.getByText("inner"))
-    screen.getByRole("textbox", { name: "inside" }).focus()
-
-    screen.getByTestId("panel").setAttribute("inert", "")
-    await flushPopoverVisibilityCheck()
-
-    expect(bodyMountedOnBlur).toBe(true)
-    expect(screen.queryByTestId("stPopoverBody")).not.toBeInTheDocument()
-  })
-
   it("closes when an expander panel becomes inert", async () => {
     // A collapsed expander sets inert on its panel inside <details>.
     // checkVisibility ignores inert. Collapsing via the summary may not
