@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import pickle  # noqa: S403
 import threading
-import weakref
 from contextlib import nullcontext
 from typing import (
     TYPE_CHECKING,
@@ -189,12 +188,10 @@ class DataCaches(StatsProvider):
         # Serialize cache creation, replacement, and process-wide clearing without
         # holding the registry lock across storage I/O.
         self._lifecycle_lock = threading.Lock()
-        # Session cleanup waits only for lifecycle work in the same session. Weak
-        # values avoid retaining state for disconnected sessions; invalidation only
-        # needs to protect lookups that already hold this state when cleanup begins.
-        self._session_lifecycles: weakref.WeakValueDictionary[
-            str, _SessionCacheLifecycle
-        ] = weakref.WeakValueDictionary()
+        # Session cleanup waits only for lifecycle work in the same session.
+        # Invalidated tombstones remain until reconnect or final shutdown so script
+        # work that outlives disconnect cannot recreate a session cache.
+        self._session_lifecycles: dict[str, _SessionCacheLifecycle] = {}
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
 
@@ -391,13 +388,20 @@ class DataCaches(StatsProvider):
                 close_error = self._apply_to_caches(
                     caches, lambda cache: cache.storage.close()
                 )
-                with self._caches_lock:
-                    if self._session_lifecycles.get(session_id) is session_lifecycle:
-                        del self._session_lifecycles[session_id]
                 if clear_error is not None:
                     raise clear_error
                 if close_error is not None:
                     raise close_error
+
+    def activate_session(self, session_id: str) -> None:
+        """Install fresh lifecycle state when a session starts or reconnects."""
+        with self._caches_lock:
+            self._session_lifecycles[session_id] = _SessionCacheLifecycle()
+
+    def release_session(self, session_id: str) -> None:
+        """Drop final lifecycle state after the session's script runner stops."""
+        with self._caches_lock:
+            self._session_lifecycles.pop(session_id, None)
 
     @staticmethod
     def _apply_to_caches(
@@ -547,6 +551,16 @@ _data_caches = DataCaches()
 def clear_session_cache(session_id: str) -> None:
     """Clears all caches for the given session ID."""
     _data_caches.clear_session(session_id)
+
+
+def activate_session_cache(session_id: str) -> None:
+    """Prepare session cache lifecycle state for a new connection."""
+    _data_caches.activate_session(session_id)
+
+
+def release_session_cache(session_id: str) -> None:
+    """Release session cache lifecycle state after final shutdown."""
+    _data_caches.release_session(session_id)
 
 
 def get_data_cache_stats_provider() -> StatsProvider:

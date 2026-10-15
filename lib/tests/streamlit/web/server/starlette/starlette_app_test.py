@@ -1726,6 +1726,7 @@ class TestAppRun:
             raw_mode_cached_value()
             app = App(script)
             with (
+                patch("streamlit.config._on_config_parsed.send"),
                 patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
                 patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
             ):

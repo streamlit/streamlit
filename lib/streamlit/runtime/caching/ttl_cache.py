@@ -209,6 +209,15 @@ class TTLCache(MutableMapping[K, V]):
     def items(self) -> ItemsView[K, V]:
         return self._live_snapshot().items()
 
+    def lru_items(self) -> list[tuple[K, V]]:
+        """Return live entries in least-to-most-recently-used order."""
+        now = self._timer()
+        return [
+            (key, value)
+            for key, value in self._data.items()
+            if now < self._expirations[key]
+        ]
+
     def values(self) -> ValuesView[V]:
         return self._live_snapshot().values()
 

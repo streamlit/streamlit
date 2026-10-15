@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import gc
 import math
 import threading
@@ -111,6 +112,59 @@ def test_reconfigure_applies_budget_to_existing_storage() -> None:
         storage.get("before-config")
     assert storage.get("after-config") == b"bbb"
     assert budget.total_bytes == 3
+
+
+def test_reconfigure_preserves_existing_storage_lru() -> None:
+    """Startup activation evicts the existing least-recently-used entry."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "raw-mode")
+    storage.set("hot", b"aaa")
+    storage.set("cold", b"bbb")
+    assert storage.get("hot") == b"aaa"
+
+    budget.reconfigure(max_bytes=3)
+
+    assert storage.get("hot") == b"aaa"
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        storage.get("cold")
+    assert budget.total_bytes == 3
+
+
+def test_read_that_observed_disabled_budget_survives_activation() -> None:
+    """A read started before activation does not require a generation."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "raw-mode")
+    storage.set("key", b"value")
+    read_paused = threading.Event()
+    continue_read = threading.Event()
+    result: list[bytes] = []
+    original_enforcement_lock = budget.enforcement_lock
+
+    class _PausedDisabledRead(contextlib.AbstractContextManager[object]):
+        def __enter__(self) -> None:
+            read_paused.set()
+            assert continue_read.wait(timeout=5)
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def enforcement_lock(
+        *, enabled: bool | None = None
+    ) -> contextlib.AbstractContextManager[object]:
+        if enabled is False:
+            return _PausedDisabledRead()
+        return original_enforcement_lock(enabled=enabled)
+
+    with patch.object(budget, "enforcement_lock", side_effect=enforcement_lock):
+        reader = threading.Thread(target=lambda: result.append(storage.get("key")))
+        reader.start()
+        assert read_paused.wait(timeout=5)
+        budget.reconfigure(max_bytes=10)
+        continue_read.set()
+        reader.join(timeout=5)
+
+    assert not reader.is_alive()
+    assert result == [b"value"]
 
 
 def test_budget_evicts_globally_least_recently_used_entry() -> None:

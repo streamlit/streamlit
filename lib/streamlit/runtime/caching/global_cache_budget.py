@@ -21,7 +21,7 @@ import queue
 import threading
 import weakref
 from collections import OrderedDict
-from contextlib import AbstractContextManager, nullcontext
+from contextlib import AbstractContextManager, ExitStack, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -106,7 +106,7 @@ class GlobalCacheBudget(StatsProvider):
             return self._total_bytes
 
     def register(self, storage: InMemoryCacheStorageWrapper) -> int:
-        with self._lock:
+        with self._enforcement_lock, self._lock:
             self._drain_pending_unregisters_locked()
             storage_id = self._next_storage_id
             self._next_storage_id += 1
@@ -127,37 +127,49 @@ class GlobalCacheBudget(StatsProvider):
         """Apply a server-start budget to this process and existing storages."""
         with self._enforcement_lock:
             with self._lock:
-                self._max_bytes = max_bytes
-                self._entries.clear()
-                self._total_bytes = 0
-                for storage_entries in self._storage_entries.values():
-                    storage_entries.clear()
+                current_max_bytes = self._max_bytes
+                if current_max_bytes == max_bytes:
+                    return
                 storages = [
                     storage
                     for storage_ref in self._storages.values()
                     if (storage := storage_ref()) is not None
                 ]
 
-            if max_bytes is None:
-                return
+            # When activation starts from disabled, writes do not yet take the
+            # enforcement lock. Hold every mutation lock until generations and
+            # accounting are published together.
+            with ExitStack() as stack:
+                if current_max_bytes is None:
+                    for storage in storages:
+                        stack.enter_context(storage._mutation_lock)
 
-            protected: tuple[int, str] | None = None
-            for storage in storages:
-                for (
-                    key,
-                    value_size,
-                    generation,
-                ) in storage._snapshot_entries_for_budget():
-                    self.record_write(
-                        storage._global_storage_id,
-                        key,
-                        value_size,
-                        generation,
-                    )
-                    protected = (storage._global_storage_id, key)
+                snapshots = [
+                    (storage, storage._snapshot_entries_for_budget())
+                    for storage in storages
+                ]
+                with self._lock:
+                    self._max_bytes = max_bytes
+                    self._entries.clear()
+                    self._total_bytes = 0
+                    for storage_entries in self._storage_entries.values():
+                        storage_entries.clear()
 
-            if protected is not None:
-                self.enforce_budget(protected)
+                if max_bytes is None:
+                    return
+
+                for storage, entries in snapshots:
+                    for key, value_size, generation in entries:
+                        self.record_write(
+                            storage._global_storage_id,
+                            key,
+                            value_size,
+                            generation,
+                        )
+
+                # No write is in flight during startup reconfiguration, so every
+                # existing entry is eligible for eviction.
+                self.enforce_budget(None)
 
     def _drain_pending_unregisters_locked(self) -> None:
         while not self._pending_unregisters.empty():
@@ -176,9 +188,13 @@ class GlobalCacheBudget(StatsProvider):
             if record is not None:
                 self._total_bytes -= record.size
 
-    def enforcement_lock(self) -> AbstractContextManager[object]:
+    def enforcement_lock(
+        self, *, enabled: bool | None = None
+    ) -> AbstractContextManager[object]:
         """Serialize enabled-budget LRU reads, writes, and eviction."""
-        if self._max_bytes is None:
+        if enabled is None:
+            enabled = self._max_bytes is not None
+        if not enabled:
             return _NO_ENFORCEMENT
         return self._enforcement_lock
 
@@ -282,7 +298,7 @@ class GlobalCacheBudget(StatsProvider):
 
     def _select_victim_snapshot(
         self,
-        protected: tuple[int, str],
+        protected: tuple[int, str] | None,
         excluded: set[tuple[int, str]],
     ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
         """Select the global LRU, excluding the protected write and tried victims."""
@@ -320,17 +336,22 @@ class GlobalCacheBudget(StatsProvider):
                     return None
             return None
 
-    def _protected_entry_alone_exceeds_budget(self, protected: tuple[int, str]) -> bool:
+    def _retained_entry_alone_exceeds_budget(
+        self, protected: tuple[int, str] | None
+    ) -> tuple[int, str] | None:
         with self._lock:
             self._drain_pending_unregisters_locked()
-            return (
+            if (
                 self._max_bytes is not None
                 and self._total_bytes > self._max_bytes
                 and len(self._entries) == 1
-                and protected in self._entries
-            )
+            ):
+                entry_key = next(iter(self._entries))
+                if protected is None or protected == entry_key:
+                    return entry_key
+            return None
 
-    def enforce_budget(self, protected: tuple[int, str]) -> None:
+    def enforce_budget(self, protected: tuple[int, str] | None) -> None:
         """Evict LRU entries without evicting the write currently being enforced.
 
         ``protected`` identifies the storage and key for that write. The entry stays
@@ -346,10 +367,12 @@ class GlobalCacheBudget(StatsProvider):
             self._reap_expired_entries()
             attempted: set[tuple[int, str]] = set()
             while True:
+                oversized_entry = self._retained_entry_alone_exceeds_budget(protected)
+                if oversized_entry is not None:
+                    self._warn_once(self._storage_display_name(oversized_entry[0]))
+                    return
                 victim = self._select_victim_snapshot(protected, attempted)
                 if victim is None:
-                    if self._protected_entry_alone_exceeds_budget(protected):
-                        self._warn_once(self._storage_display_name(protected[0]))
                     return
                 storage, key, record = victim
                 attempted.add((storage._global_storage_id, key))

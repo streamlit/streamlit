@@ -117,6 +117,8 @@ class CacheDataTest(unittest.TestCase):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
+        with _data_caches._caches_lock:
+            _data_caches._session_lifecycles.clear()
 
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
@@ -182,6 +184,7 @@ class CacheDataTest(unittest.TestCase):
             assert global_value() == b"global"
             assert session_value() == b"session"
             get_session_id.return_value = "session-a"
+            _data_caches.activate_session("session-a")
             assert session_value() == b"session"
 
         assert calls == {"global": 1, "session": 3}
@@ -674,6 +677,33 @@ If you think this is actually a Streamlit bug, please
         assert len(returned) == 1
         assert returned[0].is_active is False
         assert "session" not in _data_caches._function_caches
+
+    def test_lookup_after_session_clear_waits_for_reconnect(self) -> None:
+        """Work started after disconnect cannot recreate a session cache."""
+        clear_session_cache("session")
+        kwargs = {
+            "key": "late_session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "late_session_cache",
+            "scope": "session",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            detached = _data_caches.get_cache(**kwargs)
+            _data_caches.activate_session("session")
+            reconnected = _data_caches.get_cache(**kwargs)
+
+        assert detached.is_active is False
+        assert reconnected.is_active is True
+        assert (
+            _data_caches._function_caches["session"]["late_session_cache"]
+            is reconnected
+        )
 
     @parameterized.expand(
         [

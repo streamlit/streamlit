@@ -404,14 +404,6 @@ def load_config_options(flag_options: dict[str, Any]) -> None:
     # for future calls.
     config.get_config_options(force_reparse=True, options_from_flags=options_from_flags)
 
-    # Raw-mode cache use can create the process-wide budget before server options
-    # are loaded. Reapply the startup value without eagerly creating the budget.
-    from streamlit.runtime.caching.global_cache_budget import (
-        reconfigure_global_cache_budget_from_config,
-    )
-
-    reconfigure_global_cache_budget_from_config()
-
 
 def _install_config_watchers(flag_options: dict[str, Any]) -> None:
     def on_config_changed(_path: str) -> None:
