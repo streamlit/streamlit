@@ -21,11 +21,13 @@ from typing import TYPE_CHECKING, assert_type
 if TYPE_CHECKING:
     import datetime
 
+    import streamlit as st
     from streamlit.elements.lib.column_config_utils import ColumnConfigMappingInput
     from streamlit.elements.lib.column_types import (
         AreaChartColumn,
         AudioColumn,
         BarChartColumn,
+        ButtonColumnResult,
         CheckboxColumn,
         Column,
         ColumnConfig,
@@ -862,8 +864,31 @@ if TYPE_CHECKING:
         ColumnConfig,
     )
 
-    # Every helper except ButtonColumn is accepted by column_config.
-    # ButtonColumn is covered in button_column_types.py.
+    # Public st.column_config re-exports. ButtonColumn's full surface stays in
+    # button_column_types.py; these calls only pin the namespace.
+    assert_type(st.column_config.AreaChartColumn(), ColumnConfig)
+    assert_type(st.column_config.AudioColumn(), ColumnConfig)
+    assert_type(st.column_config.BarChartColumn(), ColumnConfig)
+    assert_type(st.column_config.ButtonColumn(), ColumnConfig)
+    assert_type(st.column_config.ButtonColumn(key="clicks"), ButtonColumnResult)
+    assert_type(st.column_config.CheckboxColumn(), ColumnConfig)
+    assert_type(st.column_config.Column(), ColumnConfig)
+    assert_type(st.column_config.DateColumn(), ColumnConfig)
+    assert_type(st.column_config.DatetimeColumn(), ColumnConfig)
+    assert_type(st.column_config.ImageColumn(), ColumnConfig)
+    assert_type(st.column_config.JsonColumn(), ColumnConfig)
+    assert_type(st.column_config.LineChartColumn(), ColumnConfig)
+    assert_type(st.column_config.LinkColumn(), ColumnConfig)
+    assert_type(st.column_config.ListColumn(), ColumnConfig)
+    assert_type(st.column_config.MarkdownColumn(), ColumnConfig)
+    assert_type(st.column_config.MultiselectColumn(), ColumnConfig)
+    assert_type(st.column_config.NumberColumn(), ColumnConfig)
+    assert_type(st.column_config.ProgressColumn(), ColumnConfig)
+    assert_type(st.column_config.SelectboxColumn(), ColumnConfig)
+    assert_type(st.column_config.TextColumn(), ColumnConfig)
+    assert_type(st.column_config.TimeColumn(), ColumnConfig)
+    assert_type(st.column_config.VideoColumn(), ColumnConfig)
+
     _column_config: ColumnConfigMappingInput = {
         "generic": Column("Name"),
         "number": NumberColumn("Amount", format="dollar"),
