@@ -281,6 +281,42 @@ describe("Popover container", () => {
     expect(committed).toBe("kept")
   })
 
+  it("does not blur a widget when pointerdown opens its select menu", async () => {
+    // The option list is portaled outside the popover body. Blurring here
+    // drops the selection before the option click can commit.
+    const user = userEvent.setup()
+    let blurred = false
+    render(
+      <div>
+        <Popover {...getProps()}>
+          <input
+            aria-label="inside"
+            onBlur={() => {
+              blurred = true
+            }}
+          />
+        </Popover>
+        <div role="listbox">
+          <div role="option" aria-selected="false">
+            two
+          </div>
+        </div>
+      </div>
+    )
+    await user.click(screen.getByText("label"))
+    screen.getByRole("textbox", { name: "inside" }).focus()
+
+    screen
+      .getByRole("option", { name: "two" })
+      .dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    screen
+      .getByRole("option", { name: "two" })
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }))
+
+    expect(blurred).toBe(false)
+    expect(screen.getByTestId("stPopoverBody")).toBeInTheDocument()
+  })
+
   it("closes when an expander panel becomes inert", async () => {
     // A collapsed expander sets inert on its panel inside <details>.
     // checkVisibility ignores inert. Collapsing via the summary may not

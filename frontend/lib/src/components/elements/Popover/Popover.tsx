@@ -444,7 +444,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         triggerRef.current?.contains(target) ||
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets an overlay target count
         popoverBodyRef.current?.contains(target) ||
-        targetElement?.closest('[data-st-overlay-root="true"]')
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets a portaled menu count
+        targetElement?.closest('[data-st-overlay-root="true"]') ||
+        // Selectbox options are portaled by React Aria, not into the overlay
+        // root. A pointerdown there is the selection, not a dismiss.
+        targetElement?.closest(
+          '[role="listbox"], [role="option"], [data-testid="stSelectboxVirtualDropdown"]'
+        )
       )
     }
 
