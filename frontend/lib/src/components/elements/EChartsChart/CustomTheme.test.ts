@@ -25,9 +25,12 @@ import {
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
   formatEChartsTooltipValue,
+  insideDataZoomCapturesWheel,
   insideDataZoomConsumesWheelEvent,
-  optionHasInsideDataZoom,
+  insideDataZoomWheelSkipsSettle,
+  optionHasWheelRoam,
   STREAMLIT_THEME,
+  wheelRoamSkipsSettle,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
 
@@ -1145,51 +1148,53 @@ describe("withDefaultSeriesCursor", () => {
   })
 })
 
-describe("optionHasInsideDataZoom", () => {
-  it("detects an inside dataZoom that zooms on wheel", () => {
-    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "inside" }] })).toBe(
-      true
-    )
-    expect(optionHasInsideDataZoom({ dataZoom: { type: "inside" } })).toBe(
-      true
-    )
+describe("optionHasWheelRoam", () => {
+  it("detects wheel roam on geo, map, and graph", () => {
+    expect(optionHasWheelRoam({ geo: { roam: true } })).toBe(true)
+    expect(optionHasWheelRoam({ geo: [{ roam: "scale" }] })).toBe(true)
     expect(
-      optionHasInsideDataZoom({
-        baseOption: { dataZoom: [{ type: "inside" }] },
+      optionHasWheelRoam({
+        series: [{ type: "map", roam: "zoom" }],
+      })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({
+        series: { type: "graph", roam: true },
+      })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({
+        baseOption: { geo: { roam: true } },
       })
     ).toBe(true)
   })
 
-  it("detects modifier-gated zoom and move-on-wheel", () => {
+  it("ignores drag-only roam and charts without it", () => {
+    expect(optionHasWheelRoam(null)).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: false } })).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: "move" } })).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: "pan" } })).toBe(false)
     expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+      optionHasWheelRoam({
+        series: [{ type: "map", roam: "move" }],
       })
-    ).toBe(true)
+    ).toBe(false)
     expect(
-      optionHasInsideDataZoom({
-        dataZoom: [
-          { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
-        ],
+      optionHasWheelRoam({
+        series: [{ type: "line", roam: true }],
       })
-    ).toBe(true)
+    ).toBe(false)
+    expect(optionHasWheelRoam({ dataZoom: [{ type: "inside" }] })).toBe(false)
   })
 
-  it("ignores slider zoom and disabled inside zoom", () => {
-    expect(optionHasInsideDataZoom(null)).toBe(false)
-    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "slider" }] })).toBe(
-      false
-    )
-    expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", disabled: true }],
-      })
-    ).toBe(false)
-    expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
-      })
-    ).toBe(false)
+  it("skips settle only for a pinch", () => {
+    const roam = { geo: { roam: true } }
+    const pinch = { shiftKey: false, ctrlKey: true, altKey: false }
+    const plain = { shiftKey: false, ctrlKey: false, altKey: false }
+    expect(wheelRoamSkipsSettle(roam, pinch)).toBe(true)
+    expect(wheelRoamSkipsSettle(roam, plain)).toBe(false)
+    expect(wheelRoamSkipsSettle({ geo: { roam: "move" } }, pinch)).toBe(false)
+    expect(wheelRoamSkipsSettle(null, pinch)).toBe(false)
   })
 })
 
@@ -1234,5 +1239,93 @@ describe("insideDataZoomConsumesWheelEvent", () => {
       ],
     }
     expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
+  })
+})
+
+describe("insideDataZoomCapturesWheel", () => {
+  it("is true when ECharts will register a wheel handler", () => {
+    expect(
+      insideDataZoomCapturesWheel({ dataZoom: [{ type: "inside" }] })
+    ).toBe(true)
+    // ECharts 6 still calls preventDefault when zoomOnMouseWheel is false.
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
+      })
+    ).toBe(true)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+      })
+    ).toBe(true)
+  })
+
+  it("is false when ECharts does not install a wheel handler", () => {
+    expect(insideDataZoomCapturesWheel(null)).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({ dataZoom: [{ type: "slider" }] })
+    ).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", disabled: true }],
+      })
+    ).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomLock: true }],
+      })
+    ).toBe(false)
+  })
+})
+
+describe("insideDataZoomWheelSkipsSettle", () => {
+  const noModifiers = { shiftKey: false, ctrlKey: false, altKey: false }
+  const shift = { shiftKey: true, ctrlKey: false, altKey: false }
+  const ctrl = { shiftKey: false, ctrlKey: true, altKey: false }
+  const alt = { shiftKey: false, ctrlKey: false, altKey: true }
+
+  it("treats pinch as immediate zoom when the wheel is not modifier-gated", () => {
+    const option = { dataZoom: [{ type: "inside" }] }
+    expect(insideDataZoomWheelSkipsSettle(option, noModifiers)).toBe(false)
+    expect(insideDataZoomWheelSkipsSettle(option, ctrl)).toBe(true)
+    expect(insideDataZoomWheelSkipsSettle(option, shift)).toBe(false)
+  })
+
+  it("skips settle only for the configured modifier", () => {
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }] },
+        shift
+      )
+    ).toBe(true)
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }] },
+        ctrl
+      )
+    ).toBe(false)
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "alt" }] },
+        alt
+      )
+    ).toBe(true)
+  })
+
+  it("treats pinch as immediate when pan is on and zoom is off", () => {
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        {
+          dataZoom: [
+            {
+              type: "inside",
+              zoomOnMouseWheel: false,
+              moveOnMouseWheel: true,
+            },
+          ],
+        },
+        ctrl
+      )
+    ).toBe(true)
   })
 })

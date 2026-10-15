@@ -43,7 +43,8 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Always cache compute-intensive or expensive data-loading code. Use `st.cache_data` for serializable data and `st.cache_resource` for shared resources like API clients, raw connectors, and models; do not wrap `st.connection`, which is already cached. Include appropriate `ttl` and/or `max_entries` limits to prevent unbounded growth. Cache the expensive source data, then apply cheap interactive filters outside the cached function.
 - Order scripts so fast UI (titles, layout, widgets) renders before slow computation. Streamlit streams elements top to bottom and temporarily greys out (marks stale) not-yet-redrawn elements from the previous run while a slow step is in progress, clearing each as the new run recreates it; put slow work last, reserve output slots with `st.container()`, or isolate slow sections in fragments.
 - Use `st.fragment` for independent sections that should rerun separately from the rest of the app, such as auto-refreshing charts or controls that do not need to rerun the full page.
-- Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work.
+- Never loop the app script with `while True` or with `time.sleep()` followed by `st.rerun()`. For live-updating dashboards, use `@st.fragment(run_every=...)` so only that section reruns on a timer.
+- Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work. If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form (advanced; see "Skip reruns on individual widgets" in `references/performance.md`).
 - Do not put expensive work unguarded inside `st.tabs`, `st.expander`, or `st.popover`: hidden, collapsed, or closed content still computes on every rerun, and caching doesn't change that. Pass `on_change="rerun"` and render each body only when the container's `.open` is `True`, or switch to `st.segmented_control` or `st.toggle` with an `if`.
 - Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
 - Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
@@ -51,7 +52,9 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - For about 2–5 options, keep them visible instead of in a dropdown: `st.segmented_control` for a single choice and `st.pills(..., selection_mode="multi")` for several. Use `st.selectbox` or `st.multiselect` for longer lists.
 - Use `st.menu_button` for a button that opens a short list of one-shot actions. Do not build one from `st.popover` with buttons or from `st.selectbox`.
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
+- Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
+- Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one.
 
 ## Proactively Look Up API Details
 
@@ -131,7 +134,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, and page organization | read `references/best-practices.md` |
+| **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, and type checking | read `references/best-practices.md` |
 | **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md` first, then `references/design.md` |
@@ -141,7 +144,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |
 | **Apache ECharts or pyecharts** — render an existing ECharts option dict, JSON string, or `pyecharts` chart with native `st.echarts_chart` rather than a third-party component (pass `alt=` carefully — it replaces the generated description) | read `references/data-display.md` |
 | **Multi-page app architecture** — `st.navigation`, `st.Page`, page routing, shared state across pages, and structuring apps with multiple views | read `references/multipage-apps.md` |
-| **Persisting values across reruns** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`), and patterns for stateful interactions | read `references/session-state.md` |
+| **Persisting values across reruns, including when a widget is hidden or the user changes pages** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`), `persist_state`, and patterns for stateful interactions | read `references/session-state.md` |
 | **Making a selection shareable via URL / syncing a widget to a query param** — `bind="query-params"` + `key=` for automatic URL sync (don't hand-roll `st.query_params`) | read `references/session-state.md` |
 | **Discovering available Streamlit public APIs, looking up `st.<command>` commands, exact parameters, docstrings, signatures, public annotation types, or choosing the right top-level command** — quick table of public `st` commands, related public objects, and `streamlit.typing` exports plus CLI instructions for inspecting local docstrings | read `references/api-reference.md` |
 | **Rich text formatting** — Markdown in `st.markdown` and widget labels, colored text (`:red[...]`), badges, Material Symbols icons (`:material/icon_name:`), LaTeX math, and Mermaid diagrams | read `references/markdown.md` |
@@ -152,7 +155,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | read `references/custom-components-v2.md` — **IMPORTANT: Never use `st.components.v1` for new components; always use `st.components.v2.component()`.** (`st.components.v1.html` and `st.components.v1.iframe` are deprecated in favor of `st.iframe`.) |
 | **Using third-party community components** — `streamlit-extras` (annotated text), `streamlit-pivot-table`, and other popular packages that extend Streamlit's built-in capabilities | read `references/third-party-components.md` |
 | **Structuring app code** — when to split into modules vs keep in one file, helper functions, and clean project organization patterns | read `references/code-organization.md` |
-| **Environment and dependency setup** — Python environment management, installing packages, and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
+| **Environment and dependency setup** — Python environment management, installing packages, installing and running a type checker (`ty` or `mypy`), and configuring the development environment for Streamlit apps | read `references/environment-setup.md` |
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
 | **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 | **Requiring users to sign in** — `st.login`/`st.logout`/`st.user` with OIDC, gating on `st.user.is_logged_in`, and `[auth]` secrets configuration (not a hand-rolled password gate) | read `references/authentication.md` |
@@ -187,6 +190,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-feature-usage` — API endpoint usage analytics
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
+  - `dashboard-background-report` — responsive page while a slow query loads in the background
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - When the user wants a branded or polished look, pair the dashboard with a theme from `assets/templates/themes/configs/` (`dense-dashboard` only if the app should keep the appearance toggle and use compact padding), or point `theme.base` at an existing shared brand file or URL
 - See `assets/templates/apps/README.md` for template descriptions
@@ -215,6 +219,7 @@ For **performance optimization**, read:
 1. Apply the patterns and recommendations from the loaded reference(s)
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
+4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so wrong API use is reported before the app runs. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.
 
 ### Step 4: Check Running Apps and Offer to Run
 

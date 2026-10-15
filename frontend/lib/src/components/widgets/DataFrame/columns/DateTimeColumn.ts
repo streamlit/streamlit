@@ -288,7 +288,7 @@ function BaseDateTimeColumn(
       } as DatePickerType
     },
     getCellValue(cell: DatePickerType): string | null {
-      return isNullOrUndefined(cell?.data?.date)
+      return isNullOrUndefined(cell.data.date)
         ? null
         : toISOString(cell.data.date)
     },
@@ -328,7 +328,7 @@ export default function DateTimeColumn(props: BaseColumnProps): BaseColumn {
   const hasTimezone: boolean =
     notNullOrUndefined(timezone) ||
     // Timezone can also be configure by the user:
-    notNullOrUndefined(props?.columnTypeOptions?.timezone)
+    notNullOrUndefined(props.columnTypeOptions?.timezone)
 
   return BaseDateTimeColumn(
     "datetime",

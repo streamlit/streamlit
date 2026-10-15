@@ -200,11 +200,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? false
+  return element.default
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? false
+  return element.value
 }
 
 function updateWidgetMgrState(

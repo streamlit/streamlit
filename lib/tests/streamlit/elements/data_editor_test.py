@@ -17,9 +17,9 @@
 from __future__ import annotations
 
 import copy
-import datetime
 import json
 import unittest
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -139,24 +139,24 @@ class DataEditorUtilTest(unittest.TestCase):
                 pd.Timestamp("2021-01-01T10:20:30.123456Z"),
             ),
             (None, ColumnDataKind.TIME, None),
-            ("10:20:30", ColumnDataKind.TIME, datetime.time(10, 20, 30)),
-            ("10:20:30.123456", ColumnDataKind.TIME, datetime.time(10, 20, 30, 123456)),
+            ("10:20:30", ColumnDataKind.TIME, time(10, 20, 30)),
+            ("10:20:30.123456", ColumnDataKind.TIME, time(10, 20, 30, 123456)),
             (
                 "2021-01-01T10:20:30.123456Z",
                 ColumnDataKind.TIME,
-                datetime.time(10, 20, 30, 123456),
+                time(10, 20, 30, 123456),
             ),
             (
                 "1970-01-01T10:20:30.123456Z",
                 ColumnDataKind.TIME,
-                datetime.time(10, 20, 30, 123456),
+                time(10, 20, 30, 123456),
             ),
             (None, ColumnDataKind.DATE, None),
-            ("2021-01-01", ColumnDataKind.DATE, datetime.date(2021, 1, 1)),
+            ("2021-01-01", ColumnDataKind.DATE, date(2021, 1, 1)),
             (
                 "2021-01-01T10:20:30.123456Z",
                 ColumnDataKind.DATE,
-                datetime.date(2021, 1, 1),
+                date(2021, 1, 1),
             ),
             (
                 100000,
@@ -319,9 +319,9 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col2": ["a", "b", "c"],
                 "col3": [True, False, True],
                 "col4": [
-                    datetime.datetime.now(),
-                    datetime.datetime.now(),
-                    datetime.datetime.now(),
+                    datetime.now(),
+                    datetime.now(),
+                    datetime.now(),
                 ],
                 "col5": [
                     Decimal("1.1"),
@@ -402,9 +402,9 @@ class DataEditorUtilTest(unittest.TestCase):
                 "col2": ["a", "b", "c"],
                 "col3": [True, False, True],
                 "col4": [
-                    datetime.datetime.now(),
-                    datetime.datetime.now(),
-                    datetime.datetime.now(),
+                    datetime.now(),
+                    datetime.now(),
+                    datetime.now(),
                 ],
                 "col5": [["x"], ["y"], ["z"]],
             }
@@ -1402,7 +1402,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
             (True,),
             (123,),
             ("foo",),
-            (datetime.datetime.now(),),
+            (datetime.now(),),
             (st,),
         ]
     )

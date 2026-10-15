@@ -1015,10 +1015,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import time
         >>> import streamlit as st
         >>>
-        >>> t = st.time_input("Set an alarm for", datetime.time(8, 45))
+        >>> t = st.time_input("Set an alarm for", time(8, 45))
         >>> st.write("Alarm is set for", t)
 
         .. output::
@@ -1029,7 +1029,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty time input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> t = st.time_input("Set an alarm for", value=None)
@@ -1473,12 +1472,12 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input(
         ...     "Schedule your event",
-        ...     datetime.datetime(2025, 11, 19, 16, 45),
+        ...     datetime(2025, 11, 19, 16, 45),
         ... )
         >>> st.write("Event scheduled for", event_time)
 
@@ -1490,7 +1489,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty datetime input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> event_time = st.datetime_input("Schedule your event", value=None)
@@ -1716,6 +1714,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1737,6 +1736,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1760,6 +1760,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1781,6 +1782,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1922,6 +1924,29 @@ class TimeWidgetsMixin:
             An optional boolean that disables the date input if set to
             ``True``. The default is ``False``.
 
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A date
+            input still starts at today unless you pass ``value=None``. Use
+            ``value=None`` together with ``required=True`` for an empty
+            required field. In range mode, a complete start and end date is
+            non-empty; ``()``, a missing bound, and a one-element interval
+            are empty. Use ``value=[]`` together with ``required=True`` for
+            an empty required range.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -1994,10 +2019,10 @@ class TimeWidgetsMixin:
         --------
         **Example 1: Basic usage**
 
-        >>> import datetime
+        >>> from datetime import date
         >>> import streamlit as st
         >>>
-        >>> d = st.date_input("When's your birthday", datetime.date(2019, 7, 6))
+        >>> d = st.date_input("When's your birthday", date(2019, 7, 6))
         >>> st.write("Your birthday is:", d)
 
         .. output::
@@ -2006,17 +2031,17 @@ class TimeWidgetsMixin:
 
         **Example 2: Date range**
 
-        >>> import datetime
+        >>> from datetime import date, datetime
         >>> import streamlit as st
         >>>
-        >>> today = datetime.datetime.now()
+        >>> today = datetime.now()
         >>> next_year = today.year + 1
-        >>> jan_1 = datetime.date(next_year, 1, 1)
-        >>> dec_31 = datetime.date(next_year, 12, 31)
+        >>> jan_1 = date(next_year, 1, 1)
+        >>> dec_31 = date(next_year, 12, 31)
         >>>
         >>> d = st.date_input(
         ...     "Select your vacation for next year",
-        ...     (jan_1, datetime.date(next_year, 1, 7)),
+        ...     (jan_1, date(next_year, 1, 7)),
         ...     jan_1,
         ...     dec_31,
         ...     format="MM.DD.YYYY",
@@ -2031,7 +2056,6 @@ class TimeWidgetsMixin:
 
         To initialize an empty date input, use ``None`` as the value:
 
-        >>> import datetime
         >>> import streamlit as st
         >>>
         >>> d = st.date_input("When's your birthday", value=None)
@@ -2054,6 +2078,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             format=format,
             width=width,
@@ -2076,6 +2101,7 @@ class TimeWidgetsMixin:
         *,  # keyword-only arguments:
         format: str = "YYYY/MM/DD",
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -2128,7 +2154,9 @@ class TimeWidgetsMixin:
             user_key=key,
             # When a key is set, only format stays in the widget identity, so a
             # format change resets the widget. min_value and max_value can
-            # change without remounting.
+            # change without remounting. `required` is hashed only for unkeyed
+            # widgets: toggling it cannot make a stored value incompatible, so
+            # it is omitted from keyed identity.
             key_as_main_identity={"format"},
             dg=self.dg,
             label=label,
@@ -2138,6 +2166,7 @@ class TimeWidgetsMixin:
             help=help,
             format=format,
             width=width,
+            required=required,
         )
         _validate_date_format(format)
 
@@ -2172,6 +2201,7 @@ class TimeWidgetsMixin:
         date_input_proto.id = element_id
         date_input_proto.is_range = parsed_values.is_range
         date_input_proto.disabled = disabled
+        date_input_proto.required = required
         date_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )

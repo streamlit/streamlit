@@ -13,8 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
-import datetime
 import unittest
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -79,7 +79,7 @@ SHARED_DATA_KIND_TEST_CASES = [
         ColumnDataKind.DATETIME,
     ),
     (
-        pd.Series([datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]),
+        pd.Series([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
         ColumnDataKind.DATETIME,
     ),
     (
@@ -162,19 +162,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Index([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
             (pd.Index([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
             (
-                pd.Index([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Index([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Index([datetime.time(0, 0, 0), datetime.time(0, 0, 1)]),
+                pd.Index([time(0, 0, 0), time(0, 0, 1)]),
                 ColumnDataKind.TIME,
             ),
             (pd.RangeIndex(0, 3), ColumnDataKind.INTEGER),
             (pd.TimedeltaIndex(["1 day", "2 days"]), ColumnDataKind.TIMEDELTA),
             (
-                pd.DatetimeIndex(
-                    [datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]
-                ),
+                pd.DatetimeIndex([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
                 ColumnDataKind.DATETIME,
             ),
             (
@@ -208,11 +206,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (
@@ -278,11 +276,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),

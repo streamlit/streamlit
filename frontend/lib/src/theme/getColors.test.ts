@@ -54,28 +54,20 @@ describe("computeDerivedColors", () => {
 
 describe("getDividerColors", () => {
   describe("light theme", () => {
-    it("returns correct divider primitive colors for light theme", () => {
+    it("returns the default divider colors for the light theme", () => {
       expect(hasLightBackgroundColor(lightTheme.emotion)).toBe(true)
       const result = getDividerColors(lightTheme.emotion)
 
-      // colors.red70
-      expect(result.red).toBe("#ff4b4b")
-      // colors.orange70
-      expect(result.orange).toBe("#ffa421")
-      // colors.yellow80
-      expect(result.yellow).toBe("#faca2b")
-      // colors.blue70
-      expect(result.blue).toBe("#1c83e1")
-      // colors.green70
-      expect(result.green).toBe("#21c354")
-      // colors.purple70
-      expect(result.violet).toBe("#803df5")
-      // colors.gray60
-      expect(result.gray).toBe("#a3a8b8")
-      // colors.gray60
-      expect(result.grey).toBe("#a3a8b8")
+      expect(result.red).toBe("#D94A57")
+      expect(result.orange).toBe("#E0682B")
+      expect(result.yellow).toBe("#BB8300")
+      expect(result.blue).toBe("#3B82F6")
+      expect(result.green).toBe("#079464")
+      expect(result.violet).toBe("#9B5DE5")
+      expect(result.gray).toBe("#6B7280")
+      expect(result.grey).toBe("#6B7280")
       expect(result.rainbow).toBe(
-        "linear-gradient(to right, #ff4b4b, #ffa421, #faca2b, #21c354, #1c83e1, #803df5)"
+        "linear-gradient(to right, #D94A57, #E0682B, #BB8300, #079464, #3B82F6, #9B5DE5)"
       )
     })
 
@@ -121,7 +113,7 @@ describe("getDividerColors", () => {
       ]
 
       expect(result.rainbow).toBe(
-        "linear-gradient(to right, #ff4b4b, #ffa421, #faca2b, #21c354, #1c83e1, #803df5)"
+        "linear-gradient(to right, #D94A57, #E0682B, #BB8300, #079464, #3B82F6, #9B5DE5)"
       )
       const gradientColors = result.rainbow.match(/#[0-9a-fA-F]{6}/g)
       expect(gradientColors).toEqual(expectedOrder)
@@ -129,28 +121,20 @@ describe("getDividerColors", () => {
   })
 
   describe("dark theme", () => {
-    it("returns correct divider primitive colors for dark theme", () => {
+    it("returns the default divider colors for the dark theme", () => {
       expect(hasLightBackgroundColor(darkTheme.emotion)).toBe(false)
       const result = getDividerColors(darkTheme.emotion)
 
-      // colors.red80
-      expect(result.red).toBe("#ff2b2b")
-      // colors.orange80
-      expect(result.orange).toBe("#ff8700")
-      // colors.yellow70
-      expect(result.yellow).toBe("#ffe312")
-      // colors.blue80
-      expect(result.blue).toBe("#0068c9")
-      // colors.green80
-      expect(result.green).toBe("#09ab3b")
-      // colors.purple70
-      expect(result.violet).toBe("#803df5")
-      // colors.gray80
-      expect(result.gray).toBe("#555867")
-      // colors.gray80
-      expect(result.grey).toBe("#555867")
+      expect(result.red).toBe("#F2919A")
+      expect(result.orange).toBe("#F2A56D")
+      expect(result.yellow).toBe("#FBD54F")
+      expect(result.blue).toBe("#85B8F8")
+      expect(result.green).toBe("#7ED5B0")
+      expect(result.violet).toBe("#BF8EF7")
+      expect(result.gray).toBe("#A9A5A0")
+      expect(result.grey).toBe("#A9A5A0")
       expect(result.rainbow).toBe(
-        "linear-gradient(to right, #ff2b2b, #ff8700, #ffe312, #09ab3b, #0068c9, #803df5)"
+        "linear-gradient(to right, #F2919A, #F2A56D, #FBD54F, #7ED5B0, #85B8F8, #BF8EF7)"
       )
     })
 
@@ -196,7 +180,7 @@ describe("getDividerColors", () => {
       ]
 
       expect(result.rainbow).toBe(
-        "linear-gradient(to right, #ff2b2b, #ff8700, #ffe312, #09ab3b, #0068c9, #803df5)"
+        "linear-gradient(to right, #F2919A, #F2A56D, #FBD54F, #7ED5B0, #85B8F8, #BF8EF7)"
       )
       const gradientColors = result.rainbow.match(/#[0-9a-fA-F]{6}/g)
       expect(gradientColors).toEqual(expectedOrder)
@@ -209,6 +193,13 @@ describe("getThemeBackgroundColors", () => {
     const result = getThemeBackgroundColors(lightTheme.emotion)
     const colors = lightTheme.emotion.colors
 
+    expect(result.redbg).toBe("#FFF1F2")
+    expect(result.orangebg).toBe("#FFF6ED")
+    expect(result.yellowbg).toBe("#FFFAE5")
+    expect(result.bluebg).toBe("#EDF5FF")
+    expect(result.greenbg).toBe("#F1FBF6")
+    expect(result.violetbg).toBe("#F8F2FF")
+    expect(result.graybg).toBe("#F5F4F2")
     expect(result.redbg).toBe(colors.redBackgroundColor)
     expect(result.orangebg).toBe(colors.orangeBackgroundColor)
     expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
@@ -224,6 +215,13 @@ describe("getThemeBackgroundColors", () => {
     const result = getThemeBackgroundColors(darkTheme.emotion)
     const colors = darkTheme.emotion.colors
 
+    expect(result.redbg).toBe("#412023")
+    expect(result.orangebg).toBe("#342414")
+    expect(result.yellowbg).toBe("#302917")
+    expect(result.bluebg).toBe("#1E2A3D")
+    expect(result.greenbg).toBe("#0E2F24")
+    expect(result.violetbg).toBe("#332244")
+    expect(result.graybg).toBe("#2C2925")
     expect(result.redbg).toBe(colors.redBackgroundColor)
     expect(result.orangebg).toBe(colors.orangeBackgroundColor)
     expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
@@ -241,6 +239,13 @@ describe("getMarkdownTextColors", () => {
     const result = getMarkdownTextColors(lightTheme.emotion)
     const colors = lightTheme.emotion.colors
 
+    expect(result.red).toBe("#9E303B")
+    expect(result.orange).toBe("#9B4519")
+    expect(result.yellow).toBe("#956B0F")
+    expect(result.blue).toBe("#244FB4")
+    expect(result.green).toBe("#0C5A44")
+    expect(result.violet).toBe("#6F33B8")
+    expect(result.gray).toBe("#686255")
     expect(result.red).toBe(colors.redTextColor)
     expect(result.orange).toBe(colors.orangeTextColor)
     expect(result.yellow).toBe(colors.yellowTextColor)
@@ -256,6 +261,13 @@ describe("getMarkdownTextColors", () => {
     const result = getMarkdownTextColors(darkTheme.emotion)
     const colors = darkTheme.emotion.colors
 
+    expect(result.red).toBe("#F2919A")
+    expect(result.orange).toBe("#F2A56D")
+    expect(result.yellow).toBe("#FBD54F")
+    expect(result.blue).toBe("#85B8F8")
+    expect(result.green).toBe("#7ED5B0")
+    expect(result.violet).toBe("#BF8EF7")
+    expect(result.gray).toBe("#B8B3A8")
     expect(result.red).toBe(colors.redTextColor)
     expect(result.orange).toBe(colors.orangeTextColor)
     expect(result.yellow).toBe(colors.yellowTextColor)

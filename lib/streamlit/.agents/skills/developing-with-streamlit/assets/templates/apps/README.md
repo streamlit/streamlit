@@ -23,6 +23,7 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, `st.skeleton` on quick cards with `st.spinner` for the slow report |
 
 ## Quick Start
 
@@ -178,6 +179,6 @@ parameterized loaders so per-argument entries stay bounded.
 
 All templates require Python >=3.11 and use:
 - `streamlit`
-- `altair>=5.5.0`
 - `pandas>=2.2.3`
+- `altair>=5.5.0` (most templates)
 - `numpy>=1.26.0` (most templates)

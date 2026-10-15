@@ -139,6 +139,7 @@ describe("ProgressColumn", () => {
     const mockColumn = getProgressColumn()
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
+    expect(mockColumn.getCellValue(cell)).toBeNull()
   })
 
   it.each([

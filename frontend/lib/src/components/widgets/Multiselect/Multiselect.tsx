@@ -118,7 +118,7 @@ const getDefaultStateFromProto = (
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.rawValues ?? []
+  return element.rawValues
 }
 
 const updateWidgetMgrState = (
@@ -561,7 +561,7 @@ const Multiselect: FC<Props> = props => {
           // first row). Leaving the first row does not change the target, so
           // the effect would not run and a sticky skip would swallow the next
           // sync.
-          const firstId = displayOptionsRef.current[0]?.id
+          const firstId = displayOptionsRef.current.at(0)?.id
           if (
             hoveredKeyRef.current === option.id &&
             String(option.id) !== String(firstId ?? "")
@@ -609,7 +609,8 @@ const Multiselect: FC<Props> = props => {
 
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         e.preventDefault()
-        const prev = tags[idx - 1]
+        // `at(idx - 1)` wraps when idx is 0 and would focus the last tag.
+        const prev = idx > 0 ? tags[idx - 1] : undefined
         if (prev) {
           tag.tabIndex = -1
           prev.tabIndex = 0
@@ -618,7 +619,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault()
-        const next = tags[idx + 1]
+        const next = tags.at(idx + 1)
         if (next) {
           tag.tabIndex = -1
           next.tabIndex = 0
@@ -626,21 +627,24 @@ const Multiselect: FC<Props> = props => {
           focusedTagIndexRef.current = idx + 1
         } else {
           tag.tabIndex = -1
-          const first = tags[0]
+          const first = tags.at(0)
           if (first) first.tabIndex = 0
           focusedTagIndexRef.current = 0
           inputRef.current?.focus()
         }
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault()
-        const tagValue = value[idx]
+        // idx is -1 when the tag isn't in tags; value.at(-1) would remove the last value instead.
+        const tagValue =
+          idx >= 0 && idx < value.length ? value[idx] : undefined
         if (tagValue !== undefined) {
-          const nextFocus = tags[idx + 1] ?? tags[idx - 1]
+          const next = tags.at(idx + 1)
+          const prev = idx > 0 ? tags[idx - 1] : undefined
+          const nextFocus = next ?? prev
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
-            // After removal, right neighbor slides to idx; left stays at idx-1
-            focusedTagIndexRef.current =
-              nextFocus === tags[idx + 1] ? idx : idx - 1
+            // After removal, the right neighbor shifts into idx; the left neighbor stays at idx - 1.
+            focusedTagIndexRef.current = nextFocus === next ? idx : idx - 1
             nextFocus.tabIndex = 0
             nextFocus.focus({ preventScroll: true })
           } else {
@@ -650,7 +654,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "Home") {
         e.preventDefault()
-        const first = tags[0]
+        const first = tags.at(0)
         if (first && first !== tag) {
           tag.tabIndex = -1
           first.tabIndex = 0

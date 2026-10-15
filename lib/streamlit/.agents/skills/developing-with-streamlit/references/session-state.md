@@ -37,6 +37,8 @@ name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
 
+By default, a keyed widget's value is dropped when the widget stops being rendered. Use [`persist_state`](#persisting-widget-values-persist_state) to keep it without exposing it in the URL; `bind="query-params"` also preserves the value.
+
 ## Syncing a widget to the URL (shareable links)
 
 To make a widget's value shareable through the page URL, pass `bind="query-params"` together with `key=`. Streamlit writes the value to the URL query string when it changes and restores it from the URL on load and on browser back/forward — **don't hand-roll `st.query_params`** for this. The `key=` becomes the query-parameter name.
@@ -80,7 +82,7 @@ Notes:
 
 ## Widget input constraints are mostly client-side
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.number_input`, `st.time_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.number_input`, `st.date_input`, `st.time_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
 
 For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
 
@@ -125,7 +127,7 @@ Access a widget's value in its own callback via `st.session_state.key`, not the 
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
-`on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets).
+`on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets-advanced).
 
 ## Initialization patterns
 
