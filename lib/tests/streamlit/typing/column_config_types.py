@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         AreaChartColumn,
         AudioColumn,
         BarChartColumn,
+        ButtonColumn,
         ButtonColumnResult,
         CheckboxColumn,
         Column,
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
         TimeColumn,
         VideoColumn,
     )
+    from streamlit.typing import ButtonColumnClickState
 
     def _format_selectbox(option: str | int | float | bool) -> str:
         return str(option)
@@ -865,10 +867,113 @@ if TYPE_CHECKING:
         ColumnConfig,
     )
 
+    # =====================================================================
+    # ButtonColumn
+    # =====================================================================
+
+    # Without a key this returns ColumnConfig. A key is required for clicks
+    # and callbacks, and that call returns ButtonColumnResult.
+    assert_type(ButtonColumn(), ColumnConfig)
+    assert_type(ButtonColumn("Actions"), ColumnConfig)
+    assert_type(ButtonColumn(label=None), ColumnConfig)
+    assert_type(ButtonColumn(label="Actions"), ColumnConfig)
+    assert_type(ButtonColumn(""), ColumnConfig)
+    assert_type(ButtonColumn(width=None), ColumnConfig)
+    assert_type(ButtonColumn(width="small"), ColumnConfig)
+    assert_type(ButtonColumn(width="medium"), ColumnConfig)
+    assert_type(ButtonColumn(width="large"), ColumnConfig)
+    assert_type(ButtonColumn(width=100), ColumnConfig)
+    assert_type(ButtonColumn(width=pixel_width), ColumnConfig)
+    assert_type(ButtonColumn(width=flexible_width), ColumnConfig)
+    assert_type(ButtonColumn(help=None), ColumnConfig)
+    assert_type(ButtonColumn(help="Click to perform action"), ColumnConfig)
+    assert_type(ButtonColumn(pinned=None), ColumnConfig)
+    assert_type(ButtonColumn(pinned=True), ColumnConfig)
+    assert_type(ButtonColumn(pinned=False), ColumnConfig)
+    assert_type(ButtonColumn(pinned=pinned_flag), ColumnConfig)
+    assert_type(ButtonColumn(alignment=None), ColumnConfig)
+    assert_type(ButtonColumn(alignment="left"), ColumnConfig)
+    assert_type(ButtonColumn(alignment="center"), ColumnConfig)
+    assert_type(ButtonColumn(alignment="right"), ColumnConfig)
+    assert_type(ButtonColumn(type="primary"), ColumnConfig)
+    assert_type(ButtonColumn(type="secondary"), ColumnConfig)
+    assert_type(ButtonColumn(type="tertiary"), ColumnConfig)
+
+    def _button_callback() -> None:
+        pass
+
+    def _button_callback_with_args(x: int, y: str) -> None:
+        pass
+
+    assert_type(ButtonColumn(key="btn_click"), ButtonColumnResult)
+    assert_type(ButtonColumn("Actions", key="btn_click"), ButtonColumnResult)
+    assert_type(
+        ButtonColumn(on_click=_button_callback, key="click"), ButtonColumnResult
+    )
+    assert_type(
+        ButtonColumn(on_click=_button_callback_with_args, key="click"),
+        ButtonColumnResult,
+    )
+    assert_type(ButtonColumn(on_click=lambda: None, key="click"), ButtonColumnResult)
+    assert_type(ButtonColumn(on_click=None, key="click"), ButtonColumnResult)
+    assert_type(
+        ButtonColumn(on_click=_button_callback_with_args, args=(1, "a"), key="click"),
+        ButtonColumnResult,
+    )
+    assert_type(
+        ButtonColumn(
+            on_click=_button_callback_with_args,
+            kwargs={"x": 1, "y": "a"},
+            key="click",
+        ),
+        ButtonColumnResult,
+    )
+    assert_type(
+        ButtonColumn(
+            on_click=_button_callback_with_args,
+            args=(1, "a"),
+            kwargs={},
+            key="click",
+        ),
+        ButtonColumnResult,
+    )
+    assert_type(
+        ButtonColumn(
+            "Actions",
+            width="medium",
+            help="Click to perform action",
+            pinned=False,
+            alignment="center",
+            type="primary",
+        ),
+        ColumnConfig,
+    )
+    assert_type(
+        ButtonColumn(
+            "Actions",
+            width="medium",
+            help="Click to perform action",
+            pinned=False,
+            alignment="center",
+            type="primary",
+            on_click=_button_callback,
+            args=None,
+            kwargs=None,
+            key="action_click",
+        ),
+        ButtonColumnResult,
+    )
+
+    # Session state for a keyed column is a row/label click payload.
+    click_state = cast("ButtonColumnClickState", object())
+    assert_type(click_state.row, int)
+    assert_type(click_state["row"], int)
+    assert_type(click_state.label, str)
+    assert_type(click_state["label"], str)
+
     # Pin each public st.column_config name. ButtonColumn() returns
     # ColumnConfig; a keyed call returns ButtonColumnResult, which
-    # column_config also accepts. The rest of that surface stays in
-    # button_column_types.py.
+    # column_config also accepts.
     assert_type(st.column_config.AreaChartColumn(), ColumnConfig)
     assert_type(st.column_config.AudioColumn(), ColumnConfig)
     assert_type(st.column_config.BarChartColumn(), ColumnConfig)
@@ -913,6 +1018,7 @@ if TYPE_CHECKING:
         "progress": ProgressColumn("Score", format="percent"),
         "json": JsonColumn("Payload"),
         "markdown": MarkdownColumn("Body"),
+        "button": ButtonColumn("Actions", key="clicks"),
     }
 
     # =====================================================================
@@ -974,3 +1080,10 @@ if TYPE_CHECKING:
     ProgressColumn(color=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     JsonColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     MarkdownColumn(default=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Button columns are not editable, so they do not accept disabled.
+    # Clicks and callbacks require a key.
+    ButtonColumn(type="danger")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    ButtonColumn(alignment="justify")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    ButtonColumn(disabled=True)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    ButtonColumn(on_click=_button_callback)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
