@@ -4740,6 +4740,9 @@ describe("required", () => {
     expect(
       screen.getByTestId("stDateInputField").querySelector("[aria-invalid]")
     ).not.toBeNull()
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2020-02-06",
+    ])
   })
 
   it("does not show a required error on unedited empty blur", async () => {
@@ -4810,6 +4813,9 @@ describe("required", () => {
       [],
       expect.anything()
     )
+    expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "1970-01-20",
+    ])
   })
 
   it("does not submit empty after a non-clearable optional field reverts in a form", async () => {
@@ -5078,11 +5084,17 @@ describe("required", () => {
     expect(screen.getByTestId("stDateInputField")).not.toHaveAttribute(
       "aria-required"
     )
+    expect(
+      screen.getByTestId("stDateInputField").querySelector("[aria-invalid]")
+    ).toBeNull()
 
     rerender(<DateInput {...props} />)
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stDateInputField").querySelector("[aria-invalid]")
+    ).toBeNull()
   })
 
   it("clears a leftover required error after a programmatic refill", () => {
@@ -5118,6 +5130,9 @@ describe("required", () => {
     expect(day).toHaveTextContent("06")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stDateInputField").querySelector("[aria-invalid]")
+    ).toBeNull()
   })
 
   it("applies a programmatic setValue after a blocked empty required commit", async () => {
@@ -5154,6 +5169,9 @@ describe("required", () => {
     expect(day).toHaveTextContent("15")
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     expect(screen.queryByTestId("stDateInputError")).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId("stDateInputField").querySelector("[aria-invalid]")
+    ).toBeNull()
   })
 
   it("applies a same-value programmatic setValue after a blocked empty required commit", async () => {
@@ -5454,6 +5472,96 @@ describe("required", () => {
       )
     })
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("does not commit an arrow-key adjustment after Escape closes the calendar", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await typeRangeDate(
+      user,
+      region,
+      ["2020", "01", "01"],
+      ["2020", "01", "10"]
+    )
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-10"],
+        expect.anything()
+      )
+    })
+    setStringArrayValueSpy.mockClear()
+
+    await user.keyboard("{ArrowUp}")
+
+    const end = getRangeDateSegments(region, "end")
+    expect(end.day).toHaveTextContent("11")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+
+    await user.click(document.body)
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-11"],
+        expect.anything()
+      )
+    })
+  })
+
+  it("blocks a fully-cleared required empty-default range on blur", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await typeRangeDate(
+      user,
+      region,
+      ["2020", "01", "01"],
+      ["2020", "01", "10"]
+    )
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-10"],
+        expect.anything()
+      )
+    })
+    setStringArrayValueSpy.mockClear()
+
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await clearSegment(user, start.year)
+    await clearSegment(user, start.month)
+    await clearSegment(user, start.day)
+    await clearSegment(user, end.year)
+    await clearSegment(user, end.month)
+    await clearSegment(user, end.day)
+    await user.click(document.body)
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
   })
 
   it("re-commits a previously notified range after a programmatic change to a different range", async () => {
@@ -5876,5 +5984,81 @@ describe("optional empty default", () => {
       ).not.toBeInTheDocument()
     })
     expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    const cleared = getRangeDateSegments(region, "end")
+    expect(cleared.year).toHaveAttribute("data-placeholder", "true")
+    expect(cleared.month).toHaveAttribute("data-placeholder", "true")
+    expect(cleared.day).toHaveAttribute("data-placeholder", "true")
+  })
+
+  it("reverts an end-only typed date when focus leaves the field", async () => {
+    const user = userEvent.setup()
+    const props = getOptionalEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "01")
+    await typeIntoSegment(user, end.day, "10")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(end.year).toHaveAttribute("data-placeholder", "true")
+    })
+    expect(end.month).toHaveAttribute("data-placeholder", "true")
+    expect(end.day).toHaveAttribute("data-placeholder", "true")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("does not keep an end-only date visible when a required range submit fails", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getProps(
+      {
+        default: [],
+        required: true,
+        isRange: true,
+        formId: "form",
+        min: "1970-01-01",
+        max: "2030-12-31",
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "01")
+    await typeIntoSegment(user, end.day, "10")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(end.year).toHaveAttribute("data-placeholder", "true")
+    })
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(end.year).toHaveAttribute("data-placeholder", "true")
+    expect(end.month).toHaveAttribute("data-placeholder", "true")
+    expect(end.day).toHaveAttribute("data-placeholder", "true")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["2020-01-10"],
+      expect.anything()
+    )
   })
 })

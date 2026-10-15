@@ -304,6 +304,21 @@ function isRangeFullyCleared(container: HTMLElement | null): boolean {
   )
 }
 
+/** End bound painted while the start bound is empty. Commit ignores that
+ * paint (`handleEndFieldChange` stores it, then returns), so close, blur,
+ * and Escape must revert it. DOM digits are not enough: a start clear sets
+ * `displayEnd` to null before the end field repaints. */
+function isEndOnlyPaint(
+  container: HTMLElement | null,
+  displayStart: CalendarDate | null,
+  displayEnd: CalendarDate | null
+): boolean {
+  if (displayStart || !displayEnd) return false
+  const startField =
+    container?.querySelector('[data-range-field="start"]') ?? null
+  return !!startField && isFieldFullyCleared(startField)
+}
+
 function getClosePendingRange(
   container: HTMLElement | null,
   displayStart: CalendarDate | null,
@@ -535,8 +550,35 @@ function RangeDateInput({
   onCloseRef.current = onClose
 
   const [isOpen, setIsOpenState] = useState(false)
-  const isOpenRef = useRef(isOpen)
-  isOpenRef.current = isOpen
+  // Armed only for the DateField onChange that may flush after Escape or
+  // overlay close. Cleared once that close is handled, so a later arrow-key
+  // edit does not commit while the calendar stays shut.
+  const pendingCloseCommitRef = useRef(false)
+  const clearPendingCloseCommit = useCallback((): void => {
+    pendingCloseCommitRef.current = false
+  }, [])
+  const armPendingCloseCommit = useCallback((): void => {
+    pendingCloseCommitRef.current = true
+  }, [])
+  const commitFlushedCloseRange = useCallback(
+    (start: CalendarDate | null, end: CalendarDate | null): void => {
+      if (!pendingCloseCommitRef.current || !start || !end) return
+      const key = rangeIsoKey([start, end])
+      pendingCloseCommitRef.current = false
+      if (key === lastNotifiedRangeKeyRef.current) return
+      hasEditedRef.current = false
+      lastNotifiedRangeKeyRef.current = key
+      onChangeRef.current([start, end])
+    },
+    []
+  )
+  const discardEndOnlyDisplay = useCallback((): void => {
+    displayStartRef.current = startValue
+    displayEndRef.current = endValue
+    setDisplayStart(startValue)
+    setDisplayEnd(endValue)
+    hasEditedRef.current = false
+  }, [endValue, startValue])
   const popoverInteractionRef = usePopoverInteractionFlag(
     isOpen,
     popoverRef,
@@ -550,6 +592,14 @@ function RangeDateInput({
       selfCommittedAnchorRef.current = null
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
+      } else if (
+        isEndOnlyPaint(
+          triggerRef.current,
+          displayStartRef.current,
+          displayEndRef.current
+        )
+      ) {
+        discardEndOnlyDisplay()
       } else {
         const pending = getClosePendingRange(
           triggerRef.current,
@@ -574,9 +624,18 @@ function RangeDateInput({
           }
         }
       }
+      // Child DateFields flush onChange before this effect. Drop the latch
+      // so the next arrow-key edit cannot commit through the close fallback.
+      clearPendingCloseCommit()
     }
     wasOpenRef.current = isOpen
-  }, [isOpen, startValue, endValue])
+  }, [
+    clearPendingCloseCommit,
+    discardEndOnlyDisplay,
+    isOpen,
+    startValue,
+    endValue,
+  ])
 
   // clear_on_submit remounts the DateFields via formResetKey but keeps this
   // instance. Drop the last-notified key so re-entering the same range writes.
@@ -665,6 +724,19 @@ function RangeDateInput({
         if (skipCloseCommitRef.current) {
           return
         }
+        armPendingCloseCommit()
+        if (
+          isEndOnlyPaint(
+            triggerRef.current,
+            displayStartRef.current,
+            displayEndRef.current
+          )
+        ) {
+          discardEndOnlyDisplay()
+          clearPendingCloseCommit()
+          skipCloseCommitRef.current = true
+          return
+        }
         // Commit before the close effect (after paint). Escape after typing
         // does not blur, so this is the synchronous path for a complete range.
         const pending = getClosePendingRange(
@@ -677,6 +749,7 @@ function RangeDateInput({
           // form submit does not commit the discarded partial edit.
           hasEditedRef.current = false
           onCloseRef.current(true)
+          clearPendingCloseCommit()
         } else {
           const committed = compact([startValue, endValue])
           const isRealClear =
@@ -696,6 +769,7 @@ function RangeDateInput({
             }
             skipCloseCommitRef.current = true
             lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
+            clearPendingCloseCommit()
           }
         }
       },
@@ -797,24 +871,12 @@ function RangeDateInput({
       onEdit(pending.map(calendarDateToIso))
       validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
-      // Escape can close before React Aria flushes onChange. Commit here if
-      // both bounds are now complete and close/blur did not already notify.
-      if (
-        !isOpenRef.current &&
-        date &&
-        displayEndRef.current &&
-        rangeIsoKey([date, displayEndRef.current]) !==
-          lastNotifiedRangeKeyRef.current
-      ) {
-        hasEditedRef.current = false
-        lastNotifiedRangeKeyRef.current = rangeIsoKey([
-          date,
-          displayEndRef.current,
-        ])
-        onChangeRef.current([date, displayEndRef.current])
-      }
+      // Escape or overlay close can run before React Aria flushes onChange.
+      // Commit only that pending close, not every later edit with the
+      // calendar shut (arrow keys stay local until blur or Escape).
+      commitFlushedCloseRange(date, displayEndRef.current)
     },
-    [onEdit, onFocusChange, validateBothFields]
+    [commitFlushedCloseRange, onEdit, onFocusChange, validateBothFields]
   )
 
   const handleEndFieldChange = useCallback(
@@ -828,22 +890,9 @@ function RangeDateInput({
       onEdit(compact([displayStartRef.current, date]).map(calendarDateToIso))
       validateBothFields(displayStartRef.current, date)
       if (date) onFocusChange(date)
-      if (
-        !isOpenRef.current &&
-        displayStartRef.current &&
-        date &&
-        rangeIsoKey([displayStartRef.current, date]) !==
-          lastNotifiedRangeKeyRef.current
-      ) {
-        hasEditedRef.current = false
-        lastNotifiedRangeKeyRef.current = rangeIsoKey([
-          displayStartRef.current,
-          date,
-        ])
-        onChangeRef.current([displayStartRef.current, date])
-      }
+      commitFlushedCloseRange(displayStartRef.current, date)
     },
-    [onEdit, onFocusChange, validateBothFields]
+    [commitFlushedCloseRange, onEdit, onFocusChange, validateBothFields]
   )
 
   // When required, incomplete ranges stay in local display until close/blur.
@@ -934,32 +983,61 @@ function RangeDateInput({
       if (e.key === "Escape") {
         // type_date and keyboard users commit with Escape even when the
         // calendar is not open (no overlay onClose / close effect).
-        const pending = getClosePendingRange(
-          triggerRef.current ?? e.currentTarget,
-          displayStartRef.current,
-          displayEndRef.current
-        )
-        if (pending.length === 2) {
-          const committed = compact([startValue, endValue])
-          const pendingKey = rangeIsoKey(pending)
-          if (
-            pendingKey !== lastNotifiedRangeKeyRef.current &&
-            shouldNotifyRangePending(pending, committed, hasEditedRef.current)
-          ) {
-            hasEditedRef.current = false
-            lastNotifiedRangeKeyRef.current = pendingKey
-            if (formCommit) {
-              formCommit(pending)
-            } else {
-              onChangeRef.current(pending)
-            }
-            if (isOpen) {
-              skipCloseCommitRef.current = true
-            }
-          }
+        const container = triggerRef.current ?? e.currentTarget
+        const popoverWasOpen = isOpen
+        if (popoverWasOpen) {
+          armPendingCloseCommit()
         }
-        if (isOpen) {
-          setIsOpenState(false)
+        if (
+          isEndOnlyPaint(
+            container,
+            displayStartRef.current,
+            displayEndRef.current
+          )
+        ) {
+          discardEndOnlyDisplay()
+          clearPendingCloseCommit()
+          if (popoverWasOpen) {
+            skipCloseCommitRef.current = true
+            setIsOpenState(false)
+          }
+        } else {
+          const pending = getClosePendingRange(
+            container,
+            displayStartRef.current,
+            displayEndRef.current
+          )
+          if (pending.length === 2) {
+            const committed = compact([startValue, endValue])
+            const pendingKey = rangeIsoKey(pending)
+            if (
+              pendingKey !== lastNotifiedRangeKeyRef.current &&
+              shouldNotifyRangePending(
+                pending,
+                committed,
+                hasEditedRef.current
+              )
+            ) {
+              hasEditedRef.current = false
+              lastNotifiedRangeKeyRef.current = pendingKey
+              if (formCommit) {
+                formCommit(pending)
+              } else {
+                onChangeRef.current(pending)
+              }
+              if (popoverWasOpen) {
+                skipCloseCommitRef.current = true
+              }
+            }
+            // The range is already parsed. Do not leave the close latch set
+            // for a later arrow-key edit.
+            clearPendingCloseCommit()
+          }
+          if (popoverWasOpen) {
+            setIsOpenState(false)
+          } else {
+            clearPendingCloseCommit()
+          }
         }
       }
 
@@ -989,7 +1067,15 @@ function RangeDateInput({
         { immediate: closePreview, afterFocusSettles: closePreview }
       )
     },
-    [isOpen, startValue, endValue, formCommit]
+    [
+      armPendingCloseCommit,
+      clearPendingCloseCommit,
+      discardEndOnlyDisplay,
+      formCommit,
+      isOpen,
+      startValue,
+      endValue,
+    ]
   )
 
   // In active mode: Tab cycles focus within the popover (focus trap).
@@ -1244,6 +1330,22 @@ function RangeDateInput({
         }
       }
       if (skipCloseCommitRef.current) return
+      if (
+        isEndOnlyPaint(
+          triggerRef.current,
+          displayStartRef.current,
+          displayEndRef.current
+        )
+      ) {
+        discardEndOnlyDisplay()
+        clearPendingCloseCommit()
+        if (closedByBlur) {
+          // This blur closed the popover. Skip the close-effect commit so it
+          // does not repaint the discarded end date from a stale read.
+          skipCloseCommitRef.current = true
+        }
+        return
+      }
       const pending = getClosePendingRange(
         triggerRef.current,
         displayStartRef.current,
@@ -1279,7 +1381,15 @@ function RangeDateInput({
         onChangeRef.current(pending)
       }
     },
-    [formCommit, isOpen, startValue, endValue, popoverInteractionRef]
+    [
+      clearPendingCloseCommit,
+      discardEndOnlyDisplay,
+      formCommit,
+      isOpen,
+      startValue,
+      endValue,
+      popoverInteractionRef,
+    ]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null
