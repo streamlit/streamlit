@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.65.0",
+  "version": "1.66.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -128,7 +128,7 @@
     "vega": "^6.4.0",
     "vega-embed": "^7.3.0",
     "vega-interpreter": "^2.3.2",
-    "vega-lite": "6.4.3",
+    "vega-lite": "6.5.0",
     "vfile": "^6.0.0",
     "wavesurfer.js": "^8.0.2",
     "xxhashjs": "^0.2.2"
@@ -166,7 +166,7 @@
     "@vitejs/plugin-react-swc": "^4.3.3",
     "timezone-mock": "^1.4.3",
     "typesync": "^0.14.3",
-    "vite": "^8.3.3",
+    "vite": "^8.3.4",
     "vite-plugin-dts": "^5.1.2",
     "vitest": "^5.0.3",
     "vitest-fetch-mock": "^0.4.5"
