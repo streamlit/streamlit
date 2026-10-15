@@ -499,8 +499,10 @@ unchanged.
 **The response is the schema.** Which controls exist, and what values they \
 accept, depends on what the app rendered on its last run -- conditional \
 widgets appear and disappear. So no static document can describe the action \
-space: read `actions`, and each element's `value_schema`, `options`, and \
-bounds, from the snapshot you just received, and act on keys you just read.
+space. Read `actions` in the snapshot you just received for what you can do, \
+then, before sending a value, the element with that `key` in `tree` for its \
+`value_schema`, and its `props`, such as `options` and bounds, for which \
+values are legal. Act only on keys you just read.
 
 **The element vocabulary is the Streamlit API.** An element's `type` is a \
 public command name and its `props` keys are that command's parameter names, \
@@ -845,8 +847,9 @@ def schemas() -> dict[str, Any]:
                     "description": (
                         "An index of everything you may do right now, so the "
                         "action space is visible at a glance, naming each "
-                        "entry's `type` and `label`. Read each element's "
-                        "`value_schema` and constraints from the tree. A "
+                        "entry's `type` and `label`. Before sending a value, "
+                        "read the element with the same `key` in `tree`: its "
+                        "`value_schema` and `props` say what to send. A "
                         "disabled element appears in the tree but not here."
                     ),
                 },
@@ -1178,8 +1181,8 @@ def schemas() -> dict[str, Any]:
                     "type": "string",
                     "description": (
                         "The element's `label`, when it has one, so a generated "
-                        "`$$ID-...` key can be matched without walking the "
-                        "tree. Not an identifier: two elements can share one."
+                        "`$$ID-...` key can be told apart at a glance. Not an "
+                        "identifier: two elements can share one."
                     ),
                 },
             },

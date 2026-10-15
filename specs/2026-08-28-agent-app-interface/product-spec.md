@@ -626,9 +626,11 @@ Rules:
   authored `key` where the element has one, is the identity.
 - **The `actions` list is an index that names its entries.** It lists the key of every
   element that can be set (`value`) or fired (`trigger`) right now, with its `type` and
-  its `label` when it has one, so a model can see the action space at a glance and match
-  a generated key without walking the tree; `value_schema` and constraints are read
-  from the element. An element without a label, such as `st.feedback` or
+  its `label` when it has one, so a model can see the action space at a glance and tell
+  generated keys apart. What to send stays on the element, which a client reads in the
+  tree before setting it: `value_schema` for the shape, `props` for the legal values.
+  The protocol description says so, since a model that fills a value from the index
+  alone guesses its shape. An element without a label, such as `st.feedback` or
   `st.chat_input`, has no `label` in its entry rather than an empty or borrowed one.
   A `disabled` widget, or one with a `support` reason, appears in the tree but not in
   `actions`. Form membership is visible from nesting, and each keyed element in a form
@@ -1358,7 +1360,7 @@ than ranked, and say where one builds on another.
     cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
     API keys are what to avoid: they would be a second identity system.
 
-Smaller potential follow-ups and alternatives considered while building the prototype:
+Smaller potential follow-ups and alternatives considered:
 
 - **Values:** a per-key note on how each sent value landed, including a key the batch
   itself removed; refusing values that do not match `value_schema` — a fraction for a

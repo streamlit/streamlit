@@ -496,9 +496,8 @@ class _SnapshotBuilder:
             ),
         )
         if actionable:
-            # The type and label name the entry, so a client can pick a generated
-            # `$$ID-...` key without walking the tree; constraints stay on the
-            # element.
+            # The type and label name the entry, so a client can tell generated
+            # `$$ID-...` keys apart; what to send stays on the element.
             entry: dict[str, Any] = {
                 "key": _public_key(element_id),
                 "kind": str(action),

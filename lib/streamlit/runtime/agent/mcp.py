@@ -88,15 +88,17 @@ named after the Streamlit API.
 **Calling it.**
 - Send `{}` to start a session and read the app. Pass the returned \
 `session_id` on every later call.
-- Each result's `actions` lists what you can do now, by `key`, with each \
-element's `type` and `label`. Set `value` keys through `widget_state`, several \
-at once in one rerun; fire one `trigger` key, with a `value` payload for \
-`st.chat_input` or `st.menu_button`. Use only keys from the latest result. \
+- Each result's `actions` is an index of what you can do now, by `key`, with \
+each element's `type` and `label`. Set `value` keys through `widget_state`, \
+several at once in one rerun; fire one `trigger` key, with a `value` payload \
+for `st.chat_input` or `st.menu_button`. Use only keys from the latest result. \
 Widgets in a collapsed expander, a closed popover, or another tab can be set \
 directly.
-- An element's `value_schema` is the JSON Schema of the value it takes, such \
-as a `date` string or a two-item list for a range; its `options` and bounds \
-say which values are legal.
+- Before you send a value, find the element with that `key` in `tree` and read \
+it: its `value_schema` is the JSON Schema of the value it takes, such as a \
+`date` string or a two-item list for a range, and its `props`, such as \
+`options`, `min_value`, `max_value`, or `max_selections`, say which values are \
+legal. Its `value` is what it holds now.
 - An `st.form`'s fields go together with one of its submit triggers.
 - `page`, a `url_path` from `pages`, and `query_params` navigate, and cannot \
 be combined with widget changes.
