@@ -35,8 +35,9 @@ def test_fragment_queue_preserves_coalesced_triggers(app: Page) -> None:
     get_markdown(app, "fragment 1 running...")
     component_button = app.get_by_role("button", name="fire component trigger")
     component_button.click()
-    # The component marks the button in the macrotask after WidgetStateManager's
-    # trigger flush, proving the next click sends a separate rerun request.
+    # setTriggerValue flushes on a zero-delay timer. The component sets this
+    # attribute from a timer queued after that flush, so the next click is a
+    # separate rerun request.
     expect(component_button).to_have_attribute("data-trigger-sent", "true")
     get_button(app, "rerun fragment 2").click()
     get_button(app, "rerun fragment 3").click()
