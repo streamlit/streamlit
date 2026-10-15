@@ -270,9 +270,10 @@ calls are unaffected:
 A result is collected once; after that, the same request is a new interaction. Only
 `session_id` is the retry that always works, and the one the timeout message names:
 after a creating call, the same request, `{}`, would create another session. A client
-that disconnects while waiting is treated as timed out, so its retry collects the run
-too. Where a browser interaction would interrupt a running run, v1 answers
-`session_busy`, because the client may still come back for the result.
+that disconnects while waiting, even while its snapshot is being built, is treated as
+timed out, so its retry waits for the run and collects it too. Where a browser
+interaction would interrupt a running run, v1 answers `session_busy`, because the client
+may still come back for the result.
 
 The limits of that guarantee:
 
@@ -321,15 +322,16 @@ not:
 - **The script on disk:** an edit takes effect on the session's next interaction, with
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
-  a run the client did not ask for.
-- **From the request:** `st.context.headers` are the request's, minus `Cookie` and the
+  a run the client did not ask for. As for a browser session, the edit is noticed by the
+  file watcher, so with `server.fileWatcherType = "none"` the old script keeps running.
+- **From the request:** `st.context.headers` are those of the request that started the
+  run, as a browser session's are its WebSocket handshake's, minus `Cookie` and the
   credentials meant for whatever fronts the app (`Authorization`,
-  `Proxy-Authorization`), refreshed on every interaction, and only when a run starts,
-  as a browser session's are its WebSocket handshake's. Apps act on headers — identity a proxy set, or the short-lived
-  caller's-rights token a Snowflake app connects with — so empty ones would make an
-  app behave differently for an agent, or fail. This grants nothing new: any client
-  that reaches the WebSocket can send arbitrary handshake headers, so a header is only
-  as trustworthy as what the deployment's proxy sets and strips, on both paths.
+  `Proxy-Authorization`). Apps act on headers — identity a proxy set, or the
+  short-lived caller's-rights token a Snowflake app connects with — so empty ones would
+  make an app behave differently for an agent, or fail. This grants nothing new: any
+  client that reaches the WebSocket can send arbitrary handshake headers, so a header
+  is only as trustworthy as what the deployment's proxy sets and strips, on both paths.
   `st.user` comes from the trusted identity headers when the deployment maps them, and
   is anonymous otherwise.
 - **Absent, because a browser supplies it:** `st.context.cookies` is empty. Cookies are
@@ -632,15 +634,15 @@ Rules:
   means fully supported. There are two: `browser_required` where what renders may differ
   from what is reported, such as a custom component, and `read_only_in_v1` where what is
   reported is accurate but the element cannot be driven yet, such as an upload. Keeping
-  it on the node means an agent never has to cross-reference a summary
-  list to find out which element a gap belongs to. A table or chart is fully supported
-  until the app enables selections on it or gives a dataframe a button column; then it
-  is `read_only_in_v1`, which marks
-  exactly the element an app's "select a row" caption is talking about. Tagging every
-  table would mark gaps a display-only element does not have, and teach clients to ignore
-  the field. A container's `support` binds its contents: an element inside an undrivable
-  container is not drivable either, and repeating the reason onto descendants keeps
-  `actions` from advertising children the container itself denies.
+  it on the node means an agent never has to cross-reference a summary list to find out
+  which element a gap belongs to. A table or chart is fully supported until the app
+  enables selections on it or gives a dataframe a button column; then it is
+  `read_only_in_v1`, which marks exactly the element an app's "select a row" caption is
+  talking about. Tagging every table would mark gaps a display-only element does not
+  have, and teach clients to ignore the field. A container's `support` binds its
+  contents: an element inside an undrivable container is not drivable either, and
+  repeating the reason onto descendants keeps `actions` from advertising children the
+  container itself denies.
 - **A described node reports what it is; a gap says so.** An element whose command has no
   description falls back to a node named after its proto field and is listed in a
   response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
@@ -718,9 +720,8 @@ Four details matter for an agent reading that snapshot:
   `error`. The two cases are distinguishable because only the runtime's own error
   display applies `client.showErrorDetails` redaction, so the element records whether it
   was uncaught as `props.uncaught`, and only that sets `status`. A caught-and-displayed
-  exception stays in
-  the tree, marked as handled, which is more useful than either hiding it or calling
-  the run broken.
+  exception stays in the tree, marked as handled, which is more useful than either
+  hiding it or calling the run broken.
 
 Callbacks and external side effects that already ran are not rolled back. The session
 stays usable, so an agent can correct its input and interact again.
@@ -815,8 +816,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   the schema stricter than v1, which resets an out-of-range number rather than refusing
   it.
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
-  `null` clears a widget whose empty value is `null` and resets any other to its
-  default, so a list-valued widget is cleared with `[]`.
+  `null` resets a widget to its default, as the browser does, except where a browser
+  user can empty a widget that has one: a single-select `st.segmented_control` or
+  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. A
+  list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
@@ -827,17 +830,16 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
 Until #16203 moves the checks into the widgets, v1 checks three things itself, each
 refused with `invalid_value`:
 
-- **The JSON type**, which the element's `value_schema` states. A number is not text except
-  where it names an option, text is not a number where the schema says number — so
-  `st.feedback` takes its index as `1`, not `"1"` — and dates and times are ISO text,
-  even for a slider that carries them as microseconds. A date-time or time input takes
-  any ISO 8601 form without an offset and stores it in the layout it reads, since its
-  own parser would silently replace any other form with the default. A list longer than
-  the schema's `maxItems`, such as a third date for a range, is refused, since the app
-  would get a value it cannot unpack. The server is a little more lenient than the
-  schema otherwise: for a list-valued element, a single value and a one-item list are
-  interchangeable, because single-select button groups and single sliders carry one
-  value in a list.
+- **The JSON type**, which the element's `value_schema` states:
+  - A number is not text except where it names an option, and text is not a number, so
+    `st.feedback` takes its index as `1`, not `"1"`; `1.0` counts as `1`.
+  - Dates and times are ISO text, even for a slider that carries them as microseconds.
+    A date-time or time input and a slider read any ISO 8601 form, a date alone being
+    midnight where a time is expected. An offset the widget's own values lack is refused
+    rather than silently dropped.
+  - A list longer than `maxItems`, such as a third date for a range, is refused, since
+    the app would get a value it cannot unpack. For a list-valued element, a single
+    value and a one-item list are interchangeable.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values; a list may hold no more than
   `max_selections`. A widget with `accept_new_options` also takes new text, as it does
@@ -848,10 +850,9 @@ refused with `invalid_value`:
 Everything else shows in the next snapshot's `value`: an out-of-range number, a
 malformed `st.date_input` date or color string, or a slider range with too few values
 is reset to the default, a fraction sent to an integer `st.number_input` or slider is
-truncated, and text past
-`max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
-values lowest first. A per-key note saying how each value landed is a potential
-follow-up.
+truncated, and text past `max_chars` is cut. A reversed slider range is stored as sent,
+so a client sends its two values lowest first. A per-key note saying how each value
+landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -942,17 +943,19 @@ Charts and maps:
 
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
-  so there is no table to serve and a client should stop looking for one. The
-  exception is an `st.vega_lite_chart` whose specification loads its data from a URL:
-  the browser fetches it and this interface does not, so it reports `complete: false`
-  with `unavailable: "external_url"`, and the URL stays in `spec`. Plotly's theme
-  styling is about nine tenths of a small figure, so it is dropped and named in
-  `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
-  image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
-  (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
-  is dropped at any size: the traces are the figure's data. Serving a large
-  specification behind `data.url`, and an ECharts `dataset.source` as Arrow as `st.map`
-  serves its table, is follow-up #9.
+  so there is no table to serve and a client should stop looking for one.
+- **Data a Vega-Lite specification loads from a URL is not served.** The browser fetches
+  it and this interface does not, so the chart reports `complete: false` with
+  `unavailable: "external_url"`, even beside a dataframe, and the URL stays in `spec`.
+  Like a chart over several dataframes, it serves none of its data rather than a part
+  passed off as the whole.
+- **Plotly's theme is dropped, its data is not.** Theme styling is about nine tenths of a
+  small figure, so it is dropped and named in `spec_omitted`; content a template adds,
+  such as a "DRAFT" annotation, a shape, or an image, is kept, since removing decoration
+  must not remove meaning. Base64 typed arrays (`bdata`), which a model cannot read, are
+  expanded into numbers. Nothing that holds data is dropped at any size: the traces are
+  the figure's data. Serving a large specification behind `data.url`, and an ECharts
+  `dataset.source` as Arrow as `st.map` serves its table, is follow-up #9.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, so a map's `data` is the columns it plots from the author's table,
   which is all its browser receives, described like a dataframe's, and the generated
@@ -1000,8 +1003,7 @@ back to a browser rather than mistake it for missing content:
 | Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
-| Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
-| Chart data loaded from a URL                                               | A Vega-Lite specification that loads its data from a URL reports `data.unavailable: external_url`; the URL stays in `spec`, and the interface does not fetch it. |
+| Chart data that is not one table                                           | A layered or concatenated Altair chart over several dataframes, or a Vega-Lite specification that loads data from a URL, reports its `spec` with `data.unavailable` (`multiple_datasets` or `external_url`) and serves none of the data, rather than part of it claimed as `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
@@ -1015,11 +1017,11 @@ back to a browser rather than mistake it for missing content:
 ### Limits and configuration
 
 Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-so an operator can tune them; the defaults are what v1 ships. The run timeout bounds
-how long one request waits, not how long the run may take, so it sits below clients'
-own timeouts rather than growing to fit the slowest app. The preview size is a hidden
-option: the default is meant to be right, and the setting is there for operators and
-tests rather than for tuning per app.
+so an operator can tune them, and each must be a whole number greater than zero; the
+defaults are what v1 ships. The run timeout bounds how long one request waits, not how
+long the run may take, so it sits below clients' own timeouts rather than growing to fit
+the slowest app. The preview size is a hidden option: the default is meant to be right,
+and the setting is there for operators and tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -1266,8 +1268,9 @@ numbered for reference rather than ranked.
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
    machinery and its limits rather than building a query API.
 4. **Long-run handling and recovery.** An operation handle in the `202` a timed-out run
-   returns, a read that returns the session's latest result without executing code,
-   and `DELETE` to close early. The read matters most for model clients: their context
+   returns, an opt-in read that returns the session's latest result without executing
+   code, and `DELETE` to close early. A request with no changes stays a rerun, since
+   most such requests want one. The read matters most for model clients: their context
    management drops or moves older tool results, and without it the only way back to
    the current state is a rerun, which can repeat side effects. Exposed through MCP
    too, it lets `get_data` serve that result's files again. v1 already makes the common
@@ -1292,9 +1295,11 @@ numbered for reference rather than ranked.
    pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
    call takes the same path as an `interact` request, so its HTTP request's headers
    supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most
-   AI applications connect to tools, so this belongs in the same release cycle as v1 if
-   possible, together with #9.
+   rather than on the MCP SDK, which keeps it free of new dependencies. It speaks the
+   `initialize`-handshake revisions the common clients support, and adds `2026-07-28`,
+   whose stateless model `session_id` already follows, once they default to it. MCP is
+   how most AI applications connect to tools, so this belongs in the same release cycle
+   as v1 if possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
