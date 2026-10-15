@@ -6061,4 +6061,67 @@ describe("optional empty default", () => {
       expect.anything()
     )
   })
+
+  it.each([
+    ["optional", false],
+    ["required", true],
+  ])(
+    "submits the saved range after a cleared start and end-only edit are discarded (%s)",
+    async (_label, required) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      widgetMgr.setFormSubmitBehaviors("form", true)
+      const props = getProps(
+        {
+          isRange: true,
+          formId: "form",
+          required,
+          default: ["2020-01-01", "2020-01-10"],
+          min: "1970-01-01",
+          max: "2030-12-31",
+        },
+        { widgetMgr }
+      )
+      const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      setStringArrayValueSpy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const start = getRangeDateSegments(region, "start")
+      await clearSegment(user, start.year)
+      await clearSegment(user, start.month)
+      await clearSegment(user, start.day)
+
+      const end = getRangeDateSegments(region, "end")
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "02")
+      await typeIntoSegment(user, end.day, "02")
+      await user.click(document.body)
+
+      const restoredStart = getRangeDateSegments(region, "start")
+      const restoredEnd = getRangeDateSegments(region, "end")
+      expect(restoredStart.year).toHaveTextContent("2020")
+      expect(restoredStart.month).toHaveTextContent("01")
+      expect(restoredStart.day).toHaveTextContent("01")
+      expect(restoredEnd.year).toHaveTextContent("2020")
+      expect(restoredEnd.month).toHaveTextContent("01")
+      expect(restoredEnd.day).toHaveTextContent("10")
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        [],
+        expect.anything()
+      )
+      expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+        "2020-01-01",
+        "2020-01-10",
+      ])
+    }
+  )
 })

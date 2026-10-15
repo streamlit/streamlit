@@ -578,6 +578,10 @@ function RangeDateInput({
     setDisplayStart(startValue)
     setDisplayEnd(endValue)
     hasEditedRef.current = false
+    // Clearing the start already called onEdit([]). End-only typing returns
+    // before replacing that pending value, so drop it or form submit writes
+    // empty while the restored range is on screen.
+    onCloseRef.current(true)
   }, [endValue, startValue])
   const popoverInteractionRef = usePopoverInteractionFlag(
     isOpen,
