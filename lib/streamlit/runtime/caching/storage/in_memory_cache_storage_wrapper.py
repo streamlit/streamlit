@@ -54,13 +54,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     otherwise a situation may arise when different items are deleted from
     the memory cache and from the storage.
 
-    Notes
-    -----
-    Threading: in-memory caching layer is thread safe: we hold self._mem_cache_lock for
-    working with this self._mem_cache object.
-    However, we do not hold this lock when calling into the underlying storage,
-    so it is the responsibility of the that storage to ensure that it is safe to use
-    it from multiple threads.
+    Threading
+    ---------
+    ``_mem_cache_lock`` guards the TTL cache and entry generations.
+    ``_mutation_lock`` guards mutations, close, read-through promotion, and
+    underlying storage writes. Memory reads do not take ``_mutation_lock``.
+    When the process-wide budget is enabled, memory reads and writes take its
+    enforcement lock before ``_mem_cache_lock``.
     """
 
     def __init__(

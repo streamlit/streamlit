@@ -130,19 +130,32 @@ class GlobalCacheBudget(StatsProvider):
                 current_max_bytes = self._max_bytes
                 if current_max_bytes == max_bytes:
                     return
+                if current_max_bytes is not None:
+                    self._max_bytes = max_bytes
+                    if max_bytes is None:
+                        self._entries.clear()
+                        self._total_bytes = 0
+                        for storage_entries in self._storage_entries.values():
+                            storage_entries.clear()
                 storages = [
                     storage
                     for storage_ref in self._storages.values()
                     if (storage := storage_ref()) is not None
                 ]
 
+            if current_max_bytes is not None:
+                if max_bytes is not None:
+                    # Existing accounting already contains exact cross-storage
+                    # recency, so resizing only needs to enforce the new limit.
+                    self.enforce_budget(None)
+                return
+
             # When activation starts from disabled, writes do not yet take the
             # enforcement lock. Hold every mutation lock until generations and
             # accounting are published together.
             with ExitStack() as stack:
-                if current_max_bytes is None:
-                    for storage in storages:
-                        stack.enter_context(storage._mutation_lock)
+                for storage in storages:
+                    stack.enter_context(storage._mutation_lock)
 
                 snapshots = [
                     (storage, storage._snapshot_entries_for_budget())
@@ -155,9 +168,6 @@ class GlobalCacheBudget(StatsProvider):
                     for storage_entries in self._storage_entries.values():
                         storage_entries.clear()
 
-                if max_bytes is None:
-                    return
-
                 for storage, entries in snapshots:
                     for key, value_size, generation in entries:
                         self.record_write(
@@ -167,8 +177,8 @@ class GlobalCacheBudget(StatsProvider):
                             generation,
                         )
 
-                # No write is in flight during startup reconfiguration, so every
-                # existing entry is eligible for eviction.
+                # The enforcement and mutation locks keep writes out of the
+                # snapshot-to-eviction window. Every existing entry is eligible.
                 self.enforce_budget(None)
 
     def _drain_pending_unregisters_locked(self) -> None:

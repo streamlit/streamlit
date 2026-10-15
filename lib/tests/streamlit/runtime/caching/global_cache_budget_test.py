@@ -130,6 +130,28 @@ def test_reconfigure_preserves_existing_storage_lru() -> None:
     assert budget.total_bytes == 3
 
 
+def test_enabled_resize_preserves_cross_storage_lru() -> None:
+    """Shrinking an enabled budget retains exact global read recency."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    first = _create_storage(budget, "first")
+    second = _create_storage(budget, "second")
+    first.set("recent", b"aaa")
+    second.set("old", b"bbb")
+    assert first.get("recent") == b"aaa"
+
+    with patch.object(
+        first,
+        "_snapshot_entries_for_budget",
+        side_effect=AssertionError("enabled resize must not rebuild accounting"),
+    ):
+        budget.reconfigure(max_bytes=3)
+
+    assert first.get("recent") == b"aaa"
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        second.get("old")
+    assert budget.total_bytes == 3
+
+
 def test_read_that_observed_disabled_budget_survives_activation() -> None:
     """A read started before activation does not require a generation."""
     budget = GlobalCacheBudget(max_bytes=None)
@@ -215,7 +237,7 @@ def test_budget_reaps_newer_expired_entry_before_evicting_live_lru() -> None:
 
 
 @pytest.mark.parametrize("ttl_seconds", [math.nan, -math.inf])
-def test_budget_reaps_nonfinite_expired_entry_before_live_lru(
+def test_budget_reaps_nan_and_negative_infinite_ttl_before_live_entry(
     ttl_seconds: float,
 ) -> None:
     """NaN and negative-infinite TTLs expire immediately and are reaped."""

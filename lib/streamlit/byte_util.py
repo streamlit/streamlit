@@ -91,7 +91,11 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
         whole, _, fraction = value_text.partition(".")
         digits = f"{whole or '0'}{fraction}"
         if len(digits) > _MAX_BYTE_SIZE_DIGITS:
-            raise StreamlitValueError("max_size", ["a positive byte size"])
+            raise StreamlitValueError(
+                "max_size",
+                ["a positive byte size"],
+                detail="Use a byte size with at most 100 digits.",
+            )
         # Integer arithmetic preserves precision for large binary-unit values.
         denominator = 10 ** len(fraction)
         size = int(digits) * _MULTIPLIERS[match.group("unit").lower()] // denominator
