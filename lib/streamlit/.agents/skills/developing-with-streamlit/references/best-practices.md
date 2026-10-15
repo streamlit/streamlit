@@ -443,9 +443,10 @@ df = conn.query(
 
 ## Type checking
 
-Annotate Streamlit-owned values with `streamlit.typing` and handle `None` before use. Type-check with `ty` (recommended) or `mypy`; see [environment-setup.md](environment-setup.md).
+Annotate values with the curated public types from `streamlit.typing` (full list in [api-reference.md](api-reference.md#public-annotation-types)) and narrow away `None` before use. Type-check with `ty` (recommended) or `mypy`; see [environment-setup.md](environment-setup.md).
 
 ```python
+import streamlit as st
 from streamlit.typing import UploadedFile
 
 

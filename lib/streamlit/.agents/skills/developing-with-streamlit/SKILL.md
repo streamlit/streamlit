@@ -54,7 +54,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
 - Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
-- Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Annotate Streamlit-owned values with types from `streamlit.typing`. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.
+- Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Annotate values with the curated public types from `streamlit.typing` (see `references/api-reference.md`).
 
 ## Proactively Look Up API Details
 
@@ -219,7 +219,7 @@ For **performance optimization**, read:
 1. Apply the patterns and recommendations from the loaded reference(s)
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
-4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so type checking catches invalid parameters and misused return values before the app runs. Install and run notes are in `references/environment-setup.md`. Annotate Streamlit-owned values with `streamlit.typing`; see `references/best-practices.md`.
+4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so type checking catches invalid parameters and misused return values before the app runs. Install and run notes are in `references/environment-setup.md`. Annotate values with the curated public types from `streamlit.typing` (see `references/api-reference.md`); an example is in `references/best-practices.md`.
 
 ### Step 4: Check Running Apps and Offer to Run
 

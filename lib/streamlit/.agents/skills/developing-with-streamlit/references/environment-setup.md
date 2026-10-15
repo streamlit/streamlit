@@ -134,7 +134,7 @@ uv run mypy streamlit_app.py
 
 `uv run ty check` with no paths checks the project. Pass the edited files when you only want those. With a plain virtual environment, install the checker the same way as other tools (`uv pip install ty` or `uv pip install mypy`) and run `ty check` or `mypy`.
 
-Annotate Streamlit-owned values with types from `streamlit.typing`. See [best-practices.md](best-practices.md).
+Annotate values with the curated public types from `streamlit.typing` (full list in [api-reference.md](api-reference.md#public-annotation-types)). See [best-practices.md](best-practices.md).
 
 ## References
 
