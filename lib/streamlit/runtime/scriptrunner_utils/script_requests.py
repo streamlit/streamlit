@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, Any, cast
 from google.protobuf.message import Message
 
 from streamlit import util
+from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
@@ -127,12 +129,10 @@ def _coalesce_widget_states(
     old_states: WidgetStates | None,
     new_states: WidgetStates | None,
 ) -> WidgetStates | None:
-    """Merge an older ``WidgetStates`` into a newer one.
+    """Merge an older WidgetStates into a newer one, returning the result.
 
-    The client clears a trigger as soon as it sends the rerun, so a later request
-    often omits it. The merge keeps active triggers from ``old_states``. The newer
-    value still wins for ordinary widgets, for a different value type, and for a
-    newer active trigger.
+    For most widgets the newer value wins. Active triggers are special: an active
+    trigger in ``old_states`` carries forward so rapid interactions aren't lost.
     """
     if not old_states and not new_states:
         return None
@@ -145,24 +145,37 @@ def _coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
+    trigger_value_types = [
+        ("trigger_value", False),
+        ("string_trigger_value", StringTriggerValueProto(data=None)),
+        ("chat_input_value", ChatInputValueProto(data=None)),
+        ("json_trigger_value", ""),
+    ]
     for old_state in old_states.widgets:
-        if not _has_active_trigger_value(old_state):
-            continue
-
-        old_trigger_type = old_state.WhichOneof("value")
-        new_state = states_by_id.get(old_state.id)
-        if new_state is None:
-            states_by_id[old_state.id] = old_state
-            continue
-
-        # A changed value type means the widget ID now belongs to a different
-        # kind of widget, so the newer state remains authoritative.
-        if new_state.WhichOneof("value") != old_trigger_type:
-            continue
-
-        # A newer active trigger replaces the older one.
-        if not _has_active_trigger_value(new_state):
-            states_by_id[old_state.id] = old_state
+        for trigger_value_type, unset_value in trigger_value_types:
+            if (
+                old_state.WhichOneof("value") == trigger_value_type
+                and getattr(old_state, trigger_value_type) != unset_value
+            ):
+                new_trigger_val = states_by_id.get(old_state.id)
+                # It should nearly always be the case that new_trigger_val
+                # is None here as trigger values are deleted from the
+                # client's WidgetStateManager as soon as a rerun_script
+                # BackMsg is sent to the server. Since it's impossible to
+                # test that the client sends us state in the expected
+                # format in a unit test, we test for this behavior in
+                # e2e_playwright/test_fragment_queue_test.py
+                if not new_trigger_val or (
+                    # Ensure the corresponding new_state is also a trigger;
+                    # otherwise, a widget that previously used a trigger but
+                    # no longer does could get a bad value.
+                    new_trigger_val.WhichOneof("value") == trigger_value_type
+                    # We only want to take the value of old_state if
+                    # new_trigger_val is unset as the old value may be
+                    # stale if a newer one was entered.
+                    and getattr(new_trigger_val, trigger_value_type) == unset_value
+                ):
+                    states_by_id[old_state.id] = old_state
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
