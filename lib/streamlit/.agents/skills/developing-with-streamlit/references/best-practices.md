@@ -14,6 +14,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 - [Data and charts](#data-and-charts)
 - [Widgets and state](#widgets-and-state)
 - [Secrets and queries](#secrets-and-queries)
+- [Type checking](#type-checking)
 
 ## Styling and copy
 
@@ -439,3 +440,17 @@ df = conn.query(
 # GOOD: Keep local secrets out of source control
 .streamlit/secrets.toml
 ```
+
+## Type checking
+
+Type-check edited Python with `ty` (recommended) or `mypy` so wrong Streamlit API use is reported while editing, before the app runs. See [environment-setup.md](environment-setup.md).
+
+```python
+# BAD: `maximum` is not a parameter
+st.slider("Count", min_value=0, maximum=10)
+
+# GOOD
+st.slider("Count", min_value=0, max_value=10)
+```
+
+When a helper needs a Streamlit-owned type, import it from `streamlit.typing`. The list is in [api-reference.md](api-reference.md#public-annotation-types).
