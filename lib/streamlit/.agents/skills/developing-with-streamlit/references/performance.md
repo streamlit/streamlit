@@ -108,11 +108,19 @@ entry count is a poor proxy for serialized cache size. Integers are bytes; strin
 use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
+# BAD: No growth bound
+@st.cache_data
+def get_user_data(user_id):
+    return fetch_user(user_id)
+
+
+# GOOD: Bound by age and number of argument combinations
 @st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
+# GOOD: Bound by serialized size
 @st.cache_data(max_size="500MB")
 def get_large_report(report_id):
     return build_report(report_id)
