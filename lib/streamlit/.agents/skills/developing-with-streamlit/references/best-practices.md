@@ -443,18 +443,14 @@ df = conn.query(
 
 ## Type checking
 
-Annotate values with the curated public types from `streamlit.typing` (full list in [api-reference.md](api-reference.md#public-annotation-types)) and narrow away `None` before use. Type-check with `ty` (recommended) or `mypy`; see [environment-setup.md](environment-setup.md).
+Type-check edited Python with `ty` (recommended) or `mypy` so wrong Streamlit API use is reported while editing, before the app runs. See [environment-setup.md](environment-setup.md).
 
 ```python
-import streamlit as st
-from streamlit.typing import UploadedFile
+# BAD: `maximum` is not a parameter
+st.slider("Count", min_value=0, maximum=10)
 
-
-def upload_label(upload: UploadedFile) -> str:
-    return f"{upload.name} ({upload.size} bytes)"
-
-
-uploaded = st.file_uploader("Upload a file")
-if uploaded is not None:
-    st.write(upload_label(uploaded))
+# GOOD
+st.slider("Count", min_value=0, max_value=10)
 ```
+
+When a helper needs a Streamlit-owned type, import it from `streamlit.typing`. The list is in [api-reference.md](api-reference.md#public-annotation-types).

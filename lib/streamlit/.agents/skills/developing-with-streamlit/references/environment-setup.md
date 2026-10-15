@@ -120,21 +120,23 @@ dev = [
 
 ## Type checking
 
-After editing app Python, type-check the changed files. Streamlit's public API is typed, so a checker catches invalid parameters and misused return values before the app runs. Use `ty` (recommended). Use `mypy` when the project already uses it, or when `ty` is not available. If the project configures a checker, use that one.
+After editing app Python, type-check the changed files. Streamlit's public API is typed, so wrong API use is reported before the app runs. Use the project's configured checker if it has one. Otherwise use `ty` (recommended), or `mypy` when `ty` is unavailable.
+
+Add a checker as a dev dependency only when the project does not already have one:
 
 ```bash
-# Recommended
 uv add --dev ty
 uv run ty check streamlit_app.py
+```
 
-# Fallback
+If `ty` is unavailable, use `mypy` instead:
+
+```bash
 uv add --dev mypy
 uv run mypy streamlit_app.py
 ```
 
-`uv run ty check` with no paths checks the project. Pass the edited files when you only want those. With a plain virtual environment, install the checker the same way as other tools (`uv pip install ty` or `uv pip install mypy`) and run `ty check` or `mypy`.
-
-Annotate values with the curated public types from `streamlit.typing` (full list in [api-reference.md](api-reference.md#public-annotation-types)). See [best-practices.md](best-practices.md).
+`uv run ty check` with no paths checks the project. Pass the edited files to check only those. With a plain virtual environment, install the checker the same way as other tools (`uv pip install ty` or `uv pip install mypy`) and run `ty check` or `mypy`.
 
 ## References
 

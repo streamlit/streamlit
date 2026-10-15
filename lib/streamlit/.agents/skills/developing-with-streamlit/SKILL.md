@@ -54,7 +54,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
 - Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
-- Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Annotate values with the curated public types from `streamlit.typing` (see `references/api-reference.md`).
+- Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one.
 
 ## Proactively Look Up API Details
 
@@ -134,7 +134,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, and type-checking Streamlit-owned values | read `references/best-practices.md` |
+| **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, and type checking | read `references/best-practices.md` |
 | **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md` first, then `references/design.md` |
@@ -219,7 +219,7 @@ For **performance optimization**, read:
 1. Apply the patterns and recommendations from the loaded reference(s)
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
-4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so type checking catches invalid parameters and misused return values before the app runs. Install and run notes are in `references/environment-setup.md`. Annotate values with the curated public types from `streamlit.typing` (see `references/api-reference.md`); an example is in `references/best-practices.md`.
+4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so wrong API use is reported before the app runs. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.
 
 ### Step 4: Check Running Apps and Offer to Run
 
