@@ -45,6 +45,7 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
+import { fromTrackValue, sliderTrackMax, toTrackValue } from "./sliderStep"
 import {
   StyledRASlider,
   StyledSlider,
@@ -228,18 +229,34 @@ function Slider({
   // Note: on keyboard interactions, React Aria fires onChange and onChangeEnd
   // synchronously in the same event, so isDragging may be true→false within
   // the same React batch.
-  const handleFinalChange = useCallback(
-    (newValue: number | number[]): void => {
-      setValueWithSource({ value: toArray(newValue), fromUser: true })
-      setIsDragging(false)
-    },
-    [setValueWithSource]
+  // React Aria cannot select `max` when it falls between steps. For a small
+  // gap (the default time slider is 1µs short of 24:00) the track ends on the
+  // next step, and that position is stored as `max`.
+  const trackMax = sliderTrackMax(element.min, element.max, element.step)
+  const commitTrackValue = useCallback(
+    (trackValue: number): number =>
+      fromTrackValue(trackValue, element.max, trackMax),
+    [element.max, trackMax]
   )
 
-  const handleChange = useCallback((newValue: number | number[]): void => {
-    setUiValue(toArray(newValue))
-    setIsDragging(true)
-  }, [])
+  const handleFinalChange = useCallback(
+    (newValue: number | number[]): void => {
+      setValueWithSource({
+        value: toArray(newValue).map(commitTrackValue),
+        fromUser: true,
+      })
+      setIsDragging(false)
+    },
+    [commitTrackValue, setValueWithSource]
+  )
+
+  const handleChange = useCallback(
+    (newValue: number | number[]): void => {
+      setUiValue(toArray(newValue).map(commitTrackValue))
+      setIsDragging(true)
+    },
+    [commitTrackValue]
+  )
 
   useLayoutEffect(() => {
     // React Aria's getThumbValueLabel always uses the Intl NumberFormatter, which
@@ -291,9 +308,11 @@ function Slider({
 
       <StyledRASlider
         minValue={element.min}
-        maxValue={element.max}
+        maxValue={trackMax}
         step={element.step}
-        value={getValueAsArray(uiValue, element)}
+        value={getValueAsArray(uiValue, element).map(value =>
+          toTrackValue(value, element.max, trackMax)
+        )}
         onChange={handleChange}
         onChangeEnd={handleFinalChange}
         isDisabled={disabled}

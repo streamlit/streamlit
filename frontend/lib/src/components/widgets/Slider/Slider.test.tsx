@@ -55,7 +55,7 @@ const getProps = (
 
 const triggerChangeEvent = async (
   element: HTMLElement,
-  key: "ArrowLeft" | "ArrowRight"
+  key: "ArrowLeft" | "ArrowRight" | "End"
 ): Promise<void> => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   act(() => {
@@ -886,5 +886,41 @@ describe("on_change='ignore' mode", () => {
         triggerRerun: false,
       }
     )
+  })
+
+  it("reaches time.max from the end of a 15-minute time slider", async () => {
+    // time.max is 1µs short of 96 steps of 15 minutes, so the last on-grid
+    // step is 23:45 unless the track end is mapped back to time.max.
+    const timeMax = 86_399_999_999
+    const props = getProps({
+      id: "time-max",
+      dataType: SliderProto.DataType.TIME,
+      format: "HH:mm",
+      min: 0,
+      max: timeMax,
+      step: 900_000_000,
+      default: [43_200_000_000],
+    })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+    render(<Slider {...props} />)
+
+    expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent("12:00")
+    await triggerChangeEvent(screen.getByRole("slider"), "End")
+
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenLastCalledWith(
+      props.element.id,
+      [timeMax],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      [85_500_000_000],
+      expect.anything()
+    )
+    expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent("23:59")
   })
 })

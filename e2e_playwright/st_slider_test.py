@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 40
+NUM_SLIDER_WIDGETS = 41
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -766,3 +766,24 @@ def test_slider_swaps_reversed_min_max(app: Page):
     slider_role.press("ArrowRight")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Reversed bounds slider value:", "6")
+
+
+def test_default_time_slider_reaches_time_max(app: Page):
+    """End on the default 15-minute time slider commits time.max, not 23:45."""
+    time_slider = get_slider(app, "Default time slider")
+    time_slider.scroll_into_view_if_needed()
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("12:00")
+    expect_prefixed_markdown(app, "Default time slider value:", "12:00:00")
+
+    time_slider.get_by_role("slider").press("End")
+    wait_for_app_run(app)
+
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("23:59")
+    expect_prefixed_markdown(
+        app, "Default time slider value:", "23:59:59.999999", exact_match=True
+    )
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(
+            has_text="Default time slider value:"
+        )
+    ).not_to_contain_text("23:45:00")
