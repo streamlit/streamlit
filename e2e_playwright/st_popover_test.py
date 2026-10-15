@@ -788,3 +788,24 @@ def test_popover_commits_text_input_when_its_tab_is_hidden(app: Page):
 
     wait_for_app_run(app)
     expect(app.get_by_text("Popover tab input value: kept value")).to_be_visible()
+
+
+def test_popover_opened_while_hidden_does_not_run_on_change(app: Page):
+    """A popover that mounts open on an inactive tab stays open.
+
+    Recording a close would deliver false on the next unrelated rerun and run
+    on_change, even though the user never saw the popover. Selecting the tab
+    shows it.
+    """
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Hidden open popover content")).not_to_be_visible()
+
+    app.get_by_role("button", name="Unrelated rerun").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Hidden open popover content")).not_to_be_visible()
+
+    app.get_by_role("tab", name="Hidden open tab").click()
+    expect(app.get_by_text("Hidden open popover content")).to_be_visible()
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()

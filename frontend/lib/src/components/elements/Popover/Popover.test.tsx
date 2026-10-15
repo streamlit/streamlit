@@ -29,21 +29,11 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
-/** One macrotask, inside `act`, so timer callbacks can update React state. */
-async function flushMacrotask(): Promise<void> {
-  await act(async () => {
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 0)
-    })
-  })
-}
-
 /**
- * Let the popover's visibility check run inside `act`.
+ * Let the popover's visibility observer run inside `act`.
  *
- * The first check is a microtask (after ancestor refs). A trigger that is
- * still hidden then waits two macrotasks. The parent effect's `setState`
- * commits between them, so the close runs only after that reveal.
+ * The observer callback is a microtask. A trigger that has never been shown
+ * is not closed, so there is no timer to flush.
  */
 async function flushPopoverVisibilityCheck(): Promise<void> {
   await act(async () => {
@@ -51,8 +41,6 @@ async function flushPopoverVisibilityCheck(): Promise<void> {
       queueMicrotask(resolve)
     })
   })
-  await flushMacrotask()
-  await flushMacrotask()
 }
 
 const createWidgetMgr = (): WidgetStateManager =>
@@ -252,6 +240,40 @@ describe("Popover container", () => {
     expect(screen.queryByTestId("stPopoverBody")).not.toBeInTheDocument()
   })
 
+  it("blurs a focused widget in a nested popover before the outer body unmounts", async () => {
+    // Nested bodies are sibling portals, so the outer body does not contain
+    // the inner input. Hiding the outer trigger still has to blur it.
+    const user = userEvent.setup()
+    let bodyMountedOnBlur: boolean | null = null
+    render(
+      <details open>
+        <div data-testid="panel">
+          <Popover {...getProps({ label: "outer" })}>
+            <Popover {...getProps({ label: "inner" })}>
+              <input
+                aria-label="inside"
+                onBlur={() => {
+                  bodyMountedOnBlur = Boolean(
+                    screen.queryByRole("textbox", { name: "inside" })
+                  )
+                }}
+              />
+            </Popover>
+          </Popover>
+        </div>
+      </details>
+    )
+    await user.click(screen.getByText("outer"))
+    await user.click(screen.getByText("inner"))
+    screen.getByRole("textbox", { name: "inside" }).focus()
+
+    screen.getByTestId("panel").setAttribute("inert", "")
+    await flushPopoverVisibilityCheck()
+
+    expect(bodyMountedOnBlur).toBe(true)
+    expect(screen.queryByTestId("stPopoverBody")).not.toBeInTheDocument()
+  })
+
   it("closes when an expander panel becomes inert", async () => {
     // A collapsed expander sets inert on its panel inside <details>.
     // checkVisibility ignores inert. Collapsing via the summary may not
@@ -335,11 +357,34 @@ describe("Popover container", () => {
     }
   })
 
+  it("closes on display:none when checkVisibility is missing", async () => {
+    // jsdom has no checkVisibility. Computed display still has to hide the
+    // body, while an empty client-rect list would hide every trigger.
+    const proto = HTMLElement.prototype as {
+      checkVisibility?: () => boolean
+    }
+    const original = proto.checkVisibility
+    delete proto.checkVisibility
+
+    try {
+      const panel = await renderOpenPopoverInPanel()
+      expect(screen.getByText("popover content")).toBeVisible()
+
+      panel.style.display = "none"
+      await flushPopoverVisibilityCheck()
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    } finally {
+      if (original) {
+        proto.checkVisibility = original
+      }
+    }
+  })
+
   describe("expander details.open applied from a ref", () => {
     // Mirrors Expander: `<details>` has no `open` attribute, and a ref sets
-    // `node.open` after the popover's layout effect. jsdom does not apply the
-    // closed-details user-agent rule, so `checkVisibility` is stubbed to
-    // emulate it.
+    // `node.open` during commit, before the popover's layout effect. jsdom
+    // does not apply the closed-details user-agent rule, so `checkVisibility`
+    // is stubbed to emulate it.
     let originalCheckVisibility: HTMLElement["checkVisibility"] | undefined
 
     function installClosedDetailsVisibility(): void {
@@ -374,8 +419,8 @@ describe("Popover container", () => {
     }
 
     /**
-     * Parent sets `details.open` from a ref, which React runs after the
-     * popover's useLayoutEffect.
+     * Parent sets `details.open` from a ref during commit, before the
+     * popover's useLayoutEffect reads visibility.
      */
     function DetailsOpenFromRef({
       expanded,
@@ -458,7 +503,9 @@ describe("Popover container", () => {
       expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
     })
 
-    it("still closes when mounted inside a collapsed expander", async () => {
+    it("withholds its body when mounted inside a collapsed expander", async () => {
+      // The user has not seen this popover. Closing it would store false and
+      // run on_change on the next unrelated rerun. Expanding shows it.
       const widgetMgr = createWidgetMgr()
       const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
       const widgetId = "popover-widget-id"
@@ -479,16 +526,32 @@ describe("Popover container", () => {
       await flushPopoverVisibilityCheck()
 
       expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
-        formId: undefined,
-        fragmentId,
-        fromUser: false,
-      })
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+
+      const details = screen.getByText("Section").closest("details")
+      details?.setAttribute("open", "")
+      screen.getByTestId("panel").removeAttribute("inert")
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.getByText("popover content")).toBeVisible()
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
     })
 
-    it("records a non-user close when the expanded expander is inside a hidden tab", async () => {
-      // The closed <details> must not hide an inactive tab. The user never
-      // saw this popover, so the close is not a user action.
+    it("withholds its body when an expanded expander is inside a hidden tab", async () => {
+      // The closed <details> must not hide an inactive tab, and the hidden
+      // tab must not record a close. Showing the tab reveals the popover.
       const widgetMgr = createWidgetMgr()
       const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
       const widgetId = "popover-widget-id"
@@ -511,16 +574,30 @@ describe("Popover container", () => {
       await flushPopoverVisibilityCheck()
 
       expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
-        formId: undefined,
-        fragmentId,
-        fromUser: false,
-      })
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+
+      document.querySelector(".is-hidden")?.classList.remove("is-hidden")
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.getByText("popover content")).toBeVisible()
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
     })
 
-    it("records a non-user close when an inactive tab is inside an expanded expander", async () => {
+    it("withholds its body when an inactive tab is inside an expanded expander", async () => {
       // The tab hides the trigger even though the expander's <details> is
-      // visible. The ref's open mutation must not record a user close.
+      // visible. Showing the tab reveals the popover without a close.
       const widgetMgr = createWidgetMgr()
       const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
       const widgetId = "popover-widget-id"
@@ -543,20 +620,27 @@ describe("Popover container", () => {
       await flushPopoverVisibilityCheck()
 
       expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
-        formId: undefined,
-        fragmentId,
-        fromUser: false,
-      })
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+
+      document.querySelector(".is-hidden")?.classList.remove("is-hidden")
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.getByText("popover content")).toBeVisible()
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
     })
 
     it("stays open when a parent effect reveals the trigger in the same update", async () => {
-      // Tabs and Expander apply a backend selection in useEffect. React then
-      // commits that setState on a later macrotask. The reveal timer below is
-      // queued from a microtask that runs after the popover's, so it sits
-      // behind the popover's first timer and ahead of the close, matching
-      // that order. `act()` would flush a direct setState too early to catch
-      // a close that races the commit.
+      // Tabs and Expander apply a backend selection in useEffect, which can
+      // commit after this popover's layout effect. The body stays withheld
+      // until that class change, and the open state is not written closed.
       function RevealFromEffect({
         children,
       }: {
@@ -564,20 +648,7 @@ describe("Popover container", () => {
       }): ReactElement {
         const [shown, setShown] = useState(false)
         useEffect(() => {
-          let cancelled = false
-          let revealTimer: ReturnType<typeof setTimeout> | undefined
-          queueMicrotask(() => {
-            if (cancelled) return
-            revealTimer = setTimeout(() => {
-              setShown(true)
-            }, 0)
-          })
-          return () => {
-            cancelled = true
-            if (revealTimer !== undefined) {
-              clearTimeout(revealTimer)
-            }
-          }
+          setShown(true)
         }, [])
         return (
           <div className={shown ? undefined : "is-hidden"} data-testid="panel">
@@ -938,9 +1009,10 @@ describe("Dynamic popover (widget mode)", () => {
     })
   })
 
-  it("does not record a user close when it mounts already hidden", async () => {
+  it("does not record a close when it mounts already hidden", async () => {
     // Restored open inside a collapsed expander. The user never saw it, so
-    // the close must not use fromUser and must not start a rerun.
+    // writing false would run on_change on the next unrelated rerun.
+    // Expanding the panel shows the popover.
     const widgetMgr = createWidgetMgr()
     const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
     const widgetId = "popover-widget-id"
@@ -949,7 +1021,7 @@ describe("Dynamic popover (widget mode)", () => {
     render(
       <details open>
         {/* React 18 drops an unknown boolean prop, so set inert as a string. */}
-        <div {...{ inert: "" }}>
+        <div data-testid="panel" {...{ inert: "" }}>
           <Popover
             {...getProps(
               { id: widgetId, open: true },
@@ -964,16 +1036,17 @@ describe("Dynamic popover (widget mode)", () => {
     await flushPopoverVisibilityCheck()
 
     expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-    expect(setBoolValueSpy).not.toHaveBeenCalledWith(
-      widgetId,
-      false,
-      expect.objectContaining({ fromUser: true })
+    expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
     )
-    expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
-      formId: undefined,
-      fragmentId,
-      fromUser: false,
-    })
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
+
+    screen.getByTestId("panel").removeAttribute("inert")
+    await flushPopoverVisibilityCheck()
+
+    expect(screen.getByText("popover content")).toBeVisible()
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
   it("does NOT call widgetMgr.setBoolValue for non-widget popovers", async () => {

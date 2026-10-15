@@ -311,3 +311,28 @@ st.write(f"Popover tab input value: {tab_input}")
 with st.expander("Expander with popover", expanded=True):
     with st.popover("Popover in expander"):
         st.write("Popover in expander content")
+
+# A popover that starts open on an inactive tab. The user has not seen it, so
+# an unrelated rerun must not run on_change. Selecting the tab shows it.
+if "hidden_open_cb" not in st.session_state:
+    st.session_state.hidden_open_cb = 0
+    st.session_state.hidden_open_pop = True
+
+
+def hidden_open_callback() -> None:
+    st.session_state.hidden_open_cb += 1
+
+
+shown_tab, hidden_open_tab = st.tabs(["Shown tab", "Hidden open tab"])
+with shown_tab:
+    st.button("Unrelated rerun", key="unrelated_rerun")
+with hidden_open_tab:
+    hidden_pop = st.popover(
+        "Popover open while hidden",
+        key="hidden_open_pop",
+        on_change=hidden_open_callback,
+    )
+    if hidden_pop.open:
+        st.write("Hidden open popover content")
+
+st.write(f"Hidden popover callback count: {st.session_state.hidden_open_cb}")
