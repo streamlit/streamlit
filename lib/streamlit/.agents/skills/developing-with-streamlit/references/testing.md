@@ -27,7 +27,7 @@ at.selectbox[0].select("Active").run()
 assert not at.exception
 ```
 
-Reach for Playwright when you must verify the actual rendered DOM, CSS, or custom-component JavaScript, or when the interaction only exists in the browser (chart and dataframe selections, media playback, and buttons inside `st.dialog`). For "does my app compute and display the right thing," `AppTest` is the right tool.
+Reach for Playwright when you must verify the actual rendered DOM, CSS, or custom-component JavaScript, or when the interaction only exists in the browser (see *What AppTest can and cannot do*). For "does my app compute and display the right thing," `AppTest` is the right tool.
 
 **Test pure logic with plain pytest — not AppTest.** If a function doesn't touch `st.*` (data transforms, parsing, calculations), factor it out and unit-test it directly with pytest. Reserve `AppTest` for the app's *UI* behavior: widget interaction, what renders, session state. Don't wrap pure logic in a Streamlit script just to exercise it.
 
@@ -57,17 +57,17 @@ at = AppTest.from_function(script).run()
 
 The script must be runnable on its own, so it must include its own imports. `.run()` accepts an optional `timeout` (seconds); the default is 3. If a script with heavy imports times out on a cold CI runner, raise it with `.run(timeout=10)` or `AppTest.from_file("app.py", default_timeout=10)`.
 
-`from_function` copies that function's source into a new module. Names from the test file, including closures, are not defined there. The rerun records a `NameError` on `at.exception`. Pass data through `args` or `kwargs`, or use `from_file` / `from_string`:
+`from_function` copies that function's source into a new module. That module does not define names from the test file, including closures. AppTest stores the resulting `NameError` on `at.exception`. Pass data through `args` or `kwargs`, or use `from_file` / `from_string`:
 
 ```python
-def script(flag):
+def script(name):
     import streamlit as st
 
-    st.write(str(flag["v"]))
+    st.write(name)
 
 
-at = AppTest.from_function(script, args=({"v": 7},)).run()
-assert at.markdown[0].value == "7"
+at = AppTest.from_function(script, args=("Ada",)).run()
+assert at.markdown[0].value == "Ada"
 ```
 
 ### Multipage apps
@@ -117,7 +117,7 @@ at.get_by_key("filters")  # unique key, any type
 
 `st.tabs(..., key=)` stores that key on the tab container, not on the panels in `at.tabs`. Use `at.get_by_key("sections")`. `at.tabs("sections")` raises `KeyError`.
 
-`at.get()` accepts the public command name. `at.get("datetime_input")`, `at.get("pills")`, `at.get("segmented_control")`, `at.get("columns")`, and `at.get("help")` match the same elements as `at.datetime_input`, `at.pills`, `at.segmented_control`, `at.columns`, and `at.help`. The stored node type can differ (`date_time_input`, `help_info`); those names still work with `get()`.
+`at.get()` accepts public command names (`datetime_input`, `help`, `pills`, `segmented_control`, `columns`) as well as stored node types (`date_time_input`, `help_info`).
 
 Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
 
@@ -163,7 +163,7 @@ assert at.link_button[0].value == "Docs"  # the label; .url is the target
 assert at.page_link[0].value == "Example"  # the label, or the inferred page title
 ```
 
-`at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`. The node type is `help_info`; `at.help` and `get("help")` both find these elements.
+`at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`.
 
 ### Assert the app didn't crash
 
@@ -176,7 +176,7 @@ assert not at.exception
 
 ### Reading and seeding session state
 
-`at.session_state` matches `st.session_state` for tests: item and attribute access, `.get`, `keys`, `items`, `values`, `to_dict`, and iteration. Seed it before a run, or read it after:
+`at.session_state` supports item and attribute access, `.get`, `keys`, `items`, `values`, `to_dict`, and iteration. It does not implement `setdefault`, `update`, `pop`, or `clear`. Seed it before a run, or read it after:
 
 ```python
 at.session_state["user"] = "alice"  # seed before running
@@ -258,16 +258,16 @@ def test_status_filter():
 Elements fall into three groups:
 
 - **Interactive.** Widget collections such as `at.button`, `at.text_input`, and `at.selectbox`, plus the other widgets that expose `set_value`, `select`, or `click`. Set the value, then `.run()`.
-- **Inspectable.** Read what the script rendered. `.set_value()` and `.click()` raise `AppTestError`. This includes `at.progress`, `at.html`, `at.help`, `at.space`, `at.link_button`, `at.page_link`, and `at.data_editor`.
-- **Browser-only.** Use Playwright. This covers rendered DOM and CSS, custom-component JavaScript, scroll and resize, media playback, selections on `st.dataframe` and charts (there is no setter for click-to-select rows or Altair/Plotly selection events), and buttons inside `st.dialog`.
+- **Inspectable.** The read-only lists under *Asserting on results*, plus `at.data_editor` (edit it through `at.session_state`). `.set_value()` and `.click()` raise `AppTestError`.
+- **Browser-only.** Use Playwright. This covers rendered DOM and CSS, custom-component JavaScript, scroll and resize, media playback, selections on `st.dataframe` and charts (there is no setter for click-to-select rows or Altair/Plotly selection events), and dialog-body code such as `if st.button(...):`.
 
 Inspect `st.data_editor` with `at.data_editor`. Those elements also stay on `at.dataframe`. `.value` is the input table. A keyed editor's `at.session_state` value is the edit state (`edited_rows`, `added_rows`, `deleted_rows`). Assigning that state before `.run()` changes the table the script receives; `.value` stays the input table.
 
 `st.balloons`, `st.snow`, `st.empty`, `st.skeleton`, `st.audio`, and `st.video` have no `at.<command>` list. `.run()` still succeeds. Inspect them with `at.get("audio")` (and the matching command name for the others). `.value` is `None`; `st.audio` and `st.video` expose the media URL on `.url`. `.set_value()` and `.click()` raise `AppTestError`. AppTest does not play media. For a keyed widget AppTest does not model, assign through `at.session_state` or use Playwright.
 
-A button inside `st.dialog` appears in the tree after the opener is clicked and `.run()`. Clicking that inner button and calling `.run()` reruns the whole script. The opener is not clicked on that run, so the dialog does not open again and the inner action does not take effect. Cover dialog workflows with Playwright.
+A button inside `st.dialog` appears in the tree after the opener is clicked and `.run()`. `.click().run()` reruns the whole script, not the dialog fragment. The opener is not clicked, so the dialog function does not run again and body code such as `if st.button(...):` does not take effect. An `on_click` callback still runs before that rerun, and its session-state updates stick. Use Playwright for the dialog-body workflow.
 
-`st.popover` contents are already on the tree, with no open click. An inner widget's `.click().run()` or `.set_value().run()` updates the app the same way as a widget in the main script.
+Eager `st.popover` contents (the default) are already on the tree, with no open click. An inner widget's `.click().run()` or `.set_value().run()` updates the app the same way as a widget in the main script. Content guarded by `.open` is absent while closed. When the popover has a key, set `at.session_state[key] = True` before `.run()`. Otherwise use Playwright.
 
 ## References
 
