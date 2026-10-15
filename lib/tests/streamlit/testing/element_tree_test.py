@@ -501,8 +501,8 @@ def test_help_value_keeps_readable_reprs() -> None:
     """
 
     def script() -> None:
-        import datetime
         from dataclasses import dataclass
+        from datetime import date, datetime
         from decimal import Decimal
 
         import numpy as np
@@ -559,8 +559,8 @@ def test_help_value_keeps_readable_reprs() -> None:
         coord = Coordinate(1, 2)
         retry = RetryBox()
         named = NamedPoint(1, 2)
-        moment = datetime.datetime(2020, 1, 2, 3, 4)
-        day = datetime.date(2024, 1, 1)
+        moment = datetime(2020, 1, 2, 3, 4)
+        day = date(2024, 1, 1)
         pair = (1, 2)
         span = range(10)
         arr = np.arange(1)
@@ -729,15 +729,13 @@ def test_dataframe_value_keeps_explicit_lazy_data_complete():
 
 def test_date_input():
     def script():
-        import datetime
+        from datetime import date, datetime
 
         import streamlit as st
 
-        st.date_input("date", value=datetime.date(2023, 4, 17))
-        st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
-        st.date_input(
-            "range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1))
-        )
+        st.date_input("date", value=date(2023, 4, 17))
+        st.date_input("datetime", value=datetime(2023, 4, 17, 11))
+        st.date_input("range", value=(date(2020, 1, 1), date(2030, 1, 1)))
 
     at = AppTest.from_function(script).run()
     assert not at.exception
@@ -1614,11 +1612,11 @@ def test_time_input():
     script = AppTest.from_string(
         """
         import streamlit as st
-        import datetime
+        from datetime import datetime, time, timedelta
 
-        st.time_input("time", value=datetime.time(8, 30))
-        st.time_input("datetime", value=datetime.datetime(2000,1,1, hour=17), step=3600)
-        st.time_input("timedelta step", value=datetime.time(2), step=datetime.timedelta(minutes=1))
+        st.time_input("time", value=time(8, 30))
+        st.time_input("datetime", value=datetime(2000,1,1, hour=17), step=3600)
+        st.time_input("timedelta step", value=time(2), step=timedelta(minutes=1))
         """,
     )
     sr = script.run()

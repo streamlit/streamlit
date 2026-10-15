@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import base64
-import datetime
 import random
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -289,9 +289,9 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
-                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
-                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime(2023, 1, 3, 3, 0, 0, 345000),
                 None,
             ],
             "col_1": [
@@ -301,9 +301,9 @@ st.dataframe(
                 None,
             ],
             "col_2": [
-                datetime.date(2021, 1, 1),
-                datetime.date(2022, 1, 2),
-                datetime.date(2023, 1, 3),
+                date(2021, 1, 1),
+                date(2022, 1, 2),
+                date(2023, 1, 3),
                 None,
             ],
         }
@@ -315,9 +315,9 @@ st.dataframe(
             help="This is a datetime column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
-            default=datetime.datetime(2021, 1, 1, 1, 0, 0),  # Should be ignored
-            min_value=datetime.datetime(2021, 1, 1, 1, 0, 0),  # Should be ignored
-            max_value=datetime.datetime(2022, 1, 1, 1, 0, 0),  # Should be ignored
+            default=datetime(2021, 1, 1, 1, 0, 0),  # Should be ignored
+            min_value=datetime(2021, 1, 1, 1, 0, 0),  # Should be ignored
+            max_value=datetime(2022, 1, 1, 1, 0, 0),  # Should be ignored
             step=0.01,
             format="YYYY-MM-DD HH:mm:ss.SSS",
         ),
@@ -336,9 +336,9 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.date(2021, 1, 1),
-                datetime.date(2022, 1, 2),
-                datetime.date(2023, 1, 3),
+                date(2021, 1, 1),
+                date(2022, 1, 2),
+                date(2023, 1, 3),
                 None,
             ],
             "col_1": [
@@ -348,9 +348,9 @@ st.dataframe(
                 None,
             ],
             "col_2": [
-                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
-                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
-                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime(2023, 1, 3, 3, 0, 0, 345000),
                 None,
             ],
         }
@@ -362,9 +362,9 @@ st.dataframe(
             help="This is a date column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
-            default=datetime.date(2021, 1, 1),  # Should be ignored
-            min_value=datetime.date(2021, 1, 1),  # Should be ignored
-            max_value=datetime.date(2022, 1, 1),  # Should be ignored
+            default=date(2021, 1, 1),  # Should be ignored
+            min_value=date(2021, 1, 1),  # Should be ignored
+            max_value=date(2022, 1, 1),  # Should be ignored
             step=2,  # Should be ignored
         ),
         "col_1": st.column_config.DateColumn(),
@@ -380,9 +380,9 @@ st.dataframe(
     pd.DataFrame(
         {
             "col_0": [
-                datetime.time(1, 2, 0, 123000),
-                datetime.time(2, 3, 0, 234000),
-                datetime.time(3, 4, 0, 345000),
+                time(1, 2, 0, 123000),
+                time(2, 3, 0, 234000),
+                time(3, 4, 0, 345000),
                 None,
             ],
             "col_1": [
@@ -392,9 +392,9 @@ st.dataframe(
                 None,
             ],
             "col_2": [
-                datetime.datetime(2021, 1, 1, 1, 0, 0, 123000),
-                datetime.datetime(2022, 1, 2, 2, 0, 0, 234000),
-                datetime.datetime(2023, 1, 3, 3, 0, 0, 345000),
+                datetime(2021, 1, 1, 1, 0, 0, 123000),
+                datetime(2022, 1, 2, 2, 0, 0, 234000),
+                datetime(2023, 1, 3, 3, 0, 0, 345000),
                 None,
             ],
         }
@@ -406,10 +406,10 @@ st.dataframe(
             help="This is a time column",
             required=True,  # Should be ignored
             disabled=False,  # Should be ignored
-            default=datetime.time(1, 2, 0),  # Should be ignored
-            min_value=datetime.time(1, 2, 0),  # Should be ignored
-            max_value=datetime.time(1, 3, 0),  # Should be ignored
-            step=datetime.timedelta(milliseconds=1),
+            default=time(1, 2, 0),  # Should be ignored
+            min_value=time(1, 2, 0),  # Should be ignored
+            max_value=time(1, 3, 0),  # Should be ignored
+            step=timedelta(milliseconds=1),
         ),
         "col_1": st.column_config.TimeColumn(
             format="HH:mm",
@@ -795,39 +795,39 @@ st.dataframe(
     pd.DataFrame(
         {
             "default": [
-                datetime.datetime(2022, 4, 6, 9, 30, 0),
-                datetime.datetime(2024, 1, 1, 15, 45, 30),
-                datetime.datetime(2019, 8, 9, 12, 0, 0),
+                datetime(2022, 4, 6, 9, 30, 0),
+                datetime(2024, 1, 1, 15, 45, 30),
+                datetime(2019, 8, 9, 12, 0, 0),
             ],
             "localized": [
-                datetime.datetime(2022, 4, 6, 9, 30, 0),
-                datetime.datetime(2024, 1, 1, 15, 45, 30),
-                datetime.datetime(2019, 8, 9, 12, 0, 0),
+                datetime(2022, 4, 6, 9, 30, 0),
+                datetime(2024, 1, 1, 15, 45, 30),
+                datetime(2019, 8, 9, 12, 0, 0),
             ],
             "calendar": [
-                datetime.datetime(2022, 4, 6, 9, 30, 0),
-                datetime.datetime(2024, 1, 1, 15, 45, 30),
-                datetime.datetime(2019, 8, 9, 12, 0, 0),
+                datetime(2022, 4, 6, 9, 30, 0),
+                datetime(2024, 1, 1, 15, 45, 30),
+                datetime(2019, 8, 9, 12, 0, 0),
             ],
             "iso8601": [
-                datetime.datetime(2022, 4, 6, 9, 30, 0),
-                datetime.datetime(2024, 1, 1, 15, 45, 30),
-                datetime.datetime(2019, 8, 9, 12, 0, 0),
+                datetime(2022, 4, 6, 9, 30, 0),
+                datetime(2024, 1, 1, 15, 45, 30),
+                datetime(2019, 8, 9, 12, 0, 0),
             ],
             "localized date": [
-                datetime.date(2022, 4, 6),
-                datetime.date(2024, 1, 1),
-                datetime.date(2019, 8, 9),
+                date(2022, 4, 6),
+                date(2024, 1, 1),
+                date(2019, 8, 9),
             ],
             "localized time": [
-                datetime.time(9, 30, 0),
-                datetime.time(15, 45, 30),
-                datetime.time(12, 0, 0),
+                time(9, 30, 0),
+                time(15, 45, 30),
+                time(12, 0, 0),
             ],
             "custom format": [
-                datetime.datetime(2022, 4, 6, 9, 30, 0),
-                datetime.datetime(2024, 1, 1, 15, 45, 30),
-                datetime.datetime(2019, 8, 9, 12, 0, 0),
+                datetime(2022, 4, 6, 9, 30, 0),
+                datetime(2024, 1, 1, 15, 45, 30),
+                datetime(2019, 8, 9, 12, 0, 0),
             ],
         }
     ),
@@ -907,10 +907,10 @@ st.dataframe(
             "Percent": [0.5, 0.6, 0.7, 0.8],
             "Salary": [50000, 54000, 58000, 62000],
             "appointment": [
-                datetime.datetime(2024, 2, 5, 12, 30),
-                datetime.datetime(2023, 11, 10, 18, 0),
-                datetime.datetime(2024, 3, 11, 20, 10),
-                datetime.datetime(2023, 9, 12, 3, 0),
+                datetime(2024, 2, 5, 12, 30),
+                datetime(2023, 11, 10, 18, 0),
+                datetime(2024, 3, 11, 20, 10),
+                datetime(2023, 9, 12, 3, 0),
             ],
         }
     ),
@@ -920,8 +920,8 @@ st.dataframe(
         "Salary": st.column_config.NumberColumn("Salary", format="localized"),
         "appointment": st.column_config.DatetimeColumn(
             "Appointment",
-            min_value=datetime.datetime(2023, 6, 1),
-            max_value=datetime.datetime(2025, 1, 1),
+            min_value=datetime(2023, 6, 1),
+            max_value=datetime(2025, 1, 1),
             format="localized",
             step=60,
         ),

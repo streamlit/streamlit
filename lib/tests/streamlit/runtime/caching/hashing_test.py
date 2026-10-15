@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import datetime
 import functools
 import hashlib
 import os
@@ -27,6 +26,7 @@ import types
 import unittest
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum, auto
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, cast
@@ -207,25 +207,23 @@ class HashTest(unittest.TestCase):
         assert get_hash(uuid3) != get_hash(uuid4)
 
     def test_datetime_naive(self):
-        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
-        naive_datetime1_copy = datetime.datetime(2007, 12, 23, 15, 45, 55)
-        naive_datetime3 = datetime.datetime(2011, 12, 21, 15, 45, 55)
+        naive_datetime1 = datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1_copy = datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime3 = datetime(2011, 12, 21, 15, 45, 55)
 
         assert get_hash(naive_datetime1) == get_hash(naive_datetime1_copy)
         assert id(naive_datetime1) != id(naive_datetime1_copy)
         assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
-        tz_info = datetime.UTC
-        aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
-        aware_datetime1_copy = datetime.datetime(
-            2007, 12, 23, 15, 45, 55, tzinfo=tz_info
-        )
-        aware_datetime2 = datetime.datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
+        tz_info = UTC
+        aware_datetime1 = datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime1_copy = datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime2 = datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
 
         # naive datetime1 is the same datetime that aware_datetime,
         # but without timezone info. They should have different hashes.
-        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1 = datetime(2007, 12, 23, 15, 45, 55)
 
         assert get_hash(aware_datetime1) == get_hash(aware_datetime1_copy)
         assert id(aware_datetime1) != id(aware_datetime1_copy)
