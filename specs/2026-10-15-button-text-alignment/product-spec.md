@@ -57,8 +57,9 @@ lines), users can't change the alignment.
 2. **List rows.** Full-width buttons that act as selectable list items (chat history,
    saved queries, files), where long labels should start at the left edge and wrap or
    truncate there.
-3. **Previous / next navigation.** Two stretched buttons side by side: "← Back"
-   left-aligned and "Next →" right-aligned, like the pager at the bottom of a docs page.
+3. **Previous / next navigation.** Two stretched buttons or page links side by side:
+   "← Back" left-aligned and "Next →" right-aligned, like the pager at the bottom of a
+   docs page.
 
 ## Proposal
 
@@ -259,11 +260,10 @@ so it would map to `horizontal_alignment`, not `text_alignment`.
 - **`"right"` has the weakest use case** (the previous/next pager). It stays because
   users who know `text_alignment` from text elements expect the full left, center, and
   right set, and supporting it adds almost no cost.
-- **Explicit per-command defaults that keep today's look, not `None` or auto.** The
-  default is `"center"` on buttons and triggers and `"left"` on `st.page_link`. An
-  explicit default documents today's behavior, and layout can't reliably infer the
-  author's intent (see [Alternatives considered](#alternatives-considered)). Text
-  elements also use an explicit default.
+- **Explicit per-command defaults, not `None` or auto.** The defaults in [Scope](#scope)
+  keep each command's current look and document today's behavior. Layout can't reliably
+  infer the author's intent (see [Alternatives considered](#alternatives-considered)),
+  and text elements also use an explicit default.
 - **`"left"` / `"right"`, not `"start"` / `"end"`**, to match the existing
   `text_alignment` values.
 
@@ -271,16 +271,18 @@ so it would map to `horizontal_alignment`, not `text_alignment`.
 
 - **Content moves as one group.** The icon, label, keyboard shortcut, and (for
   `st.popover` and `st.menu_button`) the chevron stay together and align as a unit.
-  `icon_position` still decides which side of the label the icon is on. Button padding
-  is unchanged, so content aligns to the inner padding edge.
+  `icon_position` still decides which side of the label the icon is on. `st.popover` and
+  `st.menu_button` don't have it and always show the icon on the left. Button padding is
+  unchanged, so content aligns to the inner padding edge.
 - **The chevron stays next to the label.** `"left"` doesn't pin the `st.popover` /
   `st.menu_button` chevron to the far edge. That would make the trigger look like an
   `st.selectbox` and mix two alignments under one value.
 - **The effect needs spare horizontal space.** The alignment is visible with
   `width="stretch"`, a pixel width, or a label that wraps onto multiple lines, where each
   line follows the alignment. With the default `width="content"` and a single-line label,
-  nothing changes visually. Like text elements, Streamlit doesn't warn in this case, and
-  the docstring carries the same note as the text elements' `text_alignment`.
+  nothing changes visually (except for page links in the sidebar, see below). Like text
+  elements, Streamlit doesn't warn in this case, and the docstring carries the same note
+  as the text elements' `text_alignment`.
 - **Truncated labels.** With `wrap=False`, a label that is too long is truncated with an
   ellipsis and fills the available width, so alignment has no visible effect. A label
   that fits aligns normally.
@@ -293,7 +295,9 @@ so it would map to `horizontal_alignment`, not `text_alignment`.
 - **`st.page_link` moves only its content.** Its icon and label move together. The hover
   and current-page highlights already span the link's full width and are unchanged.
   Page links keep their labels on one line, so `"center"` and `"right"` only show a
-  difference with `width="stretch"` or a pixel width.
+  difference when the link is wider than its content. Sidebar page links always stretch,
+  whatever `width` is set to, so the alignment is visible there by default. In the main
+  area, it needs `width="stretch"` or a pixel width.
 - **Independent of container alignment.** `st.container(horizontal_alignment=...)`
   positions the button, and `text_alignment` aligns the content inside it. Both can be
   combined.
@@ -372,12 +376,11 @@ forward.button(
 
 ### Implementation notes
 
-- **Protobuf.** Add a field to `Button`, `DownloadButton`, `LinkButton`, `MenuButton`,
-  `PageLink`, and `Block.Popover`, reusing the existing `TextAlignmentConfig` message. The
-  element-level `Element.text_alignment_config` already exists, but it is not enough
-  here. Blocks don't have it, so `st.popover` needs its own field either way. It also
-  only sets CSS `text-align` on the element wrapper, which doesn't reach the button's
-  inner flex layout.
+- **Protobuf.** Add a `TextAlignmentConfig` field to `Button`, `DownloadButton`,
+  `LinkButton`, `MenuButton`, `PageLink`, and `Block.Popover`. The existing
+  `Element.text_alignment_config` only sets CSS `text-align` on the element wrapper,
+  which doesn't reach the button's inner flex layout, and blocks such as `st.popover`
+  don't have it. A field on each message gives all seven commands the same path.
 - **Frontend.** Map the value to `justify-content` (for the single-row group) and
   `text-align` (for wrapped lines) where each element centers its content today. For
   regular buttons, that's the full-width shared label row. For popover and menu-button
@@ -393,9 +396,10 @@ forward.button(
   a keyed stateful `st.popover`. Expose `text_alignment` on the AppTest `Button`,
   `DownloadButton`, `LinkButton`, `MenuButton`, and `PageLink` nodes.
   `st.form_submit_button` uses the `Button` node, and `st.popover` has no typed node.
-  Add E2E snapshots for each value with a stretched button, a wrapped label,
-  `icon_position="right"`, a keyboard shortcut, a popover or menu-button chevron, and a
-  stretched page link.
+  Add frontend unit tests that an unset field keeps each element's current alignment.
+  Add E2E snapshots for each value with a stretched button, a wrapped label, a truncated
+  `wrap=False` label, `icon_position="right"`, a keyboard shortcut, a popover or
+  menu-button chevron, and a stretched page link.
 
 ## Alternatives considered
 
@@ -475,4 +479,4 @@ support a narrow automatic rule that is very unlikely to pick wrongly.
 | No new dependencies | ✅ |
 | Metrics collected | ✅ Covered by the existing `gather_metrics` tracking on each command, which records that the keyword was passed. No dedicated tracking of the value. |
 | Any security/legal impact? | ✅ None. |
-| Any docs changes needed? | ✅ Docstrings for all seven commands, with the same width note as the text elements' `text_alignment`. Add one line to the `Text alignment` section of the embedded skill's `references/design.md` noting that button-like elements also accept `text_alignment` (default `"center"`, or `"left"` for `st.page_link`). |
+| Any docs changes needed? | ✅ Docstrings for all seven commands, with the same width note as the text elements' `text_alignment`. On `st.page_link`, the note also says that sidebar links always stretch. Add one line to the `Text alignment` section of the embedded skill's `references/design.md` noting that button-like elements also accept `text_alignment` (default `"center"`, or `"left"` for `st.page_link`). Also fix the note below that section, which wrongly says container `horizontal_alignment` sets the `text_alignment` of child elements. |
