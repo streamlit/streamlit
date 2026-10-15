@@ -29,12 +29,22 @@ const tooltipFadeIn = keyframes`
 // Pin the overlay to the viewport origin so React Aria's inline left/top
 // values have no visual effect. Floating UI positions via transform: translate()
 // applied through the style prop, overriding RAC's useOverlayPosition.
+//
+// React Aria also hides the tooltip (opacity, clip, clip-path, mask-image)
+// until useOverlayPosition reports a placement. The trigger ref passed to RAC
+// is always null so Floating UI owns positioning, which means that placement
+// never arrives and the hide styles would otherwise stick for the tooltip's
+// whole lifetime.
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values -- !important overrides React Aria's inline styles */
 export const StyledTooltip = styled(RATooltip)<{ id?: string }>(
   ({ theme }) => ({
     position: "fixed !important" as "fixed",
     left: "0 !important",
     top: "0 !important",
+    opacity: "1 !important" as "1",
+    clip: "auto !important" as "auto",
+    clipPath: "none !important" as "none",
+    maskImage: "none !important" as "none",
     width: "max-content",
     zIndex: getOverlayZIndex(theme),
     pointerEvents: "none",

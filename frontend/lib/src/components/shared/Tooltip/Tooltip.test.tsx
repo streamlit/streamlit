@@ -101,6 +101,7 @@ describe("Tooltip element", () => {
 
     const tooltipContent = screen.getByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("Tooltip content text.")
+    expect(tooltipContent).toBeVisible()
   })
 
   it("renders its children", () => {

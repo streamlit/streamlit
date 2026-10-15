@@ -25,6 +25,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
 } from "react"
@@ -233,7 +234,9 @@ function Tooltip({
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
   // Always-null ref passed to RAC's TooltipContext so its internal
-  // useOverlayPosition has no target and won't fight Floating UI.
+  // useOverlayPosition has no target and won't fight Floating UI. RAC hides
+  // the tooltip until that placement exists; StyledTooltip overrides those
+  // hide styles because Floating UI positions the overlay instead.
   const nullTriggerRef = useRef<Element | null>(null)
   const raPlacement = REACT_ARIA_PLACEMENT[placement]
   const tooltipId = useId()
@@ -267,6 +270,29 @@ function Tooltip({
       offsetPx: 10,
       extraMiddleware: HIDE_MIDDLEWARE,
     })
+  const tooltipDomRef = useRef<HTMLElement | null>(null)
+  const setTooltipRef = useCallback(
+    (node: HTMLElement | null): void => {
+      tooltipDomRef.current = node
+      setFloating(node)
+    },
+    [setFloating]
+  )
+
+  // React Aria hides the tooltip with inline styles until useOverlayPosition
+  // reports a placement. That placement never arrives because the trigger ref
+  // passed to RAC is null, so clear the hide styles after RAC applies them.
+  // Layout effects run child-then-parent, which is after RAC's enter animation.
+  useLayoutEffect(() => {
+    const node = tooltipDomRef.current
+    if (!state.isOpen || !node) {
+      return
+    }
+    node.style.removeProperty("opacity")
+    node.style.removeProperty("clip")
+    node.style.removeProperty("clip-path")
+    node.style.removeProperty("mask-image")
+  }, [state.isOpen])
 
   // Close tooltip when trigger scrolls out of view (hide middleware detects this).
   // Guard against zero-size rects (e.g. JSDOM) where referenceHidden is always
@@ -354,7 +380,7 @@ function Tooltip({
             </TriggerArea>
             {!isDisabled ? (
               <StyledTooltip
-                ref={setFloating}
+                ref={setTooltipRef}
                 id={tooltipId}
                 placement={raPlacement}
                 style={floatingStyles}

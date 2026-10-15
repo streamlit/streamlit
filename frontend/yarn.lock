@@ -3630,8 +3630,8 @@ __metadata:
     protobufjs: "npm:^8.8.0"
     query-string: "npm:^9.5.1"
     re-resizable: "npm:^6.11.2"
-    react-aria: "npm:^3.53.0"
-    react-aria-components: "npm:^1.22.0"
+    react-aria: "npm:^3.53.1"
+    react-aria-components: "npm:^1.22.1"
     react-color: "npm:^2.18.1"
     react-dropzone: "npm:^20.1.2"
     react-feather: "npm:^2.0.10"
@@ -12903,28 +12903,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-aria-components@npm:^1.22.0":
-  version: 1.22.0
-  resolution: "react-aria-components@npm:1.22.0"
+"react-aria-components@npm:^1.22.1":
+  version: 1.22.1
+  resolution: "react-aria-components@npm:1.22.1"
   dependencies:
     "@internationalized/date": "npm:^3.12.4"
     "@internationalized/string": "npm:^3.2.10"
     "@react-types/shared": "npm:^3.37.0"
     "@swc/helpers": "npm:^0.5.0"
     client-only: "npm:^0.0.1"
-    react-aria: "npm:3.53.0"
+    react-aria: "npm:3.53.1"
     react-stately: "npm:3.51.0"
     use-sync-external-store: "npm:^1.6.0"
   peerDependencies:
     react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
     react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
-  checksum: 10c0/ca22aaea9947424e7840924b33e3ad324890290ca62faa125c445129cbae1e9cd3d0ba549b0d88ca0bb949a2b6a5bc17449b1b8bfc3ca2d7612a257885ee4536
+  checksum: 10c0/41df0f9c2c210ff5cc1314c2a86290ec21c467819c40cd32150a4f1f7356eeae4ff73d2bf2a490e16b40ccdbbbb8b54eb708a4f3a2d88f7b5532abf2e8ede381
   languageName: node
   linkType: hard
 
-"react-aria@npm:3.53.0, react-aria@npm:^3.53.0":
-  version: 3.53.0
-  resolution: "react-aria@npm:3.53.0"
+"react-aria@npm:3.53.1, react-aria@npm:^3.53.1":
+  version: 3.53.1
+  resolution: "react-aria@npm:3.53.1"
   dependencies:
     "@internationalized/date": "npm:^3.12.4"
     "@internationalized/number": "npm:^3.6.9"
@@ -12938,7 +12938,7 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
     react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
-  checksum: 10c0/9998373b5b39169f42d3517e16ac56f99de8de2e1ca3891222b5537c8cc88a6f45da163bbaaacca723b6600f1916fb43d7e0d4284cec888e9b0dc902c471637e
+  checksum: 10c0/89b6cf252bdddfa06738ce8a6a84789a1a2310daf79c9f30d21112341de5778ab8afb23cac5db8dad9eadc0297bb90dbb447c4895d930a6f1ceec155e34cce05
   languageName: node
   linkType: hard
 
@@ -14086,7 +14086,7 @@ __metadata:
     oxfmt: "npm:^0.72.0"
     oxlint: "npm:^1.87.0"
     react: "npm:^18.2.0"
-    react-aria: "npm:^3.53.0"
+    react-aria: "npm:^3.53.1"
     react-dom: "npm:^18.2.0"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.71.1"
