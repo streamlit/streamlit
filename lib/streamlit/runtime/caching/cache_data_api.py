@@ -665,8 +665,8 @@ class CacheDataAPI:
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
-        If either runs while a synchronous call is computing, Streamlit returns
-        that result without caching it.
+        If either runs while a call is computing, Streamlit returns that result
+        without caching it. This applies to synchronous and awaited coroutine calls.
 
         To limit the combined pickled size of all in-memory ``st.cache_data``
         entries, configure ``server.maxCachedDataSize`` with a binary-unit
