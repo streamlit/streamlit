@@ -403,12 +403,6 @@ ignore-variadic-names = true
 # Allow missing return annotation on functions that return None:
 suppress-none-returning = true
 
-[tool.ruff.lint.flake8-import-conventions.extend-aliases]
-# Streamlit imports the stdlib datetime module unaliased (`import datetime`).
-# Override the default conventional alias (`dt`) so ICN001 does not require
-# `import datetime as dt`.
-datetime = "datetime"
-
 # =============================================================================
 # Mypy Configuration
 # =============================================================================
