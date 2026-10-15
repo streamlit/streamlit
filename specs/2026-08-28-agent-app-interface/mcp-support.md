@@ -123,7 +123,7 @@ the transport allows; the route is registered for it explicitly, because otherwi
 request falls through to the app's page handler and returns its HTML with a `200`.
 A batch is refused: only MCP's `2025-03-26` revision had them, and answering one would
 run several interactions inside one HTTP request, past the timeout each is held under.
-With the agent API off, every request gets a `403` whose message names
+With the agent API off, every `POST` gets a `403` whose message names
 the setting to turn on. That is about 150–200 lines in the style of the existing agent
 routes, and it adds no dependency, so the product spec's "no new dependencies" still
 holds.

@@ -1240,7 +1240,7 @@ class LayoutsMixin:
         )
 
         tab_dgs: list[TabContainer] = []
-        for tab_label in tabs:
+        for index, tab_label in enumerate(tabs):
             tab_dg = cast(
                 "TabContainer",
                 tab_container._block(
@@ -1249,10 +1249,9 @@ class LayoutsMixin:
                     agent_props=agent_spec.block(
                         "tab",
                         label=tab_label,
-                        # An `on_change="rerun"` app can skip the work behind a
-                        # closed tab, so which one is open decides what the rest
-                        # of the snapshot even contains.
-                        open=tab_label == current_tab_label if is_stateful else None,
+                        # The tab a browser shows first. Stateful tabs report the
+                        # open one as the container's `value` instead.
+                        open=None if is_stateful else index == current_tab_index,
                     ),
                 ),
             )

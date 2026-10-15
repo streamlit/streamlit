@@ -377,7 +377,8 @@ right now. Naming follows the public API, for the reason above:
   `components.v1.html`, and a custom component is typed by the API that declared it
   (`components.v1.declare_component`, `components.v2.component`), with its own name in
   `props.component_name`. The containers `st.columns` and `st.tabs` return are typed
-  `column` and `tab`.
+  `column` and `tab`, and a command that only hands its argument to another, such as
+  `st.write` or `st.write_stream`, is reported as the command that emitted the element.
 - `props` keys are the command's **parameter names**, spelled exactly as a user would
   write them: `label`, `help`, `options`, `format`, `disabled`, `expanded`, `icon`,
   `column_config`. Never a proto field name, never a synonym.
@@ -588,7 +589,8 @@ Rules:
   label several options share, which identifies none of them. This holds for
   every widget that lists options, `st.select_slider` included. Text typed into a widget
   that accepts new options is reported as typed, since formatting it would change it on
-  every round trip. A display element is never sent back, so it reports what the author
+  every round trip. An option whose value is `None` reads back as `null`, since the app
+  cannot tell it from an empty widget either. A display element is never sent back, so it reports what the author
   passed: `st.metric` keeps its number and its `format`, which the frontend applies.
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
   `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
@@ -651,8 +653,8 @@ Rules:
   container itself denies.
 - **A described node reports what it is; a gap says so.** An element whose command has no
   description falls back to a node named after its proto field and is listed in a
-  response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
-  rather than passing as a command name. See
+  response-level `undescribed_types`. That list is what tells a gap from a described
+  node, since a proto field can share a command's name, as `dataframe` does. See
   [Key design decisions](#key-design-decisions) for how coverage is checked.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
   source, caches, and `st.session_state` are absent by construction. A password input's
@@ -738,7 +740,7 @@ Every outcome a client has to handle:
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, a cross-form or cross-dialog batch, or fields that cannot go together, such as navigation with widget changes or `widget_state` on a creating call | Error before any execution, naming which of those it was in its `code`; the OpenAPI document lists every code with its HTTP status. Nothing ran and the app is unchanged. |
+| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, a cross-form or cross-dialog batch, fields that cannot go together, such as navigation with widget changes or `widget_state` on a creating call, or text that is not valid Unicode, such as a lone surrogate escape | Error before any execution, naming which of those it was in its `code`; the OpenAPI document lists every code with its HTTP status. Nothing ran and the app is unchanged. |
 | Unknown or expired `session_id`, or one created under a different identity           | `unknown_session`; omit `session_id` to start a new one.                                                                                 |
 | Refused before the request is read — a disallowed Host or `Origin`, an oversized body, or the session cap reached | `host_not_allowed`, `origin_not_allowed`, `request_too_large`, or `too_many_sessions`. Nothing ran. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |

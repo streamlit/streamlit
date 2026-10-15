@@ -458,7 +458,9 @@ def session_digest(handle: str) -> str:
     The handle is a bearer credential, so a log line names its digest: enough
     to correlate one session's lines, and useless for addressing it.
     """
-    return hashlib.sha256(handle.encode()).hexdigest()[:12]
+    # `surrogatepass`, because a log line must never fail: a request's JSON can
+    # carry text that is not valid Unicode.
+    return hashlib.sha256(handle.encode("utf-8", "surrogatepass")).hexdigest()[:12]
 
 
 def _idle_since(session: AgentSession) -> float | None:
@@ -552,6 +554,13 @@ async def interact(
         # stranding the caller with a session it cannot continue or close.
         if is_new_session and exc.session_id is None:
             exc.session_id = session.handle
+        raise
+    except Exception:
+        # An unexpected failure answers without a `session_id`, so nobody could
+        # reach a session a creating call made, and it would hold a slot until
+        # the TTL.
+        if is_new_session:
+            registry.close(session.handle)
         raise
     finally:
         session.busy = False
@@ -917,7 +926,35 @@ def _app_session(runtime: Runtime, session: AgentSession) -> Any:
     return session_info.session
 
 
+def _refuse_invalid_text(request: Any) -> None:
+    r"""Refuse text anywhere in a request that is not valid Unicode.
+
+    JSON allows a lone UTF-16 surrogate such as "\ud800". It decodes into a
+    Python string that fails only later, when protobuf, the URL, or a response
+    encodes it. Walked without recursion, since the parser already allowed the
+    request's nesting depth.
+    """
+    pending = [request]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            pending.extend(item)
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+        elif isinstance(item, str):
+            try:
+                item.encode("utf-8")
+            except UnicodeEncodeError:
+                raise AgentRequestError(
+                    "invalid_request",
+                    "The request contains text that is not valid Unicode, such "
+                    "as a lone surrogate escape like \\ud800.",
+                ) from None
+
+
 def _validate_request_shape(request: dict[str, Any]) -> None:
+    _refuse_invalid_text(request)
     unknown = set(request) - REQUEST_FIELDS
     if unknown:
         raise AgentRequestError(

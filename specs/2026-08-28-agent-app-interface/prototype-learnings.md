@@ -1407,6 +1407,24 @@ Two leftovers from earlier rounds closed after that:
 - **Datetime sliders:** they take a date alone as its midnight in the slider's own time
   zone, as `st.datetime_input` does.
 
+An independent QA pass with two real MCP SDK clients, 1.30 and 2.3, found the contract
+holding. The 2.3 client probes `2026-07-28` and falls back to the handshake. It also
+found these, all fixed:
+
+- **Lone surrogates:** JSON allows a lone UTF-16 surrogate such as `"\ud800"`, which
+  fails only when protobuf, the URL, or a log encodes it.
+  - In `page`, `query_params`, a chat payload, or `session_id`, it gave a `500`.
+  - With debug logging it crashed the route.
+  - On a creating call, the session it had already made leaked until the TTL.
+
+  Such text is now refused up front with `invalid_request`. The log digest cannot
+  fail. A creating call that fails unexpectedly closes the session it made.
+- **Plain `st.tabs`:** they now report which tab opens first as each tab's `open`, as a
+  plain popover does. Stateful tabs report the open tab only as their `value`.
+- **The spec:** it now says that an option whose value is `None` reads back as `null`,
+  and that a proto field can share a command's name, so `undescribed_types` is what
+  marks a gap.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`
