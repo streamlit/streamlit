@@ -236,9 +236,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const wrap = useResolvedWrap(element.wrap)
   const addTitleTooltip = !wrap && !element.help
 
-  // Timestamp of the last open or reveal. The outside-click handler ignores
-  // a click in that same moment: the opening click, and the expander click
-  // that mounts a body which was withheld until the trigger was shown.
+  // Timestamp of the last open. The outside-click handler ignores a click in
+  // that same moment. A press that reveals a withheld body is tracked
+  // separately, because that click can arrive long after pointerdown.
   const openedAtRef = useRef(0)
   const userOpenedRef = useRef(false)
 
@@ -403,10 +403,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
 
   // While this is true the popover is open but its trigger is hidden, so the
-  // body stays unmounted. Dismissal stays off too: a click or Escape on the
-  // visible page must not close a popover the user has not seen.
-  const [deferBody, setDeferBody] = useState(false)
-  const deferBodyRef = useRef(false)
+  // body stays unmounted. Start withheld: the first commit must not mount the
+  // body before the layout effect knows whether the trigger is on screen.
+  // Dismissal stays off too: a click or Escape on the visible page must not
+  // close a popover the user has not seen.
+  const [deferBody, setDeferBody] = useState(true)
+  const deferBodyRef = useRef(true)
+  // A press that began while the body was withheld. The click that ends it
+  // must not dismiss the body that press revealed, even if the press is long.
+  const pressStartedHiddenRef = useRef(false)
+  const suppressRevealClickRef = useRef(false)
   const setBodyDeferred = useCallback((deferred: boolean): void => {
     if (deferBodyRef.current === deferred) return
     deferBodyRef.current = deferred
@@ -443,13 +449,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         triggerRef.current?.contains(target) ||
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets an overlay target count
         popoverBodyRef.current?.contains(target) ||
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets a portaled menu count
-        targetElement?.closest('[data-st-overlay-root="true"]') ||
-        // Selectbox options are portaled by React Aria, not into the overlay
-        // root. A pointerdown there is the selection, not a dismiss.
-        targetElement?.closest(
-          '[role="listbox"], [role="option"], [data-testid="stSelectboxVirtualDropdown"]'
-        )
+        targetElement?.closest('[data-st-overlay-root="true"]')
       )
     }
 
@@ -464,6 +464,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
 
     const handleClick = (e: MouseEvent): void => {
+      // The press that revealed a withheld body is still ending. That click
+      // is what mounted this listener; it is not an outside dismiss.
+      if (suppressRevealClickRef.current) {
+        suppressRevealClickRef.current = false
+        return
+      }
       // In test environments (JSDOM), act() flushes useEffect synchronously,
       // so this listener can be live during the same click that opened the
       // popover. The timestamp guard prevents that click from closing it.
@@ -523,6 +529,29 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, deferBody, closePopover])
 
+  // Remember a press that starts while the body is withheld. If that press
+  // reveals the trigger, its click must not close the popover. A click that
+  // leaves the trigger hidden clears the mark, so a later click still closes.
+  useEffect(() => {
+    if (!open || !deferBody) return
+
+    const onPointerDown = (): void => {
+      pressStartedHiddenRef.current = true
+    }
+    const onClick = (): void => {
+      pressStartedHiddenRef.current = false
+    }
+    // pointerdown is capture so the mark is set before a tab's own
+    // pointerdown reveals the trigger. The click clear is bubble so a
+    // summary handler can reveal first and keep the mark.
+    document.addEventListener("pointerdown", onPointerDown, true)
+    document.addEventListener("click", onClick)
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true)
+      document.removeEventListener("click", onClick)
+    }
+  }, [open, deferBody])
+
   // True once the trigger has been on screen. A later hide then closes.
   // Until then the body stays unmounted and `open` is left unchanged.
   const seenRef = useRef(false)
@@ -533,7 +562,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     () => {}
   )
   // Parent effects can still change visibility after this one. The first tick
-  // is too early to trust; the second tick is the read.
+  // is too early to trust; the second tick is the read. This wait is
+  // best-effort: a timer and a parent effect are not ordered against each
+  // other, so a busy thread can still mark the trigger seen first.
   const finishVisibilityWait = useCallback((): void => {
     if (visibilityTickRef.current === 0) {
       visibilityTickRef.current = 1
@@ -553,7 +584,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       seenRef.current = false
       waitForParentRef.current = false
       userOpenedRef.current = false
-      setBodyDeferred(false)
+      pressStartedHiddenRef.current = false
+      suppressRevealClickRef.current = false
+      setBodyDeferred(true)
       return
     }
     const trigger = triggerRef.current
@@ -565,22 +598,28 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
     userOpenedRef.current = false
 
-    const apply = (): void => {
+    const apply = (fromLayout: boolean): void => {
       if (cancelled) return
       if (!isPopoverTriggerHidden(trigger)) {
         if (waitForParentRef.current) return
-        // The click that reveals a collapsed expander is still bubbling.
-        // Treat it like the click that opened the popover so it does not
-        // dismiss the body that this reveal just mounted.
-        if (deferBodyRef.current) {
-          openedAtRef.current = Date.now()
+        // The press that reveals the trigger is still in progress. Its click
+        // mounts the dismissal listener, so remember to ignore that click.
+        if (deferBodyRef.current && pressStartedHiddenRef.current) {
+          suppressRevealClickRef.current = true
         }
+        pressStartedHiddenRef.current = false
         seenRef.current = true
         setBodyDeferred(false)
         return
       }
       if (seenRef.current) {
         blurFocusedPopoverDescendant(popoverBodyRef.current)
+        // A layout effect already runs before paint. flushSync from inside it
+        // is deferred and warns, so close directly on that path.
+        if (fromLayout) {
+          closePopover()
+          return
+        }
         /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
          * Unmount the portaled body before paint so it cannot sit on the corner.
          */
@@ -591,9 +630,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
       setBodyDeferred(true)
     }
-    applyVisibilityRef.current = apply
+    applyVisibilityRef.current = () => {
+      apply(false)
+    }
 
-    const observer = new MutationObserver(apply)
+    const observer = new MutationObserver(() => {
+      apply(false)
+    })
     let node: HTMLElement | null = trigger
     while (node) {
       observer.observe(node, {
@@ -604,7 +647,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
 
     if (seenRef.current) {
-      apply()
+      apply(true)
     } else {
       waitForParentRef.current = true
       visibilityTickRef.current = 0

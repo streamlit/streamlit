@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { type ReactElement, type ReactNode, useEffect, useState } from "react"
+import {
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react"
 
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -296,7 +302,7 @@ describe("Popover container", () => {
             }}
           />
         </Popover>
-        <div role="listbox">
+        <div data-st-overlay-root="true">
           <div role="option" aria-selected="false">
             two
           </div>
@@ -1137,8 +1143,7 @@ describe("Dynamic popover (widget mode)", () => {
     )
   })
 
-  it("ignores the click that reveals a never-shown popover", async () => {
-    const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000)
+  it("ignores a late click from the press that revealed the popover", async () => {
     const widgetMgr = createWidgetMgr()
     const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
     const widgetId = "popover-widget-id"
@@ -1157,45 +1162,70 @@ describe("Dynamic popover (widget mode)", () => {
         </details>
       </div>
     )
-    try {
-      await flushPopoverVisibilityCheck()
-      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    await flushPopoverVisibilityCheck()
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
 
-      // Reveal, then deliver the click that is still in progress in the browser.
-      now.mockReturnValue(2_000_000)
-      screen.getByTestId("panel").removeAttribute("inert")
-      await flushPopoverVisibilityCheck()
-      expect(screen.getByText("popover content")).toBeVisible()
+    const outside = screen.getByRole("button", { name: "outside" })
+    // A tab selects on pointerdown. The click follows pointerup, which can
+    // be later than any short time window.
+    outside.dispatchEvent(new Event("pointerdown", { bubbles: true }))
+    screen.getByTestId("panel").removeAttribute("inert")
+    await flushPopoverVisibilityCheck()
+    expect(screen.getByText("popover content")).toBeVisible()
 
-      act(() => {
-        screen.getByRole("button", { name: "outside" }).click()
+    await act(async () => {
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, 80)
       })
+    })
+    act(() => {
+      outside.click()
+    })
 
-      expect(screen.getByText("popover content")).toBeVisible()
-      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
-        "aria-expanded",
-        "true"
-      )
-      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
-        widgetId,
-        false,
-        expect.anything()
-      )
+    expect(screen.getByText("popover content")).toBeVisible()
+    expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+    expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+      widgetId,
+      false,
+      expect.anything()
+    )
 
-      now.mockReturnValue(2_000_100)
-      act(() => {
-        screen.getByRole("button", { name: "outside" }).click()
-      })
+    act(() => {
+      outside.click()
+    })
 
-      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-      expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
-        formId: undefined,
-        fragmentId: undefined,
-        fromUser: true,
-      })
-    } finally {
-      now.mockRestore()
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+    expect(setBoolValueSpy).toHaveBeenCalledWith(widgetId, false, {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+  })
+
+  it("does not mount a script-opened body before the trigger is checked", async () => {
+    let mounts = 0
+    function Child(): ReactElement {
+      useLayoutEffect(() => {
+        mounts += 1
+      }, [])
+      return <div>popover content</div>
     }
+
+    render(
+      <Popover {...getProps({ open: true })}>
+        <Child />
+      </Popover>
+    )
+    expect(mounts).toBe(0)
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+
+    await flushPopoverVisibilityCheck()
+
+    expect(mounts).toBe(1)
+    expect(screen.getByText("popover content")).toBeVisible()
   })
 
   it("does not record a close when it mounts already hidden", async () => {

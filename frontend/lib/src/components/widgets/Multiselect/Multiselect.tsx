@@ -978,6 +978,7 @@ const Multiselect: FC<Props> = props => {
           <StyledPopover
             ref={setFloating}
             data-testid="stMultiSelectDropdown"
+            data-st-overlay-root="true"
             placement="bottom left"
             isNonModal
             $isInSidebar={isInSidebar}

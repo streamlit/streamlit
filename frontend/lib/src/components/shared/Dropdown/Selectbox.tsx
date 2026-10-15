@@ -750,6 +750,7 @@ const Selectbox: FC<Props> = ({
           <StyledPopover
             ref={setFloating}
             data-testid="stSelectboxVirtualDropdown"
+            data-st-overlay-root="true"
             placement="bottom left"
             isNonModal
             $isInSidebar={isInSidebar}
