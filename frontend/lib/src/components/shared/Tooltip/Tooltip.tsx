@@ -25,21 +25,19 @@ import {
   useContext,
   useEffect,
   useId,
-  useMemo,
   useRef,
 } from "react"
 
-import { type Placement as FloatingPlacement, hide } from "@floating-ui/react"
-import { useFocusWithin } from "react-aria"
 import {
-  type ContextValue,
-  type Placement as RAPlacement,
-  type TooltipProps as RATooltipProps,
-  TooltipContext,
-  TooltipTriggerStateContext,
-} from "react-aria-components"
+  type Placement as FloatingPlacement,
+  FloatingPortal,
+  hide,
+} from "@floating-ui/react"
+import { useFocusWithin } from "react-aria"
+import { TooltipTriggerStateContext } from "react-aria-components"
 import { useTooltipTriggerState } from "react-stately"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 
 import {
@@ -61,26 +59,6 @@ export enum Placement {
   LEFT_BOTTOM = "leftBottom",
   LEFT = "left",
   LEFT_TOP = "leftTop",
-}
-
-/**
- * Maps Streamlit's Placement enum to React Aria placement strings.
- * Still needed because RAC's <Tooltip> uses placement to set data-placement.
- */
-const REACT_ARIA_PLACEMENT: Record<Placement, RAPlacement> = {
-  [Placement.AUTO]: "top",
-  [Placement.TOP]: "top",
-  [Placement.TOP_LEFT]: "top start",
-  [Placement.TOP_RIGHT]: "top end",
-  [Placement.BOTTOM]: "bottom",
-  [Placement.BOTTOM_LEFT]: "bottom left",
-  [Placement.BOTTOM_RIGHT]: "bottom right",
-  [Placement.LEFT]: "left",
-  [Placement.LEFT_TOP]: "left top",
-  [Placement.LEFT_BOTTOM]: "left bottom",
-  [Placement.RIGHT]: "right",
-  [Placement.RIGHT_TOP]: "right top",
-  [Placement.RIGHT_BOTTOM]: "right bottom",
 }
 
 /** Maps Streamlit's Placement enum to Floating UI placement strings. */
@@ -232,10 +210,6 @@ function Tooltip({
   interactive = true,
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
-  // Always-null ref passed to RAC's TooltipContext so its internal
-  // useOverlayPosition has no target and won't fight Floating UI.
-  const nullTriggerRef = useRef<Element | null>(null)
-  const raPlacement = REACT_ARIA_PLACEMENT[placement]
   const tooltipId = useId()
 
   const state = useTooltipTriggerState({
@@ -256,10 +230,9 @@ function Tooltip({
     }
   }, [isDisabled])
 
-  // Floating UI provides scroll-tracking via autoUpdate. RAC's <Tooltip> is
-  // kept for its portal, role="tooltip", and aria-hidden management. Its
-  // imperative positioning is overridden via CSS !important (see
-  // styled-components.tsx) and Floating UI's floatingStyles applied via style prop.
+  // Floating UI owns positioning and scroll-tracking. The tooltip is portaled
+  // into the shared overlay host so overflow or transform ancestors cannot
+  // clip it, and so an open dialog does not mark it inert.
   const { floatingStyles, middlewareData, setFloating, setReference } =
     useFloatingOverlay({
       open: state.isOpen,
@@ -292,14 +265,6 @@ function Tooltip({
     [setReference]
   )
 
-  const tooltipContextValue = useMemo(
-    () =>
-      ({
-        triggerRef: nullTriggerRef,
-      }) as ContextValue<RATooltipProps, HTMLDivElement>,
-    [nullTriggerRef]
-  )
-
   // Close the tooltip on Escape without stopping event propagation.
   // React Aria's useTooltipTrigger would register a document capture listener
   // that calls stopPropagation(), preventing other handlers (e.g. textarea
@@ -322,41 +287,49 @@ function Tooltip({
     <TooltipTriggerStateContext.Provider value={state}>
       <TriggerRefContext.Provider value={triggerRef}>
         <SetTriggerRefContext.Provider value={setReferenceRef}>
-          <TooltipContext.Provider value={tooltipContextValue}>
-            <TriggerArea
-              tag={inline ? "span" : "div"}
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: inline ? "flex-end" : "",
-                width: containerWidth ? "100%" : "auto",
-                // Opt-in: cap and allow shrinking so a flex-item trigger
-                // (e.g. badge+help) can ellipsize instead of growing to content.
-                ...(constrainWidth
-                  ? { maxWidth: "100%", minWidth: 0 }
-                  : undefined),
-                ...style,
-              }}
-              testId={
-                error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-              }
-              className={
-                error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-              }
-              ariaDescribedBy={
-                !isDisabled && state.isOpen ? tooltipId : undefined
-              }
-              disabled={isDisabled}
-              dismissOnClick={dismissOnClick}
-              closeImmediatelyOnPointerLeave={closeDelay === 0}
+          <TriggerArea
+            tag={inline ? "span" : "div"}
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: inline ? "flex-end" : "",
+              width: containerWidth ? "100%" : "auto",
+              // Opt-in: cap and allow shrinking so a flex-item trigger
+              // (e.g. badge+help) can ellipsize instead of growing to content.
+              ...(constrainWidth
+                ? { maxWidth: "100%", minWidth: 0 }
+                : undefined),
+              ...style,
+            }}
+            testId={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            className={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            ariaDescribedBy={
+              !isDisabled && state.isOpen ? tooltipId : undefined
+            }
+            disabled={isDisabled}
+            dismissOnClick={dismissOnClick}
+            closeImmediatelyOnPointerLeave={closeDelay === 0}
+          >
+            {children}
+          </TriggerArea>
+          {/*
+            FloatingPortal's default tab-order guards set tabindex="-1" on
+            portal contents when focus leaves. Help text can contain links,
+            which stay reachable by pointer and aria-describedby.
+          */}
+          {!isDisabled && state.isOpen ? (
+            <FloatingPortal
+              id={FLOATING_OVERLAY_PORTAL_ID}
+              preserveTabOrder={false}
             >
-              {children}
-            </TriggerArea>
-            {!isDisabled ? (
               <StyledTooltip
                 ref={setFloating}
                 id={tooltipId}
-                placement={raPlacement}
+                role="tooltip"
                 style={floatingStyles}
               >
                 <StyledTooltipContentWrapper
@@ -368,16 +341,16 @@ function Tooltip({
                   }
                   onPointerEnter={() => {
                     if (interactive) {
-                      state?.open(true)
+                      state.open(true)
                     }
                   }}
-                  onPointerLeave={() => state?.close(!interactive)}
+                  onPointerLeave={() => state.close(!interactive)}
                 >
                   {content}
                 </StyledTooltipContentWrapper>
               </StyledTooltip>
-            ) : null}
-          </TooltipContext.Provider>
+            </FloatingPortal>
+          ) : null}
         </SetTriggerRefContext.Provider>
       </TriggerRefContext.Provider>
     </TooltipTriggerStateContext.Provider>
