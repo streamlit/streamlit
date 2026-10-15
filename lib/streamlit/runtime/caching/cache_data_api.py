@@ -1058,6 +1058,11 @@ class DataCache(Cache[R]):
         # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
         self._write_lock = threading.Lock()
 
+    @property
+    def discard_sync_write_after_clear(self) -> bool:
+        """Discard synchronous results whose cache was cleared while computing."""
+        return True
+
     def mark_detached(self) -> None:
         """Detach this cache atomically with respect to result write-back."""
         with self._write_lock:

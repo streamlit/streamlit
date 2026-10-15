@@ -180,10 +180,8 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
-    def test_clear_invalidates_inflight_sync_write_without_releasing_value(
-        self,
-    ) -> None:
-        """A clear discards an older sync write without releasing its live value."""
+    def test_clear_during_inflight_sync_compute_caches_result(self) -> None:
+        """A synchronous result computed across clear remains cached and releasable."""
         compute_started = threading.Event()
         continue_compute = threading.Event()
         released: list[object] = []
@@ -210,12 +208,11 @@ If you think this is actually a Streamlit bug, please
 
         assert not clearer.is_alive()
         second = foo()
-        assert second is not first
-        assert foo() is second
+        assert second is first
         assert released == []
 
         foo.clear()
-        assert released == [second]
+        assert released == [first]
 
     def test_cached_class_method_clear_args(self):
         self.x = 0

@@ -375,6 +375,11 @@ class Cache(Generic[R]):
             return self._active
 
     @property
+    def discard_sync_write_after_clear(self) -> bool:
+        """Whether a synchronous computation should be discarded after a clear."""
+        return False
+
+    @property
     def generation(self) -> int:
         """A counter that increments each time the whole cache is cleared."""
         with self._invalidation_lock:
@@ -868,7 +873,11 @@ class CachedFunc(Generic[P, R]):
                 # below.
                 pass
 
-            invalidation_token = cache.capture_invalidation_token(value_key)
+            invalidation_token = (
+                cache.capture_invalidation_token(value_key)
+                if cache.discard_sync_write_after_clear
+                else None
+            )
 
             # We acquired the lock before any other thread. Compute the value!
             with self._info.cached_message_replay_ctx.calling_cached_function(
@@ -892,15 +901,15 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         computed_value: R,
         *,
-        invalidation_token: CacheInvalidationToken,
+        invalidation_token: CacheInvalidationToken | None = None,
     ) -> R:
         """Write a freshly computed value back to the cache and return it.
 
         Shared by the sync and async cache-miss paths. The value has already been
         computed (or awaited); this captures any replay messages, applies the
-        background-mode display rules, writes the result only if no clear invalidated
-        it during computation, and translates serialization failures into the
-        user-facing cache errors.
+        background-mode display rules, conditionally writes results from the current
+        cache generation, and translates serialization failures into the user-facing
+        cache errors.
         """
         # We've computed our value, and now we need to write it back to the cache
         # along with any "replay messages" that were generated during value computation.
@@ -915,12 +924,16 @@ class CachedFunc(Generic[P, R]):
         else:
             messages = captured_messages
         try:
-            was_written = cache.write_result_if_current(
-                value_key,
-                computed_value,
-                messages,
-                invalidation_token=invalidation_token,
-            )
+            if invalidation_token is None:
+                cache.write_result(value_key, computed_value, messages)
+                was_written = True
+            else:
+                was_written = cache.write_result_if_current(
+                    value_key,
+                    computed_value,
+                    messages,
+                    invalidation_token=invalidation_token,
+                )
             if not was_written:
                 return computed_value
             # A successful (re)compute clears any prior background-refresh failure
