@@ -188,9 +188,9 @@ class DataCaches(StatsProvider):
         # Serialize cache creation, replacement, and process-wide clearing without
         # holding the registry lock across storage I/O.
         self._lifecycle_lock = threading.Lock()
-        # Session cleanup waits only for lifecycle work in the same session.
-        # Invalidated tombstones remain until reconnect or final shutdown so script
-        # work that outlives disconnect cannot recreate a session cache.
+        # Session cleanup leaves an invalidated lifecycle entry until the session
+        # reconnects or shuts down, so work that outlives a disconnect cannot
+        # recreate a session cache.
         self._session_lifecycles: dict[str, _SessionCacheLifecycle] = {}
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
@@ -230,6 +230,21 @@ class DataCaches(StatsProvider):
             self._session_lifecycles[session_id] = lifecycle
         return lifecycle
 
+    @staticmethod
+    def _get_bound_session_lifecycle(
+        session_id: str,
+    ) -> _SessionCacheLifecycle | None:
+        """Return lifecycle state captured by the current ScriptRunner."""
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
+
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None or ctx.session_id != session_id:
+            return None
+        lifecycle = ctx.session_cache_lifecycle
+        return lifecycle if isinstance(lifecycle, _SessionCacheLifecycle) else None
+
     def get_cache(
         self,
         key: str,
@@ -259,15 +274,27 @@ class DataCaches(StatsProvider):
         session_id: str | None
         if scope == "global":
             session_id = None
+            bound_session_lifecycle = None
         else:
             session_id = get_session_id_or_throw()
+            bound_session_lifecycle = self._get_bound_session_lifecycle(session_id)
 
         # Keep the existing-cache hot path off the lifecycle lock, which can be held
         # while another cache is detached or its storage is closed.
         with self._caches_lock:
+            session_lifecycle = (
+                None
+                if session_id is None
+                else bound_session_lifecycle
+                or self._get_session_lifecycle_locked(session_id)
+            )
+            lifecycle_is_current = session_lifecycle is None or (
+                session_id is not None
+                and self._session_lifecycles.get(session_id) is session_lifecycle
+            )
             session_caches = self._function_caches.get(session_id)
             cache = None if session_caches is None else session_caches.get(key)
-            if self._cache_matches(
+            if lifecycle_is_current and self._cache_matches(
                 cache,
                 fresh_ttl_seconds=fresh_ttl_seconds,
                 max_entries=max_entries,
@@ -276,14 +303,6 @@ class DataCaches(StatsProvider):
                 refresh_mode=refresh_mode,
             ):
                 return cache
-            # Capture lifecycle state in the same critical section as the miss.
-            # Session teardown can then invalidate this exact object before the
-            # lookup installs a cache, even if teardown removes it from the map.
-            session_lifecycle = (
-                None
-                if session_id is None
-                else self._get_session_lifecycle_locked(session_id)
-            )
 
         # Cache creation and replacement are serialized. Re-check after taking the
         # lifecycle lock because another thread may have installed the cache.
@@ -291,23 +310,33 @@ class DataCaches(StatsProvider):
             self._lifecycle_lock,
             nullcontext() if session_lifecycle is None else session_lifecycle.lock,
         ):
-            session_invalidated = (
-                session_lifecycle is not None and session_lifecycle.invalidated
-            )
             with self._caches_lock:
-                session_caches = self._function_caches.get(session_id)
-                cache = None if session_caches is None else session_caches.get(key)
-                if not session_invalidated and self._cache_matches(
-                    cache,
-                    fresh_ttl_seconds=fresh_ttl_seconds,
-                    max_entries=max_entries,
-                    max_size_bytes=max_size_bytes,
-                    persist=persist,
-                    refresh_mode=refresh_mode,
-                ):
-                    return cache
-                if cache is not None and session_caches is not None:
-                    del session_caches[key]
+                session_invalidated = session_lifecycle is not None and (
+                    session_lifecycle.invalidated
+                    or (
+                        session_id is not None
+                        and self._session_lifecycles.get(session_id)
+                        is not session_lifecycle
+                    )
+                )
+                if session_invalidated:
+                    # This lookup belongs to an old connection. Do not inspect or
+                    # remove a cache installed by the reconnected session.
+                    cache = None
+                else:
+                    session_caches = self._function_caches.get(session_id)
+                    cache = None if session_caches is None else session_caches.get(key)
+                    if self._cache_matches(
+                        cache,
+                        fresh_ttl_seconds=fresh_ttl_seconds,
+                        max_entries=max_entries,
+                        max_size_bytes=max_size_bytes,
+                        persist=persist,
+                        refresh_mode=refresh_mode,
+                    ):
+                        return cache
+                    if cache is not None and session_caches is not None:
+                        del session_caches[key]
 
             if cache is not None:
                 # mark_detached() waits for any in-progress storage write, then:
@@ -393,10 +422,12 @@ class DataCaches(StatsProvider):
                 if close_error is not None:
                     raise close_error
 
-    def activate_session(self, session_id: str) -> None:
+    def activate_session(self, session_id: str) -> _SessionCacheLifecycle:
         """Install fresh lifecycle state when a session starts or reconnects."""
         with self._caches_lock:
-            self._session_lifecycles[session_id] = _SessionCacheLifecycle()
+            lifecycle = _SessionCacheLifecycle()
+            self._session_lifecycles[session_id] = lifecycle
+            return lifecycle
 
     def release_session(self, session_id: str) -> None:
         """Drop final lifecycle state after the session's script runner stops."""
@@ -553,9 +584,9 @@ def clear_session_cache(session_id: str) -> None:
     _data_caches.clear_session(session_id)
 
 
-def activate_session_cache(session_id: str) -> None:
+def activate_session_cache(session_id: str) -> object:
     """Prepare session cache lifecycle state for a new connection."""
-    _data_caches.activate_session(session_id)
+    return _data_caches.activate_session(session_id)
 
 
 def release_session_cache(session_id: str) -> None:
@@ -736,14 +767,16 @@ class CacheDataAPI:
             used.
 
             On a write that would exceed the limit, Streamlit drops
-            least-recently-used entries until the new value fits. If a single value
-            is larger than ``max_size``, Streamlit evicts every other entry for this
-            function, keeps that value, and logs a warning. With ``persist="disk"``,
-            only the in-memory copy is dropped; a later read can load the disk copy
-            again. This limits pickled bytes, not the total memory used by the Python
-            process. With ``scope="session"``, the limit applies separately to each
-            session's cache. If configured, ``server.maxCachedDataSize`` additionally
-            caps the combined in-memory size across all functions and sessions.
+            least-recently-used entries until the new value fits.
+
+            - If one value is larger than ``max_size``, Streamlit keeps only that
+              value and logs a warning.
+            - With ``persist="disk"``, only the in-memory copy is dropped.
+            - With ``scope="session"``, the limit applies to each session separately.
+            - The limit counts pickled bytes, not total process memory.
+
+            If configured, ``server.maxCachedDataSize`` additionally caps the
+            combined in-memory size across all functions and sessions.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is

@@ -521,9 +521,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.config.get_config_options")
     @patch("streamlit.web.bootstrap.watch_file")
     def test_install_config_watcher(
-        self,
-        patched_watch_file: Mock,
-        patched_get_config_options: Mock,
+        self, patched_watch_file: Mock, patched_get_config_options: Mock
     ) -> None:
         """Test that config watchers are installed for all config file locations."""
         bootstrap._install_config_watchers(flag_options={"server_port": 8502})

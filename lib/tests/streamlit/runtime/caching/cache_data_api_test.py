@@ -678,7 +678,37 @@ If you think this is actually a Streamlit bug, please
         assert returned[0].is_active is False
         assert "session" not in _data_caches._function_caches
 
-    def test_lookup_after_session_clear_waits_for_reconnect(self) -> None:
+    def test_disconnected_runner_cannot_replace_reconnected_cache(self) -> None:
+        """A lookup bound to an old connection leaves the new cache intact."""
+        old_lifecycle = _data_caches._get_session_lifecycle("session")
+        clear_session_cache("session")
+        _data_caches.activate_session("session")
+        kwargs = {
+            "key": "session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "session_cache",
+            "scope": "session",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            reconnected = _data_caches.get_cache(**kwargs)
+            with patch.object(
+                _data_caches,
+                "_get_bound_session_lifecycle",
+                return_value=old_lifecycle,
+            ):
+                disconnected = _data_caches.get_cache(**kwargs)
+
+        assert disconnected.is_active is False
+        assert reconnected.is_active is True
+        assert _data_caches._function_caches["session"]["session_cache"] is reconnected
+
+    def test_lookup_after_session_clear_stays_detached_until_reconnect(self) -> None:
         """Work started after disconnect cannot recreate a session cache."""
         clear_session_cache("session")
         kwargs = {

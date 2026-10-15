@@ -105,11 +105,10 @@ Do not cache live async clients or connections bound to the event loop that crea
 For functions that cache changing values, choose an appropriate bound. Use `ttl`
 or `max_entries` for ordinary parameterized caches. For `st.cache_data`, use
 `max_size` when values vary substantially in serialized size. Integers are bytes;
-strings use binary units (`"500MB"` and `"500MiB"` are equal). Streamlit keeps a
-single value that exceeds the limit:
+strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
-@st.cache_data(ttl="1h")
+@st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
@@ -118,10 +117,6 @@ def get_user_data(user_id):
 def get_large_report(report_id):
     return build_report(report_id)
 ```
-
-To cap the combined serialized size of in-memory `st.cache_data` entries across
-functions and sessions, set `server.maxCachedDataSize` (for example, `"4gb"`);
-it is disabled by default.
 
 ## Fragments
 

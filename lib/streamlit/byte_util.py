@@ -57,6 +57,33 @@ _CONFIG_MAX_CACHED_DATA_SIZE_MINIMUM_ERROR: Final = (
 _CONFIG_MAX_CACHED_DATA_SIZE_RANGE_ERROR: Final = (
     "`server.maxCachedDataSize` exceeds the supported byte-size range."
 )
+_MAX_SIZE_DETAIL: Final = (
+    "Use an integer number of bytes or a positive value with an explicit unit, "
+    'such as "500MB", "1.5GB", or "200KiB".'
+)
+
+
+class _InvalidByteSizeError(ValueError):
+    pass
+
+
+class _ByteSizeTooLongError(ValueError):
+    pass
+
+
+def _parse_byte_size(value: str) -> tuple[int, str]:
+    """Return a unit-bearing size in bytes and its decimal digits."""
+    match = _BYTE_SIZE_RE.fullmatch(value)
+    if match is None:
+        raise _InvalidByteSizeError
+    value_text = match.group("value")
+    whole, _, fraction = value_text.partition(".")
+    digits = f"{whole or '0'}{fraction}"
+    if len(digits) > _MAX_BYTE_SIZE_DIGITS:
+        raise _ByteSizeTooLongError
+    denominator = 10 ** len(fraction)
+    size = int(digits) * _MULTIPLIERS[match.group("unit").lower()] // denominator
+    return size, digits
 
 
 def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
@@ -77,71 +104,64 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
     if isinstance(value, int):
         size = value
     elif isinstance(value, str):
-        match = _BYTE_SIZE_RE.fullmatch(value)
-        if match is None:
+        try:
+            size, _ = _parse_byte_size(value)
+        except _InvalidByteSizeError:
             raise StreamlitValueError(
                 "max_size",
                 ["a positive byte size"],
-                detail=(
-                    "Use an integer number of bytes or a positive value with an "
-                    'explicit unit, such as "500MB", "1.5GB", or "200KiB".'
-                ),
-            )
-        value_text = match.group("value")
-        whole, _, fraction = value_text.partition(".")
-        digits = f"{whole or '0'}{fraction}"
-        if len(digits) > _MAX_BYTE_SIZE_DIGITS:
+                detail=_MAX_SIZE_DETAIL,
+            ) from None
+        except _ByteSizeTooLongError:
             raise StreamlitValueError(
                 "max_size",
                 ["a positive byte size"],
                 detail="Use a byte size with at most 100 digits.",
-            )
-        # Integer arithmetic preserves precision for large binary-unit values.
-        denominator = 10 ** len(fraction)
-        size = int(digits) * _MULTIPLIERS[match.group("unit").lower()] // denominator
+            ) from None
     else:
         raise StreamlitInvalidParameterTypeError(
             "max_size", type(value).__name__, ["int", "str"]
         )
 
     if size <= 0:
-        raise StreamlitValueError("max_size", ["a positive byte size"])
+        raise StreamlitValueError(
+            "max_size", ["a positive byte size"], detail=_MAX_SIZE_DETAIL
+        )
     return size
 
 
 def config_max_cached_data_size_to_bytes(value: object) -> int | None:
     """Parse ``server.maxCachedDataSize`` and return ``None`` when disabled."""
-    if (
-        isinstance(value, int) and not isinstance(value, bool) and value == 0
-    ) or value == "0":
+    if (isinstance(value, int) and not isinstance(value, bool) and value == 0) or (
+        isinstance(value, str) and value.strip() == "0"
+    ):
         return None
     if not isinstance(value, str):
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,
             error_id="config-max-cached-data-size-invalid",
         )
-    match = _BYTE_SIZE_RE.fullmatch(value)
-    if match is None:
+    try:
+        size, digits = _parse_byte_size(value)
+    except _InvalidByteSizeError:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,
             error_id="config-max-cached-data-size-invalid",
-        )
-    digits = match.group("value").replace(".", "")
+        ) from None
+    except _ByteSizeTooLongError:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHED_DATA_SIZE_RANGE_ERROR,
+            error_id="config-max-cached-data-size-invalid",
+        ) from None
     # Reject an explicit zero with a unit ("0gb"); only a bare "0" disables.
     if not digits.strip("0"):
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR,
             error_id="config-max-cached-data-size-invalid",
         )
-    if len(digits) > _MAX_BYTE_SIZE_DIGITS:
-        raise StreamlitAPIException(
-            _CONFIG_MAX_CACHED_DATA_SIZE_RANGE_ERROR,
-            error_id="config-max-cached-data-size-invalid",
-        )
-    try:
-        return cache_data_max_size_to_bytes(value)
-    except StreamlitValueError as exc:
+    if size < 1:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_MINIMUM_ERROR,
             error_id="config-max-cached-data-size-invalid",
-        ) from exc
+        )
+    return size

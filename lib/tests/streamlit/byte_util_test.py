@@ -73,7 +73,7 @@ def test_cache_data_max_size_to_bytes_uses_shared_value_error(
     value: int | str,
 ) -> None:
     """Nonpositive byte counts use the shared parameter-value error."""
-    with pytest.raises(StreamlitValueError):
+    with pytest.raises(StreamlitValueError, match="integer number of bytes"):
         cache_data_max_size_to_bytes(value)
 
 
@@ -95,7 +95,7 @@ def test_parsers_reject_long_numeric_tokens_with_streamlit_errors() -> None:
         config_max_cached_data_size_to_bytes(value)
 
 
-@pytest.mark.parametrize("value", [0, "0"])
+@pytest.mark.parametrize("value", [0, "0", " 0 "])
 def test_config_parser_accepts_disable_sentinel(value: object) -> None:
     """The config parser accepts numeric and string disable sentinels."""
     assert config_max_cached_data_size_to_bytes(value) is None

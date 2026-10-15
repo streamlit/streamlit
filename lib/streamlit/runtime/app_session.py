@@ -359,7 +359,7 @@ class AppSession:
 
     def activate_session_caches(self) -> None:
         """Allow session cache creation for a new connection."""
-        caching.activate_session_data_cache(self.id)
+        self._session_cache_lifecycle = caching.activate_session_data_cache(self.id)
 
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
@@ -637,6 +637,7 @@ class AppSession:
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,
             event_loop=self._script_event_loop,
+            session_cache_lifecycle=self._session_cache_lifecycle,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

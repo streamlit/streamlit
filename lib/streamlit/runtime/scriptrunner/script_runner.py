@@ -195,6 +195,7 @@ class ScriptRunner:
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        session_cache_lifecycle: object | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -244,6 +245,10 @@ class ScriptRunner:
             called at the start of each script run (on the script thread)
             before any user code executes.
 
+        session_cache_lifecycle
+            The cache lifecycle captured for this connection. It keeps work from
+            a disconnected runner from using a reconnected session's caches.
+
         event_loop
             A persistent, non-running asyncio event loop owned by the caller
             (typically ``AppSession``). The runner installs and detaches it but
@@ -261,6 +266,7 @@ class ScriptRunner:
         self._user_info = user_info
         self._fragment_storage = fragment_storage
         self._on_script_error = on_script_error
+        self._session_cache_lifecycle = session_cache_lifecycle
 
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
@@ -422,6 +428,7 @@ class ScriptRunner:
                 pages_manager=self._pages_manager,
                 context_info=None,
                 on_script_error=self._on_script_error,
+                session_cache_lifecycle=self._session_cache_lifecycle,
             )
             add_script_run_ctx(threading.current_thread(), ctx)
 

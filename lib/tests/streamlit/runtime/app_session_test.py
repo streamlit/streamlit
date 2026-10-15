@@ -407,6 +407,7 @@ class AppSessionTest(unittest.TestCase):
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
             event_loop=session._script_event_loop,
+            session_cache_lifecycle=session._session_cache_lifecycle,
         )
 
         assert session._scriptrunner is not None
