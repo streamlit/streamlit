@@ -104,7 +104,9 @@ Do not cache live async clients or connections bound to the event loop that crea
 **Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
 For functions that cache changing values, choose an appropriate bound. Use `ttl`
 or `max_entries` for ordinary parameterized caches. For `st.cache_data`, use
-`max_size` when values vary substantially in serialized size:
+`max_size` when values vary substantially in serialized size. Integers are bytes;
+strings use binary units (`"500MB"` and `"500MiB"` are equal). Streamlit keeps a
+single value that exceeds the limit:
 
 ```python
 @st.cache_data(ttl="1h")
