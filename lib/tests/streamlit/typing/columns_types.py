@@ -84,6 +84,11 @@ if TYPE_CHECKING:
     # A literal count is not a list.
     _as_list: list[DeltaGenerator] = columns(2)  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
+    # One name cannot hold specs that infer different types. ty rebinds the
+    # name to the second assignment instead of reporting an error.
+    shared_columns = columns(2)
+    shared_columns = columns([3, 1])  # type: ignore[assignment]
+
     # Widen gap, alignment, and width the same way as the count. An
     # annotated literal such as `gap: Gap | None = "medium"` stays
     # Literal["medium"] for ty.

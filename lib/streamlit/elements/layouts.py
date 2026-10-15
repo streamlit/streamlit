@@ -458,8 +458,8 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto)
 
-    # Literal counts 1-6 are fixed-length tuples, so
-    # `left, right = st.columns(2)` is length-checked. Any other spec is a
+    # Type checkers treat literal counts 1-6 as fixed-length tuples, so
+    # they length-check `left, right = st.columns(2)`. Any other spec is a
     # list. Runtime always returns a list.
     #
     # Each literal count is also an int, so these overloads overlap the list
@@ -653,12 +653,11 @@ class LayoutsMixin:
 
             When a type checker treats ``spec`` as exactly one of the
             literals 1 through 6, including a variable that still has that
-            literal type, it sees a tuple of that length. ``left, right =
-            st.columns(2)`` then types each name as a container. It sees a
-            list of unknown length for any other integer type, an integer
-            outside that range, or a sequence of column widths. Those two
-            results are not interchangeable. The value is always a list at
-            runtime.
+            literal type, it sees a tuple of that length and checks the
+            unpack. ``a, b = st.columns(3)`` is an error. Any other integer
+            type, an integer outside that range, or a sequence of column
+            widths is a list of unknown length. Those two results are not
+            interchangeable. The value is always a list at runtime.
 
         Examples
         --------
