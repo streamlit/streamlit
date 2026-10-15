@@ -28,7 +28,7 @@ import {
   insideDataZoomCapturesWheel,
   insideDataZoomConsumesWheelEvent,
   insideDataZoomWheelSkipsSettle,
-  optionHasInsideDataZoom,
+  optionHasWheelRoam,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
@@ -1147,51 +1147,43 @@ describe("withDefaultSeriesCursor", () => {
   })
 })
 
-describe("optionHasInsideDataZoom", () => {
-  it("detects an inside dataZoom that zooms on wheel", () => {
-    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "inside" }] })).toBe(
-      true
-    )
-    expect(optionHasInsideDataZoom({ dataZoom: { type: "inside" } })).toBe(
-      true
-    )
+describe("optionHasWheelRoam", () => {
+  it("detects wheel roam on geo, map, and graph", () => {
+    expect(optionHasWheelRoam({ geo: { roam: true } })).toBe(true)
+    expect(optionHasWheelRoam({ geo: [{ roam: "scale" }] })).toBe(true)
     expect(
-      optionHasInsideDataZoom({
-        baseOption: { dataZoom: [{ type: "inside" }] },
+      optionHasWheelRoam({
+        series: [{ type: "map", roam: "zoom" }],
+      })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({
+        series: { type: "graph", roam: true },
+      })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({
+        baseOption: { geo: { roam: true } },
       })
     ).toBe(true)
   })
 
-  it("detects modifier-gated zoom and move-on-wheel", () => {
+  it("ignores drag-only roam and charts without it", () => {
+    expect(optionHasWheelRoam(null)).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: false } })).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: "move" } })).toBe(false)
+    expect(optionHasWheelRoam({ geo: { roam: "pan" } })).toBe(false)
     expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
-      })
-    ).toBe(true)
-    expect(
-      optionHasInsideDataZoom({
-        dataZoom: [
-          { type: "inside", zoomOnMouseWheel: false, moveOnMouseWheel: true },
-        ],
-      })
-    ).toBe(true)
-  })
-
-  it("ignores slider zoom and disabled inside zoom", () => {
-    expect(optionHasInsideDataZoom(null)).toBe(false)
-    expect(optionHasInsideDataZoom({ dataZoom: [{ type: "slider" }] })).toBe(
-      false
-    )
-    expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", disabled: true }],
+      optionHasWheelRoam({
+        series: [{ type: "map", roam: "move" }],
       })
     ).toBe(false)
     expect(
-      optionHasInsideDataZoom({
-        dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
+      optionHasWheelRoam({
+        series: [{ type: "line", roam: true }],
       })
     ).toBe(false)
+    expect(optionHasWheelRoam({ dataZoom: [{ type: "inside" }] })).toBe(false)
   })
 })
 

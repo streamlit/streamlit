@@ -755,13 +755,6 @@ function insideWheelActions(zoom: Record<string, unknown>): {
   }
 }
 
-function insideDataZoomMayConsumeWheel(
-  zoom: Record<string, unknown>
-): boolean {
-  const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
-  return zoomOnWheel !== false || moveOnWheel !== false
-}
-
 function insideDataZoomConsumesEvent(
   zoom: Record<string, unknown>,
   event: WheelModifierEvent
@@ -771,16 +764,6 @@ function insideDataZoomConsumesEvent(
     isEChartsWheelSettingActive(zoomOnWheel, event) ||
     isEChartsWheelSettingActive(moveOnWheel, event)
   )
-}
-
-/**
- * True when the option enables an inside ``dataZoom`` that can consume wheel
- * events (zoom and/or pan), possibly only while a modifier is held.
- */
-export function optionHasInsideDataZoom(
-  option: EChartsOptionObject | null
-): boolean {
-  return someEnabledInsideDataZoom(option, insideDataZoomMayConsumeWheel)
 }
 
 /**
@@ -809,6 +792,50 @@ export function insideDataZoomConsumesWheelEvent(
 ): boolean {
   return someEnabledInsideDataZoom(option, zoom =>
     insideDataZoomConsumesEvent(zoom, event)
+  )
+}
+
+/** Roam values that install ECharts' mousewheel listener. */
+function roamInstallsWheelListener(roam: unknown): boolean {
+  return roam === true || roam === "scale" || roam === "zoom"
+}
+
+function targetHasWheelRoam(option: EChartsOptionObject): boolean {
+  if (
+    toComponentList(option.geo).some(geo =>
+      roamInstallsWheelListener(geo.roam)
+    )
+  ) {
+    return true
+  }
+  return toComponentList(option.series).some(
+    series =>
+      (series.type === "map" || series.type === "graph") &&
+      roamInstallsWheelListener(series.roam)
+  )
+}
+
+/**
+ * True when ``geo``, a map series, or a graph series turns on wheel roam.
+ *
+ * ``RoamController`` registers a mousewheel listener for ``roam: true``,
+ * ``"scale"``, and ``"zoom"``. ``"move"`` and ``"pan"`` are drag-only.
+ * That listener is separate from inside ``dataZoom``, so a wheel the zoom
+ * would ignore must still count as consumed and reach ECharts after the
+ * pointer rests.
+ */
+export function optionHasWheelRoam(
+  option: EChartsOptionObject | null
+): boolean {
+  if (option === null) {
+    return false
+  }
+  if (targetHasWheelRoam(option)) {
+    return true
+  }
+  return (
+    isPlainObject(option.baseOption) &&
+    targetHasWheelRoam(option.baseOption as EChartsOptionObject)
   )
 }
 

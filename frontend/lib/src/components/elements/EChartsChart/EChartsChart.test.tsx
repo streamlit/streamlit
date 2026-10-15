@@ -763,21 +763,26 @@ describe("EChartsChart", () => {
     let now = 0
     let nowSpy: ReturnType<typeof vi.spyOn>
 
-    const spec = (dataZoom: Record<string, unknown>[]): string =>
+    const spec = (
+      dataZoom: Record<string, unknown>[],
+      extra: Record<string, unknown> = {}
+    ): string =>
       JSON.stringify({
         xAxis: {},
         yAxis: {},
         dataZoom,
         series: [{ type: "line", data: [1] }],
+        ...extra,
       })
 
     const renderChart = (
-      dataZoom?: Record<string, unknown>[]
+      dataZoom?: Record<string, unknown>[],
+      extra: Record<string, unknown> = {}
     ): HTMLElement => {
       render(
         <Wrapper
           element={createElement(
-            dataZoom === undefined ? {} : { spec: spec(dataZoom) }
+            dataZoom === undefined ? {} : { spec: spec(dataZoom, extra) }
           )}
         />
       )
@@ -868,6 +873,37 @@ describe("EChartsChart", () => {
 
     it("keeps the wheel away from ECharts when zoomOnMouseWheel is false", () => {
       const chart = renderChart([{ type: "inside", zoomOnMouseWheel: false }])
+      chart.dispatchEvent(new Event("pointerenter"))
+      now += 1_000
+
+      const stopped = dispatchWheel(chart)
+      expect(stopped).toHaveBeenCalled()
+    })
+
+    it("lets a rested wheel reach geo roam when inside zoom ignores it", () => {
+      const chart = renderChart(
+        [{ type: "inside", zoomOnMouseWheel: false }],
+        {
+          geo: { roam: true },
+        }
+      )
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      const early = dispatchWheel(chart)
+      expect(early).toHaveBeenCalled()
+
+      now += 1_000
+      const rested = dispatchWheel(chart)
+      expect(rested).not.toHaveBeenCalled()
+    })
+
+    it("keeps stopping wheels when roam is drag-only", () => {
+      const chart = renderChart(
+        [{ type: "inside", zoomOnMouseWheel: false }],
+        {
+          geo: { roam: "move" },
+        }
+      )
       chart.dispatchEvent(new Event("pointerenter"))
       now += 1_000
 

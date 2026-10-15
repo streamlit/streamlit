@@ -21,6 +21,7 @@ import {
   insideDataZoomCapturesWheel,
   insideDataZoomConsumesWheelEvent,
   insideDataZoomWheelSkipsSettle,
+  optionHasWheelRoam,
 } from "./CustomTheme"
 
 /**
@@ -98,8 +99,9 @@ export function chartWheelPassesToPage(
 
   const enteredAt = gesture.enteredAt
   if (enteredAt === null) {
-    // The listener attached while the pointer was already over the chart.
-    // Only a pinch or modifier zooms. Arming at `now` lets the next flick zoom.
+    // No pointerenter yet: the chart mounted under the cursor, or hover has
+    // not caught up. An ordinary wheel scrolls the page. A pinch or modifier
+    // zooms now and leaves later flicks zooming too.
     const zooms = consumes && explicitGesture
     gesture.enteredAt = now
     gesture.gestureZooms = zooms
@@ -216,7 +218,9 @@ export function useInsideDataZoomWheelGuard(
       const passToPage = chartWheelPassesToPage(gesture, {
         now: performance.now(),
         previousWheelAt: previousPageWheelAt,
-        consumes: insideDataZoomConsumesWheelEvent(current, event),
+        consumes:
+          insideDataZoomConsumesWheelEvent(current, event) ||
+          optionHasWheelRoam(current),
         explicitGesture: insideDataZoomWheelSkipsSettle(current, event),
       })
       if (passToPage) {
@@ -225,8 +229,9 @@ export function useInsideDataZoomWheelGuard(
     }
     dom.addEventListener("pointerenter", handleEnter)
     dom.addEventListener("pointerleave", handleLeave)
-    // Capture runs before ECharts' bubble listener on this node. Passive
-    // because we never call preventDefault, so the browser can still scroll.
+    // Capture on this ancestor runs before zrender's wheel listener on its
+    // inner viewport. Passive: we never call preventDefault, so a stopped
+    // wheel still scrolls the page.
     dom.addEventListener("wheel", handleWheel, {
       capture: true,
       passive: true,

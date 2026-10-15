@@ -113,12 +113,11 @@ describe("chartWheelPassesToPage", () => {
 
     noteChartPointerLeft(gesture)
     enter(gesture, 2_000, 0)
-    expect(wheel(gesture, 2_000 + WHEEL_SETTLE_MS - 1, 0)).toBe(true)
-    // The early wheel cleared that gesture's rest timer. A fresh enter shows
-    // the chart zooms once the pointer has rested the full interval.
-    const again = createChartWheelGesture()
-    enter(again, 2_000, 0)
-    expect(wheel(again, 2_000 + WHEEL_SETTLE_MS, 0)).toBe(false)
+    const early = 2_000 + WHEEL_SETTLE_MS - 1
+    expect(wheel(gesture, early, 0)).toBe(true)
+    // That wheel cleared this gesture's rest timer. The same object zooms
+    // only after another full rest, measured from the wheel that cleared it.
+    expect(wheel(gesture, early + WHEEL_SETTLE_MS, early)).toBe(false)
   })
 
   it("scrolls a wheel that arrives before pointerenter, then zooms once the pointer rests", () => {

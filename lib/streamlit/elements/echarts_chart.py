@@ -795,11 +795,13 @@ class EChartsMixin:
         in the spec. Streamlit's hover toolbar (download, fullscreen) is
         separate from ECharts' ``toolbox``: omit ``saveAsImage`` if you only
         want Streamlit's download, or set ``toolbox.left`` so the two don't
-        stack in the top-right corner. Place ``legend`` at the top so it
-        doesn't share the footer with a bottom ``dataZoom`` slider. A wheel
-        flick keeps scrolling the page when the pointer moves onto an inside
-        ``dataZoom``, until the pointer has rested on the chart. Pinch, or the
-        modifier named in ``zoomOnMouseWheel``, zooms immediately.
+        stack in the top-right corner.         Place ``legend`` at the top so it
+        doesn't share the footer with a bottom ``dataZoom`` slider.
+
+        With an inside ``dataZoom``, the mouse wheel scrolls the page until
+        the pointer has rested on the chart, then it zooms. Pinch, or the
+        modifier set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, zooms
+        or pans immediately.
 
         .. code-block:: python
            :filename: streamlit_app.py
