@@ -229,11 +229,10 @@ function Slider({
   // Note: on keyboard interactions, React Aria fires onChange and onChangeEnd
   // synchronously in the same event, so isDragging may be true→false within
   // the same React batch.
-  // React Aria stops on `min + n * step`. Only a small shortfall moves the
-  // track end to the next step; a wider gap keeps the original max. The
-  // slider stores that end position as max.
+  // React Aria stops on `min + n * step`. Extend the track only when `max` is
+  // just past the last step, and commit that end position as `max`.
   const trackMax = sliderTrackMax(element.min, element.max, element.step)
-  const commitTrackValue = useCallback(
+  const trackToValue = useCallback(
     (trackValue: number): number =>
       fromTrackValue(trackValue, element.max, trackMax),
     [element.max, trackMax]
@@ -242,20 +241,20 @@ function Slider({
   const handleFinalChange = useCallback(
     (newValue: number | number[]): void => {
       setValueWithSource({
-        value: toArray(newValue).map(commitTrackValue),
+        value: toArray(newValue).map(trackToValue),
         fromUser: true,
       })
       setIsDragging(false)
     },
-    [commitTrackValue, setValueWithSource]
+    [trackToValue, setValueWithSource]
   )
 
   const handleChange = useCallback(
     (newValue: number | number[]): void => {
-      setUiValue(toArray(newValue).map(commitTrackValue))
+      setUiValue(toArray(newValue).map(trackToValue))
       setIsDragging(true)
     },
-    [commitTrackValue]
+    [trackToValue]
   )
 
   useLayoutEffect(() => {

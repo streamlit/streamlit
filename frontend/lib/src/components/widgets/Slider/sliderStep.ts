@@ -15,10 +15,10 @@
  */
 
 /**
- * React Aria only stops on `min + n * step`. When `max` sits just past the
- * last step, the track extends to the next step and the slider stores that
- * end position as `max`. A longer extension would move the existing steps.
- * The default time slider is 1µs short of 24:00.
+ * Lets the thumb reach `max` when `max` sits just past the last
+ * `min + n * step`. The track extends to the next step, and the slider
+ * commits that end position as `max`. A longer extension would shift the
+ * existing steps. The default time slider is 1µs short of 24:00.
  */
 
 /** Largest extra track length, as a fraction of the span, before existing steps shift too far. */
@@ -27,21 +27,26 @@ const MAX_TRACK_STRETCH = 0.01
 /**
  * Units in the last place that still count as on the step grid.
  * Float math can leave `max` a few ULPs past the last step, as with
- * `0.1 * 3`. A fraction of `step` is much coarser than that error.
+ * `0.1 * 3`. A step-relative tolerance would be too coarse, so compare in ULPs.
  */
 const ULP_TOLERANCE = 16
 
-/** True when `a` and `b` differ by only a few units in the last place. */
-function sliderValuesEqual(a: number, b: number): boolean {
+/**
+ * True when `a` and `b` differ by only a few units in the last place.
+ * Values below 1 share a tolerance of about `3.6e-15`, so a smaller
+ * remainder stays on the last on-grid step.
+ */
+function equalWithinUlps(a: number, b: number): boolean {
   const scale = Math.max(1, Math.abs(a), Math.abs(b))
   const tolerance = scale * Number.EPSILON * ULP_TOLERANCE
   return Math.abs(a - b) <= tolerance
 }
 
 /**
- * Precision React Aria uses for `step`.
- * Decimal steps count the decimal point (`"0.1"` → 2). Integer steps use 0.
- * Exponential steps add the `"e-"` index to the exponent (`"1e-7"` → 8).
+ * Decimal places React Aria uses when rounding to `step`.
+ * - `"0.1"` counts the decimal point → 2
+ * - integers → 0
+ * - `"1e-7"` adds the `"e-"` index to the exponent → 8
  */
 function stepPrecision(step: number): number {
   const stepString = step.toString()
@@ -94,7 +99,7 @@ export function sliderTrackMax(
   }
 
   const lastStep = lastInRangeStep(min, max, step)
-  if (sliderValuesEqual(lastStep, max) || lastStep > max) {
+  if (equalWithinUlps(lastStep, max) || lastStep > max) {
     return max
   }
 
@@ -107,11 +112,10 @@ export function sliderTrackMax(
 }
 
 /**
- * Track position for a committed value. `max` is drawn at the track end.
+ * Track position for a committed value. The slider draws `max` at the track end.
  *
- * Compares with `>=`, not ULP equality. Around year 2000 a microsecond is
- * only a few ULPs, so a tolerance would treat `time.max` and 24:00 as the
- * same value.
+ * Use `>=`, not ULP equality. Around year 2000 a microsecond is only a few
+ * ULPs, so a tolerance would treat `time.max` and 24:00 as the same value.
  */
 export function toTrackValue(
   value: number,
@@ -124,7 +128,7 @@ export function toTrackValue(
   return value >= max ? trackMax : value
 }
 
-/** Committed value for a track position. The slider stores the track end as `max`. */
+/** Committed value for a track position. The track end is stored as `max`. */
 export function fromTrackValue(
   value: number,
   max: number,

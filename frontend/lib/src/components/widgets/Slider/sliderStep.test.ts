@@ -38,8 +38,9 @@ describe("sliderStep", () => {
   })
 
   it("maps the track end back to time.max for a year-2000 timestamp", () => {
-    // Microseconds since 2000-01-01. A 1µs gap is only a few ULPs here, so
-    // the track end must not compare equal to time.max.
+    // Microseconds since the Unix epoch for 2000-01-01, which is how time
+    // sliders are sent. A 1µs gap is only a few ULPs there, so the track end
+    // must stay distinct from time.max.
     const min = Date.UTC(2000, 0, 1) * 1000
     const max = min + TIME_MAX
     const trackMax = sliderTrackMax(min, max, TIME_STEP)
@@ -52,7 +53,7 @@ describe("sliderStep", () => {
     )
   })
 
-  it("maps time(23, 59) back from the same 24:00 track end", () => {
+  it("maps a 23:59 maximum back from the 24:00 track end", () => {
     const max = 86_340_000_000
     const trackMax = sliderTrackMax(TIME_MIN, max, TIME_STEP)
     expect(trackMax).toBe(TIME_TRACK_MAX)
@@ -65,6 +66,17 @@ describe("sliderStep", () => {
     expect(sliderTrackMax(0, 10, 3)).toBe(10)
     expect(fromTrackValue(9, 10, 10)).toBe(9)
     expect(toTrackValue(10, 10, 10)).toBe(10)
+  })
+
+  it("commits a small numeric remainder as max", () => {
+    // 0..1000 step 3 ends at 999. The next step is 1002, within 1% of the
+    // span, so the track end commits 1000. A wider gap stays on the last step.
+    const trackMax = sliderTrackMax(0, 1000, 3)
+    expect(trackMax).toBe(1002)
+    expect(fromTrackValue(trackMax, 1000, trackMax)).toBe(1000)
+    expect(fromTrackValue(999, 1000, trackMax)).toBe(999)
+    expect(toTrackValue(1000, 1000, trackMax)).toBe(trackMax)
+    expect(toTrackValue(999, 1000, trackMax)).toBe(999)
   })
 
   it("leaves a step-aligned span unchanged", () => {

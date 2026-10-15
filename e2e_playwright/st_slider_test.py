@@ -768,8 +768,8 @@ def test_slider_swaps_reversed_min_max(app: Page):
     expect_prefixed_markdown(app, "Reversed bounds slider value:", "6")
 
 
-def test_default_time_slider_reaches_time_max(app: Page):
-    """End on the default 15-minute time slider commits time.max, not 23:45."""
+def test_default_time_sliders_reach_time_max(app: Page):
+    """End on a default 15-minute time slider commits time.max, then steps back."""
     time_slider = get_slider(app, "Default time slider")
     time_slider.scroll_into_view_if_needed()
     expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("12:00")
@@ -782,11 +782,13 @@ def test_default_time_slider_reaches_time_max(app: Page):
     expect_prefixed_markdown(
         app, "Default time slider value:", "23:59:59.999999", exact_match=True
     )
-    expect(
-        app.get_by_test_id("stMarkdownContainer").filter(
-            has_text="Default time slider value:"
-        )
-    ).not_to_contain_text("23:45:00")
+
+    time_slider.get_by_role("slider").press("ArrowLeft")
+    wait_for_app_run(app)
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("23:45")
+    expect_prefixed_markdown(
+        app, "Default time slider value:", "23:45:00", exact_match=True
+    )
 
     time_range = get_slider(app, "Default time range slider")
     time_range.scroll_into_view_if_needed()
