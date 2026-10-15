@@ -107,8 +107,9 @@ export interface PopoverProps {
 }
 
 /**
- * Attributes that can hide the trigger. A mutation only wakes the
- * observer; `isPopoverTriggerHidden` decides whether to close.
+ * Attributes that can show or hide the trigger. A mutation only wakes
+ * the observer; `isPopoverTriggerHidden` decides whether to show or
+ * close the body.
  */
 const TRIGGER_VISIBILITY_ATTRIBUTES = [
   "inert",
@@ -248,6 +249,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // that same moment. A press that reveals a withheld body is tracked
   // separately, because that click can arrive long after pointerdown.
   const openedAtRef = useRef(0)
+  /** A trigger click. The next layout effect treats the trigger as already seen. */
   const userOpenedRef = useRef(false)
 
   // Handle popover toggle with optimistic updates

@@ -16,7 +16,7 @@
 
 import { type ReactElement, useContext } from "react"
 
-import { act, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
 
 import {
@@ -649,18 +649,8 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     const layoutWrapper = screen.getByTestId("stLayoutWrapper")
     expect(layoutWrapper).toHaveClass("st-key-my_popover")
 
-    await act(async () => {
-      await new Promise<void>(resolve => {
-        setTimeout(resolve, 0)
-      })
-    })
-    await act(async () => {
-      await new Promise<void>(resolve => {
-        setTimeout(resolve, 0)
-      })
-    })
-
-    const innerBlock = screen.getByTestId("stVerticalBlock")
+    // A script-opened popover withholds its body until the trigger is shown.
+    const innerBlock = await screen.findByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
   })
 })
