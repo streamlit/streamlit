@@ -339,8 +339,6 @@ Nothing new beyond the parent spec's rules, applied to one more route:
 - **`get_data` is narrower than the `/media` route,** which serves any live file to
   whoever holds its URL: it serves only what the caller's own session's latest result
   references.
-- **Every tool call is audited without content**, `get_data` included, as the parent
-  spec describes for `interact`.
 
 What is new is practicality, as in the parent spec: pasting a URL into a chat assistant
 is far easier than writing an HTTP client, so an app with the API on will see more agent
@@ -393,7 +391,6 @@ lines including the tool descriptions. Beyond the endpoint itself:
 
 - `get_data` reads files through the media file manager, so a custom media storage
   works, and stops converting rows once a page is full, so its memory stays bounded.
-- `get_data` calls are audited like `interact` calls.
 - Route-level unit tests, and a conformance test against the official MCP SDK clients as
   a dev-only dependency.
 
@@ -524,7 +521,7 @@ every client.
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
 | No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and two MCP-only error codes, and one sentence in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                              |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
-| Metrics collected          | Which transport each interaction came through, the negotiated protocol version, the MCP client from `clientInfo.name` matched against a list of known clients or reported as `other`, and `get_data` calls by content kind, outcome, and size. No content, URLs, or arguments.                                                                                                    |
+| Metrics collected          | None, as for the HTTP API: the parent spec defers agent usage metrics until they have a channel that does not depend on the browser. Once they do, the transport each interaction came through and the negotiated protocol version are worth recording.                                                                                                                          |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host and `Origin` checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is narrower than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                     |
 | Any docs changes needed?   | A guide to connecting an app to AI applications: the URL, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too.                                                    |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
