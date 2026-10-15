@@ -274,27 +274,39 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     def _read_from_mem_cache(self, key: str) -> bytes:
         # Enabled-budget reads share the enforcement lock with writes so their LRU
         # update cannot invalidate a selected victim and leave the budget exceeded.
-        budget_enabled = self._global_budget.is_enabled
-        with (
-            self._global_budget.enforcement_lock(enabled=budget_enabled),
-            self._mem_cache_lock,
-        ):
-            try:
-                entry = self._mem_cache[key]
-            except KeyError:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError(
-                    "Key not found in mem cache"
-                ) from None
-            else:
-                if budget_enabled:
-                    generation = self._generations[key]
-                    self._global_budget.record_read(
-                        self._global_storage_id,
-                        key,
-                        generation,
-                    )
-                _LOGGER.debug("Memory cache HIT: %s", key)
+        while True:
+            enforcement_required = self._global_budget.read_enforcement_required
+            with (
+                self._global_budget.enforcement_lock(enabled=enforcement_required),
+                self._mem_cache_lock,
+            ):
+                try:
+                    entry = self._mem_cache[key]
+                except KeyError:
+                    _LOGGER.debug("Memory cache MISS: %s", key)
+                    raise CacheStorageKeyNotFoundError(
+                        "Key not found in mem cache"
+                    ) from None
+                else:
+                    # Activation marks reconfiguration before taking a snapshot. A
+                    # disabled-path read that overlaps that mark retries under the
+                    # enforcement lock so its recency is accounted for.
+                    if (
+                        not enforcement_required
+                        and self._global_budget.read_enforcement_required
+                    ):
+                        continue
+
+                    budget_enabled = self._global_budget.is_enabled
+                    if budget_enabled:
+                        generation = self._generations[key]
+                        self._global_budget.record_read(
+                            self._global_storage_id,
+                            key,
+                            generation,
+                        )
+                    _LOGGER.debug("Memory cache HIT: %s", key)
+                break
 
         return bytes(entry)
 

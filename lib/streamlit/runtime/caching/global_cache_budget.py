@@ -21,7 +21,7 @@ import queue
 import threading
 import weakref
 from collections import OrderedDict
-from contextlib import AbstractContextManager, ExitStack, nullcontext
+from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -31,7 +31,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.stats import CounterStat, StatsProvider
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
     from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
         InMemoryCacheStorageWrapper,
@@ -66,6 +66,7 @@ class GlobalCacheBudget(StatsProvider):
 
     def __init__(self, max_bytes: int | None) -> None:
         self._max_bytes = max_bytes
+        self._reconfiguring = False
         self._lock = threading.Lock()
         # Serialize insertion accounting and enforcement so an entry cannot become
         # eligible for another writer's eviction before its own write is enforced.
@@ -100,6 +101,11 @@ class GlobalCacheBudget(StatsProvider):
         return self._max_bytes is not None
 
     @property
+    def read_enforcement_required(self) -> bool:
+        """Whether a read must synchronize with budget enforcement."""
+        return self._max_bytes is not None or self._reconfiguring
+
+    @property
     def total_bytes(self) -> int:
         with self._lock:
             self._drain_pending_unregisters_locked()
@@ -123,9 +129,18 @@ class GlobalCacheBudget(StatsProvider):
             self._drain_pending_unregisters_locked()
             self._unregister_locked(storage_id)
 
+    @contextmanager
+    def _reconfiguration(self) -> Generator[None, None, None]:
+        with self._enforcement_lock:
+            self._reconfiguring = True
+            try:
+                yield
+            finally:
+                self._reconfiguring = False
+
     def reconfigure(self, max_bytes: int | None) -> None:
         """Apply a server-start budget to this process and existing storages."""
-        with self._enforcement_lock:
+        with self._reconfiguration():
             with self._lock:
                 current_max_bytes = self._max_bytes
                 if current_max_bytes == max_bytes:

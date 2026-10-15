@@ -153,10 +153,11 @@ def test_enabled_resize_preserves_cross_storage_lru() -> None:
 
 
 def test_read_that_observed_disabled_budget_survives_activation() -> None:
-    """A read started before activation does not require a generation."""
+    """A read that races activation retries and updates global recency."""
     budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "raw-mode")
-    storage.set("key", b"value")
+    storage.set("hot", b"aaa")
+    storage.set("cold", b"bbb")
     read_paused = threading.Event()
     continue_read = threading.Event()
     result: list[bytes] = []
@@ -178,15 +179,60 @@ def test_read_that_observed_disabled_budget_survives_activation() -> None:
         return original_enforcement_lock(enabled=enabled)
 
     with patch.object(budget, "enforcement_lock", side_effect=enforcement_lock):
-        reader = threading.Thread(target=lambda: result.append(storage.get("key")))
+        reader = threading.Thread(target=lambda: result.append(storage.get("hot")))
         reader.start()
         assert read_paused.wait(timeout=5)
-        budget.reconfigure(max_bytes=10)
+        budget.reconfigure(max_bytes=6)
         continue_read.set()
         reader.join(timeout=5)
 
     assert not reader.is_alive()
-    assert result == [b"value"]
+    assert result == [b"aaa"]
+
+    storage.set("new", b"c")
+    assert storage.get("hot") == b"aaa"
+    assert storage.get("new") == b"c"
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        storage.get("cold")
+
+
+def test_read_that_observed_enabled_budget_survives_deactivation() -> None:
+    """A read that races deactivation does not require a removed generation."""
+    budget = GlobalCacheBudget(max_bytes=10)
+    storage = _create_storage(budget, "configured")
+    storage.set("key", b"old")
+    read_paused = threading.Event()
+    continue_read = threading.Event()
+    result: list[bytes] = []
+    original_enforcement_lock = budget.enforcement_lock
+
+    class _PausedEnabledRead(contextlib.AbstractContextManager[object]):
+        def __enter__(self) -> None:
+            read_paused.set()
+            assert continue_read.wait(timeout=5)
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def enforcement_lock(
+        *, enabled: bool | None = None
+    ) -> contextlib.AbstractContextManager[object]:
+        if enabled is True and not read_paused.is_set():
+            return _PausedEnabledRead()
+        return original_enforcement_lock(enabled=enabled)
+
+    with patch.object(budget, "enforcement_lock", side_effect=enforcement_lock):
+        reader = threading.Thread(target=lambda: result.append(storage.get("key")))
+        reader.start()
+        assert read_paused.wait(timeout=5)
+        budget.reconfigure(max_bytes=None)
+        storage.set("key", b"new")
+        continue_read.set()
+        reader.join(timeout=5)
+
+    assert not reader.is_alive()
+    assert result == [b"new"]
+    assert budget.total_bytes == 0
 
 
 def test_budget_evicts_globally_least_recently_used_entry() -> None:

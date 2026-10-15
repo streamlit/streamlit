@@ -701,7 +701,7 @@ class CacheDataAPI:
 
         To limit the combined pickled size of all in-memory ``st.cache_data``
         entries, configure ``server.maxCachedDataSize`` with a binary-unit
-        string such as ``"2gb"``. The process-wide budget is disabled by default.
+        string such as ``"10mb"``. The process-wide budget is disabled by default.
 
         A function's arguments must be hashable to cache it. Streamlit makes a
         best effort to hash a variety of objects, but the fallback hashing method
