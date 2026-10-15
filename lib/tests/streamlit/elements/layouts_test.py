@@ -77,6 +77,12 @@ class ColumnsTest(DeltaGeneratorTestCase):
         """A small literal count is a tuple to type checkers and a list at runtime."""
         assert isinstance(st.columns(2), list)
 
+    def test_width_tuple_returns_a_list(self) -> None:
+        """A known-length width tuple is a tuple to type checkers and a list at runtime."""
+        columns = st.columns((3, 1))
+        assert isinstance(columns, list)
+        assert len(columns) == 2
+
     def test_numpy_integer_spec(self):
         """numpy integer specs are treated as a column count, like Python ints."""
         columns = st.columns(np.int64(3))

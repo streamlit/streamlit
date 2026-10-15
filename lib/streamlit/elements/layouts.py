@@ -458,12 +458,15 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto)
 
-    # Type checkers treat literal counts 1-6 as fixed-length tuples, so
-    # they length-check `left, right = st.columns(2)`. Any other spec is a
-    # list. Runtime always returns a list.
+    # Type checkers see a fixed-length tuple for literal counts 1-6 and for
+    # width tuples of length 1-6, so they length-check
+    # `left, right = st.columns(2)` and `left, right = st.columns((1, 2))`.
+    # Every other spec, including any list of widths, is a list. Runtime
+    # always returns a list.
     #
-    # Each literal count is also an int, so these overloads overlap the list
-    # fallback. The ignores tell mypy that overlap is intentional.
+    # Each literal count is also an int, and each width tuple is also a
+    # sequence, so these overloads overlap the list fallback. The ignores
+    # tell mypy that overlap is intentional.
     @overload
     def columns(  # type: ignore[overload-overlap]
         self,
@@ -534,6 +537,99 @@ class LayoutsMixin:
     def columns(  # type: ignore[overload-overlap]
         self,
         spec: Literal[6],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    # Width tuples of length 1-6.
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+        ],
         *,
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
@@ -651,13 +747,20 @@ class LayoutsMixin:
         list of containers
             A list of container objects.
 
-            Type checkers see a fixed-length tuple when ``spec`` is a
-            literal integer from ``1`` to ``6``, including a variable that
-            still has that literal type, so they report mismatched unpacking
-            such as ``a, b = st.columns(3)``. Every other ``spec`` is a list.
-            The returned value is always a list, so tuple-only operations are
-            not valid. To annotate a variable or parameter that holds columns
-            from any ``spec``, use ``Sequence[DeltaGenerator]``.
+            Type checkers see a fixed-length tuple in either of these cases:
+
+            - ``spec`` is an integer literal from ``1`` to ``6``, or a
+              variable whose type is still that literal.
+            - ``spec`` is a tuple of 1 to 6 numbers (``int`` or ``float``),
+              or a variable with that fixed-length tuple type.
+
+            Type checkers then report mismatched unpacking, such as
+            ``a, b = st.columns(3)`` or ``a, b = st.columns((1, 2, 3))``.
+            Every other ``spec`` is a list, including a non-literal integer,
+            a list of widths, and a tuple longer than 6 or of unknown length.
+            Streamlit always returns a list, so tuple-only operations are not
+            valid. To annotate a variable or parameter that holds columns from
+            any ``spec``, use ``Sequence[DeltaGenerator]``.
 
         Examples
         --------
