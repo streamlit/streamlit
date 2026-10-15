@@ -2129,6 +2129,64 @@ describe("DateInput single-mode keyboard navigation", () => {
     })
   })
 
+  it("reverts an incomplete edit on blur when the calendar is already closed", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const { day } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    // Focus stayed on the day, so typing does not reopen the calendar.
+    await user.keyboard("{Backspace}{Backspace}")
+    expect(screen.queryByTestId("stDateInputCalendar")).not.toBeInTheDocument()
+    const beforeBlur = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    expect(beforeBlur.day.textContent).toBe("dd")
+    await user.click(document.body)
+
+    const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    expect(after.day).toHaveTextContent("20")
+    expect(after.year).toHaveTextContent("1970")
+    expect(after.month).toHaveTextContent("01")
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "1970-01-20",
+    ])
+  })
+
+  it("reverts unparseable segments on blur when the calendar is already closed", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<DateInput {...props} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    // Digits that do not parse, with the controlled date unchanged. React Aria
+    // keeps that text unless the field remounts.
+    year.textContent = "abcd"
+    year.removeAttribute("data-placeholder")
+    await user.click(document.body)
+
+    const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    expect(after.year).toHaveTextContent("1970")
+    expect(after.month).toHaveTextContent("01")
+    expect(after.day).toHaveTextContent("20")
+  })
+
   it("partially cleared segments revert to committed value on popover close (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()

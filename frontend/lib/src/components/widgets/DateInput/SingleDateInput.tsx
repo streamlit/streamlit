@@ -241,6 +241,9 @@ function SingleDateInput({
   // the popover closes. This prevents intermediate backspace states from
   // triggering backend reruns and on_change callbacks.
   const [displayValue, setDisplayValue] = useState<CalendarDate | null>(value)
+  // Remount the field when a revert must repaint segments but the controlled
+  // date did not change. React Aria keeps incomplete text in that case.
+  const [fieldGeneration, setFieldGeneration] = useState(0)
 
   // Sync from parent when value changes externally (session_state, form
   // clear, close-commit, calendar click). Render-time adjustment pattern per
@@ -431,6 +434,11 @@ function SingleDateInput({
           if (field.partial || (field.cleared && !allowEmptyCommit)) {
             // Will revert on next render — don't commit stale/invalid state.
             // Clear pending now so a concurrent form submit does not use it.
+            if (datesEqual(displayValueRef.current, value)) {
+              setFieldGeneration(generation => generation + 1)
+            } else {
+              setDisplayValue(value)
+            }
             hasEditedRef.current = false
             onCloseRef.current(true)
           } else {
@@ -714,6 +722,13 @@ function SingleDateInput({
         displayValueRef.current
       )
       if (field.partial || (field.cleared && !allowEmptyCommit)) {
+        // The calendar may already be closed, so the close effect will not
+        // restore the field. Reset the display here.
+        if (datesEqual(displayValueRef.current, value)) {
+          setFieldGeneration(generation => generation + 1)
+        } else {
+          setDisplayValue(value)
+        }
         hasEditedRef.current = false
         onCloseRef.current(true)
         return
@@ -766,7 +781,7 @@ function SingleDateInput({
               <DateField
                 // Remount on form clear because React Aria retains incomplete
                 // segment text when the controlled value has not changed.
-                key={formResetKey}
+                key={`${formResetKey}-${fieldGeneration}`}
                 aria-label={label}
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}
