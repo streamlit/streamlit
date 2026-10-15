@@ -26,6 +26,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
 import { EChartsChart } from "./EChartsChart"
+import { resetPageWheelClockForTests } from "./insideDataZoomWheel"
 
 const { mockInit, mockChart } = vi.hoisted(() => {
   const mockChart = {
@@ -162,6 +163,7 @@ describe("EChartsChart", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resetPageWheelClockForTests()
     mockContainerRef.current = null
     themeHolder.override = null
     dimensionsHolder.width = 600
@@ -757,73 +759,132 @@ describe("EChartsChart", () => {
     clickSpy.mockRestore()
   })
 
-  it("prevents page scroll on wheel when inside dataZoom is enabled", () => {
-    render(
-      <Wrapper
-        element={createElement({
-          spec: JSON.stringify({
-            xAxis: {},
-            yAxis: {},
-            dataZoom: [{ type: "inside" }],
-            series: [{ type: "line", data: [1] }],
-          }),
-        })}
-      />
-    )
+  describe("inside dataZoom wheel", () => {
+    let now = 0
+    let nowSpy: ReturnType<typeof vi.spyOn>
 
-    const chart = screen.getByTestId("stEChartsChart")
-    const event = new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
-      deltaY: 40,
+    const spec = (dataZoom: Record<string, unknown>[]): string =>
+      JSON.stringify({
+        xAxis: {},
+        yAxis: {},
+        dataZoom,
+        series: [{ type: "line", data: [1] }],
+      })
+
+    const renderChart = (
+      dataZoom?: Record<string, unknown>[]
+    ): HTMLElement => {
+      render(
+        <Wrapper
+          element={createElement(
+            dataZoom === undefined ? {} : { spec: spec(dataZoom) }
+          )}
+        />
+      )
+      return screen.getByTestId("stEChartsChart")
+    }
+
+    const dispatchWheel = (
+      target: HTMLElement,
+      init: WheelEventInit = {}
+    ): ReturnType<typeof vi.spyOn> => {
+      const event = new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        deltaY: 40,
+        ...init,
+      })
+      const stop = vi.spyOn(event, "stopImmediatePropagation")
+      target.dispatchEvent(event)
+      expect(event.defaultPrevented).toBe(false)
+      return stop
+    }
+
+    beforeEach(() => {
+      now = 10_000
+      nowSpy = vi.spyOn(performance, "now").mockImplementation(() => now)
     })
-    chart.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(true)
-  })
 
-  it("does not intercept unmodified wheel when zoomOnMouseWheel requires a modifier", () => {
-    render(
-      <Wrapper
-        element={createElement({
-          spec: JSON.stringify({
-            xAxis: {},
-            yAxis: {},
-            dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
-            series: [{ type: "line", data: [1] }],
-          }),
-        })}
-      />
-    )
-
-    const chart = screen.getByTestId("stEChartsChart")
-    const unmodified = new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
-      deltaY: 40,
+    afterEach(() => {
+      nowSpy.mockRestore()
     })
-    chart.dispatchEvent(unmodified)
-    expect(unmodified.defaultPrevented).toBe(false)
 
-    const withShift = new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
-      deltaY: 40,
-      shiftKey: true,
+    it("scrolls the page until the pointer has rested, then lets the chart zoom", () => {
+      const chart = renderChart([{ type: "inside" }])
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      const stopped = dispatchWheel(chart)
+      expect(stopped).toHaveBeenCalled()
+
+      now += 16
+      const sameFlick = dispatchWheel(chart)
+      expect(sameFlick).toHaveBeenCalled()
+
+      now += 500
+      const rested = dispatchWheel(chart)
+      expect(rested).not.toHaveBeenCalled()
     })
-    chart.dispatchEvent(withShift)
-    expect(withShift.defaultPrevented).toBe(true)
-  })
 
-  it("does not intercept wheel when the chart has no inside dataZoom", () => {
-    render(<Wrapper element={createElement()} />)
+    it("keeps scrolling when a page-scroll flick runs into the chart", () => {
+      const chart = renderChart([{ type: "inside" }])
 
-    const chart = screen.getByTestId("stEChartsChart")
-    const event = new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
-      deltaY: 40,
+      // A wheel outside the chart, then the chart slides under the cursor.
+      window.dispatchEvent(
+        new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          deltaY: 40,
+        })
+      )
+      now += 20
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      const intoChart = dispatchWheel(chart)
+      expect(intoChart).toHaveBeenCalled()
+
+      now += 250
+      const nextFlick = dispatchWheel(chart)
+      expect(nextFlick).toHaveBeenCalled()
+
+      now += 400
+      const rested = dispatchWheel(chart)
+      expect(rested).not.toHaveBeenCalled()
     })
-    chart.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(false)
+
+    it("lets a configured modifier zoom before the pointer has rested", () => {
+      const chart = renderChart([
+        { type: "inside", zoomOnMouseWheel: "shift" },
+      ])
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      const unmodified = dispatchWheel(chart)
+      expect(unmodified).toHaveBeenCalled()
+
+      // A later flick, before the pointer has rested, with the modifier held.
+      now += 250
+      const withShift = dispatchWheel(chart, { shiftKey: true })
+      expect(withShift).not.toHaveBeenCalled()
+    })
+
+    it("keeps the wheel away from ECharts when zoomOnMouseWheel is false", () => {
+      const chart = renderChart([{ type: "inside", zoomOnMouseWheel: false }])
+      chart.dispatchEvent(new Event("pointerenter"))
+      now += 1_000
+
+      const stopped = dispatchWheel(chart)
+      expect(stopped).toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when the chart has no inside dataZoom", () => {
+      const chart = renderChart()
+      const stopped = dispatchWheel(chart)
+      expect(stopped).not.toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when inside zoom is locked to drag", () => {
+      const chart = renderChart([{ type: "inside", zoomLock: true }])
+      const stopped = dispatchWheel(chart)
+      expect(stopped).not.toHaveBeenCalled()
+    })
   })
 })

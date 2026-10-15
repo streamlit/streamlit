@@ -688,13 +688,15 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
   ].some(isBottomAnchored)
 }
 
+type WheelModifierEvent = Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+
 /**
  * ECharts ``zoomOnMouseWheel`` / ``moveOnMouseWheel``: ``true``, ``false``, or
  * a modifier name. Matches RoamController's ``isAvailableBehavior``.
  */
 function isEChartsWheelSettingActive(
   setting: unknown,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
   if (setting === true) {
     return true
@@ -711,12 +713,16 @@ function isEChartsWheelSettingActive(
   return false
 }
 
-function forEachEnabledInsideDataZoom(
+/**
+ * True when an enabled inside ``dataZoom`` on the option, or on a timeline
+ * ``baseOption``, matches ``predicate``.
+ */
+function someEnabledInsideDataZoom(
   option: EChartsOptionObject | null,
-  visit: (zoom: Record<string, unknown>) => void
-): void {
+  predicate: (zoom: Record<string, unknown>) => boolean
+): boolean {
   if (option === null) {
-    return
+    return false
   }
   const targets: EChartsOptionObject[] = [option]
   if (isPlainObject(option.baseOption)) {
@@ -724,32 +730,43 @@ function forEachEnabledInsideDataZoom(
   }
   for (const target of targets) {
     for (const zoom of toComponentList(target.dataZoom)) {
-      if (zoom.type === "inside" && zoom.disabled !== true) {
-        visit(zoom)
+      if (
+        zoom.type === "inside" &&
+        zoom.disabled !== true &&
+        predicate(zoom)
+      ) {
+        return true
       }
     }
+  }
+  return false
+}
+
+/** Inside ``dataZoom`` defaults: zoom on wheel, do not pan on wheel. */
+function insideWheelActions(zoom: Record<string, unknown>): {
+  zoomOnWheel: unknown
+  moveOnWheel: unknown
+} {
+  return {
+    zoomOnWheel:
+      zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel,
+    moveOnWheel:
+      zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel,
   }
 }
 
 function insideDataZoomMayConsumeWheel(
   zoom: Record<string, unknown>
 ): boolean {
-  // Inside defaults: zoom on wheel, do not pan on wheel.
-  const zoomOnWheel =
-    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
-  const moveOnWheel =
-    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
+  const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
   return zoomOnWheel !== false || moveOnWheel !== false
 }
 
 function insideDataZoomConsumesEvent(
   zoom: Record<string, unknown>,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
-  const zoomOnWheel =
-    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
-  const moveOnWheel =
-    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
+  const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
   return (
     isEChartsWheelSettingActive(zoomOnWheel, event) ||
     isEChartsWheelSettingActive(moveOnWheel, event)
@@ -759,40 +776,72 @@ function insideDataZoomConsumesEvent(
 /**
  * True when the option enables an inside ``dataZoom`` that can consume wheel
  * events (zoom and/or pan), possibly only while a modifier is held.
- *
- * Used to attach a non-passive wheel listener so the page does not steal
- * those events.
  */
 export function optionHasInsideDataZoom(
   option: EChartsOptionObject | null
 ): boolean {
-  let found = false
-  forEachEnabledInsideDataZoom(option, zoom => {
-    if (insideDataZoomMayConsumeWheel(zoom)) {
-      found = true
-    }
-  })
-  return found
+  return someEnabledInsideDataZoom(option, insideDataZoomMayConsumeWheel)
+}
+
+/**
+ * True when an enabled inside ``dataZoom`` installs ECharts' wheel handler.
+ *
+ * ECharts 6 calls ``preventDefault`` for every wheel over the plot once that
+ * handler is installed — including wheels that ``zoomOnMouseWheel: false``
+ * or a modifier would not zoom. ``zoomLock`` only pans on drag, so those
+ * charts still scroll.
+ */
+export function insideDataZoomCapturesWheel(
+  option: EChartsOptionObject | null
+): boolean {
+  return someEnabledInsideDataZoom(option, zoom => zoom.zoomLock !== true)
 }
 
 /**
  * True when this wheel event would zoom or pan an inside ``dataZoom``.
  *
  * ``zoomOnMouseWheel`` / ``moveOnMouseWheel`` may be ``true`` or a modifier
- * (``"shift"`` / ``"ctrl"`` / ``"alt"``). Only matching events should call
- * ``preventDefault``; otherwise the page cannot scroll.
+ * (``"shift"`` / ``"ctrl"`` / ``"alt"``).
  */
 export function insideDataZoomConsumesWheelEvent(
   option: EChartsOptionObject | null,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
-  let consumes = false
-  forEachEnabledInsideDataZoom(option, zoom => {
-    if (insideDataZoomConsumesEvent(zoom, event)) {
-      consumes = true
-    }
+  return someEnabledInsideDataZoom(option, zoom =>
+    insideDataZoomConsumesEvent(zoom, event)
+  )
+}
+
+/**
+ * True when the user is pinching or holding the configured modifier, so the
+ * chart zooms or pans without waiting for the pointer to rest.
+ *
+ * Trackpad pinch is a wheel with ``ctrlKey`` set. It counts when unmodified
+ * wheel zoom or pan is on. A ``"shift"`` / ``"ctrl"`` / ``"alt"`` setting
+ * counts when that key is held.
+ */
+export function insideDataZoomWheelSkipsSettle(
+  option: EChartsOptionObject | null,
+  event: WheelModifierEvent
+): boolean {
+  return someEnabledInsideDataZoom(option, zoom => {
+    const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
+    return (
+      wheelSettingSkipsSettle(zoomOnWheel, event) ||
+      wheelSettingSkipsSettle(moveOnWheel, event)
+    )
   })
-  return consumes
+}
+
+function wheelSettingSkipsSettle(
+  setting: unknown,
+  event: WheelModifierEvent
+): boolean {
+  // Unmodified zoom or pan: only pinch (ctrlKey) is a deliberate gesture.
+  if (setting === true) {
+    return event.ctrlKey
+  }
+  return isEChartsWheelSettingActive(setting, event)
 }
 
 function isTitleAtBottom(title: Record<string, unknown>): boolean {

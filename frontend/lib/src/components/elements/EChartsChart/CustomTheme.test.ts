@@ -25,7 +25,9 @@ import {
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
   formatEChartsTooltipValue,
+  insideDataZoomCapturesWheel,
   insideDataZoomConsumesWheelEvent,
+  insideDataZoomWheelSkipsSettle,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
   withDefaultSeriesCursor,
@@ -1234,5 +1236,93 @@ describe("insideDataZoomConsumesWheelEvent", () => {
       ],
     }
     expect(insideDataZoomConsumesWheelEvent(option, noModifiers)).toBe(true)
+  })
+})
+
+describe("insideDataZoomCapturesWheel", () => {
+  it("is true when ECharts will register a wheel handler", () => {
+    expect(
+      insideDataZoomCapturesWheel({ dataZoom: [{ type: "inside" }] })
+    ).toBe(true)
+    // ECharts 6 still calls preventDefault when zoomOnMouseWheel is false.
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: false }],
+      })
+    ).toBe(true)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }],
+      })
+    ).toBe(true)
+  })
+
+  it("is false when ECharts does not install a wheel handler", () => {
+    expect(insideDataZoomCapturesWheel(null)).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({ dataZoom: [{ type: "slider" }] })
+    ).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", disabled: true }],
+      })
+    ).toBe(false)
+    expect(
+      insideDataZoomCapturesWheel({
+        dataZoom: [{ type: "inside", zoomLock: true }],
+      })
+    ).toBe(false)
+  })
+})
+
+describe("insideDataZoomWheelSkipsSettle", () => {
+  const noModifiers = { shiftKey: false, ctrlKey: false, altKey: false }
+  const shift = { shiftKey: true, ctrlKey: false, altKey: false }
+  const ctrl = { shiftKey: false, ctrlKey: true, altKey: false }
+  const alt = { shiftKey: false, ctrlKey: false, altKey: true }
+
+  it("treats pinch as immediate zoom when the wheel is not modifier-gated", () => {
+    const option = { dataZoom: [{ type: "inside" }] }
+    expect(insideDataZoomWheelSkipsSettle(option, noModifiers)).toBe(false)
+    expect(insideDataZoomWheelSkipsSettle(option, ctrl)).toBe(true)
+    expect(insideDataZoomWheelSkipsSettle(option, shift)).toBe(false)
+  })
+
+  it("skips settle only for the configured modifier", () => {
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }] },
+        shift
+      )
+    ).toBe(true)
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "shift" }] },
+        ctrl
+      )
+    ).toBe(false)
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        { dataZoom: [{ type: "inside", zoomOnMouseWheel: "alt" }] },
+        alt
+      )
+    ).toBe(true)
+  })
+
+  it("treats pinch as immediate when pan is on and zoom is off", () => {
+    expect(
+      insideDataZoomWheelSkipsSettle(
+        {
+          dataZoom: [
+            {
+              type: "inside",
+              zoomOnMouseWheel: false,
+              moveOnMouseWheel: true,
+            },
+          ],
+        },
+        ctrl
+      )
+    ).toBe(true)
   })
 })
