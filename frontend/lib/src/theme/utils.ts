@@ -918,18 +918,21 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // Set the fallback here for dataframe & table border color
-    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    // Unset dataframeBorderColor follows borderColor (not borderColorLight).
+    conditionalOverrides.colors.dataframeBorderColor = borderColor
   }
 
   if (notNullOrUndefined(dataframeBorderColor)) {
-    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    // If dataframeBorderColor explicitly set, override borderColor fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder) {
+  if (showWidgetBorder === true) {
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
+  } else if (showWidgetBorder === false) {
+    // Explicit off clears stock widgetBorderColor inherited from the base theme.
+    delete conditionalOverrides.colors.widgetBorderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -950,9 +953,9 @@ export const createEmotionTheme = (
     linkColor ?? conditionalOverrides.colors.blueTextColor
 
   // Code text color should use the codeTextColor config if provided, otherwise
-  // use the greenTextColor (configured/derived or default) handled above
+  // keep the stock/createEmotionColors value (body text on the default theme).
   conditionalOverrides.colors.codeTextColor =
-    codeTextColor ?? conditionalOverrides.colors.greenTextColor
+    codeTextColor ?? conditionalOverrides.colors.codeTextColor
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&
@@ -1710,13 +1713,30 @@ const stockMainSurfaces = {
 export const stockSidebarSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     backgroundColor: "#F8F8F7",
-    // Distinct from the sidebar background so widgets stay visible while
-    // showWidgetBorder is off.
+    // Distinct from the sidebar background so widget fills stay visible.
     secondaryBackgroundColor: "#F1F0EE",
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
     backgroundColor: "#21201D",
     secondaryBackgroundColor: "#2D2B27",
+  },
+} as const
+
+/** Sidebar chrome used with stockSidebarSurfaces when `[theme.sidebar]` leaves these unset. */
+export const stockSidebarChrome = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    borderColor: "#D7D3CF",
+    dataframeBorderColor: "#E5E2DF",
+    dataframeHeaderBackgroundColor: "#F3F3F2",
+    codeBackgroundColor: "#F1F1F0",
+    codeTextColor: "#2F2D2B",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    borderColor: "#4A4742",
+    dataframeBorderColor: "#3F3D39",
+    dataframeHeaderBackgroundColor: "#2A2825",
+    codeBackgroundColor: "#1A1917",
+    codeTextColor: "#EDEBE8",
   },
 } as const
 
@@ -1746,6 +1766,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
   const mainThemeBase = getActiveThemeBase(activeTheme)
   const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
+  const stockChrome = stockSidebarChrome[mainThemeBase]
 
   // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
   // (sidebar bg = main secondary, sidebar secondary = main bg).
@@ -1783,6 +1804,30 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
+  // Stock sidebar chrome only when main surfaces are stock and sidebar left the
+  // key unset (blank). Custom main surfaces inherit main chrome as before.
+  const stockChromeFallbacks = useStockSidebarSurfaces
+    ? {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+        borderColor: sidebarThemeInput?.borderColor || stockChrome.borderColor,
+        dataframeBorderColor:
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+          sidebarThemeInput?.dataframeBorderColor ||
+          stockChrome.dataframeBorderColor,
+        dataframeHeaderBackgroundColor:
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+          sidebarThemeInput?.dataframeHeaderBackgroundColor ||
+          stockChrome.dataframeHeaderBackgroundColor,
+        codeBackgroundColor:
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+          sidebarThemeInput?.codeBackgroundColor ||
+          stockChrome.codeBackgroundColor,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+        codeTextColor:
+          sidebarThemeInput?.codeTextColor || stockChrome.codeTextColor,
+      }
+    : {}
+
   // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
   const mergedSidebarThemeInput = mergeWith(
     {},
@@ -1794,6 +1839,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       backgroundColor: sidebarBackground,
       secondaryBackgroundColor: secondaryBackgroundColor,
       headingFontSizes: headingFontSizes,
+      ...stockChromeFallbacks,
     },
     skipProtobufDefaults
   )

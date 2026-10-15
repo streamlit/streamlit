@@ -84,16 +84,16 @@ export const createEmotionColors = (
     ...genericColors,
     ...derivedColors,
 
+    // Stock link tracks blue text (surfaces + chrome share the design hex).
     link: genericColors.blueTextColor,
 
-    codeTextColor: genericColors.greenTextColor,
-    codeBackgroundColor: derivedColors.bgMix,
+    // Stock chrome hexes come from light/dark themeColors (required).
+    codeTextColor: genericColors.codeTextColor,
+    codeBackgroundColor: genericColors.codeBackgroundColor,
 
-    borderColor: derivedColors.fadedText10,
-    borderColorLight: derivedColors.fadedText05,
-
-    dataframeBorderColor: derivedColors.fadedText05,
-    dataframeHeaderBackgroundColor: derivedColors.bgMix,
+    // borderColor / dataframeBorderColor / dataframeHeaderBackgroundColor
+    // come from themeColors via the genericColors spread above.
+    borderColorLight: transparentize(genericColors.borderColor, 0.55),
     dataframeHeaderTextColor: derivedColors.fadedText60,
 
     headingColor: genericColors.bodyText,

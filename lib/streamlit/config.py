@@ -2097,7 +2097,8 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        This defaults to the resolved value of `greenTextColor`.
+        If this isn't set, Streamlit uses the theme's default code text
+        color (body text on the built-in light and dark themes).
     """,
 )
 
@@ -2569,7 +2570,9 @@ _create_theme_options(
     description="""
         The color of the border around dataframes and tables.
 
-        If this isn't set, Streamlit uses `theme.borderColor` instead.
+        If this isn't set and `theme.borderColor` is set, Streamlit uses
+        `theme.borderColor`. If neither is set, Streamlit uses the theme's
+        default dataframe border color.
     """,
 )
 

@@ -21,10 +21,15 @@ import { createShadows } from "~lib/theme/getShadows"
 import genericColors from "./themeColors"
 
 // Create colors (includes derived colors)
-const colors = createEmotionColors({
+const baseColors = createEmotionColors({
   ...emotionBaseTheme.colors,
   ...genericColors,
 })
+// Stock default: show widget borders (config showWidgetBorder=true).
+const colors = {
+  ...baseColors,
+  widgetBorderColor: baseColors.borderColor,
+}
 
 // Create shadows (dependent on colors/derived colors)
 const shadows = createShadows(colors)
@@ -32,6 +37,7 @@ const shadows = createShadows(colors)
 export default {
   ...emotionBaseTheme,
   inSidebar: false,
+  showSidebarBorder: true,
   colors,
   shadows,
 }
