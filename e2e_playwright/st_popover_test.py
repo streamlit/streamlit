@@ -41,7 +41,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(32)
+    expect(popover_elements).to_have_count(33)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -808,4 +808,8 @@ def test_popover_opened_while_hidden_does_not_run_on_change(app: Page):
 
     app.get_by_role("tab", name="Hidden open tab").click()
     expect(app.get_by_text("Hidden open popover content")).to_be_visible()
+    expect(
+        get_popover(app, "Popover open while hidden").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_test_id("stPopoverBody")).to_be_visible()
     expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()

@@ -29,11 +29,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
+/** One macrotask, inside `act`, so timer callbacks can update React state. */
+async function flushMacrotask(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+}
+
 /**
- * Let the popover's visibility observer run inside `act`.
+ * Let the popover's visibility check run inside `act`.
  *
- * The observer callback is a microtask. A trigger that has never been shown
- * is not closed, so there is no timer to flush.
+ * The observer callback is a microtask. A script-restored open then waits two
+ * macrotasks before it treats the trigger as shown, so a parent effect can
+ * hide or reveal it first. A trigger that is still hidden is not closed.
  */
 async function flushPopoverVisibilityCheck(): Promise<void> {
   await act(async () => {
@@ -41,6 +51,8 @@ async function flushPopoverVisibilityCheck(): Promise<void> {
       queueMicrotask(resolve)
     })
   })
+  await flushMacrotask()
+  await flushMacrotask()
 }
 
 const createWidgetMgr = (): WidgetStateManager =>
@@ -238,6 +250,35 @@ describe("Popover container", () => {
 
     expect(bodyMountedOnBlur).toBe(true)
     expect(screen.queryByTestId("stPopoverBody")).not.toBeInTheDocument()
+  })
+
+  it("commits a focused widget on an outside pointerdown before focus moves", async () => {
+    // A tab click selects on pointerdown and moves focus before the
+    // visibility observer runs. The value has to commit from that pointerdown.
+    const user = userEvent.setup()
+    let committed = ""
+    render(
+      <div>
+        <button type="button">other tab</button>
+        <Popover {...getProps()}>
+          <input
+            aria-label="inside"
+            onBlur={event => {
+              committed = event.currentTarget.value
+            }}
+          />
+        </Popover>
+      </div>
+    )
+    await user.click(screen.getByText("label"))
+    await user.type(screen.getByRole("textbox", { name: "inside" }), "kept")
+
+    // jsdom has no PointerEvent. A bubbling Event still hits the capture listener.
+    screen
+      .getByRole("button", { name: "other tab" })
+      .dispatchEvent(new Event("pointerdown", { bubbles: true }))
+
+    expect(committed).toBe("kept")
   })
 
   it("blurs a focused widget in a nested popover before the outer body unmounts", async () => {
@@ -637,6 +678,55 @@ describe("Popover container", () => {
       )
     })
 
+    it("does not close when a parent effect hides the trigger before it was shown", async () => {
+      // The ancestor is visible during this popover's layout effect. The
+      // parent hides it afterward, which is the order an inactive tab can
+      // take. That must not record a close.
+      function HideFromEffect({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactElement {
+        const [hidden, setHidden] = useState(false)
+        useEffect(() => {
+          setHidden(true)
+        }, [])
+        return (
+          <div className={hidden ? "is-hidden" : undefined}>{children}</div>
+        )
+      }
+
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <HideFromEffect>
+          <Popover
+            {...getProps(
+              { id: widgetId, open: true },
+              { widgetMgr, fragmentId }
+            )}
+          >
+            <div>popover content</div>
+          </Popover>
+        </HideFromEffect>
+      )
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+    })
+
     it("stays open when a parent effect reveals the trigger in the same update", async () => {
       // Tabs and Expander apply a backend selection in useEffect, which can
       // commit after this popover's layout effect. The body stays withheld
@@ -1007,6 +1097,42 @@ describe("Dynamic popover (widget mode)", () => {
       fragmentId,
       fromUser: true,
     })
+  })
+
+  it("does not close a never-shown popover on an outside click", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+    const widgetId = "popover-widget-id"
+
+    render(
+      <div>
+        <button type="button">outside</button>
+        <details open>
+          {/* React 18 drops an unknown boolean prop, so set inert as a string. */}
+          <div {...{ inert: "" }}>
+            <Popover
+              {...getProps({ id: widgetId, open: true }, { widgetMgr })}
+            >
+              <div>popover content</div>
+            </Popover>
+          </div>
+        </details>
+      </div>
+    )
+    await flushPopoverVisibilityCheck()
+
+    await user.click(screen.getByRole("button", { name: "outside" }))
+
+    expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
+    expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+      widgetId,
+      false,
+      expect.anything()
+    )
   })
 
   it("does not record a close when it mounts already hidden", async () => {
