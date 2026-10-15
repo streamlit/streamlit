@@ -529,10 +529,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       closePopoverRef.current(false)
     })
   }, [setBodyDeferred])
-  // Armed only when the trigger is still hidden after ancestor refs. A parent
-  // passive effect can reveal it before this fires.
-  const { clear: clearStayHiddenTimer, restart: restartStayHiddenTimer } =
+  // The real close. A parent passive effect's setState commits on the
+  // macrotask after the effect, so this must be queued from that later turn.
+  const { clear: clearStayHiddenCheck, restart: restartStayHiddenCheck } =
     useTimeout(closeIfStillHidden, 0, { autoStart: false })
+  const armStayHiddenCheck = useCallback((): void => {
+    restartStayHiddenCheck(0)
+  }, [restartStayHiddenCheck])
+  // Queued while the trigger is still hidden after ancestor refs. This turn
+  // runs before the parent effect's setState commits, so it only schedules
+  // the check above.
+  const { clear: clearStayHiddenArm, restart: restartStayHiddenArm } =
+    useTimeout(armStayHiddenCheck, 0, { autoStart: false })
 
   // Close when the trigger goes from visible to hidden. The body is portaled,
   // so hiding the trigger would otherwise leave it mounted.
@@ -540,9 +548,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Do not close on the first hidden check. A parent may reveal the trigger
   // in the same update: Expander sets `<details open>` from a ref after this
   // layout effect, and Tabs / Expander apply a backend selection in a passive
-  // effect. Closing here would overwrite that programmatic open. The body is
+  // effect. That effect's setState commits on a later macrotask. Closing
+  // before it lands would overwrite the programmatic open. The body is
   // withheld until the trigger is visible. A trigger that is still hidden
-  // after that parent update closes with `fromUser: false`.
+  // after that commit closes with `fromUser: false`.
   //
   // A later hide passes `fromUser: true`:
   // - an inactive tab sets `display: none`, and React Aria stops the tab
@@ -596,9 +605,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       node = node.parentElement
     }
 
-    // Refs have run by the next microtask. Parent passive effects commit on
-    // a later task, so a trigger that is still hidden waits for that task
-    // before it counts as never shown.
+    // Refs have run by the next microtask. The parent effect runs after that,
+    // and its setState commits on the macrotask after the effect. The first
+    // timer is queued before that commit, so it only arms a second timer.
     queueMicrotask(() => {
       if (visibilityCheckCancelledRef.current) return
       noteVisibility()
@@ -608,20 +617,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       ) {
         return
       }
-      restartStayHiddenTimer(0)
+      restartStayHiddenArm(0)
     })
 
     return () => {
       visibilityCheckCancelledRef.current = true
       observer.disconnect()
-      clearStayHiddenTimer()
+      clearStayHiddenArm()
+      clearStayHiddenCheck()
     }
   }, [
     open,
     closePopover,
     setBodyDeferred,
-    clearStayHiddenTimer,
-    restartStayHiddenTimer,
+    clearStayHiddenArm,
+    clearStayHiddenCheck,
+    restartStayHiddenArm,
   ])
 
   // Merge the floating ref with our local popoverBodyRef for dismissal logic.

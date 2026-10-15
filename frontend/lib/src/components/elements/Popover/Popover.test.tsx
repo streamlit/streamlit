@@ -29,11 +29,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
+/** One macrotask, inside `act`, so timer callbacks can update React state. */
+async function flushMacrotask(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+}
+
 /**
  * Let the popover's visibility check run inside `act`.
  *
  * The first check is a microtask (after ancestor refs). A trigger that is
- * still hidden waits one macrotask so a parent effect can reveal it first.
+ * still hidden then waits two macrotasks. The parent effect's `setState`
+ * commits between them, so the close runs only after that reveal.
  */
 async function flushPopoverVisibilityCheck(): Promise<void> {
   await act(async () => {
@@ -41,11 +51,8 @@ async function flushPopoverVisibilityCheck(): Promise<void> {
       queueMicrotask(resolve)
     })
   })
-  await act(async () => {
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 0)
-    })
-  })
+  await flushMacrotask()
+  await flushMacrotask()
 }
 
 const createWidgetMgr = (): WidgetStateManager =>
@@ -544,9 +551,12 @@ describe("Popover container", () => {
     })
 
     it("stays open when a parent effect reveals the trigger in the same update", async () => {
-      // Tabs and Expander apply a backend selection in useEffect, after this
-      // popover's layout effect. Opening the popover in that same update must
-      // not write it closed before the panel is shown.
+      // Tabs and Expander apply a backend selection in useEffect. React then
+      // commits that setState on a later macrotask. The reveal timer below is
+      // queued from a microtask that runs after the popover's, so it sits
+      // behind the popover's first timer and ahead of the close, matching
+      // that order. `act()` would flush a direct setState too early to catch
+      // a close that races the commit.
       function RevealFromEffect({
         children,
       }: {
@@ -554,7 +564,20 @@ describe("Popover container", () => {
       }): ReactElement {
         const [shown, setShown] = useState(false)
         useEffect(() => {
-          setShown(true)
+          let cancelled = false
+          let revealTimer: ReturnType<typeof setTimeout> | undefined
+          queueMicrotask(() => {
+            if (cancelled) return
+            revealTimer = setTimeout(() => {
+              setShown(true)
+            }, 0)
+          })
+          return () => {
+            cancelled = true
+            if (revealTimer !== undefined) {
+              clearTimeout(revealTimer)
+            }
+          }
         }, [])
         return (
           <div className={shown ? undefined : "is-hidden"} data-testid="panel">
