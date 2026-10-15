@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from numbers import Integral
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
@@ -458,6 +458,113 @@ class LayoutsMixin:
 
         return self.dg._block(block_proto)
 
+    # Counts 1-6 are fixed-length tuples so `left, right = st.columns(2)` is
+    # length-checked. Any other spec is a list: its length is not known
+    # statically. Runtime always returns a list.
+    #
+    # Each literal is also an int, so mypy reports overload-overlap when the
+    # tuple returns differ from the list fallback. The ignores mark that
+    # intentional overlap.
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[1],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[2],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[3],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[4],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[5],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[6],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(
+        self,
+        spec: SpecType,
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> list[DeltaGenerator]: ...
+
+    # Sequence is a supertype of the tuple overloads and the list fallback.
+    # Both checkers require that of the implementation. Callers see the
+    # overloads above. Runtime always returns a list.
     @gather_metrics("columns")
     def columns(
         self,
@@ -468,7 +575,7 @@ class LayoutsMixin:
         border: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
-    ) -> list[DeltaGenerator]:
+    ) -> Sequence[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -544,6 +651,13 @@ class LayoutsMixin:
         -------
         list of containers
             A list of container objects.
+
+            When ``spec`` is an integer literal from 1 to 6, type checkers
+            treat the return value as a tuple of that length.
+            ``left, right = st.columns(2)`` then types each variable as a
+            container. A non-literal integer, an integer outside that range,
+            or a sequence of widths is typed as a list of unknown length.
+            The value is always a list at runtime.
 
         Examples
         --------

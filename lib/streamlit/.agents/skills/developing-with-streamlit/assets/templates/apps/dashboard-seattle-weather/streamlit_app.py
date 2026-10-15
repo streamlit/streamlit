@@ -174,9 +174,9 @@ if not selected_years:
 
 df = full_df[full_df["date"].dt.year.isin(selected_years)]
 
-cols = st.columns([3, 1])
+ratio_cols = st.columns([3, 1])
 
-with cols[0].container(border=True, height="stretch"):
+with ratio_cols[0].container(border=True, height="stretch"):
     "### :material/thermostat: Temperature"
 
     st.altair_chart(
@@ -199,7 +199,7 @@ with cols[0].container(border=True, height="stretch"):
         alt="Daily high and low temperatures by year",
     )
 
-with cols[1].container(border=True, height="stretch"):
+with ratio_cols[1].container(border=True, height="stretch"):
     "### Weather distribution"
 
     st.altair_chart(
