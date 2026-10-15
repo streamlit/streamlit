@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, assert_type, cast
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     import datetime
@@ -26,8 +26,6 @@ if TYPE_CHECKING:
         AreaChartColumn,
         AudioColumn,
         BarChartColumn,
-        ButtonColumn,
-        ButtonColumnResult,
         CheckboxColumn,
         Column,
         ColumnConfig,
@@ -48,20 +46,6 @@ if TYPE_CHECKING:
         TimeColumn,
         VideoColumn,
     )
-    from streamlit.typing import ButtonColumnClickState
-
-    # ButtonColumn click state supports attribute and bracket access.
-    click_state = cast("ButtonColumnClickState", object())
-    assert_type(click_state.row, int)
-    assert_type(click_state["row"], int)
-    assert_type(click_state.label, str)
-    assert_type(click_state["label"], str)
-
-    def _on_click() -> None:
-        pass
-
-    def _on_click_with_args(x: int, y: str) -> None:
-        pass
 
     def _format_selectbox(option: str | int | float | bool) -> str:
         return str(option)
@@ -878,92 +862,8 @@ if TYPE_CHECKING:
         ColumnConfig,
     )
 
-    # =====================================================================
-    # ButtonColumn
-    # Without key: ColumnConfig. With key: ButtonColumnResult.
-    # =====================================================================
-
-    assert_type(ButtonColumn(), ColumnConfig)
-    assert_type(ButtonColumn("Actions"), ColumnConfig)
-    assert_type(ButtonColumn(label="Actions"), ColumnConfig)
-    assert_type(ButtonColumn(label=None), ColumnConfig)
-    assert_type(ButtonColumn(""), ColumnConfig)
-    assert_type(ButtonColumn(width="small"), ColumnConfig)
-    assert_type(ButtonColumn(width="medium"), ColumnConfig)
-    assert_type(ButtonColumn(width="large"), ColumnConfig)
-    assert_type(ButtonColumn(width=100), ColumnConfig)
-    assert_type(ButtonColumn(width=None), ColumnConfig)
-    assert_type(ButtonColumn(help=None), ColumnConfig)
-    assert_type(ButtonColumn(help="Click to perform action"), ColumnConfig)
-    assert_type(ButtonColumn(pinned=None), ColumnConfig)
-    assert_type(ButtonColumn(pinned=True), ColumnConfig)
-    assert_type(ButtonColumn(pinned=False), ColumnConfig)
-    assert_type(ButtonColumn(alignment=None), ColumnConfig)
-    assert_type(ButtonColumn(alignment="left"), ColumnConfig)
-    assert_type(ButtonColumn(alignment="center"), ColumnConfig)
-    assert_type(ButtonColumn(alignment="right"), ColumnConfig)
-    assert_type(ButtonColumn(type="primary"), ColumnConfig)
-    assert_type(ButtonColumn(type="secondary"), ColumnConfig)
-    assert_type(ButtonColumn(type="tertiary"), ColumnConfig)
-    assert_type(ButtonColumn(key="btn_click"), ButtonColumnResult)
-    assert_type(ButtonColumn("Actions", key="btn_click"), ButtonColumnResult)
-    key_name: str = "btn_click"
-    assert_type(ButtonColumn(key=key_name), ButtonColumnResult)
-    dynamic_key: str | None = "btn_click"
-    # ty infers ButtonColumnResult for a non-literal `str | None` key.
-    assert_type(  # ty: ignore[type-assertion-failure]
-        ButtonColumn(key=dynamic_key), ButtonColumnResult | ColumnConfig
-    )
-    assert_type(ButtonColumn(on_click=_on_click, key="click"), ButtonColumnResult)
-    assert_type(
-        ButtonColumn(on_click=_on_click_with_args, key="click"), ButtonColumnResult
-    )
-    assert_type(ButtonColumn(on_click=lambda: None, key="click"), ButtonColumnResult)
-    assert_type(ButtonColumn(on_click=None, key="click"), ButtonColumnResult)
-    assert_type(
-        ButtonColumn(on_click=_on_click_with_args, args=(1, "a"), key="click"),
-        ButtonColumnResult,
-    )
-    assert_type(
-        ButtonColumn(
-            on_click=_on_click_with_args, kwargs={"x": 1, "y": "a"}, key="click"
-        ),
-        ButtonColumnResult,
-    )
-    assert_type(
-        ButtonColumn(
-            on_click=_on_click_with_args, args=(1, "a"), kwargs={}, key="click"
-        ),
-        ButtonColumnResult,
-    )
-    assert_type(
-        ButtonColumn(
-            label="Actions",
-            width="medium",
-            help="Click to perform action",
-            pinned=False,
-            alignment="center",
-            type="primary",
-        ),
-        ColumnConfig,
-    )
-    assert_type(
-        ButtonColumn(
-            label="Actions",
-            width="medium",
-            help="Click to perform action",
-            pinned=False,
-            alignment="center",
-            type="primary",
-            on_click=_on_click,
-            args=None,
-            kwargs=None,
-            key="action_click",
-        ),
-        ButtonColumnResult,
-    )
-
-    # Every helper is accepted by st.dataframe / st.data_editor column_config.
+    # Every helper except ButtonColumn is accepted by column_config.
+    # ButtonColumn is covered in button_column_types.py.
     _column_config: ColumnConfigMappingInput = {
         "generic": Column("Name"),
         "number": NumberColumn("Amount", format="dollar"),
@@ -985,7 +885,6 @@ if TYPE_CHECKING:
         "progress": ProgressColumn("Score", format="percent"),
         "json": JsonColumn("Payload"),
         "markdown": MarkdownColumn("Body"),
-        "button": ButtonColumn("Actions", key="action_click"),
     }
 
     # =====================================================================
@@ -1050,13 +949,3 @@ if TYPE_CHECKING:
     ProgressColumn(color=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     JsonColumn(disabled=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     MarkdownColumn(default=1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-
-    ButtonColumn(type="other")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
-    # ty accepts a non-literal str for `type`; mypy does not.
-    button_type: str = "primary"
-    ButtonColumn(type=button_type)  # type: ignore[call-overload]
-    ButtonColumn(key=1)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
-    # Callbacks require a key, matching the runtime error.
-    ButtonColumn(on_click=_on_click)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
-    ButtonColumn(args=(1,))  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
-    ButtonColumn(disabled=True)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
