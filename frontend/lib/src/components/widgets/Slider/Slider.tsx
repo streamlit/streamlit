@@ -229,9 +229,9 @@ function Slider({
   // Note: on keyboard interactions, React Aria fires onChange and onChangeEnd
   // synchronously in the same event, so isDragging may be true→false within
   // the same React batch.
-  // React Aria cannot select `max` when it falls between steps. For a small
-  // gap (the default time slider is 1µs short of 24:00) the track ends on the
-  // next step, and that position is stored as `max`.
+  // React Aria stops on `min + n * step`. Only a small shortfall moves the
+  // track end to the next step; a wider gap keeps the original max. The
+  // slider stores that end position as max.
   const trackMax = sliderTrackMax(element.min, element.max, element.step)
   const commitTrackValue = useCallback(
     (trackValue: number): number =>

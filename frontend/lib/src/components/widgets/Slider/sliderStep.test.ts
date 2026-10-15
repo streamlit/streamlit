@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-import {
-  fromTrackValue,
-  sliderTrackMax,
-  sliderValuesEqual,
-  toTrackValue,
-} from "./sliderStep"
+import { fromTrackValue, sliderTrackMax, toTrackValue } from "./sliderStep"
 
 // time.min .. time.max with a 15-minute step. time.max is 1µs short of 96 steps.
 const TIME_MIN = 0
 const TIME_MAX = 86_399_999_999
 const TIME_STEP = 900_000_000
 const TIME_TRACK_MAX = 86_400_000_000
+const TIME_23_45 = 85_500_000_000
 
 describe("sliderStep", () => {
   it("extends a time slider track to the next step and maps it back to max", () => {
@@ -36,15 +32,14 @@ describe("sliderStep", () => {
     expect(fromTrackValue(TIME_TRACK_MAX, TIME_MAX, TIME_TRACK_MAX)).toBe(
       TIME_MAX
     )
-    // 23:45 stays on the original grid.
-    expect(fromTrackValue(85_500_000_000, TIME_MAX, TIME_TRACK_MAX)).toBe(
-      85_500_000_000
+    expect(fromTrackValue(TIME_23_45, TIME_MAX, TIME_TRACK_MAX)).toBe(
+      TIME_23_45
     )
   })
 
-  it("maps the endpoint back to time.max at epoch magnitude", () => {
-    // Microseconds for 2000-01-01. A 1µs gap is inside a few ULPs here, so
-    // equality at this magnitude must not treat 24:00 as time.max.
+  it("maps the track end back to time.max for a year-2000 timestamp", () => {
+    // Microseconds since 2000-01-01. A 1µs gap is only a few ULPs here, so
+    // the track end must not compare equal to time.max.
     const min = Date.UTC(2000, 0, 1) * 1000
     const max = min + TIME_MAX
     const trackMax = sliderTrackMax(min, max, TIME_STEP)
@@ -52,8 +47,8 @@ describe("sliderStep", () => {
     expect(trackMax).not.toBe(max)
     expect(fromTrackValue(trackMax, max, trackMax)).toBe(max)
     expect(toTrackValue(max, max, trackMax)).toBe(trackMax)
-    expect(fromTrackValue(min + 85_500_000_000, max, trackMax)).toBe(
-      min + 85_500_000_000
+    expect(fromTrackValue(min + TIME_23_45, max, trackMax)).toBe(
+      min + TIME_23_45
     )
   })
 
@@ -75,6 +70,13 @@ describe("sliderStep", () => {
   it("leaves a step-aligned span unchanged", () => {
     expect(sliderTrackMax(0, 10, 1)).toBe(10)
     expect(sliderTrackMax(0, 1, 0.1)).toBe(1)
-    expect(sliderValuesEqual(0.30000000000000004, 0.3)).toBe(true)
+  })
+
+  it("does not stretch a max that is only a few ULPs past the last step", () => {
+    // 0.1 * 3 lands just above 0.3. A 0.001 step is within 1% of that span,
+    // so the track would extend to 0.301 without the tolerance.
+    const max = 0.30000000000000004
+    expect(max).not.toBe(0.3)
+    expect(sliderTrackMax(0, max, 0.001)).toBe(max)
   })
 })

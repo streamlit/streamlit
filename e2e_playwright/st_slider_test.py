@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 41
+NUM_SLIDER_WIDGETS = 42
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -787,3 +787,20 @@ def test_default_time_slider_reaches_time_max(app: Page):
             has_text="Default time slider value:"
         )
     ).not_to_contain_text("23:45:00")
+
+    time_range = get_slider(app, "Default time range slider")
+    time_range.scroll_into_view_if_needed()
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(0)).to_have_text("09:00")
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(1)).to_have_text("17:00")
+
+    time_range.get_by_role("slider").nth(1).press("End")
+    wait_for_app_run(app)
+
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(0)).to_have_text("09:00")
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(1)).to_have_text("23:59")
+    expect_prefixed_markdown(
+        app,
+        "Default time range slider value:",
+        "09:00:00 23:59:59.999999",
+        exact_match=True,
+    )
