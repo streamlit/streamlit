@@ -45,6 +45,7 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
+import { fromTrackValue, sliderTrackMax, toTrackValue } from "./sliderStep"
 import {
   StyledRASlider,
   StyledSlider,
@@ -228,18 +229,33 @@ function Slider({
   // Note: on keyboard interactions, React Aria fires onChange and onChangeEnd
   // synchronously in the same event, so isDragging may be true→false within
   // the same React batch.
-  const handleFinalChange = useCallback(
-    (newValue: number | number[]): void => {
-      setValueWithSource({ value: toArray(newValue), fromUser: true })
-      setIsDragging(false)
-    },
-    [setValueWithSource]
+  // React Aria stops on `min + n * step`. Extend the track only when `max` is
+  // just past the last step, and commit that end position as `max`.
+  const trackMax = sliderTrackMax(element.min, element.max, element.step)
+  const trackToValue = useCallback(
+    (trackValue: number): number =>
+      fromTrackValue(trackValue, element.max, trackMax),
+    [element.max, trackMax]
   )
 
-  const handleChange = useCallback((newValue: number | number[]): void => {
-    setUiValue(toArray(newValue))
-    setIsDragging(true)
-  }, [])
+  const handleFinalChange = useCallback(
+    (newValue: number | number[]): void => {
+      setValueWithSource({
+        value: toArray(newValue).map(trackToValue),
+        fromUser: true,
+      })
+      setIsDragging(false)
+    },
+    [trackToValue, setValueWithSource]
+  )
+
+  const handleChange = useCallback(
+    (newValue: number | number[]): void => {
+      setUiValue(toArray(newValue).map(trackToValue))
+      setIsDragging(true)
+    },
+    [trackToValue]
+  )
 
   useLayoutEffect(() => {
     // React Aria's getThumbValueLabel always uses the Intl NumberFormatter, which
@@ -291,9 +307,11 @@ function Slider({
 
       <StyledRASlider
         minValue={element.min}
-        maxValue={element.max}
+        maxValue={trackMax}
         step={element.step}
-        value={getValueAsArray(uiValue, element)}
+        value={getValueAsArray(uiValue, element).map(value =>
+          toTrackValue(value, element.max, trackMax)
+        )}
         onChange={handleChange}
         onChangeEnd={handleFinalChange}
         isDisabled={disabled}
