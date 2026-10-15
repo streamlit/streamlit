@@ -184,8 +184,9 @@ hook that already decides when a run's stale deltas are dropped.
 ## Query large tables on the server
 
 **Today:** an MCP chat client reads a table beyond its preview through the `get_data`
-tool, a page of rows at a time ([mcp-support.md](mcp-support.md#data-for-chat-clients)).
-That reaches every row, but a table of a hundred thousand rows takes a hundred pages,
+tool, a page of rows at a time
+([MCP endpoint spec](../2026-10-15-agent-app-mcp-endpoint/product-spec.md#get_data)).
+That reaches every row, but a table of a hundred thousand rows takes hundreds of pages,
 each spent in the model's context, to answer one aggregate question.
 
 **The fuller version:** let the client run a query over an element's data on the server,
