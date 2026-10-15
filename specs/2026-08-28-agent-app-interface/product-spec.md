@@ -384,7 +384,8 @@ right now. Naming follows the public API, for the reason above:
 - Anything Streamlit derived rather than the author wrote stays **out of `props`**, so a
   reader never has to guess which keys are real parameters. Tabular and chart elements
   put it in a sibling `data` object — column schema, row and column counts, the
-  preview, the artifact URL — named after the `data` argument it describes. The
+  preview, the artifact URL, a chart's specification as `spec` — named after the `data`
+  argument it describes. The
   exceptions are few, and the coverage test lists each with what it is derived from:
   state a container has no `value` for (a dialog's `is_open`, a popover's or tab's
   `open`), facts read from the object a command was given (an exception's `message`,
@@ -395,7 +396,8 @@ right now. Naming follows the public API, for the reason above:
 - **Effective values, not just authored ones.** Include every public property that
   affects an element's meaning or how it can be interacted with, after backend-known
   defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
-  effective button `type`, `label_visibility`, selection mode, options, bounds, and step.
+  effective button `type`, `label_visibility`, a widget's selection mode, options,
+  bounds, and step.
   A client should not have to know each command's defaults for each Streamlit version to
   read the document, and "absent" should never be ambiguous between false, unsupported,
   and overlooked.
@@ -571,8 +573,9 @@ Rules:
   what it holds now. A widget's live value comes from reconciled client state, since
   proto defaults stop being accurate after the first interaction. A parameter that only
   picks the starting value — `index`, a multiselect's `default`, the tab `st.tabs` opens
-  first — is left out: `value` says the same thing on the first run and stays true after
-  it, and every tab's contents are in the tree regardless of which one a browser shows. A
+  first — is left out: `value`, or a tab's `open` where the tabs hold no value, says the
+  same thing on the first run, and every tab's contents are in the tree regardless of
+  which one a browser shows. A
   display element has no `value`; its content stays in `props`, so an `st.metric` number
   is `props.value`, and `st.json` reports its decoded body rather than a JSON string.
 - **Reported options and values are the form a request may send back.** For a widget with
@@ -610,7 +613,8 @@ Rules:
   tell which parameter sets it without a trial run. Its parameter follows the runtime's
   rules, as in a browser, with one difference:
 
-  - The widget keeps its value for the session, so `{}` clears only unbound parameters.
+  - The widget keeps its value for the session, so `"query_params": {}` clears only
+    unbound parameters.
   - A parameter equal to the widget's default is ignored, so `query_params` can move a
     bound widget away from its default but not back; `widget_state` does that.
   - Setting the widget drops its parameter rather than rewriting it, until the app
@@ -622,9 +626,11 @@ Rules:
   authored `key` where the element has one, is the identity.
 - **The `actions` list is an index that names its entries.** It lists the key of every
   element that can be set (`value`) or fired (`trigger`) right now, with its `type` and
-  its `label` when it has one, so a model can see the action space at a glance and match
-  a generated key without walking the tree; `value_schema` and constraints are read
-  from the element. An element without a label, such as `st.feedback` or
+  its `label` when it has one, so a model can see the action space at a glance and tell
+  generated keys apart. What to send stays on the element, which a client reads in the
+  tree before setting it: `value_schema` for the shape, `props` for the legal values.
+  The protocol description says so, since a model that fills a value from the index
+  alone guesses its shape. An element without a label, such as `st.feedback` or
   `st.chat_input`, has no `label` in its entry rather than an empty or borrowed one.
   A `disabled` widget, or one with a `support` reason, appears in the tree but not in
   `actions`. Form membership is visible from nesting, and each keyed element in a form
@@ -635,7 +641,7 @@ Rules:
   from what is reported, such as a custom component, and `read_only_in_v1` where what is
   reported is accurate but the element cannot be driven yet, such as an upload. Keeping
   it on the node means an agent never has to cross-reference a summary list to find out
-  which element a gap belongs to. A table or chart is fully supported until the app
+  which element a gap belongs to. A dataframe or chart is fully supported until the app
   enables selections on it or gives a dataframe a button column; then it is
   `read_only_in_v1`, which marks exactly the element an app's "select a row" caption is
   talking about. Tagging every table would mark gaps a display-only element does not
@@ -661,7 +667,8 @@ Rules:
   carry prompt injection. Nearly every string in the document is app-authored, so rather
   than marking them field by field, the protocol description tells clients to treat all
   of it as data, not instructions. Only the envelope — `schema_version`, `session_id`,
-  `status`, `observed_at`, and error codes — is server-generated.
+  `status`, `observed_at`, and error codes — and the interface's own field names and
+  enumerated values, such as `support`, are server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled, the runtime did not mark the run failed, and the page shows no uncaught
   exception, including one an earlier full run left outside a fragment that reran since.
@@ -719,7 +726,8 @@ Four details matter for an agent reading that snapshot:
   catches a `ValueError` and renders it deliberately would flip the whole interaction to
   `error`. The two cases are distinguishable because only the runtime's own error
   display applies `client.showErrorDetails` redaction, so the element records whether it
-  was uncaught as `props.uncaught`, and only that sets `status`. A caught-and-displayed
+  was uncaught as `props.uncaught`, and only that, of the exception elements, sets
+  `status`. A caught-and-displayed
   exception stays in the tree, marked as handled, which is more useful than either
   hiding it or calling the run broken.
 
@@ -730,7 +738,9 @@ Every outcome a client has to handle:
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, or a cross-form or cross-dialog batch | Error before any execution, naming which of those it was in its `code`; the OpenAPI document lists every code with its HTTP status. Nothing ran and the app is unchanged. |
+| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, a cross-form or cross-dialog batch, or fields that cannot go together, such as navigation with widget changes or `widget_state` on a creating call | Error before any execution, naming which of those it was in its `code`; the OpenAPI document lists every code with its HTTP status. Nothing ran and the app is unchanged. |
+| Unknown or expired `session_id`, or one created under a different identity           | `unknown_session`; omit `session_id` to start a new one.                                                                                 |
+| Refused before the request is read — a disallowed Host or `Origin`, an oversized body, or the session cap reached | `host_not_allowed`, `origin_not_allowed`, `request_too_large`, or `too_many_sessions`. Nothing ran. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `200` with `status: "error"`, the compile error as an uncaught `exception` in `main`, and no actions.                                     |
@@ -750,7 +760,8 @@ How elements are addressed:
   Streamlit should construct, parse, or persist one, and since every response is a fresh
   snapshot, a client never needs to. It also changes when the widget's parameters do,
   such as a slider whose bound moved, so a `not_on_page` for a generated key says to
-  look the element up by its `label`.
+  find the element again in the latest snapshot, by its `label` where that identifies
+  one.
 - **An authored `key` adds durability for text a human writes.** `{"region": "Europe"}`
   survives runs and releases and reads well in a PR, so authored keys are what make a
   saved request or a verification script survive a redeploy. An agent driving an app
@@ -838,8 +849,9 @@ refused with `invalid_value`:
     midnight where a time is expected. An offset the widget's own values lack is refused
     rather than silently dropped.
   - A list longer than `maxItems`, such as a third date for a range, is refused, since
-    the app would get a value it cannot unpack. For a list-valued element, a single
-    value and a one-item list are interchangeable.
+    the app would get a value it cannot unpack. An element whose `value_schema` is a
+    single value reads a one-item list as that value and refuses any other list, which
+    it would otherwise read as no value and reset.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values; a list may hold no more than
   `max_selections`. A widget with `accept_new_options` also takes new text, as it does
@@ -933,8 +945,8 @@ without introducing a new authorization surface.
 - `complete: false` with `unavailable`: the data could not be served, and why.
 
 It is about row count, not payload size: an eagerly sent 5,000-row table is incomplete
-because only its first 100 rows are inlined, so every truncated preview gets a URL,
-however small the table is in bytes. The cap is a row count set high enough that most
+because only its first 100 rows are inlined, so every truncated preview gets a URL, or
+an `unavailable` reason saying why it cannot, however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
 to an aggregate question**, and nothing else is truncated either: other large content
 stays inline in v1, and follow-up #9 moves it behind a URL.
@@ -982,8 +994,9 @@ Charts and maps:
   while it is rendered. Both are how media storage works for every client today, and
   outside this interface.
 - **They are bounded by `server.maxMessageSize`** (200 MB by default) per element, the
-  bound the app's own WebSocket messages have, so an agent is served no more than the app
-  could send its browser; anything larger is marked unavailable rather than registered.
+  bound on the messages the app sends its browser, so an agent is served no more than the
+  app could send; anything larger is `unavailable: "too_large_to_serve"` rather than
+  registered.
   The session also keeps the page's messages so a fragment rerun can return the whole
   page, which the same limit, the session cap, and the idle TTL bound. Keeping only the
   summaries a snapshot reads is a potential follow-up if profiling asks for it.
@@ -1002,7 +1015,7 @@ back to a browser rather than mistake it for missing content:
 | `st.data_editor` edits, dataframe and chart selections, dataframe button columns | Read-only, with `support: read_only_in_v1`: on every data editor, and on a dataframe or chart only when the app enabled selections or added a button column.          |
 | Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
-| Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
+| Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable: too_large_to_serve` instead of a `url`. See [Limits and configuration](#limits-and-configuration).              |
 | Chart data that is not one table                                           | A layered or concatenated Altair chart over several dataframes, or a Vega-Lite specification that loads data from a URL, reports its `spec` with `data.unavailable` (`multiple_datasets` or `external_url`) and serves none of the data, rather than part of it claimed as `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
@@ -1030,12 +1043,12 @@ and the setting is there for operators and tests rather than for tuning per app.
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
-| Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
+| Request body                           | 25 MB, then `request_too_large`; the bound on a message a browser sends | `server.maxWidgetStateSize`                                 |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
-| Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
+| Data served behind `data.url`          | 200 MB per element, then `too_large_to_serve`         | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed; follow-up #9 serves large ones behind `data.url`                       |
 | Response size                          | No cap                                                | Follow-up #9                                                                  |
-| `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
+| `data.url` lifetime                    | At least while the element that produced it is still rendered | Fixed; a fetch-now handle, never persisted                            |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
 | Error detail in a failed run           | As in the browser                                     | `client.showErrorDetails`                                                     |
@@ -1047,8 +1060,8 @@ and the setting is there for operators and tests rather than for tuning per app.
 This is a new programmatic execution surface and needs an explicit review.
 
 - **Off by default in v1, on by default as the goal.** Upgrading Streamlit should not open
-  a new route until the concerns in [Enablement](#enablement) are settled; after that, the
-  default flips. Either way the route applies the WebSocket's Host allow-list and
+  a new executing route until the concerns in [Enablement](#enablement) are settled;
+  after that, the default flips. Either way the route applies the WebSocket's Host allow-list and
   identity mapping, and serves any program that can reach the app; only a web page from
   an origin the operator did not list is refused.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, delta path,
@@ -1075,9 +1088,9 @@ This is a new programmatic execution surface and needs an explicit review.
   of its session handle, the request fields it used, its outcome, and its latency —
   never the handle itself, labels, values, table contents, or queries.
 
-What stands between opt-in and on-by-default, including why the route reads no cookie and
-refuses web pages, is one list, in [Enablement](#enablement), rather than a second one
-here.
+The security concerns that stand between opt-in and on-by-default, including why the
+route reads no cookie and refuses web pages, are one list, in [Enablement](#enablement),
+rather than a second one here.
 
 ### Enablement
 
@@ -1108,7 +1121,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 
 | Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
+| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once nothing renders it.                                                                                                                        | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
 | Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, the request's headers reach `st.context.headers` as the handshake's do, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here, in `st.user` and in the headers an app reads. | Agent sign-in for `st.login` apps (follow-up #10). |
@@ -1247,8 +1260,8 @@ disagree within a release.
 
 ## Follow-ups
 
-Each of these is additive to the v1 contract and independently shippable. They are
-numbered for reference rather than ranked.
+Each of these is additive to the v1 contract. They are numbered for reference rather
+than ranked, and say where one builds on another.
 
 1. **On by default.** Agent sign-in for `st.login` apps (follow-up #10), the
    response and rate budgets and per-caller quotas that make bulk access and request
@@ -1312,7 +1325,8 @@ numbered for reference rather than ranked.
    already a JSON value the runtime validates; chart selections, whose point identity is
    library-specific, follow. Each declares its `value_schema` as every widget does, with
    the object shape its selection has. Then uploads, including
-   `st.chat_input` attachments; `st.data_editor` edits; deferred downloads; and the
+   `st.chat_input` attachments; `st.data_editor` edits; dataframe button columns;
+   deferred downloads; and the
    browser's half of forms and bound parameters — applying `clear_on_submit` and
    rewriting a bound parameter when its widget is set.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
@@ -1346,7 +1360,7 @@ numbered for reference rather than ranked.
     cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
     API keys are what to avoid: they would be a second identity system.
 
-Smaller potential follow-ups and alternatives considered while building the prototype:
+Smaller potential follow-ups and alternatives considered:
 
 - **Values:** a per-key note on how each sent value landed, including a key the batch
   itself removed; refusing values that do not match `value_schema` — a fraction for a
