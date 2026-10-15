@@ -102,10 +102,10 @@ Do not cache live async clients or connections bound to the event loop that crea
 ### Bound cache growth
 
 **Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
-For functions that cache changing values, choose an appropriate bound. Use `ttl`
-or `max_entries` for ordinary parameterized caches. For `st.cache_data`, use
-`max_size` when values vary substantially in serialized size. Integers are bytes;
-strings use binary units (`"500MB"` and `"500MiB"` are equal):
+Use `ttl` to expire stale results and `max_entries` to cap how many argument
+combinations either decorator retains. For `st.cache_data`, add `max_size` when
+entry count is a poor proxy for serialized cache size. Integers are bytes; strings
+use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
 @st.cache_data(ttl="1h", max_entries=1000)
