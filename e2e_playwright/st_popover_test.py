@@ -778,8 +778,8 @@ def test_popover_closes_when_its_trigger_is_hidden(app: Page):
 def test_popover_commits_text_input_when_its_tab_is_hidden(app: Page):
     """A text input inside a popover keeps its value when the tab changes.
 
-    The tab commits on pointerdown, before focus leaves the input. The popover
-    blurs that input before unmounting so the typed value is not dropped.
+    The tab selects on pointerdown, before focus leaves the input. The popover
+    blurs the input first so its typed value is committed.
     """
     popover_body = open_popover(app, "Popover in tab")
     popover_body.get_by_label("Popover tab input").fill("kept value")

@@ -125,9 +125,8 @@ const TRIGGER_VISIBILITY_ATTRIBUTES = [
  * - Expander collapse sets `inert` on the panel inside `<details>` before the
  *   height animation finishes, so that `inert` counts as hidden.
  * - Dialog `inert` sits on an ancestor outside `<details>` and leaves the popover open.
- * - Without `checkVisibility`, computed `display: none` on the trigger or an
- *   ancestor still counts. Expander `inert` is handled above that, so dialog
- *   `inert` does not.
+ * - Without `checkVisibility` (for example jsdom or older Safari), fall back
+ *   to computed `display: none` on the trigger or an ancestor.
  */
 function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
   // `closest` returns the nearest inert ancestor. Only an inert host inside
@@ -162,9 +161,18 @@ function hasDisplayNone(trigger: HTMLElement): boolean {
 }
 
 /** Blur a focused widget in the body so its value commits before unmount. */
-function blurFocusedPopoverDescendant(body: HTMLElement | null): void {
+function blurFocusedPopoverDescendant(
+  body: HTMLElement | null,
+  fromLayout = false
+): void {
   const active = document.activeElement
   if (!(active instanceof HTMLElement) || !body?.contains(active)) {
+    return
+  }
+  // A layout effect already flushes updates it schedules. flushSync there
+  // warns and does not flush.
+  if (fromLayout) {
+    active.blur()
     return
   }
   /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
@@ -566,9 +574,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, deferBody])
 
-  // True once the trigger has been on screen. A later hide then closes.
-  // Until then the body stays unmounted and `open` is left unchanged.
+  // Whether the trigger has been visible during this open. A later hide
+  // records a close only after that. Until then the body stays unmounted
+  // and `open` is left unchanged.
   const seenRef = useRef(false)
+  // True while a script-restored open waits for parent effects. Visible
+  // readings in that window are ignored.
   const waitForParentRef = useRef(false)
   const applyVisibilityRef = useRef<() => void>(() => {})
   const visibilityTickRef = useRef(0)
@@ -627,7 +638,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         return
       }
       if (seenRef.current) {
-        blurFocusedPopoverDescendant(popoverBodyRef.current)
+        blurFocusedPopoverDescendant(popoverBodyRef.current, fromLayout)
         // A layout effect already runs before paint. flushSync from inside it
         // is deferred and warns, so close directly on that path.
         if (fromLayout) {
