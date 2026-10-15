@@ -503,6 +503,13 @@ export function calendarDateFromSegments(
   }
 }
 
+/** True when a spinbutton is an empty placeholder. Painted digits are not a
+ * clear: React Aria can leave `data-placeholder` set after the digits show. */
+export function isSegmentCleared(segment: Element): boolean {
+  const text = segment.textContent.trim()
+  return segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
+}
+
 /**
  * Reads a complete `CalendarDate` from a DateField's spinbutton segments.
  * Uses numeric text even when `data-placeholder` is still set, because React

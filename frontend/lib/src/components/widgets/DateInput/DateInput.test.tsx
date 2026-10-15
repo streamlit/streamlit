@@ -6124,4 +6124,59 @@ describe("optional empty default", () => {
       ])
     }
   )
+
+  it.each([
+    ["optional", false],
+    ["required", true],
+  ])(
+    "commits a painted single date on blur when placeholder attributes remain (%s)",
+    async (_label, required) => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: [],
+        required,
+        min: "1970-01-01",
+        max: "2030-12-31",
+      })
+      const setStringArrayValueSpy = vi.spyOn(
+        props.widgetMgr,
+        "setStringArrayValue"
+      )
+      render(<DateInput {...props} />)
+      setStringArrayValueSpy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+      const field = screen.getByTestId("stDateInputField")
+      // React Aria can leave data-placeholder set after the digits are visible.
+      // Apply it in capture so blur still sees the painted date.
+      field.addEventListener(
+        "focusout",
+        () => {
+          field.querySelectorAll('[role="spinbutton"]').forEach(segment => {
+            segment.setAttribute("data-placeholder", "true")
+          })
+        },
+        true
+      )
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2020-02-06"],
+          expect.anything()
+        )
+      })
+      expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        [],
+        expect.anything()
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    }
+  )
 })

@@ -70,6 +70,7 @@ import {
   datesEqual,
   getQuickSelectPresets,
   getSafeLocale,
+  isSegmentCleared,
   isValidSegmentValue,
   noop,
   parseDateFieldPaste,
@@ -218,10 +219,7 @@ function isFieldFullyCleared(field: Element): boolean {
   if (segs.length === 0) {
     return false
   }
-  return Array.from(segs).every(segment => {
-    const text = segment.textContent.trim()
-    return segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
-  })
+  return Array.from(segs).every(isSegmentCleared)
 }
 
 /** DOM digits if present; skip stale display state while the field is
@@ -295,12 +293,7 @@ function isRangeFullyCleared(container: HTMLElement | null): boolean {
   return (
     !!segments &&
     segments.length > 0 &&
-    Array.from(segments).every(segment => {
-      const text = segment.textContent.trim()
-      return (
-        segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
-      )
-    })
+    Array.from(segments).every(isSegmentCleared)
   )
 }
 

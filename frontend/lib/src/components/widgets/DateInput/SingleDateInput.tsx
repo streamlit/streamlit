@@ -62,8 +62,10 @@ import {
   calendarDateToIso,
   datesEqual,
   getSafeLocale,
+  isSegmentCleared,
   isValidSegmentValue,
   parseDateFieldPaste,
+  readCalendarDateFromField,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
 import {
@@ -140,6 +142,34 @@ interface SingleDateInputProps {
  * that matches an already-empty committed value after a real edit.
  * Callers must clear `hasEdited` after the pending edit is committed or
  * discarded so later empty blurs do not notify again. */
+/** Close/blur view of one date field. A segment with painted digits is not
+ * cleared, even when `data-placeholder` is still set. */
+function readSingleFieldOnLeave(
+  container: HTMLElement | null,
+  display: CalendarDate | null
+): {
+  partial: boolean
+  cleared: boolean
+  pending: CalendarDate | null
+} {
+  const segments = container?.querySelectorAll('[role="spinbutton"]')
+  if (!segments || segments.length === 0) {
+    return { partial: false, cleared: false, pending: display }
+  }
+  const clearedCount = Array.from(segments).filter(isSegmentCleared).length
+  if (clearedCount === segments.length) {
+    return { partial: false, cleared: true, pending: null }
+  }
+  if (clearedCount > 0) {
+    return { partial: true, cleared: false, pending: null }
+  }
+  const fromDom = readCalendarDateFromField(container)
+  if (!fromDom) {
+    return { partial: true, cleared: false, pending: null }
+  }
+  return { partial: false, cleared: false, pending: fromDom }
+}
+
 function shouldNotifySinglePending(
   pending: CalendarDate | null,
   committed: CalendarDate | null,
@@ -279,23 +309,12 @@ function SingleDateInput({
       if (skipCloseCommitRef.current) {
         skipCloseCommitRef.current = false
       } else {
-        const segments = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"]'
+        const field = readSingleFieldOnLeave(
+          triggerRef.current,
+          displayValueRef.current
         )
-        const placeholders = triggerRef.current?.querySelectorAll(
-          '[role="spinbutton"][data-placeholder="true"]'
-        )
-        const isPartiallyTyped =
-          segments &&
-          placeholders &&
-          placeholders.length > 0 &&
-          placeholders.length < segments.length
-        const allCleared =
-          segments &&
-          segments.length > 0 &&
-          placeholders?.length === segments.length
 
-        if (isPartiallyTyped || (allCleared && !allowEmptyCommit)) {
+        if (field.partial || (field.cleared && !allowEmptyCommit)) {
           // Incomplete segments, or a full clear when the default is
           // non-empty: revert display to the committed value. Empty-default
           // fields notify the parent so required can paint.
@@ -303,12 +322,12 @@ function SingleDateInput({
           hasEditedRef.current = false
           onCloseRef.current(true /* shouldClearError */)
         } else {
-          const pending = allCleared ? null : displayValueRef.current
+          const pending = field.pending
           if (
             shouldNotifySinglePending(
               pending,
               value,
-              Boolean(allCleared),
+              field.cleared,
               hasEditedRef.current,
               allowEmptyCommit
             )
@@ -405,33 +424,22 @@ function SingleDateInput({
         // Synchronous form commit: outside-click dismiss can race form submit
         // (the close-commit effect fires after paint). Mirrors handleBlur.
         if (formCommit) {
-          const segments = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"]'
+          const field = readSingleFieldOnLeave(
+            triggerRef.current,
+            displayValueRef.current
           )
-          const placeholders = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"][data-placeholder="true"]'
-          )
-          const isPartiallyTyped =
-            segments &&
-            placeholders &&
-            placeholders.length > 0 &&
-            placeholders.length < segments.length
-          const isFullyCleared =
-            segments &&
-            segments.length > 0 &&
-            placeholders?.length === segments.length
-          if (isPartiallyTyped || (isFullyCleared && !allowEmptyCommit)) {
+          if (field.partial || (field.cleared && !allowEmptyCommit)) {
             // Will revert on next render — don't commit stale/invalid state.
             // Clear pending now so a concurrent form submit does not use it.
             hasEditedRef.current = false
             onCloseRef.current(true)
           } else {
-            const pending = isFullyCleared ? null : displayValueRef.current
+            const pending = field.pending
             if (
               shouldNotifySinglePending(
                 pending,
                 value,
-                Boolean(isFullyCleared),
+                field.cleared,
                 hasEditedRef.current,
                 allowEmptyCommit
               )
@@ -701,36 +709,21 @@ function SingleDateInput({
           return
         }
       }
-      const segments = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"]'
+      const field = readSingleFieldOnLeave(
+        triggerRef.current,
+        displayValueRef.current
       )
-      const placeholders = triggerRef.current?.querySelectorAll(
-        '[role="spinbutton"][data-placeholder="true"]'
-      )
-      const isFullyCleared =
-        !!segments &&
-        segments.length > 0 &&
-        placeholders?.length === segments.length
-      if (segments && placeholders) {
-        const isPartiallyTyped =
-          placeholders.length > 0 && placeholders.length < segments.length
-        if (isPartiallyTyped) {
-          hasEditedRef.current = false
-          onCloseRef.current(true)
-          return
-        }
-        if (isFullyCleared && !allowEmptyCommit) {
-          hasEditedRef.current = false
-          onCloseRef.current(true)
-          return
-        }
+      if (field.partial || (field.cleared && !allowEmptyCommit)) {
+        hasEditedRef.current = false
+        onCloseRef.current(true)
+        return
       }
-      const pending = isFullyCleared ? null : displayValueRef.current
+      const pending = field.pending
       if (
         !shouldNotifySinglePending(
           pending,
           value,
-          isFullyCleared,
+          field.cleared,
           hasEditedRef.current,
           allowEmptyCommit
         )
