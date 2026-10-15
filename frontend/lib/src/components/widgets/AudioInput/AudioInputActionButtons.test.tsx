@@ -55,7 +55,7 @@ describe("AudioInputActionButton", () => {
     )
 
     const recordButton = screen.getByLabelText("Record")
-    expect(recordButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+    expect(recordButton).toHaveStyle("color: rgba(47, 45, 43, 0.6)")
 
     await user.click(recordButton)
     expect(startRecording).toHaveBeenCalled()
@@ -73,7 +73,7 @@ describe("AudioInputActionButton", () => {
     )
 
     const stopRecordingButton = screen.getByLabelText("Stop recording")
-    expect(stopRecordingButton).toHaveStyle("color: rgb(255, 75, 75)")
+    expect(stopRecordingButton).toHaveStyle("color: rgb(197, 57, 72)")
 
     await user.click(stopRecordingButton)
     expect(stopRecording).toHaveBeenCalled()
@@ -92,7 +92,7 @@ describe("AudioInputActionButton", () => {
 
     expect(screen.getByLabelText("Record")).toBeInTheDocument()
     const playButton = screen.getByLabelText("Play")
-    expect(playButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+    expect(playButton).toHaveStyle("color: rgba(47, 45, 43, 0.6)")
 
     await user.click(playButton)
     expect(onClickPlayPause).toHaveBeenCalled()
@@ -112,7 +112,7 @@ describe("AudioInputActionButton", () => {
 
     expect(screen.getByLabelText("Record")).toBeInTheDocument()
     const pauseButton = screen.getByLabelText("Pause")
-    expect(pauseButton).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+    expect(pauseButton).toHaveStyle("color: rgba(47, 45, 43, 0.6)")
 
     await user.click(pauseButton)
     expect(onClickPlayPause).toHaveBeenCalled()

@@ -1675,6 +1675,67 @@ const setSidebarHeadingFontSizes = (
 }
 
 /**
+ * Resolves the main theme's light/dark base. Named custom light and dark
+ * themes keep that base even when main-background luminance would imply the
+ * other one. Every other theme uses the main background's luminance.
+ */
+const getActiveThemeBase = (
+  activeTheme: ThemeConfig
+): CustomThemeConfig.BaseTheme => {
+  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+    return CustomThemeConfig.BaseTheme.LIGHT
+  }
+  if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
+    return CustomThemeConfig.BaseTheme.DARK
+  }
+
+  return getLuminance(activeTheme.emotion.colors.bgColor) > 0.5
+    ? CustomThemeConfig.BaseTheme.LIGHT
+    : CustomThemeConfig.BaseTheme.DARK
+}
+
+/** Built-in main page surfaces used to decide stock vs swapped sidebar fallbacks. */
+const stockMainSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    bgColor: lightTheme.emotion.colors.bgColor,
+    secondaryBg: lightTheme.emotion.colors.secondaryBg,
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    bgColor: darkTheme.emotion.colors.bgColor,
+    secondaryBg: darkTheme.emotion.colors.secondaryBg,
+  },
+} as const
+
+/** Sidebar backgrounds used when main surfaces still match the built-in pair and `[theme.sidebar]` leaves a side unset. */
+export const stockSidebarSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    backgroundColor: "#F8F8F7",
+    // Distinct from the sidebar background so widgets stay visible while
+    // showWidgetBorder is off.
+    secondaryBackgroundColor: "#F1F0EE",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    backgroundColor: "#21201D",
+    secondaryBackgroundColor: "#2D2B27",
+  },
+} as const
+
+const mainSurfacesAreStock = (
+  activeTheme: ThemeConfig,
+  mainThemeBase: CustomThemeConfig.BaseTheme
+): boolean => {
+  const stock = stockMainSurfaces[mainThemeBase]
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  // Normalize both sides so equivalent spellings (white, #fff, #FFFFFF) still
+  // count as the built-in pair. A raw string compare would treat those as
+  // customized and swap the sidebar.
+  return (
+    toHex(bgColor) === toHex(stock.bgColor) &&
+    toHex(secondaryBg) === toHex(stock.secondaryBg)
+  )
+}
+
+/**
  * Create the sidebar's theme, including any sidebar custom theme configurations
  * Note: handleSectionInheritance has already handled section inheritance for sidebar
  * in generating the main theme.
@@ -1683,32 +1744,44 @@ const setSidebarHeadingFontSizes = (
 export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const sidebarThemeInput = activeTheme.themeInput?.sidebar
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  const mainThemeBase = getActiveThemeBase(activeTheme)
+  const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
 
-  // Either use the configured background color or secondary background from main theme:
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
-  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+  // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
+  // (sidebar bg = main secondary, sidebar secondary = main bg).
+  const useStockSidebarSurfaces = mainSurfacesAreStock(
+    activeTheme,
+    mainThemeBase
+  )
+  const fallbackBackground = useStockSidebarSurfaces
+    ? stockSurfaces.backgroundColor
+    : secondaryBg
+  const fallbackSecondary = useStockSidebarSurfaces
+    ? stockSurfaces.secondaryBackgroundColor
+    : bgColor
 
-  // Either use the configured secondary background color or background from main theme:
+  const sidebarBackground =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
+    sidebarThemeInput?.backgroundColor || fallbackBackground
+
   const secondaryBackgroundColor =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
-    sidebarThemeInput?.secondaryBackgroundColor || bgColor
+    sidebarThemeInput?.secondaryBackgroundColor || fallbackSecondary
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(
     sidebarThemeInput?.headingFontSizes
   )
 
-  let baseTheme =
-    getLuminance(sidebarBackground) > 0.5
-      ? CustomThemeConfig.BaseTheme.LIGHT
-      : CustomThemeConfig.BaseTheme.DARK
-
-  // If the active theme is a light/dark custom theme, use the expected base
-  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.LIGHT
-  } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.DARK
-  }
+  // Named custom light/dark themes keep that base. Other themes follow
+  // the resolved sidebar background's luminance.
+  const baseTheme =
+    activeTheme.name === CUSTOM_THEME_LIGHT_NAME ||
+    activeTheme.name === CUSTOM_THEME_DARK_NAME
+      ? mainThemeBase
+      : getLuminance(sidebarBackground) > 0.5
+        ? CustomThemeConfig.BaseTheme.LIGHT
+        : CustomThemeConfig.BaseTheme.DARK
 
   // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
   const mergedSidebarThemeInput = mergeWith(

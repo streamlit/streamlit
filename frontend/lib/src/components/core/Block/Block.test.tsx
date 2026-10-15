@@ -213,7 +213,7 @@ describe("FlexBoxContainer Block Component", () => {
     renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
-      "border: 1px solid rgba(49, 51, 63, 0.2);"
+      "border: 1px solid rgba(47, 45, 43, 0.2);"
     )
   })
 

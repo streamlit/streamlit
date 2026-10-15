@@ -99,7 +99,12 @@ Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
 Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
-Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Leave both unset to keep that swap. Set both explicitly only when the sidebar should use the main pairing or another custom pair.
+Unset sidebar surfaces depend on whether the resolved main backgrounds still match the built-in light/dark pair:
+
+- **Main backgrounds still match the built-in pair:** the sidebar uses light `#F8F8F7` / `#F1F0EE` or dark `#21201D` / `#2D2B27` (background / secondary background).
+- **Either resolved main surface differs from that built-in pair:** unset sidebar background uses the main secondary background, and unset sidebar secondary uses the main background.
+
+Set both sidebar surfaces explicitly when the sidebar should use another custom pair.
 
 **Sidebar headings:**
 
@@ -345,7 +350,7 @@ linkColor = "#38bdf8"
 showWidgetBorder = true
 ```
 
-Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds swap main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
+Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use Streamlit's default sidebar colors when the main backgrounds still match the built-in pair; otherwise they swap the main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
 
 When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
 
