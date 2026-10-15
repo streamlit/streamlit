@@ -94,7 +94,7 @@ coverage (95% or higher) of our Python code in `lib/streamlit`.
 
 ### Public API changes
 
-Cover new public `st.*` commands and new or changed parameters in typing tests (`lib/tests/streamlit/typing/`; see below). When feasible, support the same changes in AppTest (`lib/streamlit/testing/v1/`): a typed node and query accessor for a new command, interaction methods for widgets, and the new or changed parameter on that node.
+Cover new public `st.*` commands and new or changed parameters in typing tests (`lib/tests/streamlit/typing/`; see below). When a command can be represented as an element or block, support the same changes in AppTest (`lib/streamlit/testing/v1/`): a typed node, query properties on both `AppTest` and `Block`, interaction methods for widgets, and the new or changed parameter on that node.
 
 ### Typing Tests
 
