@@ -3,7 +3,7 @@
 The goal: an app that serves the [agent API](product-spec.md) can also be added to an AI
 application as an MCP server by pasting one URL. Nothing to install and no second
 process. The MCP endpoint is one more route on the Streamlit server, offering the same
-interactions as `POST /_stcore/agent/v1/interact` through the same code.
+interactions as `POST /_stcore/agent/interact` through the same code.
 
 **Status:** prototyped. The protocol handling is in `lib/streamlit/runtime/agent/mcp.py`
 and the route in `starlette_agent_routes.py`, next to the HTTP API's.
@@ -11,8 +11,12 @@ and the route in `starlette_agent_routes.py`, next to the HTTP API's.
 ## What it looks like
 
 ```text
-https://your-app.example.com/_stcore/agent/v1/mcp
+https://your-app.example.com/_stcore/agent/mcp
 ```
+
+The URL carries no version, since a person pastes it into an AI application once: MCP
+negotiates its protocol revision in `initialize`, and clients read the tools afresh on
+every connection.
 
 MCP's HTTP transport is JSON-RPC over `POST`: the client sends small JSON messages and
 the server answers with JSON. Clients such as Claude, ChatGPT, Cursor, VS Code, and
@@ -26,7 +30,7 @@ same Host allow-list, identity mapping, and session limits.
 ## Which clients can use it
 
 - **Desktop and editor clients** — Cursor, Claude Code, VS Code, Claude Desktop — run on
-  the user's machine and can connect to `http://localhost:8501/_stcore/agent/v1/mcp`
+  the user's machine and can connect to `http://localhost:8501/_stcore/agent/mcp`
   directly. That covers the coding-agent case: verify the app you just edited.
 - **Web clients** such as Claude.ai and ChatGPT connect from their own servers, so the
   app must be deployed somewhere publicly reachable, typically over HTTPS.
@@ -66,7 +70,7 @@ Three details:
   result marked as an error, carrying the same code and message the HTTP API returns,
   because MCP expects a model to see a tool failure and correct itself.
 - **URLs are relative to the MCP server's URL**, the same rule the HTTP API uses for
-  its own responses: a table's `data.url` is `../../../media/<id>`, and resolving it
+  its own responses: a table's `data.url` is `../../media/<id>`, and resolving it
   against the URL the client connected to reaches the file. The client knows that URL
   and the app may not: Community Cloud strips its `/~/+/` prefix and terminates TLS
   before forwarding, so a URL built from what the app sees points at the platform's

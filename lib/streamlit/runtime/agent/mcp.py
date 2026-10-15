@@ -20,7 +20,7 @@ so it answers four methods and rejects the rest, without the SDK and its
 dependencies.
 
 The main tool is ``interact``: the same operation as ``POST
-/_stcore/agent/v1/interact``, with the same request schema, taken from
+/_stcore/agent/interact``, with the same request schema, taken from
 ``protocol`` so the two cannot drift. Its description is a compact version of
 the HTTP guidance, ordered for a model: how to call it and what each field
 means come first, because a long description may be skimmed or cut off. The

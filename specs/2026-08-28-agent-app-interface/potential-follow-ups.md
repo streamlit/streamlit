@@ -271,7 +271,7 @@ to the browser, and no other client shares the session. So the last snapshot sta
 current until the agent acts, which the tool description could say outright.
 
 **The fuller version:** keep each session's last document and return it from a read
-that does not execute, as an MCP tool or the `GET /_stcore/agent/v1/sessions/{id}` of
+that does not execute, as an MCP tool or the `GET /_stcore/agent/sessions/{id}` of
 the product spec's follow-up #4. About 20 lines, plus one document of memory per
 session. It should be opt-in, not what a request with no changes does: the prototype
 tried that default, and most such requests want a run, such as a coding agent

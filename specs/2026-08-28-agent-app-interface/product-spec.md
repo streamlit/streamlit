@@ -212,11 +212,11 @@ agents is the half nobody owns.
 ### v1 is one operation
 
 The whole interface is one executing route, served when `server.enableAgentApi` is on,
-plus `GET /_stcore/agent/v1/openapi.json` describing it. See [Enablement](#enablement)
+plus `GET /_stcore/agent/openapi.json` describing it. See [Enablement](#enablement)
 for that setting and where it should end up.
 
 ```http
-POST /_stcore/agent/v1/interact
+POST /_stcore/agent/interact
 Content-Type: application/json
 ```
 
@@ -510,7 +510,7 @@ right now. Naming follows the public API, for the reason above:
                   ["2026-Q4", 318000]
                 ]
               },
-              "url": "../../../media/4f1c8ab27d9e5306"
+              "url": "../../media/4f1c8ab27d9e5306"
             }
           },
           {
@@ -681,7 +681,11 @@ Rules:
   and the element vocabulary is the API of the Streamlit it runs, so a client that reads
   the description, as a model does on every connection, picks up a change with the
   upgrade. Only a script that hard-codes element types or `props` names relies on the
-  additive rule, and authored keys keep its addressing stable.
+  additive rule, and authored keys keep its addressing stable. The routes carry no
+  version, like Streamlit's other routes: a server speaks the one protocol its
+  description documents, and a breaking change would bump `schema_version` and go
+  through Streamlit's deprecation cycle rather than a second set of routes. An MCP URL,
+  which a person pastes into an AI application once, never has to change.
 - **Values are plain JSON, encoded one way everywhere**, as the table below lists. The
   same encoding applies to `value`, `props`, and table rows, and is what a request sends
   back; each element's `value_schema` states its JSON type for that element, with
@@ -1056,7 +1060,7 @@ and the setting is there for operators and tests rather than for tuning per app.
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
 | Error detail in a failed run           | As in the browser                                     | `client.showErrorDetails`                                                     |
-| Where the routes live                  | `/_stcore/agent/v1/…`                                 | `server.baseUrlPath`                                                          |
+| Where the routes live                  | `/_stcore/agent/…`                                    | `server.baseUrlPath`                                                          |
 | Where a session lives                  | One server process. Behind several replicas, requests need sticky routing, which a load balancer cannot derive from the `session_id` in the JSON body, so without it a later call gets `unknown_session` | The deployment; follow-up #1 |
 
 ### Security
@@ -1165,11 +1169,11 @@ cannot always tell where it is: Community Cloud strips its `/~/+/` prefix and te
 TLS without saying so, so the app sees `http://example.streamlit.app/_stcore/...` for a
 request to `https://example.streamlit.app/~/+/_stcore/...`, and any URL built from that
 points at the platform. The URL the client called is the one base that is always right.
-So the OpenAPI `servers` entry, resolved against the document's own URL, is `../../..`,
+So the OpenAPI `servers` entry, resolved against the document's own URL, is `../..`,
 with one more `..` per segment of `server.baseUrlPath`, which the documented paths
 include. Every `data.url` and media URL is relative to the request, such as
-`../../../media/<id>`: ordinary URL joining climbs out of `_stcore/agent/v1/` to the
-app's root, whatever prefix sits in front. The `index.html` links, and the MCP endpoint
+`../../media/<id>`: ordinary URL joining climbs out of `_stcore/agent/` to the app's
+root, whatever prefix sits in front. The `index.html` links, and the MCP endpoint
 of follow-up #6, use the same form.
 
 ## Key design decisions
@@ -1302,7 +1306,7 @@ than ranked, and say where one builds on another.
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
 6. **MCP endpoint.** One more route on the Streamlit server,
-   `/_stcore/agent/v1/mcp`, so an app can be added to an AI application by its URL. One
+   `/_stcore/agent/mcp`, so an app can be added to an AI application by its URL. One
    fixed `interact` tool, with dynamic actions in its _result_. Per-widget tools are not
    an option: `tools/list` "MUST NOT vary per-connection or as a side effect of other
    requests on the connection"

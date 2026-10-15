@@ -1246,7 +1246,7 @@ _create_option(
     "server.enableAgentApi",
     description="""
         Enable the agent API, which lets a non-browser client drive the app
-        over HTTP at `/_stcore/agent/v1/interact`.
+        over HTTP at `/_stcore/agent/interact`.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets

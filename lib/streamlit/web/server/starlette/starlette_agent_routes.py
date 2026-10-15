@@ -14,10 +14,10 @@
 
 """The agent API routes.
 
-``POST /_stcore/agent/v1/interact`` drives the app; ``GET
-/_stcore/agent/v1/openapi.json`` describes how, so a caller that found the
+``POST /_stcore/agent/interact`` drives the app; ``GET
+/_stcore/agent/openapi.json`` describes how, so a caller that found the
 endpoint can learn the protocol without being handed documentation; and
-``POST /_stcore/agent/v1/mcp`` offers the same interaction as an MCP server,
+``POST /_stcore/agent/mcp`` offers the same interaction as an MCP server,
 for AI applications that connect to servers by URL.
 
 All three are always registered, because the app's HTML always links the
@@ -73,9 +73,9 @@ _T = TypeVar("_T")
 # How often a waiting interaction checks whether its client is still there.
 _DISCONNECT_POLL_SECONDS: Final = 1.0
 
-_ROUTE_AGENT_INTERACT: Final = "_stcore/agent/v1/interact"
-_ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/v1/openapi.json"
-_ROUTE_AGENT_MCP: Final = "_stcore/agent/v1/mcp"
+_ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
+_ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/openapi.json"
+_ROUTE_AGENT_MCP: Final = "_stcore/agent/mcp"
 
 # How many path segments every agent route sits below the app's root, so how
 # far a URL relative to the request has to climb to reach it.
@@ -86,7 +86,7 @@ _MEDIA_PATH: Final = f"/{BASE_ROUTE_MEDIA}"
 
 
 def _climb(levels: int) -> str:
-    """A relative URL that climbs this many path segments, such as ``../../..``."""
+    """A relative URL that climbs this many path segments, such as ``../..``."""
     return "/".join([".."] * levels)
 
 
