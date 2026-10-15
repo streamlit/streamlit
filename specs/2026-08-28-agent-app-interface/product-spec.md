@@ -91,9 +91,8 @@ data**, and making that view legible to agents changes what a question costs:
 The differentiator is that Streamlit already holds most of the semantics and the execution
 model this needs, so it can offer this across existing apps with little author effort,
 where a lower-level framework would need each author to describe their app. And it
-compounds: agents that
-write apps embed definitions and units, which makes those apps better semantic views,
-which makes agents consuming them more accurate.
+compounds: agents that write apps embed definitions and units, which makes those apps
+better semantic views, which makes agents consuming them more accurate.
 
 Two honest limits. The interface surfaces author-provided meaning; it does not invent
 it, so an unexplained table stays unexplained. And choosing _which_ app answers a
@@ -277,11 +276,11 @@ may still come back for the result.
 
 The limits of that guarantee:
 
-- **It covers a `202` the client received.** A lost final response, or a lost response to
-  a creating call, leaves nothing to collect, so a retry is a new interaction. After a
-  lost final response, sending only `session_id` reruns the app and re-applies nothing,
-  so a trigger never fires twice. General retry idempotency is the `request_id` of
-  follow-up #4.
+- **It covers a run the client stopped waiting for, not a response it lost.** A lost
+  final response, or a lost response to a creating call, leaves nothing to collect, so a
+  retry is a new interaction. After a lost final response, sending only `session_id`
+  reruns the app and re-applies nothing, so a trigger never fires twice. General retry
+  idempotency is the `request_id` of follow-up #4.
 - **A disconnect only helps if it reaches the server**, and a proxy that keeps the
   upstream connection open hides it. So the run timeout should stay below the timeouts
   of the clients a deployment expects, such as the 60 seconds MCP clients built on the
@@ -386,14 +385,12 @@ right now. Naming follows the public API, for the reason above:
   reader never has to guess which keys are real parameters. Tabular and chart elements
   put it in a sibling `data` object — column schema, row and column counts, the
   preview, the artifact URL, a chart's specification as `spec` — named after the `data`
-  argument it describes. The
-  exceptions are few, and the coverage test lists each with what it is derived from:
-  state a container has no `value` for (a dialog's `is_open`, a popover's or tab's
-  `open`), facts read from the object a command was given (an exception's `message`,
-  the `doc_string` `st.help` shows), whether an exception went uncaught, and a media
-  element's `url`. A parameter
-  Streamlit normalized, such as `column_config` with its defaults applied, is still a
-  parameter.
+  argument it describes. The exceptions are few, and the coverage test lists each with
+  what it is derived from: state a container has no `value` for (a dialog's `is_open`, a
+  popover's or tab's `open`), facts read from the object a command was given (an
+  exception's `message`, the `doc_string` `st.help` shows), whether an exception went
+  uncaught, and the `url` of a media element or an eager download. A parameter Streamlit
+  normalized, such as `column_config` with its defaults applied, is still a parameter.
 - **Effective values, not just authored ones.** Include every public property that
   affects an element's meaning or how it can be interacted with, after backend-known
   defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
@@ -573,12 +570,14 @@ Rules:
 - **Construction versus current state.** `props` is how the element was built; `value` is
   what it holds now. A widget's live value comes from reconciled client state, since
   proto defaults stop being accurate after the first interaction. A parameter that only
-  picks the starting value — `index`, a multiselect's `default`, the tab `st.tabs` opens
-  first — is left out: `value`, or a tab's `open` where the tabs hold no value, says the
-  same thing on the first run, and every tab's contents are in the tree regardless of
-  which one a browser shows. A
-  display element has no `value`; its content stays in `props`, so an `st.metric` number
-  is `props.value`, and `st.json` reports its decoded body rather than a JSON string.
+  picks the starting value — `index`, a multiselect's `default`, an expander's
+  `expanded`, the tab `st.tabs` opens first — is left out wherever the element holds a
+  `value`, which says the same thing on the first run. A container without one keeps
+  its starting state: a plain expander reports `expanded`, and plain tabs report each
+  tab's `open`. Every tab's contents are in the tree regardless of which one a browser
+  shows. A display element has no `value`; its content stays in `props`, so an
+  `st.metric` number is `props.value`, and `st.json` reports its decoded body rather
+  than a JSON string.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
@@ -851,8 +850,8 @@ refused with `invalid_value`:
     `st.feedback` takes its index as `1`, not `"1"`; `1.0` counts as `1`.
   - Dates and times are ISO text, even for a slider that carries them as microseconds.
     A date-time or time input and a slider read any ISO 8601 form, a date alone being
-    midnight where a time is expected. An offset the widget's own values lack is refused
-    rather than silently dropped.
+    midnight where a date and time is expected. An offset the widget's own values lack
+    is refused rather than silently dropped.
   - A list longer than `maxItems`, such as a third date for a range, is refused, since
     the app would get a value it cannot unpack. An element whose `value_schema` is a
     single value reads a one-item list as that value and refuses any other list, which
@@ -951,10 +950,11 @@ without introducing a new authorization surface.
 
 It is about row count, not payload size: an eagerly sent 5,000-row table is incomplete
 because only its first 100 rows are inlined, so every truncated preview gets a URL, or
-an `unavailable` reason saying why it cannot, however small the table is in bytes. The cap is a row count set high enough that most
-filtered tables come back complete. **A preview must never look like the complete answer
-to an aggregate question**, and nothing else is truncated either: other large content
-stays inline in v1, and follow-up #9 moves it behind a URL.
+an `unavailable` reason saying why it cannot, however small the table is in bytes. The
+cap is a row count set high enough that most filtered tables come back complete. **A
+preview must never look like the complete answer to an aggregate question**, and nothing
+else is truncated either: other large content stays inline in v1, and follow-up #9 moves
+it behind a URL.
 
 Charts and maps:
 
@@ -1030,7 +1030,7 @@ back to a browser rather than mistake it for missing content:
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`, and a table's rows beyond the preview are `unavailable: "undescribed"`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
-| Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
+| Reading without running, polling                                           | Every `interact` runs the script, apart from a retry that collects a timed-out run, which returns no partial results; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. Follow-up #4 adds a read and an operation handle. |
 
 ### Limits and configuration
 
@@ -1122,7 +1122,7 @@ forfeit the installed base of existing apps, which is most of the value here.
 more than the app would contradict that invariant: anyone who can reach the app's
 WebSocket can already drive it. What v1 does instead is close the few ways this route
 differs from the WebSocket. What is genuinely new is not capability but _practicality_,
-and the rest of it is what stands between opt-in and on-by-default:
+and handling that is what stands between opt-in and on-by-default:
 
 | Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -1166,12 +1166,12 @@ cannot always tell where it is: Community Cloud strips its `/~/+/` prefix and te
 TLS without saying so, so the app sees `http://example.streamlit.app/_stcore/...` for a
 request to `https://example.streamlit.app/~/+/_stcore/...`, and any URL built from that
 points at the platform. The URL the client called is the one base that is always right.
-So the OpenAPI `servers` entry is `../../..`, with one more `..` per segment of
-`server.baseUrlPath`, which the documented paths include, resolved against the
-document's own URL, and
-every `data.url` and media URL is relative to the request, such as `../../../media/<id>`:
-ordinary URL joining climbs out of `_stcore/agent/v1/` to the app's root, whatever prefix
-sits in front. The MCP endpoint and the `index.html` links use the same form.
+So the OpenAPI `servers` entry, resolved against the document's own URL, is `../../..`,
+with one more `..` per segment of `server.baseUrlPath`, which the documented paths
+include. Every `data.url` and media URL is relative to the request, such as
+`../../../media/<id>`: ordinary URL joining climbs out of `_stcore/agent/v1/` to the
+app's root, whatever prefix sits in front. The `index.html` links, and the MCP endpoint
+of follow-up #6, use the same form.
 
 ## Key design decisions
 
