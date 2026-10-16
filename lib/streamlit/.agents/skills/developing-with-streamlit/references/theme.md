@@ -166,7 +166,18 @@ A shared file may use all valid theme sections. App config, environment variable
 
 ## Options agents often miss
 
-Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`): semantic `*Color` / `*BackgroundColor` / `*TextColor`; `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors)); `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`; `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`; Google Fonts URL syntax in `font`; self-hosted `[[theme.fontFaces]]` with `[server] enableStaticServing = true`; `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`; a shared `theme.base` file/URL for multi-app brand inheritance; dual light/dark sections and sidebars when those shapes fit; `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS).
+Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`):
+
+- Semantic `*Color` / `*BackgroundColor` / `*TextColor`
+- `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors))
+- `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`
+- `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`
+- Google Fonts URL syntax in `font`, `headingFont`, or `codeFont`
+- Self-hosted fonts via `[[theme.fontFaces]]` and `[server] enableStaticServing = true`
+- `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
+- A shared `theme.base` file/URL for multi-app brand inheritance
+- Dual light/dark sections and sidebars when those shapes fit
+- `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS)
 
 ## Color configuration
 
