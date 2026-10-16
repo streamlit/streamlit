@@ -40,6 +40,29 @@ def _get_editor(app: Page, key: str) -> Locator:
     return data_editor
 
 
+def _open_markdown_cell(app: Page, row: int) -> Locator:
+    """Double-click a markdown cell until its overlay is visible.
+
+    After a rerun the canvas can accept the double-click before cells are
+    interactive, so the overlay never mounts. Retry until it does.
+    """
+    overlay = app.get_by_test_id("portal").locator(".gdg-clip-region")
+    last_error: AssertionError | None = None
+    for _attempt in range(3):
+        editor = _get_editor(app, "markdown-column")
+        editor.scroll_into_view_if_needed()
+        expect_canvas_to_be_visible(editor)
+        click_on_cell(editor, row, 0, double_click=True, column_width="medium")
+        try:
+            expect(overlay).to_be_visible(timeout=2000)
+            return overlay
+        except AssertionError as error:
+            last_error = error
+    if last_error is not None:
+        raise last_error
+    return overlay
+
+
 def test_data_editor_supports_various_configurations(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -226,13 +249,9 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
 )  # Cell overlay visibility flaky on webkit and Firefox
 def test_markdown_cell_keyboard_shortcuts(app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
-    markdown_column_df = _get_editor(app, "markdown-column")
-    expect_canvas_to_be_visible(markdown_column_df)
-
-    # Open the second markdown cell (row 2) to avoid conflicts with previous test
-    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    expect(cell_overlay).to_be_visible()
+    # Open the second markdown cell (row 2). The overlay open is retried because
+    # the grid sometimes drops the double-click while the canvas is settling.
+    cell_overlay = _open_markdown_cell(app, 2)
 
     edit_button = cell_overlay.get_by_label("Edit")
     expect(edit_button).to_be_visible()
@@ -256,13 +275,10 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
         app, "Markdown column return:", "Saved via keyboard", exact_match=False
     )
 
-    # Re-fetch the dataframe locator since the page has been rerendered, then
-    # re-open the same cell to confirm it can be re-opened after saving.
-    markdown_column_df = _get_editor(app, "markdown-column")
-    expect_canvas_to_be_visible(markdown_column_df)
-    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    expect(cell_overlay).to_be_visible()
+    # Re-open the same cell to confirm it can be re-opened after saving.
+    # This is the step that flakes: the post-rerun canvas accepts the
+    # double-click without mounting the overlay.
+    cell_overlay = _open_markdown_cell(app, 2)
     expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_contain_text(
         "Shortcut Header"
     )
