@@ -20,7 +20,7 @@ Use `streamlit config show` for the full option list and descriptions. Do not in
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
-**Where to put keys:** shared fonts/radii/borders/padding on `[theme]`; per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`); sidebar contrast on `[theme.sidebar]` or nested light/dark sidebars; chart/dataframe palettes on the section for that mode.
+**Where to put keys:** shared fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]`; per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`); sidebar contrast on `[theme.sidebar]` or nested light/dark sidebars; chart/dataframe palettes on the section for that mode.
 
 ## Cheat sheet: common customization intents
 
@@ -131,6 +131,7 @@ font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;70
 backgroundColor = "#0f172a"
 secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
+codeTextColor = "#f8fafc"
 textColor = "#f8fafc"
 borderColor = "#334155"
 primaryColor = "#4f46e5"
@@ -279,12 +280,14 @@ linkUnderline = false
 
 ## Border and radius
 
+Built-in themes already show widget borders and the sidebar separator unless you set these flags to `false`. Only set them when opting out or overriding a nested section.
+
 ```toml
 [theme]
 baseRadius = "8px"                 # none/small/medium/large/full or px/rem
 buttonRadius = "8px"               # defaults to baseRadius
-showWidgetBorder = true
-showSidebarBorder = true           # [theme]-only
+showWidgetBorder = false           # opt out; omit to keep the built-in on default
+showSidebarBorder = false          # [theme]-only; omit to keep the built-in on default
 ```
 
 Radius keywords: `"none"`, `"small"` (0.35rem), `"medium"` (0.5rem), `"large"` (1rem), `"full"` (1.4rem).
@@ -328,16 +331,16 @@ Affects sidebar chrome and widgets only (not the main block). `showSidebarBorder
 backgroundColor = "#0f172a"
 secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
+codeTextColor = "#f8fafc"
 textColor = "#f8fafc"
 borderColor = "#334155"
 primaryColor = "#0284c7"
 linkColor = "#38bdf8"
-showWidgetBorder = true
 ```
 
 Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use Streamlit's default sidebar colors when the main backgrounds still match the built-in pair; otherwise they swap the main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
 
-When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
+When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, `codeTextColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
 
 ## Light and dark modes
 
@@ -413,6 +416,7 @@ backgroundColor = "#11567F"
 backgroundColor = "#11567F"
 secondaryBackgroundColor = "#174D6A"
 textColor = "#ffffff"
+codeTextColor = "#ffffff"
 borderColor = "#1E6D94"
 primaryColor = "#0969da"
 linkColor = "#8ecbff"

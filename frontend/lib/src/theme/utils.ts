@@ -894,11 +894,11 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  // Unset code background keeps the stock chrome hex from createEmotionColors.
+  // Unset: use the theme's default code background from createEmotionColors.
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
-  // Unset dataframe header background keeps the stock chrome hex.
+  // Unset: use the theme's default dataframe header background.
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
@@ -951,8 +951,8 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.link =
     linkColor ?? conditionalOverrides.colors.blueTextColor
 
-  // Code text color should use the codeTextColor config if provided, otherwise
-  // keep the stock/createEmotionColors value (body text on the default theme).
+  // Unset: keep the theme's default code text color (matches body text on the
+  // built-in themes).
   conditionalOverrides.colors.codeTextColor =
     codeTextColor ?? conditionalOverrides.colors.codeTextColor
 
@@ -1803,13 +1803,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Stock sidebar chrome only when the resolved sidebar surfaces still match
-  // stockSidebarSurfaces (so a customized dark sidebar on a stock main page
-  // keeps luminance-matched base chrome) and both the sidebar section and the
-  // inherited main value left the key blank. A configured `[theme]` chrome
-  // color must still reach the sidebar.
+  // Stock sidebar chrome is eligible only when the resolved sidebar surfaces
+  // match the built-in pair (so a customized dark sidebar on a stock main page
+  // keeps luminance-matched base chrome). Each key is still applied only when
+  // both the sidebar section and the inherited main value left it blank.
   // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
-  const useStockSidebarChrome =
+  const canUseStockSidebarChrome =
     useStockSidebarSurfaces &&
     toHex(sidebarBackground) === toHex(stockSurfaces.backgroundColor) &&
     toHex(secondaryBackgroundColor) ===
@@ -1822,7 +1821,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     codeBackgroundColor?: string
     codeTextColor?: string
   } = {}
-  if (useStockSidebarChrome) {
+  if (canUseStockSidebarChrome) {
     const mainThemeInput = activeTheme.themeInput
     const resolvedBorder =
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset

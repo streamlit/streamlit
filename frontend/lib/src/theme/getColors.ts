@@ -87,7 +87,7 @@ export const createEmotionColors = (
     // Links default to blueTextColor.
     link: genericColors.blueTextColor,
 
-    // Stock chrome hexes come from light/dark themeColors (required).
+    // Default chrome colors are defined per theme in themeColors.ts.
     codeTextColor: genericColors.codeTextColor,
     codeBackgroundColor: genericColors.codeBackgroundColor,
 
