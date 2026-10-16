@@ -363,7 +363,8 @@ def logout() -> None:
         if runtime.exists():
             runtime.get_instance().clear_user_info_for_session(session_id)
 
-        # Also covers the cases with no runtime or no matching session.
+        # Clear the script context directly too, for runs without a runtime
+        # or a matching session.
         context.user_info.clear()
 
         base_path = config.get_option("server.baseUrlPath")

@@ -101,8 +101,9 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         # Mapping of AppSession.id -> ActiveSessionInfo.
         self._active_session_info_by_id: dict[str, ActiveSessionInfo] = {}
 
-        # Logged-out session ids. Checked before storage so a script-thread
-        # logout does not have to read or write SessionStorage.
+        # Guards the logged-out id set together with moves between the active
+        # map and storage, so a script-thread logout cannot interleave with
+        # disconnect or resume.
         self._storage_lock = threading.Lock()
         self._nonresumable_session_ids: set[str] = set()
 
@@ -155,16 +156,23 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
                 )
                 if active_session_info is not None:
                     if active_session_info.session.matches_user_info(user_info):
-                        _LOGGER.warning(
-                            "Session with id %s is already connected! Reconnecting to existing session.",
-                            existing_session_id,
-                        )
-                        # Disconnecting the still-active session moves it into
-                        # storage, which makes it available to the storage-based
-                        # reconnect path below. The new client then reconnects to
-                        # the same session (preserving its state) instead of a
-                        # brand-new one being created.
-                        self.disconnect_session(active_session_info.session.id)
+                        # Logout may have published the id after the check
+                        # above. Re-check before disconnect so request_script_stop
+                        # does not run on a session that must stay connected.
+                        if self._session_resume_forbidden(existing_session_id):
+                            self._log_logged_out_reconnect(existing_session_id)
+                            existing_session_id = None
+                        else:
+                            _LOGGER.warning(
+                                "Session with id %s is already connected! Reconnecting to existing session.",
+                                existing_session_id,
+                            )
+                            # Disconnecting the still-active session moves it
+                            # into storage, which makes it available to the
+                            # storage-based reconnect path below. The new client
+                            # then reconnects to the same session (preserving
+                            # its state) instead of a brand-new one being created.
+                            self.disconnect_session(active_session_info.session.id)
                     else:
                         # The reconnect id points at a session that is still
                         # active under a different user's identity, or one that
@@ -187,6 +195,12 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         )
         if resumed_session_id is not None:
             return resumed_session_id
+
+        if session_id_override is not None and self._session_resume_forbidden(
+            session_id_override
+        ):
+            self._log_logged_out_reconnect(session_id_override)
+            session_id_override = None
 
         session = AppSession(
             script_data=script_data,
@@ -249,8 +263,8 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
     ) -> str | None:
         """Reconnect to a stored session, or return None when that id cannot be used.
 
-        Holds the storage lock across the tombstone check, the storage read,
-        and the adopt so a script-thread logout cannot land in the middle.
+        Holds the storage lock across the non-resumable id check, the storage
+        read, and the adopt, so a script-thread logout cannot land in the middle.
         """
         with self._storage_lock:
             if (

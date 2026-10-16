@@ -239,8 +239,10 @@ class SessionManager(Protocol):
 
     Notes
     -----
-    Threading: All SessionManager methods are *not* threadsafe -- they must be called
-    from the runtime's eventloop thread.
+    Threading: SessionManager methods are *not* threadsafe -- they must be called
+    from the runtime's eventloop thread. ``mark_session_nonresumable`` is the
+    exception: logout calls it from the script thread, and it must not touch
+    session storage.
     """
 
     @abstractmethod

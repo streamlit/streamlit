@@ -359,6 +359,75 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         "streamlit.runtime.app_session.AppSession.register_file_watchers",
         new=MagicMock(),
     )
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
+    def test_logout_mark_blocks_same_user_handoff(
+        self, patched_warning: MagicMock
+    ) -> None:
+        """A logout mark stops a same-user reconnect from disconnecting the original."""
+        alice = {"email": "alice@example.com"}
+        original_client = MagicMock()
+        session_id = self.connect_session(client=original_client, user_info=alice)
+        original_session_info = self.session_mgr._active_session_info_by_id[session_id]
+        original_session = original_session_info.session
+
+        self.session_mgr.mark_session_nonresumable(session_id)
+        new_session_id = self.connect_session(
+            existing_session_id=session_id,
+            client=MagicMock(),
+            user_info=alice,
+        )
+
+        assert new_session_id != session_id
+        assert (
+            self.session_mgr._active_session_info_by_id[session_id]
+            is original_session_info
+        )
+        assert original_session_info.client is original_client
+        original_session.request_script_stop.assert_not_called()
+        patched_warning.assert_called_with(
+            "Ignoring reconnect to logged-out session id %s. "
+            "Connecting to a new session instead.",
+            session_id,
+        )
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_logged_out_id_is_not_reused_as_session_id_override(self) -> None:
+        """A logged-out id is not assigned to a newly created session."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.mark_session_nonresumable(session_id)
+
+        new_session_id = self.connect_session(
+            session_id_override=session_id, user_info={}
+        )
+
+        assert new_session_id != session_id
+        assert self.session_mgr._session_storage.get(session_id) is not None
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
     def test_disconnect_shuts_down_logged_out_session(self) -> None:
         """disconnect_session shuts down a logged-out session instead of saving it."""
         alice = {"email": "alice@example.com"}

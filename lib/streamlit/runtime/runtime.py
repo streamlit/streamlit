@@ -344,11 +344,17 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         def close_if_inactive() -> None:
-            session_info = self._session_mgr.get_session_info(session_id)
-            if session_info is not None:
-                session_info.session.clear_user_info()
-            if not self.is_active_session(session_id):
-                self.close_session(session_id)
+            active = self._session_mgr.get_active_session_info(session_id)
+            if active is not None:
+                # Only the logged-out session is cleared. A replacement that
+                # reused the id is left alone.
+                if not active.session.is_resumable():
+                    active.session.clear_user_info()
+            else:
+                # close_session drops the id even when storage no longer has
+                # it. get_session_info would skip that when the id is gone.
+                self._session_mgr.close_session(session_id)
+                self._on_session_disconnected()
 
         try:
             running_loop = asyncio.get_running_loop()
