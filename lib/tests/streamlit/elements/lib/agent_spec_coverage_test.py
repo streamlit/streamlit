@@ -213,9 +213,23 @@ def _dialog() -> None:
     show()
 
 
+def _html_with_javascript() -> None:
+    st.html("<b>Hello</b>", unsafe_allow_javascript=True)
+
+
+def _url_iframe() -> None:
+    st.iframe("https://example.com")
+
+
 _PRODUCER_OVERRIDES: dict[str, ELEMENT_PRODUCER] = {
     "dialog": _dialog,
     "form_submit_button": _form_submit_button,
+}
+
+# Extra calls so a command with more than one support signature is exercised.
+_EXTRA_PRODUCERS: dict[str, list[ELEMENT_PRODUCER]] = {
+    "html": [_html_with_javascript],
+    "iframe": [_url_iframe],
 }
 
 
@@ -225,6 +239,8 @@ def _producers_by_command() -> dict[str, list[ELEMENT_PRODUCER]]:
         producers[command].append(producer)
     for command, producer in _PRODUCER_OVERRIDES.items():
         producers[command] = [producer]
+    for command, extras in _EXTRA_PRODUCERS.items():
+        producers[command].extend(extras)
     return dict(producers)
 
 
@@ -276,8 +292,12 @@ _RESERVED_FIELDS: dict[
     "graphviz_chart": frozenset({(None, False, None, None)}),
     "header": frozenset({(None, False, None, None)}),
     "help": frozenset({(None, False, None, None)}),
-    "html": frozenset({(None, False, None, None)}),
-    "iframe": frozenset({(None, False, "browser_required", None)}),
+    "html": frozenset(
+        {(None, False, None, None), (None, False, "browser_required", None)}
+    ),
+    "iframe": frozenset(
+        {(None, False, None, None), (None, False, "browser_required", None)}
+    ),
     "image": frozenset({(None, False, None, None)}),
     "info": frozenset({(None, False, None, None)}),
     "json": frozenset({(None, False, None, None)}),

@@ -489,8 +489,9 @@ class MarkdownMixin:
 
             body = sympy.latex(body)
 
+        body_text = clean_text(body)
         latex_proto = MarkdownProto()
-        latex_proto.body = f"$$\n{clean_text(body)}\n$$"
+        latex_proto.body = f"$$\n{body_text}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
             latex_proto.help = to_help_str(help)
@@ -504,7 +505,7 @@ class MarkdownMixin:
             # `body` is the dedented LaTeX source, not the `$$`-delimited form
             # the frontend needs.
             agent_props=agent_spec.element(
-                "latex", body=clean_text(body), help=latex_proto.help or None
+                "latex", body=body_text, help=latex_proto.help or None
             ),
         )
 

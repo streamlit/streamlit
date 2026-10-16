@@ -73,6 +73,13 @@ def _process_dialog_width_input(
     )
 
 
+_POSITION_NAMES: Final = {
+    BlockProto.Dialog.DialogPosition.CENTER: "center",
+    BlockProto.Dialog.DialogPosition.LEFT: "left",
+    BlockProto.Dialog.DialogPosition.RIGHT: "right",
+}
+
+
 def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None:
     """Describe this dialog for the agent API.
 
@@ -96,13 +103,6 @@ def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None
         on_dismiss="rerun" if can_dismiss else "ignore",
         is_open=is_open,
     )
-
-
-_POSITION_NAMES: Final = {
-    BlockProto.Dialog.DialogPosition.CENTER: "center",
-    BlockProto.Dialog.DialogPosition.LEFT: "left",
-    BlockProto.Dialog.DialogPosition.RIGHT: "right",
-}
 
 
 def _process_dialog_position_input(

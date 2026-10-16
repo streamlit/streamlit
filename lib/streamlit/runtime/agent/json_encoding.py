@@ -102,8 +102,8 @@ def _to_json_value(value: Any, seen: set[int]) -> Any:
             },
         )
 
-    # numpy scalars and arrays. Before the sequence fallback: a matrix is a
-    # sequence, and tolist() is the form the previous encoding used.
+    # numpy scalars and arrays, via tolist(). This runs before the sequence
+    # fallback because a matrix is also a sequence.
     # The source is marked first: tolist() may return the object itself, or a
     # structure that points back at it, and either one would recurse forever.
     if hasattr(value, "tolist"):

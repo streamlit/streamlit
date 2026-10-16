@@ -285,17 +285,34 @@ def _prop_value(value: Any) -> Any:
     return json_encoding.to_json_value(_omit_unset(value))
 
 
-def _omit_unset(value: Any) -> Any:
-    """Copy ``value`` with dict entries that are ``None`` removed."""
-    if isinstance(value, dict):
-        return {
-            key: _omit_unset(item) for key, item in value.items() if item is not None
-        }
-    if isinstance(value, list):
-        return [None if item is None else _omit_unset(item) for item in value]
-    if isinstance(value, tuple):
-        return tuple(None if item is None else _omit_unset(item) for item in value)
-    return value
+def _omit_unset(value: Any, seen: set[int] | None = None) -> Any:
+    """Copy ``value`` with dict entries that are ``None`` removed.
+
+    A container already on the stack is left as-is. ``to_json_value`` turns that
+    cycle into text, so this walk cannot recurse on a self-referential prop.
+    """
+    if not isinstance(value, (dict, list, tuple)):
+        return value
+    if seen is None:
+        seen = set()
+    marker = id(value)
+    if marker in seen:
+        return value
+    seen.add(marker)
+    try:
+        if isinstance(value, dict):
+            return {
+                key: _omit_unset(item, seen)
+                for key, item in value.items()
+                if item is not None
+            }
+        if isinstance(value, list):
+            return [None if item is None else _omit_unset(item, seen) for item in value]
+        return tuple(
+            None if item is None else _omit_unset(item, seen) for item in value
+        )
+    finally:
+        seen.remove(marker)
 
 
 class Content(NamedTuple):

@@ -86,6 +86,15 @@ def test_nan_prop_becomes_null() -> None:
     assert decoded["props"]["value"] is None
 
 
+def test_cyclic_dict_prop_does_not_recurse() -> None:
+    """A prop that contains itself is left for the encoder instead of looping."""
+    cycle: dict[str, Any] = {}
+    cycle["self"] = cycle
+    decoded = _recorded("metric", column_config=cycle)
+    repeated = decoded["props"]["column_config"]["self"]["self"]
+    assert isinstance(repeated, str)
+
+
 def test_nested_missing_values_stay_null() -> None:
     """A nested NaN or ``pd.NA`` stays null. Only an original ``None`` is dropped."""
 
