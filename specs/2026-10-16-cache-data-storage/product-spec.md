@@ -7,12 +7,12 @@ created: 2026-10-16
 
 ## Summary
 
-Let an app choose once where `st.cache_data` stores its entries, instead of opting single
-functions in with `persist="disk"`. Streamlit ships a built-in disk storage configured in
-`config.toml`, and `st.App` accepts any custom storage, such as Redis. All replicas of an
-app can share one storage, and cache hits stay as fast as today because each replica keeps
-an in-memory copy of the entries it uses. `persist` is deprecated and keeps working on the
-new disk storage during a long deprecation window.
+Let an app choose once where `st.cache_data` stores its entries, instead of opting
+individual functions in with `persist="disk"`. Streamlit ships a built-in disk storage
+configured in `config.toml`, and `st.App` accepts any custom storage, such as Redis. All
+replicas of an app can share one storage, and cache hits stay as fast as today because each
+replica keeps an in-memory copy of the entries it uses. `persist` is deprecated and keeps
+working on the new disk storage during a long deprecation window.
 
 The [tech spec](./tech-spec.md) covers how this works across replicas.
 
@@ -69,8 +69,9 @@ investigation (see the tech spec).
 
 - The storage is configured once per app and applies to every `st.cache_data` function
   with `scope="global"`.
-- Each replica keeps an in-memory copy of the entries it has used, as today. A cache hit on
-  a rerun doesn't touch the storage.
+- Each replica keeps an in-memory copy of the entries it has used, as today. A cache hit
+  reads the entry from memory. Its only storage access is a check of small invalidation
+  markers, at most once per second per function.
 - `scope="session"` caches and `st.cache_resource` always stay in memory. Session caches
   belong to one session on one replica, and resources aren't serializable.
 - The default stays in-memory, so apps that configure nothing behave exactly as today.
@@ -89,7 +90,7 @@ namespace = "sales-dashboard"
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries. `"memory"` keeps them only in the process; `"disk"` also writes them to `cache.diskPath`. |
-| `cache.diskPath` | `str` | `"~/.streamlit/cache"` | Folder for `storage = "disk"`. Can be a volume that several replicas share. |
+| `cache.diskPath` | `str` | `"~/.streamlit/cache"` | Folder for `storage = "disk"`. Can be a volume that several replicas share. `~` is expanded, and a relative path is resolved against the working directory. |
 | `cache.namespace` | `str` | A hash of the main script's absolute path | Keeps the entries of different apps apart when they share one storage. Up to 64 lowercase letters, digits, `.`, `_`, and `-`, starting with a letter or digit; other values are rejected at startup. |
 
 The default namespace only separates apps whose main scripts have different absolute paths.
@@ -132,21 +133,25 @@ key more than once. The full contract is in the tech spec.
 
 **Cache parameters with a storage:**
 
-- `ttl`: An entry expires a fixed time after it was computed, on every replica. Expired
-  entries are never served, whether from memory or from the storage.
+- `ttl`: Every replica expires an entry at the same time, `ttl` after it was computed (later
+  with background refresh, see below). Expired entries are never served, whether from memory
+  or from the storage.
 - `max_entries`: Limits how many entries each replica keeps in memory for that function. The
   storage's own eviction policy limits what it keeps: disk only deletes expired entries, so
   entries without a `ttl` stay until they're cleared; Redis uses its memory policy. An entry
   evicted from memory can still be read back from the storage.
 - `refresh_mode="background"`: Supported. As today, an entry goes stale after `ttl` and
   expires at `runner.cacheBackgroundRefreshTTLMultiplier` × `ttl`. When an entry goes
-  stale, every replica keeps serving it while one replica refreshes it, and the others reuse
-  the result instead of recomputing it.
+  stale, every replica keeps serving it while it's refreshed. If the storage implements
+  `add`, usually one replica refreshes it and the others reuse the result; otherwise each
+  replica may refresh it.
 - Other parameters and async cached functions work as today, including their limits:
   coroutines can't use `refresh_mode="background"`, and background mode doesn't replay
   display output. Otherwise, display output from cached functions is replayed on every
   replica, including media. Audio and video passed as a local file path are read from that
   path again, so the file must exist on every replica.
+- Storage calls are synchronous, so on a miss, an async cached function blocks the event
+  loop while it reads from the storage.
 
 **Clearing:**
 
@@ -156,28 +161,34 @@ key more than once. The full contract is in the tech spec.
   stay.
 - The replica that cleared sees the change immediately. A session stays on one replica, so
   a user who clicks a "Refresh" button gets fresh data. Other replicas see the clear within
-  about one second.
-- `streamlit cache clear` deletes the entries of every namespace in the disk storage folder
-  configured in `config.toml`, and nothing else in that folder. It can't reach a storage
-  passed to `st.App`; use `st.cache_data.clear()` from the app instead.
+  about one second. After `my_func.clear(*args)`, a compute of that key that was already
+  running on another replica can still store its result.
+- `streamlit cache clear` deletes the entries of every namespace in `cache.diskPath`, and the
+  old `persist` files in `~/.streamlit/cache`, but no other files. It reads `cache.diskPath`
+  the way `streamlit config show` does, from the global and current folder's `config.toml`,
+  environment variables, and flags. It can't reach a storage passed to `st.App`; use
+  `st.cache_data.clear()` from the app instead.
 
 **Several replicas:**
 
 - A value computed on one replica is reused by all others.
-- A cold key that several replicas request at the same time is computed once if the storage
-  implements `add`. The built-in disk storage and the documented Redis recipe both do.
-  Without `add`, each replica may compute the key once.
-- Replicas must run the same code and the same `runner.cacheHashSeed`; the default works.
-  Changing a function's code changes its keys, so during a rolling deploy, old and new
-  replicas don't read each other's entries for changed functions. To keep deploy versions
-  completely apart, for example when upgrading pandas, set `cache.namespace` to the
-  version.
+- A cold key that several replicas request at the same time is usually computed only once if
+  the storage implements `add`. The built-in disk storage and the documented Redis recipe
+  both do. This is best-effort: a replica that stalls for more than 30 seconds can let
+  another one compute the key again. Without `add`, each replica may compute the key once.
+- Replicas must run the same code, and keep `runner.cacheHashSeed` at its default or set the
+  same value on all of them. Changing a function's code changes its keys, so during a
+  rolling deploy, old and new replicas don't read each other's entries for changed
+  functions. To keep deploy versions completely apart, for example when upgrading pandas,
+  set `cache.namespace` to the version.
 - Replica clocks must be in sync (NTP), because expiry is compared across replicas.
 
 **Failures:**
 
 - If the storage is unavailable, the app keeps working. Each replica serves its in-memory
   entries and computes misses itself. Streamlit logs a warning, at most once per minute.
+  This needs storage calls to fail quickly instead of hanging, so a custom storage should
+  set a client timeout, as the Redis recipe does.
 - An entry that can't be read is treated as a miss and recomputed. This covers corrupted
   entries, entries written by an incompatible Streamlit version, and entries whose class no
   longer exists.
@@ -230,7 +241,8 @@ def _ms(ttl_seconds: float | None) -> int | None:
 
 class RedisCacheStorage(CacheStorage):
     def __init__(self, url: str) -> None:
-        self._redis = redis.Redis.from_url(url)
+        # Fail fast instead of stalling reruns when Redis is unreachable.
+        self._redis = redis.Redis.from_url(url, socket_timeout=1)
 
     def get(self, key: str) -> bytes | None:
         return self._redis.get(key)
@@ -349,6 +361,8 @@ added later if users ask for it. Adding a parameter later is easier than removin
   or push notifications through Redis pub/sub.
 - **Async storage protocol.**
 - **Memory budget for in-memory copies:** each replica still keeps its own copies.
+- **Size limit for the disk storage:** entries without a `ttl` stay until they're cleared,
+  so the docs recommend a `ttl` for functions called with many distinct arguments.
 - **Signing or encrypting stored entries.**
 - **Choosing a custom storage in `config.toml`** by import path.
 - **Per-function opt-out** (see above).
