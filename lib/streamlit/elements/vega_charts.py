@@ -785,29 +785,14 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
-def _builtin_chart_encoding(
-    *,
-    color_column: str | None,
-    size_column: str | None,
-    **arguments: Any,
-) -> dict[str, Any]:
+def _builtin_chart_encoding(**arguments: Any) -> dict[str, Any]:
     """The arguments a built-in chart was given that say what it plots.
 
-    All six Vega commands emit the same proto with no field saying which one
-    ran, and these arguments are compiled into the generated Vega-Lite spec
-    rather than sent as parameters. So the columns the author chose, and how
-    the chart combines them, are only knowable at the command, which passes
-    exactly the parameters it has.
-
-    ``color`` and ``size`` are the column names ``generate_chart`` resolved
-    from the converted data. A literal color or pixel size is omitted.
+    All six Vega commands emit the same proto. The chart specification carries
+    how ``color`` and ``size`` were applied, so the description reports the
+    parameters the author passed.
     """
-    described = dict(arguments)
-    if "color" in described:
-        described["color"] = color_column
-    if "size" in described:
-        described["size"] = size_column
-    return described
+    return dict(arguments)
 
 
 class VegaChartsMixin:
@@ -1056,7 +1041,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, color_column, size_column = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.LINE,
             data=data,
             x_from_user=x,
@@ -1079,8 +1064,6 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="line_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    color_column=color_column,
-                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1378,7 +1361,7 @@ class VegaChartsMixin:
         if stack is False or stack is None:
             stack = "layered"
 
-        chart, color_column, size_column = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.AREA,
             data=data,
             x_from_user=x,
@@ -1401,8 +1384,6 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="area_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    color_column=color_column,
-                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1742,7 +1723,7 @@ class VegaChartsMixin:
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
 
-        chart, color_column, size_column = generate_chart(
+        chart = generate_chart(
             chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
@@ -1766,8 +1747,6 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="bar_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    color_column=color_column,
-                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -2028,7 +2007,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, color_column, size_column = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.SCATTER,
             data=data,
             x_from_user=x,
@@ -2050,8 +2029,6 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="scatter_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    color_column=color_column,
-                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,

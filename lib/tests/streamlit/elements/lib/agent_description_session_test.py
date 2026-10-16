@@ -235,57 +235,24 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert metric["props"]["value"] == "—"
         assert metric["props"]["delta"] == "up"
 
-    def test_chart_color_uses_columns_of_the_converted_data(self) -> None:
-        """Color and size are columns of the data the chart converted.
+    def test_chart_reports_the_color_and_size_arguments(self) -> None:
+        """Color and size are the arguments the author passed.
 
-        A fixed color is omitted. A column is reported even when its name is a
-        color, and even when the input is a dict, a list of records, or a
-        PyArrow table.
+        The chart specification carries whether a string is a column or a
+        fixed color, so the description does not resolve that itself.
         """
-        import pyarrow as pa
-
         self._record()
         frame = pd.DataFrame({"a": [1], "b": [2]})
         st.line_chart(frame, x="a", y="b", color="#ffaa00")
         st.line_chart(frame, x="a", y="b", color="b")
-        st.line_chart(
-            {"x": [1, 2], "y": [3, 4], "red": ["a", "b"]},
-            x="x",
-            y="y",
-            color="red",
-        )
-        st.line_chart(
-            [{"x": 1, "y": 3, "#ffaa00": "a"}, {"x": 2, "y": 4, "#ffaa00": "b"}],
-            x="x",
-            y="y",
-            color="#ffaa00",
-        )
-        st.scatter_chart(
-            {"x": [1, 2], "y": [3, 4], "red": [5, 6]},
-            x="x",
-            y="y",
-            size="red",
-            color=["#ff0000"],
-        )
-        st.line_chart(
-            pa.table({"x": [1], "y": [2], "group": ["a"]}),
-            x="x",
-            y="y",
-            color="group",
-        )
+        st.scatter_chart(frame, x="a", y="b", size="b", color=["#ff0000"])
 
         described = _descriptions(list(self.forward_msg_queue._queue))
         line_charts = [item for item in described if item["type"] == "line_chart"]
         scatter = next(item for item in described if item["type"] == "scatter_chart")
-        assert [item["props"].get("color") for item in line_charts] == [
-            None,
-            "b",
-            "red",
-            "#ffaa00",
-            "group",
-        ]
-        assert scatter["props"]["size"] == "red"
-        assert "color" not in scatter["props"]
+        assert [item["props"]["color"] for item in line_charts] == ["#ffaa00", "b"]
+        assert scatter["props"]["size"] == "b"
+        assert scatter["props"]["color"] == ["#ff0000"]
 
     def test_map_color_and_size_use_columns_of_the_converted_data(self) -> None:
         """Map color and size follow the columns of the converted dataframe."""
