@@ -1278,11 +1278,11 @@ class ArrowMixin:
             width=width, height=height if height != "auto" else None
         )
 
-        def describe() -> str | None:
-            """The agent-API description, built once `proto.id` is set.
+        def dataframe_agent_props() -> str | None:
+            """The agent description for this dataframe.
 
-            The schema, row counts, and row preview stay out of the description:
-            they are derived facts about the payload, not command parameters.
+            Called at each enqueue so the selection path can read ``proto.id``
+            after it is assigned. Column config is walked only while recording.
             """
             if not agent_spec.is_recording():
                 return None
@@ -1379,7 +1379,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
-                    agent_props=describe(),
+                    agent_props=dataframe_agent_props(),
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1395,11 +1395,14 @@ class ArrowMixin:
                 "dataframe",
                 proto,
                 layout_config=layout_config,
-                agent_props=describe(),
+                agent_props=dataframe_agent_props(),
             )
             return DataframeState(widget_state.value)
         return self.dg._enqueue(
-            "dataframe", proto, layout_config=layout_config, agent_props=describe()
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            agent_props=dataframe_agent_props(),
         )
 
     @property
