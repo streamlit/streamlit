@@ -630,13 +630,15 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     expect(innerBlock.className).not.toContain("st-key-")
   })
 
-  it("places st-key-* on StyledLayoutWrapper for popover blocks", () => {
+  it("places st-key-* on StyledLayoutWrapper for popover blocks", async () => {
     const node = new BlockNode(
       FAKE_SCRIPT_HASH,
       [],
       new BlockProto({
         allowEmpty: true,
-        // open: true so the popover body is mounted and stVerticalBlock is in the DOM
+        // open: true so the popover body is mounted and stVerticalBlock is in the DOM.
+        // A script-opened popover withholds that body until a later tick confirms
+        // the trigger is on screen.
         popover: { label: "test popover", open: true },
         id: "$$ID-abc123-my_popover",
       })
@@ -647,7 +649,8 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     const layoutWrapper = screen.getByTestId("stLayoutWrapper")
     expect(layoutWrapper).toHaveClass("st-key-my_popover")
 
-    const innerBlock = screen.getByTestId("stVerticalBlock")
+    // A script-opened popover withholds its body until the trigger is shown.
+    const innerBlock = await screen.findByTestId("stVerticalBlock")
     expect(innerBlock.className).not.toContain("st-key-")
   })
 })

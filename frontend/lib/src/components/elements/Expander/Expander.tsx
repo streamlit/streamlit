@@ -426,6 +426,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           expanderType={type}
           // Exclude collapsed content from browser find-in-page (Cmd+F) searches.
           // Using "" instead of true for consistent behavior in jsdom tests.
+          // Popover treats inert inside <details> as a collapsed expander.
           inert={!isOpen ? "" : undefined}
         >
           {children}
