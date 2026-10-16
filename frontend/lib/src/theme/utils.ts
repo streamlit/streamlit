@@ -246,6 +246,32 @@ const parseColor = (
 }
 
 /**
+ * Normalize a color for hex equality checks. Accepts hashless hex the same way
+ * `parseColor` does. Returns undefined for invalid colors instead of throwing.
+ */
+const toComparableHex = (color: string): string | undefined => {
+  const normalized = isColor(color)
+    ? color
+    : isColor(`#${color}`)
+      ? `#${color}`
+      : undefined
+  if (normalized === undefined) {
+    return undefined
+  }
+  try {
+    return toHex(normalized)
+  } catch {
+    return undefined
+  }
+}
+
+const colorsMatchAsHex = (a: string, b: string): boolean => {
+  const aHex = toComparableHex(a)
+  const bHex = toComparableHex(b)
+  return aHex !== undefined && bHex !== undefined && aHex === bHex
+}
+
+/**
  * Helper function for theme background colors
  * If the background color is configured, use it.
  * If the main color is configured, derive background color from it.
@@ -1810,9 +1836,11 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
   const canUseStockSidebarChrome =
     useStockSidebarSurfaces &&
-    toHex(sidebarBackground) === toHex(stockSurfaces.backgroundColor) &&
-    toHex(secondaryBackgroundColor) ===
-      toHex(stockSurfaces.secondaryBackgroundColor)
+    colorsMatchAsHex(sidebarBackground, stockSurfaces.backgroundColor) &&
+    colorsMatchAsHex(
+      secondaryBackgroundColor,
+      stockSurfaces.secondaryBackgroundColor
+    )
 
   const stockChromeFallbacks: {
     borderColor?: string

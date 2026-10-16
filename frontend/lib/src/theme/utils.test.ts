@@ -4841,6 +4841,46 @@ describe("Sidebar theme creation", () => {
       expect(darkSidebarTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
     })
 
+    it("matches stock sidebar surfaces when configured without a # prefix", () => {
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+      // Hashless hex is accepted by theme config (parseColor adds # later).
+      // Comparing before that step must not throw or miss the stock pair.
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: {
+          secondaryBackgroundColor: "F1F0EE",
+        },
+      })
+
+      expect(() => createSidebarTheme(mainTheme)).not.toThrow()
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe(
+        stockLight.backgroundColor
+      )
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F1F0EE")
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+    })
+
+    it("does not throw when a sidebar surface color is invalid", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: {
+          secondaryBackgroundColor: "not-a-color",
+        },
+      })
+
+      expect(() => createSidebarTheme(mainTheme)).not.toThrow()
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Invalid secondary still flows through; stock chrome is skipped.
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
+    })
+
     it("applies stock sidebar chrome when main surfaces are built-in", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)
