@@ -35,7 +35,7 @@ import streamlit as st
 from streamlit import runtime
 from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_memory_pressure, cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -338,6 +338,26 @@ class DataCaches(StatsProvider):
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
+
+    def get_memory_pressure_summary(
+        self,
+    ) -> cache_memory_pressure.CacheUsageSummary:
+        """Return exact serialized cache usage for memory-pressure diagnostics."""
+        with self._caches_lock:
+            function_caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
+
+        stats: list[CacheStat] = []
+        for cache in function_caches:
+            try:
+                cache_stats = cache.get_stats()
+            except Exception:
+                cache_stats = {}
+            stats.extend(cache_stats.get(CACHE_MEMORY_FAMILY, ()))
+        return cache_memory_pressure.summarize_cache_stats(stats)
 
     def validate_cache_params(
         self,
@@ -885,7 +905,7 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
-        self.storage.set(value_key, pickled_entry)
+        self._write_to_storage(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
@@ -936,7 +956,7 @@ class DataCache(Cache[R]):
         with self._write_lock:
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
-            self.storage.set(value_key, pickled_entry)
+            self._write_to_storage(value_key, pickled_entry)
             return True
 
     def write_background_refresh_result(
@@ -993,7 +1013,22 @@ class DataCache(Cache[R]):
                     return
             except CacheStorageError:
                 return
+            self._write_to_storage(value_key, pickled_entry)
+
+    def _write_to_storage(self, value_key: str, pickled_entry: bytes) -> None:
+        reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+            current_function=self.display_name,
+            pending_entry_bytes=len(pickled_entry),
+            get_cache_summary=_data_caches.get_memory_pressure_summary,
+        )
+        try:
             self.storage.set(value_key, pickled_entry)
+        except Exception:
+            cache_memory_pressure.record_cache_write_result(
+                reservation, succeeded=False
+            )
+            raise
+        cache_memory_pressure.record_cache_write_result(reservation, succeeded=True)
 
     def _clear(self, key: str | None = None) -> None:
         with self._write_lock:
