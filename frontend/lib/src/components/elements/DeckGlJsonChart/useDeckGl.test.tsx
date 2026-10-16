@@ -24,6 +24,7 @@ import {
 } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 
 import {
@@ -1026,6 +1027,60 @@ describe("useDeckGl", () => {
 
       expect(result.current.deck.views).toBeUndefined()
       expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+    })
+  })
+
+  describe("st.map primary fill placeholder", () => {
+    it("resolves getFillColor primary to theme primary with default alpha", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: "primary",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor).toEqual([r, g, b, 160])
+    })
+
+    it("does not rewrite concrete getFillColor arrays", () => {
+      const concrete = [200, 30, 0, 160]
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: concrete,
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      expect(layer.props.getFillColor).toEqual(concrete)
     })
   })
 })

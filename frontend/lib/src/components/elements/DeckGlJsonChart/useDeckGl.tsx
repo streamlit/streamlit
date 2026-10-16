@@ -50,6 +50,7 @@ import {
   type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
+  resolveMapPrimaryFillColor,
 } from "./utils/colors"
 import { convertDeckJson } from "./utils/jsonConverter"
 import {
@@ -487,6 +488,24 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
+      // Resolve st.map's "primary" fill placeholder before selection styling
+      // or Deck.gl conversion so default markers use the active theme primary.
+      jsonCopy.layers = jsonCopy.layers.map(layer => {
+        if (!layer || Array.isArray(layer)) {
+          return layer
+        }
+
+        const resolvedFillColor = resolveMapPrimaryFillColor(
+          layer.getFillColor,
+          theme.colors.primary
+        )
+        if (resolvedFillColor === layer.getFillColor) {
+          return layer
+        }
+
+        return { ...layer, getFillColor: resolvedFillColor }
+      })
+
       // Build a map of layer IDs to data lengths for validation
       const { layerData } = getLayerDataInfo(jsonCopy.layers)
 
