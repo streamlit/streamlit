@@ -254,10 +254,12 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert scatter["props"]["size"] == "b"
         assert scatter["props"]["color"] == ["#ff0000"]
 
-    def test_map_color_and_size_use_columns_of_the_converted_data(self) -> None:
-        """Map color and size follow the columns of the converted dataframe."""
-        import pyarrow as pa
+    def test_map_reports_the_color_and_size_arguments(self) -> None:
+        """Color and size are the arguments the author passed.
 
+        The plotted table carries which columns those names refer to, so the
+        description does not resolve them.
+        """
         self._record()
         st.map(
             {
@@ -270,18 +272,6 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             size="#0044ff",
         )
         st.map({"lat": [1.0], "lon": [2.0]}, color="#0044ff", size=20)
-        st.map(
-            pa.table(
-                {
-                    "lat": [1.0],
-                    "lon": [2.0],
-                    "group": ["#00ff00"],
-                    "weight": [5],
-                }
-            ),
-            color="group",
-            size="weight",
-        )
 
         maps = [
             item
@@ -290,10 +280,8 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         ]
         assert maps[0]["props"]["color"] == "red"
         assert maps[0]["props"]["size"] == "#0044ff"
-        assert "color" not in maps[1]["props"]
-        assert "size" not in maps[1]["props"]
-        assert maps[2]["props"]["color"] == "group"
-        assert maps[2]["props"]["size"] == "weight"
+        assert maps[1]["props"]["color"] == "#0044ff"
+        assert maps[1]["props"]["size"] == 20
 
     def test_plotly_selection_mode_survives_a_generator(self) -> None:
         """Selection modes are read after the iterable has been consumed."""
