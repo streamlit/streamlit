@@ -839,7 +839,7 @@ class PlotlyMixin:
                     support="read_only_in_v1",
                     theme=theme,
                     selection_mode=reported_selection_mode,
-                    alt=agent_spec.proto_alt(plotly_chart_proto),
+                    alt=plotly_chart_proto.alt or None,
                 ),
             )
             return widget_state.value
@@ -853,7 +853,7 @@ class PlotlyMixin:
                 "plotly_chart",
                 key=key,
                 theme=theme,
-                alt=agent_spec.proto_alt(plotly_chart_proto),
+                alt=plotly_chart_proto.alt or None,
             ),
         )
 

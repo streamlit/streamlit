@@ -215,7 +215,7 @@ class GraphvizMixin:
                 # As DOT source, whether the author passed DOT or a graph object.
                 figure_or_dot=graphviz_chart_proto.spec,
                 engine=graphviz_chart_proto.engine or None,
-                alt=agent_spec.proto_alt(graphviz_chart_proto),
+                alt=graphviz_chart_proto.alt or None,
             ),
         )
 

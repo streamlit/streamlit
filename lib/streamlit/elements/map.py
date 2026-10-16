@@ -309,7 +309,7 @@ class MapMixin:
                 size=size,
                 color=color,
                 zoom=zoom,
-                alt=agent_spec.proto_alt(map_proto),
+                alt=map_proto.alt or None,
             ),
         )
 

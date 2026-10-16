@@ -2863,7 +2863,7 @@ class VegaChartsMixin:
             # Selections cannot be sent through this interface. A chart without
             # them has nothing to send, so it is fully supported.
             support="read_only_in_v1" if selection_mode else None,
-            alt=agent_spec.proto_alt(proto),
+            alt=proto.alt or None,
             **own_arguments,
         )
 

@@ -924,7 +924,7 @@ class EChartsMixin:
                 "echarts_chart",
                 key=echarts_chart_proto.id or None,
                 theme=theme,
-                alt=agent_spec.proto_alt(echarts_chart_proto),
+                alt=echarts_chart_proto.alt or None,
             ),
         )
 

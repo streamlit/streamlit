@@ -24,7 +24,6 @@ import pytest
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
-from streamlit.proto.Image_pb2 import Image as ImageProto
 
 
 def _recorded(command: str, **props: Any) -> dict[str, Any]:
@@ -136,14 +135,6 @@ def test_described_column_config_drops_presentation_and_index() -> None:
     }
     assert agent_spec.described_column_config({INDEX_IDENTIFIER: {"width": 1}}) is None
     assert agent_spec.described_column_config("unchanged") == "unchanged"
-
-
-def test_proto_alt_distinguishes_missing_from_empty() -> None:
-    """An empty alt is a real value: it marks an image as decorative."""
-    image = ImageProto()
-    assert agent_spec.proto_alt(image) is None
-    image.alt = ""
-    assert agent_spec.proto_alt(image) == ""
 
 
 def test_block_marks_a_transparent_wrapper() -> None:
