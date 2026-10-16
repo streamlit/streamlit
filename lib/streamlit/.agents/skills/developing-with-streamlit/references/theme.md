@@ -191,7 +191,7 @@ secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
 textColor = "#1F2328"              # Body text
 
 linkColor = "#0969da"              # Defaults to blueTextColor
-codeTextColor = "#1F2328"          # Built-in themes use body text
+codeTextColor = "#1F2328"          # Built-in default matches body text; a custom textColor does not change it
 codeBackgroundColor = "#f6f8fa"    # Unset keeps the built-in code background
 borderColor = "#d0d7de"
 ```

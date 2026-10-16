@@ -2097,8 +2097,9 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        If this isn't set, Streamlit uses the theme's default code text
-        color (body text on the built-in light and dark themes).
+        If this isn't set, Streamlit keeps the built-in code text color.
+        On the built-in light and dark themes that color matches body
+        text. A custom `textColor` does not change it.
     """,
 )
 
@@ -2593,8 +2594,8 @@ _create_theme_options(
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
         isn't set, Streamlit uses the theme's default dataframe header
-        background. Customizing only ``backgroundColor`` or
-        ``secondaryBackgroundColor`` does not change that default.
+        background. Customizing only `backgroundColor` or
+        `secondaryBackgroundColor` does not change that default.
     """,
 )
 
@@ -2634,8 +2635,8 @@ _create_theme_options(
     description="""
         Whether to show a border around input widgets.
 
-        Built-in light and dark themes show widget borders unless this is set
-        to false.
+        If this is unset or true, Streamlit draws widget borders in the
+        resolved `borderColor`. Set it to false to hide them.
     """,
     type_=bool,
 )
@@ -2647,8 +2648,8 @@ _create_theme_options(
         Whether to show a vertical separator between the sidebar and the main
         content area.
 
-        Built-in light and dark themes show the separator unless this is set
-        to false.
+        If this is unset or true, Streamlit shows the separator. Set it to
+        false to hide it.
     """,
     type_=bool,
 )

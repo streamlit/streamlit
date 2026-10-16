@@ -1721,7 +1721,7 @@ export const stockSidebarSurfaces = {
   },
 } as const
 
-/** Sidebar chrome used with stockSidebarSurfaces when both `[theme]` and `[theme.sidebar]` leave these unset. */
+/** Sidebar chrome used when resolved sidebar surfaces still match stockSidebarSurfaces and both `[theme]` and `[theme.sidebar]` leave these unset. */
 export const stockSidebarChrome = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     borderColor: "#D7D3CF",
@@ -1803,10 +1803,18 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Stock sidebar chrome only when main surfaces are stock and both the
-  // sidebar section and the inherited main value left the key blank. A
-  // configured `[theme]` chrome color must still reach the sidebar.
+  // Stock sidebar chrome only when the resolved sidebar surfaces still match
+  // stockSidebarSurfaces (so a customized dark sidebar on a stock main page
+  // keeps luminance-matched base chrome) and both the sidebar section and the
+  // inherited main value left the key blank. A configured `[theme]` chrome
+  // color must still reach the sidebar.
   // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
+  const useStockSidebarChrome =
+    useStockSidebarSurfaces &&
+    toHex(sidebarBackground) === toHex(stockSurfaces.backgroundColor) &&
+    toHex(secondaryBackgroundColor) ===
+      toHex(stockSurfaces.secondaryBackgroundColor)
+
   const stockChromeFallbacks: {
     borderColor?: string
     dataframeBorderColor?: string
@@ -1814,7 +1822,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     codeBackgroundColor?: string
     codeTextColor?: string
   } = {}
-  if (useStockSidebarSurfaces) {
+  if (useStockSidebarChrome) {
     const mainThemeInput = activeTheme.themeInput
     const resolvedBorder =
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset

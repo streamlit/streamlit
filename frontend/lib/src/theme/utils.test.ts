@@ -875,6 +875,11 @@ describe("createEmotionTheme", () => {
     expect(theme.showSidebarBorder).toBe(true)
   })
 
+  it("sets the showSidebarBorder config to false if showSidebarBorder=false", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: false })
+    expect(theme.showSidebarBorder).toBe(false)
+  })
+
   it("linkUnderline config is set to true by default", () => {
     const theme = createEmotionTheme({})
     expect(theme.linkUnderline).toBe(true)
@@ -4945,6 +4950,31 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.bgColor).toBe("darkblue")
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe(
         stockLight.secondaryBackgroundColor
+      )
+    })
+
+    it("does not paint stock light chrome onto a customized dark sidebar", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        // Leave main surfaces on the built-in light pair.
+        sidebar: {
+          backgroundColor: "darkblue",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Luminance picks the dark base; leave light stock chrome unset.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        darkTheme.emotion.colors.codeTextColor
+      )
+      expect(sidebarTheme.emotion.colors.codeTextColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].codeTextColor
+      )
+      expect(
+        sidebarTheme.emotion.colors.dataframeHeaderBackgroundColor
+      ).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+          .dataframeHeaderBackgroundColor
       )
     })
 
