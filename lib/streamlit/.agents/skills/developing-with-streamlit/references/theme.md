@@ -20,7 +20,12 @@ Use `streamlit config show` for the full option list and descriptions. Do not in
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
-**Where to put keys:** shared fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]`; per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`); sidebar contrast on `[theme.sidebar]` or nested light/dark sidebars; chart/dataframe palettes on the section for that mode.
+**Where to put keys:**
+
+- Shared fonts, radii, padding, and border flags on `[theme]` (`showSidebarBorder` is `[theme]`-only; `showWidgetBorder` may also sit on light/dark/sidebar)
+- Per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`)
+- Sidebar contrast on `[theme.sidebar]` or `[theme.light.sidebar]` / `[theme.dark.sidebar]`
+- Chart and dataframe palettes on the section for that mode
 
 ## Cheat sheet: common customization intents
 
@@ -192,6 +197,8 @@ codeBackgroundColor = "#f6f8fa"    # Unset keeps the built-in code background
 borderColor = "#d0d7de"
 ```
 
+When you change `backgroundColor` or `secondaryBackgroundColor`, also set `codeBackgroundColor` and `dataframeHeaderBackgroundColor` if those fills should follow your surfaces — unset values stay on the built-in fills.
+
 Choose a `primaryColor` dark enough for white primary-button text.
 
 ### Color palette
@@ -316,7 +323,7 @@ paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height so `"0"` is flush under the header (not the viewport top). Embed options leave the value as-is. In a bare embed with no header, a very small value can clip overlay toolbars — leave unset or use a small non-zero gap. Print uses the value alone (no header reservation).
+**Main `paddingTop`:** Gap below visible header chrome. Streamlit adds header height, so `"0"` is flush under the header. Embed options leave a configured value as-is. In a bare embed with no header, a very small value can clip overlay toolbars — leave unset or use a small non-zero gap. Print uses the value alone (no header reservation).
 
 **Sidebar `paddingTop`:** Gap before the first sidebar widget (after nav, or after header/logo when there is no page nav).
 

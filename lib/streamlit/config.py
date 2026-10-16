@@ -2097,9 +2097,9 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        If this isn't set, Streamlit keeps the built-in code text color.
-        On the built-in light and dark themes that color matches body
-        text. A custom `textColor` does not change it.
+        If this isn't set, Streamlit uses the built-in code text color.
+        On the built-in light and dark themes, that color is the same as
+        body text. Setting `textColor` does not change code text.
     """,
 )
 
@@ -2115,6 +2115,10 @@ _create_theme_options(
     ],
     description="""
         Background color used for code blocks.
+
+        If this isn't set, Streamlit uses the theme's default code
+        background. Customizing only `backgroundColor` or
+        `secondaryBackgroundColor` does not change that default.
     """,
 )
 
@@ -2635,8 +2639,8 @@ _create_theme_options(
     description="""
         Whether to show a border around input widgets.
 
-        If this is unset or true, Streamlit draws widget borders in the
-        resolved `borderColor`. Set it to false to hide them.
+        If this is unset or `true`, Streamlit draws widget borders using
+        `borderColor`. Set it to `false` to hide them.
     """,
     type_=bool,
 )

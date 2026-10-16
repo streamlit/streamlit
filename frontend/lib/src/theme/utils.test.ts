@@ -4881,6 +4881,45 @@ describe("Sidebar theme creation", () => {
       )
     })
 
+    it("keeps stock sidebar chrome when an invalid main borderColor is set", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "not-a-color",
+      })
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Invalid main border is treated as unset for the stock-chrome gate.
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+    })
+
+    it("applies stock sidebar chrome when sidebar surfaces are explicitly the stock pair", () => {
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+      // Custom main surfaces normally skip stock sidebar chrome, but an
+      // explicit stock sidebar pair should still receive it.
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          backgroundColor: stockLight.backgroundColor,
+          secondaryBackgroundColor: stockLight.secondaryBackgroundColor,
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.codeBackgroundColor).toBe(
+        stockChrome.codeBackgroundColor
+      )
+    })
+
     it("applies stock sidebar chrome when main surfaces are built-in", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)

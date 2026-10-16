@@ -272,6 +272,22 @@ const colorsMatchAsHex = (a: string, b: string): boolean => {
 }
 
 /**
+ * First non-blank color that parses (hashless hex allowed). Blank or invalid
+ * values are treated as unset so they cannot suppress stock chrome fallbacks.
+ */
+const firstConfiguredColor = (
+  ...colors: Array<string | null | undefined>
+): string | undefined => {
+  for (const color of colors) {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+    if (color && toComparableHex(color) !== undefined) {
+      return color
+    }
+  }
+  return undefined
+}
+
+/**
  * Helper function for theme background colors
  * If the background color is configured, use it.
  * If the main color is configured, derive background color from it.
@@ -942,7 +958,7 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // Unset dataframeBorderColor follows borderColor (not borderColorLight).
+    // An unset dataframeBorderColor follows borderColor.
     conditionalOverrides.colors.dataframeBorderColor = borderColor
   }
 
@@ -1747,7 +1763,11 @@ export const stockSidebarSurfaces = {
   },
 } as const
 
-/** Sidebar chrome used when resolved sidebar surfaces still match stockSidebarSurfaces and both `[theme]` and `[theme.sidebar]` leave these unset. */
+/**
+ * Sidebar chrome for the built-in sidebar surface pair.
+ * Applied only while the resolved sidebar surfaces still match that pair and
+ * both `[theme]` and `[theme.sidebar]` left the key unset.
+ */
 export const stockSidebarChrome = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     borderColor: "#D7D3CF",
@@ -1829,13 +1849,11 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Stock sidebar chrome is eligible only when the resolved sidebar surfaces
-  // match the built-in pair (so a customized dark sidebar on a stock main page
-  // keeps luminance-matched base chrome). Each key is still applied only when
-  // both the sidebar section and the inherited main value left it blank.
-  // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
+  // Eligible when the resolved sidebar surfaces match the built-in pair (a
+  // customized dark sidebar keeps luminance-matched base chrome). Each key is
+  // still applied only when both the sidebar section and the inherited main
+  // value left it blank or invalid.
   const canUseStockSidebarChrome =
-    useStockSidebarSurfaces &&
     colorsMatchAsHex(sidebarBackground, stockSurfaces.backgroundColor) &&
     colorsMatchAsHex(
       secondaryBackgroundColor,
@@ -1851,9 +1869,10 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   } = {}
   if (canUseStockSidebarChrome) {
     const mainThemeInput = activeTheme.themeInput
-    const resolvedBorder =
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-      sidebarThemeInput?.borderColor || mainThemeInput?.borderColor
+    const resolvedBorder = firstConfiguredColor(
+      sidebarThemeInput?.borderColor,
+      mainThemeInput?.borderColor
+    )
 
     if (!resolvedBorder) {
       stockChromeFallbacks.borderColor = stockChrome.borderColor
@@ -1862,10 +1881,10 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     // Keep a distinct stock dataframe hex only when both sides leave
     // dataframeBorderColor and borderColor unset. Otherwise omit so
     // createEmotionTheme can follow the resolved borderColor.
-    const resolvedDataframeBorder =
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-      sidebarThemeInput?.dataframeBorderColor ||
+    const resolvedDataframeBorder = firstConfiguredColor(
+      sidebarThemeInput?.dataframeBorderColor,
       mainThemeInput?.dataframeBorderColor
+    )
     if (!resolvedDataframeBorder && !resolvedBorder) {
       stockChromeFallbacks.dataframeBorderColor =
         stockChrome.dataframeBorderColor
@@ -1876,10 +1895,9 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       "codeBackgroundColor",
       "codeTextColor",
     ] as const) {
-      const resolved =
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-        sidebarThemeInput?.[key] || mainThemeInput?.[key]
-      if (!resolved) {
+      if (
+        !firstConfiguredColor(sidebarThemeInput?.[key], mainThemeInput?.[key])
+      ) {
         stockChromeFallbacks[key] = stockChrome[key]
       }
     }
