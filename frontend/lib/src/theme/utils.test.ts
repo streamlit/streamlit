@@ -1339,6 +1339,11 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
   })
 
+  it("syncs widgetBorderColor to borderColor when showWidgetBorder is omitted", () => {
+    const theme = createEmotionTheme({ borderColor: "purple" })
+    expect(theme.colors.widgetBorderColor).toBe("purple")
+  })
+
   it("clears widgetBorderColor when showWidgetBorder is false", () => {
     const theme = createEmotionTheme({ showWidgetBorder: false })
     expect(theme.colors.widgetBorderColor).toBeUndefined()
@@ -4840,6 +4845,9 @@ describe("Sidebar theme creation", () => {
       expect(lightSidebarTheme.emotion.colors.borderColor).toBe(
         stockLight.borderColor
       )
+      expect(lightSidebarTheme.emotion.colors.widgetBorderColor).toBe(
+        stockLight.borderColor
+      )
       expect(lightSidebarTheme.emotion.colors.dataframeBorderColor).toBe(
         stockLight.dataframeBorderColor
       )
@@ -4856,6 +4864,9 @@ describe("Sidebar theme creation", () => {
       expect(darkSidebarTheme.emotion.colors.borderColor).toBe(
         stockDark.borderColor
       )
+      expect(darkSidebarTheme.emotion.colors.widgetBorderColor).toBe(
+        stockDark.borderColor
+      )
       expect(darkSidebarTheme.emotion.colors.dataframeBorderColor).toBe(
         stockDark.dataframeBorderColor
       )
@@ -4867,6 +4878,22 @@ describe("Sidebar theme creation", () => {
       )
       expect(darkSidebarTheme.emotion.colors.codeTextColor).toBe(
         stockDark.codeTextColor
+      )
+    })
+
+    it("inherits main-only borderColor into the sidebar when surfaces stay stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "purple",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.widgetBorderColor).toBe("purple")
+      // Unset dataframeBorderColor follows the configured borderColor.
+      expect(sidebarTheme.emotion.colors.dataframeBorderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
       )
     })
 

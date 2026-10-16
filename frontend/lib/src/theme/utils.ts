@@ -894,13 +894,11 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  // Code background should use the codeBackgroundColor config if provided,
-  // otherwise use the derived bgMix (configured/derived or default) above
+  // Unset code background keeps the stock chrome hex from createEmotionColors.
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
-  // Dataframe header background should use the config if provided,
-  // otherwise use the derived bgMix (configured/derived or default) above
+  // Unset dataframe header background keeps the stock chrome hex.
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
@@ -927,12 +925,13 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder === true) {
-    conditionalOverrides.colors.widgetBorderColor =
-      conditionalOverrides.colors.borderColor
-  } else if (showWidgetBorder === false) {
+  if (showWidgetBorder === false) {
     // Explicit off clears stock widgetBorderColor inherited from the base theme.
     delete conditionalOverrides.colors.widgetBorderColor
+  } else {
+    // Unset or true: paint widget borders with the resolved borderColor.
+    conditionalOverrides.colors.widgetBorderColor =
+      conditionalOverrides.colors.borderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -1722,7 +1721,7 @@ export const stockSidebarSurfaces = {
   },
 } as const
 
-/** Sidebar chrome used with stockSidebarSurfaces when `[theme.sidebar]` leaves these unset. */
+/** Sidebar chrome used with stockSidebarSurfaces when both `[theme]` and `[theme.sidebar]` leave these unset. */
 export const stockSidebarChrome = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     borderColor: "#D7D3CF",
@@ -1804,31 +1803,51 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Stock sidebar chrome only when main surfaces are stock and sidebar left the
-  // key unset (blank). Custom main surfaces inherit main chrome as before.
+  // Stock sidebar chrome only when main surfaces are stock and both the
+  // sidebar section and the inherited main value left the key blank. A
+  // configured `[theme]` chrome color must still reach the sidebar.
   // `||` (not `??`): blank strings from protobuf mean unset, same as surfaces.
-  const stockChromeFallbacks = useStockSidebarSurfaces
-    ? {
-        borderColor:
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-          sidebarThemeInput?.borderColor || stockChrome.borderColor,
-        dataframeBorderColor:
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-          sidebarThemeInput?.dataframeBorderColor ||
-          stockChrome.dataframeBorderColor,
-        dataframeHeaderBackgroundColor:
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-          sidebarThemeInput?.dataframeHeaderBackgroundColor ||
-          stockChrome.dataframeHeaderBackgroundColor,
-        codeBackgroundColor:
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-          sidebarThemeInput?.codeBackgroundColor ||
-          stockChrome.codeBackgroundColor,
-        codeTextColor:
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-          sidebarThemeInput?.codeTextColor || stockChrome.codeTextColor,
+  const stockChromeFallbacks: {
+    borderColor?: string
+    dataframeBorderColor?: string
+    dataframeHeaderBackgroundColor?: string
+    codeBackgroundColor?: string
+    codeTextColor?: string
+  } = {}
+  if (useStockSidebarSurfaces) {
+    const mainThemeInput = activeTheme.themeInput
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+    const resolvedBorder =
+      sidebarThemeInput?.borderColor || mainThemeInput?.borderColor
+
+    if (!resolvedBorder) {
+      stockChromeFallbacks.borderColor = stockChrome.borderColor
+    }
+
+    // Keep a distinct stock dataframe hex only when both sides leave
+    // dataframeBorderColor and borderColor unset. Otherwise omit so
+    // createEmotionTheme can follow the resolved borderColor.
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+    const resolvedDataframeBorder =
+      sidebarThemeInput?.dataframeBorderColor ||
+      mainThemeInput?.dataframeBorderColor
+    if (!resolvedDataframeBorder && !resolvedBorder) {
+      stockChromeFallbacks.dataframeBorderColor =
+        stockChrome.dataframeBorderColor
+    }
+
+    for (const key of [
+      "dataframeHeaderBackgroundColor",
+      "codeBackgroundColor",
+      "codeTextColor",
+    ] as const) {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+      const resolved = sidebarThemeInput?.[key] || mainThemeInput?.[key]
+      if (!resolved) {
+        stockChromeFallbacks[key] = stockChrome[key]
       }
-    : {}
+    }
+  }
 
   // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
   const mergedSidebarThemeInput = mergeWith(

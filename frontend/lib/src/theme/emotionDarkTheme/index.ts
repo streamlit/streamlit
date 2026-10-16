@@ -25,7 +25,8 @@ const baseColors = createEmotionColors({
   ...emotionBaseTheme.colors,
   ...genericColors,
 })
-// Stock default: show widget borders (config showWidgetBorder=true).
+// Built-in themes paint widget borders. createEmotionTheme removes
+// widgetBorderColor only when showWidgetBorder is false.
 const colors = {
   ...baseColors,
   widgetBorderColor: baseColors.borderColor,

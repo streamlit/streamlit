@@ -2592,8 +2592,9 @@ _create_theme_options(
         This color applies to all non-interior cells of the dataframe. This
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
-        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
-        `theme.secondaryBackgroundColor`.
+        isn't set, Streamlit uses the theme's default dataframe header
+        background. Customizing only ``backgroundColor`` or
+        ``secondaryBackgroundColor`` does not change that default.
     """,
 )
 
@@ -2632,6 +2633,9 @@ _create_theme_options(
     ],
     description="""
         Whether to show a border around input widgets.
+
+        Built-in light and dark themes show widget borders unless this is set
+        to false.
     """,
     type_=bool,
 )
@@ -2642,6 +2646,9 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        Built-in light and dark themes show the separator unless this is set
+        to false.
     """,
     type_=bool,
 )

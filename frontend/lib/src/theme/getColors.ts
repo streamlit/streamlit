@@ -84,7 +84,7 @@ export const createEmotionColors = (
     ...genericColors,
     ...derivedColors,
 
-    // Stock link tracks blue text (surfaces + chrome share the design hex).
+    // Links default to blueTextColor.
     link: genericColors.blueTextColor,
 
     // Stock chrome hexes come from light/dark themeColors (required).
