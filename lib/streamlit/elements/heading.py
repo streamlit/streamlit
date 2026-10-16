@@ -208,7 +208,7 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
-        heading_proto = HeadingMixin._create_heading_proto(
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
             tag=HeadingProtoTag.HEADER_TAG,
             body=body,
             anchor=anchor,
@@ -223,7 +223,7 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "header",
-                heading_proto.body,
+                body_text,
                 anchor=anchor,
                 help=heading_proto.help or None,
                 icon=heading_proto.icon or None,
@@ -367,7 +367,7 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
-        heading_proto = HeadingMixin._create_heading_proto(
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
             tag=HeadingProtoTag.SUBHEADER_TAG,
             body=body,
             anchor=anchor,
@@ -382,7 +382,7 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "subheader",
-                heading_proto.body,
+                body_text,
                 anchor=anchor,
                 help=heading_proto.help or None,
                 icon=heading_proto.icon or None,
@@ -515,7 +515,7 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
-        heading_proto = HeadingMixin._create_heading_proto(
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
             tag=HeadingProtoTag.TITLE_TAG,
             body=body,
             anchor=anchor,
@@ -529,7 +529,7 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "title",
-                heading_proto.body,
+                body_text,
                 anchor=anchor,
                 help=heading_proto.help or None,
                 icon=heading_proto.icon or None,
@@ -572,11 +572,12 @@ class HeadingMixin:
         divider: Divider = False,
         icon: str | None = None,
         wrap: bool = True,
-    ) -> HeadingProto:
+    ) -> tuple[HeadingProto, str]:
         validate_wrap(wrap)
         proto = HeadingProto()
         proto.tag = tag.value
-        proto.body = clean_text(body)
+        body_text = clean_text(body)
+        proto.body = body_text
         proto.icon = validate_icon_or_emoji(icon)
         proto.wrap = wrap
         if divider:
@@ -601,4 +602,4 @@ class HeadingMixin:
         if help:
             proto.help = to_help_str(help)
 
-        return proto
+        return proto, body_text

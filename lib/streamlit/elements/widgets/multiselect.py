@@ -905,7 +905,9 @@ class MultiSelectMixin:
                 # author's Python objects.
                 options=formatted_options,
                 help=proto.help or None,
-                placeholder=placeholder,
+                # The wire form encodes an explicit empty placeholder as a
+                # single space; report the public empty value.
+                placeholder="" if placeholder == " " else placeholder,
                 max_selections=max_selections,
                 accept_new_options=accept_new_options,
                 filter_mode=filter_mode,

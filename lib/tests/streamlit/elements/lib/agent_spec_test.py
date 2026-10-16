@@ -20,6 +20,7 @@ import json
 import math
 from typing import Any
 
+import pandas as pd
 import pytest
 
 from streamlit.elements.lib import agent_spec
@@ -83,6 +84,16 @@ def test_nan_prop_becomes_null() -> None:
     """A non-finite number has no JSON form, so it is reported as null."""
     decoded = _recorded("metric", value=math.nan)
     assert decoded["props"]["value"] is None
+
+
+def test_nested_missing_values_stay_null() -> None:
+    """A nested NaN or ``pd.NA`` stays null. Only an original ``None`` is dropped."""
+
+    decoded = _recorded(
+        "dataframe",
+        column_config={"col": {"help": math.nan, "width": None, "label": pd.NA}},
+    )
+    assert decoded["props"]["column_config"] == {"col": {"help": None, "label": None}}
 
 
 def test_command_type_parameter_is_a_prop() -> None:

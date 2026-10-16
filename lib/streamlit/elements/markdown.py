@@ -74,7 +74,8 @@ class MarkdownMixin:
         _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        markdown_proto.body = body_text
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
@@ -99,9 +100,9 @@ class MarkdownMixin:
             agent_props=agent_props
             or agent_spec.element(
                 "markdown",
-                body=markdown_proto.body,
+                body=body_text,
                 help=markdown_proto.help or None,
-                unsafe_allow_html=unsafe_allow_html,
+                unsafe_allow_html=unsafe_allow_html or None,
             ),
         )
 
@@ -405,7 +406,8 @@ class MarkdownMixin:
         """
         _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         caption_proto = MarkdownProto()
-        caption_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        caption_proto.body = body_text
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         caption_proto.wrap = wrap
@@ -422,9 +424,9 @@ class MarkdownMixin:
             layout_config=layout_config,
             agent_props=agent_spec.element(
                 "caption",
-                body=caption_proto.body,
+                body=body_text,
                 help=caption_proto.help or None,
-                unsafe_allow_html=unsafe_allow_html,
+                unsafe_allow_html=unsafe_allow_html or None,
             ),
         )
 

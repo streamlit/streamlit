@@ -467,7 +467,11 @@ class IframeMixin:
             agent_props=agent_spec.element(
                 "iframe",
                 support="browser_required" if uses_srcdoc else None,
-                src=iframe_proto.src or iframe_proto.srcdoc or None,
+                src=(
+                    (iframe_proto.src or iframe_proto.srcdoc or None)
+                    if agent_spec.is_recording()
+                    else None
+                ),
                 alt=iframe_proto.alt or None,
             ),
         )

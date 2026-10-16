@@ -146,6 +146,8 @@ def _page_link_agent_props(proto: PageLinkProto) -> str | None:
     has the shape a navigation request takes, so a client can follow the link
     by sending both.
     """
+    if not agent_spec.is_recording():
+        return None
     return agent_spec.element(
         "page_link",
         label=proto.label or None,

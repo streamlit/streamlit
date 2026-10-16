@@ -275,13 +275,27 @@ def _prop_value(value: Any) -> Any:
     """JSON for one prop.
 
     ``Content`` is the element's body, so a null inside it stays. Every other
-    value drops nulls at any depth, because those are unset parameters.
+    value drops entries that were ``None`` before encoding. A NaN that encodes
+    as null stays, because that null is the value, not an unset parameter.
     """
     from streamlit.runtime.agent import json_encoding
 
     if isinstance(value, Content):
         return json_encoding.to_json_value(value.value)
-    return _drop_unset(json_encoding.to_json_value(value))
+    return json_encoding.to_json_value(_omit_unset(value))
+
+
+def _omit_unset(value: Any) -> Any:
+    """Copy ``value`` with dict entries that are ``None`` removed."""
+    if isinstance(value, dict):
+        return {
+            key: _omit_unset(item) for key, item in value.items() if item is not None
+        }
+    if isinstance(value, list):
+        return [None if item is None else _omit_unset(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(None if item is None else _omit_unset(item) for item in value)
+    return value
 
 
 class Content(NamedTuple):
@@ -292,17 +306,6 @@ class Content(NamedTuple):
     """
 
     value: Any
-
-
-def _drop_unset(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {
-            key: _drop_unset(item) for key, item in value.items() if item is not None
-        }
-    if isinstance(value, list):
-        # Positions in a list are meaningful, so a null stays a null.
-        return [_drop_unset(item) for item in value]
-    return value
 
 
 def block(

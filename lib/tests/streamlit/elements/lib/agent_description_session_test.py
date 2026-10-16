@@ -89,12 +89,12 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert decoded == [
             {
                 "type": "markdown",
-                "props": {"body": "hello", "help": "more", "unsafe_allow_html": False},
+                "props": {"body": "hello", "help": "more"},
             }
         ]
 
-    def test_markdown_reports_unsafe_html_as_a_boolean(self) -> None:
-        """``unsafe_allow_html`` is reported for both values, including the default."""
+    def test_markdown_omits_unsafe_html_when_false(self) -> None:
+        """The documented false default is omitted. True is reported."""
         self._record()
         st.markdown("<b>hello</b>", unsafe_allow_html=True)
         st.caption("plain")
@@ -103,7 +103,7 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         markdown = next(item for item in descriptions if item["type"] == "markdown")
         caption = next(item for item in descriptions if item["type"] == "caption")
         assert markdown["props"]["unsafe_allow_html"] is True
-        assert caption["props"]["unsafe_allow_html"] is False
+        assert "unsafe_allow_html" not in caption["props"]
 
     def test_indented_markdown_and_caption_match_the_proto(self) -> None:
         """Body text is the dedented string the browser receives."""
@@ -141,6 +141,55 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             if item["type"] == "dataframe"
         )
         assert dataframe["props"]["hide_index"] is True
+
+    def test_non_pandas_data_reports_the_hidden_index(self) -> None:
+        """A dict has no index, so the description reports the hidden flag."""
+        self._record()
+        st.dataframe({"a": [1, 2]})
+        st.data_editor({"a": [1]}, key="dict-editor")
+
+        described = _descriptions(list(self.forward_msg_queue._queue))
+        dataframe = next(item for item in described if item["type"] == "dataframe")
+        editor = next(item for item in described if item["type"] == "data_editor")
+        assert dataframe["props"]["hide_index"] is True
+        assert editor["props"]["hide_index"] is True
+
+    def test_text_placeholder_keeps_an_authored_space(self) -> None:
+        """Text widgets do not treat a single space as an empty sentinel."""
+        self._record()
+        st.text_input("Empty", placeholder="")
+        st.text_input("Space", placeholder=" ")
+        st.text_area("Area empty", placeholder="")
+        st.text_area("Area space", placeholder=" ")
+
+        inputs = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "text_input"
+        ]
+        areas = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "text_area"
+        ]
+        assert [item["props"]["placeholder"] for item in inputs] == ["", " "]
+        assert [item["props"]["placeholder"] for item in areas] == ["", " "]
+
+    def test_multiselect_placeholder_reports_the_public_empty_value(self) -> None:
+        """An explicit empty placeholder is ``""``, and the default is omitted."""
+        self._record()
+        st.multiselect("Default", ["a"])
+        st.multiselect("Empty", ["a"], placeholder="")
+        st.multiselect("Custom", ["a"], placeholder="Pick")
+
+        selects = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "multiselect"
+        ]
+        assert "placeholder" not in selects[0]["props"]
+        assert selects[1]["props"]["placeholder"] == ""
+        assert selects[2]["props"]["placeholder"] == "Pick"
 
     def test_text_input_reports_the_resolved_autocomplete(self) -> None:
         """Autocomplete includes the type default, an override, and empty."""
@@ -450,8 +499,9 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
     def test_cache_replay_keeps_descriptions_in_the_session_that_records(self) -> None:
         """A cache entry carries the description from the run that filled it.
 
-        Replaying into a browser session drops it. Replaying a browser-filled
-        entry into an agent session does not invent one.
+        Replaying it in the same agent session keeps the description. Replaying
+        into a browser session drops it. Replaying a browser-filled entry into
+        an agent session does not invent one.
         """
 
         @st.cache_data(show_spinner=False)
@@ -472,6 +522,13 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             item["type"] for item in _descriptions(list(self.forward_msg_queue._queue))
         }
         assert {"markdown", "container", "text"} <= filled_types
+
+        self.clear_queue()
+        filled_by_agent()
+        replayed_types = {
+            item["type"] for item in _descriptions(list(self.forward_msg_queue._queue))
+        }
+        assert {"markdown", "container", "text"} <= replayed_types
 
         self.clear_queue()
         agent_spec.forget_agent_session(self.script_run_ctx.session_id)

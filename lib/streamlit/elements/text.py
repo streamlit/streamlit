@@ -113,7 +113,8 @@ class TextMixin:
         """
         validate_wrap(wrap)
         text_proto = TextProto()
-        text_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        text_proto.body = body_text
         text_proto.wrap = wrap
         if help:
             text_proto.help = to_help_str(help)
@@ -129,7 +130,7 @@ class TextMixin:
             text_proto,
             layout_config=layout_config,
             agent_props=agent_spec.element(
-                "text", body=text_proto.body, help=text_proto.help or None
+                "text", body=body_text, help=text_proto.help or None
             ),
         )
 

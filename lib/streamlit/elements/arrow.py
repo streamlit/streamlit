@@ -39,6 +39,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnConfigMappingInput,
     apply_data_specific_configs,
     described_column_config,
+    described_hide_index,
     extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
@@ -1302,7 +1303,7 @@ class ArrowMixin:
                 else None,
                 column_config=described_column_config(column_config_mapping),
                 column_order=list(proto.column_order) or None,
-                hide_index=effective_hide_index,
+                hide_index=described_hide_index(column_config_mapping),
                 selection_mode=sorted(selection_mode_set) or None,
                 on_select="ignore" if on_select == "ignore" else "rerun",
                 # The text shown for missing values, which the preview reports

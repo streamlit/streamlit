@@ -649,7 +649,6 @@ class RadioMixin:
                 if agent_spec.is_recording()
                 else None,
                 help=radio_proto.help or None,
-                horizontal=horizontal,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

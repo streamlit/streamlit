@@ -44,6 +44,7 @@ from streamlit.elements.lib.column_config_utils import (
     DataframeSchema,
     apply_data_specific_configs,
     described_column_config,
+    described_hide_index,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -1562,7 +1563,7 @@ class DataEditorMixin:
                 support="read_only",
                 column_config=described_column_config(column_config_mapping),
                 column_order=list(proto.column_order) or None,
-                hide_index=hide_index,
+                hide_index=described_hide_index(column_config_mapping),
                 num_rows=num_rows,
                 # A bool locks or unlocks the whole editor. False is reported:
                 # omitting it would look like a column list, which is already

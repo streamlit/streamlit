@@ -133,7 +133,11 @@ def _exception(
             "exception",
             type=exception_proto.type or None,
             message=exception_proto.message or None,
-            stack_trace=list(exception_proto.stack_trace) or None,
+            stack_trace=(
+                list(exception_proto.stack_trace) or None
+                if agent_spec.is_recording()
+                else None
+            ),
             is_warning=exception_proto.is_warning,
             # Only the runtime's own error display passes this, so it is what
             # separates a run that failed from an app deliberately showing an
