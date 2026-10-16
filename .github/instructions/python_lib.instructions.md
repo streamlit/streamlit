@@ -76,15 +76,15 @@ Changes to these high-fan-out internals can affect every command, message, sessi
 
 ## Agent API element descriptions
 
-An `st.*` command that emits an element or container describes itself for the agent API, unless the coverage test lists it in `_NOT_DESCRIBED` (it delegates to another command, or it never joins the element tree). It builds `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto and passes it as `agent_props=`. Details are in `elements/lib/agent_spec.py`; `lib/tests/streamlit/elements/lib/agent_spec_coverage_test.py` holds each description to the command's signature.
+Every `st.*` command that emits an element or container provides an agent description. Build it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills the proto, and pass it as `agent_props=`. The exceptions are listed in the coverage test's `_NOT_DESCRIBED`: a command that delegates to another command, or one that never joins the element tree. That test holds each description to the command's signature. Details are in `elements/lib/agent_spec.py`.
 
-The JSON is stored on `ForwardMsg.metadata.agent_props` and encoded by `runtime/agent/json_encoding.py`. The builders return `None` unless `register_agent_session` marked the session. The server does not register sessions.
+The JSON is stored on `ForwardMsg.metadata.agent_props`. The builders return `None` unless `register_agent_session` marked the session.
 
 - **Public names only:** the first argument is the public command name; each keyword is one of the command's parameter names, never a proto field name or synonym. Pass `key=element_id` for an element with an identity.
 - **Report what changes meaning or use, omit presentation:** pass effective values (`disabled=False`, resolved `options`, bounds, `label_visibility`) and `None` for an unset optional parameter, which is dropped. Leave out width, height, gaps, alignment, colors, and other styling.
-- **Widgets:** pass `action="value"` (or `"trigger"`) and a `value_schema` built from the `agent_spec` constants (`STRING`, `INTEGER`, `DATE`, `list_of`, `range_of`, …) describing the JSON shape the snapshot reports. A widget with options reports the `format_func`-formatted labels, which are what a request sends back, so its schema is `STRING`.
+- **Widgets:** pass `action="value"` (or `"trigger"`) and a `value_schema` built from the `agent_spec` constants (`STRING`, `INTEGER`, `DATE`, `list_of`, `range_of`, …). A widget with options reports the `format_func` labels, so its schema is `STRING`.
 - **Arguments are evaluated in every session, browsers included.** They must never raise for an input the command accepts (never truth-test a sequence parameter: a NumPy array or pandas Series has no truth value), and expensive preparation belongs behind `agent_spec.is_recording()`.
-- **Publish nothing the browser does not receive:** report the form the proto carries (a rounded value, normalized captions), and never export data the frontend never gets, such as a dataframe index it drops.
+- **Publish nothing the browser does not receive:** report the form the proto carries, such as a rounded value or normalized captions.
 - **Gaps are explicit:** set `support="browser_required"` when rendering depends on JavaScript the agent API does not run, and `support="read_only"` when a browser user can act on the element and this API only reports that action. A display-only element has no `support` field.
 - **Every parameter is decided:** report it, or list it in the coverage test's `_OMITTED_EVERYWHERE` or `_OMITTED` with the reason. A reported name that is not a parameter goes in `_DERIVED_PROPS`. The test fails until one of these is done.
 
