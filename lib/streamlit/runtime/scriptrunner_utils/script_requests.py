@@ -23,6 +23,7 @@ from google.protobuf.message import Message
 
 from streamlit import util
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
@@ -130,9 +131,8 @@ def _coalesce_widget_states(
 ) -> WidgetStates | None:
     """Merge an older WidgetStates into a newer one, returning the result.
 
-    For most widgets the newer value wins.  Button and chat-input triggers are
-    special: an active trigger in ``old_states`` carries forward so rapid clicks
-    aren't lost.
+    For most widgets the newer value wins. Active triggers are special: an active
+    trigger in ``old_states`` carries forward so rapid interactions aren't lost.
     """
     if not old_states and not new_states:
         return None
@@ -147,7 +147,9 @@ def _coalesce_widget_states(
 
     trigger_value_types = [
         ("trigger_value", False),
+        ("string_trigger_value", StringTriggerValueProto(data=None)),
         ("chat_input_value", ChatInputValueProto(data=None)),
+        ("json_trigger_value", ""),
     ]
     for old_state in old_states.widgets:
         for trigger_value_type, unset_value in trigger_value_types:
@@ -165,9 +167,8 @@ def _coalesce_widget_states(
                 # e2e_playwright/test_fragment_queue_test.py
                 if not new_trigger_val or (
                     # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a
-                    # button/chat_input but no longer is could get a bad
-                    # value.
+                    # otherwise, a widget that previously used a trigger but
+                    # no longer does could get a bad value.
                     new_trigger_val.WhichOneof("value") == trigger_value_type
                     # We only want to take the value of old_state if
                     # new_trigger_val is unset as the old value may be
