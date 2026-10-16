@@ -315,9 +315,10 @@ unpickle that `st.cache_data` already does on every hit.
 
 ## Validation
 
-A prototype in `work-tmp/shared_cache_prototype/` implemented the shared layer, the disk
-storage, and the Redis recipe, with tests running against a shared directory and against
-fakeredis's TCP server. It didn't implement lease renewal or the disk sweep. All 29 tests
+A [prototype](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/17518/shared-cache-prototype/README.md)
+implemented the shared layer, the disk storage, and the Redis recipe, with tests running
+against a shared directory and against fakeredis's TCP server. It also includes the scripts
+that reproduce the issues under [Key issues found](#key-issues-found). It didn't implement lease renewal or the disk sweep. All 29 tests
 passed:
 
 - **Sharing:** A value computed on one replica was reused by another. 1,000 hits between
