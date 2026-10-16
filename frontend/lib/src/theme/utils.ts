@@ -1816,8 +1816,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   } = {}
   if (useStockSidebarSurfaces) {
     const mainThemeInput = activeTheme.themeInput
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
     const resolvedBorder =
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
       sidebarThemeInput?.borderColor || mainThemeInput?.borderColor
 
     if (!resolvedBorder) {
@@ -1827,8 +1827,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     // Keep a distinct stock dataframe hex only when both sides leave
     // dataframeBorderColor and borderColor unset. Otherwise omit so
     // createEmotionTheme can follow the resolved borderColor.
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
     const resolvedDataframeBorder =
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
       sidebarThemeInput?.dataframeBorderColor ||
       mainThemeInput?.dataframeBorderColor
     if (!resolvedDataframeBorder && !resolvedBorder) {
@@ -1841,8 +1841,9 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       "codeBackgroundColor",
       "codeTextColor",
     ] as const) {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
-      const resolved = sidebarThemeInput?.[key] || mainThemeInput?.[key]
+      const resolved =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
+        sidebarThemeInput?.[key] || mainThemeInput?.[key]
       if (!resolved) {
         stockChromeFallbacks[key] = stockChrome[key]
       }
