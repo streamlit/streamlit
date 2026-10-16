@@ -284,9 +284,6 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.WARNING
-        agent_props = _alert_agent_props(
-            "warning", processed_body, processed_icon, title
-        )
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -301,7 +298,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "warning", processed_body, processed_icon, title
+            ),
+        )
 
     @gather_metrics("info")
     def info(
@@ -397,7 +400,6 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.INFO
-        agent_props = _alert_agent_props("info", processed_body, processed_icon, title)
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -412,7 +414,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "info", processed_body, processed_icon, title
+            ),
+        )
 
     @gather_metrics("success")
     def success(
@@ -507,9 +515,6 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.SUCCESS
-        agent_props = _alert_agent_props(
-            "success", processed_body, processed_icon, title
-        )
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -524,7 +529,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "success", processed_body, processed_icon, title
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -480,7 +480,10 @@ class MediaMixin:
                 loop=loop,
                 autoplay=autoplay,
                 muted=muted,
-                subtitles=sorted(subtitles) if isinstance(subtitles, dict) else None,
+                # Labels in player order. The first track is shown by default,
+                # including "default" for a single subtitle file.
+                subtitles=[subtitle.label for subtitle in video_proto.subtitles]
+                or None,
             ),
         )
 
