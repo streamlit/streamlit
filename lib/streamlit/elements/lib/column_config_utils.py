@@ -650,6 +650,34 @@ def update_column_config(
     column_config_mapping[column].update(column_config)
 
 
+# Presentation keys carry no meaning for a non-visual client.
+_COLUMN_PRESENTATION_KEYS: Final = frozenset({"width", "pinned", "alignment"})
+
+
+def described_column_config(column_config_mapping: Any) -> Any:
+    """The agent-facing view of a resolved column configuration.
+
+    The resolved mapping already has defaults applied, and it states "hide this
+    column" as ``{"hidden": True}`` rather than the bare ``None`` the author may
+    have written. The index entry is removed because ``hide_index`` is reported
+    as its own parameter. Width, pinning, and alignment are removed as well.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return column_config_mapping
+
+    return {
+        name: {
+            key: value
+            for key, value in config.items()
+            if key not in _COLUMN_PRESENTATION_KEYS
+        }
+        if isinstance(config, dict)
+        else config
+        for name, config in column_config_mapping.items()
+        if name != INDEX_IDENTIFIER
+    } or None
+
+
 def apply_data_specific_configs(
     columns_config: ColumnConfigMapping,
     data_format: DataFormat,

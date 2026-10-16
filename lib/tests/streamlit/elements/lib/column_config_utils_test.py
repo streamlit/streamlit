@@ -38,6 +38,7 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
+    described_column_config,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -611,3 +612,27 @@ class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
         widget_id = proto.button_click_widgets["actions"]
         assert widget_id
         assert widget_id in self.script_run_ctx.shared.widget_ids_this_run
+
+
+def test_described_column_config_drops_presentation_and_index() -> None:
+    """The agent view keeps column meaning and drops layout and the index entry."""
+    described = described_column_config(
+        {
+            "notes": {
+                "label": "Notes",
+                "width": 100,
+                "alignment": "left",
+                "pinned": True,
+                "hidden": False,
+            },
+            INDEX_IDENTIFIER: {"width": 20},
+            "secret": {"hidden": True},
+        }
+    )
+
+    assert described == {
+        "notes": {"label": "Notes", "hidden": False},
+        "secret": {"hidden": True},
+    }
+    assert described_column_config({INDEX_IDENTIFIER: {"width": 1}}) is None
+    assert described_column_config("unchanged") == "unchanged"

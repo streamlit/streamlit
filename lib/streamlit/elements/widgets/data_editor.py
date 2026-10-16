@@ -43,6 +43,7 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     apply_data_specific_configs,
+    described_column_config,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -1559,7 +1560,7 @@ class DataEditorMixin:
                 # without selections, it is still an editor, and a rejection
                 # should say this API does not accept the edit.
                 support="read_only",
-                column_config=agent_spec.described_column_config(column_config_mapping),
+                column_config=described_column_config(column_config_mapping),
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 num_rows=num_rows,

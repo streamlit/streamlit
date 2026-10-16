@@ -293,42 +293,6 @@ class Content(NamedTuple):
     value: Any
 
 
-def described_column_config(column_config_mapping: Any) -> Any:
-    """Describe a column configuration from the mapping Streamlit resolved.
-
-    The resolved mapping is the better source than the author's argument: it has
-    defaults applied, and it already states "hide this column" as
-    `{"hidden": True}` rather than as the bare `None` the author may have
-    written -- so no null in it carries meaning, and every remaining one can be
-    dropped as unset.
-
-    The index entry is removed, because its key is an internal identifier and
-    `hide_index` is reported as a parameter in its own right. So is each
-    column's presentation -- its width, pinning, and alignment -- which, like
-    geometry everywhere else in the snapshot, means nothing to a non-visual
-    client.
-    """
-    if not isinstance(column_config_mapping, dict):
-        return column_config_mapping
-
-    from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
-
-    return {
-        name: {
-            key: value
-            for key, value in config.items()
-            if key not in _COLUMN_PRESENTATION_KEYS
-        }
-        if isinstance(config, dict)
-        else config
-        for name, config in column_config_mapping.items()
-        if name != INDEX_IDENTIFIER
-    } or None
-
-
-_COLUMN_PRESENTATION_KEYS: Final = frozenset({"width", "pinned", "alignment"})
-
-
 def _drop_unset(value: Any) -> Any:
     if isinstance(value, dict):
         return {

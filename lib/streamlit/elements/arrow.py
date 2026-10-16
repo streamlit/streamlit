@@ -38,6 +38,7 @@ from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    described_column_config,
     extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
@@ -1296,7 +1297,7 @@ class ArrowMixin:
                 support="read_only"
                 if is_selection_activated or button_columns
                 else None,
-                column_config=agent_spec.described_column_config(column_config_mapping),
+                column_config=described_column_config(column_config_mapping),
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 selection_mode=sorted(selection_mode_set) or None,

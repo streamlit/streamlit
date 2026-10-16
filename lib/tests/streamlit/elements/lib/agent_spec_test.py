@@ -23,7 +23,6 @@ from typing import Any
 import pytest
 
 from streamlit.elements.lib import agent_spec
-from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 
 
 def _recorded(command: str, **props: Any) -> dict[str, Any]:
@@ -111,30 +110,6 @@ def test_value_schema_shapes() -> None:
         "items": {"type": "string", "format": "date"},
         "maxItems": 2,
     }
-
-
-def test_described_column_config_drops_presentation_and_index() -> None:
-    """Column config is reported from the resolved mapping, without layout."""
-    described = agent_spec.described_column_config(
-        {
-            "notes": {
-                "label": "Notes",
-                "width": 100,
-                "alignment": "left",
-                "pinned": True,
-                "hidden": False,
-            },
-            INDEX_IDENTIFIER: {"width": 20},
-            "secret": {"hidden": True},
-        }
-    )
-
-    assert described == {
-        "notes": {"label": "Notes", "hidden": False},
-        "secret": {"hidden": True},
-    }
-    assert agent_spec.described_column_config({INDEX_IDENTIFIER: {"width": 1}}) is None
-    assert agent_spec.described_column_config("unchanged") == "unchanged"
 
 
 def test_block_marks_a_transparent_wrapper() -> None:
