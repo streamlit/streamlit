@@ -15,8 +15,9 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
 from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
@@ -81,6 +82,30 @@ def test_st_map_has_consistent_visuals(
     assert_snapshot(
         maps.nth(4),
         name="st_map-width_and_height",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
+def test_st_map_default_markers_use_custom_primary_color(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Default map markers follow a custom theme primaryColor (snapshot)."""
+    # Loud green, distinct from the stock Streamlit primary red.
+    apply_theme_via_window(app, base="light", primaryColor="#00C853")
+    app.reload()
+    wait_for_app_loaded(app)
+
+    maps = app.get_by_test_id("stDeckGlJsonChart")
+    expect(maps).to_have_count(MAP_ELEMENT_COUNT, timeout=15000)
+    # Map tiles/assets can take extra time; match other st_map snapshot waits.
+    app.wait_for_timeout(10000)
+
+    # Simple map (no color=) — markers should use the injected primary.
+    assert_snapshot(
+        maps.nth(1).locator("canvas").nth(1),
+        name="st_map-simple_map_custom_primary",
         pixel_threshold=PIXEL_THRESHOLD,
     )
 
