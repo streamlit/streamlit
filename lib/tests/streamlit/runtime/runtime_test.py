@@ -737,7 +737,7 @@ class RuntimeTest(RuntimeTestCase):
         # Should not raise.
         self.runtime.clear_user_info_for_session("not_a_session_id")
 
-    async def test_clear_user_info_for_active_session_stays_connected(self):
+    async def test_clear_user_info_for_active_session_stays_connected(self) -> None:
         """An active session stays connected after its user info is cleared."""
         await self.runtime.start()
         session_id = self.runtime.connect_session(
@@ -809,17 +809,40 @@ class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
             )
             self.runtime.disconnect_session(session_id)
 
-            thread = threading.Thread(
-                target=self.runtime.clear_user_info_for_session,
-                args=(session_id,),
-            )
-            thread.start()
-            thread.join()
+            storage = self.runtime._session_mgr._session_storage
+            worker_ids: list[int] = []
+            get_callers: list[int] = []
+            original_get = storage.get
 
-            # The close is queued until this coroutine yields to the loop.
-            assert self.runtime._session_mgr.get_session_info(session_id) is not None
-            await asyncio.sleep(0)
-            assert self.runtime._session_mgr.get_session_info(session_id) is None
+            def tracking_get(stored_session_id: str):
+                get_callers.append(threading.get_ident())
+                return original_get(stored_session_id)
+
+            def run_clear() -> None:
+                worker_ids.append(threading.get_ident())
+                self.runtime.clear_user_info_for_session(session_id)
+
+            with patch.object(storage, "get", side_effect=tracking_get):
+                thread = threading.Thread(target=run_clear)
+                thread.start()
+                thread.join()
+
+                # The script thread publishes the tombstone and does not read
+                # storage. The close stays queued until this coroutine yields.
+                assert worker_ids
+                assert worker_ids[0] not in get_callers
+                assert (
+                    self.runtime._session_mgr.get_session_info(session_id) is not None
+                )
+                new_session_id = self.runtime.connect_session(
+                    client=MockSessionClient(),
+                    user_info={},
+                    existing_session_id=session_id,
+                )
+                assert new_session_id != session_id
+                await asyncio.sleep(0)
+                assert self.runtime._session_mgr.get_session_info(session_id) is None
+                assert worker_ids[0] not in get_callers
 
 
 class ScriptCheckTest(RuntimeTestCase):

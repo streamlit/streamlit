@@ -318,29 +318,35 @@ class Runtime:
 
         Notes
         -----
-        Threading: SAFE. May be called on any thread. Closing a stored
-        session is scheduled onto the event loop, because ``close_session``
-        mutates session storage.
+        Threading: SAFE. May be called on any thread. The non-resumable mark
+        is published before this returns and does not touch session storage.
+        Storage lookup and deletion run on the event loop.
         """
-        session_info = self._session_mgr.get_session_info(session_id)
-        if session_info is None:
-            return
+        # Publish the mark before looking at the active map. A concurrent
+        # disconnect or reconnect then cannot save or adopt this id, and this
+        # path never calls get_session_info() (that read mutates storage).
+        self._session_mgr.mark_session_nonresumable(session_id)
 
-        session_info.session.clear_user_info()
-        if self.is_active_session(session_id):
+        active_session = self._session_mgr.get_active_session_info(session_id)
+        if active_session is not None:
+            active_session.session.clear_user_info()
             return
 
         self._close_inactive_session_on_event_loop(session_id)
 
     def _close_inactive_session_on_event_loop(self, session_id: str) -> None:
-        """Close ``session_id`` on the event loop when it is not active.
+        """Close a stored session on the event loop.
 
-        ``clear_user_info`` has already marked the session non-resumable, so
-        a reconnect cannot adopt it before this close runs.
+        The session is already marked non-resumable, so a reconnect cannot
+        adopt it before this close runs. Session storage is only touched here,
+        on the event loop.
         """
         async_objs = self._get_async_objs()
 
         def close_if_inactive() -> None:
+            session_info = self._session_mgr.get_session_info(session_id)
+            if session_info is not None:
+                session_info.session.clear_user_info()
             if not self.is_active_session(session_id):
                 self.close_session(session_id)
 
@@ -351,8 +357,17 @@ class Runtime:
 
         if running_loop is async_objs.eventloop:
             close_if_inactive()
-        else:
+            return
+
+        try:
             async_objs.eventloop.call_soon_threadsafe(close_if_inactive)
+        except RuntimeError:
+            if not async_objs.eventloop.is_closed():
+                raise
+            _LOGGER.debug(
+                "Dropped logout close for session %s because the event loop is closed.",
+                session_id,
+            )
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before

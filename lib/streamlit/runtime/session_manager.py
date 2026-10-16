@@ -377,6 +377,23 @@ class SessionManager(Protocol):
     # If left unimplemented in a subclass, the default implementations of these methods
     # call corresponding SessionManager methods in a natural way.
 
+    def mark_session_nonresumable(self, session_id: str) -> None:
+        """Prevent ``session_id`` from being resumed.
+
+        The default does nothing and does not touch session storage. Managers
+        that store disconnected sessions override this so a logout on the
+        script thread is visible before any storage lookup.
+
+        Parameters
+        ----------
+        session_id
+            The session's unique ID.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+
     def disconnect_session(self, session_id: str) -> None:
         """Disconnect the given session.
 

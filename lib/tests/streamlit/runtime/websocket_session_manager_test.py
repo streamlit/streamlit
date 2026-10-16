@@ -336,8 +336,8 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert self.session_mgr._connect_count == 2
 
         patched_warning.assert_called_with(
-            "Ignoring reconnect to active session id %s: user identity "
-            "mismatch. Connecting to a new session instead.",
+            "Ignoring reconnect to logged-out session id %s. "
+            "Connecting to a new session instead.",
             session_id,
         )
 
@@ -397,8 +397,10 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         "streamlit.runtime.app_session.AppSession.register_file_watchers",
         new=MagicMock(),
     )
-    def test_disconnect_drops_session_if_logout_wins_the_race(self) -> None:
-        """A logout that flips the flag during disconnect is not left in storage."""
+    def test_disconnect_deletes_stored_session_when_logout_runs_mid_disconnect(
+        self,
+    ) -> None:
+        """A logout that runs during disconnect_session does not leave the session in storage."""
         alice = {"email": "alice@example.com"}
         session_id = self.connect_session(user_info=alice)
         session_info = self.session_mgr.get_session_info(session_id)

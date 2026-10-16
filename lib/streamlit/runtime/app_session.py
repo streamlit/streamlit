@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import sys
+import threading
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final
@@ -264,6 +265,9 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
         self._resumable = True
+        # Pairs the resume flag with the owner dict. clear_user_info() and
+        # matches_user_info() must observe both together.
+        self._user_info_lock = threading.Lock()
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
@@ -589,15 +593,16 @@ class AppSession:
 
     def is_resumable(self) -> bool:
         """Return whether a later connection may resume this session."""
-        return self._resumable
+        with self._user_info_lock:
+            return self._resumable
 
     def clear_user_info(self) -> None:
         """Clear this session's user info so later connections cannot resume it."""
-        # Mark the session non-resumable before emptying the dict. A disconnect
-        # that runs in between would otherwise save an anonymous session that a
-        # reconnect can resume.
-        self._resumable = False
-        self._user_info.clear()
+        # Hold the flag and the dict together. A reconnect must not observe a
+        # resumable flag and then compare the dict after it has been cleared.
+        with self._user_info_lock:
+            self._resumable = False
+            self._user_info.clear()
 
     def matches_user_info(self, user_info: UserInfoType) -> bool:
         """Return whether ``user_info`` matches this session's owner identity.
@@ -610,12 +615,13 @@ class AppSession:
         (full equality) so any identity difference fails closed to a fresh
         session rather than allowing a takeover.
 
-        ``clear_user_info`` makes this session match no reconnect identity,
-        including ``{}``.
+        After ``clear_user_info`` runs, this returns ``False`` for every
+        identity, including the anonymous ``{}``.
         """
-        if not self._resumable:
-            return False
-        return self._user_info == user_info
+        with self._user_info_lock:
+            if not self._resumable:
+                return False
+            return self._user_info == user_info
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""

@@ -272,7 +272,7 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
 
         assert c.url.startswith("/auth/logout")
 
-    def test_user_logout_clears_user_after_marking_session(self):
+    def test_user_logout_invokes_runtime_before_clearing_user_info(self) -> None:
         """Logout marks the session before the in-flight user info is cleared."""
         user_info_when_marked: dict[str, str | bool | dict[str, str] | None] = {}
 
