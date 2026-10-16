@@ -31,7 +31,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import type { WidgetStateManager } from "~lib/WidgetStateManager"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
@@ -61,6 +61,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 vi.mock("native-file-system-adapter", () => ({}))
 
 import DataFrame, { type DataFrameProps } from "./DataFrame"
+import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 
 const getProps = (
   data: Uint8Array,
@@ -1082,5 +1083,270 @@ describe("DataFrame widget", () => {
       expect.objectContaining({ bgCell: expect.any(String) })
     )
     expect(getRowThemeOverride(1)).toBeUndefined()
+  })
+
+  describe("ignoreRerun", () => {
+    // WidgetStateManager sends reruns from a setTimeout(0) flush, so wait one
+    // macrotask before asserting on sendRerunBackMsg.
+    async function flushScheduledRerun(): Promise<void> {
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+    }
+
+    // on_change="ignore" writes in a microtask, after render and before the
+    // next timer or click.
+    async function flushIgnoreSync(): Promise<void> {
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+
+    async function waitForDebouncedEditSync(): Promise<void> {
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, DEBOUNCE_TIME_MS)
+        })
+      })
+      await flushScheduledRerun()
+    }
+
+    const renderIgnoreRerunDataFrame = (
+      editingMode: DataframeProto.EditingMode,
+      elementOverrides: {
+        ignoreRerun?: boolean
+        formId?: string
+      } = {},
+      onFormsDataChanged?: (newData: {
+        formsWithPendingChanges: Set<string>
+      }) => void
+    ): {
+      sendRerunBackMsg: ReturnType<typeof vi.fn>
+      setStringValueSpy: ReturnType<typeof vi.spyOn>
+      widgetMgr: WidgetStateManager
+    } => {
+      const sendRerunBackMsg = vi.fn()
+      const formsDataChanged = vi.fn(onFormsDataChanged)
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged,
+      })
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      render(
+        <DataFrame
+          element={DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
+            editingMode,
+            id: "ignore-editor",
+            ...elementOverrides,
+          })}
+          elementHash="ignore-rerun-hash"
+          disabled={false}
+          widgetMgr={widgetMgr}
+        />
+      )
+
+      return { sendRerunBackMsg, setStringValueSpy, widgetMgr }
+    }
+
+    const updatedCell = (): GridCell => {
+      const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+      return {
+        ...dataEditorProps.getCellContent([1, 0]),
+        data: 999,
+        displayData: "999",
+      }
+    }
+
+    const commitCellEdit = (): void => {
+      const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+      act(() => {
+        dataEditorProps.onCellEdited([1, 0], updatedCell())
+      })
+    }
+
+    const lastSetStringOptions = (
+      setStringValueSpy: ReturnType<typeof vi.spyOn>
+    ): Record<string, unknown> =>
+      setStringValueSpy.mock.lastCall?.[2] as Record<string, unknown>
+
+    async function expectIgnoredEdit(
+      setStringValueSpy: ReturnType<typeof vi.spyOn>,
+      sendRerunBackMsg: ReturnType<typeof vi.fn>,
+      extraOptions: Record<string, unknown> = {}
+    ): Promise<void> {
+      await waitForDebouncedEditSync()
+
+      expect(lastSetStringOptions(setStringValueSpy)).toEqual(
+        expect.objectContaining({
+          fromUser: true,
+          triggerRerun: false,
+          ...extraOptions,
+        })
+      )
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+
+    it("passes triggerRerun: false on cell edit when ignoreRerun is true", async () => {
+      const { sendRerunBackMsg, setStringValueSpy } =
+        renderIgnoreRerunDataFrame(DataframeProto.EditingMode.FIXED, {
+          ignoreRerun: true,
+        })
+
+      commitCellEdit()
+      // The write is queued on the commit, not after the 150ms debounce, so a
+      // rerun in that window already includes the edit.
+      await flushIgnoreSync()
+      expect(setStringValueSpy).toHaveBeenCalled()
+      await expectIgnoredEdit(setStringValueSpy, sendRerunBackMsg)
+    })
+
+    it("does not pass triggerRerun when ignoreRerun is false", async () => {
+      const { sendRerunBackMsg, setStringValueSpy } =
+        renderIgnoreRerunDataFrame(DataframeProto.EditingMode.FIXED, {
+          ignoreRerun: false,
+        })
+
+      commitCellEdit()
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      await waitForDebouncedEditSync()
+
+      const options = lastSetStringOptions(setStringValueSpy)
+      expect(options).toEqual(expect.objectContaining({ fromUser: true }))
+      expect(options).not.toHaveProperty("triggerRerun")
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+    })
+
+    it.each([
+      {
+        action: "paste",
+        editingMode: DataframeProto.EditingMode.FIXED,
+        commit: (): void => {
+          dataEditorMockFn.mock.lastCall?.[0].onPaste([1, 0], [["999"]])
+        },
+      },
+      {
+        action: "row append",
+        editingMode: DataframeProto.EditingMode.DYNAMIC,
+        commit: (): void => {
+          dataEditorMockFn.mock.lastCall?.[0].onRowAppended()
+        },
+      },
+      {
+        action: "row delete",
+        editingMode: DataframeProto.EditingMode.DYNAMIC,
+        commit: (): void => {
+          dataEditorMockFn.mock.lastCall?.[0].onDelete({
+            columns: CompactSelection.empty(),
+            rows: CompactSelection.fromSingleSelection(0),
+            current: undefined,
+          })
+        },
+      },
+      {
+        action: "cell clear",
+        editingMode: DataframeProto.EditingMode.FIXED,
+        commit: (): void => {
+          dataEditorMockFn.mock.lastCall?.[0].onDelete({
+            columns: CompactSelection.empty(),
+            rows: CompactSelection.empty(),
+            current: {
+              cell: [1, 0],
+              range: { x: 1, y: 0, width: 1, height: 1 },
+              rangeStack: [],
+            },
+          })
+        },
+      },
+    ])(
+      "passes triggerRerun: false on $action when ignoreRerun is true",
+      async ({ editingMode, commit }) => {
+        const { sendRerunBackMsg, setStringValueSpy } =
+          renderIgnoreRerunDataFrame(editingMode, { ignoreRerun: true })
+
+        act(() => {
+          commit()
+        })
+        await waitForDebouncedEditSync()
+
+        expect(lastSetStringOptions(setStringValueSpy)).toEqual(
+          expect.objectContaining({
+            fromUser: true,
+            triggerRerun: false,
+          })
+        )
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      }
+    )
+
+    it("flushes an outside click without a rerun when ignoreRerun is true", async () => {
+      const { sendRerunBackMsg, setStringValueSpy } =
+        renderIgnoreRerunDataFrame(DataframeProto.EditingMode.FIXED, {
+          ignoreRerun: true,
+        })
+      const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+      const cell = updatedCell()
+
+      act(() => {
+        const pointerDownEvent = new MouseEvent("pointerdown")
+        Object.defineProperty(pointerDownEvent, "target", {
+          value: document.body,
+        })
+        expect(dataEditorProps.isOutsideClick(pointerDownEvent)).toBe(true)
+        dataEditorProps.onCellEdited([1, 0], cell)
+        dataEditorProps.onFinishedEditing(cell, [0, 0])
+      })
+
+      // The outside-click path writes on the commit, before the debounce.
+      await flushIgnoreSync()
+      expect(setStringValueSpy).toHaveBeenCalled()
+      await expectIgnoredEdit(setStringValueSpy, sendRerunBackMsg)
+    })
+
+    it("includes an ignored edit in a rerun before the debounce delay", async () => {
+      const { sendRerunBackMsg, widgetMgr } = renderIgnoreRerunDataFrame(
+        DataframeProto.EditingMode.FIXED,
+        { ignoreRerun: true }
+      )
+
+      commitCellEdit()
+      act(() => {
+        void widgetMgr.setTriggerValue("apply-button", {
+          fromUser: true,
+          formId: undefined,
+          fragmentId: undefined,
+        })
+      })
+      await flushScheduledRerun()
+
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      const widgets = sendRerunBackMsg.mock.calls[0][0].widgets as {
+        id: string
+        stringValue?: string
+      }[]
+      const editorState = widgets.find(widget => widget.id === "ignore-editor")
+      expect(editorState?.stringValue).toContain("999")
+    })
+
+    it("does not change form batching when ignoreRerun is true", async () => {
+      let pendingFormIds = new Set<string>()
+      const { sendRerunBackMsg, setStringValueSpy } =
+        renderIgnoreRerunDataFrame(
+          DataframeProto.EditingMode.FIXED,
+          { formId: "testForm", ignoreRerun: true },
+          newData => {
+            pendingFormIds = newData.formsWithPendingChanges
+          }
+        )
+
+      commitCellEdit()
+      await expectIgnoredEdit(setStringValueSpy, sendRerunBackMsg, {
+        formId: "testForm",
+      })
+      expect(pendingFormIds).toEqual(new Set(["testForm"]))
+    })
   })
 })

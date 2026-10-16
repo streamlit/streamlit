@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- ??= would read the unbound Promise.withResolvers method
 if (Promise.withResolvers === undefined) {
   Promise.withResolvers = <T>() => {
     let promiseResolve: PromiseWithResolvers<T>["resolve"]

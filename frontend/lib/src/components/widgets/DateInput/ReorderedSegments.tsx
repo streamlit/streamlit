@@ -65,10 +65,13 @@ export function ReorderedSegments({
   format,
   isRange,
   includeTime,
+  required,
 }: {
   format: string
   isRange?: boolean
   includeTime?: boolean
+  /** When true, the field group exposes `aria-required` to assistive tech. */
+  required?: boolean
 }): ReactElement | null {
   const state = useContext(DateFieldStateContext)
   if (!state) return null
@@ -78,7 +81,10 @@ export function ReorderedSegments({
     : reorderSegments(state.segments, format)
 
   return (
-    <StyledDateFieldInput $isRange={isRange}>
+    <StyledDateFieldInput
+      $isRange={isRange}
+      aria-required={required ? true : undefined}
+    >
       {segments.map((segment, i) => (
         // Index key is safe: segments is a fixed-length, fixed-order array derived from format.
         // eslint-disable-next-line @eslint-react/no-array-index-key

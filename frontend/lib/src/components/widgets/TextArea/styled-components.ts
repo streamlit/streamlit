@@ -16,11 +16,20 @@
 
 import styled from "@emotion/styled"
 
-export const StyledTextAreaContainer = styled.div({
-  height: "100%",
+export const StyledTextAreaContainer = styled.div<{
+  $isStretchHeight: boolean
+}>(({ $isStretchHeight }) => ({
+  // Only a stretch-height text area fills its element container. Otherwise, a
+  // container stretched by its row (for example with
+  // vertical_alignment="distribute") would show an empty field below the
+  // textarea.
+  height: $isStretchHeight ? "100%" : "auto",
   display: "flex",
   flexDirection: "column",
-})
+  // Anchors the absolutely positioned input instructions to the field instead
+  // of a taller element container.
+  position: "relative",
+}))
 
 export const StyledTextAreaRoot = styled.div(({ theme }) => ({
   border: `${theme.sizes.borderWidth} solid`,
@@ -41,7 +50,9 @@ export const StyledTextAreaInput = styled.textarea<{
   width: "100%",
   height: $height,
   maxHeight: $maxHeight,
-  minHeight: theme.sizes.largestElementHeight,
+  // The root's border adds to this, so subtract it to keep the minimum field
+  // height at largestElementHeight like other large widgets.
+  minHeight: `calc(${theme.sizes.largestElementHeight} - 2 * ${theme.sizes.borderWidth})`,
   resize: $resize,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,

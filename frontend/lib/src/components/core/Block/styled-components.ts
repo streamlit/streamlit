@@ -33,9 +33,9 @@ import { assertNever } from "~lib/util/assertNever"
 import { computeGridTemplateColumns } from "./gridUtils"
 
 /**
- * Column vertical-alignment rules target the wrapper class rather than the two
- * field styled-components, so both widgets stay covered if their inner React
- * Aria composition changes.
+ * Vertical-alignment rules for columns and horizontal containers target the
+ * wrapper class rather than the two field styled-components, so both widgets
+ * stay covered if their inner React Aria composition changes.
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
@@ -76,8 +76,11 @@ interface StyledElementContainerProps {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
-  minHeight?: React.CSSProperties["minHeight"]
   textAlign?: React.CSSProperties["textAlign"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
+  contain?: React.CSSProperties["contain"]
 }
 
 export const StyledSpace = styled.div({
@@ -98,18 +101,24 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     overflow,
     flex,
     minWidth,
-    minHeight,
     textAlign,
+    alignSelf,
+    minHeight,
+    maxHeight,
+    contain,
   }) => ({
     width,
     height,
+    alignSelf,
+    minHeight,
+    maxHeight,
+    ...(contain !== undefined ? { contain } : {}),
     textAlign,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
     // Some components support zero width (e.g. iframe).
     minWidth: width === "0px" ? 0 : (minWidth ?? "1rem"),
-    minHeight,
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -184,6 +193,9 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
 
+    // Columns don't shift themselves for vertical alignment: the row stretches
+    // each column (so bordered columns match), and ContainerContentsWrapper
+    // aligns the content inside it.
     return {
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
@@ -200,7 +212,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
             minWidth: theme.spacing.sixXL,
           }),
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
-        marginTop: "auto",
         // Align the last direct-child checkbox/toggle with other input widgets.
         // Scoped to the column's own stVerticalBlock so nested containers
         // (e.g. horizontal containers of checkboxes) do not also get matched
@@ -219,10 +230,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
           {
             marginTop: theme.spacing.sm,
           },
-      }),
-      ...(verticalAlignment === VerticalAlignment.CENTER && {
-        marginTop: "auto",
-        marginBottom: "auto",
       }),
       ...(showBorder && {
         border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -361,6 +368,14 @@ export const StyledFlexContainerBlock =
               }),
             }
           : { overflow }),
+        ...(direction === Direction.HORIZONTAL &&
+          align === BlockProto.FlexContainer.Align.ALIGN_END && {
+            // Align direct-child checkboxes/toggles with input widgets, matching
+            // bottom-aligned columns. Nested containers are not matched.
+            [`& > ${StyledElementContainer} > ${CHECKBOX_WRAPPER_SELECTOR}`]: {
+              marginBottom: theme.spacing.sm,
+            },
+          }),
         // Consecutive steps should read as one continuous timeline, so a step's
         // connector has to span the flex gap separating it from the next step.
         // The property holds a negative `bottom` offset for the connector, and
@@ -391,7 +406,9 @@ interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
   minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 /**
@@ -409,7 +426,7 @@ export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
 }))
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex, minHeight }) => ({
+  ({ width, height, flex, alignSelf, minHeight, maxHeight }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -419,7 +436,9 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minWidth: "1rem",
     height,
     flex,
+    alignSelf,
     minHeight,
+    maxHeight,
   })
 )
 

@@ -56,6 +56,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             datetime.strptime(c.default[0], "%Y-%m-%d").date() <= datetime.now().date()
         )
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -73,6 +74,58 @@ class DateInputTest(DeltaGeneratorTestCase):
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
         assert c.default == []
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.date_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike format, required cannot make a stored date illegal, so it is
+        not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", key="date_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", key="date_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 == id2
+
+    def test_required_does_not_change_today_default(self) -> None:
+        """required=True does not replace the today default with an empty value."""
+        st.date_input("the label", required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert len(c.default) == 1
+        assert c.required
+
+    def test_required_with_none_value_stays_empty(self) -> None:
+        """Empty required fields still need an explicit empty value."""
+        st.date_input("the label", value=None, required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.default == []
+        assert c.required
 
     @parameterized.expand(
         [
@@ -447,6 +500,8 @@ class DateInputTest(DeltaGeneratorTestCase):
                 max_value=date(2025, 1, 1),
                 # Whitelisted kwargs:
                 format="YYYY/MM/DD",
+                # Not on the format allowlist; must not change keyed identity.
+                required=True,
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
@@ -607,7 +662,7 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
     """Test that value resets to default when dynamically changing min_value makes current value invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -618,18 +673,18 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
             # New min_value makes the previous value invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 6, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 7, 15),
+                value=date(2024, 7, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -655,7 +710,7 @@ def test_dynamic_max_value_resets_value_when_above_new_max():
     """Test that value resets to default when dynamically changing max_value makes current value invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -666,18 +721,18 @@ def test_dynamic_max_value_resets_value_when_above_new_max():
             # New max_value makes the previous value invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 6, 30),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 6, 30),
                 key="date",
-                value=datetime.date(2024, 3, 15),
+                value=date(2024, 3, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -703,7 +758,7 @@ def test_dynamic_bounds_preserves_valid_value():
     """Test that value is preserved when it remains valid after bound changes."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -714,18 +769,18 @@ def test_dynamic_bounds_preserves_valid_value():
             # Changing bounds but May 15 is still valid (between Apr 1 and Sep 30)
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 4, 1),
-                max_value=datetime.date(2024, 9, 30),
+                min_value=date(2024, 4, 1),
+                max_value=date(2024, 9, 30),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -747,7 +802,7 @@ def test_dynamic_bounds_with_range_resets_when_start_below_min():
     """Test that range date input resets when start date becomes invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -758,18 +813,18 @@ def test_dynamic_bounds_with_range_resets_when_start_below_min():
             # New min_value makes the start date of the previous range invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 6, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 7, 1), datetime.date(2024, 8, 1)),
+                value=(date(2024, 7, 1), date(2024, 8, 1)),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+                value=(date(2024, 5, 1), date(2024, 6, 1)),
             )
         st.write(f"value: {value}")
 
@@ -795,7 +850,7 @@ def test_dynamic_bounds_with_range_resets_when_end_above_max():
     """Test that range date input resets when end date becomes invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -806,18 +861,18 @@ def test_dynamic_bounds_with_range_resets_when_end_above_max():
             # New max_value makes the end date of the previous range invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 6, 30),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 6, 30),
                 key="date",
-                value=(datetime.date(2024, 3, 1), datetime.date(2024, 4, 1)),
+                value=(date(2024, 3, 1), date(2024, 4, 1)),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+                value=(date(2024, 5, 1), date(2024, 6, 1)),
             )
         st.write(f"value: {value}")
 
@@ -1065,20 +1120,20 @@ def test_datetime_session_state_value_with_date_bounds():
     from datetime import datetime as dt
 
     def script():
-        import datetime
+        from datetime import date, datetime
 
         import streamlit as st
 
         # Initialize session_state with a datetime value
         if "date" not in st.session_state:
-            st.session_state["date"] = datetime.datetime(2025, 6, 15, 12, 30, 0)
+            st.session_state["date"] = datetime(2025, 6, 15, 12, 30, 0)
 
         # Use date_input with date bounds - this should not raise TypeError
         result = st.date_input(
             "Select date",
             key="date",
-            min_value=datetime.date(2025, 1, 1),
-            max_value=datetime.date(2025, 12, 31),
+            min_value=date(2025, 1, 1),
+            max_value=date(2025, 12, 31),
         )
         st.write(f"result: {result}")
 

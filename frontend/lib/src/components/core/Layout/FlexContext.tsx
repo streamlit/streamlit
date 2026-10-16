@@ -68,10 +68,32 @@ export interface IFlexContext {
    * cell (which overflows siblings). Nested providers do not inherit this.
    */
   verticalStretchGrows?: boolean
+  /**
+   * Whether this container gives its stretch-height children a definite
+   * height to fill:
+   * - true for pixel- and rem-height containers, and for stretch-height
+   *   containers whose own parent has a definite height. Tab panels use their
+   *   tab container's height. A filling `st.grid` cell counts too.
+   * - false (or unset) for the root and content-height containers, where
+   *   stretch elements size to their content.
+   */
+  hasDefiniteHeight?: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
 FlexContext.displayName = "FlexContext"
+
+/**
+ * Whether a stretch-height element should use its default height. It should
+ * only do so when its container has no definite height to fill. Inside a
+ * definite-height container, a default height would stop the element from
+ * shrinking to fit next to its siblings.
+ */
+export function hasStretchHeightFallback(
+  flexContext: IFlexContext | null
+): boolean {
+  return !flexContext?.hasDefiniteHeight
+}
 
 /**
  * FlexContextProvider sets the current `FlexContext` value to one of the
@@ -97,6 +119,10 @@ FlexContext.displayName = "FlexContext"
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
  *   container, unless a closer fixed-width container overrides it.
+ * @returns fillAvailableHeight: Whether a `grid.cell()` block should fill a
+ *   definite-height grid cell.
+ * @returns hasDefiniteHeight: Whether stretch-height children get a definite
+ *   height from this container.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
@@ -113,6 +139,8 @@ export const FlexContextProvider: FC<
     fillAvailableHeight?: boolean
     fillJustify?: IFlexContext["fillJustify"]
     verticalStretchGrows?: boolean
+    hasFixedHeight?: boolean
+    hasStretchHeight?: boolean
     parentContext?: IFlexContext | null
   }>
 > = ({
@@ -127,6 +155,8 @@ export const FlexContextProvider: FC<
   fillAvailableHeight = false,
   fillJustify,
   verticalStretchGrows = false,
+  hasFixedHeight = false,
+  hasStretchHeight = false,
   parentContext = null,
 }) => {
   const value = useMemo<IFlexContext>(() => {
@@ -146,6 +176,10 @@ export const FlexContextProvider: FC<
         parentContext?.isInContentWidthContainer ?? false
     }
 
+    const hasDefiniteHeight =
+      hasFixedHeight ||
+      (hasStretchHeight && Boolean(parentContext?.hasDefiniteHeight))
+
     return {
       direction,
       isInHorizontalLayout,
@@ -157,6 +191,7 @@ export const FlexContextProvider: FC<
       ...(fillAvailableHeight && { fillAvailableHeight: true }),
       ...(fillJustify && { fillJustify }),
       ...(verticalStretchGrows && { verticalStretchGrows: true }),
+      hasDefiniteHeight,
     }
   }, [
     direction,
@@ -169,6 +204,8 @@ export const FlexContextProvider: FC<
     fillAvailableHeight,
     fillJustify,
     verticalStretchGrows,
+    hasFixedHeight,
+    hasStretchHeight,
     parentContext,
   ])
 

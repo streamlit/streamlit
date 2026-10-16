@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, assert_type, cast
 
 # Perform type checking tests for the public ``streamlit.typing`` namespace.
 # Each export must resolve to the same type as its internal definition, so the

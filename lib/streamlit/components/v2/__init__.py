@@ -28,12 +28,8 @@ from streamlit.components.v2.get_bidi_component_manager import (
 from streamlit.errors import StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.types import ComponentRenderer
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from streamlit.components.v2.bidi_component import ComponentResult
+    from streamlit.components.v2.types import BidiComponentKey, ComponentRenderer
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
@@ -104,6 +100,40 @@ def _register_component(
     return component_key
 
 
+def _ensure_component_on_active_runtime(
+    component_key: str,
+    html: str | None,
+    css: str | None,
+    js: str | None,
+) -> None:
+    """Register captured HTML, CSS, and JS on the active runtime if needed.
+
+    Do this when that name is missing or still a manifest placeholder.
+    ``component()`` runs when the module is imported, which can be a different
+    manager than the runtime executing the script. AppTest creates a new
+    runtime per instance. Leave a definition the script already registered,
+    including an explicit empty ``component()`` call. Return immediately when
+    there is no script run or runtime, so this path does not create a
+    throwaway manager.
+    """
+    from streamlit.runtime import Runtime
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
+
+    # Suppress the missing-context warning here. The mount that follows logs it.
+    if get_script_run_ctx(suppress_warning=True) is None or not Runtime.exists():
+        return
+
+    manager = Runtime.instance().bidi_component_registry
+    manager.ensure_definition_if_missing_or_placeholder(
+        component_key=component_key,
+        html=html,
+        css=css,
+        js=js,
+    )
+
+
 def _create_component_callable(
     name: str,
     *,
@@ -111,7 +141,7 @@ def _create_component_callable(
     css: str | None = None,
     js: str | None = None,
     isolate_styles: bool = True,
-) -> Callable[..., Any]:
+) -> ComponentRenderer:
     """Create a component callable, handling both lookup and registration cases.
 
     Parameters
@@ -132,7 +162,7 @@ def _create_component_callable(
 
     Returns
     -------
-    Callable[..., Any]
+    ComponentRenderer
         A function that, when called inside a Streamlit script, mounts the
         component and returns its state.
 
@@ -146,7 +176,7 @@ def _create_component_callable(
     # The inner callable that mounts the component.
     def _mount_component(
         *,
-        key: str | None = None,
+        key: BidiComponentKey = None,
         data: Any | None = None,
         default: dict[str, Any] | None = None,
         width: Width = "stretch",
@@ -157,8 +187,9 @@ def _create_component_callable(
 
         Parameters
         ----------
-        key : str or None
-            An optional string to use as the unique key for the component.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for the
+            component.
         data : Any or None
             Data to pass to the component (JSON-serializable).
         default : dict[str, Any] or None
@@ -192,6 +223,8 @@ def _create_component_callable(
                 "(`st.components.v2.component(..., isolate_styles=...)`).",
                 show_in_browser=False,
             )
+
+        _ensure_component_on_active_runtime(component_key, html, css, js)
 
         return st._bidi_component(
             component_key,

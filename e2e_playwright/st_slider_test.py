@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 40
+NUM_SLIDER_WIDGETS = 42
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -766,3 +766,43 @@ def test_slider_swaps_reversed_min_max(app: Page):
     slider_role.press("ArrowRight")
     wait_for_app_run(app)
     expect_prefixed_markdown(app, "Reversed bounds slider value:", "6")
+
+
+def test_default_time_sliders_reach_time_max(app: Page):
+    """End on a default 15-minute time slider commits time.max, then steps back."""
+    time_slider = get_slider(app, "Default time slider")
+    time_slider.scroll_into_view_if_needed()
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("12:00")
+    expect_prefixed_markdown(app, "Default time slider value:", "12:00:00")
+
+    time_slider.get_by_role("slider").press("End")
+    wait_for_app_run(app)
+
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("23:59")
+    expect_prefixed_markdown(
+        app, "Default time slider value:", "23:59:59.999999", exact_match=True
+    )
+
+    time_slider.get_by_role("slider").press("ArrowLeft")
+    wait_for_app_run(app)
+    expect(time_slider.get_by_test_id("stSliderThumbValue")).to_have_text("23:45")
+    expect_prefixed_markdown(
+        app, "Default time slider value:", "23:45:00", exact_match=True
+    )
+
+    time_range = get_slider(app, "Default time range slider")
+    time_range.scroll_into_view_if_needed()
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(0)).to_have_text("09:00")
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(1)).to_have_text("17:00")
+
+    time_range.get_by_role("slider").nth(1).press("End")
+    wait_for_app_run(app)
+
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(0)).to_have_text("09:00")
+    expect(time_range.get_by_test_id("stSliderThumbValue").nth(1)).to_have_text("23:59")
+    expect_prefixed_markdown(
+        app,
+        "Default time range slider value:",
+        "09:00:00 23:59:59.999999",
+        exact_match=True,
+    )

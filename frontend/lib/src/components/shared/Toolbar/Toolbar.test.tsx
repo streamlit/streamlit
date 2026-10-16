@@ -88,7 +88,7 @@ describe("Toolbar element", () => {
       "stElementToolbarButtonContainer"
     )
     expect(toolbarButtonContainer).toHaveStyle("padding: 0.25rem")
-    expect(toolbarButtonContainer).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+    expect(toolbarButtonContainer).toHaveStyle("color: rgba(47, 45, 43, 0.6)")
   })
 
   it("doesn't show toolbar if not locked", () => {

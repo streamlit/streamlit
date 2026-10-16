@@ -70,6 +70,15 @@ export interface Props {
   disabled: boolean
 }
 
+/**
+ * Re-read whether `signal` is aborted. TypeScript treats an earlier
+ * `signal.aborted` check as stuck false, including across `await`, but
+ * `abort()` can still run.
+ */
+function isSignalAborted(signal: AbortSignal): boolean {
+  return signal.aborted
+}
+
 const AudioInput: React.FC<Props> = ({
   element,
   uploadClient,
@@ -133,7 +142,7 @@ const AudioInput: React.FC<Props> = ({
         if (notNullOrUndefined(widgetFormId))
           widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
 
-        if (abortController.signal.aborted) {
+        if (isSignalAborted(abortController.signal)) {
           return
         }
 
@@ -156,7 +165,7 @@ const AudioInput: React.FC<Props> = ({
           return
         }
 
-        if (abortController.signal.aborted) {
+        if (isSignalAborted(abortController.signal)) {
           URL.revokeObjectURL(blobUrl)
           currentBlobUrlRef.current = null
           return
@@ -180,9 +189,13 @@ const AudioInput: React.FC<Props> = ({
             widgetInfo: { id: widgetId, formId: widgetFormId },
             fragmentId,
             signal: abortController.signal,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
           })
 
-          if (abortController.signal.aborted) {
+          if (isSignalAborted(abortController.signal)) {
             return
           }
 
@@ -192,25 +205,25 @@ const AudioInput: React.FC<Props> = ({
           }
 
           setIsError(false)
-          const upload = successfulUploads[0]
-          if (upload?.fileUrl?.deleteUrl) {
-            setDeleteFileUrl(upload.fileUrl.deleteUrl)
+          const fileUrl = successfulUploads.at(0)?.fileUrl
+          if (fileUrl?.deleteUrl) {
+            setDeleteFileUrl(fileUrl.deleteUrl)
           }
         } catch {
           // File upload failed - set error state unless request was cancelled
-          if (!abortController.signal.aborted) {
+          if (!isSignalAborted(abortController.signal)) {
             setIsError(true)
           }
         } finally {
           if (notNullOrUndefined(widgetFormId))
             widgetMgr.setFormsWithUploadsInProgress(new Set())
-          if (!abortController.signal.aborted) {
+          if (!isSignalAborted(abortController.signal)) {
             setIsUploading(false)
           }
         }
       } catch {
         // Unexpected error during upload process - cleanup and set error state
-        if (!abortController.signal.aborted) {
+        if (!isSignalAborted(abortController.signal)) {
           setIsError(true)
           setIsUploading(false)
         }
@@ -224,6 +237,7 @@ const AudioInput: React.FC<Props> = ({
       widgetId,
       widgetFormId,
       fragmentId,
+      element.ignoreRerun,
       setDeleteFileUrl,
       setRecordingUrl,
     ]
@@ -317,6 +331,10 @@ const AudioInput: React.FC<Props> = ({
             formId: element.formId,
             fragmentId,
             fromUser: true,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
           }
         )
       }

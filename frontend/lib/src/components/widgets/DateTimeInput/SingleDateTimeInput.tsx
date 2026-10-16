@@ -1015,7 +1015,7 @@ function SingleDateTimeInput({
                 onChange={handleCalendarChange}
                 minValue={calendarMinDate}
                 maxValue={calendarMaxDate}
-                focusedValue={focusedValue ?? undefined}
+                focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >
                 <CalendarPopoverHeader />

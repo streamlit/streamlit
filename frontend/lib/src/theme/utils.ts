@@ -483,6 +483,85 @@ export const parseFontSize = (
 }
 
 /**
+ * Parses a `paddingTop` or `paddingBottom` theme config value.
+ *
+ * Accepted formats (non-negative):
+ *  - `"1.5rem"` / `"16px"` — returned as a normalized `rem` or `px` string.
+ *  - `"16"` (bare number string) — treated as pixels, returned as `"16px"`.
+ *  - `"0"`, `"0rem"`, `"0px"` — all valid; returned as `"0px"` / `"0rem"`.
+ *
+ * Values are normalized through `Number()`, so `"1.50rem"` becomes `"1.5rem"`
+ * and `"1e1px"` becomes `"10px"`.
+ *
+ * Rejected: negative values, non-finite numbers, `%`, `vh`, `vw`, `calc()`,
+ * and other CSS units. On rejection, logs a warning and returns `undefined`
+ * so the caller keeps the built-in spacing.
+ *
+ * @param configName - The config key name, used in the warning message.
+ * @param value - The raw config string to validate. Host theme payloads may
+ *   send a non-string; those warn and fall back like invalid strings.
+ * @param inSidebar - When true, the warning message cites "theme.sidebar".
+ * @returns The normalised CSS length string, or `undefined` if invalid.
+ */
+export const parsePadding = (
+  configName: string,
+  value: string | null | undefined | number | boolean,
+  inSidebar: boolean
+): string | undefined => {
+  if (!notNullOrUndefined(value)) {
+    return undefined
+  }
+
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  // Host SET_CUSTOM_THEME_CONFIG can deliver a bare number; do not call trim().
+  if (typeof value !== "string") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: ${String(value)}. Use a quoted rem or px value. Falling back to default.`
+    )
+    return undefined
+  }
+
+  const trimmed = value.trim().toLowerCase()
+
+  // Only allow rem and px units (or unitless numbers → treated as px)
+  const hasRemUnit = trimmed.endsWith("rem")
+  const hasPxUnit = trimmed.endsWith("px")
+
+  let numericStr: string
+  if (hasRemUnit) {
+    numericStr = trimmed.slice(0, -3)
+  } else if (hasPxUnit) {
+    numericStr = trimmed.slice(0, -2)
+  } else {
+    // Must be a bare number (no unit)
+    numericStr = trimmed
+  }
+
+  const numericValue = Number(numericStr)
+
+  if (!Number.isFinite(numericValue) || numericStr === "") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Only rem or px values are allowed (e.g. "1.5rem", "24px"). Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (numericValue < 0) {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Negative values are not allowed. Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (hasRemUnit) {
+    return `${numericValue}rem`
+  }
+  // px or unitless — return as px
+  return `${numericValue}px`
+}
+
+/**
  * Validates a font weight config value against three rules:
  *   1. Must be an integer.
  *   2. Must be an integer multiple of 50.
@@ -723,6 +802,9 @@ export const createEmotionTheme = (
     // Metric value styling
     metricValueFontSize,
     metricValueFontWeight,
+    // Page content padding
+    paddingTop,
+    paddingBottom,
     ...customColors
   } = themeInput
 
@@ -790,6 +872,8 @@ export const createEmotionTheme = (
     radii: EmotionTheme["radii"]
     fontSizes: EmotionTheme["fontSizes"]
     fontWeights: EmotionTheme["fontWeights"]
+    paddingTop: string | undefined
+    paddingBottom: string | undefined
   }
 
   const conditionalOverrides: ConditionalOverrides = {
@@ -803,6 +887,9 @@ export const createEmotionTheme = (
     radii: { ...baseThemeConfig.emotion.radii },
     fontSizes: { ...baseThemeConfig.emotion.fontSizes },
     fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+    // Page content padding: parsed below. Undefined keeps the built-in spacing.
+    paddingTop: baseThemeConfig.emotion.paddingTop,
+    paddingBottom: baseThemeConfig.emotion.paddingBottom,
   }
 
   // Conditional Overrides - Colors
@@ -1046,6 +1133,22 @@ export const createEmotionTheme = (
       metricValueFontWeight
   }
 
+  // Conditional Overrides - Page Content Padding
+
+  const parsedPaddingTop = parsePadding("paddingTop", paddingTop, inSidebar)
+  if (parsedPaddingTop !== undefined) {
+    conditionalOverrides.paddingTop = parsedPaddingTop
+  }
+
+  const parsedPaddingBottom = parsePadding(
+    "paddingBottom",
+    paddingBottom,
+    inSidebar
+  )
+  if (parsedPaddingBottom !== undefined) {
+    conditionalOverrides.paddingBottom = parsedPaddingBottom
+  }
+
   // Font Overrides
 
   // Type for font overrides - represents genericFonts properties that can be overridden
@@ -1166,7 +1269,7 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
+      baseThemeConfig ?? (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
@@ -1438,7 +1541,7 @@ export const handleSectionInheritance = (
   // and light or dark variant sections
   const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
   const variantSection = isLightTheme ? light : dark
-  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection ?? {}
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
@@ -1568,7 +1671,68 @@ const setSidebarHeadingFontSizes = (
   ]
 
   // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
-  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes ?? [])
+}
+
+/**
+ * Resolves the main theme's light/dark base. Named custom light and dark
+ * themes keep that base even when main-background luminance would imply the
+ * other one. Every other theme uses the main background's luminance.
+ */
+const getActiveThemeBase = (
+  activeTheme: ThemeConfig
+): CustomThemeConfig.BaseTheme => {
+  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+    return CustomThemeConfig.BaseTheme.LIGHT
+  }
+  if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
+    return CustomThemeConfig.BaseTheme.DARK
+  }
+
+  return getLuminance(activeTheme.emotion.colors.bgColor) > 0.5
+    ? CustomThemeConfig.BaseTheme.LIGHT
+    : CustomThemeConfig.BaseTheme.DARK
+}
+
+/** Built-in main page surfaces used to decide stock vs swapped sidebar fallbacks. */
+const stockMainSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    bgColor: lightTheme.emotion.colors.bgColor,
+    secondaryBg: lightTheme.emotion.colors.secondaryBg,
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    bgColor: darkTheme.emotion.colors.bgColor,
+    secondaryBg: darkTheme.emotion.colors.secondaryBg,
+  },
+} as const
+
+/** Sidebar backgrounds used when main surfaces still match the built-in pair and `[theme.sidebar]` leaves a side unset. */
+export const stockSidebarSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    backgroundColor: "#F8F8F7",
+    // Distinct from the sidebar background so widgets stay visible while
+    // showWidgetBorder is off.
+    secondaryBackgroundColor: "#F1F0EE",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    backgroundColor: "#21201D",
+    secondaryBackgroundColor: "#2D2B27",
+  },
+} as const
+
+const mainSurfacesAreStock = (
+  activeTheme: ThemeConfig,
+  mainThemeBase: CustomThemeConfig.BaseTheme
+): boolean => {
+  const stock = stockMainSurfaces[mainThemeBase]
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  // Normalize both sides so equivalent spellings (white, #fff, #FFFFFF) still
+  // count as the built-in pair. A raw string compare would treat those as
+  // customized and swap the sidebar.
+  return (
+    toHex(bgColor) === toHex(stock.bgColor) &&
+    toHex(secondaryBg) === toHex(stock.secondaryBg)
+  )
 }
 
 /**
@@ -1580,30 +1744,44 @@ const setSidebarHeadingFontSizes = (
 export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const sidebarThemeInput = activeTheme.themeInput?.sidebar
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  const mainThemeBase = getActiveThemeBase(activeTheme)
+  const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
 
-  // Either use the configured background color or secondary background from main theme:
-  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+  // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
+  // (sidebar bg = main secondary, sidebar secondary = main bg).
+  const useStockSidebarSurfaces = mainSurfacesAreStock(
+    activeTheme,
+    mainThemeBase
+  )
+  const fallbackBackground = useStockSidebarSurfaces
+    ? stockSurfaces.backgroundColor
+    : secondaryBg
+  const fallbackSecondary = useStockSidebarSurfaces
+    ? stockSurfaces.secondaryBackgroundColor
+    : bgColor
 
-  // Either use the configured secondary background color or background from main theme:
+  const sidebarBackground =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
+    sidebarThemeInput?.backgroundColor || fallbackBackground
+
   const secondaryBackgroundColor =
-    sidebarThemeInput?.secondaryBackgroundColor || bgColor
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
+    sidebarThemeInput?.secondaryBackgroundColor || fallbackSecondary
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(
     sidebarThemeInput?.headingFontSizes
   )
 
-  let baseTheme =
-    getLuminance(sidebarBackground) > 0.5
-      ? CustomThemeConfig.BaseTheme.LIGHT
-      : CustomThemeConfig.BaseTheme.DARK
-
-  // If the active theme is a light/dark custom theme, use the expected base
-  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.LIGHT
-  } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.DARK
-  }
+  // Named custom light/dark themes keep that base. Other themes follow
+  // the resolved sidebar background's luminance.
+  const baseTheme =
+    activeTheme.name === CUSTOM_THEME_LIGHT_NAME ||
+    activeTheme.name === CUSTOM_THEME_DARK_NAME
+      ? mainThemeBase
+      : getLuminance(sidebarBackground) > 0.5
+        ? CustomThemeConfig.BaseTheme.LIGHT
+        : CustomThemeConfig.BaseTheme.DARK
 
   // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
   const mergedSidebarThemeInput = mergeWith(

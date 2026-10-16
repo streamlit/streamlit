@@ -17,6 +17,7 @@
 import * as geoLayers from "@deck.gl/geo-layers"
 import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
+import { parseToRgba } from "color2k"
 
 import { jsonConverter } from "./jsonConverter"
 
@@ -24,6 +25,34 @@ import { jsonConverter } from "./jsonConverter"
  * @file Utilities for determining fill colors for layers based on their
  *      selection state and the layer's selection color mode.
  */
+
+/**
+ * st.map sends this when it wants the theme primary color. The frontend
+ * replaces it with theme.colors.primary at MAP_DEFAULT_MARKER_ALPHA.
+ */
+export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
+
+/**
+ * Alpha applied to st.map's theme-primary default markers so overlapping
+ * points stay visible.
+ */
+export const MAP_DEFAULT_MARKER_ALPHA = 160
+
+/**
+ * Resolve st.map's primary fill placeholder to an RGBA array, or return the
+ * original value unchanged.
+ */
+export function resolveMapPrimaryFillColor(
+  fillColor: unknown,
+  primaryCssColor: string
+): unknown {
+  if (fillColor !== MAP_PRIMARY_FILL_PLACEHOLDER) {
+    return fillColor
+  }
+
+  const [r, g, b] = parseToRgba(primaryCssColor)
+  return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
+}
 
 /**
  * Maps the "@@type" of a layer to the corresponding fill functions.
@@ -95,11 +124,13 @@ const getOriginalColor = ({
       : originalFillFunction
 
   if (Array.isArray(originalColor)) {
+    // Missing channels default to 0. A missing alpha defaults to opaque.
+    // `??` keeps an explicit 0, including a fully transparent alpha.
     return [
-      originalColor[0] || 0,
-      originalColor[1] || 0,
-      originalColor[2] || 0,
-      originalColor[3] || 255,
+      originalColor[0] ?? 0,
+      originalColor[1] ?? 0,
+      originalColor[2] ?? 0,
+      originalColor[3] ?? 255,
     ]
   }
 
@@ -112,10 +143,10 @@ const getOriginalColor = ({
     const evaluated = converted.originalColor(object)
 
     return [
-      evaluated[0] || 0,
-      evaluated[1] || 0,
-      evaluated[2] || 0,
-      evaluated[3] || 255,
+      evaluated[0] ?? 0,
+      evaluated[1] ?? 0,
+      evaluated[2] ?? 0,
+      evaluated[3] ?? 255,
     ]
   }
 
@@ -173,9 +204,9 @@ const getOriginalColorWithAppliedOpacity = ({
       )
 
   return [
-    originalColor[0] || 0,
-    originalColor[1] || 0,
-    originalColor[2] || 0,
+    originalColor[0] ?? 0,
+    originalColor[1] ?? 0,
+    originalColor[2] ?? 0,
     calculatedOpacity,
   ]
 }
@@ -212,7 +243,7 @@ export const getContextualFillColor = ({
         object,
         objectInfo,
         originalFillFunction,
-      }) || selectedColor
+      }) ?? selectedColor
     )
   }
 
@@ -223,6 +254,6 @@ export const getContextualFillColor = ({
       object,
       objectInfo,
       originalFillFunction,
-    }) || unselectedColor
+    }) ?? unselectedColor
   )
 }

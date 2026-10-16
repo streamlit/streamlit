@@ -134,6 +134,51 @@ if st.button("Open large-width Dialog"):
     large_width_dialog()
 
 
+@st.dialog("Pixel width 400", width=400)
+def pixel_width_400_dialog() -> None:
+    st.write("This dialog is 400 pixels wide.")
+
+
+if st.button("Open 400px Dialog"):
+    pixel_width_400_dialog()
+
+
+@st.dialog("Pixel width 200", width=200)
+def pixel_width_200_dialog() -> None:
+    st.write("This dialog is 200 pixels wide.")
+
+
+if st.button("Open 200px Dialog"):
+    pixel_width_200_dialog()
+
+
+@st.dialog("Pixel width 100", width=100)
+def pixel_width_100_dialog() -> None:
+    st.write("This dialog requests 100 pixels.")
+
+
+if st.button("Open 100px Dialog"):
+    pixel_width_100_dialog()
+
+
+@st.dialog("Pixel width 2000", width=2000)
+def pixel_width_2000_dialog() -> None:
+    st.write("This dialog is 2000 pixels wide.")
+
+
+if st.button("Open 2000px Dialog"):
+    pixel_width_2000_dialog()
+
+
+@st.dialog("Pixel width drawer", width=420, position="left")
+def pixel_width_drawer_dialog() -> None:
+    st.write("This drawer starts at 420 pixels.")
+
+
+if st.button("Open 420px Left Drawer"):
+    pixel_width_drawer_dialog()
+
+
 @st.dialog("Dialog with headings")
 def headings_dialog() -> None:
     st.header("Header", help="Some tooltip!")

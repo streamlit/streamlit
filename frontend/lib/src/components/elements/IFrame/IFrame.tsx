@@ -228,6 +228,7 @@ function IFrame({
       // An iframe always needs an accessible name (WCAG H64), so fall back to
       // "st.iframe" whenever `alt` is unset or blank, including deprecated
       // `components.v1` embeds, which never send `alt`.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank title uses st.iframe
       title={element.alt?.trim() || "st.iframe"}
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}

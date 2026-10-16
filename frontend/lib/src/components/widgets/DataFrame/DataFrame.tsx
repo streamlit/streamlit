@@ -245,11 +245,10 @@ function DataFrame({
     []
   )
 
-  // This is done to keep some backwards compatibility
-  // so that old arrow proto messages from the st.dataframe
-  // would still work. Those messages don't have the
-  // editingMode field defined.
+  // Old Arrow proto messages omit editingMode, even though the generated type
+  // marks it as required.
   const editingMode =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy messages omit editingMode
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
   const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
   const isClipboardCopyDisabled = disableDataExport && isReadOnly
@@ -799,7 +798,7 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth || 0,
+    containerWidth ?? 0,
     fullScreenHeight,
     isFullScreen,
     widthConfig,
@@ -836,7 +835,7 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    containerWidth ?? 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
@@ -859,7 +858,7 @@ function DataFrame({
       // Get the bounds of the glide-data-grid scroll area (dvn-stack):
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
+        .querySelector(".dvn-stack")
         ?.getBoundingClientRect()
 
       // We might also be able to use the following as an alternative,
@@ -944,6 +943,7 @@ function DataFrame({
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt must not become an accessible name
   const accessibleName = element.alt?.trim() || undefined
 
   return (

@@ -25,6 +25,7 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
+import { getLogger } from "loglevel"
 import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
@@ -42,6 +43,7 @@ import {
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 import type { ErrorDetails, OnRetry } from "./types"
+import { MISSING_WEBSOCKET_CLOSE_REASON } from "./websocketCloseDiagnostics"
 import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
 const expectedFirstReconnectDelayMs =
@@ -1154,9 +1156,9 @@ describe("WebsocketConnection", () => {
   afterEach(async () => {
     globalThis.fetch = originalFetch
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     if (client.websocket) {
-      // @ts-expect-error
+      // @ts-expect-error - websocket is private
       client.websocket.close()
     }
     client.disconnect()
@@ -1171,9 +1173,9 @@ describe("WebsocketConnection", () => {
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
     client.disconnect()
 
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     expect(client.websocket).toBe(undefined)
   })
 
@@ -1181,7 +1183,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.CONNECTED
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1336,7 +1338,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.PINGING_SERVER
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1509,7 +1511,7 @@ describe("WebsocketConnection", () => {
 
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
-      // @ts-expect-error
+      // @ts-expect-error - cache is private
       client.cache,
       "incrementRunCount"
     )
@@ -1525,7 +1527,7 @@ describe("WebsocketConnection", () => {
   it("gets cached message hashes from cache", () => {
     const getCachedMessageHashesSpy = vi
       .spyOn(
-        // @ts-expect-error
+        // @ts-expect-error - cache is private
         client.cache,
         "getCachedMessageHashes"
       )
@@ -1542,7 +1544,7 @@ describe("WebsocketConnection", () => {
     await vi.runAllTimersAsync()
     await server.connected
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     const sendSpy = vi.spyOn(client.websocket, "send")
 
     const TEST_BACK_MSG = {}
@@ -1611,7 +1613,7 @@ describe("WebsocketConnection", () => {
 
   describe("getBaseUriParts", () => {
     it("returns correct base uri parts when ConnectionState == Connected", () => {
-      // @ts-expect-error
+      // @ts-expect-error - state is private
       client.state = ConnectionState.CONNECTED
 
       expect(client.getBaseUriParts()).toEqual(
@@ -1691,6 +1693,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     globalThis.fetch = originalFetch
     globalThis.WebSocket = originalWebSocket
     pingServerSpy.mockRestore()
@@ -1701,9 +1704,9 @@ describe("WebsocketConnection auth token handling", () => {
     const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1723,9 +1726,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1740,9 +1743,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     // "lastSessionId" should be the WebSocket's session token
@@ -1763,15 +1766,67 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
 
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "iAmAnAuthToken", "lastSessionId"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  const mockDocumentCookieReadFailure = (): void => {
+    vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+      throw new DOMException(
+        "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+        "SecurityError"
+      )
+    })
+  }
+
+  it("uses the placeholder auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  it("prefers the host auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(
+      createMockArgs({
+        claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
+      })
+    )
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
@@ -2167,6 +2222,204 @@ describe("WebsocketConnection unexpected frames", () => {
       ConnectionState.DISCONNECTED_FOREVER,
       expect.anything()
     )
+    ws.disconnect()
+  })
+})
+
+describe("WebsocketConnection close diagnostics", () => {
+  type SocketListener = (event: Event) => void
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly listeners = new Map<string, SocketListener[]>()
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchClose(event: {
+      code: number
+      reason: string
+      wasClean: boolean
+    }): void {
+      for (const listener of this.listeners.get("close") ?? []) {
+        listener(event as CloseEvent)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: these tests only dispatch inbound close events
+    }
+  }
+
+  let originalWebSocket: typeof WebSocket
+  let lastSocket: MockWebSocket | undefined
+  let pingServerSpy: MockInstance
+  const logger = getLogger("WebsocketConnection")
+
+  function createMockWebSocket(
+    url: string,
+    protocols?: string | string[]
+  ): MockWebSocket {
+    const socket = new MockWebSocket(url, protocols)
+    lastSocket = socket
+    return socket
+  }
+
+  beforeEach(() => {
+    originalWebSocket = globalThis.WebSocket
+    lastSocket = undefined
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
+    vi.restoreAllMocks()
+  })
+
+  async function connectClient(): Promise<{
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }> {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    if (!lastSocket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    return { ws, socket: lastSocket, args }
+  }
+
+  function getCloseLogCalls(spy: MockInstance): string[] {
+    return spy.mock.calls
+      .map(call => String(call[0]))
+      .filter(message => message.includes("WebSocket onclose"))
+  }
+
+  async function closeAndCaptureLogs(event: {
+    code: number
+    reason: string
+    wasClean: boolean
+  }): Promise<{
+    infoLogs: string[]
+    warnLogs: string[]
+    args: Args
+    ws: WebsocketConnection
+  }> {
+    const { ws, socket, args } = await connectClient()
+    vi.mocked(args.onConnectionStateChange).mockClear()
+    vi.mocked(args.sendClientError).mockClear()
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {})
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {})
+    socket.dispatchClose(event)
+    return {
+      infoLogs: getCloseLogCalls(infoSpy),
+      warnLogs: getCloseLogCalls(warnSpy),
+      args,
+      ws,
+    }
+  }
+
+  it("logs a clean normal closure at info and does not send telemetry", async () => {
+    const { infoLogs, warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1000,
+      reason: "client shutdown",
+      wasClean: true,
+    })
+
+    expect(infoLogs).toHaveLength(1)
+    expect(infoLogs[0]).toContain("code=1000 (normal closure)")
+    expect(infoLogs[0]).toContain('reason="client shutdown"')
+    expect(infoLogs[0]).toContain("wasClean=true")
+    expect(infoLogs[0]).toContain(`state=${ConnectionState.CONNECTING}`)
+    expect(warnLogs).toHaveLength(0)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    ws.disconnect()
+  })
+
+  it("logs an abnormal closure at warning with code, wasClean, and state", async () => {
+    const { infoLogs, warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1006,
+      reason: "",
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1006 (abnormal closure)")
+    expect(warnLogs[0]).toContain(`reason="${MISSING_WEBSOCKET_CLOSE_REASON}"`)
+    expect(warnLogs[0]).toContain("wasClean=false")
+    expect(warnLogs[0]).toContain(`state=${ConnectionState.CONNECTING}`)
+    expect(infoLogs).toHaveLength(0)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    ws.disconnect()
+  })
+
+  it("uses a placeholder when the close reason is empty", async () => {
+    const { warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1009,
+      reason: "   ",
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1009 (message too big)")
+    expect(warnLogs[0]).toContain(`reason="${MISSING_WEBSOCKET_CLOSE_REASON}"`)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    ws.disconnect()
+  })
+
+  it("redacts URLs and session IDs in the close reason and does not send telemetry", async () => {
+    const sessionId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    const { warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1011,
+      reason: `failed at wss://app.example.com/stream session=${sessionId}`,
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1011 (internal server error)")
+    expect(warnLogs[0]).toContain("[redacted]")
+    expect(warnLogs[0]).not.toContain("wss://")
+    expect(warnLogs[0]).not.toContain("app.example.com")
+    expect(warnLogs[0]).not.toContain(sessionId)
+    expect(args.sendClientError).not.toHaveBeenCalled()
     ws.disconnect()
   })
 })

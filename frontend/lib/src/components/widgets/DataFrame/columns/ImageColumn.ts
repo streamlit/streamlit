@@ -37,7 +37,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     displayData: [],
     readonly: true,
     allowOverlay: true,
-    contentAlign: props.contentAlignment || "center",
+    contentAlign: props.contentAlignment ?? "center",
     style: "normal",
   }
 
@@ -62,7 +62,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
       } as ImageCell
     },
     getCellValue(cell: ImageCell): string | null {
-      if (cell.data === undefined || cell.data.length === 0) {
+      if (cell.data.length === 0) {
         return null
       }
 

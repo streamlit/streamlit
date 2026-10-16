@@ -946,6 +946,8 @@ def _mock_get_options_for_section(
         "backgroundColor": "white",
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1rem",
+        "paddingBottom": "2rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -996,6 +998,8 @@ def _mock_get_options_for_section(
         "baseFontWeight": 300,
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1.5rem",
+        "paddingBottom": "3rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -1683,6 +1687,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1750,6 +1756,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1817,6 +1825,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
                     "borderColor": None,
@@ -1868,6 +1878,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "backgroundColor": None,
                         "baseRadius": None,
                         "buttonRadius": None,
+                        "paddingTop": None,
+                        "paddingBottom": None,
                         "borderColor": None,
                         "dataframeBorderColor": None,
                         "codeFont": None,
@@ -1931,6 +1943,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
         assert not new_session_msg.custom_theme.HasField("button_radius")
+        assert not new_session_msg.custom_theme.HasField("padding_top")
+        assert not new_session_msg.custom_theme.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.HasField("border_color")
         assert not new_session_msg.custom_theme.HasField("dataframe_border_color")
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
@@ -1976,6 +1990,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.sidebar.HasField("base_radius")
         assert not new_session_msg.custom_theme.sidebar.HasField("button_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_top")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_border_color"
@@ -2030,6 +2046,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.base_radius == "1.2rem"
         assert new_session_msg.custom_theme.button_radius == "medium"
+        assert new_session_msg.custom_theme.padding_top == "1.5rem"
+        assert new_session_msg.custom_theme.padding_bottom == "3rem"
         assert new_session_msg.custom_theme.border_color == "#ff0000"
         assert new_session_msg.custom_theme.dataframe_border_color == "#280f63"
         assert new_session_msg.custom_theme.show_widget_border is True
@@ -3048,6 +3066,36 @@ def test_populate_theme_msg_ignores_invalid_json(
     patched_logger.warning.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    ("config_key", "theme_attr", "invalid_value"),
+    [
+        ("paddingTop", "padding_top", 0),
+        ("paddingBottom", "padding_bottom", 16),
+        ("paddingTop", "padding_top", 1.5),
+        ("paddingBottom", "padding_bottom", True),
+    ],
+    ids=[
+        "padding_top_int",
+        "padding_bottom_int",
+        "padding_top_float",
+        "padding_bottom_bool",
+    ],
+)
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_ignores_non_string_padding(
+    patched_logger: MagicMock,
+    config_key: str,
+    theme_attr: str,
+    invalid_value: object,
+) -> None:
+    """Unquoted TOML numbers for padding options are skipped so session startup survives."""
+    theme = _populate_theme_with_overrides({config_key: invalid_value})
+    assert not theme.HasField(theme_attr)
+    patched_logger.warning.assert_called_once()
+    # Format string, then section, option name, value repr.
+    assert patched_logger.warning.call_args.args[2] == config_key
+
+
 def test_populate_theme_msg_parses_chart_colors_from_json_string() -> None:
     """Chart colors provided as a JSON string (e.g. via env var) are parsed."""
     theme = _populate_theme_with_overrides(
@@ -3303,14 +3351,50 @@ def test_request_rerun_after_shutdown_is_discarded() -> None:
     create_scriptrunner.assert_not_called()
 
 
-def test_clear_user_info_empties_user_info() -> None:
-    """Test that clear_user_info removes all stored user info."""
+def test_clear_user_info_rejects_all_reconnect_identities() -> None:
+    """Test that clear_user_info empties user info and rejects every reconnect identity."""
     session = _create_test_session()
     assert session._user_info != {}
+    assert session.matches_user_info({"email": "test@example.com"}) is True
 
     session.clear_user_info()
 
     assert session._user_info == {}
+    assert session.matches_user_info({}) is False
+    assert session.matches_user_info({"email": "other@example.com"}) is False
+    assert session.is_resumable() is False
+
+
+def test_matches_user_info_does_not_observe_concurrent_clear_as_anonymous() -> None:
+    """A clear during identity comparison cannot make the anonymous dict match."""
+    session = _create_test_session()
+    clear_threads: list[threading.Thread] = []
+    raced = False
+
+    class _OwnerDict(dict[str, str | bool | dict[str, str] | None]):
+        __hash__ = None  # type: ignore[assignment]
+
+        def __eq__(self, other: object) -> bool:
+            nonlocal raced
+            if other == {} and not raced:
+                raced = True
+                thread = threading.Thread(target=session.clear_user_info)
+                clear_threads.append(thread)
+                thread.start()
+                # clear_user_info needs the lock this comparison holds.
+                thread.join(timeout=0.05)
+                assert thread.is_alive()
+                assert "email" in self
+            return dict.__eq__(self, other)
+
+    session._user_info = _OwnerDict(session._user_info)
+
+    assert session.matches_user_info({}) is False
+    assert len(clear_threads) == 1
+    clear_threads[0].join(timeout=1)
+    assert not clear_threads[0].is_alive()
+    assert session._user_info == {}
+    assert session.matches_user_info({}) is False
 
 
 def test_on_secrets_file_changed_triggers_source_change() -> None:

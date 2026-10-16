@@ -74,6 +74,16 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.weight == 1.0 / 3
         assert columns_blocks[2].add_block.column.weight == 1.0 / 3
 
+    def test_literal_count_returns_a_list(self) -> None:
+        """A small literal count is a tuple to type checkers and a list at runtime."""
+        assert isinstance(st.columns(2), list)
+
+    def test_width_tuple_returns_a_list(self) -> None:
+        """A known-length width tuple is a tuple to type checkers and a list at runtime."""
+        columns = st.columns((3, 1))
+        assert isinstance(columns, list)
+        assert len(columns) == 2
+
     def test_numpy_integer_spec(self):
         """numpy integer specs are treated as a column count, like Python ints."""
         columns = st.columns(np.int64(3))
@@ -2427,13 +2437,84 @@ class DialogTest(DeltaGeneratorTestCase):
     def test_dialog_width(
         self, width: str, expected_width: BlockProto.Dialog.DialogWidth.ValueType
     ):
-        """Test that the dialog width parameter works correctly for all supported values"""
+        """Test that a preset width maps to the enum and leaves pixel_width unset."""
         dialog = st._main._dialog(DialogTest.title, width=width)
         with dialog:
             # No content so that 'get_delta_from_queue' returns the dialog.
             pass
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.width == expected_width
+        assert not dialog_block.add_block.dialog.HasField("pixel_width")
+
+    @parameterized.expand(
+        [
+            (400,),
+            (1,),
+            (2**32 - 1,),
+        ]
+    )
+    def test_dialog_pixel_width(self, width: int) -> None:
+        """Test that a positive integer width sets pixel_width and the small enum."""
+        dialog = st._main._dialog(DialogTest.title, width=width)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_proto = self.get_delta_from_queue().add_block.dialog
+        assert dialog_proto.HasField("pixel_width")
+        assert dialog_proto.pixel_width == width
+        assert dialog_proto.width == BlockProto.Dialog.DialogWidth.SMALL
+
+    def test_dialog_decorator_sets_pixel_width(self) -> None:
+        """Test that the dialog decorator propagates an integer width."""
+
+        @st.dialog("Pixels", width=400)
+        def test_dialog() -> None:
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        dialogs = [
+            delta.add_block.dialog
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        ]
+        assert dialogs
+        for dialog in dialogs:
+            assert dialog.HasField("pixel_width")
+            assert dialog.pixel_width == 400
+            assert dialog.width == BlockProto.Dialog.DialogWidth.SMALL
+
+    def test_dialog_pixel_width_does_not_share_id_with_small_preset(self) -> None:
+        """Test that an integer width stays in the dialog element id.
+
+        The proto enum is SMALL for every pixel width. The id must still use
+        the caller's width so a pixel dialog does not collide with ``"small"``.
+        """
+        small = st._main._dialog(DialogTest.title, width="small")
+        pixels = st._main._dialog(DialogTest.title, width=400)
+        assert small._current_proto is not None
+        assert pixels._current_proto is not None
+        assert small._current_proto.id != pixels._current_proto.id
+
+    @parameterized.expand(
+        [
+            (0,),
+            (-1,),
+            (True,),
+            (False,),
+            (1.5,),
+            ("stretch",),
+            ("content",),
+            ("50%",),
+            ("500px",),
+            ("huge",),
+            (2**32,),
+        ]
+    )
+    def test_dialog_invalid_width(self, width: object) -> None:
+        """Test that invalid dialog widths raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="width"):
+            st._main._dialog(DialogTest.title, width=width)  # type: ignore[arg-type]
 
     @parameterized.expand(
         [

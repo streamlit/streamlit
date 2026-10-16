@@ -299,6 +299,53 @@ describe("Dialog container", () => {
         expect(screen.getByText("test")).toBeVisible()
       }
     )
+
+    it("uses an explicit pixel width instead of the enum preset", () => {
+      const props = getProps({
+        width: BlockProto.Dialog.DialogWidth.LARGE,
+        pixelWidth: 400,
+      })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const panel = document.querySelector("[role='dialog']")?.parentElement
+      // 400 / default baseFontSize 16 = 25rem, not the large preset (80rem).
+      expect(panel).toHaveStyle({ width: "25rem" })
+      expect(panel).not.toHaveStyle({ width: "80rem" })
+      expect(screen.getByText("test")).toBeVisible()
+    })
+
+    it.each([
+      { label: "omitted", pixelWidth: undefined },
+      { label: "null", pixelWidth: null },
+      { label: "zero", pixelWidth: 0 },
+    ])("uses the large preset when pixelWidth is $label", ({ pixelWidth }) => {
+      const props = getProps({
+        width: BlockProto.Dialog.DialogWidth.LARGE,
+      })
+      if (pixelWidth === undefined) {
+        // protobufjs keeps proto3 defaults on the prototype, so delete is a no-op.
+        Object.defineProperty(props.element, "pixelWidth", {
+          value: undefined,
+        })
+      } else {
+        props.element.pixelWidth = pixelWidth
+      }
+
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      const panel = document.querySelector("[role='dialog']")?.parentElement
+      expect(panel).toHaveStyle({ width: "80rem" })
+      expect(panel).not.toHaveStyle({ width: "0rem" })
+      expect(screen.getByText("test")).toBeVisible()
+    })
   })
 
   describe("dialog position", () => {

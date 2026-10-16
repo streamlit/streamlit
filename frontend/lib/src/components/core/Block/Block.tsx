@@ -152,18 +152,70 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactNode => {
   return elements
 }
 
+/**
+ * Maps a column's vertical alignment to the justify-content of its contents.
+ * The column itself stretches to the row height, so its contents are aligned
+ * inside it instead of shrinking the column.
+ */
+const COLUMN_CONTENT_JUSTIFY: Partial<
+  Record<BlockProto.Column.VerticalAlignment, BlockProto.FlexContainer.Justify>
+> = {
+  [BlockProto.Column.VerticalAlignment.CENTER]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+  [BlockProto.Column.VerticalAlignment.BOTTOM]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_END,
+}
+
+/**
+ * Layout wrapper overrides for a stretch-height container or form, keyed by
+ * its parent's direction. The block fills its parent but grows to fit taller
+ * content instead of letting it spill past its border. Tabs don't use these
+ * because they scroll inside the active panel instead.
+ */
+const STRETCH_BLOCK_WRAPPER_STYLES = {
+  /**
+   * Replaces the `height: 100%` from `useLayoutStyles` with a flex basis, so
+   * the block's automatic minimum size is its content height. The flexed size
+   * still counts as definite for nested stretch children.
+   */
+  [Direction.VERTICAL]: { height: "auto", flex: "0 1 100%" },
+  /**
+   * Drops the `maxHeight: 100%` from `useLayoutStyles`, so taller content can
+   * grow the block past a fixed-height row. In a single-line row
+   * (`wrap=False`), `align-self: stretch` keeps the wrapper at the row height,
+   * so the inner block grows by overflowing it and the row scrolls to it.
+   */
+  [Direction.HORIZONTAL]: { maxHeight: undefined },
+} as const
+
+/** Derives a block's FlexContextProvider height props from its height config. */
+const getHeightContextProps = (
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
+): { hasFixedHeight: boolean; hasStretchHeight: boolean } => ({
+  hasFixedHeight:
+    (heightConfig?.pixelHeight ?? 0) > 0 || (heightConfig?.remHeight ?? 0) > 0,
+  hasStretchHeight: heightConfig?.useStretch ?? false,
+})
+
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
   /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
   padContentEnd?: boolean
+  /**
+   * Height config that decides whether stretch-height children get a
+   * definite height. Defaults to the node's own config. Tab panels pass the
+   * tab container's config because the tab nodes have none.
+   */
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
+  const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
@@ -172,6 +224,9 @@ export const ContainerContentsWrapper = (
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
+    justify: notNullOrUndefined(columnAlignment)
+      ? COLUMN_CONTENT_JUSTIFY[columnAlignment]
+      : undefined,
   }
 
   return (
@@ -185,6 +240,9 @@ export const ContainerContentsWrapper = (
       // resets the same way because FlexBoxContainer only sets this prop when the
       // node is a column or grid cell.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
+      {...getHeightContextProps(
+        props.heightConfig ?? props.node.deltaBlock.heightConfig
+      )}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -263,8 +321,18 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // We need the height on the container for scrolling.
-    height: fillGridCell ? "100%" : layout_styles.height,
+    // Block height:
+    // - filling grid cell: the cell block has no height of its own, so it
+    //   must be 100% or stretch children resolve against 0. min-height 0
+    //   lets the cell scroll instead of growing the track.
+    // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
+    //   auto height lets taller content grow the wrapper instead of overflowing.
+    // - pixel: set here so the block can scroll.
+    height: fillGridCell
+      ? "100%"
+      : props.node.deltaBlock.heightConfig?.useStretch
+        ? "auto"
+        : layout_styles.height,
     minHeight: fillGridCell ? 0 : undefined,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
@@ -285,6 +353,9 @@ export const FlexBoxContainer = (
   const hasFixedWidth =
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
+  const heightContextProps = getHeightContextProps(
+    props.node.deltaBlock.heightConfig
+  )
 
   return (
     <FlexContextProvider
@@ -304,6 +375,11 @@ export const FlexBoxContainer = (
       // fillAvailableHeight: nested containers must not fill the cell
       // unless they ask for stretch.
       verticalStretchGrows={fillGridCell}
+      {...heightContextProps}
+      // A filling grid cell is a definite-height column even though the cell
+      // block has no height config of its own. Set this after the height
+      // props so it wins over a content-sized cell.
+      hasFixedHeight={fillGridCell || heightContextProps.hasFixedHeight}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -535,7 +611,9 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   const userKey = getKeyFromId(node.deltaBlock.id)
   const heightConfig = node.deltaBlock.heightConfig
   const gridHasBoundedHeight = Boolean(
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch still lets a pixel or rem height count
     heightConfig?.useStretch ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a zero pixel height is not a bounded grid
     heightConfig?.pixelHeight ||
     heightConfig?.remHeight
   )
@@ -660,6 +738,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
           childNode instanceof TransientNode ? childNode.anchor : childNode
 
         if (layoutNode instanceof BlockNode) {
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
           nodeId = layoutNode.deltaBlock.id || undefined
           if (layoutNode.deltaBlock.gridCell) {
             const gridCell = layoutNode.deltaBlock.gridCell
@@ -768,6 +847,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
                 ? gridCellJustifyContent(verticalAlignment)
                 : undefined
             }
+            // Direct children of a fixed-height cell (not wrapped in
+            // grid.cell()) still need a definite height so stretch charts
+            // fill the track instead of falling back to their default size.
+            hasFixedHeight={constrainOverflow}
             parentContext={parentContext}
           >
             {child.element}
@@ -863,9 +946,6 @@ export const BlockNodeRenderer = (
   // wrapper must fill the cell; otherwise its default flex (0 1 auto) and
   // height: auto collapse stretch children to 0.
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
-  const wrapperStyles = fillGridCell
-    ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
-    : styles
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return null
@@ -886,6 +966,7 @@ export const BlockNodeRenderer = (
   // (e.g., via libConfig or ancestor dialog/popover),
   // or if this block itself is a dialog or popover
   const disableFullscreenMode =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets a dialog or popover disable fullscreen
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
@@ -915,6 +996,21 @@ export const BlockNodeRenderer = (
   // empty step terminates a timeline at its icon.
   const isStepBlock =
     node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
+
+  const isStretchHeight = node.deltaBlock.heightConfig?.useStretch ?? false
+  // Stretch containers grow with their content. A stretch grid stays a
+  // bounded scrollport, so it keeps the percentage height from useLayoutStyles.
+  const stretchWrapperStyles =
+    isStretchHeight && !node.deltaBlock.gridContainer
+      ? STRETCH_BLOCK_WRAPPER_STYLES[
+          flexContext?.direction ?? Direction.VERTICAL
+        ]
+      : undefined
+  // A filling grid cell wins over the stretch-container wrapper, which would
+  // size the block to its content and collapse stretch children.
+  const layoutWrapperStyles = fillGridCell
+    ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
+    : { ...styles, ...stretchWrapperStyles }
 
   const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
@@ -981,6 +1077,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.expandable as BlockProto.Expandable}
         empty={node.isEmpty}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
@@ -997,6 +1094,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
@@ -1016,6 +1114,7 @@ export const BlockNodeRenderer = (
         widgetMgr={props.widgetMgr}
         border={border}
         overflow={styles.overflow}
+        isStretchHeight={isStretchHeight}
       >
         {child}
       </Form>
@@ -1070,6 +1169,7 @@ export const BlockNodeRenderer = (
         <ContainerContentsWrapper
           {...mappedChildProps}
           height={contentHeight}
+          heightConfig={heightConfig}
         />
       )
     }
@@ -1083,6 +1183,9 @@ export const BlockNodeRenderer = (
       width: styles.width,
       height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
+      alignSelf: styles.alignSelf,
+      minHeight: styles.minHeight,
+      maxHeight: styles.maxHeight,
       fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
@@ -1096,7 +1199,7 @@ export const BlockNodeRenderer = (
         className={convertKeyToClassName(
           keyClassOnWrapper ? userKey : undefined
         )}
-        {...wrapperStyles}
+        {...layoutWrapperStyles}
       >
         {containerElement}
       </StyledLayoutWrapper>

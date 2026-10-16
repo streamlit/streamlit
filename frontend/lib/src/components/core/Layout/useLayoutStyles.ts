@@ -136,11 +136,15 @@ const getWidth = (
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
   const isStretch =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useStretch still lets the sub-element flag count
     element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 element width must fall through to the === 0 check below
     element?.widthConfig?.pixelWidth ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 sub-element width must not hide the element === 0 check below
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth
@@ -294,8 +298,10 @@ export type UseLayoutStylesShape = {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
-  minHeight?: React.CSSProperties["minHeight"]
   textAlign?: React.CSSProperties["textAlign"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 /**
@@ -358,11 +364,26 @@ export const useLayoutStyles = ({
 
     const heightConfig = getHeight(element, subElement)
     let height: React.CSSProperties["height"]
+    let alignSelf: React.CSSProperties["alignSelf"]
+    let minHeight: React.CSSProperties["minHeight"]
+    let maxHeight: React.CSSProperties["maxHeight"]
     let overflow: React.CSSProperties["overflow"] = "visible"
 
     switch (heightConfig.type) {
       case DimensionType.STRETCH:
-        height = "100%"
+        if (direction === Direction.HORIZONTAL) {
+          // A percentage height can't resolve against a content-sized row, so
+          // stretch along the cross axis to match the tallest sibling instead.
+          height = "auto"
+          alignSelf = "stretch"
+          // Percentage min/max heights resolve only when the row has a
+          // definite height (pixel or stretched), where they keep the element
+          // exactly as tall as the row.
+          minHeight = "100%"
+          maxHeight = "100%"
+        } else {
+          height = "100%"
+        }
         break
       case DimensionType.CONTENT:
         height = "auto"
@@ -387,11 +408,11 @@ export const useLayoutStyles = ({
       direction,
       minStretchBehavior
     )
-    let minHeight: React.CSSProperties["minHeight"] = undefined
 
     // A pixel `row_height` cell is a definite-height column. Stretch
     // children take the leftover space (`flex-basis: 0%`) so a heading
     // above a chart does not make the chart 100% of the whole cell.
+    // Horizontal stretch keeps the min/max heights set above.
     if (
       flexContext?.verticalStretchGrows &&
       direction === Direction.VERTICAL &&
@@ -413,8 +434,10 @@ export const useLayoutStyles = ({
       overflow,
       flex,
       minWidth,
-      minHeight,
       textAlign,
+      alignSelf,
+      minHeight,
+      maxHeight,
     }
 
     return {
