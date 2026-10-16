@@ -196,10 +196,11 @@ message ForwardMsgMetadata {
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
 
-  // JSON description of the emitting command for the agent API: its public
-  // name and parameters, including ones that never reach the payload. Set only
-  // for sessions the agent API created. In metadata so it is excluded from the
-  // ForwardMsg cache hash.
+  // JSON for the command that emitted this delta. "type" is its public name
+  // and "props" its parameters, including parameters that are not proto fields.
+  // Unset on a browser session, so those messages omit it. Set only for a
+  // session the agent API created. In metadata because the ForwardMsg hash is
+  // computed with metadata cleared.
   optional string agent_props = 5;
 
   reserved 3;
