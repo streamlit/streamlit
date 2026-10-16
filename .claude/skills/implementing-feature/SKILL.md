@@ -1,6 +1,7 @@
 ---
 name: implementing-feature
 description: Implement a feature from a product/tech spec, URL, GitHub issue, or by auto-selecting the next papercut enhancement. Reads the spec, implements the feature following Streamlit patterns, and creates a merge-ready PR. Use when given a spec folder path, document URL, or issue link to implement, or when asked to implement a feature or papercut without a spec.
+disable-model-invocation: true
 ---
 
 # Implementing feature
