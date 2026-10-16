@@ -50,7 +50,7 @@ vi.mock("~lib/theme/getColors", () => ({
 
 describe("isElementStale", () => {
   const node = new ElementNode(
-    // @ts-expect-error
+    // @ts-expect-error - null is not assignable to Element
     null,
     null,
     "myScriptRunId",
@@ -133,7 +133,7 @@ describe("isElementStale", () => {
 
 describe("shouldHideStaleDialog", () => {
   const node = new ElementNode(
-    // @ts-expect-error
+    // @ts-expect-error - null is not assignable to Element
     null,
     null,
     "myScriptRunId",

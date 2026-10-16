@@ -20,9 +20,7 @@ internal ``streamlit.config.set_option`` accepts ``where_defined``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, assert_type
 
 if TYPE_CHECKING:
     from streamlit.config import get_option

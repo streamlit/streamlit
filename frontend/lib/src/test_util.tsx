@@ -184,13 +184,13 @@ export function render(
 export function mockWindowLocation(hostname: string): void {
   // Mock window.location by creating a new object
   // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-  // @ts-expect-error
+  // @ts-expect-error - location is required, so delete is a type error
   delete window.location
 
   const hasScheme = /^https?:\/\//.test(hostname)
   const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
 
-  // @ts-expect-error
+  // @ts-expect-error - partial Location is not assignable to string & Location
   window.location = {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,
@@ -534,7 +534,7 @@ export function createTestFile(
       js: "application/javascript",
       json: "application/json",
     }
-    mimeType = mimeTypes[ext || ""] || "application/octet-stream"
+    mimeType = mimeTypes[ext ?? ""] || "application/octet-stream"
   }
 
   return new File([content], fileName, { type: mimeType })
@@ -567,6 +567,7 @@ export function createDirectoryFiles(
   }>
 ): File[] {
   return files.map(({ content, path, mimeType = "text/plain" }) => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank file name uses file
     const fileName = path.split("/").pop() || "file"
     return createFileWithPath(content, fileName, path, mimeType)
   })

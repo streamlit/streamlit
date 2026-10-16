@@ -103,6 +103,8 @@ class ConfigTest(unittest.TestCase):
             "textColor",
             "baseRadius",
             "buttonRadius",
+            "paddingTop",
+            "paddingBottom",
             "font",
             "headingFont",
             "codeFont",
@@ -559,7 +561,7 @@ class ConfigTest(unittest.TestCase):
             config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
-        """Test that exceptions during toml.loads are caught and logged."""
+        """Test that invalid TOML is logged and leaves the current config unchanged."""
         # Create a dummy default option
         config._create_option(
             "_test.invalidTomlTest",
@@ -1221,6 +1223,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": None,
             "baseRadius": None,
             "buttonRadius": None,
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
@@ -1356,6 +1360,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#1BD760",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
@@ -1477,6 +1483,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#FFF000",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",

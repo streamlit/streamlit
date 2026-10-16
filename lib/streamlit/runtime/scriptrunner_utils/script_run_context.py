@@ -84,6 +84,12 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
+# True while execution_control enqueues its internal st.empty() yield point,
+# so the fragment-callback element warning ignores that write.
+_fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
+    contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
+)
+
 
 @dataclass(frozen=True)
 class FragmentThreadState:
@@ -197,6 +203,21 @@ class ThreadState:
             _thread_state.reset(token)
 
 
+def is_fragment_callback_warning_suppressed() -> bool:
+    """Whether the fragment-callback element warning is suppressed for this write."""
+    return _fragment_callback_warning_suppressed.get()
+
+
+@contextlib.contextmanager
+def suppress_fragment_callback_warning() -> Generator[None, None, None]:
+    """Suppress the fragment-callback element warning within this block."""
+    token = _fragment_callback_warning_suppressed.set(True)
+    try:
+        yield
+    finally:
+        _fragment_callback_warning_suppressed.reset(token)
+
+
 @dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
@@ -241,6 +262,9 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
+    # Raises StopException or RerunException when this run should end. Read by
+    # contended cache waits via get_run_yield_check().
+    yield_check: Callable[[], None] = lambda: None
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -272,7 +296,7 @@ class ScriptRunContext:
         cached_message_hashes: frozenset[str] | None = None,
         context_info: ContextInfo | None = None,
         is_history_navigation: bool = False,
-        # Checked by fragment workers to cease execution.
+        # Called by fragment workers and contended cache waits to cease execution.
         yield_check: Callable[[], None] = lambda: None,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
@@ -291,6 +315,7 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
+        self.yield_check = yield_check
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
@@ -487,6 +512,12 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
         )
 
     return ctx
+
+
+def get_run_yield_check() -> Callable[[], None] | None:
+    """Return this thread's stop/rerun callback, or None if it has no script run."""
+    ctx = get_script_run_ctx(suppress_warning=True)
+    return ctx.yield_check if ctx is not None else None
 
 
 def enqueue_message(msg: ForwardMsg) -> None:

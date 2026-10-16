@@ -466,3 +466,29 @@ _wrap_val = st.pills(
     key="pills_wrap_preserve",
 )
 st.text(f"pills_wrap_preserve: {_wrap_val}")
+
+# --- on_change="ignore" pills ---
+# Reuses the script-run counter above ("Runs:").
+
+ignore_single = st.pills(
+    "Ignore change pills",
+    ["alpha", "beta", "gamma"],
+    key="ignore_pills",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_pills: {ignore_single}")
+
+ignore_multi = st.pills(
+    "Ignore change multi pills",
+    ["Red", "Green", "Blue"],
+    selection_mode="multi",
+    key="ignore_pills_multi",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_pills_multi: {ignore_multi}")
+
+if st.button("Apply ignore pills", key="apply_ignore_pills"):
+    st.text(f"Applied ignore pills: {ignore_single}")
+    st.text(f"Applied ignore multi pills: {ignore_multi}")

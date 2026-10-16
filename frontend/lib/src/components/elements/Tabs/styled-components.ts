@@ -30,20 +30,34 @@ interface StyledTabContainerProps {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ isOverflowing, width, height, flex }) => ({
+  ({
+    isOverflowing,
+    width,
+    height,
+    flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
+  }) => ({
     position: isOverflowing ? "relative" : undefined,
-    width: width || undefined,
-    height: height || undefined,
+    width: width ?? undefined,
+    height: height ?? undefined,
     // When the container has a constrained height, lay out the tab list and
     // panel as a column so the active panel can grow and scroll internally,
     // and clip the outer container so only the active panel scrolls.
     ...(height
       ? { display: "flex", flexDirection: "column", overflow: "hidden" }
       : {}),
-    flex: flex || undefined,
+    flex: flex ?? undefined,
+    alignSelf,
+    minHeight,
+    maxHeight,
   })
 )
 

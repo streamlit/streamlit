@@ -27,7 +27,6 @@ export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
     width: "100%",
     background: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
-    marginBottom: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
     position: "relative",

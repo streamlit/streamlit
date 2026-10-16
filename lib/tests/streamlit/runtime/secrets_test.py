@@ -26,12 +26,11 @@ import unittest
 from collections.abc import Callable, Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
-from typing_extensions import Self
 
 import streamlit as st
 from streamlit import config
@@ -135,8 +134,36 @@ class SecretsTest(unittest.TestCase):
     def test_load_if_toml_exists_returns_true_if_parse_succeeds(self, _):
         assert self.secrets.load_if_toml_exists()
 
-    def test_load_if_toml_exists_returns_false_if_parse_fails(self):
+    def test_load_if_toml_exists_returns_false_if_secrets_file_absent(self):
+        """An absent secrets file is optional and must not raise."""
         assert not self.secrets.load_if_toml_exists()
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data='SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n',
+    )
+    @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
+    def test_load_if_toml_exists_returns_false_for_malformed_toml(
+        self, mock_get_option, _
+    ):
+        """Malformed TOML is treated as unavailable by the boolean probe."""
+        assert not self.secrets.load_if_toml_exists()
+        assert os.environ.get("SMTP_PASSWORD") is None
+
+        with pytest.raises(
+            StreamlitSecretNotFoundError, match="Error parsing secrets file"
+        ) as excinfo:
+            self.secrets._parse()
+
+        message = str(excinfo.value)
+        error = excinfo.value.exec_kwargs["error"]
+        assert MOCK_SECRETS_FILE_LOC in message
+        assert excinfo.value.exec_kwargs["path"] == MOCK_SECRETS_FILE_LOC
+        assert error
+        assert error in message
+        assert "synthetic-secret-value" not in message
+        assert "synthetic-secret-value" not in error
 
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
     def test_missing_toml_error(self, _):
@@ -278,6 +305,20 @@ class SecretsTest(unittest.TestCase):
         with pytest.raises(TypeError) as cm:
             self.secrets.new_secret = "123"
         assert str(cm.value) == "Secrets does not support attribute assignment."
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_item_assignment_raises_type_error(self, *mocks: object) -> None:
+        """Verify that item assignment raises TypeError."""
+        with pytest.raises(TypeError, match="does not support item assignment"):
+            self.secrets["new_secret"] = "123"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_item_deletion_raises_type_error(self, *mocks: object) -> None:
+        """Verify that item deletion raises TypeError."""
+        with pytest.raises(TypeError, match="does not support item deletion"):
+            del self.secrets["db_username"]
 
 
 class MultipleSecretsFilesTest(unittest.TestCase):
@@ -512,6 +553,17 @@ class AttrDictTest(unittest.TestCase):
         attr_dict.to_dict()["x"]["y"] = "zed"
         assert attr_dict.x.y == "z"
         assert d["x"]["y"] == "z"
+
+    def test_attr_dict_rejects_mutation(self) -> None:
+        """Item and attribute writes raise TypeError."""
+        attr_dict = AttrDict({"user": "jane"})
+
+        with pytest.raises(TypeError, match="does not support item assignment"):
+            attr_dict["user"] = "joan"
+        with pytest.raises(TypeError, match="does not support attribute assignment"):
+            attr_dict.user = "joan"
+        with pytest.raises(TypeError, match="does not support item deletion"):
+            del attr_dict["user"]
 
 
 class SecretsFallbackTest(DeltaGeneratorTestCase):

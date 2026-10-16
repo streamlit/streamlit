@@ -78,6 +78,7 @@ const filterFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank message should still explain the rejection
             message: validation.errorMessage || "File type not allowed.",
           },
         ],
@@ -128,7 +129,7 @@ export const createDropHandler =
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
-        file => file.errors?.[0].code === FileErrorCode.TooManyFiles
+        file => file.errors[0].code === FileErrorCode.TooManyFiles
       )
 
       if (firstFileIndex >= 0) {

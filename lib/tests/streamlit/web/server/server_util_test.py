@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import unittest
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
 
 from streamlit import config
+from streamlit.runtime.secrets import Secrets
 from streamlit.web.server import server_util
 from tests import testutil
 
@@ -258,3 +259,20 @@ def test_get_cookie_secret(
 
     if not toml_exists:
         secrets_mock.get.assert_not_called()
+
+
+def test_get_cookie_secret_falls_back_when_secrets_toml_is_malformed() -> None:
+    """Malformed secrets.toml must not abort cookie-secret lookup."""
+    secrets = Secrets()
+    with (
+        patch("streamlit.web.server.server_util.secrets_singleton", secrets),
+        testutil.patch_config_options(
+            {
+                "server.cookieSecret": "from-config",
+                "secrets.files": ["/mock/secrets.toml"],
+            }
+        ),
+        patch("builtins.open", mock_open(read_data="SMTP_PORT = ---\n")),
+        patch("streamlit.watcher.path_watcher.watch_file"),
+    ):
+        assert server_util.get_cookie_secret() == "from-config"

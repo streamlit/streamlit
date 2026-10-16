@@ -120,8 +120,8 @@ def test_top_nav_with_sections(app: Page):
     section_a_trigger.click()
 
     # Wait for pages to become visible after clicking section
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
 
@@ -149,9 +149,9 @@ def test_top_nav_with_single_section(app: Page):
     section_trigger.click()
 
     # Wait for all 3 pages to become visible in the popover
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
-    page3_in_popover = app.get_by_role("link", name="Page 3")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
+    page3_in_popover = app.get_by_role("menuitem", name="Page 3")
 
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
@@ -208,8 +208,8 @@ def test_top_nav_section_headers_support_markdown(app: Page):
     bold_section_trigger.click()
 
     # Wait for popover with pages
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
 
@@ -372,7 +372,7 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     single_section_trigger.click()
 
     # Wait for popover with 3 pages
-    page3_in_popover = app.get_by_role("link", name="Page 3")
+    page3_in_popover = app.get_by_role("menuitem", name="Page 3")
     expect(page3_in_popover).to_be_visible()
 
     # Take screenshot of single section popover
@@ -424,8 +424,8 @@ def test_mixed_empty_and_named_sections(app: Page):
     admin_trigger.click()
 
     # Wait for Admin section pages to be visible
-    settings_link = app.get_by_role("link", name="Settings")
-    users_link = app.get_by_role("link", name="Users")
+    settings_link = app.get_by_role("menuitem", name="Settings")
+    users_link = app.get_by_role("menuitem", name="Users")
     expect(settings_link).to_be_visible()
     expect(users_link).to_be_visible()
 
@@ -438,7 +438,7 @@ def test_mixed_empty_and_named_sections(app: Page):
     reports_trigger.click()
 
     # Verify Reports section has only one page
-    analytics_link = app.get_by_role("link", name="Analytics")
+    analytics_link = app.get_by_role("menuitem", name="Analytics")
     expect(analytics_link).to_be_visible()
 
     # Navigate to Analytics
@@ -453,11 +453,7 @@ def test_mixed_empty_and_named_sections(app: Page):
 
 
 def test_top_nav_section_keyboard_and_aria(app: Page):
-    """Test keyboard dismissal and ARIA state for top nav section popovers.
-
-    Escape must close the popover and return focus to the trigger, while
-    aria-expanded reflects the open or closed state.
-    """
+    """Escape closes and refocuses; ArrowDown opens on the first page; trigger exposes menu ARIA."""
     app.set_viewport_size({"width": 1280, "height": 800})
 
     click_checkbox(app, "Test Sections")
@@ -467,6 +463,7 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
 
     # Trigger starts closed with correct ARIA state
     expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(section_trigger).to_have_attribute("aria-haspopup", "menu")
     expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
 
     # Click to open — aria-expanded updates and popover appears
@@ -479,6 +476,15 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
     expect(section_trigger).to_have_attribute("aria-expanded", "false")
     expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
     expect(section_trigger).to_be_focused()
+
+    # ArrowDown opens the menu and focuses the first menu item.
+    section_trigger.focus()
+    app.keyboard.press("ArrowDown")
+    expect(section_trigger).to_have_attribute("aria-expanded", "true")
+    popover = app.get_by_test_id("stTopNavPopover").locator("visible=true")
+    first_link = popover.get_by_test_id("stTopNavDropdownLink").first
+    expect(first_link).to_be_visible()
+    expect(first_link).to_be_focused()
 
 
 def test_mixed_sections_visual_regression(
@@ -509,7 +515,7 @@ def test_mixed_sections_visual_regression(
     admin_trigger.click()
 
     # Wait for dropdown to open
-    settings_link = app.get_by_role("link", name="Settings")
+    settings_link = app.get_by_role("menuitem", name="Settings")
     expect(settings_link).to_be_visible()
 
     # Capture Admin section popover
@@ -524,7 +530,7 @@ def test_mixed_sections_visual_regression(
     reports_trigger.click()
 
     # Wait for Reports dropdown
-    analytics_link = app.get_by_role("link", name="Analytics")
+    analytics_link = app.get_by_role("menuitem", name="Analytics")
     expect(analytics_link).to_be_visible()
 
     # Capture Reports section popover (single item)

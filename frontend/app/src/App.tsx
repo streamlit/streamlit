@@ -408,11 +408,12 @@ export class App extends PureComponent<Props, State> {
   private inFlightSkillsInstall: Promise<string | undefined> | null = null
 
   private get skillsCalloutEnvEligible(): boolean {
-    if (this.cachedSkillsCalloutEnvEligible === undefined) {
-      this.cachedSkillsCalloutEnvEligible =
-        isLocalhost() && !isEmbed() && localStorageAvailable()
-    }
-    return this.cachedSkillsCalloutEnvEligible
+    // A stored false is a real cached answer, so only fill an unset value.
+    const eligible =
+      this.cachedSkillsCalloutEnvEligible ??
+      (isLocalhost() && !isEmbed() && localStorageAvailable())
+    this.cachedSkillsCalloutEnvEligible = eligible
+    return eligible
   }
 
   public constructor(props: Props) {
@@ -820,7 +821,7 @@ export class App extends PureComponent<Props, State> {
         },
       }
 
-      // @ts-expect-error
+      // @ts-expect-error - iframe-resizer contentWindow path has no type declarations
       void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
@@ -838,9 +839,9 @@ export class App extends PureComponent<Props, State> {
     _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // @ts-expect-error
+    // @ts-expect-error - prerenderReady flag is missing from Window
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady flag is missing from Window
       window.prerenderReady = true
     }
     if (this.state.scriptRunState !== prevState.scriptRunState) {
@@ -2278,7 +2279,7 @@ export class App extends PureComponent<Props, State> {
 
     // It's not a problem that we're mucking around with private fields since
     // this is a test-only method anyway.
-    // @ts-expect-error
+    // @ts-expect-error - test-only access to the private websocket message cache
     this.connectionManager?.websocketConnection?.cache.messages.clear()
   }
 
@@ -2681,7 +2682,7 @@ export class App extends PureComponent<Props, State> {
     } catch {
       windowToPrint = window
     } finally {
-      if (!windowToPrint) windowToPrint = window
+      windowToPrint ??= window
       windowToPrint.print()
     }
   }
@@ -2842,7 +2843,9 @@ export class App extends PureComponent<Props, State> {
   private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank about text still lets other menu items count
       menuItems?.aboutSectionMd ||
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help url still lets the bug-report item count
       (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
       (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
     )

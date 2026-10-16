@@ -237,7 +237,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
-      return cell.data === undefined ? null : cell.data
+      return cell.data ?? null
     },
     valuesEqual(a: unknown, b: unknown): boolean {
       // Compare numerically so a string like "5" and the number 5 match.

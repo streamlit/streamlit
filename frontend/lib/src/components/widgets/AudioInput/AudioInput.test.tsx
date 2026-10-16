@@ -15,7 +15,9 @@
  */
 
 import { act, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
+import userEvent, {
+  PointerEventsCheckLevel,
+} from "@testing-library/user-event"
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
@@ -25,6 +27,7 @@ import type {
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
 import { render } from "~lib/test_util"
+import type * as UploadFiles from "~lib/util/uploadFiles"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
@@ -1308,5 +1311,260 @@ describe("AudioInput Widget State", () => {
     expect(uploadCall.fragmentId).toBe("fragment-1")
     expect(uploadCall.files).toHaveLength(1)
     expect(uploadCall.files[0].type).toBe("audio/wav")
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  let latestEvents: WaveformControllerEvents | undefined
+  let controller: WaveformController
+
+  const createController = (): WaveformController => ({
+    get state() {
+      return "idle" as RecordingState
+    },
+    get isPlaybackPlaying() {
+      return false
+    },
+    mountRef: { current: document.createElement("div") },
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue({
+      blob: new Blob(),
+      meta: {
+        durationMs: 0,
+        sampleRate: 16000,
+        mimeType: "audio/webm",
+        size: 0,
+      },
+    }),
+    approve: vi.fn().mockResolvedValue(undefined),
+    cancel: vi.fn().mockReturnValue(undefined),
+    destroy: vi.fn().mockReturnValue(undefined),
+    playback: {
+      isPlaying: vi.fn().mockReturnValue(false),
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn().mockReturnValue(undefined),
+      load: vi.fn().mockResolvedValue(undefined),
+      getCurrentTimeMs: vi.fn().mockReturnValue(0),
+      getDurationMs: vi.fn().mockReturnValue(0),
+    },
+    setEventHandlers: vi.fn().mockReturnValue(undefined),
+  })
+
+  function createWidgetMgrWithRerunSpy(): {
+    widgetMgr: WidgetStateManager
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    return { widgetMgr, sendRerunBackMsg }
+  }
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const wavBlob = (): Blob => new Blob(["wav"], { type: "audio/wav" })
+
+  beforeEach(async () => {
+    latestEvents = undefined
+    controller = createController()
+
+    global.URL.createObjectURL = vi.fn(() => "blob:test-url")
+    global.URL.revokeObjectURL = vi.fn()
+
+    FormClearHelperMock.mockReturnValue({
+      manageFormClearListener: vi.fn(),
+      disconnect: vi.fn(),
+    })
+
+    useWaveformControllerMock.mockImplementation(
+      ({ events }: { events?: WaveformControllerEvents }) => {
+        latestEvents = events
+        return controller
+      }
+    )
+
+    const { uploadFiles: realUploadFiles } = await vi.importActual<
+      typeof UploadFiles
+    >("~lib/util/uploadFiles")
+
+    uploadFilesMock.mockImplementation(args => realUploadFiles(args))
+  })
+
+  afterEach(() => {
+    useWaveformControllerMock.mockReset()
+    uploadFilesMock.mockReset()
+    FormClearHelperMock.mockReset()
+    vi.restoreAllMocks()
+  })
+
+  function stubUploadClient(): Props["uploadClient"] {
+    const uploadClient = createUploadClient()
+    uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockResolvedValue([
+        { fileId: "file-1", uploadUrl: "upload-url", deleteUrl: "delete-url" },
+      ])
+    uploadClient.uploadFile = vi.fn().mockResolvedValue(undefined)
+    return uploadClient
+  }
+
+  async function approveRecording(): Promise<void> {
+    await act(async () => {
+      await latestEvents?.onApprove?.(wavBlob())
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = createProps(
+      { ignoreRerun: true },
+      { widgetMgr, uploadClient: stubUploadClient() }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<AudioInput {...props} />)
+
+    await approveRecording()
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      expect.anything(),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    const stored = widgetMgr.getFileUploaderStateValue({
+      id: props.element.id,
+      formId: props.element.formId,
+    })
+    expect(stored?.uploadedFileInfo?.[0]?.fileId).toBe("file-1")
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = createProps(
+      { ignoreRerun: false },
+      { widgetMgr, uploadClient: stubUploadClient() }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<AudioInput {...props} />)
+
+    await approveRecording()
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      expect.anything(),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a recording is cleared", async () => {
+    // The clear control stays at opacity 0 until hover, so user-event would
+    // otherwise refuse the click.
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = createProps(
+      { ignoreRerun: true },
+      { widgetMgr, uploadClient: stubUploadClient() }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<AudioInput {...props} />)
+
+    await approveRecording()
+
+    const audioInput = screen.getByTestId("stAudioInput")
+    await user.hover(audioInput)
+    // Match the "Clear recording" prefix; the accessible name also includes the label.
+    const clearButton = await screen.findByRole("button", {
+      name: /Clear recording/,
+    })
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(clearButton)
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      {},
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = createProps(
+      { ignoreRerun: true, formId: "testForm" },
+      { widgetMgr, uploadClient: stubUploadClient() }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<AudioInput {...props} />)
+
+    await approveRecording()
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      expect.anything(),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 })

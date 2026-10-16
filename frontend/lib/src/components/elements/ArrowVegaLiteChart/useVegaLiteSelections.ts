@@ -106,6 +106,7 @@ export const useVegaLiteSelections = (
 
             // Get the current widget state
             const currentWidgetState = JSON.parse(
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank widget state parses as an empty object
               widgetMgr.getStringValue(widgetInfo) || "{}"
             )
 
@@ -113,6 +114,7 @@ export const useVegaLiteSelections = (
             const updatedSelections = {
               selection: {
                 ...currentWidgetState?.selection,
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy signal still falls back to an empty selection
                 [name]: processedSelection || {},
               } as VegaLiteState,
             }

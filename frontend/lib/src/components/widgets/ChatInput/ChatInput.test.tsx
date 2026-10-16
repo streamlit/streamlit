@@ -65,7 +65,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-  // @ts-expect-error
+  // @ts-expect-error - upload client fixture does not implement FileUploadClient
   uploadClient: {
     uploadFile: vi.fn().mockImplementation(() => {
       return Promise.resolve()

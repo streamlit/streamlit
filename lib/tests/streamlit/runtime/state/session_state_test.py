@@ -496,6 +496,163 @@ class WStateTests(unittest.TestCase):
             # Verify no warning was logged
             mock_logger.warning.assert_not_called()
 
+    def test_fragment_callback_rerun_does_not_warn(self):
+        """st.rerun() from a fragment callback displays nothing, so it must not warn."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_switch_page_does_not_warn(self):
+        """st.switch_page() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == ["other page"]
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_stop_does_not_warn(self):
+        """st.stop() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.stop()
+
+                    st.button("go", on_click=cb)
+                    st.text("after")
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == []
+            assert len(at.exception) == 0
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_element_before_switch_page_still_warns(self):
+        """A real element write still warns when the callback then calls st.switch_page()."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.write("from callback")
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
+    def test_fragment_callback_element_before_rerun_still_warns(self):
+        """A real element write in a fragment callback still warns, even if it then reruns."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.write("from callback")
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(DeltaGeneratorTestCase):

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Pagination as PaginationProto } from "@streamlit/protobuf"
@@ -574,5 +574,150 @@ describe("Pagination widget", () => {
         }
       )
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it.each([
+    ["a page button", 1, "Page 3", 3],
+    ["previous", 5, "Previous page", 4],
+    ["next", 1, "Next page", 2],
+  ] as const)(
+    "passes triggerRerun: false when %s commits with ignoreRerun",
+    async (_label, defaultPage, buttonName, expectedPage) => {
+      const user = userEvent.setup()
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps(
+        { ignoreRerun: true, numPages: 5, default: defaultPage },
+        { widgetMgr }
+      )
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<Pagination {...props} />)
+      setIntValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      await user.click(screen.getByRole("button", { name: buttonName }))
+
+      expect(setIntValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expectedPage,
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { ignoreRerun: false, numPages: 5, default: 1 },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 2, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+        numPages: 5,
+        default: 1,
+      },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 2, {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit when the current page is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { ignoreRerun: true, numPages: 5, default: 1 },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Page 1" }))
+
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

@@ -16,6 +16,9 @@
 
 import "@testing-library/jest-dom/vitest"
 import { act, configure } from "@testing-library/react"
+// Must be imported before react-aria so its test-only visualViewport polyfill
+// does not run. See vitest.jsdom-env.ts.
+import "./vitest.jsdom-env"
 // FRAGILE: setInteractionModality has no public export today, so we import from a
 // private react-aria path. This may break on minor/patch upgrades — migrate to the
 // public API if React Aria ever exposes it.
@@ -71,7 +74,7 @@ globalThis.jest = vi
 //    globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = "http://example.com"
 globalThis.__mockStreamlitConfig = {}
 
-if (typeof window.URL.createObjectURL === "undefined") {
+if (window.URL.createObjectURL === undefined) {
   window.URL.createObjectURL = vi.fn()
 }
 
