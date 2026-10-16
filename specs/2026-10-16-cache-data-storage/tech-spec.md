@@ -196,7 +196,8 @@ one replica refreshes it.
 3. Look up the full key in the in-memory copies. On a hit that hasn't expired, unpickle and
    return, with no storage I/O. A failed unpickle drops the copy and goes to step 5.
 4. Otherwise, `get` the key from the storage. If the envelope is valid, hasn't expired, and
-   unpickles, keep it in memory with its original timestamps and return it.
+   unpickles, return it. Keep it in memory with its original timestamps, unless the
+   function's tokens changed during the `get`.
 5. Otherwise, it's a miss. An invalid envelope or a failed unpickle also deletes the key.
 
 ### Write path
@@ -236,9 +237,10 @@ one replica refreshes it.
   the clear lands under the old token where nobody reads it. Old entries are deleted in the
   background with `delete_prefix` if supported, and otherwise by the storage's own eviction.
 - A per-key clear has no token in the entry key, so it writes the marker only after the
-  delete succeeds, retrying it in the background; otherwise another replica could reload
-  the entry. A compute of the same key that started earlier on another replica can still
-  write its result after the clear (see [Limits](#guarantees-and-limits)).
+  delete succeeds; otherwise another replica could reload the entry. A failed delete is
+  retried in the background, and until it succeeds the clearing replica doesn't read that
+  key from the storage. A compute of the same key that started earlier on another replica
+  can still write its result after the clear (see [Limits](#guarantees-and-limits)).
 - The replica that clears updates its own tokens immediately. Other replicas see the clear
   within one token read interval (one second) after the new token is written.
 - Tokens are random, so a replica can't tell an old token from a new one. The clearing
