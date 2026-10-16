@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
@@ -67,6 +68,7 @@ _MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 _USE_ENV_PREFIX: Final = "env:"
+_CONNECTION_DEFAULT_TTL_KEY: Final = "runner.connectionDefaultTTL"
 
 # The BaseConnection bound is parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -101,6 +103,12 @@ def _create_connection(
             error_id="connection-not-base-connection-subclass",
         )
 
+    if isinstance(ttl, (int, float)) and not isinstance(ttl, bool):
+        # Normalize to one numeric form so an explicit `ttl=30` and the server
+        # default (always a float) share a single cache entry instead of
+        # splitting into two live connections with identical expiry.
+        ttl = float(ttl)
+
     # We modify our helper function's `__qualname__` here to work around default
     # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
     # different `ttl` or `max_entries` values will reset the cache with each call.
@@ -131,6 +139,49 @@ def _create_connection(
     )(__create_connection)
 
     return cached_create_connection(name, connection_class, **kwargs)
+
+
+def _invalid_connection_default_ttl(value: Any) -> StreamlitAPIException:
+    """Build the error for a bad ``runner.connectionDefaultTTL`` value."""
+    return StreamlitAPIException(
+        "Invalid `runner.connectionDefaultTTL` value. "
+        "Use a non-negative number of seconds, or leave the option unset "
+        "to keep connections cached until they are cleared. "
+        f"Received {value!r}.",
+        error_id="connection-default-ttl-invalid",
+    )
+
+
+def _coerce_connection_default_ttl(value: Any) -> float:
+    """Return ``value`` as a non-negative number of seconds."""
+    original = value
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            raise _invalid_connection_default_ttl(original) from None
+
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        raise _invalid_connection_default_ttl(original)
+
+    return float(value)
+
+
+def _configured_connection_ttl() -> float | None:
+    """Return the server default ``st.connection`` TTL."""
+    # Local import: config pulls in enough of the runtime to cycle back here.
+    from streamlit import config
+
+    configured = config.get_option(_CONNECTION_DEFAULT_TTL_KEY)
+    if configured is None:
+        return None
+
+    return _coerce_connection_default_ttl(configured)
 
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:
@@ -322,8 +373,12 @@ def connection_factory(  # type: ignore
         a new entry is added to a full cache, the oldest cached entry is
         removed.
     ttl : float, timedelta, or None
-        The maximum number of seconds to keep results in the cache.
-        If this is ``None`` (default), cached results do not expire with time.
+        The maximum number of seconds to keep the connection in the cache.
+        If this is ``None`` (default), ``runner.connectionDefaultTTL`` is used.
+        If that option is unset, the connection stays cached until it is
+        cleared. An explicit non-``None`` value overrides the server default.
+        Pass ``float("inf")`` to keep this connection cached indefinitely even
+        when ``runner.connectionDefaultTTL`` is set.
     **kwargs : any
         Connection-specific keyword arguments that are passed to the
         connection's ``._connect()`` method. ``**kwargs`` are typically
@@ -489,6 +544,9 @@ def connection_factory(  # type: ignore
             connection_class = _get_first_party_connection(connection_class)
 
     # At this point, connection_class should be of type Type[ConnectionClass].
+    if ttl is None:
+        ttl = _configured_connection_ttl()
+
     try:
         return _create_connection(
             name, connection_class, max_entries=max_entries, ttl=ttl, **kwargs
