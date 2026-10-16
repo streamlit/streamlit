@@ -290,7 +290,9 @@ class MapMixin:
         layout_config = create_layout_config(width=width, height=height)
 
         map_proto = DeckGlJsonChartProto()
-        deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
+        deck_gl_json, size_column, color_column = to_deckgl_json(
+            data, latitude, longitude, size, color, zoom
+        )
 
         marshall(map_proto, deck_gl_json)
 
@@ -304,13 +306,14 @@ class MapMixin:
             map_proto,
             layout_config=layout_config,
             # st.map and st.pydeck_chart share a proto. A literal color or
-            # pixel size is presentation; only a column name is reported.
+            # pixel size is presentation; only a column of the converted data
+            # is reported.
             agent_props=agent_spec.element(
                 "map",
                 latitude=latitude,
                 longitude=longitude,
-                size=_reported_map_column(data, size),
-                color=_reported_map_column(data, color),
+                size=size_column,
+                color=color_column,
                 zoom=zoom,
                 alt=map_proto.alt or None,
             ),
@@ -329,15 +332,20 @@ def to_deckgl_json(
     size: str | float | None,
     color: str | Collection[float] | None,
     zoom: int | None,
-) -> str:
+) -> tuple[str, str | None, str | None]:
+    """PyDeck JSON, plus size and color when those arguments name columns.
+
+    The column names are resolved from the converted dataframe, the same check
+    the layer uses. A literal color or pixel size is ``None``.
+    """
     if data is None:
-        return json.dumps(_DEFAULT_MAP)
+        return json.dumps(_DEFAULT_MAP), None, None
 
     # TODO(harahu): iterables don't have the empty attribute. This is either
     # a bug, or the documented data type is too broad. One or the other
     # should be addressed
     if hasattr(data, "empty") and data.empty:
-        return json.dumps(_DEFAULT_MAP)
+        return json.dumps(_DEFAULT_MAP), None, None
 
     df = dataframe_util.convert_anything_to_pandas_df(data)
 
@@ -381,7 +389,7 @@ def to_deckgl_json(
         }
     ]
 
-    return json.dumps(default)
+    return json.dumps(default), size_col_name, color_col_name
 
 
 def _get_lat_or_lon_col_name(
@@ -429,30 +437,6 @@ def _get_lat_or_lon_col_name(
         )
 
     return col_name
-
-
-def _reported_map_column(data: Any, value: Any) -> str | None:
-    """A size or color argument that names a column, or None for a literal.
-
-    Matches ``_get_value_and_col_name``: a string is a column only when it is
-    one of the data's columns. A hex color or built-in color name is not.
-    """
-    if not isinstance(value, str):
-        return None
-    columns = getattr(data, "columns", None)
-    if columns is not None:
-        try:
-            return value if value in columns else None
-        except TypeError:
-            return None
-    from streamlit.elements.lib.color_util import (
-        is_builtin_color_name,
-        is_color_like,
-    )
-
-    if is_color_like(value) or is_builtin_color_name(value):
-        return None
-    return value
 
 
 def _get_value_and_col_name(

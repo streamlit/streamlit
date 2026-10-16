@@ -146,9 +146,12 @@ def generate_chart(
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
     sort_from_user: bool | str = False,
-) -> alt.Chart | alt.LayerChart:
+) -> tuple[alt.Chart | alt.LayerChart, str | None, str | None]:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
+
+    The last two values are the color and size arguments that named a column of
+    the converted data. A literal color or pixel size is ``None``.
     """
     import altair as alt
 
@@ -169,6 +172,9 @@ def generate_chart(
     # Get name of column to use for size, or constant value to use. Any/both could
     #  be None.
     size_column, size_value = _parse_generic_column(df, size_from_user)
+    # The author's column names, before prep renames columns for Vega-Lite.
+    authored_color_column = color_column
+    authored_size_column = size_column
     # Get name of column to use for sort.
     sort_column = _parse_sort_column(df, sort_from_user)
 
@@ -272,10 +278,10 @@ def generate_chart(
         layer_chart: alt.LayerChart = _add_improved_hover_tooltips(
             chart, x_column, chart_width, chart_height, len(df)
         ).interactive()
-        return layer_chart
+        return layer_chart, authored_color_column, authored_size_column
 
     interactive_chart: alt.Chart = chart.interactive()
-    return interactive_chart
+    return interactive_chart, authored_color_column, authored_size_column
 
 
 def _add_improved_hover_tooltips(

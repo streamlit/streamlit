@@ -785,7 +785,12 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
-def _builtin_chart_encoding(data: Any, **arguments: Any) -> dict[str, Any]:
+def _builtin_chart_encoding(
+    *,
+    color_column: str | None,
+    size_column: str | None,
+    **arguments: Any,
+) -> dict[str, Any]:
     """The arguments a built-in chart was given that say what it plots.
 
     All six Vega commands emit the same proto with no field saying which one
@@ -794,42 +799,15 @@ def _builtin_chart_encoding(data: Any, **arguments: Any) -> dict[str, Any]:
     the chart combines them, are only knowable at the command, which passes
     exactly the parameters it has.
 
-    `color` and `size` are reported only when they name a column. A literal
-    color or pixel size carries no meaning for a non-visual client. The same
-    column-versus-literal check the chart uses decides which is which.
+    ``color`` and ``size`` are the column names ``generate_chart`` resolved
+    from the converted data. A literal color or pixel size is omitted.
     """
-    columns = getattr(data, "columns", None)
-    return {
-        name: _encoding_argument(name, value, columns)
-        for name, value in arguments.items()
-    }
-
-
-def _encoding_argument(name: str, value: Any, columns: Any) -> Any:
-    """Keep a color or size only when it names a column."""
-    if name not in {"color", "size"}:
-        return value
-    if not isinstance(value, str):
-        return None
-    if columns is not None:
-        try:
-            return value if value in columns else None
-        except TypeError:
-            return None
-    # No column index to consult. A color literal is still not a column.
-    if name == "color" and _is_color_literal(value):
-        return None
-    return value
-
-
-def _is_color_literal(value: str) -> bool:
-    """True for a hex color or a built-in color name, which are not columns."""
-    from streamlit.elements.lib.color_util import (
-        is_builtin_color_name,
-        is_color_like,
-    )
-
-    return is_color_like(value) or is_builtin_color_name(value)
+    described = dict(arguments)
+    if "color" in described:
+        described["color"] = color_column
+    if "size" in described:
+        described["size"] = size_column
+    return described
 
 
 class VegaChartsMixin:
@@ -1078,7 +1056,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart = generate_chart(
+        chart, color_column, size_column = generate_chart(
             chart_type=ChartType.LINE,
             data=data,
             x_from_user=x,
@@ -1101,7 +1079,8 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="line_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    data,
+                    color_column=color_column,
+                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1399,7 +1378,7 @@ class VegaChartsMixin:
         if stack is False or stack is None:
             stack = "layered"
 
-        chart = generate_chart(
+        chart, color_column, size_column = generate_chart(
             chart_type=ChartType.AREA,
             data=data,
             x_from_user=x,
@@ -1422,7 +1401,8 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="area_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    data,
+                    color_column=color_column,
+                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1762,7 +1742,7 @@ class VegaChartsMixin:
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
 
-        chart = generate_chart(
+        chart, color_column, size_column = generate_chart(
             chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
@@ -1786,7 +1766,8 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="bar_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    data,
+                    color_column=color_column,
+                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -2047,7 +2028,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart = generate_chart(
+        chart, color_column, size_column = generate_chart(
             chart_type=ChartType.SCATTER,
             data=data,
             x_from_user=x,
@@ -2069,7 +2050,8 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="scatter_chart",
                 agent_encoding=_builtin_chart_encoding(
-                    data,
+                    color_column=color_column,
+                    size_column=size_column,
                     x=x,
                     y=y,
                     x_label=x_label,

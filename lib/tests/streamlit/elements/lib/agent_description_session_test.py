@@ -186,20 +186,98 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert metric["props"]["value"] == "—"
         assert metric["props"]["delta"] == "up"
 
-    def test_chart_color_literal_is_not_an_encoding(self) -> None:
-        """A hex color is presentation. A column name is an encoding."""
+    def test_chart_color_uses_columns_of_the_converted_data(self) -> None:
+        """Color and size are columns of the data the chart converted.
+
+        A fixed color is omitted. A column is reported even when its name is a
+        color, and even when the input is a dict, a list of records, or a
+        PyArrow table.
+        """
+        import pyarrow as pa
+
         self._record()
         frame = pd.DataFrame({"a": [1], "b": [2]})
         st.line_chart(frame, x="a", y="b", color="#ffaa00")
         st.line_chart(frame, x="a", y="b", color="b")
+        st.line_chart(
+            {"x": [1, 2], "y": [3, 4], "red": ["a", "b"]},
+            x="x",
+            y="y",
+            color="red",
+        )
+        st.line_chart(
+            [{"x": 1, "y": 3, "#ffaa00": "a"}, {"x": 2, "y": 4, "#ffaa00": "b"}],
+            x="x",
+            y="y",
+            color="#ffaa00",
+        )
+        st.scatter_chart(
+            {"x": [1, 2], "y": [3, 4], "red": [5, 6]},
+            x="x",
+            y="y",
+            size="red",
+            color=["#ff0000"],
+        )
+        st.line_chart(
+            pa.table({"x": [1], "y": [2], "group": ["a"]}),
+            x="x",
+            y="y",
+            color="group",
+        )
 
-        charts = [
+        described = _descriptions(list(self.forward_msg_queue._queue))
+        line_charts = [item for item in described if item["type"] == "line_chart"]
+        scatter = next(item for item in described if item["type"] == "scatter_chart")
+        assert [item["props"].get("color") for item in line_charts] == [
+            None,
+            "b",
+            "red",
+            "#ffaa00",
+            "group",
+        ]
+        assert scatter["props"]["size"] == "red"
+        assert "color" not in scatter["props"]
+
+    def test_map_color_and_size_use_columns_of_the_converted_data(self) -> None:
+        """Map color and size follow the columns of the converted dataframe."""
+        import pyarrow as pa
+
+        self._record()
+        st.map(
+            {
+                "lat": [1.0],
+                "lon": [2.0],
+                "red": ["#ff0000"],
+                "#0044ff": [12],
+            },
+            color="red",
+            size="#0044ff",
+        )
+        st.map({"lat": [1.0], "lon": [2.0]}, color="#0044ff", size=20)
+        st.map(
+            pa.table(
+                {
+                    "lat": [1.0],
+                    "lon": [2.0],
+                    "group": ["#00ff00"],
+                    "weight": [5],
+                }
+            ),
+            color="group",
+            size="weight",
+        )
+
+        maps = [
             item
             for item in _descriptions(list(self.forward_msg_queue._queue))
-            if item["type"] == "line_chart"
+            if item["type"] == "map"
         ]
-        assert "color" not in charts[0]["props"]
-        assert charts[1]["props"]["color"] == "b"
+        assert maps[0]["props"]["color"] == "red"
+        assert maps[0]["props"]["size"] == "#0044ff"
+        assert "color" not in maps[1]["props"]
+        assert "size" not in maps[1]["props"]
+        assert maps[2]["props"]["color"] == "group"
+        assert maps[2]["props"]["size"] == "weight"
 
     def test_plotly_selection_mode_survives_a_generator(self) -> None:
         """Selection modes are read after the iterable has been consumed."""
