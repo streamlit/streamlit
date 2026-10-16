@@ -101,7 +101,7 @@ class MarkdownMixin:
                 "markdown",
                 body=body,
                 help=help,
-                unsafe_allow_html=unsafe_allow_html,
+                unsafe_allow_html=unsafe_allow_html or None,
             ),
         )
 
@@ -424,7 +424,7 @@ class MarkdownMixin:
                 "caption",
                 body=body,
                 help=help,
-                unsafe_allow_html=unsafe_allow_html,
+                unsafe_allow_html=unsafe_allow_html or None,
             ),
         )
 

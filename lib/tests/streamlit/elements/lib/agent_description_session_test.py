@@ -89,9 +89,21 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert decoded == [
             {
                 "type": "markdown",
-                "props": {"body": "hello", "help": "more", "unsafe_allow_html": False},
+                "props": {"body": "hello", "help": "more"},
             }
         ]
+
+    def test_markdown_reports_unsafe_html_only_when_enabled(self) -> None:
+        """``unsafe_allow_html`` is an opt-in. The default stays out of the description."""
+        self._record()
+        st.markdown("<b>hello</b>", unsafe_allow_html=True)
+        st.caption("plain")
+
+        descriptions = _descriptions(list(self.forward_msg_queue._queue))
+        markdown = next(item for item in descriptions if item["type"] == "markdown")
+        caption = next(item for item in descriptions if item["type"] == "caption")
+        assert markdown["props"]["unsafe_allow_html"] is True
+        assert "unsafe_allow_html" not in caption["props"]
 
     def test_radio_series_captions_do_not_raise(self) -> None:
         """Captions may be a pandas Series, which has no truth value."""
