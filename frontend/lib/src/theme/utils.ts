@@ -246,6 +246,47 @@ const parseColor = (
 }
 
 /**
+ * Normalize a color for hex equality checks. Accepts hashless hex the same way
+ * `parseColor` does. Returns undefined for invalid colors instead of throwing.
+ */
+const toComparableHex = (color: string): string | undefined => {
+  const normalized = isColor(color)
+    ? color
+    : isColor(`#${color}`)
+      ? `#${color}`
+      : undefined
+  if (normalized === undefined) {
+    return undefined
+  }
+  try {
+    return toHex(normalized)
+  } catch {
+    return undefined
+  }
+}
+
+const colorsMatchAsHex = (a: string, b: string): boolean => {
+  const aHex = toComparableHex(a)
+  const bHex = toComparableHex(b)
+  return aHex !== undefined && bHex !== undefined && aHex === bHex
+}
+
+/**
+ * First non-blank color that parses (hashless hex allowed). Blank or invalid
+ * values are treated as unset so they cannot suppress stock chrome fallbacks.
+ */
+const firstConfiguredColor = (
+  ...colors: Array<string | null | undefined>
+): string | undefined => {
+  for (const color of colors) {
+    if (color && toComparableHex(color) !== undefined) {
+      return color
+    }
+  }
+  return undefined
+}
+
+/**
  * Helper function for theme background colors
  * If the background color is configured, use it.
  * If the main color is configured, derive background color from it.
@@ -894,13 +935,11 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  // Code background should use the codeBackgroundColor config if provided,
-  // otherwise use the derived bgMix (configured/derived or default) above
+  // Unset: use the theme's default code background from createEmotionColors.
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
-  // Dataframe header background should use the config if provided,
-  // otherwise use the derived bgMix (configured/derived or default) above
+  // Unset: use the theme's default dataframe header background.
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
@@ -918,16 +957,20 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // Set the fallback here for dataframe & table border color
-    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    // An unset dataframeBorderColor follows borderColor.
+    conditionalOverrides.colors.dataframeBorderColor = borderColor
   }
 
   if (notNullOrUndefined(dataframeBorderColor)) {
-    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    // If dataframeBorderColor explicitly set, override borderColor fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder) {
+  if (showWidgetBorder === false) {
+    // Explicit off clears stock widgetBorderColor inherited from the base theme.
+    delete conditionalOverrides.colors.widgetBorderColor
+  } else {
+    // Unset or true: paint widget borders with the resolved borderColor.
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
   }
@@ -949,10 +992,10 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.link =
     linkColor ?? conditionalOverrides.colors.blueTextColor
 
-  // Code text color should use the codeTextColor config if provided, otherwise
-  // use the greenTextColor (configured/derived or default) handled above
+  // Unset: keep the theme's default code text color (matches body text on the
+  // built-in themes).
   conditionalOverrides.colors.codeTextColor =
-    codeTextColor ?? conditionalOverrides.colors.greenTextColor
+    codeTextColor ?? conditionalOverrides.colors.codeTextColor
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&
@@ -1710,13 +1753,34 @@ const stockMainSurfaces = {
 export const stockSidebarSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     backgroundColor: "#F8F8F7",
-    // Distinct from the sidebar background so widgets stay visible while
-    // showWidgetBorder is off.
+    // Distinct from the sidebar background so widget fills stay visible.
     secondaryBackgroundColor: "#F1F0EE",
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
     backgroundColor: "#21201D",
     secondaryBackgroundColor: "#2D2B27",
+  },
+} as const
+
+/**
+ * Sidebar chrome for the built-in sidebar surface pair.
+ * Applied only while the resolved sidebar surfaces still match that pair and
+ * both `[theme]` and `[theme.sidebar]` left the key unset.
+ */
+export const stockSidebarChrome = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    borderColor: "#D7D3CF",
+    dataframeBorderColor: "#E5E2DF",
+    dataframeHeaderBackgroundColor: "#F3F3F2",
+    codeBackgroundColor: "#F1F1F0",
+    codeTextColor: "#2F2D2B",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    borderColor: "#4A4742",
+    dataframeBorderColor: "#3F3D39",
+    dataframeHeaderBackgroundColor: "#2A2825",
+    codeBackgroundColor: "#1A1917",
+    codeTextColor: "#EDEBE8",
   },
 } as const
 
@@ -1746,6 +1810,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
   const mainThemeBase = getActiveThemeBase(activeTheme)
   const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
+  const stockChrome = stockSidebarChrome[mainThemeBase]
 
   // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
   // (sidebar bg = main secondary, sidebar secondary = main bg).
@@ -1783,6 +1848,60 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
+  // Eligible when the resolved sidebar surfaces match the built-in pair (a
+  // customized dark sidebar keeps luminance-matched base chrome). Each key is
+  // still applied only when both the sidebar section and the inherited main
+  // value left it blank or invalid.
+  const canUseStockSidebarChrome =
+    colorsMatchAsHex(sidebarBackground, stockSurfaces.backgroundColor) &&
+    colorsMatchAsHex(
+      secondaryBackgroundColor,
+      stockSurfaces.secondaryBackgroundColor
+    )
+
+  const stockChromeFallbacks: {
+    borderColor?: string
+    dataframeBorderColor?: string
+    dataframeHeaderBackgroundColor?: string
+    codeBackgroundColor?: string
+    codeTextColor?: string
+  } = {}
+  if (canUseStockSidebarChrome) {
+    const mainThemeInput = activeTheme.themeInput
+    const resolvedBorder = firstConfiguredColor(
+      sidebarThemeInput?.borderColor,
+      mainThemeInput?.borderColor
+    )
+
+    if (!resolvedBorder) {
+      stockChromeFallbacks.borderColor = stockChrome.borderColor
+    }
+
+    // Keep a distinct stock dataframe hex only when both sides leave
+    // dataframeBorderColor and borderColor unset. Otherwise omit so
+    // createEmotionTheme can follow the resolved borderColor.
+    const resolvedDataframeBorder = firstConfiguredColor(
+      sidebarThemeInput?.dataframeBorderColor,
+      mainThemeInput?.dataframeBorderColor
+    )
+    if (!resolvedDataframeBorder && !resolvedBorder) {
+      stockChromeFallbacks.dataframeBorderColor =
+        stockChrome.dataframeBorderColor
+    }
+
+    for (const key of [
+      "dataframeHeaderBackgroundColor",
+      "codeBackgroundColor",
+      "codeTextColor",
+    ] as const) {
+      if (
+        !firstConfiguredColor(sidebarThemeInput?.[key], mainThemeInput?.[key])
+      ) {
+        stockChromeFallbacks[key] = stockChrome[key]
+      }
+    }
+  }
+
   // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
   const mergedSidebarThemeInput = mergeWith(
     {},
@@ -1794,6 +1913,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       backgroundColor: sidebarBackground,
       secondaryBackgroundColor: secondaryBackgroundColor,
       headingFontSizes: headingFontSizes,
+      ...stockChromeFallbacks,
     },
     skipProtobufDefaults
   )

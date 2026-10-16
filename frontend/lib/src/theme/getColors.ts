@@ -84,16 +84,12 @@ export const createEmotionColors = (
     ...genericColors,
     ...derivedColors,
 
+    // Links default to blueTextColor.
     link: genericColors.blueTextColor,
 
-    codeTextColor: genericColors.greenTextColor,
-    codeBackgroundColor: derivedColors.bgMix,
-
-    borderColor: derivedColors.fadedText10,
-    borderColorLight: derivedColors.fadedText05,
-
-    dataframeBorderColor: derivedColors.fadedText05,
-    dataframeHeaderBackgroundColor: derivedColors.bgMix,
+    // Default chrome colors (code, border, dataframe) come from themeColors.ts
+    // via the genericColors spread above.
+    borderColorLight: transparentize(genericColors.borderColor, 0.55),
     dataframeHeaderTextColor: derivedColors.fadedText60,
 
     headingColor: genericColors.bodyText,

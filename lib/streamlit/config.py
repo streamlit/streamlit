@@ -2097,7 +2097,9 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        This defaults to the resolved value of `greenTextColor`.
+        If this isn't set, Streamlit uses the built-in code text color.
+        On the built-in light and dark themes, that color is the same as
+        body text. Setting `textColor` does not change code text.
     """,
 )
 
@@ -2113,6 +2115,10 @@ _create_theme_options(
     ],
     description="""
         Background color used for code blocks.
+
+        If this isn't set, Streamlit uses the theme's default code
+        background. Customizing only `backgroundColor` or
+        `secondaryBackgroundColor` does not change that default.
     """,
 )
 
@@ -2569,7 +2575,9 @@ _create_theme_options(
     description="""
         The color of the border around dataframes and tables.
 
-        If this isn't set, Streamlit uses `theme.borderColor` instead.
+        If this isn't set and `theme.borderColor` is set, Streamlit uses
+        `theme.borderColor`. If neither is set, Streamlit uses the theme's
+        default dataframe border color.
     """,
 )
 
@@ -2589,8 +2597,9 @@ _create_theme_options(
         This color applies to all non-interior cells of the dataframe. This
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
-        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
-        `theme.secondaryBackgroundColor`.
+        isn't set, Streamlit uses the theme's default dataframe header
+        background. Customizing only `backgroundColor` or
+        `secondaryBackgroundColor` does not change that default.
     """,
 )
 
@@ -2629,6 +2638,9 @@ _create_theme_options(
     ],
     description="""
         Whether to show a border around input widgets.
+
+        If this is unset or `true`, Streamlit draws widget borders using
+        `borderColor`. Set it to `false` to hide them.
     """,
     type_=bool,
 )
@@ -2639,6 +2651,9 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        If this is unset or true, Streamlit shows the separator. Set it to
+        false to hide it.
     """,
     type_=bool,
 )
