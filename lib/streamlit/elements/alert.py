@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -30,6 +31,24 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.type_util import SupportsStr
+
+
+def _alert_agent_props(
+    command: str, body: str, icon: str, title: SupportsStr | None
+) -> str | None:
+    """Describe an alert for the agent API.
+
+    st.error, st.warning, st.info, and st.success differ only in the format
+    they set, so each passes its own command name. `body` and `icon` are the
+    processed values, because an icon extracted from a leading emoji in `body`
+    is part of what the user sees.
+    """
+    return agent_spec.element(
+        command,
+        body=body,
+        icon=icon or None,
+        title=None if title is None else str(title),
+    )
 
 
 def _process_alert_body_and_icon(
@@ -164,7 +183,13 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue(
+            "alert",
+            alert_proto,
+            agent_props=_alert_agent_props(
+                "error", processed_body, processed_icon, title
+            ),
+        )
 
     @gather_metrics("warning")
     def warning(
@@ -259,6 +284,9 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.WARNING
+        agent_props = _alert_agent_props(
+            "warning", processed_body, processed_icon, title
+        )
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -273,7 +301,7 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
 
     @gather_metrics("info")
     def info(
@@ -369,6 +397,7 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.INFO
+        agent_props = _alert_agent_props("info", processed_body, processed_icon, title)
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -383,7 +412,7 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
 
     @gather_metrics("success")
     def success(
@@ -478,6 +507,9 @@ class AlertMixin:
         alert_proto.body = processed_body
         alert_proto.icon = processed_icon
         alert_proto.format = AlertProto.SUCCESS
+        agent_props = _alert_agent_props(
+            "success", processed_body, processed_icon, title
+        )
         if title is not None:
             alert_proto.title = clean_text(title)
 
@@ -492,7 +524,7 @@ class AlertMixin:
 
         alert_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._enqueue("alert", alert_proto)
+        return self.dg._enqueue("alert", alert_proto, agent_props=agent_props)
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.image_utils import (
     Channels,
     ImageFormatOrAuto,
@@ -247,9 +248,58 @@ class ImageMixin:
                 )
             image_list_proto.link = link
 
-        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
+        imgs = image_list_proto.imgs
+        return self.dg._enqueue(
+            "imgs",
+            image_list_proto,
+            layout_config=layout_config,
+            # st.image and st.pyplot both emit ImageList, and nothing in the
+            # payload says which one ran.
+            agent_props=_describe_images(image, imgs, link)
+            if agent_spec.is_recording()
+            else None,
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _describe_images(image: Any, imgs: Sequence[Any], link: str | None) -> str | None:
+    """Describe an `st.image` call for the agent API.
+
+    Reported the way the author passed the images: one image as single values,
+    several as parallel lists. None marks an image without a caption or alt
+    text; `""` alt text is kept, because it marks an image as decorative, which
+    is not the same as unlabeled.
+    """
+    several = _is_image_list(image)
+    return agent_spec.element(
+        "image",
+        caption=_as_authored([img.caption or None for img in imgs], several),
+        url=_as_authored([img.url for img in imgs], several),
+        alt=_as_authored(
+            [img.alt if img.HasField("alt") else None for img in imgs], several
+        ),
+        link=link,
+    )
+
+
+def _is_image_list(image: Any) -> bool:
+    """Whether ``image`` holds several images, by the rule `marshall_images` uses."""
+    if isinstance(image, (list, set, tuple)):
+        return True
+    import numpy as np
+
+    return isinstance(image, np.ndarray) and len(image.shape) == 4
+
+
+def _as_authored(values: list[Any], several: bool) -> Any:
+    """Every image's value as a list, or one image's value alone.
+
+    A list that would only hold None is left out, as an unset parameter is.
+    """
+    if several:
+        return values if any(value is not None for value in values) else None
+    return values[0] if values else None
