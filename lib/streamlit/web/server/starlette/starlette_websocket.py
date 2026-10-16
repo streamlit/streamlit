@@ -145,6 +145,22 @@ def _is_host_allowed(host: str | None) -> bool:
     return False
 
 
+def _is_same_origin(origin: str, host: str | None) -> bool:
+    """Check whether the Origin header names the same host and port as the request.
+
+    The comparison includes the port, so an origin on a different port is
+    cross-origin. It leaves out the scheme on purpose. A proxy that terminates
+    TLS sends the backend an http request for an https origin, so a scheme
+    comparison would call every such deployment cross-origin.
+
+    The comparison does not normalize a default port, because ``urlparse``
+    leaves it out of ``netloc``. An ``https://app.example.com`` origin against
+    an ``app.example.com:443`` host reads as cross-origin, which requires the
+    token rather than skipping it.
+    """
+    return urlparse(origin).netloc == host
+
+
 def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """Check if the WebSocket Origin header is allowed.
 
@@ -177,12 +193,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     if origin is None:
         return True
 
-    # Check same-origin: compare origin host with request host
-    parsed_origin = urlparse(origin)
-    origin_host = parsed_origin.netloc
-
-    # If origin host matches request host, it's same-origin
-    if origin_host == host:
+    if _is_same_origin(origin, host):
         return True
 
     # Delegate to the standard allowed origins check
@@ -411,6 +422,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     bidirectional communication between the browser and the Streamlit runtime.
     The handler performs:
     - Origin validation (CORS/XSRF protection)
+    - XSRF admission control for cross-origin handshakes
     - Subprotocol negotiation
     - Session management (connect/disconnect)
     - User authentication via cookies and trusted headers
@@ -447,6 +459,36 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         subprotocol, xsrf_token, existing_session_id = _parse_subprotocols(
             websocket.headers
         )
+
+        # A cross-origin handshake must send a matching double-submit XSRF
+        # token. The HTTP upload and delete routes apply the same check.
+        # A same-origin handshake skips it. Browsers set Origin and scripts
+        # cannot forge it, so a same-origin handshake comes from the app's own
+        # page, where JavaScript can read the XSRF cookie anyway. A cross-origin
+        # page cannot read that cookie, which is what makes the token an
+        # effective control there.
+        # The gate cannot cover a same-origin handshake, because an embed puts
+        # its host auth token in the entry that carries the XSRF token. Issue
+        # 16477 tracks that shared slot.
+        xsrf_valid = False
+        if is_xsrf_enabled() and origin:
+            xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
+            xsrf_valid = starlette_app_utils.validate_xsrf_token(
+                xsrf_token, xsrf_cookie
+            )
+            if not xsrf_valid and not _is_same_origin(origin, host):
+                _LOGGER.warning(
+                    "Rejecting cross-origin WebSocket connection with a missing "
+                    "or invalid XSRF token: origin=%s, host=%s, token_present=%s, "
+                    "cookie_present=%s",
+                    origin,
+                    host,
+                    bool(xsrf_token),
+                    bool(xsrf_cookie),
+                )
+                await websocket.close(code=1008)  # 1008 = Policy Violation
+                return
+
         await websocket.accept(subprotocol=subprotocol)
 
         client = StarletteSessionClient(websocket)
@@ -454,52 +496,44 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
         try:
             user_info: dict[str, Any] = {}
-            if is_xsrf_enabled():
-                xsrf_cookie = websocket.cookies.get(XSRF_COOKIE_NAME)
-                origin_header = websocket.headers.get("Origin")
+            # Read the signed user cookie only when the admission check above
+            # validated the XSRF token. A same-origin handshake without a valid
+            # token connects but stays anonymous.
+            if origin and xsrf_valid:
+                # Read expose_tokens lazily on connect (rather than once at
+                # handler creation) so programmatic secrets from
+                # ``st.App(secrets=...)``, which are merged during the ASGI
+                # lifespan after routes are built, are honored. Resolve it
+                # outside the defensive cookie-parsing block below so an
+                # invalid ``expose_tokens`` config surfaces as a clear error
+                # instead of being silently swallowed as a cookie-parsing
+                # failure.
+                expose_tokens = get_expose_tokens_config()
 
-                # Validate XSRF token before parsing auth cookie:
-                if origin_header and starlette_app_utils.validate_xsrf_token(
-                    xsrf_token, xsrf_cookie
-                ):
-                    # Read expose_tokens lazily on connect (rather than once at
-                    # handler creation) so programmatic secrets from
-                    # ``st.App(secrets=...)``, which are merged during the ASGI
-                    # lifespan after routes are built, are honored. Resolve it
-                    # outside the defensive cookie-parsing block below so an
-                    # invalid ``expose_tokens`` config surfaces as a clear error
-                    # instead of being silently swallowed as a cookie-parsing
-                    # failure.
-                    expose_tokens = get_expose_tokens_config()
-
-                    try:
-                        raw_auth_cookie = _get_signed_cookie_with_chunks(
-                            websocket.cookies, USER_COOKIE_NAME
+                try:
+                    raw_auth_cookie = _get_signed_cookie_with_chunks(
+                        websocket.cookies, USER_COOKIE_NAME
+                    )
+                    if raw_auth_cookie:
+                        user_info.update(
+                            _parse_decoded_user_cookie(raw_auth_cookie, origin)
                         )
-                        if raw_auth_cookie:
-                            user_info.update(
-                                _parse_decoded_user_cookie(
-                                    raw_auth_cookie, origin_header
-                                )
-                            )
 
-                            raw_token_cookie = _get_signed_cookie_with_chunks(
-                                websocket.cookies, TOKENS_COOKIE_NAME
-                            )
-                            if raw_token_cookie:
-                                all_tokens = json.loads(raw_token_cookie)
+                        raw_token_cookie = _get_signed_cookie_with_chunks(
+                            websocket.cookies, TOKENS_COOKIE_NAME
+                        )
+                        if raw_token_cookie:
+                            all_tokens = json.loads(raw_token_cookie)
 
-                                filtered_tokens: dict[str, str] = {}
-                                for token_type in expose_tokens:
-                                    token_key = f"{token_type}_token"
-                                    if token_key in all_tokens:
-                                        filtered_tokens[token_type] = all_tokens[
-                                            token_key
-                                        ]
+                            filtered_tokens: dict[str, str] = {}
+                            for token_type in expose_tokens:
+                                token_key = f"{token_type}_token"
+                                if token_key in all_tokens:
+                                    filtered_tokens[token_type] = all_tokens[token_key]
 
-                                user_info["tokens"] = filtered_tokens
-                    except Exception:  # pragma: no cover - defensive
-                        _LOGGER.exception("Error parsing auth cookie for websocket")
+                            user_info["tokens"] = filtered_tokens
+                except Exception:  # pragma: no cover - defensive
+                    _LOGGER.exception("Error parsing auth cookie for websocket")
 
             # Map in any user-configured headers. Note that these override anything
             # coming from the auth cookie.

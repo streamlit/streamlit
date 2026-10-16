@@ -188,6 +188,32 @@ Browser connects -> Runtime.connect_session()
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
 
+The handshake applies two gates before `accept()`, then it binds identity:
+
+- **Origin check** (`_is_origin_allowed`): the handler rejects a handshake when
+  `server.allowedHosts` does not list the `Host` header, or when the `Origin` header is neither
+  same-origin nor allowed by `is_url_from_allowed_origins`. That helper accepts localhost, the
+  machine IP addresses, and `server.corsAllowedOrigins`. When `server.enableCORS=false`, it accepts
+  every origin. Both config lists are empty by default.
+- **XSRF admission**: a cross-origin handshake must send a matching double-submit XSRF token, or
+  the handler closes the socket with code `1008` before `accept()` and before `connect_session()`.
+  This gate runs when XSRF protection is on, which `is_xsrf_enabled()` decides: either
+  `server.enableXsrfProtection` is on, which is the default, or an `[auth]` section exists in
+  secrets. That second path turns the gate on even when the config option is `false`. A same-origin
+  handshake and a handshake without an `Origin` header skip the token check. Browsers set `Origin`
+  and scripts cannot forge it, so same-origin means the app's own page opened the socket, and
+  JavaScript can read the XSRF cookie there anyway. This gate still limits cross-origin handshakes
+  when an operator sets `server.enableCORS=false`.
+- **Identity**: the handler reads the signed user cookie into `user_info` only when the XSRF token
+  validates. A handshake that connects without a valid token stays anonymous. So does every
+  handshake when XSRF protection is off. `server.trustedUserHeaders` still applies in
+  both cases, and it overrides the cookie.
+
+HTTP routes carry the token in the `X-Xsrftoken` header. The handshake carries it in the second
+`Sec-WebSocket-Protocol` entry, because browsers cannot set arbitrary WebSocket headers. The
+frontend puts either a host auth token or the XSRF token in that one entry, so an embed that uses
+`useExternalAuthToken` cannot send both. See `frontend.md` for the effect on `st.user`.
+
 ## Key abstractions
 
 | Interface | Purpose | Default Implementation |
