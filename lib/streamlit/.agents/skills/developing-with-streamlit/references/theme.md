@@ -57,7 +57,13 @@ Do not put these under light/dark/sidebar: `base`, `fontFaces` (`[[theme.fontFac
 
 ### Options allowed in all six sections
 
-All other theme keys may be set in any of the six sections: colors and semantic `*Color` / `*BackgroundColor` / `*TextColor`; dataframe chrome and chart palettes; fonts (`font`, `headingFont`, `headingFontSizes`, `headingFontWeights`, `codeFont*`, `linkUnderline`); radii and `showWidgetBorder`; `paddingTop` / `paddingBottom`.
+All other theme keys may be set in any of the six sections:
+
+- Colors and semantic `*Color` / `*BackgroundColor` / `*TextColor`
+- Dataframe chrome and chart palettes
+- Fonts (`font`, `headingFont`, `headingFontSizes`, `headingFontWeights`, `codeFont*`, `linkUnderline`)
+- Radii and `showWidgetBorder`
+- `paddingTop` / `paddingBottom`
 
 ## How theme config is applied
 
@@ -160,7 +166,7 @@ A shared file may use all valid theme sections. App config, environment variable
 
 ## Options agents often miss
 
-Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`): semantic `*Color` / `*BackgroundColor` / `*TextColor`; `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors)); `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`; `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`; Google Fonts URL syntax with `[[theme.fontFaces]]` and `[server] enableStaticServing = true`; `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`; a shared `theme.base` file/URL; dual light/dark sections and sidebars when those shapes fit; `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS).
+Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`): semantic `*Color` / `*BackgroundColor` / `*TextColor`; `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors)); `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`; `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`; Google Fonts URL syntax in `font`; self-hosted `[[theme.fontFaces]]` with `[server] enableStaticServing = true`; `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`; a shared `theme.base` file/URL for multi-app brand inheritance; dual light/dark sections and sidebars when those shapes fit; `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS).
 
 ## Color configuration
 
