@@ -839,6 +839,7 @@ class PlotlyMixin:
                     support="read_only",
                     theme=theme,
                     selection_mode=reported_selection_mode,
+                    on_select="ignore" if on_select == "ignore" else "rerun",
                     alt=plotly_chart_proto.alt or None,
                 ),
             )
@@ -853,6 +854,7 @@ class PlotlyMixin:
                 "plotly_chart",
                 key=key,
                 theme=theme,
+                on_select="ignore" if on_select == "ignore" else "rerun",
                 alt=plotly_chart_proto.alt or None,
             ),
         )

@@ -1300,6 +1300,7 @@ class ArrowMixin:
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 selection_mode=sorted(selection_mode_set) or None,
+                on_select="ignore" if on_select == "ignore" else "rerun",
                 # The text shown for missing values, which the preview reports
                 # as null.
                 placeholder=placeholder,

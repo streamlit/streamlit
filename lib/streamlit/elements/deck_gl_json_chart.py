@@ -680,6 +680,7 @@ class PydeckMixin:
                     key=pydeck_proto.id,
                     support="read_only",
                     selection_mode=selection_mode,
+                    on_select="ignore" if on_select == "ignore" else "rerun",
                     alt=pydeck_proto.alt or None,
                 ),
             )
@@ -691,7 +692,10 @@ class PydeckMixin:
             pydeck_proto,
             layout_config=layout_config,
             agent_props=agent_spec.element(
-                "pydeck_chart", key=key, alt=pydeck_proto.alt or None
+                "pydeck_chart",
+                key=key,
+                on_select="ignore" if on_select == "ignore" else "rerun",
+                alt=pydeck_proto.alt or None,
             ),
         )
 

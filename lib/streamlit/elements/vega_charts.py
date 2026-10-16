@@ -2812,6 +2812,7 @@ class VegaChartsMixin:
                     encoding=agent_encoding,
                     theme=theme,
                     selection_mode=list(vega_lite_proto.selection_mode),
+                    on_select=on_select,
                 ),
             )
             return widget_state.value
@@ -2829,6 +2830,7 @@ class VegaChartsMixin:
                 encoding=agent_encoding,
                 theme=theme,
                 key=key,
+                on_select=on_select,
             ),
         )
 
@@ -2841,6 +2843,7 @@ class VegaChartsMixin:
         theme: str | None,
         selection_mode: list[str] | None = None,
         key: str | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback | None = None,
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
@@ -2856,6 +2859,9 @@ class VegaChartsMixin:
             if encoding is not None
             else {"theme": theme, "selection_mode": selection_mode or None}
         )
+        if command in {"altair_chart", "vega_lite_chart"}:
+            # A callback reaches the server, so it is the same mode as "rerun".
+            own_arguments["on_select"] = "ignore" if on_select == "ignore" else "rerun"
         return agent_spec.element(
             command,
             # A chart without selections has no element ID, only the author's key.

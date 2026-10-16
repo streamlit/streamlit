@@ -86,11 +86,10 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
     "key": _IDENTITY,
     "args": _CALLBACK,
     "kwargs": _CALLBACK,
-    "on_change": _CALLBACK,
+    # A click or submit already reaches the server, so this is not a mode.
+    # Buttons that accept on_click="ignore" still report that mode.
     "on_click": _CALLBACK,
     "on_submit": _CALLBACK,
-    "on_select": _CALLBACK,
-    "on_dismiss": _CALLBACK,
     "format_func": _FORMATTER,
     "default": _STARTING_VALUE,
     "index": _STARTING_VALUE,

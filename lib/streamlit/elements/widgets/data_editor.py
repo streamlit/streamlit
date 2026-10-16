@@ -1566,6 +1566,7 @@ class DataEditorMixin:
                 # True only when every column is locked. A column list is
                 # already applied to column_config, and the default is omitted.
                 disabled=True if disabled is True else None,
+                on_change="ignore" if on_change == "ignore" else "rerun",
                 # The text shown for missing values, which the preview reports
                 # as null.
                 placeholder=placeholder,
