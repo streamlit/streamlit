@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useMemo } from "react"
+import {
+  forwardRef,
+  type HTMLAttributes,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react"
 
 import Overflow from "rc-overflow"
 
@@ -44,6 +50,28 @@ export interface Props {
 
 /** A top-nav overflow item: one page, or a section (array of pages). */
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
+
+/**
+ * Set `inert` on collapsed rc-overflow hosts so Tab skips their links.
+ *
+ * rc-overflow keeps those items mounted with `aria-hidden`, which leaves
+ * their links in the native tab order. Same approach as collapsed expanders.
+ *
+ * Pass `inert=""` rather than `true`: React 18 drops an unknown boolean prop.
+ */
+export const TopNavOverflowItem = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(function TopNavOverflowItem({ children, ...props }, ref) {
+  const isHidden =
+    props["aria-hidden"] === true || props["aria-hidden"] === "true"
+
+  return (
+    <div ref={ref} {...props} {...(isHidden ? { inert: "" } : {})}>
+      {children}
+    </div>
+  )
+})
 
 /**
  * Responsive top navigation, rendered as the "App pages" `<nav>` landmark.
@@ -170,6 +198,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   return (
     <Overflow<OverflowNavItem>
       component={StyledOverflowContainer}
+      itemComponent={TopNavOverflowItem}
       aria-label="App pages"
       data-testid="stTopNav"
       itemKey={itemKey}
