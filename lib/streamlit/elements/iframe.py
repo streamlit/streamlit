@@ -466,7 +466,7 @@ class IframeMixin:
             # where what renders can differ from what is reported.
             agent_props=agent_spec.element(
                 "iframe",
-                support="browser_required" if iframe_proto.srcdoc else None,
+                support="browser_required" if uses_srcdoc else None,
                 src=iframe_proto.src or iframe_proto.srcdoc or None,
                 alt=iframe_proto.alt or None,
             ),

@@ -213,7 +213,9 @@ class GraphvizMixin:
             agent_props=agent_spec.element(
                 "graphviz_chart",
                 # As DOT source, whether the author passed DOT or a graph object.
-                figure_or_dot=graphviz_chart_proto.spec,
+                figure_or_dot=(
+                    graphviz_chart_proto.spec if agent_spec.is_recording() else None
+                ),
                 engine=graphviz_chart_proto.engine or None,
                 alt=graphviz_chart_proto.alt or None,
             ),

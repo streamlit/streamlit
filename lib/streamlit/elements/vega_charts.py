@@ -785,7 +785,7 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
-def _builtin_chart_encoding(**arguments: Any) -> dict[str, Any]:
+def _builtin_chart_encoding(data: Any, **arguments: Any) -> dict[str, Any]:
     """The arguments a built-in chart was given that say what it plots.
 
     All six Vega commands emit the same proto with no field saying which one
@@ -794,13 +794,42 @@ def _builtin_chart_encoding(**arguments: Any) -> dict[str, Any]:
     the chart combines them, are only knowable at the command, which passes
     exactly the parameters it has.
 
-    `color` and `size` are reported only when they name a column; a literal
-    color or pixel size carries no meaning for a non-visual client.
+    `color` and `size` are reported only when they name a column. A literal
+    color or pixel size carries no meaning for a non-visual client. The same
+    column-versus-literal check the chart uses decides which is which.
     """
+    columns = getattr(data, "columns", None)
     return {
-        name: value if name not in {"color", "size"} or isinstance(value, str) else None
+        name: _encoding_argument(name, value, columns)
         for name, value in arguments.items()
     }
+
+
+def _encoding_argument(name: str, value: Any, columns: Any) -> Any:
+    """Keep a color or size only when it names a column."""
+    if name not in {"color", "size"}:
+        return value
+    if not isinstance(value, str):
+        return None
+    if columns is not None:
+        try:
+            return value if value in columns else None
+        except TypeError:
+            return None
+    # No column index to consult. A color literal is still not a column.
+    if name == "color" and _is_color_literal(value):
+        return None
+    return value
+
+
+def _is_color_literal(value: str) -> bool:
+    """True for a hex color or a built-in color name, which are not columns."""
+    from streamlit.elements.lib.color_util import (
+        is_builtin_color_name,
+        is_color_like,
+    )
+
+    return is_color_like(value) or is_builtin_color_name(value)
 
 
 class VegaChartsMixin:
@@ -1072,6 +1101,7 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="line_chart",
                 agent_encoding=_builtin_chart_encoding(
+                    data,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1392,6 +1422,7 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="area_chart",
                 agent_encoding=_builtin_chart_encoding(
+                    data,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -1755,6 +1786,7 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="bar_chart",
                 agent_encoding=_builtin_chart_encoding(
+                    data,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -2037,6 +2069,7 @@ class VegaChartsMixin:
                 height=height,
                 agent_command="scatter_chart",
                 agent_encoding=_builtin_chart_encoding(
+                    data,
                     x=x,
                     y=y,
                     x_label=x_label,
@@ -2810,7 +2843,6 @@ class VegaChartsMixin:
                     vega_lite_proto,
                     command=agent_command,
                     encoding=agent_encoding,
-                    theme=theme,
                     selection_mode=list(vega_lite_proto.selection_mode),
                     on_select=on_select,
                 ),
@@ -2828,7 +2860,6 @@ class VegaChartsMixin:
                 vega_lite_proto,
                 command=agent_command,
                 encoding=agent_encoding,
-                theme=theme,
                 key=key,
                 on_select=on_select,
             ),
@@ -2840,7 +2871,6 @@ class VegaChartsMixin:
         *,
         command: str,
         encoding: dict[str, Any] | None,
-        theme: str | None,
         selection_mode: list[str] | None = None,
         key: str | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback | None = None,
@@ -2853,12 +2883,12 @@ class VegaChartsMixin:
         """
         if not agent_spec.is_recording():
             return None
-        # A built-in chart has neither a `theme` nor a selection parameter, so
-        # it reports its own arguments only.
-        own_arguments = (
+        # A built-in chart has no selection parameter, so it reports its own
+        # arguments only. `theme` is surface styling and is left out.
+        own_arguments: dict[str, Any] = (
             encoding
             if encoding is not None
-            else {"theme": theme, "selection_mode": selection_mode or None}
+            else {"selection_mode": selection_mode or None}
         )
         if command in {"altair_chart", "vega_lite_chart"}:
             # A callback reaches the server, so it is the same mode as "rerun".

@@ -150,7 +150,7 @@ class CodeMixin:
             layout_config=layout_config,
             agent_props=agent_spec.element(
                 "code",
-                body=code_proto.code_text,
+                body=code_proto.code_text if agent_spec.is_recording() else None,
                 language=code_proto.language,
                 line_numbers=line_numbers,
                 wrap_lines=wrap_lines,

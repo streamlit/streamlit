@@ -962,7 +962,9 @@ class TextWidgetsMixin:
                     else validate_regex
                 )
                 or None,
-                autocomplete=autocomplete or None,
+                # The resolved value, including the default `type` implies and
+                # an explicit empty string.
+                autocomplete=text_input_proto.autocomplete,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),

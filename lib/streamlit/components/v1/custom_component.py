@@ -230,23 +230,23 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
         # arguments stay omitted until table payloads land. The arguments are
         # nested because their names are the component's own, not Streamlit's.
         # An empty argument set is omitted, the same way an unset parameter is.
-        component_args = {
-            name: value
-            for name, value in json_args.items()
-            if name not in {"key", "default"}
-        }
-        component_default = json_args.get("default")
-        for special in special_args:
-            if special.WhichOneof("value") != "bytes":
-                continue
-            if special.key == "default":
-                component_default = special.bytes
-            elif special.key != "key":
-                component_args[special.key] = special.bytes
-        dg._enqueue(
-            "component_instance",
-            element.component_instance,
-            agent_props=agent_spec.element(
+        # Built only while recording: a browser session would throw the work away.
+        agent_props = None
+        if agent_spec.is_recording():
+            component_args = {
+                name: value
+                for name, value in json_args.items()
+                if name not in {"key", "default"}
+            }
+            component_default = json_args.get("default")
+            for special in special_args:
+                if special.WhichOneof("value") != "bytes":
+                    continue
+                if special.key == "default":
+                    component_default = special.bytes
+                elif special.key != "key":
+                    component_args[special.key] = special.bytes
+            agent_props = agent_spec.element(
                 "components.v1.declare_component",
                 key=element.component_instance.id or None,
                 support="browser_required",
@@ -255,7 +255,11 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
                 default=agent_spec.Content(component_default)
                 if component_default is not None
                 else None,
-            ),
+            )
+        dg._enqueue(
+            "component_instance",
+            element.component_instance,
+            agent_props=agent_props,
         )
         return return_value
 

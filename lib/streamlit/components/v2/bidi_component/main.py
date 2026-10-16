@@ -76,6 +76,22 @@ if TYPE_CHECKING:
     from streamlit.runtime.state.common import WidgetCallback
 
 
+def _described_bidi_data(proto: BidiComponentProto) -> Any:
+    """The agent-facing payload, or None when it is an Arrow blob.
+
+    JSON and the JSON half of mixed data are reported. Bytes are their length.
+    Arrow tables stay omitted until table payloads land.
+    """
+    kind = proto.WhichOneof("data")
+    if kind == "json" and proto.json:
+        return agent_spec.Content(json.loads(proto.json))
+    if kind == "bytes":
+        return {"bytes": len(proto.bytes)}
+    if kind == "mixed" and proto.mixed.json:
+        return agent_spec.Content(json.loads(proto.mixed.json))
+    return None
+
+
 def _make_trigger_id(base: str, event: str) -> str:
     """Construct the per-event *trigger widget* identifier.
 
@@ -538,9 +554,7 @@ class BidiComponentMixin:
                 key=bidi_component_proto.id or None,
                 support="browser_required",
                 component_name=bidi_component_proto.component_name or None,
-                data=agent_spec.Content(json.loads(bidi_component_proto.json))
-                if bidi_component_proto.json
-                else None,
+                data=_described_bidi_data(bidi_component_proto),
             )
             if agent_spec.is_recording()
             else None,

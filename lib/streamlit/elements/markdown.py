@@ -99,7 +99,7 @@ class MarkdownMixin:
             agent_props=agent_props
             or agent_spec.element(
                 "markdown",
-                body=body,
+                body=markdown_proto.body,
                 help=markdown_proto.help or None,
                 unsafe_allow_html=unsafe_allow_html,
             ),
@@ -422,7 +422,7 @@ class MarkdownMixin:
             layout_config=layout_config,
             agent_props=agent_spec.element(
                 "caption",
-                body=body,
+                body=caption_proto.body,
                 help=caption_proto.help or None,
                 unsafe_allow_html=unsafe_allow_html,
             ),
@@ -499,10 +499,10 @@ class MarkdownMixin:
             "markdown",
             latex_proto,
             layout_config=layout_config,
-            # `body` is reported as the LaTeX source the author supplied, not
-            # the `$$`-delimited form the frontend needs.
+            # `body` is the dedented LaTeX source, not the `$$`-delimited form
+            # the frontend needs.
             agent_props=agent_spec.element(
-                "latex", body=body, help=latex_proto.help or None
+                "latex", body=clean_text(body), help=latex_proto.help or None
             ),
         )
 

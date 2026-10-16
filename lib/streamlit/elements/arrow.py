@@ -1239,20 +1239,23 @@ class ArrowMixin:
             num_rows = len(data_df)
             column_names = list(data_df.columns)
 
-        if hide_index is not None:
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
-            )
-
-        elif (
-            # Hide index column if row selections are activated and the dataframe has a range index.
-            # The range index usually does not add a lot of value.
-            is_selection_activated
+        # A selectable range index is hidden even when the author left
+        # hide_index unset. The description has to report that effective value:
+        # the index entry's own hidden flag is stripped because hide_index
+        # carries it.
+        effective_hide_index = hide_index
+        if (
+            effective_hide_index is None
+            and is_selection_activated
             and has_range_index
             and selection_mode_set & _ROW_SELECTION_MODES
         ):
+            effective_hide_index = True
+        if effective_hide_index is not None:
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping,
+                INDEX_IDENTIFIER,
+                {"hidden": effective_hide_index},
             )
 
         marshall_column_config(proto, column_config_mapping)
@@ -1299,7 +1302,7 @@ class ArrowMixin:
                 else None,
                 column_config=described_column_config(column_config_mapping),
                 column_order=list(proto.column_order) or None,
-                hide_index=hide_index,
+                hide_index=effective_hide_index,
                 selection_mode=sorted(selection_mode_set) or None,
                 on_select="ignore" if on_select == "ignore" else "rerun",
                 # The text shown for missing values, which the preview reports

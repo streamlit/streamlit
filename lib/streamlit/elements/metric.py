@@ -494,8 +494,10 @@ class MetricMixin:
             agent_props=agent_spec.element(
                 "metric",
                 label=label,
-                value=value,
-                delta=delta,
+                # A missing value is the em dash the browser shows. A number
+                # stays a number; the frontend applies `format`.
+                value=metric_proto.body if value is None else value,
+                delta=metric_proto.delta if isinstance(delta, str) else delta,
                 delta_color=delta_color if delta is not None else None,
                 delta_arrow=delta_arrow if delta is not None else None,
                 delta_description=delta_description,

@@ -422,8 +422,8 @@ class TableMixin:
                 "table",
                 # `border` is surface styling; `hide_index` and `hide_header`
                 # stay because they change which data is presented.
-                hide_index=hide_index,
-                hide_header=hide_header,
+                hide_index=proto.hide_index,
+                hide_header=proto.hide_header,
                 alt=normalized_alt,
             )
             if agent_spec.is_recording()

@@ -105,6 +105,120 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert markdown["props"]["unsafe_allow_html"] is True
         assert caption["props"]["unsafe_allow_html"] is False
 
+    def test_indented_markdown_and_caption_match_the_proto(self) -> None:
+        """Body text is the dedented string the browser receives."""
+        self._record()
+        st.markdown(
+            """
+            - one
+            - two
+            """
+        )
+        st.caption(
+            """
+            note
+            """
+        )
+
+        descriptions = _descriptions(list(self.forward_msg_queue._queue))
+        markdown = next(item for item in descriptions if item["type"] == "markdown")
+        caption = next(item for item in descriptions if item["type"] == "caption")
+        assert markdown["props"]["body"] == "- one\n- two"
+        assert caption["props"]["body"] == "note"
+
+    def test_selectable_range_index_reports_hide_index(self) -> None:
+        """Row selection hides a range index, and the description says so."""
+        self._record()
+        st.dataframe(
+            pd.DataFrame({"a": [1, 2]}),
+            on_select="rerun",
+            selection_mode="single-row",
+        )
+
+        dataframe = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "dataframe"
+        )
+        assert dataframe["props"]["hide_index"] is True
+
+    def test_text_input_reports_the_resolved_autocomplete(self) -> None:
+        """Autocomplete includes the type default, an override, and empty."""
+        self._record()
+        st.text_input("Email", type="email")
+        st.text_input("Name", autocomplete="name")
+        st.text_input("Blank", autocomplete="")
+
+        inputs = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "text_input"
+        ]
+        assert [item["props"]["autocomplete"] for item in inputs] == [
+            "email",
+            "name",
+            "",
+        ]
+
+    def test_number_input_reports_the_resolved_format(self) -> None:
+        """An omitted format is the printf string the browser receives."""
+        self._record()
+        st.number_input("Int", value=1)
+        st.number_input("Float", value=1.0)
+
+        formats = [
+            item["props"]["format"]
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "number_input"
+        ]
+        assert formats == ["%d", "%0.2f"]
+
+    def test_metric_reports_missing_value_and_dedented_delta(self) -> None:
+        """A missing value is the em dash, and a string delta is dedented."""
+        self._record()
+        st.metric("Empty", None, "    up")
+
+        metric = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "metric"
+        )
+        assert metric["props"]["value"] == "—"
+        assert metric["props"]["delta"] == "up"
+
+    def test_chart_color_literal_is_not_an_encoding(self) -> None:
+        """A hex color is presentation. A column name is an encoding."""
+        self._record()
+        frame = pd.DataFrame({"a": [1], "b": [2]})
+        st.line_chart(frame, x="a", y="b", color="#ffaa00")
+        st.line_chart(frame, x="a", y="b", color="b")
+
+        charts = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "line_chart"
+        ]
+        assert "color" not in charts[0]["props"]
+        assert charts[1]["props"]["color"] == "b"
+
+    def test_plotly_selection_mode_survives_a_generator(self) -> None:
+        """Selection modes are read after the iterable has been consumed."""
+        import plotly.graph_objects as go
+
+        self._record()
+        figure = go.Figure(go.Scatter(x=[1], y=[1]))
+        st.plotly_chart(
+            figure, on_select="rerun", selection_mode=iter(["points", "box"])
+        )
+
+        chart = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "plotly_chart"
+        )
+        assert set(chart["props"]["selection_mode"]) == {"points", "box"}
+        assert "theme" not in chart["props"]
+
     def test_text_help_matches_the_dedented_proto(self) -> None:
         """Help is the dedented string the browser receives."""
         self._record()

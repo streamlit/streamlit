@@ -309,8 +309,8 @@ class MapMixin:
                 "map",
                 latitude=latitude,
                 longitude=longitude,
-                size=size if isinstance(size, str) else None,
-                color=color if isinstance(color, str) else None,
+                size=_reported_map_column(data, size),
+                color=_reported_map_column(data, color),
                 zoom=zoom,
                 alt=map_proto.alt or None,
             ),
@@ -429,6 +429,30 @@ def _get_lat_or_lon_col_name(
         )
 
     return col_name
+
+
+def _reported_map_column(data: Any, value: Any) -> str | None:
+    """A size or color argument that names a column, or None for a literal.
+
+    Matches ``_get_value_and_col_name``: a string is a column only when it is
+    one of the data's columns. A hex color or built-in color name is not.
+    """
+    if not isinstance(value, str):
+        return None
+    columns = getattr(data, "columns", None)
+    if columns is not None:
+        try:
+            return value if value in columns else None
+        except TypeError:
+            return None
+    from streamlit.elements.lib.color_util import (
+        is_builtin_color_name,
+        is_color_like,
+    )
+
+    if is_color_like(value) or is_builtin_color_name(value):
+        return None
+    return value
 
 
 def _get_value_and_col_name(

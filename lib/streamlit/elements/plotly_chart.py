@@ -92,6 +92,11 @@ FigureOrData: TypeAlias = Union[
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
 _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODE_FROM_PROTO: Final[dict[int, SelectionMode]] = {
+    PlotlyChartProto.SelectionMode.POINTS: "points",
+    PlotlyChartProto.SelectionMode.BOX: "box",
+    PlotlyChartProto.SelectionMode.LASSO: "lasso",
+}
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -825,10 +830,6 @@ class PlotlyMixin:
             )
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
-            if isinstance(selection_mode, str):
-                reported_selection_mode = [selection_mode]
-            else:
-                reported_selection_mode = sorted(set(selection_mode))
             self.dg._enqueue(
                 "plotly_chart",
                 plotly_chart_proto,
@@ -837,8 +838,11 @@ class PlotlyMixin:
                     "plotly_chart",
                     key=plotly_chart_proto.id,
                     support="read_only",
-                    theme=theme,
-                    selection_mode=reported_selection_mode,
+                    selection_mode=sorted(
+                        _SELECTION_MODE_FROM_PROTO[mode]
+                        for mode in plotly_chart_proto.selection_mode
+                    )
+                    or None,
                     on_select="ignore" if on_select == "ignore" else "rerun",
                     alt=plotly_chart_proto.alt or None,
                 ),
@@ -853,7 +857,6 @@ class PlotlyMixin:
             agent_props=agent_spec.element(
                 "plotly_chart",
                 key=key,
-                theme=theme,
                 on_select="ignore" if on_select == "ignore" else "rerun",
                 alt=plotly_chart_proto.alt or None,
             ),

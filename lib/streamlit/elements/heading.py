@@ -63,7 +63,7 @@ def _heading_agent_props(
     """
     return agent_spec.element(
         command,
-        body=str(body),
+        body=body,
         anchor=anchor,
         help=help,
         icon=icon,
@@ -223,10 +223,10 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "header",
-                body,
+                heading_proto.body,
                 anchor=anchor,
                 help=heading_proto.help or None,
-                icon=icon,
+                icon=heading_proto.icon or None,
             ),
         )
 
@@ -382,10 +382,10 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "subheader",
-                body,
+                heading_proto.body,
                 anchor=anchor,
                 help=heading_proto.help or None,
-                icon=icon,
+                icon=heading_proto.icon or None,
             ),
         )
 
@@ -529,10 +529,10 @@ class HeadingMixin:
             layout_config=layout_config,
             agent_props=_heading_agent_props(
                 "title",
-                body,
+                heading_proto.body,
                 anchor=anchor,
                 help=heading_proto.help or None,
-                icon=icon,
+                icon=heading_proto.icon or None,
             ),
         )
 

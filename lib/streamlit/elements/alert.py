@@ -34,20 +34,19 @@ if TYPE_CHECKING:
 
 
 def _alert_agent_props(
-    command: str, body: str, icon: str, title: SupportsStr | None
+    command: str, body: str, icon: str, title: str | None
 ) -> str | None:
     """Describe an alert for the agent API.
 
     st.error, st.warning, st.info, and st.success differ only in the format
-    they set, so each passes its own command name. `body` and `icon` are the
-    processed values, because an icon extracted from a leading emoji in `body`
-    is part of what the user sees.
+    they set, so each passes its own command name. `body`, `icon`, and
+    `title` are the processed values the browser receives.
     """
     return agent_spec.element(
         command,
         body=body,
         icon=icon or None,
-        title=None if title is None else str(title),
+        title=title or None,
     )
 
 
@@ -187,7 +186,7 @@ class AlertMixin:
             "alert",
             alert_proto,
             agent_props=_alert_agent_props(
-                "error", processed_body, processed_icon, title
+                "error", processed_body, processed_icon, alert_proto.title or None
             ),
         )
 
@@ -302,7 +301,7 @@ class AlertMixin:
             "alert",
             alert_proto,
             agent_props=_alert_agent_props(
-                "warning", processed_body, processed_icon, title
+                "warning", processed_body, processed_icon, alert_proto.title or None
             ),
         )
 
@@ -418,7 +417,7 @@ class AlertMixin:
             "alert",
             alert_proto,
             agent_props=_alert_agent_props(
-                "info", processed_body, processed_icon, title
+                "info", processed_body, processed_icon, alert_proto.title or None
             ),
         )
 
@@ -533,7 +532,7 @@ class AlertMixin:
             "alert",
             alert_proto,
             agent_props=_alert_agent_props(
-                "success", processed_body, processed_icon, title
+                "success", processed_body, processed_icon, alert_proto.title or None
             ),
         )
 

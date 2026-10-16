@@ -967,7 +967,7 @@ class NumberInputMixin:
                 min_value=min_value if has_user_min else None,
                 max_value=max_value if has_user_max else None,
                 step=step,
-                format=format,
+                format=number_input_proto.format,
                 help=number_input_proto.help or None,
                 placeholder=placeholder,
                 icon=icon,
