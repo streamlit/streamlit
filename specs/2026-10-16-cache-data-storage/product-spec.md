@@ -89,7 +89,7 @@ namespace = "sales-dashboard"
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries. `"memory"` keeps them only in the process; `"disk"` also writes them to `cache.diskPath`. |
+| `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries. `"memory"` keeps them only in the process; `"disk"` also writes them to `cache.diskPath`. Other values are rejected at startup. |
 | `cache.diskPath` | `str` | `"~/.streamlit/cache"` | Folder for `storage = "disk"`. Can be a volume that several replicas share. `~` is expanded, and a relative path is resolved against the working directory. |
 | `cache.namespace` | `str` | A hash of the main script's absolute path | Keeps the entries of different apps apart when they share one storage. Up to 64 lowercase letters, digits, `.`, `_`, and `-`, starting with a letter or digit; other values are rejected at startup. |
 
@@ -108,8 +108,7 @@ st.App(
 )
 ```
 
-If set, `cache_storage` takes precedence over `cache.storage`. The order is
-`st.App(cache_storage=...)`, then `cache.storage`, then memory.
+If set, `cache_storage` takes precedence over `cache.storage`.
 
 `CacheStorage` is a protocol. It and the built-in `DiskCacheStorage` are exported from a new
 public module:
@@ -150,8 +149,8 @@ key more than once. The full contract is in the tech spec.
   display output. Otherwise, display output from cached functions is replayed on every
   replica, including media. Audio and video passed as a local file path are read from that
   path again, so the file must exist on every replica.
-- Storage calls are synchronous, so on a miss, an async cached function blocks the event
-  loop while it reads from the storage.
+- Storage calls are synchronous, so an async cached function blocks the event loop during
+  them: on a miss, and during the marker check.
 
 **Clearing:**
 

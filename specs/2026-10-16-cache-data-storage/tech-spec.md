@@ -151,7 +151,7 @@ Streamlit wraps each pickled `CachedResult` in a fixed-size header:
 | Magic bytes and format version | Reject entries in another format |
 | `created_at` (wall clock) | Freshness for background refresh |
 | `expires_at` (wall clock, or none) | Hard expiry, checked on every read from memory or storage |
-| Payload length and CRC32 | Detect truncated or corrupted entries, for example on network volumes |
+| Payload length and CRC32 | Detect truncated or corrupted entries, for example on network volumes. The CRC also covers the timestamps. |
 
 Wall-clock timestamps let every replica, and a restarted process, agree on when an entry
 goes stale and when it expires. This assumes NTP-synced clocks.
@@ -171,19 +171,19 @@ one replica refreshes it.
 {entry_key}.lease                                                                 lease
 ```
 
-- `namespace`: `cache.namespace`, which defaults to a short `calc_hash` of the main script's
-  absolute path. Apps at different paths, such as several apps on one machine, no longer
-  collide. Apps at the same path, such as containers that all run `/app/streamlit_app.py`,
-  need explicit namespaces. Replicas with different checkout paths just miss each other's
-  entries, which is safe. A configured namespace must match `[a-z0-9][a-z0-9._-]{0,63}` and
-  is rejected at startup otherwise, so it stays one key segment, can't escape `diskPath`, and
-  keeps keys under 250 characters.
+- `namespace`: `cache.namespace`, which defaults to a short `calc_hash` of the resolved
+  `RuntimeConfig.script_path`, not an `st.App` launcher's path. Apps at different paths,
+  such as several apps on one machine, no longer collide. Apps at the same path, such as
+  containers that all run `/app/streamlit_app.py`, need explicit namespaces. Replicas with
+  different checkout paths just miss each other's entries, which is safe. A configured
+  namespace must match `[a-z0-9][a-z0-9._-]{0,63}` and is rejected at startup otherwise, so
+  it stays one key segment, can't escape `diskPath`, and keeps keys under 250 characters.
 - `format`: Bumped whenever the envelope, `CachedResult`, or key derivation changes, for
   example with the [#16559](https://github.com/streamlit/streamlit/issues/16559) fix. Old
   entries then become unreachable instead of being misread.
-- Tokens: Random 16-character hex strings stored as the values of the marker keys. Changing
-  a token makes every entry under the old token unreachable. `epoch` holds the function
-  token, and `inval` is the per-key-clear marker.
+- Tokens: Random 16-character hex strings stored as marker values. Changing the global or
+  function (`epoch`) token makes every entry under the old token unreachable. `inval` isn't
+  part of entry keys; a new value only makes replicas drop that function's in-memory copies.
 
 ### Read path
 
@@ -195,9 +195,9 @@ one replica refreshes it.
    reads and adopts that token. Storages without `add` use `set`.
 3. Look up the full key in the in-memory copies. On a hit that hasn't expired, unpickle and
    return, with no storage I/O.
-4. On a miss, `get` the key from the storage, decode it, check `expires_at`, and keep it in
-   memory with its original `created_at` and `expires_at`. Then unpickle it.
-5. If the envelope is invalid or unpickling fails, delete the key and treat it as a miss.
+4. Otherwise, `get` the key from the storage. If the envelope is valid, hasn't expired, and
+   unpickles, keep it in memory with its original timestamps and return it.
+5. Otherwise, it's a miss. An invalid envelope or a failed unpickle also deletes the key.
 
 ### Write path
 
@@ -249,10 +249,10 @@ one replica refreshes it.
   token replaces it. That can cause misses, but it never makes cleared entries reachable
   again.
 - `streamlit cache clear` deletes only Streamlit's content: the `{namespace}/v{format}`
-  folders of every format in `cache.diskPath`, and the legacy
+  folders in `cache.diskPath` that contain an `m/global` marker, and the legacy
   `{function_key}-{value_key}.memo` files in `~/.streamlit/cache`. Without a script it can't
-  derive the namespace, so it clears every namespace in the folder. It never deletes either
-  folder or other files in them, which matters once `diskPath` can be a shared mount.
+  derive the namespace, so it clears every namespace in the folder. It keeps both folders
+  and everything else in them, which matters once `diskPath` can be a shared mount.
 
 ### Background refresh across replicas
 
@@ -374,8 +374,8 @@ unpickle that `st.cache_data` already does on every hit.
   one replica, the existing invalidation tokens prevent this.
 - Each replica keeps its own in-memory copies, so a shared storage doesn't lower memory
   use.
-- Storage calls are synchronous, so an async cached function blocks its event loop for the
-  transfer time on a miss.
+- Storage calls are synchronous, so an async cached function blocks its event loop during
+  them: on a miss, and on a hit that reads the markers.
 - Leases are best-effort. Renewal and release are a plain `set` and `delete`, because the
   protocol has no compare-and-set, so a holder that stalls past the lease expiry can renew
   or release a lease that another replica has taken over. Then a key can be computed twice,
