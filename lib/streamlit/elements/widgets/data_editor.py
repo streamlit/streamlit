@@ -1563,7 +1563,9 @@ class DataEditorMixin:
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 num_rows=num_rows,
-                disabled=disabled is True,
+                # True only when every column is locked. A column list is
+                # already applied to column_config, and the default is omitted.
+                disabled=True if disabled is True else None,
                 # The text shown for missing values, which the preview reports
                 # as null.
                 placeholder=placeholder,
