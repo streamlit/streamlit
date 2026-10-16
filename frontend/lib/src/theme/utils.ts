@@ -279,7 +279,6 @@ const firstConfiguredColor = (
   ...colors: Array<string | null | undefined>
 ): string | undefined => {
   for (const color of colors) {
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank means unset
     if (color && toComparableHex(color) !== undefined) {
       return color
     }
