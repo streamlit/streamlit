@@ -164,3 +164,24 @@ def test_self_reference_becomes_text() -> None:
 
     shared = [1]
     assert to_json_value([shared, shared]) == [[1], [1]]
+
+
+def test_tolist_that_returns_itself_becomes_text() -> None:
+    """An object whose ``tolist`` returns itself does not recurse."""
+
+    class _SelfList:
+        def tolist(self) -> _SelfList:
+            return self
+
+        def __str__(self) -> str:
+            return "self-list"
+
+    class _ContainsSelf:
+        def tolist(self) -> list[_ContainsSelf]:
+            return [self]
+
+        def __str__(self) -> str:
+            return "contains-self"
+
+    assert to_json_value(_SelfList()) == "self-list"
+    assert to_json_value(_ContainsSelf()) == ["contains-self"]

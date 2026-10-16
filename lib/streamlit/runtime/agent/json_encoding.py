@@ -104,12 +104,22 @@ def _to_json_value(value: Any, seen: set[int]) -> Any:
 
     # numpy scalars and arrays. Before the sequence fallback: a matrix is a
     # sequence, and tolist() is the form the previous encoding used.
+    # The source is marked first: tolist() may return the object itself, or a
+    # structure that points back at it, and either one would recurse forever.
     if hasattr(value, "tolist"):
+        marker = id(value)
+        if marker in seen:
+            return str(value)
+        seen.add(marker)
         try:
             converted = value.tolist()
+            if converted is value:
+                return str(value)
+            return _to_json_value(converted, seen)
         except Exception:
             return str(value)
-        return _to_json_value(converted, seen)
+        finally:
+            seen.remove(marker)
 
     # Sets are not sequences. Lists and tuples are, and are included below.
     if isinstance(value, (set, frozenset)) or _is_described_sequence(value):
