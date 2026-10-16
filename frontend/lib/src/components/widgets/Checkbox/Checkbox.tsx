@@ -90,10 +90,8 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // When wrap resolves to no-wrap, a native title on the label reveals the full
-  // label on hover. Unlike a button (whose help tooltip covers the whole control),
-  // help here lives on a separate icon, so the title and help never compete and
-  // both stay enabled.
+  // Checkbox help uses a separate icon, so a clipped label can keep its
+  // native title alongside the help tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
@@ -202,11 +200,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? false
+  return element.default
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? false
+  return element.value
 }
 
 function updateWidgetMgrState(

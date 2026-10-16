@@ -42,7 +42,7 @@ from tests.testutil import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator, Iterator
 
 DB_SECRETS = {
     "dialect": "postgres",
@@ -56,7 +56,7 @@ DB_SECRETS = {
 
 
 @contextmanager
-def _patched_sqlalchemy() -> Iterator[types.ModuleType]:
+def _patched_sqlalchemy() -> Generator[types.ModuleType, None, None]:
     """Install a fake ``sqlalchemy`` package so SQLConnection tests need no extra."""
     sqlalchemy_mod = types.ModuleType("sqlalchemy")
     engine_mod = types.ModuleType("sqlalchemy.engine")
@@ -95,7 +95,9 @@ def _patched_sqlalchemy() -> Iterator[types.ModuleType]:
 
 
 @contextmanager
-def _sqlalchemy_and_secrets(secrets: dict[str, object]) -> Iterator[types.ModuleType]:
+def _sqlalchemy_and_secrets(
+    secrets: dict[str, object],
+) -> Generator[types.ModuleType, None, None]:
     """Patch SQLAlchemy and ``SQLConnection._secrets`` together."""
     with (
         _patched_sqlalchemy() as sa,

@@ -309,8 +309,9 @@ export default defineConfig([
       // TypeScript rules with type-checking
       // Production src enables no-unsafe-call / return / argument, no-misused-spread,
       // and unbound-method (see the overlay below). This block leaves those rules
-      // off so tests, which that overlay ignores, stay exempt. Other no-unsafe-*
-      // rules stay off.
+      // off so tests, which that overlay ignores, stay exempt. Assignment and
+      // member access stay off here. A later overlay enables them for an
+      // explicit file list that already satisfies both rules.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -346,11 +347,12 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -517,14 +519,45 @@ export default defineConfig([
       // Calling, returning, or passing `any` infects typed APIs. Spreading a
       // class instance (protobuf, AxiosHeaders) copies enumerable own fields
       // and drops methods. Extracting a class method without binding drops
-      // `this`. Tests and the remaining no-unsafe-* rules
-      // (assignment/member-access) stay off for now; see the frontend linting
-      // plan in the wiki for the remaining queue.
+      // `this`. Tests stay exempt. Assignment and member access on `any` are
+      // enabled only for the explicit file list in the next overlay. Other
+      // production files can still read untyped values.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
+    },
+  },
+  {
+    // Error when these files assign or read `any`. They satisfy both rules
+    // today (`unknown` annotations, `as` assertions, or `JSON5.parse<T>()`).
+    // Assertions and `JSON5.parse<T>()` still bypass these rules. Add a
+    // sibling module only after it satisfies them the same way.
+    files: [
+      "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
+      "**/dataframes/arrowFormatUtils.ts",
+      "**/dataframes/arrowParseUtils.ts",
+      "**/dataframes/arrowTypeUtils.ts",
+      "**/dataframes/Quiver.ts",
+      "**/PlotlyChart/PlotlyChart.tsx",
+      "**/DeckGlJsonChart/useDeckGl.tsx",
+      "**/DataFrame/hooks/EditingState.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
     },
   },
   // Test files specific configuration
@@ -622,6 +655,25 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
+  // `||` drops 0, "", and false. Keep `||` where a blank string or false
+  // means unset, and where `||` combines booleans. Use `??` where only
+  // null and undefined mean missing, including an explicit 0.
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+    },
+  },
+  // Flags redundant optional chains and always-true checks.
+  // Tests stay off until production source is clean. Elements and non-widget
+  // packages stay off until those directories are cleaned.
+  {
+    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],
@@ -635,6 +687,7 @@ export default defineConfig([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
     "vitest.config.mts",
+    "vitest.jsdom-env.ts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

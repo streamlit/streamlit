@@ -19,10 +19,11 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, `st.skeleton` on quick cards with `st.spinner` for the slow report |
 
 ## Quick Start
 
@@ -49,13 +50,15 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
+
 ## Canonical Patterns
 
 When creating new templates or adapting existing ones, follow these patterns for consistency.
 
 ### Page Configuration
 
-Always set page config as the first Streamlit call, with `layout="wide"` and a Material icon:
+Set page config near the top of the script, with `layout="wide"` and a Material icon:
 
 ```python
 st.set_page_config(
@@ -176,8 +179,8 @@ parameterized loaders so per-argument entries stay bounded.
 
 ## Dependencies
 
-All templates require Python >=3.10 and use:
+All templates require Python >=3.11 and use:
 - `streamlit`
-- `altair>=5.5.0`
 - `pandas>=2.2.3`
+- `altair>=5.5.0` (most templates)
 - `numpy>=1.26.0` (most templates)

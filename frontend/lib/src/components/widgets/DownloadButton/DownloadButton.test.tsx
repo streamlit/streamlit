@@ -33,6 +33,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty shortcut displays as nothing
       shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
@@ -238,6 +239,16 @@ describe("DownloadButton widget", () => {
       props.element.url,
       "Download Button"
     )
+  })
+
+  it("does not check the source url when a callable download has no url", () => {
+    const props = getProps({
+      url: "",
+      deferredFileId: undefined,
+    })
+    render(<DownloadButton {...props} />)
+
+    expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
   })
 
   describe("Deferred downloads", () => {

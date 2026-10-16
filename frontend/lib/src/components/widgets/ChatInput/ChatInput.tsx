@@ -178,7 +178,7 @@ function ChatInput({
   // Forces dropzone to remount when files are cleared
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
 
-  const acceptAudio = element.acceptAudio ?? false
+  const acceptAudio = element.acceptAudio
 
   const {
     scriptRunFinishedFragmentIds,
@@ -635,11 +635,14 @@ function ChatInput({
         return
       }
 
-      if (!e.clipboardData) {
+      // The browser leaves paste data null when a paste has none. React types
+      // `clipboardData` as always present, so read the native event.
+      const clipboardData = e.nativeEvent.clipboardData
+      if (!clipboardData) {
         return
       }
 
-      const pastedFiles = getPastedFiles(e.clipboardData)
+      const pastedFiles = getPastedFiles(clipboardData)
       if (pastedFiles.length === 0) {
         return
       }
@@ -705,6 +708,7 @@ function ChatInput({
         // because it comes from a protobuf string field. Normalize falsy values
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- protobuf "" means a full-script run
           fragmentId: fragmentId || null,
           scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,

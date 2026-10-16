@@ -43,6 +43,7 @@ export const uploadFiles = async ({
   widgetInfo,
   fragmentId,
   signal,
+  triggerRerun,
 }: {
   files: File[]
   uploadClient: FileUploadClient
@@ -50,6 +51,7 @@ export const uploadFiles = async ({
   widgetInfo: WidgetInfo
   fragmentId?: string
   signal?: AbortSignal
+  triggerRerun?: boolean
 }): Promise<{
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
@@ -81,7 +83,7 @@ export const uploadFiles = async ({
 
       try {
         await uploadClient.uploadFile(
-          { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
+          { id: fileUrl.fileId, formId: widgetInfo.formId ?? "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
           file,
           undefined, // onUploadProgress
@@ -113,6 +115,9 @@ export const uploadFiles = async ({
       formId: widgetInfo.formId,
       fragmentId,
       fromUser: true,
+      // WidgetStateManager reruns a user upload unless triggerRerun is false.
+      // Pass false to store this upload without a rerun; omit it otherwise.
+      ...(triggerRerun === false ? { triggerRerun: false } : {}),
     }
   )
 

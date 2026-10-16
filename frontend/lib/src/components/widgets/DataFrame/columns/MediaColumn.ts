@@ -40,7 +40,7 @@ function BaseMediaColumn(
   const cellTemplate: MediaCell = {
     kind: GridCellKind.Custom,
     allowOverlay: true,
-    contentAlign: props.contentAlignment || "center",
+    contentAlign: props.contentAlignment ?? "center",
     readonly: true,
     copyData: "",
     data: {
@@ -71,7 +71,7 @@ function BaseMediaColumn(
       } as MediaCell
     },
     getCellValue(cell: MediaCell): string | null {
-      return cell.data?.src ?? null
+      return cell.data.src ?? null
     },
   }
 }

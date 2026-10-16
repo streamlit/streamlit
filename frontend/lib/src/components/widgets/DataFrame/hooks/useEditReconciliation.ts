@@ -138,6 +138,8 @@ function useEditReconciliation({
     // before the grid repaints, and the data change that triggered the
     // reconciliation gives the grid a fresh `getCellContent` that reflects the
     // reconciled source values.
+    // TypeScript doesn't see the write to hasClearedCells inside forEachEditedCell.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- written in forEach callback
     if (hasClearedCells) {
       syncEditState()
     }

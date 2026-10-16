@@ -173,9 +173,7 @@ const CameraInput = ({
   const initialStateRef = useRef<ReturnType<typeof createInitialFiles> | null>(
     null
   )
-  if (initialStateRef.current === null) {
-    initialStateRef.current = createInitialFiles(element, widgetMgr)
-  }
+  initialStateRef.current ??= createInitialFiles(element, widgetMgr)
   const {
     files: initialFiles,
     nextLocalId: initialNextLocalId,

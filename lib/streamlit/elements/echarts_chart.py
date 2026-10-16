@@ -970,7 +970,9 @@ class EChartsMixin:
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
-            also applied.
+            also applied, and long tooltip numbers are shortened. Set
+            ``tooltip.formatter`` to a string template (for example
+            ``"{b}: {c}"``) to use your own formatting.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
@@ -1118,6 +1120,12 @@ class EChartsMixin:
         want Streamlit's download, or set ``toolbox.left`` so the two don't
         stack in the top-right corner. Place ``legend`` at the top so it
         doesn't share the footer with a bottom ``dataZoom`` slider.
+
+        With an inside ``dataZoom``, the wheel scrolls the page until the
+        pointer has rested on the chart, then it zooms or pans. Pinch, or the
+        modifier set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, does that
+        on the first wheel of a new flick. A flick that already started as a
+        page scroll keeps scrolling.
 
         .. code-block:: python
            :filename: streamlit_app.py

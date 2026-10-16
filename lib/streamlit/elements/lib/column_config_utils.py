@@ -18,7 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -65,7 +65,7 @@ NUMERICAL_POSITION_PREFIX = "_pos:"
 
 
 # The column data kind is used to describe the type of the data within the column.
-class ColumnDataKind(str, Enum):
+class ColumnDataKind(StrEnum):
     INTEGER = "integer"
     FLOAT = "float"
     DATE = "date"

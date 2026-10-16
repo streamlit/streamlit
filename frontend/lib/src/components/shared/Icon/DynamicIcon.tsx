@@ -157,7 +157,7 @@ const DynamicIconDispatcher = ({
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
           aria-hidden="true"
-          data-testid={props.testid || "stSpinnerIcon"}
+          data-testid={props.testid ?? "stSpinnerIcon"}
           {...props}
         />
       </StyledDynamicIcon>
@@ -174,7 +174,7 @@ const DynamicIconDispatcher = ({
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
                 alt=""
-                data-testid={props.testid || "stImageIcon"}
+                data-testid={props.testid ?? "stImageIcon"}
               />
             </StyledDynamicIcon>
           )

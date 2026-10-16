@@ -19,6 +19,7 @@ import {
   memo,
   type ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -26,8 +27,19 @@ import {
 
 import type * as Plotly from "plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import {
+  PlotlyChart as PlotlyChartProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
+import {
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
@@ -61,8 +73,16 @@ const MIN_WIDTH = 150
  * preventing the selection state from being immediately overwritten due to plotly's update cycle.
  */
 const RESET_SELECTION_TIMEOUT_MS = 50
-// Default height for Plotly charts when no height is specified
+// Default height for Plotly charts when no height is specified.
+// Plotly.js replaces a layout height below this minimum with 450.
 const DEFAULT_PLOTLY_HEIGHT = 450
+const PLOTLY_MIN_LAYOUT_HEIGHT = 10
+
+/** Returns `height` when Plotly.js accepts it (>= 10); otherwise Plotly's 450px default. */
+const plotlyLayoutHeight = (height: number | undefined): number =>
+  height !== undefined && height >= PLOTLY_MIN_LAYOUT_HEIGHT
+    ? height
+    : DEFAULT_PLOTLY_HEIGHT
 
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
@@ -88,6 +108,8 @@ interface PlotlyChartProps {
   fragmentId?: string
   disableFullscreenMode?: boolean
   width: number
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export function PlotlyChart({
@@ -96,6 +118,8 @@ export function PlotlyChart({
   disabled,
   fragmentId,
   disableFullscreenMode,
+  widthConfig,
+  heightConfig,
 }: Readonly<PlotlyChartProps>): ReactElement {
   const theme = useEmotionTheme()
   const {
@@ -109,7 +133,7 @@ export function PlotlyChart({
   const { height: chartContainerHeight, elementRef: containerRef } =
     useCalculatedDimensions([], 0)
 
-  const width = elWidth || 0
+  const width = elWidth ?? 0
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -127,6 +151,17 @@ export function PlotlyChart({
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
+
+  // Size-contain charts with stretch or pixel width and height so the
+  // rendered plot cannot grow its parent. Without a definite parent
+  // height, use the figure height or the default height. Fullscreen sets
+  // its own size.
+  const isSizeContained =
+    !isFullScreen &&
+    shouldWidthStretch(widthConfig) &&
+    shouldHeightStretch(heightConfig)
+  const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
+  const fallbackHeight = plotlyLayoutHeight(initialFigureSpec.layout?.height)
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
@@ -185,14 +220,10 @@ export function PlotlyChart({
     // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
     // Default the flag off, and also remove the button so layout.modebar.add
     // cannot put it back unless the app opts in with showSendToCloud: true.
-    if (config.showSendToCloud === undefined) {
-      config.showSendToCloud = false
-    }
+    config.showSendToCloud ??= false
 
-    if (config.displaylogo === undefined) {
-      // Hide the Plotly logo unless the user explicitly opts in.
-      config.displaylogo = false
-    }
+    // Hide the Plotly logo unless the user explicitly opts in.
+    config.displaylogo ??= false
 
     const modeBarButtonsToRemove: NonNullable<
       Plotly.Config["modeBarButtonsToRemove"]
@@ -339,10 +370,18 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
+  // Plotly.js replaces layout.height below 10 with its default of 450,
+  // which paints out of a size-contained box. Hide the plot instead of
+  // passing that height.
+  const isShrunkPlotHidden =
+    isSizeContained &&
+    !hasFallbackHeight &&
+    chartContainerHeight < PLOTLY_MIN_LAYOUT_HEIGHT
+
   let calculatedHeight =
-    chartContainerHeight > 0
+    chartContainerHeight >= PLOTLY_MIN_LAYOUT_HEIGHT
       ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : plotlyLayoutHeight(plotlyFigure.layout?.height)
 
   if (isFullScreen) {
     calculatedWidth = width
@@ -506,11 +545,14 @@ export function PlotlyChart({
   // accessible name, which is worse than none. role="figure" (not "img")
   // is required to legally expose aria-label on this otherwise-generic div
   // without making Plotly's focusable modebar presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
+      isSizeContained={isSizeContained}
+      fallbackHeight={hasFallbackHeight ? fallbackHeight : undefined}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
       role={accessibleName ? "figure" : undefined}
@@ -526,6 +568,7 @@ export function PlotlyChart({
           // to prevent flickering issues.
           visibility:
             plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+          display: isShrunkPlotHidden ? "none" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",

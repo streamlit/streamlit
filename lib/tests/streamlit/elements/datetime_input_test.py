@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -338,7 +338,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
     def test_timezone_handling(self):
         """Test that timezone-aware datetimes are normalized to naive."""
         # Create a timezone-aware datetime
-        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
 
         st.datetime_input("Label", value=dt_aware)
 

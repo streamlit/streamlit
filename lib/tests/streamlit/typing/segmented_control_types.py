@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
@@ -122,4 +120,40 @@ if TYPE_CHECKING:
     assert_type(
         segmented_control("foo", options, selection_mode="multi", wrap=False),
         list[int],
+    )
+
+    # Check on_change parameter modes
+    assert_type(segmented_control("foo", options, on_change=None), int | None)
+    assert_type(segmented_control("foo", options, on_change="rerun"), int | None)
+    assert_type(segmented_control("foo", options, on_change="ignore"), int | None)
+    assert_type(segmented_control("foo", options, on_change=lambda: None), int | None)
+    assert_type(
+        segmented_control("foo", options, selection_mode="single", on_change="ignore"),
+        int | None,
+    )
+    assert_type(
+        segmented_control("foo", options, selection_mode="multi", on_change=None),
+        list[int],
+    )
+    assert_type(
+        segmented_control("foo", options, selection_mode="multi", on_change="rerun"),
+        list[int],
+    )
+    assert_type(
+        segmented_control("foo", options, selection_mode="multi", on_change="ignore"),
+        list[int],
+    )
+    assert_type(
+        segmented_control(
+            "foo", options, selection_mode="multi", on_change=lambda: None
+        ),
+        list[int],
+    )
+    assert_type(
+        segmented_control("foo", options, default=1, required=True, on_change="ignore"),
+        int,
+    )
+    assert_type(
+        segmented_control("foo", options, required=True, on_change="ignore"),
+        int | None,
     )

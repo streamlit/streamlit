@@ -39,7 +39,7 @@ from tests.testutil import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator, Iterator
     from pathlib import Path
 
 
@@ -59,7 +59,7 @@ def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
 
 
 @contextmanager
-def _patched_sis(active_session: object) -> Iterator[types.ModuleType]:
+def _patched_sis(active_session: object) -> Generator[types.ModuleType, None, None]:
     """Patch Snowflake modules and treat the process as running in Streamlit in Snowflake."""
     modules = _snowflake_connector_modules()
     context_mod = types.ModuleType("snowflake.snowpark.context")
@@ -80,7 +80,7 @@ def _patched_sis(active_session: object) -> Iterator[types.ModuleType]:
 @contextmanager
 def _patched_snowpark(
     *, in_sis: bool
-) -> Iterator[tuple[types.ModuleType, types.ModuleType]]:
+) -> Generator[tuple[types.ModuleType, types.ModuleType], None, None]:
     """Install fake Snowpark modules and control ``running_in_sis``.
 
     Used by ``session()`` tests that should not import the Snowflake extra.
@@ -116,7 +116,7 @@ class TestSnowflakeConnectionConfiguration:
     @contextmanager
     def _patched_snowflake(
         secrets: dict[str, str] | None = None,
-    ) -> Iterator[types.ModuleType]:
+    ) -> Generator[types.ModuleType, None, None]:
         """Patch the Snowflake connector and Streamlit secrets, yielding the connector module."""
         modules = _snowflake_connector_modules()
         with (

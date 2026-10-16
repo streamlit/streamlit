@@ -33,7 +33,7 @@ from click.testing import CliRunner
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ _needs_permission_bits = pytest.mark.skipif(
 
 
 @contextmanager
-def _unreadable(*dirs: Path) -> Iterator[None]:
+def _unreadable(*dirs: Path) -> Generator[None, None, None]:
     """Set ``dirs`` to mode 0o000 so ``lstat()`` fails, then restore 0o700.
 
     Restores even on test failure: pytest cannot clean up a 0o000 ``tmp_path``.
@@ -4250,14 +4250,16 @@ class TestMetaSkillPackaging:
         not match files outside the published skill trees.
         """
         import glob as globmod
-
-        import toml
+        import tomllib
 
         pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
         if not pyproject.is_file():  # pragma: no cover - unusual layout
             pytest.skip("lib/pyproject.toml not found in this layout")
 
-        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        with pyproject.open("rb") as pyproject_file:
+            globs = tomllib.load(pyproject_file)["tool"]["setuptools"]["package-data"][
+                "streamlit"
+            ]
         # <streamlit pkg>/.agents/skills -> <streamlit pkg>
         pkg_dir = skills._get_source_skills_dir().parents[1]
 
@@ -4297,6 +4299,10 @@ class TestMetaSkillPackaging:
         install deterministically — the exact failure this change removes — so
         build the wheel and assert both files are inside it, and that
         repo-only files under ``.agents`` are not.
+
+        Also assert dashboard-metrics/.streamlit/config.toml is in the wheel.
+        Python's default glob skips hidden directories, so a package-data pattern
+        alone can omit that sample theme.
         """
         import shutil
         import zipfile
@@ -4339,6 +4345,9 @@ class TestMetaSkillPackaging:
         assert f"{meta}/SKILL.md" in names
         assert f"{meta}/scripts/discover.py" in names
         assert f"{content}/SKILL.md" in names
+        assert (
+            f"{content}/assets/templates/apps/dashboard-metrics/.streamlit/config.toml"
+        ) in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [
@@ -4349,6 +4358,49 @@ class TestMetaSkillPackaging:
             and not name.startswith(allowed_prefixes)
         ]
         assert unexpected == []
+
+    def test_dashboard_metrics_theme_matches_dense_dashboard(self) -> None:
+        """dashboard-metrics config.toml must stay a copy of dense-dashboard.toml.
+
+        The sample adds a provenance comment; compare bodies after stripping
+        leading comments so the two theme files cannot drift silently.
+        """
+        skill_root = (
+            Path(__file__).resolve().parents[3]
+            / "streamlit"
+            / ".agents"
+            / "skills"
+            / "developing-with-streamlit"
+        )
+        sample = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "apps"
+            / "dashboard-metrics"
+            / ".streamlit"
+            / "config.toml"
+        )
+        source = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "themes"
+            / "configs"
+            / "dense-dashboard.toml"
+        )
+        assert sample.is_file()
+        assert source.is_file()
+
+        def strip_leading_comments(text: str) -> str:
+            lines = text.splitlines()
+            while lines and (not lines[0].strip() or lines[0].lstrip().startswith("#")):
+                lines.pop(0)
+            return "\n".join(lines)
+
+        assert strip_leading_comments(sample.read_text(encoding="utf-8")) == (
+            strip_leading_comments(source.read_text(encoding="utf-8"))
+        )
 
 
 class TestVendoredMetaSkillDiscovery:

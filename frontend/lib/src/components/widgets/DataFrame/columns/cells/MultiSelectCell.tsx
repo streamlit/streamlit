@@ -129,7 +129,7 @@ export const prepareOptions = (
 
     return {
       value: option.value,
-      label: option.label ?? option.value ?? "",
+      label: option.label ?? option.value,
       color: option.color,
     }
   })
@@ -679,7 +679,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     }),
   }),
   onPaste: (val: string, cell: MultiSelectCellProps) => {
-    if (!val?.trim()) {
+    if (!val.trim()) {
       // Empty values should result in empty strings
       return {
         ...cell,

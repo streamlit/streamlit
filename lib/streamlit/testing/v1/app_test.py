@@ -40,10 +40,12 @@ from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
+    AudioInput,
     Block,
     BlockList,
     Button,
     ButtonGroup,
+    CameraInput,
     Caption,
     ChatInput,
     ChatMessage,
@@ -64,17 +66,23 @@ from streamlit.testing.v1.element_tree import (
     Feedback,
     FileUploader,
     Header,
+    Help,
+    Html,
     Image,
     Info,
     InitialValue,
     Json,
     Latex,
+    LinkButton,
     Markdown,
     MenuButton,
     Metric,
     Multiselect,
     Node,
     NumberInput,
+    PageLink,
+    Pagination,
+    Progress,
     Radio,
     Selectbox,
     SelectSlider,
@@ -293,6 +301,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Page hash at the end of the previous run. A new PagesManager starts at
+        # "", and ScriptRunner treats that mismatch as a page change.
+        self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
         self._registered_pages: dict[PageHash, PageInfo] = {}
@@ -506,12 +517,13 @@ class AppTest:
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
+        pages_manager.set_current_page_script_hash(self._finished_page_script_hash)
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
             new_secrets = Secrets()
-            new_secrets._secrets = self.secrets
+            new_secrets._secrets = self.secrets  # ty: ignore[invalid-assignment]
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
@@ -523,13 +535,19 @@ class AppTest:
             fragment_storage=self._fragment_storage,
         )
 
-        # Register any files from FileUploader widgets with the file manager
+        # Register recordings and uploads before the script reads them.
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
+            # switch_page() sets _page_hash to the destination. An empty
+            # request stays on the page the previous run finished on. Sending
+            # "" would substitute the main-script hash, which does not match
+            # the url-path hash a multipage app finished on.
+            requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, self._page_hash
+                widget_state, self.query_params, timeout, requested_page_hash
             )
+            self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
             # main-page-only fallback. Keep the last navigation registry in
@@ -555,12 +573,23 @@ class AppTest:
         return self
 
     def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
-        """Register files from FileUploader widgets with the file manager."""
+        """Register bytes for widgets that upload files.
+
+        Covers ``st.file_uploader``, ``st.audio_input``, ``st.camera_input``,
+        and files attached to ``st.chat_input``. Those widgets read the bytes
+        back from ``MemoryUploadedFileManager`` while deserializing widget
+        state.
+        """
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
         submitted = _submitted_form_ids(self._tree)
         form_clears = _form_clear_flags(self._tree)
-        for widget in self._tree.file_uploader:
+        for widget in (
+            *self._tree.file_uploader,
+            *self._tree.audio_input,
+            *self._tree.camera_input,
+            *self._tree.chat_input,
+        ):
             form_id = _widget_form_id(widget)
             saved_files = widget._files
             if form_id and form_id not in submitted:
@@ -745,6 +774,20 @@ class AppTest:
         return self._tree.sidebar
 
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        """Sequence of all ``st.audio_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of AudioInput
+            Sequence of all ``st.audio_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.audio_input[0]`` for the first widget or
+            ``at.audio_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.audio_input
+
+    @property
     def button(self) -> WidgetList[Button]:
         """Sequence of all ``st.button`` and ``st.form_submit_button`` widgets.
 
@@ -803,6 +846,20 @@ class AppTest:
             for a widget with a given key.
         """
         return self._tree.segmented_control
+
+    @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        """Sequence of all ``st.camera_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of CameraInput
+            Sequence of all ``st.camera_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.camera_input[0]`` for the first widget or
+            ``at.camera_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.camera_input
 
     @property
     def caption(self) -> ElementList[Caption]:
@@ -919,17 +976,47 @@ class AppTest:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        """Sequence of all ``st.dataframe`` elements.
+        """Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+
+        ``st.data_editor`` elements are also available from ``at.data_editor``.
 
         Returns
         -------
         ElementList of Dataframe
-            Sequence of all ``st.dataframe`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.dataframe[0]`` for the first element. Dataframe is an
-            extension of the Element class.
+            Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+            Individual elements can be accessed from an ElementList by index
+            (order on the page) or, when the element has a key, by key. For
+            example, ``at.dataframe[0]`` for the first element or
+            ``at.dataframe(key="editor")`` for an element with a given key.
+            Dataframe is an extension of the Element class.
         """
         return self._tree.dataframe
+
+    @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """Sequence of all ``st.data_editor`` elements.
+
+        ``at.dataframe`` includes these elements too. A table is included here
+        when ``editing_mode`` is not ``"read_only"``.
+
+        - ``.value`` is the table passed to the editor, without cell edits.
+        - ``set_value()`` raises ``AppTestError``.
+        - A keyed editor's session state value is the edit state
+          (``edited_rows``, ``added_rows``, ``deleted_rows``). Assigning
+          that state on ``at.session_state`` before ``.run()`` changes the
+          table the script receives. ``.value`` stays the input table.
+        - The script rejects ``st.session_state`` writes to that key.
+
+        Returns
+        -------
+        ElementList of Dataframe
+            Sequence of all ``st.data_editor`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.data_editor[0]`` for the first element
+            or ``at.data_editor(key="editor")`` for an element with a given
+            key.
+        """
+        return self._tree.data_editor
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1103,6 +1190,34 @@ class AppTest:
         return self._tree.header
 
     @property
+    def help(self) -> ElementList[Help]:
+        """Sequence of all ``st.help`` elements.
+
+        Returns
+        -------
+        ElementList of Help
+            Sequence of all ``st.help`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.help[0]`` for the first element. Help is an
+            extension of the Element class.
+        """
+        return self._tree.help
+
+    @property
+    def html(self) -> ElementList[Html]:
+        """Sequence of all ``st.html`` elements.
+
+        Returns
+        -------
+        ElementList of Html
+            Sequence of all ``st.html`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.html[0]`` for the first element. Html is an
+            extension of the Element class.
+        """
+        return self._tree.html
+
+    @property
     def image(self) -> ElementList[Image]:
         """Sequence of all ``st.image`` elements.
 
@@ -1157,6 +1272,21 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.latex
+
+    @property
+    def link_button(self) -> ElementList[LinkButton]:
+        """Sequence of all ``st.link_button`` elements.
+
+        Returns
+        -------
+        ElementList of LinkButton
+            Sequence of all ``st.link_button`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.link_button[0]`` for the first element
+            or ``at.link_button(key="docs")`` for an element with a given key.
+            LinkButton is an extension of the Element class.
+        """
+        return self._tree.link_button
 
     @property
     def markdown(self) -> ElementList[Markdown]:
@@ -1227,6 +1357,49 @@ class AppTest:
             ``at.number_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.number_input
+
+    @property
+    def page_link(self) -> ElementList[PageLink]:
+        """Sequence of all ``st.page_link`` elements.
+
+        Returns
+        -------
+        ElementList of PageLink
+            Sequence of all ``st.page_link`` elements. Individual elements can
+            be accessed from an ElementList by index (order on the page). For
+            example, ``at.page_link[0]`` for the first element. PageLink is an
+            extension of the Element class.
+        """
+        return self._tree.page_link
+
+    @property
+    def pagination(self) -> WidgetList[Pagination]:
+        """Sequence of all ``st.pagination`` widgets.
+
+        Returns
+        -------
+        WidgetList of Pagination
+            Sequence of all ``st.pagination`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pagination[0]`` for the first widget or
+            ``at.pagination(key="my_key")`` for a widget with a given key.
+            ``set_value`` and ``select`` choose a page (1-indexed).
+        """
+        return self._tree.pagination
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        """Sequence of all ``st.progress`` elements.
+
+        Returns
+        -------
+        ElementList of Progress
+            Sequence of all ``st.progress`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.progress[0]`` for the first element. Progress is an
+            extension of the Element class.
+        """
+        return self._tree.progress
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:
@@ -1507,9 +1680,10 @@ class AppTest:
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
             ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
-            Internal node type names such as ``"date_time_input"`` also work.
-            ``"help"`` selects ``st.help`` elements (node type ``help_info``).
+            Internal node type names such as ``"date_time_input"`` and
+            ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
+            ``"data_editor"`` selects dataframes that are not read-only.
 
         Returns
         -------

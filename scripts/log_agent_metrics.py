@@ -29,7 +29,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
@@ -242,7 +242,7 @@ def main() -> int:
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     entry = {
-        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "branch": branch,
         "session_id": _normalize_optional(payload.get("session_id")),
         "type": entry_type,

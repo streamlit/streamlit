@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -140,62 +140,84 @@ describe("Sidebar Component", () => {
       {
         state: PageConfig.SidebarState.EXPANDED,
         isCollapsed: false,
-        expectedAria: "true",
+        expectedCollapsed: "false",
       },
       {
         state: PageConfig.SidebarState.COLLAPSED,
         isCollapsed: true,
-        expectedAria: "false",
+        expectedCollapsed: "true",
       },
     ])(
       "should render $state correctly",
-      ({ state, isCollapsed, expectedAria }) => {
+      ({ state, isCollapsed, expectedCollapsed }) => {
         renderSidebar(
           { isCollapsed },
           { sidebarConfigContext: { initialSidebarState: state } }
         )
 
-        expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-          "aria-expanded",
-          expectedAria
-        )
+        const sidebar = screen.getByTestId("stSidebar")
+        expect(sidebar).toHaveAttribute("id", "stSidebar")
+        expect(sidebar).toHaveAttribute("aria-label", "Sidebar")
+        expect(sidebar).toHaveAttribute("data-collapsed", expectedCollapsed)
+        expect(sidebar).not.toHaveAttribute("aria-expanded")
       }
     )
 
-    it.each([
-      {
-        initialCollapsed: false,
-        expectedToggleValue: true,
-        description: "collapse when expanded",
-      },
-      {
-        initialCollapsed: true,
-        expectedToggleValue: false,
-        description: "expand when collapsed",
-      },
-    ])(
-      "should $description on toggle",
-      async ({ initialCollapsed, expectedToggleValue }) => {
-        const mockOnToggleCollapse = vi.fn()
-        const user = userEvent.setup()
+    it("collapse button exposes expanded state and controls the sidebar", () => {
+      renderSidebar(
+        { isCollapsed: false },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.EXPANDED,
+          },
+        }
+      )
 
-        renderSidebar({
-          isCollapsed: initialCollapsed,
-          onToggleCollapse: mockOnToggleCollapse,
-        })
+      // Collapse control is visibility:hidden until header hover.
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button", { hidden: true })
+      expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
+      expect(collapseButton).toHaveAttribute("aria-expanded", "true")
+      expect(collapseButton).toHaveAttribute("aria-controls", "stSidebar")
+    })
 
-        // Hover to show collapse button
-        await user.hover(screen.getByTestId("stSidebarHeader"))
+    it("omits the collapse button when the sidebar is collapsed", () => {
+      renderSidebar(
+        { isCollapsed: true },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+        }
+      )
 
-        // Click the collapse button
-        const collapseButton = within(
-          screen.getByTestId("stSidebarCollapseButton")
-        ).getByRole("button", { name: "Collapse sidebar" })
-        await user.click(collapseButton)
+      // Avoid a focusable offscreen "Collapse sidebar" beside the header expand
+      // control (especially on small viewports where visibility stays visible).
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
 
-        expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)
-      }
-    )
+    it("should collapse when expanded on toggle", async () => {
+      const mockOnToggleCollapse = vi.fn()
+      const user = userEvent.setup()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Hover to show collapse button
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button", { name: "Collapse sidebar" })
+      await user.click(collapseButton)
+
+      expect(mockOnToggleCollapse).toHaveBeenCalledWith(true)
+    })
   })
 
   describe("Collapse Button Visibility", () => {
@@ -267,6 +289,47 @@ describe("Sidebar Component", () => {
         writable: true,
         configurable: true,
       })
+    })
+  })
+
+  describe("Auto-collapse on resize", () => {
+    const setWindowWidth = (width: number): void => {
+      Object.defineProperty(window, "innerWidth", {
+        value: width,
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    afterEach(() => {
+      setWindowWidth(1024)
+    })
+
+    it("collapses an expanded sidebar when the window narrows to mobile", () => {
+      setWindowWidth(1024)
+      const onToggleCollapse = vi.fn()
+      renderSidebar({ isCollapsed: false, onToggleCollapse })
+      expect(onToggleCollapse).not.toHaveBeenCalled()
+
+      act(() => {
+        setWindowWidth(500)
+        window.dispatchEvent(new Event("resize"))
+      })
+
+      expect(onToggleCollapse).toHaveBeenCalledExactlyOnceWith(true, false)
+    })
+
+    it("does not collapse when the window widens", () => {
+      setWindowWidth(500)
+      const onToggleCollapse = vi.fn()
+      renderSidebar({ isCollapsed: false, onToggleCollapse })
+
+      act(() => {
+        setWindowWidth(1024)
+        window.dispatchEvent(new Event("resize"))
+      })
+
+      expect(onToggleCollapse).not.toHaveBeenCalled()
     })
   })
 

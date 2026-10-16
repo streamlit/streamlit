@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-import time
+from datetime import date, time
+from time import sleep
 
 import streamlit as st
 
@@ -38,7 +38,7 @@ number = st.number_input("test", value=0, step=1)
 st.write(number)
 
 if number:
-    time.sleep(1)
+    sleep(1)
 
 st.header("Widget State - Redisplayed Widget Test")
 # Test for https://github.com/streamlit/streamlit/issues/3512
@@ -102,9 +102,7 @@ with st.container(key="widget_container"):
         # Use fixed value/date so the snapshot is deterministic. The defaults
         # ("now"/"today") render the current time/date, which changes between
         # runs and causes flaky snapshot mismatches.
-        st.time_input("st.time_input", value=datetime.time(4, 45), disabled=disabled)
-        st.date_input(
-            "st.date_input", value=datetime.date(2026, 6, 3), disabled=disabled
-        )
+        st.time_input("st.time_input", value=time(4, 45), disabled=disabled)
+        st.date_input("st.date_input", value=date(2026, 6, 3), disabled=disabled)
         st.chat_input("st.chat_input", disabled=disabled)
         st.audio_input("st.audio_input", disabled=disabled)

@@ -17,7 +17,7 @@
 import { screen, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import * as utils from "~lib/util/utils"
 
 import {
@@ -34,6 +34,7 @@ const getProps = (
 })
 
 describe("DynamicButtonLabel", () => {
+  mockEllipsizedLabels()
   it("renders without crashing", () => {
     render(<DynamicButtonLabel {...getProps()} />)
     const buttonLabel = screen.getByText("Button Label")
@@ -175,14 +176,22 @@ describe("DynamicButtonLabel", () => {
   })
 
   it("adds a native title tooltip with the full label when enabled", () => {
-    render(<DynamicButtonLabel {...getProps({ addTitleTooltip: true })} />)
+    render(
+      <DynamicButtonLabel
+        {...getProps({ addTitleTooltip: true, wrap: false })}
+      />
+    )
     expect(screen.getByTitle("Button Label")).toBeVisible()
   })
 
   it("uses the plain text of a Markdown label for the title", () => {
     render(
       <DynamicButtonLabel
-        {...getProps({ label: "**Bold** report", addTitleTooltip: true })}
+        {...getProps({
+          label: "**Bold** report",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
       />
     )
     // The title is the rendered plain text, not the raw Markdown source.
@@ -193,7 +202,11 @@ describe("DynamicButtonLabel", () => {
   it("re-syncs the title when markdown DOM content changes asynchronously", async () => {
     render(
       <DynamicButtonLabel
-        {...getProps({ label: "First label", addTitleTooltip: true })}
+        {...getProps({
+          label: "First label",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
       />
     )
     expect(screen.getByTitle("First label")).toBeVisible()

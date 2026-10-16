@@ -23,3 +23,4 @@ Rules for inline comments:
 - `severity` must be one of: `high`, `medium`, `low`.
 - If there are no suitable inline comments, write `{"comments": []}`.
 - Do not duplicate inline comment findings in the PR-level review body (`review.md`). Each finding should appear in exactly one place: either as an inline comment (for line-specific issues) or in the summary (for high-level concerns), not both.
+- Do not comment on agent or skill instruction files only to request a script or a more detailed procedure. Those instructions are meant to stay high-level.

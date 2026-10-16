@@ -25,7 +25,7 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 
 import Heading, { type HeadingProtoProps } from "./Heading"
 
@@ -42,6 +42,8 @@ const getHeadingProps = (
 })
 
 describe("Heading", () => {
+  mockEllipsizedLabels()
+
   beforeAll(async () => {
     await import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
   }, 30_000)

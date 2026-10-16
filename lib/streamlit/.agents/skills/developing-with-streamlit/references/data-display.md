@@ -2,6 +2,28 @@
 
 Present data clearly.
 
+## Contents
+
+- [Accessible names (alt)](#accessible-names-alt)
+- [Native charts first](#native-charts-first)
+- [Human-readable labels](#human-readable-labels)
+- [Altair for complex charts](#altair-for-complex-charts)
+- [Apache ECharts](#apache-echarts)
+- [Deprecated: use_container_width](#deprecated-use_container_width)
+- [Dataframe column configuration](#dataframe-column-configuration)
+- [Markdown in dataframe cells](#markdown-in-dataframe-cells)
+- [Colored badges with MultiselectColumn](#colored-badges-with-multiselectcolumn)
+- [Row actions with ButtonColumn](#row-actions-with-buttoncolumn)
+- [Choosing the right data widget](#choosing-the-right-data-widget)
+- [Description and key-value lists](#description-and-key-value-lists)
+- [Pandas Styler: formatting vs coloring](#pandas-styler-formatting-vs-coloring)
+- [Editing data with st.data_editor](#editing-data-with-stdata_editor)
+- [Row, column and cell selections](#row-column-and-cell-selections)
+- [Empty DataFrames](#empty-dataframes)
+- [Pinned columns](#pinned-columns)
+- [Sparklines in metrics](#sparklines-in-metrics)
+- [References](#references)
+
 ## Accessible names (`alt`)
 
 Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence); Markdown syntax is announced literally. Prefer the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
@@ -94,7 +116,7 @@ st.echarts_chart(
 
 ## Deprecated: `use_container_width`
 
-**Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
+**Do not use `use_container_width`.** It is deprecated. Dataframes and most charts stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
 
 ```python
 # BAD: deprecated parameter
@@ -383,7 +405,7 @@ st.metric(
     delta="-7.42% (MoM)",
     delta_color="inverse",
     chart_data=values,
-    chart_type="line",  # or "bar"
+    chart_type="line",  # or "bar" or "area"
 )
 ```
 

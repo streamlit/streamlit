@@ -48,9 +48,8 @@ export interface DynamicButtonLabelProps {
    * When true, add a native browser tooltip (`title`) exposing the full label so
    * a label truncated with an ellipsis (`wrap=false`) can still be read on hover.
    * The tooltip uses the rendered plain text (the button's accessible name), so
-   * a Markdown label is shown without its raw syntax. Because it is a native
-   * `title`, the browser shows it on hover whenever it is set, regardless of
-   * whether the label is actually clipped.
+   * a Markdown label is shown without its raw syntax. The title is attached only
+   * when that label is actually clipped.
    */
   addTitleTooltip?: boolean
 }

@@ -216,13 +216,13 @@ jobs:
             exit $exit_code
           fi
       - name: Upload failed test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/test-results
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage_report_e2e${{ inputs.iteration != '' && format('_iter{0}', inputs.iteration) || '' }}
           path: e2e_playwright/htmlcov

@@ -19,15 +19,19 @@ import os
 import os.path
 import sys
 import types
+from contextlib import contextmanager
 from io import StringIO
 from unittest import IsolatedAsyncioTestCase, TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
+from starlette.middleware.sessions import SessionMiddleware
 
 from streamlit import config
 from streamlit.runtime.runtime import Runtime
+from streamlit.runtime.secrets import Secrets
 from streamlit.web import bootstrap
+from streamlit.web.server.starlette.starlette_app import create_streamlit_middleware
 from tests import testutil
 from tests.testutil import patch_config_options
 
@@ -370,7 +374,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch.object(Secrets, "_parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
@@ -495,7 +499,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch.object(Secrets, "_parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
@@ -505,7 +509,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch.object(Secrets, "_parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -542,6 +546,100 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.port": 8502,
             },
         )
+
+
+class BootstrapSecretsLoadTest(TestCase):
+    """Eager secrets loading in ``prepare_streamlit_environment``."""
+
+    MOCK_SECRETS_PATH = "/mock/secrets.toml"
+
+    def setUp(self) -> None:
+        self._prev_environ = dict(os.environ)
+        self.secrets = Secrets()
+
+    def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self._prev_environ)
+
+    @contextmanager
+    def _secrets_patches(self, contents: str | None):
+        """Patch startup so ``contents`` is the secrets file. ``None`` means the file is absent."""
+        open_patch = (
+            patch("builtins.open", mock_open(read_data=contents))
+            if contents is not None
+            else patch("builtins.open", side_effect=FileNotFoundError())
+        )
+        with (
+            patch.object(bootstrap, "secrets", self.secrets),
+            patch(
+                "streamlit.web.server.server_util.secrets_singleton",
+                self.secrets,
+            ),
+            patch_config_options(
+                {
+                    "secrets.files": [self.MOCK_SECRETS_PATH],
+                    "server.cookieSecret": "from-config",
+                }
+            ),
+            patch("streamlit.watcher.path_watcher.watch_file"),
+            patch.object(bootstrap, "_initialize_mimetypes"),
+            patch.object(bootstrap, "_fix_pydeck_mapbox_api_warning"),
+            patch.object(bootstrap, "_maybe_print_static_folder_warning"),
+            open_patch,
+        ):
+            yield
+
+    def _prepare_with_secrets_file(self, contents: str | None) -> None:
+        with self._secrets_patches(contents):
+            bootstrap.prepare_streamlit_environment("app.py")
+
+    def test_absent_secrets_file_is_non_fatal(self) -> None:
+        """Missing secrets.toml must not log an error or prevent startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(contents=None)
+        mock_log.assert_not_called()
+        assert os.environ.get("SMTP_PASSWORD") is None
+
+    def test_malformed_secrets_toml_logs_and_continues(self) -> None:
+        """Malformed TOML logs once and does not abort ``prepare_streamlit_environment``."""
+        with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+            )
+
+        assert len(logs.records) == 1
+        record = logs.records[0]
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
+
+    def test_malformed_secrets_do_not_abort_middleware_construction(self) -> None:
+        """Malformed secrets.toml uses the config cookie secret, then startup logs the parse error."""
+
+        malformed = 'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+        with self._secrets_patches(malformed):
+            middleware_list = create_streamlit_middleware()
+            session_middleware = next(
+                mw for mw in middleware_list if mw.cls is SessionMiddleware
+            )
+            assert session_middleware.kwargs["secret_key"] == "from-config"
+
+            with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+                bootstrap.prepare_streamlit_environment("app.py")
+
+        assert len(logs.records) == 1
+        record = logs.records[0]
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
+
+    def test_valid_top_level_secrets_are_promoted_to_environ(self) -> None:
+        """Valid scalar secrets are still copied into ``os.environ`` at startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = 587\n'
+            )
+        mock_log.assert_not_called()
+        assert os.environ["SMTP_PASSWORD"] == "synthetic-secret-value"
+        assert os.environ["SMTP_PORT"] == "587"
 
 
 class BootstrapRunTest(IsolatedAsyncioTestCase):
@@ -624,7 +722,7 @@ class BootstrapUvloopTest(TestCase):
             assert bootstrap._get_uvloop_loop_factory() is None
 
     def test_run_server_loop_uses_runner_loop_factory(self):
-        """When asyncio.Runner exists, the server uses loop_factory=uvloop."""
+        """When uvloop can build a loop, the server uses loop_factory=uvloop."""
         fake_loop = Mock(name="uvloop")
         fake_factory = Mock(name="uvloop_factory", return_value=fake_loop)
         mock_runner = Mock()
@@ -672,24 +770,6 @@ class BootstrapUvloopTest(TestCase):
         mock_install.assert_not_called()
         mock_run.assert_called_once_with(coro)
         mock_warning.assert_called_once()
-
-    def test_run_server_loop_uses_install_when_runner_unavailable(self):
-        """Python 3.10 (no asyncio.Runner) falls back to uvloop.install()."""
-        fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
-        fake_uvloop.install = Mock(name="install")
-        coro = Mock(name="main_coro")
-
-        with (
-            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
-            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
-            patch.object(asyncio, "Runner", None, create=True),
-            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
-        ):
-            bootstrap._run_server_loop(coro)
-
-        fake_uvloop.install.assert_called_once()
-        mock_run.assert_called_once_with(coro)
 
     def test_run_server_loop_falls_back_to_asyncio_run(self):
         """Without uvloop, the server uses the stdlib event loop."""

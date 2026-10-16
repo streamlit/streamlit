@@ -52,10 +52,9 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
-  insideDataZoomConsumesWheelEvent,
-  optionHasInsideDataZoom,
   STREAMLIT_THEME,
 } from "./CustomTheme"
+import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -542,27 +541,7 @@ export function EChartsChart({
     }
   }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
 
-  // Inside dataZoom zooms (or pans) on wheel. Without preventDefault the page
-  // scroll container wins, so the chart never zooms. Only block the event when
-  // this wheel would actually be consumed — `zoomOnMouseWheel` may require a
-  // modifier (`"shift"` / `"ctrl"` / `"alt"`), and unmodified wheels must still
-  // scroll the page.
-  const hasInsideDataZoom = optionHasInsideDataZoom(option)
-  useEffect(() => {
-    const dom = containerRef.current
-    if (!dom || !hasInsideDataZoom) {
-      return
-    }
-    const handleWheel = (event: WheelEvent): void => {
-      if (insideDataZoomConsumesWheelEvent(option, event)) {
-        event.preventDefault()
-      }
-    }
-    dom.addEventListener("wheel", handleWheel, { passive: false })
-    return () => {
-      dom.removeEventListener("wheel", handleWheel)
-    }
-  }, [containerRef, hasInsideDataZoom, option])
+  useInsideDataZoomWheelGuard(containerRef, option)
 
   const downloadType = rendererStr === "svg" ? "svg" : "png"
 
@@ -600,6 +579,7 @@ export function EChartsChart({
     element.theme,
   ])
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const labelContext = element.alt?.trim() || undefined
 
   return (

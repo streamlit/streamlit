@@ -42,7 +42,7 @@ from streamlit.testing.v1.util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from snowflake.snowpark import Session
 
@@ -80,7 +80,7 @@ def retry_without_sleep(**kwargs: object) -> object:
 
 
 @contextmanager
-def script_run_ctx_and_cleared_cache() -> Iterator[None]:
+def script_run_ctx_and_cleared_cache() -> Generator[None, None, None]:
     """Attach a mock ScriptRunContext and restore the previous one after the test.
 
     Also clears ``st.cache_data`` so query-cache tests cannot leak across cases.

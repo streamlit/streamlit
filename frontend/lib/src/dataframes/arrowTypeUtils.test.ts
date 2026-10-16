@@ -572,6 +572,24 @@ describe("getTimezone", () => {
         type: DataFrameCellType.DATA,
         arrowField: new Field(
           "test",
+          new Timestamp(TimeUnit.SECOND, null),
+          true
+        ),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "datetime",
+          numpy_type: "datetime64[ns]",
+          metadata: { timezone: "America/New_York" },
+        },
+      },
+      "America/New_York",
+    ],
+    [
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
           new Timestamp(TimeUnit.SECOND, "America/New_York"),
           true
         ),

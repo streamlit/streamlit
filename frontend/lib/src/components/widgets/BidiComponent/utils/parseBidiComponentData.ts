@@ -60,7 +60,7 @@ export const parseBidiComponentData = ({
 
         const arrowBlobsMap: Record<string, Uint8Array> = {}
         Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
-          if (arrowProto?.data) {
+          if (arrowProto.data) {
             arrowBlobsMap[key] = arrowProto.data
           }
         })

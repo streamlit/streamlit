@@ -26,4 +26,10 @@ message AudioInput {
   bool disabled = 5;
   LabelVisibility label_visibility = 6;
   optional int32 sample_rate = 7;
+
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Inside a form, this flag has no effect because the form
+  // batches values until submit.
+  bool ignore_rerun = 8;
+  // Next: 9
 }
