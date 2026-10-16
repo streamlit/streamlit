@@ -62,7 +62,7 @@ message ForwardMsgMetadata {
 
 ## Agent command descriptions
 
-Agent sessions store a command description on `ForwardMsg.metadata.agent_props` for the snapshot described in `specs/2026-08-28-agent-app-interface/product-spec.md`. No route reads the field yet.
+Agent sessions store a command description on `ForwardMsg.metadata.agent_props` for the snapshot described in `specs/2026-08-28-agent-app-interface/product-spec.md`.
 
 `ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`.
 

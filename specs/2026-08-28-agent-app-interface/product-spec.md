@@ -391,19 +391,19 @@ right now. Naming follows the public API, for the reason above:
   exception's `message`, the `doc_string` `st.help` shows), whether an exception went
   uncaught, and the `url` of a media element or an eager download. A parameter Streamlit
   normalized, such as `column_config` with its defaults applied, is still a parameter.
-- **Effective values, not just authored ones.** Include every public property that
-  affects an element's meaning or how it can be interacted with, after backend-known
-  defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
-  effective button `type`, `label_visibility`, a widget's selection mode, options,
-  bounds, and step.
-  A client should not have to know each command's defaults for each Streamlit version to
-  read the document, and "absent" should never be ambiguous between false, unsupported,
-  and overlooked.
+- **Parameter values, read beside the docstring.** A prop is that parameter's value:
+  the argument the author passed, or an already processed form of it when that form
+  is the clearer description. Dedented and stringified text, and a list materialized
+  from an iterable, are processed forms. Which form to use is a case-by-case choice.
+  A documented default may be omitted — `unsafe_allow_html` left false, `format=None`,
+  `hide_index=None` — because the command's docstring explains the fallback. Include a
+  resolved value when leaving it out would hide a choice the docstring does not already
+  spell out, such as `disabled`, options, bounds, and `label_visibility`.
 - **Omit presentation.** Width, height, gaps, alignment, stretch ratios, padding, border
   or surface styling, a heading's `divider`, a dialog's width, a column's
   share of its row, and a table column's width, pinning, and alignment carry no meaning
-  for a non-visual client. Read this strictly, because the effective-value rule
-  above pulls the other way and would otherwise put styling on most nodes of a page. The
+  for a non-visual client. Read this strictly. A parameter that changes meaning is
+  included, and that rule would otherwise put styling on most nodes of a page. The
   test is whether a property changes what the element *means* or how it can be *used*,
   not whether the author passed it.
 - **Omit absent content, at any depth.** Optional content that was never supplied —
@@ -413,9 +413,9 @@ right now. Naming follows the public API, for the reason above:
   …` for every column. Such a parameter is reported from the mapping Streamlit resolved
   rather than the author's argument, so defaults are applied and the one null that
   *means* something — a `column_config` entry of `None`, which hides that column — has
-  already become `{"hidden": true}`. Content is not a parameter object and is kept
-  exactly as authored: a null in `st.json`'s body or a custom component's arguments is
-  data.
+  already become `{"hidden": true}`. Content may be the processed text, dedented and
+  stringified. A null in `st.json`'s body or a custom component's arguments is data
+  and stays.
 - **An element that would serialize to nothing is left out.** An unfilled `st.empty()`
   placeholder and an `st.space()` say only "there is nothing here", which is what their
   absence says too. A container whose properties were all presentation likewise
@@ -451,8 +451,7 @@ right now. Naming follows the public API, for the reason above:
           {
             "type": "caption",
             "props": {
-              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger.",
-              "unsafe_allow_html": false
+              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."
             }
           },
           {
@@ -525,8 +524,7 @@ right now. Naming follows the public API, for the reason above:
               {
                 "type": "markdown",
                 "props": {
-                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate.",
-                  "unsafe_allow_html": false
+                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."
                 }
               }
             ]
@@ -662,11 +660,11 @@ Rules:
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
   kept in a model's context. Markdown, code, and LaTeX stay source strings.
-- **A description publishes nothing the browser does not receive.** Building it from the
-  command's arguments does not make an argument publishable: where the browser gets a
-  rounded or reduced form, the description reports that form. So `st.progress` reports a
-  fraction rounded to the whole percent the browser shows, whether the author passed an
-  `int` percent or a `float` fraction.
+- **A description publishes nothing the browser does not receive.** A processed
+  parameter value is fine. What must not appear is anything the page does not show: a
+  secret, a field the proto drops, or the unreduced value behind a rounded one. So
+  `st.progress` reports a fraction rounded to the whole percent the browser shows,
+  whether the author passed an `int` percent or a `float` fraction.
 - **App text is untrusted content.** Labels, help, captions, page titles, and data can
   carry prompt injection. Nearly every string in the document is app-authored, so rather
   than marking them field by field, the protocol description tells clients to treat all

@@ -237,8 +237,9 @@ def element(
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
-        Pass an effective value (``disabled=False``) for any parameter whose
-        value changes what the element means, so "absent" is never ambiguous.
+        Pass the author's value or a processed form of it, such as dedented or
+        stringified text, whichever reads as that parameter beside the
+        command's docstring. A documented default may be omitted.
     """
     return _json_description(
         command,
