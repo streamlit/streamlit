@@ -22,12 +22,7 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
-**Where to put keys** (placement the table above leaves out)
-
-1. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
-2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See the `shadcn-dual` template
-3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
-4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
+**Where to put keys:** shared fonts/radii/borders/padding on `[theme]`; per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`); sidebar contrast on `[theme.sidebar]` or nested light/dark sidebars; chart/dataframe palettes on the section for that mode.
 
 ## Cheat sheet: common customization intents
 
@@ -323,14 +318,9 @@ paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Main `paddingTop`:** Gap *below* visible header chrome.
+**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height so `"0"` is flush under the header (not the viewport top). Embed options leave the value as-is. In a bare embed with no header, a very small value can clip overlay toolbars — leave unset or use a small non-zero gap. Print uses the value alone (no header reservation).
 
-- Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport.
-- Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`).
-- In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap.
-- Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
-
-**Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
+**Sidebar `paddingTop`:** Gap before the first sidebar widget (after nav, or after header/logo when there is no page nav).
 
 **`paddingBottom`:** Replaces the default bottom inset in main or sidebar. Does not affect sticky `st.bottom` content.
 
@@ -466,11 +456,11 @@ If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never privat
 
 ## Development workflow
 
-Most options hot-reload on save + rerun. `fontFaces` additions and updates apply on the next rerun; after removing the last entry, refresh the page. Restart when you newly enable `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
+Most options hot-reload on save + rerun. `fontFaces` additions/updates apply on the next rerun; after removing the last entry, refresh. Restart when newly enabling `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the appearance toggle. Inspect: `streamlit config show`.
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Picker defaults and dual vs locked guidance live in `assets/templates/themes/README.md` — use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into `.streamlit/config.toml`, or adapt into a shared brand file via `theme.base`. See `assets/templates/themes/README.md` for picker defaults; use dual mode only when the appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|
