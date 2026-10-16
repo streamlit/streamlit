@@ -88,9 +88,13 @@ namespace = "sales-dashboard"
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries in addition to memory. |
+| `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries. `"memory"` keeps them only in the process; `"disk"` also writes them to `cache.diskPath`. |
 | `cache.diskPath` | `str` | `"~/.streamlit/cache"` | Folder for `storage = "disk"`. Can be a volume that several replicas share. |
-| `cache.namespace` | `str` | Derived from the main script path | Keeps the entries of different apps apart when they share one storage. |
+| `cache.namespace` | `str` | Derived from the main script path | Keeps the entries of different apps apart when they share one storage. Lowercase letters, digits, `.`, `_`, and `-`, starting with a letter or digit; other values are rejected at startup. |
+
+The default namespace only separates apps whose main scripts have different absolute paths.
+Different apps that share one storage from containers with the same path, such as
+`/app/streamlit_app.py`, must each set their own `cache.namespace`.
 
 **Custom storages in `st.App`:**
 
@@ -130,24 +134,30 @@ key more than once. The full contract is in the tech spec.
 
 - `ttl`: An entry expires a fixed time after it was computed, on every replica. Expired
   entries are never served, whether from memory or from the storage.
-- `max_entries`: Limits how many entries each replica keeps in memory. The storage's own
-  eviction policy limits what it keeps (disk: TTL; Redis: its memory policy). An entry
+- `max_entries`: Limits how many entries each replica keeps in memory for that function. The
+  storage's own eviction policy limits what it keeps: disk only deletes expired entries, so
+  entries without a `ttl` stay until they're cleared; Redis uses its memory policy. An entry
   evicted from memory can still be read back from the storage.
-- `refresh_mode="background"`: Supported. When an entry goes stale, one replica refreshes it
-  and the others reuse the result instead of recomputing it.
-- Other parameters and async cached functions are unchanged. Display output from cached
-  functions is replayed on every replica, including media.
+- `refresh_mode="background"`: Supported. As today, an entry goes stale after `ttl` and
+  expires at `runner.cacheBackgroundRefreshTTLMultiplier` × `ttl`. When an entry goes
+  stale, every replica keeps serving it while one replica refreshes it, and the others reuse
+  the result instead of recomputing it.
+- Other parameters and async cached functions work as today, including their limits:
+  coroutines can't use `refresh_mode="background"`, and background mode doesn't replay
+  display output. Otherwise, display output from cached functions is replayed on every
+  replica, including media. Audio and video passed as a local file path are read from that
+  path again, so the file must exist on every replica.
 
 **Clearing:**
 
 - `my_func.clear()`, `my_func.clear(*args)`, and `st.cache_data.clear()` clear the shared
   storage.
 - The replica that cleared sees the change immediately. A session stays on one replica, so
-  a user who clicks a "Refresh" button always gets fresh data. Other replicas see the clear
-  within about one second.
-- `streamlit cache clear` deletes the disk storage folder configured in `config.toml`. It
-  can't reach a storage passed to `st.App`; use `st.cache_data.clear()` from the app
-  instead.
+  a user who clicks a "Refresh" button gets fresh data. Other replicas see the clear within
+  about one second.
+- `streamlit cache clear` deletes the entries of every namespace in the disk storage folder
+  configured in `config.toml`, and nothing else in that folder. It can't reach a storage
+  passed to `st.App`; use `st.cache_data.clear()` from the app instead.
 
 **Several replicas:**
 
@@ -265,9 +275,10 @@ This stores every global `st.cache_data` function, not just `load_data`. See
 
 1. **First release:** Ship storage support. `persist="disk"` and `persist=True` keep working:
    that function uses the built-in disk storage at `cache.diskPath`, so it now honors `ttl`,
-   supports background refresh, uses a configurable folder, and is isolated per app. If an
-   app-level storage is configured, `persist` has no effect, because entries are already
-   stored. The docs mark `persist` as deprecated.
+   supports background refresh, uses a configurable folder, and is isolated per app. If a
+   storage is already in use (`cache.storage = "disk"` or `st.App(cache_storage=...)`),
+   `persist` has no effect, because every global `st.cache_data` function already uses that
+   storage. The docs mark `persist` as deprecated.
 2. **At least 3 months later:** `persist` shows a deprecation warning pointing to
    `cache.storage = "disk"`.
 3. **Removal:** No date yet. GitHub code search finds about 2,400 public uses of
@@ -345,8 +356,8 @@ added later if users ask for it. Adding a parameter later is easier than removin
 | Item | ✅ or comment |
 |---|---|
 | Works on SiS, Cloud, etc? | ✅ The default is unchanged (memory). `cache.storage = "disk"` needs a writable folder; platforms with ephemeral disks, like Community Cloud and SiS, keep entries only until the container restarts. `cache_storage` works wherever `st.App` does. |
-| No breaking API changes | ✅ Additive. `persist` keeps working through a long deprecation. Persisted `.memo` files recompute once after upgrading. |
+| No breaking API changes | ✅ No API is removed, and `persist` keeps working through a long deprecation. The first release still changes some behavior: `persist` with `scope="session"` raises an error, `persist` starts honoring `ttl`, persisted `.memo` files recompute once, and calls with `set` arguments miss once in both `st.cache_data` and `st.cache_resource`. |
 | No new dependencies | ✅ The built-in disk storage uses only the standard library. |
 | Metrics collected | Record the `cache.storage` value, whether `st.App(cache_storage=...)` is set, and `persist` usage to plan its removal. |
-| Any security/legal impact? | Entries are pickles, so write access to the storage means code execution in the app. This isn't new, but shared storages can widen access, so the docs must cover access control. It also fixes the cross-session and cross-app leaks of `persist`. |
+| Any security/legal impact? | Entries are pickles, so write access to the storage means code execution in the app. This isn't new, but shared storages can widen access, so the docs must cover access control. It also fixes the cross-session leak of `persist`, and its cross-app leak between apps at different paths. |
 | Any docs changes needed? | ✅ Caching concepts page (storage and multi-replica sections, Redis recipe), `st.cache_data` docstring (`persist` deprecation, `ttl` and `max_entries` with a storage), `st.App` docstring, config docs, and the embedded skill's `performance.md`, which says background refresh can't be combined with `persist`. |

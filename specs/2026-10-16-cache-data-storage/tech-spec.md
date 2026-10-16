@@ -82,11 +82,14 @@ DataCache (per function)              unchanged: hashing, per-key locks, replay
    │ read / write / clear by value key
    ▼
 SharedCacheLayer (per process)        new: envelope, key layout, expiry,
-   │  ├─ in-memory copies (LRU)            invalidation markers, leases,
+   │  ├─ in-memory copies per function     invalidation markers, leases,
    │  └─ marker tokens per function        background writes, failure handling
    ▼
 CacheStorage (user-provided or DiskCacheStorage)   stores bytes
 ```
+
+Each function keeps its own in-memory cache with its `ttl` and `max_entries`, as today,
+and entries loaded from the storage count toward that cap.
 
 With the default `cache.storage = "memory"`, the current in-memory path is kept as is, so
 apps that don't configure a storage see no change or overhead. `scope="session"` caches
@@ -94,6 +97,10 @@ always use that in-memory path. `CacheStorageManager` and `CacheStorageContext` 
 internal; `CacheStorageContext.persist` goes away together with the `persist` shim.
 
 ### Public protocol
+
+`streamlit.storage.CacheStorage` is a new public type. The internal per-function
+`CacheStorage` in `runtime/caching/storage/cache_storage_protocol.py` has a different
+contract, stays private, and gets a different name during implementation.
 
 ```python
 class CacheStorage(Protocol):
@@ -113,10 +120,12 @@ class CacheStorage(Protocol):
         """Delete the key if it exists."""
 ```
 
-Optional methods have defaults on the protocol. Streamlit treats a `NotImplementedError` as
-"not supported", which follows the existing `CacheStorageManager.clear_all()` convention:
+The protocol declares only these three methods, so any class with them type-checks without
+subclassing. Streamlit looks up the optional methods below with `getattr`, and treats a
+missing method or a `NotImplementedError` as "not supported", which follows the existing
+`CacheStorageManager.clear_all()` convention:
 
-| Method | Used for | Default |
+| Method | Used for | Without it |
 |---|---|---|
 | `get_many(keys) -> list[bytes \| None]` | Reading a function's markers in one round trip | Calls `get` for each key |
 | `add(key, value, *, ttl_seconds) -> bool` | Set-if-absent, for leases and creating markers | Not supported: no leases |
@@ -142,6 +151,11 @@ Streamlit wraps each pickled `CachedResult` in a fixed-size header:
 Wall-clock timestamps let every replica, and a restarted process, agree on when an entry
 goes stale and when it expires. This assumes NTP-synced clocks.
 
+`expires_at` and the `ttl_seconds` hint use the existing hard TTL from
+`get_hard_ttl_seconds()`: `ttl`, or `runner.cacheBackgroundRefreshTTLMultiplier` × `ttl`
+with `refresh_mode="background"`. That keeps a stale entry readable on every replica while
+one replica refreshes it.
+
 ### Key layout
 
 ```
@@ -152,13 +166,18 @@ goes stale and when it expires. This assumes NTP-synced clocks.
 {entry_key}.lease                                                                 lease
 ```
 
-- `namespace`: `cache.namespace`, which defaults to a short hash of the main script's
-  absolute path. This fixes the cross-app collision. Replicas with different checkout paths
-  just miss each other's entries, which is safe.
+- `namespace`: `cache.namespace`, which defaults to a short `calc_hash` of the main script's
+  absolute path. Apps at different paths, such as several apps on one machine, no longer
+  collide. Apps at the same path, such as containers that all run `/app/streamlit_app.py`,
+  need explicit namespaces. Replicas with different checkout paths just miss each other's
+  entries, which is safe. A configured namespace must match `[a-z0-9][a-z0-9._-]*` and is
+  rejected at startup otherwise, so it stays one key segment and can't escape `diskPath`.
 - `format`: Bumped whenever the envelope, `CachedResult`, or key derivation changes, for
   example with the [#16559](https://github.com/streamlit/streamlit/issues/16559) fix. Old
   entries then become unreachable instead of being misread.
-- Tokens: Random 16-character hex strings stored in the marker keys.
+- Tokens: Random 16-character hex strings stored in the marker keys. Changing a token makes
+  every entry under the old token unreachable. `epoch` holds the function token, and `inval`
+  is the per-key-clear marker.
 
 ### Read path
 
@@ -179,14 +198,19 @@ goes stale and when it expires. This assumes NTP-synced clocks.
    first (TTL 30 s). The holder renews the lease every 10 s while it computes, so long
    computations keep it and a crashed holder blocks others for at most 30 s.
 2. If another replica holds the lease, poll the storage with backoff (10 ms up to 200 ms)
-   until the value appears or the lease is gone. The poll loop runs the run's yield check
-   from [cancellable cache waits](../2026-10-07-cancellable-cache-wait/tech-spec.md), so an
-   abandoned run stops waiting.
-3. Keep the result in memory right away, and write it to the storage on a bounded
-   background executor. The rerun that computed the value doesn't wait for the upload. If
-   the executor is full, the write is skipped. The lease is released after the write.
-4. Writes are dropped if a local clear happened during the compute, using the existing
-   invalidation tokens.
+   until the value appears or the lease is gone. While polling, the waiter checks whether
+   its script run was stopped (see
+   [cancellable cache waits](../2026-10-07-cancellable-cache-wait/tech-spec.md)), so an
+   abandoned run stops waiting. Async cached functions `await` between polls instead of
+   sleeping, so the wait doesn't block the event loop.
+3. If a local clear happened during the compute, detected with the existing invalidation
+   tokens, return the result without keeping or writing it. Otherwise keep it in memory
+   right away, and write it to the storage on a bounded background executor. The rerun that
+   computed the value doesn't wait for the upload. If the executor is full, the write is
+   skipped.
+4. Release the lease with a best-effort `delete` after the write, and also when the function
+   raises, the run is stopped, or the write is skipped or dropped. Waiters then compute
+   right away instead of waiting for the lease to expire.
 
 ### Clears
 
@@ -196,18 +220,23 @@ goes stale and when it expires. This assumes NTP-synced clocks.
 | `my_func.clear()` | New function token | Drop that function's copies |
 | `my_func.clear(*args)` | Delete the entry and write a new `inval` marker | Drop that function's copies, and fetch its other keys from storage again |
 
-- Because tokens are part of every entry key, a clear is a single write. Old entries become
-  unreachable without scanning keys, and a compute that finishes after the clear lands under
-  the old token where nobody reads it. Old entries are deleted in the background with
-  `delete_prefix` if supported, and otherwise by the storage's own eviction.
+- Because tokens are part of every entry key, a global or function clear is a single write.
+  Old entries become unreachable without scanning keys, and a compute that finishes after
+  the clear lands under the old token where nobody reads it. Old entries are deleted in the
+  background with `delete_prefix` if supported, and otherwise by the storage's own eviction.
+- A per-key clear has no token in the entry key. A compute of the same key that started
+  earlier on another replica can still write its result after the clear (see
+  [Limits](#guarantees-and-limits)).
 - The replica that clears updates its own tokens immediately. Other replicas see the clear
   within one token read interval (one second).
 - Markers are always overwritten with new random values and never read and modified, so
   concurrent clears can't undo each other. If the storage evicts a marker, a new random
   token replaces it. That can cause misses, but it never makes cleared entries reachable
   again.
-- `streamlit cache clear` deletes the whole `cache.diskPath` folder, as it does today. Without
-  a script it can't derive the namespace.
+- `streamlit cache clear` deletes only Streamlit's content in `cache.diskPath`: the
+  `{namespace}/v{format}` folders and legacy `*.memo` files. Without a script it can't
+  derive the namespace, so it clears every namespace in the folder. It never deletes the
+  folder itself or other files in it, which matters once `diskPath` can be a shared mount.
 
 ### Background refresh across replicas
 
@@ -227,21 +256,25 @@ goes stale and when it expires. This assumes NTP-synced clocks.
   - A failed write is skipped.
   - A failed marker read keeps the current tokens and retries after the next interval. If a
     replica has never read the markers, it uses random local tokens, so it never serves
-    entries it can't validate.
-- A warning is logged at most once per minute for each kind of failure.
+    entries it can't validate. It doesn't write those tokens to the storage, so it never
+    replaces the shared markers.
+- Streamlit logs at most one warning per minute for each kind of failure.
 - Storage calls never hold `DataCaches`' global lock. Token reads only block threads asking
   for the same function's tokens for the first time.
 
 ### Built-in `DiskCacheStorage`
 
 - **Layout:** Each `/`-separated key segment becomes a directory under `diskPath`. Each file
-  starts with an 8-byte expiry, and `get` treats expired files as missing.
+  starts with an 8-byte expiry. `get` strips it before returning the value, and treats
+  expired files as missing.
 - **Atomic writes:** A value is written to a temp file in the same directory, then
   `os.replace`d into place. Readers see the old or the new file, never a partial one. This
   holds on local disks and on NFS/EFS.
 - **`add`:** Writes a temp file, then `os.link`s it to the target. Hard-link creation fails
   if the target exists, which makes it an atomic create-with-content, also on NFS. Expired
-  holders are replaced on a best-effort basis.
+  holders are replaced on a best-effort basis. On a volume without hard links, such as some
+  SMB shares or exFAT, `add` raises `NotImplementedError`, so the replica keeps storing
+  entries with `set` and just runs without leases.
 - **`delete_prefix`:** `shutil.rmtree` of the token directory.
 - **Sweeping:** At most every 10 minutes per process, a sweep deletes expired files and temp
   files older than an hour. It tolerates other replicas sweeping at the same time.
@@ -260,11 +293,12 @@ lease release, use a compare-and-delete Lua script.
 - **Runtime setup:** `create_default_cache_storage_manager()` reads `cache.storage`,
   `cache.diskPath`, and `cache.namespace`. `st.App.__init__` accepts `cache_storage`, which
   `st.App._create_runtime()` passes into `RuntimeConfig` in place of the default.
-- **`persist` shim:** If no app-level storage is configured, `persist="disk"` and
-  `persist=True` route that function through a `SharedCacheLayer` over
-  `DiskCacheStorage(cache.diskPath)`. If a storage is configured, `persist` has no effect.
-- **CLI:** `streamlit cache clear` deletes `cache.diskPath`, which also removes the old
-  `.memo` files.
+- **`persist` shim:** If neither `cache.storage` nor `st.App(cache_storage=...)` selects a
+  storage, `persist="disk"` and `persist=True` route that function through a
+  `SharedCacheLayer` over `DiskCacheStorage(cache.diskPath)`. If a storage is already
+  selected, `persist` has no effect.
+- **CLI:** `streamlit cache clear` deletes the `{namespace}/v{format}` folders and legacy
+  `.memo` files in `cache.diskPath` (see [Clears](#clears)).
 - **AppTest:** Keeps using `MemoryCacheStorageManager`.
 - **Stats:** In-memory copies keep reporting through the existing `cache_memory_bytes`
   stats.
@@ -297,15 +331,16 @@ unpickle that `st.cache_data` already does on every hit.
 - A replica never serves an entry past its `expires_at`.
 - A clear is immediate on the replica that made it, and reaches every other replica within
   one second.
-- Cleared entries never become reachable again, even if the storage evicts markers.
+- Entries cleared with `st.cache_data.clear()` or `my_func.clear()` never become reachable
+  again, even if the storage evicts markers.
 - A torn or corrupted entry is never served.
 - A storage failure never fails a script run.
 
 **Limits:**
 
-- A compute that started before a clear on another replica can still be written after it,
-  because the protocol has no compare-and-set. Within one replica, the existing
-  invalidation tokens prevent this.
+- After `my_func.clear(*args)`, a compute of the same key that started earlier on another
+  replica can still write its result, because the protocol has no compare-and-set. Within
+  one replica, the existing invalidation tokens prevent this.
 - Each replica keeps its own in-memory copies, so a shared storage doesn't lower memory
   use.
 - Storage calls are synchronous, so an async cached function blocks its event loop for the
@@ -315,11 +350,12 @@ unpickle that `st.cache_data` already does on every hit.
 
 ## Validation
 
-A [prototype](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/17518/shared-cache-prototype/README.md)
+A
+[prototype](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/17518/shared-cache-prototype/README.md)
 implemented the shared layer, the disk storage, and the Redis recipe, with tests running
 against a shared directory and against fakeredis's TCP server. It also includes the scripts
-that reproduce the issues under [Key issues found](#key-issues-found). It didn't implement lease renewal or the disk sweep. All 29 tests
-passed:
+that reproduce the issues under [Key issues found](#key-issues-found). It didn't implement
+lease renewal or the disk sweep. All 29 tests passed:
 
 - **Sharing:** A value computed on one replica was reused by another. 1,000 hits between
   token reads made zero storage calls, and the next interval cost one `get_many`.
