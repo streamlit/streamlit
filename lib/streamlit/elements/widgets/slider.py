@@ -1316,7 +1316,7 @@ class SliderMixin:
                 max_value=described_bounds[1],
                 step=described_bounds[2],
                 format=format,
-                help=help,
+                help=slider_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

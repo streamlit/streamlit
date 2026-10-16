@@ -1561,12 +1561,13 @@ class DataEditorMixin:
                 # should say this API does not accept the edit.
                 support="read_only",
                 column_config=described_column_config(column_config_mapping),
-                column_order=list(column_order) if column_order else None,
+                column_order=list(proto.column_order) or None,
                 hide_index=hide_index,
                 num_rows=num_rows,
-                # True only when every column is locked. A column list is
-                # already applied to column_config, and the default is omitted.
-                disabled=True if disabled is True else None,
+                # A bool locks or unlocks the whole editor. False is reported:
+                # omitting it would look like a column list, which is already
+                # applied to column_config and left out here.
+                disabled=disabled if isinstance(disabled, bool) else None,
                 on_change="ignore" if on_change == "ignore" else "rerun",
                 # The text shown for missing values, which the preview reports
                 # as null.

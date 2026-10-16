@@ -2847,8 +2847,9 @@ class VegaChartsMixin:
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
-        Built here rather than at the public command because the command name
-        and encoding arguments are only known once the chart proto exists.
+        Built here because the element ID and normalized selection modes exist
+        only once the chart proto is filled. The public command passes its own
+        name and encoding arguments in.
         """
         if not agent_spec.is_recording():
             return None

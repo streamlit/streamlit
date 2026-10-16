@@ -100,8 +100,8 @@ class MarkdownMixin:
             or agent_spec.element(
                 "markdown",
                 body=body,
-                help=help,
-                unsafe_allow_html=unsafe_allow_html or None,
+                help=markdown_proto.help or None,
+                unsafe_allow_html=unsafe_allow_html,
             ),
         )
 
@@ -423,8 +423,8 @@ class MarkdownMixin:
             agent_props=agent_spec.element(
                 "caption",
                 body=body,
-                help=help,
-                unsafe_allow_html=unsafe_allow_html or None,
+                help=caption_proto.help or None,
+                unsafe_allow_html=unsafe_allow_html,
             ),
         )
 
@@ -501,7 +501,9 @@ class MarkdownMixin:
             layout_config=layout_config,
             # `body` is reported as the LaTeX source the author supplied, not
             # the `$$`-delimited form the frontend needs.
-            agent_props=agent_spec.element("latex", body=body, help=help),
+            agent_props=agent_spec.element(
+                "latex", body=body, help=latex_proto.help or None
+            ),
         )
 
     @gather_metrics("divider")
@@ -683,7 +685,11 @@ class MarkdownMixin:
             # payload: it emits NATIVE markdown with the color and icon
             # directives already expanded into `body`.
             agent_props=agent_spec.element(
-                "badge", label=label, icon=icon, color=color, help=help
+                "badge",
+                label=label,
+                icon=icon,
+                color=color,
+                help=badge_proto.help or None,
             ),
         )
 

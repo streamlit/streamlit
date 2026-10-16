@@ -499,7 +499,7 @@ class MetricMixin:
                 delta_color=delta_color if delta is not None else None,
                 delta_arrow=delta_arrow if delta is not None else None,
                 delta_description=delta_description,
-                help=help,
+                help=metric_proto.help or None,
                 icon=icon,
                 format=format,
                 # The sparkline is already on the proto. Copy it only while

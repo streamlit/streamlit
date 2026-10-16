@@ -659,23 +659,27 @@ def described_column_config(column_config_mapping: Any) -> Any:
 
     The resolved mapping already has defaults applied, and it states "hide this
     column" as ``{"hidden": True}`` rather than the bare ``None`` the author may
-    have written. The index entry is removed because ``hide_index`` is reported
-    as its own parameter. Width, pinning, and alignment are removed as well.
+    have written. Width, pinning, and alignment are presentation and are
+    removed. The index entry keeps its label, type, format, and other semantic
+    settings; its ``hidden`` flag is removed because ``hide_index`` reports
+    whether the index is shown. A column left with nothing to say is dropped.
     """
     if not isinstance(column_config_mapping, dict):
         return column_config_mapping
 
-    return {
-        name: {
-            key: value
-            for key, value in config.items()
-            if key not in _COLUMN_PRESENTATION_KEYS
-        }
-        if isinstance(config, dict)
-        else config
-        for name, config in column_config_mapping.items()
-        if name != INDEX_IDENTIFIER
-    } or None
+    described: dict[Any, Any] = {}
+    for name, config in column_config_mapping.items():
+        if not isinstance(config, dict):
+            described[name] = config
+            continue
+
+        dropped_keys = _COLUMN_PRESENTATION_KEYS
+        if name == INDEX_IDENTIFIER:
+            dropped_keys = _COLUMN_PRESENTATION_KEYS | {"hidden"}
+        kept = {key: value for key, value in config.items() if key not in dropped_keys}
+        if kept:
+            described[name] = kept
+    return described or None
 
 
 def apply_data_specific_configs(

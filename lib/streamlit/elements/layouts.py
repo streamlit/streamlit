@@ -2296,7 +2296,7 @@ class LayoutsMixin:
                     value_schema=agent_spec.BOOLEAN if is_stateful else None,
                     label=label,
                     type=type,
-                    help=help,
+                    help=popover_proto.help or None,
                     icon=icon,
                     disabled=disabled,
                     # A stateful popover reports whether it is open as `value`.

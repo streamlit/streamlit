@@ -648,7 +648,7 @@ class RadioMixin:
                 captions=(list(radio_proto.captions) if captions is not None else None)
                 if agent_spec.is_recording()
                 else None,
-                help=help,
+                help=radio_proto.help or None,
                 horizontal=horizontal,
                 disabled=disabled,
                 label_visibility=label_visibility,

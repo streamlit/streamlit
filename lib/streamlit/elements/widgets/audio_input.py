@@ -375,7 +375,7 @@ class AudioInputMixin:
                 support="read_only",
                 label=label,
                 sample_rate=sample_rate,
-                help=help,
+                help=audio_input_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

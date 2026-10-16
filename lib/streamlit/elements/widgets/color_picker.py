@@ -406,7 +406,7 @@ class ColorPickerMixin:
                 action="value",
                 value_schema=agent_spec.STRING,
                 label=label,
-                help=help,
+                help=color_picker_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

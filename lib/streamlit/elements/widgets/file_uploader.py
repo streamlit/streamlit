@@ -665,7 +665,7 @@ class FileUploaderMixin:
                 accept_multiple_files=accept_multiple_files,
                 # The cap the browser enforces, including the server default.
                 max_upload_size=file_uploader_proto.max_upload_size_mb,
-                help=help,
+                help=file_uploader_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

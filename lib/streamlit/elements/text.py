@@ -128,7 +128,9 @@ class TextMixin:
             "text",
             text_proto,
             layout_config=layout_config,
-            agent_props=agent_spec.element("text", body=text_proto.body, help=help),
+            agent_props=agent_spec.element(
+                "text", body=text_proto.body, help=text_proto.help or None
+            ),
         )
 
     @property

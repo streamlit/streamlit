@@ -1577,7 +1577,7 @@ class ButtonGroupMixin:
                     else None
                 ),
                 selection_mode=selection_mode,
-                help=help,
+                help=proto.help or None,
                 required=proto.required,
                 disabled=disabled,
                 label_visibility=label_visibility,

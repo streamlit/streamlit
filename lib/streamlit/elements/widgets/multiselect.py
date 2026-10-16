@@ -904,7 +904,7 @@ class MultiSelectMixin:
                 # The formatted options a client must send back, not the
                 # author's Python objects.
                 options=formatted_options,
-                help=help,
+                help=proto.help or None,
                 placeholder=placeholder,
                 max_selections=max_selections,
                 accept_new_options=accept_new_options,

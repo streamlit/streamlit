@@ -944,7 +944,7 @@ class TextWidgetsMixin:
                 label=label,
                 max_chars=max_chars,
                 type=type,
-                help=help,
+                help=text_input_proto.help or None,
                 # The wire form encodes an explicit empty placeholder as a
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",
@@ -1383,7 +1383,7 @@ class TextWidgetsMixin:
                 value_schema=agent_spec.STRING,
                 label=label,
                 max_chars=max_chars,
-                help=help,
+                help=text_area_proto.help or None,
                 placeholder=placeholder if placeholder != " " else "",
                 disabled=disabled,
                 label_visibility=label_visibility,

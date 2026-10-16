@@ -605,7 +605,7 @@ class CheckboxMixin:
                 action="value",
                 value_schema=agent_spec.BOOLEAN,
                 label=label,
-                help=help,
+                help=checkbox_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

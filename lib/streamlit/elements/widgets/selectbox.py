@@ -836,7 +836,7 @@ class SelectboxMixin:
                 # these are the strings a client has to send back to set the
                 # widget, so they are the actionable form.
                 options=formatted_options,
-                help=help,
+                help=selectbox_proto.help or None,
                 # The wire form encodes an explicit empty placeholder as a
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",

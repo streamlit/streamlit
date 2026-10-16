@@ -369,7 +369,7 @@ class CameraInputMixin:
                 support="read_only",
                 label=label,
                 resolution=resolution,
-                help=help,
+                help=camera_input_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

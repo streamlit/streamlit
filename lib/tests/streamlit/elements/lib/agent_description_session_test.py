@@ -89,12 +89,12 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert decoded == [
             {
                 "type": "markdown",
-                "props": {"body": "hello", "help": "more"},
+                "props": {"body": "hello", "help": "more", "unsafe_allow_html": False},
             }
         ]
 
-    def test_markdown_reports_unsafe_html_only_when_enabled(self) -> None:
-        """``unsafe_allow_html`` is an opt-in. The default stays out of the description."""
+    def test_markdown_reports_unsafe_html_as_a_boolean(self) -> None:
+        """``unsafe_allow_html`` is reported for both values, including the default."""
         self._record()
         st.markdown("<b>hello</b>", unsafe_allow_html=True)
         st.caption("plain")
@@ -103,7 +103,93 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         markdown = next(item for item in descriptions if item["type"] == "markdown")
         caption = next(item for item in descriptions if item["type"] == "caption")
         assert markdown["props"]["unsafe_allow_html"] is True
-        assert "unsafe_allow_html" not in caption["props"]
+        assert caption["props"]["unsafe_allow_html"] is False
+
+    def test_text_help_matches_the_dedented_proto(self) -> None:
+        """Help is the dedented string the browser receives."""
+        self._record()
+        st.text("hello", help="    tip")
+
+        message = self.get_message_from_queue()
+        decoded = json.loads(message.metadata.agent_props)
+        assert decoded["props"]["help"] == "tip"
+        assert message.delta.new_element.text.help == "tip"
+
+    def test_dataframe_column_order_reads_the_consumed_iterable(self) -> None:
+        """A one-shot column order is read from the proto after it is consumed."""
+        self._record()
+        st.dataframe(pd.DataFrame({"b": [1], "a": [2]}), column_order=iter(["a", "b"]))
+
+        dataframe = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "dataframe"
+        )
+        assert dataframe["props"]["column_order"] == ["a", "b"]
+
+    def test_data_editor_reports_disabled_false(self) -> None:
+        """``disabled=False`` is an effective value, and a column list is omitted."""
+        self._record()
+        frame = pd.DataFrame({"a": [1]})
+        st.data_editor(frame, disabled=False, key="unlocked")
+        st.data_editor(frame, disabled=["a"], key="partial")
+
+        editors = [
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "data_editor"
+        ]
+        assert editors[0]["props"]["disabled"] is False
+        assert "disabled" not in editors[1]["props"]
+
+    def test_custom_component_reports_bytes_and_omits_dataframes(self) -> None:
+        """Bytes arguments are their length. Dataframe arguments stay omitted."""
+        from streamlit.components.v1 import declare_component
+
+        self._record()
+        component = declare_component("demo", url="http://not.a.url")
+        component(label="Ada", payload=b"abc", frame=pd.DataFrame({"a": [1]}))
+
+        described = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "components.v1.declare_component"
+        )
+        assert described["props"]["args"]["label"] == "Ada"
+        assert described["props"]["args"]["payload"] == {"bytes": 3}
+        assert "frame" not in described["props"]["args"]
+
+    def test_fragment_rerun_resends_the_transparent_wrapper(self) -> None:
+        """A fragment rerun keeps the instruction to skip the internal wrapper."""
+        self._record()
+        outside = st.container()
+
+        @st.fragment
+        def writer() -> None:
+            with outside:
+                st.markdown("inside")
+
+        writer()
+
+        def transparent() -> list[dict[str, Any]]:
+            return [
+                item
+                for item in _descriptions(list(self.forward_msg_queue._queue))
+                if item.get("transparent") is True
+            ]
+
+        assert transparent() == [
+            {"type": "container", "transparent": True, "props": {}}
+        ]
+
+        fragment_id = next(iter(self.script_run_ctx.fragment_storage._fragments))
+        self.script_run_ctx.fragment_ids_this_run = [fragment_id]
+        self.clear_queue()
+        self.script_run_ctx.fragment_storage._fragments[fragment_id]()
+
+        assert transparent() == [
+            {"type": "container", "transparent": True, "props": {}}
+        ]
 
     def test_radio_series_captions_do_not_raise(self) -> None:
         """Captions may be a pandas Series, which has no truth value."""

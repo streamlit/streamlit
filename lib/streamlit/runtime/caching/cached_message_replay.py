@@ -305,13 +305,12 @@ P = ParamSpec("P")
 
 
 def _agent_props_for_this_session(agent_props: str | None) -> str | None:
-    """Drop a recorded agent description when replaying into a session that
-    would not have produced one.
+    """Return the recorded description only when the replaying session records.
 
-    A cache entry is filled by whichever session ran the function first. If an
-    agent session populated it, the recorded description must not leak into a
-    browser session replaying the same entry, and vice versa: a cache filled by
-    a browser session has no description for an agent session to read.
+    A cache entry keeps the description from whichever session filled it, so an
+    agent session's description must not reach a browser session. An entry a
+    browser session filled has no description, so an agent session replays it
+    without one.
     """
     from streamlit.elements.lib import agent_spec
 

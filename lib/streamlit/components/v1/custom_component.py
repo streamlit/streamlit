@@ -224,17 +224,25 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
         element = Element()
         return_value = marshall_component(dg, element)
 
-        # Component JavaScript is never executed server-side, so only the
-        # component's identity and the arguments it was given are visible.
-        # The arguments are nested because their names are the component's
-        # own, not Streamlit's. An empty argument set is omitted, the same
-        # way an unset parameter is.
+        # Component JavaScript is never executed server-side. JSON arguments
+        # are visible here. Bytes arguments live in special_args and are
+        # reported as their length, without their contents. Dataframe
+        # arguments stay omitted until table payloads land. The arguments are
+        # nested because their names are the component's own, not Streamlit's.
+        # An empty argument set is omitted, the same way an unset parameter is.
         component_args = {
             name: value
             for name, value in json_args.items()
             if name not in {"key", "default"}
         }
         component_default = json_args.get("default")
+        for special in special_args:
+            if special.WhichOneof("value") != "bytes":
+                continue
+            if special.key == "default":
+                component_default = special.bytes
+            elif special.key != "key":
+                component_args[special.key] = special.bytes
         dg._enqueue(
             "component_instance",
             element.component_instance,

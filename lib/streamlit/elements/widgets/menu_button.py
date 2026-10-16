@@ -467,7 +467,7 @@ class MenuButtonMixin:
                     if agent_spec.is_recording()
                     else None
                 ),
-                help=help,
+                help=menu_button_proto.help or None,
                 icon=icon,
                 type=type,
                 disabled=disabled,

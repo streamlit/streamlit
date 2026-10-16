@@ -1298,7 +1298,7 @@ class ArrowMixin:
                 if is_selection_activated or button_columns
                 else None,
                 column_config=described_column_config(column_config_mapping),
-                column_order=list(column_order) if column_order else None,
+                column_order=list(proto.column_order) or None,
                 hide_index=hide_index,
                 selection_mode=sorted(selection_mode_set) or None,
                 on_select="ignore" if on_select == "ignore" else "rerun",

@@ -654,7 +654,7 @@ class SelectSliderMixin:
                 else agent_spec.STRING,
                 label=label,
                 options=formatted_options,
-                help=help,
+                help=slider_proto.help or None,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

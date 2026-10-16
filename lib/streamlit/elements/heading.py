@@ -208,20 +208,25 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.HEADER_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            divider=divider,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.HEADER_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                divider=divider,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
             agent_props=_heading_agent_props(
-                "header", body, anchor=anchor, help=help, icon=icon
+                "header",
+                body,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=icon,
             ),
         )
 
@@ -362,20 +367,25 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.SUBHEADER_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            divider=divider,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.SUBHEADER_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                divider=divider,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
             agent_props=_heading_agent_props(
-                "subheader", body, anchor=anchor, help=help, icon=icon
+                "subheader",
+                body,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=icon,
             ),
         )
 
@@ -505,19 +515,24 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.TITLE_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.TITLE_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
             agent_props=_heading_agent_props(
-                "title", body, anchor=anchor, help=help, icon=icon
+                "title",
+                body,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=icon,
             ),
         )
 

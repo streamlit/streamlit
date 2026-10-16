@@ -16,9 +16,11 @@
 
 from __future__ import annotations
 
+import collections.abc
 import datetime as dt
 import decimal
 import enum
+import itertools
 import math
 from typing import Any
 
@@ -99,3 +101,66 @@ def test_encodes_numpy_and_falls_back_to_str() -> None:
     assert to_json_value(np.int64(7)) == 7
     assert to_json_value(np.array([1.0, np.nan])) == [1.0, None]
     assert to_json_value(_Point()) == "Point(1, 2)"
+
+
+def test_only_real_sequences_become_lists() -> None:
+    """A dataframe, a mapping, and an endless iterator stay text.
+
+    Listing them would report a dataframe's column names, a mapping's keys, or
+    never return.
+    """
+
+    class _Keys(collections.abc.Mapping[str, int]):
+        def __getitem__(self, key: str) -> int:
+            return 1
+
+        def __iter__(self) -> Any:
+            yield "only-key"
+
+        def __len__(self) -> int:
+            return 1
+
+        def __str__(self) -> str:
+            return "mapping"
+
+    class _Seq(collections.abc.Sequence[str]):
+        def __getitem__(self, index: int) -> str:
+            if index == 0:
+                return "a"
+            raise IndexError
+
+        def __len__(self) -> int:
+            return 1
+
+    class _BrokenSequence(collections.abc.Sequence[int]):
+        def __getitem__(self, index: int) -> int:
+            raise RuntimeError("nope")
+
+        def __len__(self) -> int:
+            return 1
+
+        def __str__(self) -> str:
+            return "broken-seq"
+
+    frame = pd.DataFrame({"col": [1]})
+    counter = itertools.count()
+
+    assert to_json_value(frame) == str(frame)
+    assert to_json_value(_Keys()) == "mapping"
+    assert to_json_value(counter) == str(counter)
+    assert to_json_value(_Seq()) == ["a"]
+    assert to_json_value(_BrokenSequence()) == "broken-seq"
+
+
+def test_self_reference_becomes_text() -> None:
+    """A value that contains itself does not recurse forever."""
+    body: list[Any] = []
+    body.append(body)
+    assert to_json_value(body) == ["[[...]]"]
+
+    mapping: dict[str, Any] = {}
+    mapping["self"] = mapping
+    assert to_json_value(mapping) == {"self": "{'self': {...}}"}
+
+    shared = [1]
+    assert to_json_value([shared, shared]) == [[1], [1]]

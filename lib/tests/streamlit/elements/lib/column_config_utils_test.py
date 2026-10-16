@@ -614,8 +614,8 @@ class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
         assert widget_id in self.script_run_ctx.shared.widget_ids_this_run
 
 
-def test_described_column_config_drops_presentation_and_index() -> None:
-    """The agent view keeps column meaning and drops layout and the index entry."""
+def test_described_column_config_drops_presentation_and_keeps_index_meaning() -> None:
+    """The agent view keeps column meaning, including the index, and drops layout."""
     described = described_column_config(
         {
             "notes": {
@@ -625,14 +625,25 @@ def test_described_column_config_drops_presentation_and_index() -> None:
                 "pinned": True,
                 "hidden": False,
             },
-            INDEX_IDENTIFIER: {"width": 20},
+            INDEX_IDENTIFIER: {
+                "label": "Month",
+                "type": "date",
+                "format": "MMM YYYY",
+                "width": 20,
+                "hidden": False,
+            },
             "secret": {"hidden": True},
+            "width_only": {"width": 40},
         }
     )
 
     assert described == {
         "notes": {"label": "Notes", "hidden": False},
+        INDEX_IDENTIFIER: {"label": "Month", "type": "date", "format": "MMM YYYY"},
         "secret": {"hidden": True},
     }
-    assert described_column_config({INDEX_IDENTIFIER: {"width": 1}}) is None
+    assert (
+        described_column_config({INDEX_IDENTIFIER: {"width": 1, "hidden": True}})
+        is None
+    )
     assert described_column_config("unchanged") == "unchanged"

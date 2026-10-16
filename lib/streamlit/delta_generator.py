@@ -922,6 +922,7 @@ def _get_or_create_outside_wrapper(
             creation_delta_path,
             block_proto,
             creating_fragment_id=dg._creating_fragment_id,
+            agent_props=wrapper_agent_props,
         ),
     )
     return wrapper_dg

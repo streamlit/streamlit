@@ -32,7 +32,7 @@ its proto, in the same function, from the same arguments::
             value_schema=agent_spec.STRING,
             label=label,
             options=formatted_options,
-            help=help,
+            help=selectbox_proto.help or None,
             placeholder=placeholder,
             disabled=disabled,
             label_visibility=label_visibility,
