@@ -678,7 +678,7 @@ class PydeckMixin:
                 agent_props=agent_spec.element(
                     "pydeck_chart",
                     key=pydeck_proto.id,
-                    support="read_only_in_v1",
+                    support="read_only",
                     selection_mode=selection_mode,
                     alt=pydeck_proto.alt or None,
                 ),

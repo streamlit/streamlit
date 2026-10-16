@@ -1290,10 +1290,10 @@ class ArrowMixin:
                 "dataframe",
                 # A display dataframe has no element ID, only the author's key.
                 key=proto.id or key,
-                # Selections and button columns cannot be driven through this
-                # interface. A display-only table has nothing to drive, so it
-                # is fully supported.
-                support="read_only_in_v1"
+                # A browser user can select rows or press a button column. This
+                # API only reports that. A display-only table has nothing to
+                # withhold, so it is fully supported.
+                support="read_only"
                 if is_selection_activated or button_columns
                 else None,
                 column_config=agent_spec.described_column_config(column_config_mapping),

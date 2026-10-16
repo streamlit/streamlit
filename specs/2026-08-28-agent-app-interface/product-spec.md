@@ -640,12 +640,14 @@ Rules:
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason, and absent
   means fully supported. There are two: `browser_required` where what renders may differ
-  from what is reported, such as a custom component, and `read_only_in_v1` where what is
-  reported is accurate but the element cannot be driven yet, such as an upload. Keeping
+  from what is reported, such as a custom component, and `read_only` where a browser
+  user can act on the element and this API only reports that action, such as an upload.
+  The limit belongs to this API, not to the element, so a later revision can accept the
+  action and drop the field. Keeping
   it on the node means an agent never has to cross-reference a summary list to find out
   which element a gap belongs to. A dataframe or chart is fully supported until the app
   enables selections on it or gives a dataframe a button column; then it is
-  `read_only_in_v1`, which marks exactly the element an app's "select a row" caption is
+  `read_only`, which marks exactly the element an app's "select a row" caption is
   talking about. Tagging every table would mark gaps a display-only element does not
   have, and teach clients to ignore the field. A container's `support` binds its
   contents: an element inside an undrivable container is not drivable either, and
@@ -1018,10 +1020,10 @@ back to a browser rather than mistake it for missing content:
 | Not in v1                                                                  | Behavior                                                                                                                                                                      |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it, and cannot be driven. See [Data, charts, and media](#data-charts-and-media-in-v1). |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: read_only_in_v1`.                                                                                                                      |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Interactive in the app. `support: read_only`: this API reports the widget and cannot deliver the captured bytes.                                                                |
 | `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
-| `st.data_editor` edits, dataframe and chart selections, dataframe button columns | Read-only, with `support: read_only_in_v1`: on every data editor, and on a dataframe or chart only when the app enabled selections or added a button column.          |
-| Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
+| `st.data_editor` edits, dataframe and chart selections, dataframe button columns | `support: read_only`: the app can edit or select, and this API only reports that. On every data editor, and on a dataframe or chart only when the app enabled selections or added a button column. A display-only table or chart has no `support` field. |
+| Deferred downloads                                                         | `support: read_only`: the browser generates the file on click, and this API has no URL to report until then. An eager download is fully supported.                       |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable: too_large_to_serve` instead of a `url`. See [Limits and configuration](#limits-and-configuration).              |
 | Chart data that is not one table                                           | A layered or concatenated Altair chart over several dataframes, or a Vega-Lite specification that loads data from a URL, reports its `spec` with `data.unavailable` (`multiple_datasets` or `external_url`) and serves none of the data, rather than part of it claimed as `complete`. |

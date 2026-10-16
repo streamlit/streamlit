@@ -657,9 +657,9 @@ class FileUploaderMixin:
             agent_props=agent_spec.element(
                 "file_uploader",
                 key=element_id,
-                # Inspectable but not interactive: a JSON widget-state patch
-                # cannot deliver bytes.
-                support="read_only_in_v1",
+                # A browser user can upload. This API cannot deliver the bytes,
+                # so it only reports the widget.
+                support="read_only",
                 label=label,
                 type=list(file_uploader_proto.type) or None,
                 accept_multiple_files=accept_multiple_files,

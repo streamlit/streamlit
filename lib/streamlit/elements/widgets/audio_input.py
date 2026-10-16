@@ -372,7 +372,7 @@ class AudioInputMixin:
             agent_props=agent_spec.element(
                 "audio_input",
                 key=element_id,
-                support="read_only_in_v1",
+                support="read_only",
                 label=label,
                 help=help,
                 disabled=disabled,

@@ -1554,12 +1554,11 @@ class DataEditorMixin:
             agent_props=agent_spec.element(
                 "data_editor",
                 key=proto.id or None,
-                # Edits cannot be sent through this interface. Kept even when
-                # the app locks the editor: unlike a chart without selections,
-                # it is still an editor, and a rejection should say it cannot be
-                # driven here rather than send the caller looking for whatever
-                # enables it.
-                support="read_only_in_v1",
+                # A browser user can edit the table. This API only reports it.
+                # Kept even when the app locks the editor: unlike a chart
+                # without selections, it is still an editor, and a rejection
+                # should say this API does not accept the edit.
+                support="read_only",
                 column_config=agent_spec.described_column_config(column_config_mapping),
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,

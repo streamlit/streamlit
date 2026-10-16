@@ -2860,9 +2860,10 @@ class VegaChartsMixin:
             command,
             # A chart without selections has no element ID, only the author's key.
             key=proto.id or key,
-            # Selections cannot be sent through this interface. A chart without
-            # them has nothing to send, so it is fully supported.
-            support="read_only_in_v1" if selection_mode else None,
+            # A browser user can select marks. This API only reports that. A
+            # chart without selections has nothing to withhold, so it is fully
+            # supported.
+            support="read_only" if selection_mode else None,
             alt=proto.alt or None,
             **own_arguments,
         )

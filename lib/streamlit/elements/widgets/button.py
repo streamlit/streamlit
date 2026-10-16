@@ -1509,8 +1509,8 @@ class ButtonMixin:
         layout_config = create_layout_config(width=width, allow_content_width=True)
         # An eager download is fully usable: its file is at `url`, and a click's
         # effect on the server -- a rerun or the `on_click` callback -- is an
-        # ordinary trigger. A deferred one only generates its file when clicked,
-        # and that file has no URL this interface could report.
+        # ordinary trigger. A deferred one is a real button in the app, and
+        # this API has no URL to report until the browser generates the file.
         is_deferred = download_button_proto.HasField("deferred_file_id")
         self.dg._enqueue(
             "download_button",
@@ -1520,7 +1520,7 @@ class ButtonMixin:
                 "download_button",
                 key=element_id,
                 action=None if is_deferred or on_click == "ignore" else "trigger",
-                support="read_only_in_v1" if is_deferred else None,
+                support="read_only" if is_deferred else None,
                 label=label,
                 help=help,
                 icon=icon,

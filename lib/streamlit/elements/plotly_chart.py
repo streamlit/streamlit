@@ -836,7 +836,7 @@ class PlotlyMixin:
                 agent_props=agent_spec.element(
                     "plotly_chart",
                     key=plotly_chart_proto.id,
-                    support="read_only_in_v1",
+                    support="read_only",
                     theme=theme,
                     selection_mode=reported_selection_mode,
                     alt=plotly_chart_proto.alt or None,
