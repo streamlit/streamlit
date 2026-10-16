@@ -69,6 +69,16 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             with contextlib.suppress(Exception):
                 del sys.modules[name]
 
+        # gh-6404 helpers live in test_data/; drop them if another test file
+        # imported the gate so update_watched_modules does not watch them.
+        for name in (
+            "tests.streamlit.watcher.test_data.import_sleep_gate",
+            "tests.streamlit.watcher.test_data.import_sleep_module",
+            "tests.streamlit.watcher.test_data.import_sleep_pkg",
+            "tests.streamlit.watcher.test_data.import_sleep_pkg.child",
+        ):
+            sys.modules.pop(name, None)
+
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_just_script(self, fob):
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
