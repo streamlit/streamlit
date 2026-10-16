@@ -578,7 +578,7 @@ def test_long_word_in_list_does_not_overflow_container(
     # Text measurements need the real body font. Gate on the font, not on the
     # wrapping itself, so a genuine regression fails an assertion instead of
     # timing out.
-    expect_font(app, "Source Sans")
+    expect_font(app, "Figtree")
 
     # The single-line item is the reference height for "did not wrap".
     short_box = (

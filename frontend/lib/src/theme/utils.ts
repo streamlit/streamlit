@@ -206,7 +206,7 @@ export const parseFont = (
   // that if custom fonts fail to load (including any user-specified fallbacks),
   // Streamlit's default fonts are used instead of the browser's defaults.
   // Note: This may result in redundant generic families if the user's font string
-  // already includes one (ex: "Arial, sans-serif, "Source Sans", sans-serif").
+  // already includes one (ex: "Arial, sans-serif, "Figtree", sans-serif").
   // This is intentional - it's valid CSS and ensures appropriate fallback behavior.
   return `${trimmedFont}, ${fallbackFont}`
 }
