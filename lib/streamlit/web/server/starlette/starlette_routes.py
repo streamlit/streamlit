@@ -177,6 +177,9 @@ ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
 # Host configuration
 ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 
+# Agent JSON API (loopback-only when server.enableAgentApi is on)
+ROUTE_AGENT_INTERACT: Final = f"{BASE_ROUTE_CORE}/agent/v1/interact"
+
 # Media and file routes
 _ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
 _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}}"
