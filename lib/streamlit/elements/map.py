@@ -303,11 +303,14 @@ class MapMixin:
             "deck_gl_json_chart",
             map_proto,
             layout_config=layout_config,
-            agent_props=_agent_description(
+            # st.map and st.pydeck_chart share a proto. A literal color or
+            # pixel size is presentation; only a column name is reported.
+            agent_props=agent_spec.element(
+                "map",
                 latitude=latitude,
                 longitude=longitude,
-                size=size,
-                color=color,
+                size=size if isinstance(size, str) else None,
+                color=color if isinstance(color, str) else None,
                 zoom=zoom,
                 alt=map_proto.alt or None,
             ),
@@ -317,34 +320,6 @@ class MapMixin:
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def _agent_description(
-    *,
-    latitude: str | None,
-    longitude: str | None,
-    size: str | float | None,
-    color: str | Collection[float] | None,
-    **props: Any,
-) -> str | None:
-    """Describe a map for the agent API.
-
-    st.map and st.pydeck_chart share a proto. The plotted table is not a
-    command parameter, so it stays out of this description. A literal color or
-    pixel size is presentation, and only a column name changes which data is
-    plotted.
-    """
-    if not agent_spec.is_recording():
-        return None
-
-    return agent_spec.element(
-        "map",
-        latitude=latitude,
-        longitude=longitude,
-        size=size if isinstance(size, str) else None,
-        color=color if isinstance(color, str) else None,
-        **props,
-    )
 
 
 def to_deckgl_json(
