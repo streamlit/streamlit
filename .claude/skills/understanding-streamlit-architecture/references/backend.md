@@ -182,8 +182,6 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
 
-There is no `/_stcore/agent` route. Command descriptions travel only as `ForwardMsg.metadata.agent_props`.
-
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
 Browser connects -> Runtime.connect_session()
