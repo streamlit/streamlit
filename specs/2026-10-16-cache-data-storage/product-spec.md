@@ -175,11 +175,11 @@ key more than once. The full contract is in the tech spec.
   the storage implements `add`. The built-in disk storage and the documented Redis recipe
   both do. This is best-effort: a replica that stalls for more than 30 seconds can let
   another one compute the key again. Without `add`, each replica may compute the key once.
-- Replicas must run the same code, and keep `runner.cacheHashSeed` at its default or set the
-  same value on all of them. Changing a function's code changes its keys, so during a
-  rolling deploy, old and new replicas don't read each other's entries for changed
-  functions. To keep deploy versions completely apart, for example when upgrading pandas,
-  set `cache.namespace` to the version.
+- Replicas must run the same code, at the same path or with the same `cache.namespace`, and
+  keep `runner.cacheHashSeed` at its default or the same value on all of them. Changing a
+  function's code changes its keys, so during a rolling deploy, old and new replicas don't
+  read each other's entries for changed functions. To keep deploy versions completely apart,
+  for example when upgrading pandas, set `cache.namespace` to the version.
 - Replica clocks must be in sync (NTP), because expiry is compared across replicas.
 
 **Failures:**

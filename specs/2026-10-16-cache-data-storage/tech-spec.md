@@ -194,7 +194,7 @@ one replica refreshes it.
    `add`. If `add` returns false, another replica created the marker first, so this replica
    reads and adopts that token. Storages without `add` use `set`.
 3. Look up the full key in the in-memory copies. On a hit that hasn't expired, unpickle and
-   return, with no storage I/O.
+   return, with no storage I/O. A failed unpickle drops the copy and goes to step 5.
 4. Otherwise, `get` the key from the storage. If the envelope is valid, hasn't expired, and
    unpickles, keep it in memory with its original timestamps and return it.
 5. Otherwise, it's a miss. An invalid envelope or a failed unpickle also deletes the key.
@@ -211,7 +211,7 @@ one replica refreshes it.
    waiter checks whether its script run was stopped (see
    [cancellable cache waits](../2026-10-07-cancellable-cache-wait/tech-spec.md)), so an
    abandoned run stops waiting. Async cached functions `await` between polls instead of
-   sleeping, so the wait doesn't block the event loop.
+   sleeping, so only the polls' storage calls block the event loop.
 3. If a local clear happened during the compute, detected with the existing invalidation
    tokens, return the result without keeping or writing it. Otherwise keep it in memory
    right away, and write it to the storage on a bounded background executor. The rerun that
@@ -229,25 +229,25 @@ one replica refreshes it.
 |---|---|---|
 | `st.cache_data.clear()` | New global token | Drop all in-memory copies |
 | `my_func.clear()` | New function token | Drop that function's copies |
-| `my_func.clear(*args)` | Delete the entry and write a new `inval` marker | Drop that function's copies, and fetch its other keys from storage again |
+| `my_func.clear(*args)` | Delete the entry, then write a new `inval` marker | Drop that function's copies, and fetch its other keys from storage again |
 
 - Because tokens are part of every entry key, a global or function clear is a single write.
   Old entries become unreachable without scanning keys, and a compute that finishes after
   the clear lands under the old token where nobody reads it. Old entries are deleted in the
   background with `delete_prefix` if supported, and otherwise by the storage's own eviction.
-- A per-key clear has no token in the entry key. A compute of the same key that started
-  earlier on another replica can still write its result after the clear (see
-  [Limits](#guarantees-and-limits)).
+- A per-key clear has no token in the entry key, so it writes the marker only after the
+  delete succeeds, retrying it in the background; otherwise another replica could reload
+  the entry. A compute of the same key that started earlier on another replica can still
+  write its result after the clear (see [Limits](#guarantees-and-limits)).
 - The replica that clears updates its own tokens immediately. Other replicas see the clear
   within one token read interval (one second) after the new token is written.
 - Tokens are random, so a replica can't tell an old token from a new one. The clearing
   replica therefore ignores the stored value of a marker it changed in any read that
   started before its write succeeded. If the write fails, it retries in the background, so
   the old token never comes back.
-- Markers are always overwritten with new random values and never read and modified, so
+- Markers are always overwritten with new random values, never read and modified, so
   concurrent clears can't undo each other. If the storage evicts a marker, a new random
-  token replaces it. That can cause misses, but it never makes cleared entries reachable
-  again.
+  token replaces it. That can cause misses, but never makes cleared entries reachable again.
 - `streamlit cache clear` deletes only Streamlit's content: the `{namespace}/v{format}`
   folders in `cache.diskPath` that contain an `m/global` marker, and the legacy
   `{function_key}-{value_key}.memo` files in `~/.streamlit/cache`. Without a script it can't
