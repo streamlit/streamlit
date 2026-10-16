@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, Literal, Self, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib import agent_spec
@@ -73,44 +73,29 @@ def _process_dialog_width_input(
     )
 
 
-def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]:
-    """Keywords for ``agent_spec.block`` for this dialog.
+def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None:
+    """Describe this dialog for the agent API.
 
-    ``key`` and ``action`` are set only when ``on_dismiss`` registered a widget.
-    They are block arguments, separate from props.
-
-    A dialog's body is a fragment, so its contents stay drivable as long as an
-    interaction targets them: that scopes the rerun to the dialog's fragment,
-    which re-renders the body without re-emitting the block. Anything else is a
-    full rerun, which does not re-emit the dialog at all and therefore closes
-    it -- the same rule the browser follows.
-
-    The overlay is only addressable when `on_dismiss` registered a widget for
-    it, which is when `dialog.id` is set. The block's own ID is only what the
-    frontend uses to avoid showing stale content, and nothing is registered
-    under it, so reporting that as a `key` would offer a handle that resolves
-    to nothing -- a client that walks the tree rather than `actions` would try
-    it and get `unknown_key`.
+    Called when the dialog is created and again when it is re-sent, so
+    ``is_open`` matches that message. ``key`` and ``action`` are set only when
+    ``on_dismiss`` registered a widget. The block id only keeps the frontend
+    from showing a stale dialog, and nothing is registered under it.
     """
     dialog = block_proto.dialog
-    # `width` is left out: geometry means nothing to a non-visual client. A
-    # `position` drawer is a side panel beside the page rather than a modal.
-    description: dict[str, Any] = {
-        "title": dialog.title,
-        "icon": dialog.icon or None,
-        "position": _POSITION_NAMES.get(dialog.position, "center"),
-        "dismissible": dialog.dismissible,
-        # How a client closes it: "ignore" means by any full rerun, "rerun"
-        # means by firing the overlay's key. A callback is reported as "rerun".
-        "on_dismiss": "rerun" if dialog.id else "ignore",
-        "is_open": is_open,
-    }
-    if dialog.id:
-        description["key"] = dialog.id
-        # Firing it is how a client closes the dialog deliberately, rather than
-        # by causing some unrelated full rerun.
-        description["action"] = "trigger"
-    return description
+    # Empty means no dismiss widget. A callback reaches the server, which is
+    # the same mode as "rerun": firing the overlay's key closes the dialog.
+    can_dismiss = bool(dialog.id)
+    return agent_spec.block(
+        "dialog",
+        key=dialog.id if can_dismiss else None,
+        action="trigger" if can_dismiss else None,
+        title=dialog.title,
+        icon=dialog.icon or None,
+        position=_POSITION_NAMES.get(dialog.position, "center"),
+        dismissible=dialog.dismissible,
+        on_dismiss="rerun" if can_dismiss else "ignore",
+        is_open=is_open,
+    )
 
 
 _POSITION_NAMES: Final = {
@@ -243,9 +228,7 @@ class Dialog(DeltaGenerator):
             parent._block(
                 block_proto=block_proto,
                 dg_type=Dialog,
-                agent_props=agent_spec.block(
-                    "dialog", **_agent_description(block_proto, is_open=False)
-                ),
+                agent_props=_dialog_agent_props(block_proto, is_open=False),
             ),
         )
 
@@ -289,9 +272,7 @@ class Dialog(DeltaGenerator):
         # This message replaces the one sent at the same delta path, so it has
         # to carry a description too, rebuilt so `is_open` reflects this update
         # rather than the value the dialog was created with.
-        agent_props = agent_spec.block(
-            "dialog", **_agent_description(self._current_proto, should_open)
-        )
+        agent_props = _dialog_agent_props(self._current_proto, is_open=should_open)
         if agent_props is not None:
             msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open

@@ -38,6 +38,28 @@ if TYPE_CHECKING:
 
 States: TypeAlias = Literal["running", "complete", "error"]
 
+
+def _status_agent_props(
+    *,
+    label: str | None,
+    expanded: bool | None,
+    state: States | None,
+    type: ExpandableType,
+) -> str | None:
+    """Describe this status for the agent API.
+
+    Used when the container is created and when ``update`` re-sends it, so the
+    description matches the values on that message.
+    """
+    return agent_spec.block(
+        "status",
+        label=label,
+        expanded=expanded,
+        state=state,
+        type=type,
+    )
+
+
 # Maps each state to the icon the default and compact styles render. Also
 # defines the valid `state` values, which both validation sites check against.
 _STATE_ICONS: Final[dict[States, str]] = {
@@ -93,10 +115,8 @@ class StatusContainer(DeltaGenerator):
             parent._block(
                 block_proto=block_proto,
                 dg_type=StatusContainer,
-                # st.status and st.expander share the Expandable proto, so the
-                # command name has to be passed explicitly.
-                agent_props=agent_spec.block(
-                    "status", label=label, expanded=expanded, state=state, type=type
+                agent_props=_status_agent_props(
+                    label=label, expanded=expanded, state=state, type=type
                 ),
             ),
         )
@@ -193,11 +213,9 @@ class StatusContainer(DeltaGenerator):
             self._current_expanded = expanded
 
         # This message replaces the one sent at the same delta path, so it has
-        # to carry a description too, rebuilt from the current values: replaying
-        # the one from `_create` would leave the snapshot reporting a status as
-        # `running` after it completed.
-        agent_props = agent_spec.block(
-            "status",
+        # to carry a description too. Replaying the one from `_create` would
+        # leave the snapshot reporting a status as `running` after it completed.
+        agent_props = _status_agent_props(
             label=msg.delta.add_block.expandable.label,
             expanded=self._current_expanded,
             state=self._current_state,
