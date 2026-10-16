@@ -102,6 +102,7 @@ class MarkdownMixin:
                 "markdown",
                 body=body_text,
                 help=markdown_proto.help or None,
+                # Omitted when false, which is the documented default.
                 unsafe_allow_html=unsafe_allow_html or None,
             ),
         )
@@ -426,6 +427,7 @@ class MarkdownMixin:
                 "caption",
                 body=body_text,
                 help=caption_proto.help or None,
+                # Omitted when false, which is the documented default.
                 unsafe_allow_html=unsafe_allow_html or None,
             ),
         )

@@ -785,16 +785,6 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
-def _builtin_chart_encoding(**arguments: Any) -> dict[str, Any]:
-    """The arguments a built-in chart was given that say what it plots.
-
-    All six Vega commands emit the same proto. The chart specification carries
-    how ``color`` and ``size`` were applied, so the description reports the
-    parameters the author passed.
-    """
-    return dict(arguments)
-
-
 class VegaChartsMixin:
     """Mix-in class for all vega-related chart commands.
 
@@ -1063,13 +1053,13 @@ class VegaChartsMixin:
                 width=width,
                 height=height,
                 agent_command="line_chart",
-                agent_encoding=_builtin_chart_encoding(
-                    x=x,
-                    y=y,
-                    x_label=x_label,
-                    y_label=y_label,
-                    color=color,
-                ),
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                },
                 alt=alt,
             ),
         )
@@ -1383,14 +1373,14 @@ class VegaChartsMixin:
                 width=width,
                 height=height,
                 agent_command="area_chart",
-                agent_encoding=_builtin_chart_encoding(
-                    x=x,
-                    y=y,
-                    x_label=x_label,
-                    y_label=y_label,
-                    color=color,
-                    stack=stack,
-                ),
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "stack": stack,
+                },
                 alt=alt,
             ),
         )
@@ -1746,16 +1736,16 @@ class VegaChartsMixin:
                 width=width,
                 height=height,
                 agent_command="bar_chart",
-                agent_encoding=_builtin_chart_encoding(
-                    x=x,
-                    y=y,
-                    x_label=x_label,
-                    y_label=y_label,
-                    color=color,
-                    horizontal=horizontal,
-                    sort=sort,
-                    stack=stack,
-                ),
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "horizontal": horizontal,
+                    "sort": sort,
+                    "stack": stack,
+                },
                 alt=alt,
             ),
         )
@@ -2028,14 +2018,14 @@ class VegaChartsMixin:
                 width=width,
                 height=height,
                 agent_command="scatter_chart",
-                agent_encoding=_builtin_chart_encoding(
-                    x=x,
-                    y=y,
-                    x_label=x_label,
-                    y_label=y_label,
-                    color=color,
-                    size=size,
-                ),
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "size": size,
+                },
                 alt=alt,
             ),
         )
