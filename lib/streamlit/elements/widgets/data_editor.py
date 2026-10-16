@@ -35,6 +35,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -42,6 +43,8 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -1543,7 +1546,38 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            # st.dataframe and st.data_editor share this proto. The schema and
+            # row preview are derived facts about the payload, not command
+            # parameters.
+            agent_props=agent_spec.element(
+                "data_editor",
+                key=proto.id or None,
+                # A browser user can edit the table. This API only reports it.
+                # Kept even when the app locks the editor: unlike a chart
+                # without selections, it is still an editor, and a rejection
+                # should say this API does not accept the edit.
+                support="read_only",
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                num_rows=num_rows,
+                # A bool locks or unlocks the whole editor. False is reported:
+                # omitting it would look like a column list, which is already
+                # applied to column_config and left out here.
+                disabled=disabled if isinstance(disabled, bool) else None,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
+            if agent_spec.is_recording()
+            else None,
+        )
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

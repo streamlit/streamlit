@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import (
     enforce_filename_restriction,
     normalize_upload_file_type,
@@ -650,7 +651,25 @@ class FileUploaderMixin:
         layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
-            "file_uploader", file_uploader_proto, layout_config=layout_config
+            "file_uploader",
+            file_uploader_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "file_uploader",
+                key=element_id,
+                # A browser user can upload. This API cannot deliver the bytes,
+                # so it only reports the widget.
+                support="read_only",
+                label=label,
+                type=list(file_uploader_proto.type) or None,
+                accept_multiple_files=accept_multiple_files,
+                # The cap the browser enforces, including the server default.
+                max_upload_size=file_uploader_proto.max_upload_size_mb,
+                help=file_uploader_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
 
         if isinstance(widget_state.value, DeletedFile):

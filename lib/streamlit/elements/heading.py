@@ -17,6 +17,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
@@ -40,6 +41,33 @@ class HeadingProtoTag(Enum):
 
 Anchor: TypeAlias = str | Literal[False] | None
 Divider: TypeAlias = bool | str | None
+
+
+def _heading_agent_props(
+    command: str,
+    body: SupportsStr,
+    *,
+    anchor: Anchor = None,
+    help: str | None = None,
+    icon: str | None = None,
+) -> str | None:
+    """Describe a heading for the agent API.
+
+    st.title, st.header, and st.subheader differ only in the HTML tag they
+    emit, so each passes its own command name.
+
+    `divider` is deliberately not a parameter here: it draws a rule under the
+    heading, which is styling on an element whose meaning is its text, and
+    reporting it would put a key on every heading in every snapshot that no
+    reader can act on.
+    """
+    return agent_spec.element(
+        command,
+        body=body,
+        anchor=anchor,
+        help=help,
+        icon=icon,
+    )
 
 
 class HeadingMixin:
@@ -180,18 +208,26 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.HEADER_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            divider=divider,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.HEADER_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                divider=divider,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "header",
+                body_text,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=heading_proto.icon or None,
+            ),
         )
 
     @gather_metrics("subheader")
@@ -331,18 +367,26 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.SUBHEADER_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            divider=divider,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.SUBHEADER_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                divider=divider,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "subheader",
+                body_text,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=heading_proto.icon or None,
+            ),
         )
 
     @gather_metrics("title")
@@ -471,17 +515,25 @@ class HeadingMixin:
             allow_content_width=True,
         )
 
+        heading_proto, body_text = HeadingMixin._create_heading_proto(
+            tag=HeadingProtoTag.TITLE_TAG,
+            body=body,
+            anchor=anchor,
+            help=help,
+            icon=icon,
+            wrap=wrap,
+        )
         return self.dg._enqueue(
             "heading",
-            HeadingMixin._create_heading_proto(
-                tag=HeadingProtoTag.TITLE_TAG,
-                body=body,
-                anchor=anchor,
-                help=help,
-                icon=icon,
-                wrap=wrap,
-            ),
+            heading_proto,
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "title",
+                body_text,
+                anchor=anchor,
+                help=heading_proto.help or None,
+                icon=heading_proto.icon or None,
+            ),
         )
 
     @property
@@ -520,11 +572,12 @@ class HeadingMixin:
         divider: Divider = False,
         icon: str | None = None,
         wrap: bool = True,
-    ) -> HeadingProto:
+    ) -> tuple[HeadingProto, str]:
         validate_wrap(wrap)
         proto = HeadingProto()
         proto.tag = tag.value
-        proto.body = clean_text(body)
+        body_text = clean_text(body)
+        proto.body = body_text
         proto.icon = validate_icon_or_emoji(icon)
         proto.wrap = wrap
         if divider:
@@ -549,4 +602,4 @@ class HeadingMixin:
         if help:
             proto.help = to_help_str(help)
 
-        return proto
+        return proto, body_text

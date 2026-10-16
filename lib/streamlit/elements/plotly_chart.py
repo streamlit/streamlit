@@ -32,6 +32,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -91,6 +92,11 @@ FigureOrData: TypeAlias = Union[
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
 _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODE_FROM_PROTO: Final[dict[int, SelectionMode]] = {
+    PlotlyChartProto.SelectionMode.POINTS: "points",
+    PlotlyChartProto.SelectionMode.BOX: "box",
+    PlotlyChartProto.SelectionMode.LASSO: "lasso",
+}
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -825,13 +831,35 @@ class PlotlyMixin:
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
             self.dg._enqueue(
-                "plotly_chart", plotly_chart_proto, layout_config=layout_config
+                "plotly_chart",
+                plotly_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "plotly_chart",
+                    key=plotly_chart_proto.id,
+                    support="read_only",
+                    selection_mode=sorted(
+                        _SELECTION_MODE_FROM_PROTO[mode]
+                        for mode in plotly_chart_proto.selection_mode
+                    )
+                    or None,
+                    on_select="ignore" if on_select == "ignore" else "rerun",
+                    alt=plotly_chart_proto.alt or None,
+                ),
             )
             return widget_state.value
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
-            "plotly_chart", plotly_chart_proto, layout_config=layout_config
+            "plotly_chart",
+            plotly_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "plotly_chart",
+                key=key,
+                on_select="ignore" if on_select == "ignore" else "rerun",
+                alt=plotly_chart_proto.alt or None,
+            ),
         )
 
     @property

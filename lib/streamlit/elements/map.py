@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -299,7 +300,20 @@ class MapMixin:
             map_proto.alt = normalized_alt
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            # st.map and st.pydeck_chart share a proto. Size and color are the
+            # arguments the author passed; the plotted table shows the columns.
+            agent_props=agent_spec.element(
+                "map",
+                latitude=latitude,
+                longitude=longitude,
+                size=size,
+                color=color,
+                zoom=zoom,
+                alt=map_proto.alt or None,
+            ),
         )
 
     @property
@@ -316,6 +330,7 @@ def to_deckgl_json(
     color: str | Collection[float] | None,
     zoom: int | None,
 ) -> str:
+    """Serialize the map to a PyDeck JSON string."""
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 

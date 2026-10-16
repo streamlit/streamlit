@@ -391,19 +391,19 @@ right now. Naming follows the public API, for the reason above:
   exception's `message`, the `doc_string` `st.help` shows), whether an exception went
   uncaught, and the `url` of a media element or an eager download. A parameter Streamlit
   normalized, such as `column_config` with its defaults applied, is still a parameter.
-- **Effective values, not just authored ones.** Include every public property that
-  affects an element's meaning or how it can be interacted with, after backend-known
-  defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
-  effective button `type`, `label_visibility`, a widget's selection mode, options,
-  bounds, and step.
-  A client should not have to know each command's defaults for each Streamlit version to
-  read the document, and "absent" should never be ambiguous between false, unsupported,
-  and overlooked.
+- **Parameter values, read beside the docstring.** A prop is that parameter's value:
+  the argument the author passed, or an already processed form of it when that form
+  is the clearer description. Dedented and stringified text, and a list materialized
+  from an iterable, are processed forms. Which form to use is a case-by-case choice.
+  A documented default may be omitted — `unsafe_allow_html` left false, `format=None`,
+  `hide_index=None` — because the command's docstring explains the fallback. Include a
+  resolved value when leaving it out would hide a choice the docstring does not already
+  spell out, such as `disabled`, options, bounds, and `label_visibility`.
 - **Omit presentation.** Width, height, gaps, alignment, stretch ratios, padding, border
   or surface styling, a heading's `divider`, a dialog's width, a column's
   share of its row, and a table column's width, pinning, and alignment carry no meaning
-  for a non-visual client. Read this strictly, because the effective-value rule
-  above pulls the other way and would otherwise put styling on most nodes of a page. The
+  for a non-visual client. Read this strictly. A parameter that changes meaning is
+  included, and that rule would otherwise put styling on most nodes of a page. The
   test is whether a property changes what the element *means* or how it can be *used*,
   not whether the author passed it.
 - **Omit absent content, at any depth.** Optional content that was never supplied —
@@ -413,9 +413,9 @@ right now. Naming follows the public API, for the reason above:
   …` for every column. Such a parameter is reported from the mapping Streamlit resolved
   rather than the author's argument, so defaults are applied and the one null that
   *means* something — a `column_config` entry of `None`, which hides that column — has
-  already become `{"hidden": true}`. Content is not a parameter object and is kept
-  exactly as authored: a null in `st.json`'s body or a custom component's arguments is
-  data.
+  already become `{"hidden": true}`. Content may be the processed text, dedented and
+  stringified. A null in `st.json`'s body or a custom component's arguments is data
+  and stays.
 - **An element that would serialize to nothing is left out.** An unfilled `st.empty()`
   placeholder and an `st.space()` say only "there is nothing here", which is what their
   absence says too. A container whose properties were all presentation likewise
@@ -451,8 +451,7 @@ right now. Naming follows the public API, for the reason above:
           {
             "type": "caption",
             "props": {
-              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger.",
-              "unsafe_allow_html": false
+              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."
             }
           },
           {
@@ -525,8 +524,7 @@ right now. Naming follows the public API, for the reason above:
               {
                 "type": "markdown",
                 "props": {
-                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate.",
-                  "unsafe_allow_html": false
+                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."
                 }
               }
             ]
@@ -640,12 +638,14 @@ Rules:
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason, and absent
   means fully supported. There are two: `browser_required` where what renders may differ
-  from what is reported, such as a custom component, and `read_only_in_v1` where what is
-  reported is accurate but the element cannot be driven yet, such as an upload. Keeping
+  from what is reported, such as a custom component, and `read_only` where a browser
+  user can act on the element and this API only reports that action, such as an upload.
+  The limit belongs to this API, not to the element, so a later revision can accept the
+  action and drop the field. Keeping
   it on the node means an agent never has to cross-reference a summary list to find out
   which element a gap belongs to. A dataframe or chart is fully supported until the app
   enables selections on it or gives a dataframe a button column; then it is
-  `read_only_in_v1`, which marks exactly the element an app's "select a row" caption is
+  `read_only`, which marks exactly the element an app's "select a row" caption is
   talking about. Tagging every table would mark gaps a display-only element does not
   have, and teach clients to ignore the field. A container's `support` binds its
   contents: an element inside an undrivable container is not drivable either, and
@@ -660,11 +660,11 @@ Rules:
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
   kept in a model's context. Markdown, code, and LaTeX stay source strings.
-- **A description publishes nothing the browser does not receive.** Building it from the
-  command's arguments does not make an argument publishable: where the browser gets a
-  rounded or reduced form, the description reports that form. So `st.progress` reports a
-  fraction rounded to the whole percent the browser shows, whether the author passed an
-  `int` percent or a `float` fraction.
+- **A description publishes nothing the browser does not receive.** A processed
+  parameter value is fine. What must not appear is anything the page does not show: a
+  secret, a field the proto drops, or the unreduced value behind a rounded one. So
+  `st.progress` reports a fraction rounded to the whole percent the browser shows,
+  whether the author passed an `int` percent or a `float` fraction.
 - **App text is untrusted content.** Labels, help, captions, page titles, and data can
   carry prompt injection. Nearly every string in the document is app-authored, so rather
   than marking them field by field, the protocol description tells clients to treat all
@@ -1018,10 +1018,10 @@ back to a browser rather than mistake it for missing content:
 | Not in v1                                                                  | Behavior                                                                                                                                                                      |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it, and cannot be driven. See [Data, charts, and media](#data-charts-and-media-in-v1). |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: read_only_in_v1`.                                                                                                                      |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Interactive in the app. `support: read_only`: this API reports the widget and cannot deliver the captured bytes.                                                                |
 | `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
-| `st.data_editor` edits, dataframe and chart selections, dataframe button columns | Read-only, with `support: read_only_in_v1`: on every data editor, and on a dataframe or chart only when the app enabled selections or added a button column.          |
-| Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
+| `st.data_editor` edits, dataframe and chart selections, dataframe button columns | `support: read_only`: the app can edit or select, and this API only reports that. On every data editor, and on a dataframe or chart only when the app enabled selections or added a button column. A display-only table or chart has no `support` field. |
+| Deferred downloads                                                         | `support: read_only`: the browser generates the file on click, and this API has no URL to report until then. An eager download is fully supported.                       |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable: too_large_to_serve` instead of a `url`. See [Limits and configuration](#limits-and-configuration).              |
 | Chart data that is not one table                                           | A layered or concatenated Altair chart over several dataframes, or a Vega-Lite specification that loads data from a URL, reports its `spec` with `data.unavailable` (`multiple_datasets` or `external_url`) and serves none of the data, rather than part of it claimed as `complete`. |

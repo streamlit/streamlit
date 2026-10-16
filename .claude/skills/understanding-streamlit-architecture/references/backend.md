@@ -125,10 +125,12 @@ The `st` object users interact with.
 ```
 st.button("Click")
   -> ButtonMixin.button()
-  -> _enqueue("button", ButtonProto(...))
-  -> ForwardMsg with delta path
+  -> _enqueue("button", ButtonProto(...), agent_props=...)
+  -> ForwardMsg with delta path; agent_props on metadata when set
   -> ScriptRunContext.enqueue()
 ```
+
+`agent_props` is the command's JSON description, or `None` for a session that is not recording. See [communication.md](communication.md#agent-command-descriptions).
 
 ## SessionState (`lib/streamlit/runtime/state/session_state.py`)
 
@@ -167,6 +169,8 @@ register_widget(
 - Stores singleton resources (DB connections, ML models)
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
+
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry.
 
 ## Web server (`lib/streamlit/web/server/`)
 

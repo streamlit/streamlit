@@ -33,10 +33,13 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
@@ -1237,20 +1240,23 @@ class ArrowMixin:
             num_rows = len(data_df)
             column_names = list(data_df.columns)
 
-        if hide_index is not None:
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
-            )
-
-        elif (
-            # Hide index column if row selections are activated and the dataframe has a range index.
-            # The range index usually does not add a lot of value.
-            is_selection_activated
+        # A selectable range index is hidden even when the author left
+        # hide_index unset. The description has to report that effective value:
+        # the index entry's own hidden flag is stripped because hide_index
+        # carries it.
+        effective_hide_index = hide_index
+        if (
+            effective_hide_index is None
+            and is_selection_activated
             and has_range_index
             and selection_mode_set & _ROW_SELECTION_MODES
         ):
+            effective_hide_index = True
+        if effective_hide_index is not None:
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping,
+                INDEX_IDENTIFIER,
+                {"hidden": effective_hide_index},
             )
 
         marshall_column_config(proto, column_config_mapping)
@@ -1276,6 +1282,35 @@ class ArrowMixin:
         layout_config = LayoutConfig(
             width=width, height=height if height != "auto" else None
         )
+
+        def dataframe_agent_props() -> str | None:
+            """The agent description for this dataframe.
+
+            Called at each enqueue so the selection path can read ``proto.id``
+            after it is assigned. Column config is walked only while recording.
+            """
+            if not agent_spec.is_recording():
+                return None
+            return agent_spec.element(
+                "dataframe",
+                # A display dataframe has no element ID, only the author's key.
+                key=proto.id or key,
+                # A browser user can select rows or press a button column. This
+                # API only reports that. A display-only table has nothing to
+                # withhold, so it is fully supported.
+                support="read_only"
+                if is_selection_activated or button_columns
+                else None,
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                selection_mode=sorted(selection_mode_set) or None,
+                on_select="ignore" if on_select == "ignore" else "rerun",
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
 
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
@@ -1349,6 +1384,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
+                    agent_props=dataframe_agent_props(),
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1360,9 +1396,19 @@ class ArrowMixin:
                     }
                 )
 
-            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            self.dg._enqueue(
+                "dataframe",
+                proto,
+                layout_config=layout_config,
+                agent_props=dataframe_agent_props(),
+            )
             return DataframeState(widget_state.value)
-        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            agent_props=dataframe_agent_props(),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
