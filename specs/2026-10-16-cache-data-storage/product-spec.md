@@ -90,7 +90,7 @@ namespace = "sales-dashboard"
 |---|---|---|---|
 | `cache.storage` | `"memory"`, `"disk"` | `"memory"` | Where `st.cache_data` stores entries. `"memory"` keeps them only in the process; `"disk"` also writes them to `cache.diskPath`. |
 | `cache.diskPath` | `str` | `"~/.streamlit/cache"` | Folder for `storage = "disk"`. Can be a volume that several replicas share. |
-| `cache.namespace` | `str` | Derived from the main script path | Keeps the entries of different apps apart when they share one storage. Lowercase letters, digits, `.`, `_`, and `-`, starting with a letter or digit; other values are rejected at startup. |
+| `cache.namespace` | `str` | A hash of the main script's absolute path | Keeps the entries of different apps apart when they share one storage. Up to 64 lowercase letters, digits, `.`, `_`, and `-`, starting with a letter or digit; other values are rejected at startup. |
 
 The default namespace only separates apps whose main scripts have different absolute paths.
 Different apps that share one storage from containers with the same path, such as
@@ -151,7 +151,9 @@ key more than once. The full contract is in the tech spec.
 **Clearing:**
 
 - `my_func.clear()`, `my_func.clear(*args)`, and `st.cache_data.clear()` clear the shared
-  storage.
+  storage. As today, `st.cache_data.clear()` also clears `scope="session"` caches on the
+  replica that calls it. Session caches on other replicas aren't in the storage, so they
+  stay.
 - The replica that cleared sees the change immediately. A session stays on one replica, so
   a user who clicks a "Refresh" button gets fresh data. Other replicas see the clear within
   about one second.
