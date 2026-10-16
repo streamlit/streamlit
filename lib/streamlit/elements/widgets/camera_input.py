@@ -368,6 +368,7 @@ class CameraInputMixin:
                 key=element_id,
                 support="read_only",
                 label=label,
+                resolution=resolution,
                 help=help,
                 disabled=disabled,
                 label_visibility=label_visibility,

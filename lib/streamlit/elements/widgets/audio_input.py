@@ -374,6 +374,7 @@ class AudioInputMixin:
                 key=element_id,
                 support="read_only",
                 label=label,
+                sample_rate=sample_rate,
                 help=help,
                 disabled=disabled,
                 label_visibility=label_visibility,

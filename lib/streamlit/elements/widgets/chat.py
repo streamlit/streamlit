@@ -1180,7 +1180,10 @@ class ChatMixin:
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=list(file_type) if file_type else None,
+            # The cap the browser enforces, including the server default.
+            max_upload_size=chat_input_proto.max_upload_size_mb,
             accept_audio=accept_audio,
+            audio_sample_rate=audio_sample_rate,
             disabled=disabled,
             submit_mode=submit_mode,
         )

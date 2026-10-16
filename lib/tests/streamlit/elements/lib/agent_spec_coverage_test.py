@@ -68,7 +68,6 @@ _STARTING_VALUE = "only picks the starting value, which the node's `value` repor
 _STATE_HANDLING = "how the server keeps the value, not what the element means"
 _BROWSER_AFFORDANCE = "a browser affordance, with nothing to read or send without one"
 _CONTENT = "the content itself, reported under `data`, as a `url`, or as derived props"
-_UPLOAD = "applies to uploads, which this interface cannot send"
 _ENCODING = "applied when the media is encoded; the reported `url` serves the result"
 
 # Omitted for every command that has them.
@@ -106,9 +105,6 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
 _OMITTED: dict[str, dict[str, str]] = {
     "altair_chart": {"altair_chart": _CONTENT},
     "audio": {"sample_rate": _ENCODING},
-    "audio_input": {"sample_rate": _UPLOAD},
-    "camera_input": {"resolution": _UPLOAD},
-    "chat_input": {"audio_sample_rate": _UPLOAD, "max_upload_size": _UPLOAD},
     "checkbox": {"value": _STARTING_VALUE},
     "color_picker": {"value": _STARTING_VALUE},
     "columns": {"spec": _PRESENTATION},
@@ -122,7 +118,6 @@ _OMITTED: dict[str, dict[str, str]] = {
     "datetime_input": {"value": _STARTING_VALUE},
     "echarts_chart": {"spec": _CONTENT, "renderer": _PRESENTATION},
     "exception": {"exception": _CONTENT},
-    "file_uploader": {"max_upload_size": _UPLOAD},
     "header": {"divider": _PRESENTATION},
     "help": {"obj": _CONTENT},
     "iframe": {"tab_index": _BROWSER_AFFORDANCE},
