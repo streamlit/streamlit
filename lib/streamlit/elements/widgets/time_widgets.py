@@ -1180,6 +1180,8 @@ class TimeWidgetsMixin:
                 "time_input",
                 key=element_id,
                 action="value",
+                # JSON Schema "time" is RFC 3339 and requires an offset. A naive
+                # time has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
                 label=label,
                 # Times serialize as ISO 8601, which is also what the public
@@ -1688,8 +1690,8 @@ class TimeWidgetsMixin:
                 "datetime_input",
                 key=element_id,
                 action="value",
-                # Reported without an offset, which the standard `date-time`
-                # format requires.
+                # JSON Schema "date-time" is RFC 3339 and requires an offset. A
+                # naive datetime has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
                 label=label,
                 # The resolved bounds, which are always present: st.date_input
