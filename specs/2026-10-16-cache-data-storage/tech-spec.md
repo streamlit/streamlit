@@ -109,8 +109,9 @@ class CacheStorage(Protocol):
     """Byte storage for st.cache_data entries.
 
     Implementations must be thread-safe. A storage shared by several replicas must also
-    be safe to use from several processes and hosts. Calls must raise instead of hanging
-    when the backend is unreachable, for example through a client timeout.
+    be safe to use from several processes and hosts, and a ``get`` must see the latest
+    completed ``set`` or ``delete`` of that key. Calls must raise instead of hanging when
+    the backend is unreachable, for example through a client timeout.
     """
 
     def get(self, key: str) -> bytes | None:
@@ -131,7 +132,7 @@ missing method or a `NotImplementedError` as "not supported", which follows the 
 | Method | Used for | Without it |
 |---|---|---|
 | `get_many(keys) -> list[bytes \| None]` | Reading a function's markers in one round trip | Calls `get` for each key |
-| `add(key, value, *, ttl_seconds) -> bool` | Set-if-absent, for leases and creating markers | Not supported: no leases |
+| `add(key, value, *, ttl_seconds) -> bool` | Atomic set-if-absent, for leases and creating markers | Not supported: no leases |
 | `delete_prefix(prefix) -> None` | Reclaiming space after clears | Not supported: relies on the storage's own eviction |
 
 `get_many` returns one value or `None` per key, in the order of `keys`.
@@ -139,8 +140,8 @@ missing method or a `NotImplementedError` as "not supported", which follows the 
 Keys contain only lowercase letters, digits, `.`, `_`, `-`, and `/` (as separator), and stay
 under 250 characters. A storage can map them to file paths or add its own prefix.
 
-Correctness never depends on the storage: it may drop any key at any time, or keep it past
-`ttl_seconds`, which only helps it reclaim space.
+Correctness never depends on the storage keeping keys: it may drop any key at any time, or
+keep it past `ttl_seconds`, which only helps it reclaim space.
 
 ### Entry envelope
 
@@ -202,11 +203,12 @@ one replica refreshes it.
 
 ### Write path
 
-1. Compute under the existing per-key lock. If the storage supports `add`, take the lease
-   first (TTL 30 s). A background timer renews the lease every 10 s until the write finishes
-   or is dropped, so long computations and slow uploads keep it. The lease value holds its
-   wall-clock expiry, which waiters check themselves, so a crashed holder blocks others for
-   at most 30 s, even on a storage that keeps keys past their TTL.
+1. Compute under the existing per-key lock (for async functions, the per-key compute
+   claim). If the storage supports `add`, take the lease first (TTL 30 s). A background
+   timer renews the lease every 10 s until the write finishes or is dropped, so long
+   computations and slow uploads keep it. The lease value holds its wall-clock expiry,
+   which waiters check themselves, so a crashed holder blocks others for at most 30 s, even
+   on a storage that keeps keys past their TTL.
 2. If another replica holds the lease, poll the storage with backoff (10 ms up to 200 ms)
    until the value appears, or the lease is gone or past its expiry. While polling, the
    waiter checks whether its script run was stopped (see
@@ -245,8 +247,9 @@ one replica refreshes it.
   within one token read interval (one second) after the new token is written.
 - Tokens are random, so a replica can't tell an old token from a new one. The clearing
   replica therefore ignores the stored value of a marker it changed in any read that
-  started before its write succeeded. If the write fails, it retries in the background, so
-  the old token never comes back.
+  started before its write succeeded. If the write fails, it retries in the background so
+  the old token never comes back, each time with a new random token so a retry can't undo
+  another replica's later clear.
 - Markers are always overwritten with new random values, never read and modified, so
   concurrent clears can't undo each other. If the storage evicts a marker, a new random
   token replaces it. That can cause misses, but never makes cleared entries reachable again.
@@ -381,7 +384,8 @@ unpickle that `st.cache_data` already does on every hit.
 - Leases are best-effort. Renewal and release are a plain `set` and `delete`, because the
   protocol has no compare-and-set, so a holder that stalls past the lease expiry can renew
   or release a lease that another replica has taken over. Then a key can be computed twice,
-  and an older result can replace a newer one of the same key, as it can without `add`.
+  replicas can keep different results of it, and an older result can replace a newer one,
+  as without `add`.
 
 ## Validation
 

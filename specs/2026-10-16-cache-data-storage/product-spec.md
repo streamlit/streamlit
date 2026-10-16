@@ -155,9 +155,9 @@ key more than once. The full contract is in the tech spec.
 **Clearing:**
 
 - `my_func.clear()`, `my_func.clear(*args)`, and `st.cache_data.clear()` clear the shared
-  storage. As today, `st.cache_data.clear()` also clears `scope="session"` caches on the
-  replica that calls it. Session caches on other replicas aren't in the storage, so they
-  stay.
+  storage, and so does **Clear cache** in the app menu. As today, `st.cache_data.clear()`
+  also clears `scope="session"` caches on the replica that calls it. Session caches on
+  other replicas aren't in the storage, so they stay.
 - The replica that cleared sees the change immediately. A session stays on one replica, so
   a user who clicks a "Refresh" button gets fresh data. Other replicas see the clear within
   about one second. After `my_func.clear(*args)`, a compute of that key that was already
@@ -371,7 +371,7 @@ added later if users ask for it. Adding a parameter later is easier than removin
 | Item | ✅ or comment |
 |---|---|
 | Works on SiS, Cloud, etc? | ✅ The default is unchanged (memory). `cache.storage = "disk"` needs a writable folder; platforms with ephemeral disks, like Community Cloud and SiS, keep entries only until the container restarts. `cache_storage` works wherever `st.App` does. |
-| No breaking API changes | ✅ No API is removed, and `persist` keeps working through a long deprecation. The first release still changes some behavior: `persist` with `scope="session"` raises an error, `persist` starts honoring `ttl`, persisted `.memo` files recompute once, and calls with `set` arguments miss once in both `st.cache_data` and `st.cache_resource`. |
+| No breaking API changes | ✅ No API is removed, and `persist` keeps working through a long deprecation. The first release still changes some behavior: `persist` with `scope="session"` raises an error, `persist` starts honoring `ttl`, persisted functions recompute once, and again after the app moves to another folder unless `cache.namespace` is set, and calls with `set` arguments miss once in both `st.cache_data` and `st.cache_resource`. |
 | No new dependencies | ✅ The built-in disk storage uses only the standard library. |
 | Metrics collected | Record the `cache.storage` value, whether `st.App(cache_storage=...)` is set, and `persist` usage to plan its removal. |
 | Any security/legal impact? | Entries are pickles, so write access to the storage means code execution in the app. This isn't new, but shared storages can widen access, so the docs must cover access control. It also fixes the cross-session leak of `persist`, and its cross-app leak between apps at different paths. |
