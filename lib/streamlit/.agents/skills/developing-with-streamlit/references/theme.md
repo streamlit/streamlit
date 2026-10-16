@@ -2,9 +2,7 @@
 
 Configure themes in `.streamlit/config.toml`. When several apps share a brand, point each app's `theme.base` at one shared file (or URL) and override per app. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
 
-Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
-
-Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars.
+Use `streamlit config show` for the full option list and descriptions. Do not invent option names. Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars.
 
 - TOML edits apply on the next rerun.
 - `fontFaces` additions and updates apply on the next rerun. After you remove the last `fontFaces` entry, refresh the page so old `@font-face` rules clear.
@@ -59,21 +57,13 @@ Do not put these under light/dark/sidebar: `base`, `fontFaces` (`[[theme.fontFac
 
 ### Options allowed in all six sections
 
-All other theme keys may be set in any of the six sections:
-
-- Colors and semantic `*Color` / `*BackgroundColor` / `*TextColor`
-- Dataframe chrome and chart palettes
-- Fonts (`font`, `headingFont`, `headingFontSizes`, `headingFontWeights`, `codeFont*`, `linkUnderline`)
-- Radii and `showWidgetBorder`
-- `paddingTop` / `paddingBottom`
+All other theme keys may be set in any of the six sections: colors and semantic `*Color` / `*BackgroundColor` / `*TextColor`; dataframe chrome and chart palettes; fonts (`font`, `headingFont`, `headingFontSizes`, `headingFontWeights`, `codeFont*`, `linkUnderline`); radii and `showWidgetBorder`; `paddingTop` / `paddingBottom`.
 
 ## How theme config is applied
 
 ### Source precedence (highest wins)
 
-Source precedence follows `cli.md`: CLI flags > env vars > script, project, then global `config.toml` > defaults.
-
-Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme.
+Source precedence follows `cli.md`: CLI flags > env vars > script, project, then global `config.toml` > defaults. Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme.
 
 ### CLI and env naming
 
@@ -91,9 +81,7 @@ Prefer TOML for arrays (chart palettes, heading sizes). Use flags/env for tempor
 
 ### Section merge order
 
-When `theme.base` is `"light"` / `"dark"`, Streamlit starts from that built-in theme. When `theme.base` is a **file/URL**, that file’s options are loaded first (if the file sets `base`, it must be `"light"` or `"dark"`, not another file; omitted `base` defaults to `"light"`).
-
-When `[theme.light]` or `[theme.dark]` is set, each variant starts from its matching built-in theme, and `[theme] base` is ignored for that choice. Color and other keys on `[theme]` still apply to both variants.
+When `theme.base` is `"light"` / `"dark"`, Streamlit starts from that built-in theme. When `theme.base` is a **file/URL**, that file’s options are loaded first (if the file sets `base`, it must be `"light"` or `"dark"`, not another file; omitted `base` defaults to `"light"`). When `[theme.light]` or `[theme.dark]` is set, each variant starts from its matching built-in theme, and `[theme] base` is ignored for that choice. Color and other keys on `[theme]` still apply to both variants.
 
 Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
@@ -172,17 +160,7 @@ A shared file may use all valid theme sections. App config, environment variable
 
 ## Options agents often miss
 
-Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`):
-
-- Semantic `*Color` / `*BackgroundColor` / `*TextColor`
-- `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors))
-- `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`
-- `baseRadius`, `buttonRadius`, `showWidgetBorder`; `showSidebarBorder` (`[theme]`-only)
-- Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
-- `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
-- Shared `theme.base` file/URL for multi-app brand inheritance
-- Dual light/dark sections and sidebars when those shapes fit the goal
-- `paddingTop` / `paddingBottom` (main and sidebar — prefer over `.block-container` CSS)
+Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`): semantic `*Color` / `*BackgroundColor` / `*TextColor`; `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors)); `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`; `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`; Google Fonts URL syntax with `[[theme.fontFaces]]` and `[server] enableStaticServing = true`; `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`; a shared `theme.base` file/URL; dual light/dark sections and sidebars when those shapes fit; `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS).
 
 ## Color configuration
 
