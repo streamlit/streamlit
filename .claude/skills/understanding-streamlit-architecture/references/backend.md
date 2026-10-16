@@ -71,11 +71,28 @@ This ordering explains why `connect_session()` alone does not start user code ex
 
 Executes user scripts in isolated thread.
 
+`ScriptData` / `RuntimeConfig` carry `main_script_path` and an optional
+`script_entrypoint` callable. For a callable entrypoint, `main_script_path` is
+the outermost non-installed source file. A nested decorator wrapper is skipped
+when the wrapped function's module imports that decorator; a nested wrapper the
+app defines around another module stays on the wrapper. When every candidate
+is installed, the outermost installed file is used, which for `functools.partial`
+of a library function is that library file. The path is used for static files,
+source watching, and `sys.path` during runs. Prepending that directory can load
+a package module twice (`myproj.ui.models` and `models`) when the callable lives
+inside a package. Script-level config and secrets come from the launched
+file under `streamlit run` and `App.run()`, and from the callable source only
+when no launched file is set (uvicorn). When `script_entrypoint` is set (via
+`st.App(callable)`), ScriptRunner invokes that callable instead of compiling
+and `exec()`-ing the main script file.
+
 **Execution flow**:
-1. Compile script to bytecode (cached via ScriptCache)
-2. Create fake `__main__` module
-3. Attach `ScriptRunContext` to thread
-4. Execute with `exec()` in modified sys.path
+1. Prepare the app entrypoint: compile a script to bytecode (cached via
+   `ScriptCache`) or retain the callable supplied to `st.App`
+2. Create a fake `__main__` module for file-based entrypoints
+3. Attach `ScriptRunContext` to the script thread
+4. Execute file bytecode with `exec()` or invoke the callable inside the same
+   rerun and error-handling envelope
 5. Process widget callbacks before execution
 6. Handle fragments for partial reruns
 

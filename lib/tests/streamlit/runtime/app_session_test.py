@@ -371,6 +371,11 @@ class AppSessionTest(unittest.TestCase):
     def test_create_scriptrunner(self, mock_scriptrunner: MagicMock):
         """Verify that ScriptRunner receives the session-owned script event loop."""
         session = _create_test_session()
+        script_entrypoint = MagicMock()
+        session._script_data = ScriptData(
+            session._script_data.main_script_path,
+            script_entrypoint=script_entrypoint,
+        )
         assert session._scriptrunner is None
 
         session._create_scriptrunner(initial_rerun_data=RerunData())
@@ -387,9 +392,10 @@ class AppSessionTest(unittest.TestCase):
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
+            event_loop=session._script_event_loop,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
-            event_loop=session._script_event_loop,
+            script_entrypoint=script_entrypoint,
         )
 
         assert session._scriptrunner is not None
