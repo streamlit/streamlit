@@ -21,6 +21,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_font,
     reset_focus,
     reset_hovering,
     tab_until_focused,
@@ -29,6 +30,9 @@ from e2e_playwright.shared.app_utils import (
 
 def test_code_display(app: Page):
     """Test that st.code displays a code block."""
+    # Wait for the default monospace face so a missing WOFF2 fails as a font
+    # timeout instead of silently using the system monospace.
+    expect_font(app, "Geist Mono")
     # The code blocks might require a bit more time for rendering, so wait until
     # the text is truly visible. Otherwise we might get blank code blocks in the
     # screenshots.
