@@ -270,8 +270,11 @@ interface FlexBoxContainerProps extends BaseBlockProps {
 
 /**
  * A definite-height grid cell's `grid.cell()` block must fill the cell.
- * The layout wrapper and the inner flex block both use this, so stretch
- * children do not collapse when one of them forgets the check.
+ *
+ * The cell block has no height of its own. The layout wrapper and the inner
+ * flex block both use this so stretch children do not collapse to 0 when one
+ * of them forgets the check. Content rows stay content-sized so
+ * `vertical_alignment` can still move the cell.
  */
 function shouldFillGridCell(
   deltaBlock: BlockProto,
@@ -305,10 +308,7 @@ export const FlexBoxContainer = (
   // don't fit, instead of wrapping.
   const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
-  // A pixel row is definite height. The cell block has no height of its
-  // own, so without this it stays content-sized and stretch children
-  // resolve against 0. Content rows leave the block content-sized so
-  // vertical_alignment can still move it.
+  // See shouldFillGridCell.
   const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
 
   const styles: StyledFlexContainerBlockProps = {
@@ -323,10 +323,8 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // Block height:
-    // - filling grid cell: the cell block has no height of its own, so it
-    //   must be 100% or stretch children resolve against 0. min-height 0
-    //   lets the cell scroll instead of growing the track.
+    // Block height. A filling grid cell uses 100% and min-height 0; see
+    // shouldFillGridCell.
     // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
     //   auto height lets taller content grow the wrapper instead of overflowing.
     // - pixel: set here so the block can scroll.
@@ -671,9 +669,8 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   } = props
 
   const theme = useEmotionTheme()
-  // Width changes re-render this component. Keep the divider walk off that
-  // path; ChildRenderer already memoizes its own traversal. The returned
-  // node is the same object, after divider colors are assigned.
+  // assignDividerColor walks every child and mutates heading colors in
+  // place. Memoize that walk so width-driven re-renders do not repeat it.
   const gridNode = useMemo(() => {
     assignDividerColor(node, theme)
     return node
@@ -1036,9 +1033,7 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
-  // grid.cell() is wrapped in stLayoutWrapper. In a definite-height row that
-  // wrapper must fill the cell; otherwise its default flex (0 1 auto) and
-  // height: auto collapse stretch children to 0.
+  // See shouldFillGridCell.
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
@@ -1100,8 +1095,7 @@ export const BlockNodeRenderer = (
         flexContext?.direction ?? Direction.VERTICAL
       ]
     : undefined
-  // A filling grid cell wins over the stretch-container wrapper, which would
-  // size the block to its content and collapse stretch children.
+  // See shouldFillGridCell. This wins over the stretch-container wrapper.
   const layoutWrapperStyles = fillGridCell
     ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
     : { ...styles, ...stretchWrapperStyles }

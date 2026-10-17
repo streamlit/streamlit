@@ -3812,6 +3812,58 @@ class ChatMessage(Block):
         self.avatar = proto.avatar
 
 
+# Public gap names. None is the "no gap" value, matching GapSize.NONE.
+_GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
+    GapSize.NONE: None,
+    GapSize.XXSMALL: "xxsmall",
+    GapSize.XSMALL: "xsmall",
+    GapSize.SMALL: "small",
+    GapSize.MEDIUM: "medium",
+    GapSize.LARGE: "large",
+    GapSize.XLARGE: "xlarge",
+    GapSize.XXLARGE: "xxlarge",
+}
+
+GridGapValue: TypeAlias = str | int | None
+GridSizeValue: TypeAlias = int | float | str
+
+
+def _public_gap_value(gap_config: Any) -> GridGapValue:
+    """Rebuild one ``st.grid`` gap argument from a ``GapConfig``."""
+    spec = gap_config.WhichOneof("gap_spec")
+    if spec == "pixel_gap":
+        return int(gap_config.pixel_gap)
+    if spec == "gap_size":
+        return _GRID_GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
+    return "small"
+
+
+def _public_width(width_config: Any) -> GridSizeValue:
+    """Rebuild a width argument. An unset config is the grid default, stretch."""
+    spec = width_config.WhichOneof("width_spec") if width_config is not None else None
+    if spec == "pixel_width":
+        return int(width_config.pixel_width)
+    if spec == "rem_width":
+        return float(width_config.rem_width)
+    if spec == "use_content":
+        return "content"
+    return "stretch"
+
+
+def _public_height(height_config: Any) -> GridSizeValue:
+    """Rebuild a height argument. An unset config is the grid default, content."""
+    spec = (
+        height_config.WhichOneof("height_spec") if height_config is not None else None
+    )
+    if spec == "pixel_height":
+        return int(height_config.pixel_height)
+    if spec == "rem_height":
+        return float(height_config.rem_height)
+    if spec == "use_stretch":
+        return "stretch"
+    return "content"
+
+
 @dataclass(repr=False)
 class Grid(Block):
     """A representation of ``st.grid``.
@@ -3826,11 +3878,19 @@ class Grid(Block):
     wrap: bool
     border: bool
     row_height: int | str
+    min_column_width: int | str
+    gap: GridGapValue | tuple[GridGapValue, GridGapValue]
+    vertical_alignment: str
+    dense: bool
+    width: GridSizeValue
+    height: GridSizeValue
 
     def __init__(
         self,
         proto: BlockProto.GridContainer,
         root: ElementTree,
+        *,
+        block: BlockProto | None = None,
     ) -> None:
         # Pass the sub-message and the node type into Block so this class
         # does not assign `proto` or `type` again. WhichOneof("type") does
@@ -3839,6 +3899,24 @@ class Grid(Block):
         self.column_count = "auto" if proto.max_columns == 0 else proto.max_columns
         self.wrap = proto.wrap if proto.HasField("wrap") else True
         self.border = bool(proto.show_cell_border)
+        # 0 is the proto sentinel for min_column_width="auto".
+        self.min_column_width = (
+            "auto" if proto.min_column_width_px == 0 else proto.min_column_width_px
+        )
+        row_gap = _public_gap_value(proto.row_gap_config)
+        column_gap = _public_gap_value(proto.column_gap_config)
+        self.gap = row_gap if row_gap == column_gap else (row_gap, column_gap)
+        alignment = type(proto).VerticalAlignment
+        if proto.vertical_alignment == alignment.CENTER:
+            self.vertical_alignment = "center"
+        elif proto.vertical_alignment == alignment.BOTTOM:
+            self.vertical_alignment = "bottom"
+        else:
+            self.vertical_alignment = "top"
+        self.dense = bool(proto.dense)
+        # Width and height live on the parent block, same as the block id.
+        self.width = _public_width(None if block is None else block.width_config)
+        self.height = _public_height(None if block is None else block.height_config)
         # FIXED is the pixel row-height mode. CONTENT and the reserved EQUAL
         # value both surface as "content".
         if proto.cell_height_mode == type(
@@ -4335,7 +4413,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             if bty == "chat_message":
                 new_node = ChatMessage(block.chat_message, root=root)
             elif bty == "grid_container":
-                new_node = Grid(block.grid_container, root=root)
+                new_node = Grid(block.grid_container, root=root, block=block)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "expandable":

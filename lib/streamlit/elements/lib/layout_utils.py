@@ -79,10 +79,16 @@ def is_int(value: object) -> bool:
     return isinstance(value, Integral) and not isinstance(value, bool)
 
 
-def validate_uint32_max(parameter: str, value: int) -> None:
-    """Raise if ``value`` cannot be stored in a protobuf ``uint32`` field."""
-    if value > PROTO_UINT32_MAX:
-        raise StreamlitValueOutOfRangeError(parameter, value, 1, PROTO_UINT32_MAX)
+def validate_uint32_max(parameter: str, value: int, *, min_value: int = 1) -> None:
+    """Raise if ``value`` cannot be stored in a protobuf ``uint32`` field.
+
+    ``min_value`` is the public lower bound named in the error. Most pixel and
+    span parameters reject values below 1 before calling this. Gap allows 0.
+    """
+    if value < min_value or value > PROTO_UINT32_MAX:
+        raise StreamlitValueOutOfRangeError(
+            parameter, value, min_value, PROTO_UINT32_MAX
+        )
 
 
 EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[
@@ -356,7 +362,7 @@ def get_gap_config(
     # as a pixel value.
     if isinstance(gap, int) and not isinstance(gap, bool) and gap >= 0:
         # Pixel gaps are stored in a protobuf uint32.
-        validate_uint32_max(parameter, gap)
+        validate_uint32_max(parameter, gap, min_value=0)
         gap_config.pixel_gap = gap
         return gap_config
 

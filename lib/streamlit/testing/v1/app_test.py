@@ -1172,9 +1172,10 @@ class AppTest:
         BlockList of Grid
             Individual grids can be accessed by index or key. For example,
             ``at.grid[0]`` or ``at.grid(key="cards")``. ``column_count``,
-            ``wrap``, ``border``, and ``row_height`` are available on each
-            grid. ``columns`` stays the nested ``st.columns`` collection.
-            ``grid.cell()`` is not included.
+            ``min_column_width``, ``wrap``, ``gap``, ``vertical_alignment``,
+            ``border``, ``row_height``, ``width``, ``height``, and ``dense``
+            are available on each grid. ``columns`` stays the nested
+            ``st.columns`` collection. ``grid.cell()`` is not included.
         """
         return self._tree.grid
 

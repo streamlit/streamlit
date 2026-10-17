@@ -4134,7 +4134,19 @@ def test_get_grid_accepts_public_name() -> None:
     def script() -> None:
         import streamlit as st
 
-        st.grid(2, wrap=False, border=True, row_height=120, key="cards")
+        st.grid(
+            2,
+            min_column_width=180,
+            wrap=False,
+            gap=(None, 12),
+            vertical_alignment="center",
+            border=True,
+            row_height=120,
+            width=400,
+            height=300,
+            dense=True,
+            key="cards",
+        )
         st.grid(key="auto")
 
     at = AppTest.from_function(script).run()
@@ -4144,15 +4156,27 @@ def test_get_grid_accepts_public_name() -> None:
     cards = at.grid[0]
     assert cards.key == "cards"
     assert cards.column_count == 2
+    assert cards.min_column_width == 180
     assert cards.wrap is False
+    assert cards.gap == (None, 12)
+    assert cards.vertical_alignment == "center"
     assert cards.border is True
     assert cards.row_height == 120
+    assert cards.width == 400
+    assert cards.height == 300
+    assert cards.dense is True
     assert len(cards.grid) == 0
     auto = at.grid(key="auto")
     assert auto.column_count == "auto"
+    assert auto.min_column_width == "auto"
     assert auto.wrap is True
+    assert auto.gap == "small"
+    assert auto.vertical_alignment == "top"
     assert auto.border is False
     assert auto.row_height == "content"
+    assert auto.width == "stretch"
+    assert auto.height == "content"
+    assert auto.dense is False
 
 
 def test_expander_key_and_get_by_key() -> None:

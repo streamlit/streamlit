@@ -77,7 +77,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_width_above_uint32_max_raises(self):
         """Pixel widths above a protobuf uint32 raise a Streamlit range error."""
 
-        with pytest.raises(StreamlitValueOutOfRangeError, match=r"`width`"):
+        with pytest.raises(StreamlitValueOutOfRangeError, match=r"\[1, 4294967295\]"):
             validate_width(2**32)
 
         validate_width(2**32 - 1)
@@ -260,7 +260,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_get_gap_config_above_uint32_max_raises(self):
         """Pixel gaps above a protobuf uint32 raise a Streamlit range error."""
 
-        with pytest.raises(StreamlitValueOutOfRangeError, match=r"`gap`"):
+        with pytest.raises(StreamlitValueOutOfRangeError, match=r"\[0, 4294967295\]"):
             get_gap_config(2**32)
 
         assert get_gap_config(2**32 - 1).pixel_gap == 2**32 - 1

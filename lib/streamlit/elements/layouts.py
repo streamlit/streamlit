@@ -993,6 +993,10 @@ class LayoutsMixin:
         (preferred) or call commands on the returned object. Group multiple
         elements or span tracks with ``grid.cell()``.
 
+        ``st.empty()`` as a direct child reserves a cell. Later writes replace
+        that cell and do not insert a new one. A heading inside the grid also
+        takes a cell, so keep section headings outside the grid.
+
         Parameters
         ----------
         columns : "auto" or int
@@ -1142,8 +1146,7 @@ class LayoutsMixin:
             ]
             grid = st.grid(4, border=True)
             for label, value, delta in metrics:
-                with grid.cell():
-                    st.metric(label, value, delta)
+                grid.metric(label, value, delta)
 
         .. output::
             https://doc-grid1.streamlit.app/
