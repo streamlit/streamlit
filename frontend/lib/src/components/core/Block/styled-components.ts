@@ -539,6 +539,10 @@ export const StyledGridScrollBody = styled.div<{
     flexDirection: "column",
     alignItems: "stretch",
     width: "100%",
+    // The track floor lives on the content measure, not on this port.
+    // min-width: 0 keeps the port at the layout slot so its border box
+    // stays a stable available-width measurement.
+    minWidth: 0,
     minHeight: 0,
     flex: 1,
     height: "100%",

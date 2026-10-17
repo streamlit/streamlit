@@ -18,6 +18,7 @@ import {
   type JSX,
   type ReactElement,
   type ReactNode,
+  useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
@@ -409,6 +410,7 @@ interface GridContainerProps extends BaseBlockProps {
 
 const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
 const HEIGHT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
+const PORT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height", "width"]
 // Descendants only. The scroll body itself is not included, so giving it
 // tabIndex={0} does not count as an existing tab stop.
 const FOCUSABLE_DESCENDANT =
@@ -515,21 +517,42 @@ const OverflowAwareGridPort = ({
   wrap,
   horizontalScroll,
   trackMinWidthPx,
+  onPortWidthPx,
   children,
 }: {
   bounded: boolean
   wrap: boolean
   horizontalScroll: boolean
   trackMinWidthPx?: number
+  onPortWidthPx?: (widthPx: number) => void
   children: ReactNode
 }): ReactElement => {
-  const { values: portHeights, elementRef: portRef } =
-    useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
+  const { values: portSize, elementRef: portRef } =
+    useResizeObserver<HTMLDivElement>(PORT_OBSERVED_PROPERTIES, [bounded])
   const { values: contentHeights, elementRef: contentRef } =
     useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
+  const observedPortWidth = portSize[1] ?? 0
+  // The grid inside this port grows to the track floor once horizontal
+  // scrolling is on. Report the port's own border box so that decision
+  // does not feed on the width it just created.
+  useLayoutEffect(() => {
+    if (!onPortWidthPx) {
+      return
+    }
+    if (!bounded) {
+      onPortWidthPx(0)
+      return
+    }
+    const element = portRef.current
+    if (!element) {
+      return
+    }
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Width is needed before the first paint.
+    onPortWidthPx(element.getBoundingClientRect().width)
+  }, [bounded, observedPortWidth, onPortWidthPx, portRef])
   const scroll =
     bounded &&
-    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portHeights[0] ?? 0)
+    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portSize[0] ?? 0)
   const keyboardScrollTarget = useExposeScrollTarget(
     bounded && (scroll || horizontalScroll),
     portRef,
@@ -622,6 +645,15 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES, [
       gridHasBoundedHeight,
     ])
+  // Bounded wrap=False grows the grid to its track floor. The scrollport
+  // border box stays the layout slot, so horizontal scrolling is decided
+  // from this width instead of the grid's.
+  const [scrollportWidthPx, setScrollportWidthPx] = useState(0)
+  const handlePortWidthPx = useCallback((widthPx: number) => {
+    setScrollportWidthPx(current =>
+      Math.abs(current - widthPx) < 0.5 ? current : widthPx
+    )
+  }, [])
   const observedWidth = observedWidths[0]
   // The resize observer reports after paint, so a nested grid (sidebar,
   // column) would flash the 704px fallback for a frame. Read the laid-out
@@ -798,17 +830,28 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   // Only become a scrollport once the tracks are wider than the box.
   // overflow-x: auto would otherwise coerce overflow-y and clip toolbars
   // even when every column fits.
+  //
+  // A bounded grid must not use its own measured width here. Applying the
+  // track floor makes that element wider, the next measure clears the
+  // scroll flag, and the floor drops — a loop. The scrollport width does
+  // not follow the floor. Unbounded grids scroll on the grid itself and
+  // never apply that floor, so their own width is the available width.
   const tracksMinWidthPx = gridTracksMinWidthPx(
     columnCount,
     minColumnWidthPx,
     columnGapPx
   )
+  const horizontalScrollAvailableWidthPx = gridHasBoundedHeight
+    ? scrollportWidthPx > 0
+      ? scrollportWidthPx
+      : fallbackWidthPx
+    : measuredWidth !== undefined && measuredWidth > 0
+      ? measuredWidth
+      : fallbackWidthPx
   const horizontalScroll = shouldScrollHorizontally(
     wrap,
     tracksMinWidthPx,
-    measuredWidth !== undefined && measuredWidth > 0
-      ? measuredWidth
-      : fallbackWidthPx
+    horizontalScrollAvailableWidthPx
   )
   const trackMinWidthPx =
     gridHasBoundedHeight && horizontalScroll ? tracksMinWidthPx : undefined
@@ -875,6 +918,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       wrap={wrap}
       horizontalScroll={horizontalScroll}
       trackMinWidthPx={trackMinWidthPx}
+      onPortWidthPx={handlePortWidthPx}
     >
       <StyledGridContainerBlock
         ref={elementRef}

@@ -1549,6 +1549,90 @@ describe("GridContainer Component", () => {
     )
   })
 
+  function mockGridAndPortWidths(
+    gridWidth: number,
+    portWidth: number
+  ): () => void {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const width =
+          this.dataset.testid === "stGridScrollBody" ? portWidth : gridWidth
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: 160,
+          right: width,
+          width,
+          height: 160,
+          toJSON: () => ({}),
+        }
+      })
+    return () => spy.mockRestore()
+  }
+
+  function renderBoundedNoWrapGrid(): void {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          maxColumns: 4,
+          minColumnWidthPx: 200,
+          wrap: false,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+  }
+
+  it("scrolls a bounded no-wrap grid from the scrollport, not the expanded grid", async () => {
+    // The grid element is already at the track floor. Deciding from that
+    // width would clear the scrollbar. The port is still narrower.
+    const restore = mockGridAndPortWidths(900, 400)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+          "overflow-x: auto"
+        )
+      })
+      expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+        "min-width: 848px"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it("does not scroll a bounded no-wrap grid when the scrollport fits the tracks", async () => {
+    // A narrow grid measurement must not turn scrolling on once the port
+    // is wide enough for every track.
+    const restore = mockGridAndPortWidths(400, 900)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridContentMeasure")).not.toHaveStyle(
+          "min-width: 848px"
+        )
+      })
+      expect(screen.getByTestId("stGridScrollBody")).not.toHaveStyle(
+        "overflow-x: auto"
+      )
+    } finally {
+      restore()
+    }
+  })
+
   it("scrolls a bounded grid when reserved equal mode is set", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
