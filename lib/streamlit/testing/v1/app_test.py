@@ -65,6 +65,7 @@ from streamlit.testing.v1.element_tree import (
     Expander,
     Feedback,
     FileUploader,
+    Grid,
     Header,
     Help,
     Html,
@@ -1163,14 +1164,17 @@ class AppTest:
         return self._tree.form_submit_button
 
     @property
-    def grid(self) -> BlockList[Block]:
+    def grid(self) -> BlockList[Grid]:
         """Sequence of all ``st.grid`` blocks.
 
         Returns
         -------
-        BlockList
+        BlockList of Grid
             Individual grids can be accessed by index or key. For example,
-            ``at.grid[0]`` or ``at.grid(key="cards")``.
+            ``at.grid[0]`` or ``at.grid(key="cards")``. ``column_count``,
+            ``wrap``, ``border``, and ``row_height`` are available on each
+            grid. ``columns`` stays the nested ``st.columns`` collection.
+            ``grid.cell()`` is not included.
         """
         return self._tree.grid
 

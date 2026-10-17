@@ -4134,14 +4134,25 @@ def test_get_grid_accepts_public_name() -> None:
     def script() -> None:
         import streamlit as st
 
-        st.grid(2, key="cards")
+        st.grid(2, wrap=False, border=True, row_height=120, key="cards")
+        st.grid(key="auto")
 
     at = AppTest.from_function(script).run()
-    assert len(at.grid) == 1
+    assert len(at.grid) == 2
     assert list(at.grid) == list(at.get("grid"))
     assert list(at.get("grid")) == list(at.get("grid_container"))
-    assert at.grid[0].key == "cards"
-    assert len(at.grid[0].grid) == 0
+    cards = at.grid[0]
+    assert cards.key == "cards"
+    assert cards.column_count == 2
+    assert cards.wrap is False
+    assert cards.border is True
+    assert cards.row_height == 120
+    assert len(cards.grid) == 0
+    auto = at.grid(key="auto")
+    assert auto.column_count == "auto"
+    assert auto.wrap is True
+    assert auto.border is False
+    assert auto.row_height == "content"
 
 
 def test_expander_key_and_get_by_key() -> None:

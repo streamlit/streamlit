@@ -412,17 +412,33 @@ const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
 const HEIGHT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
 const PORT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height", "width"]
 // Descendants only. The scroll body itself is not included, so giving it
-// tabIndex={0} does not count as an existing tab stop.
-const FOCUSABLE_DESCENDANT =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+// tabIndex={0} does not count as an existing tab stop. Native tab stops
+// that are not form controls are included so a media or iframe scrollport
+// does not add a second stop.
+const FOCUSABLE_DESCENDANT = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "summary",
+  "iframe",
+  "audio[controls]",
+  "video[controls]",
+  "[contenteditable]:not([contenteditable='false'])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ")
 
 /**
- * `tabIndex={0}` on a scrollport that has no focusable descendant, so
- * keyboard users can scroll text-only overflow. No `role="region"`: every
- * cell would otherwise be a landmark with the same name. Widgets inside
- * the scrollport stay the tab stops; this does not add a second one.
+ * Returns whether an active scrollport needs `tabIndex={0}` so keyboard
+ * users can scroll it. This is false when the port already has a focusable
+ * descendant, because those controls are the tab stops. No `role="region"`:
+ * every cell would become a landmark with the same name.
+ *
+ * `dependency` re-runs the check when the React child list changes. The
+ * observer covers later DOM mounts, including widgets that load lazily.
  */
-function useExposeScrollTarget(
+function useNeedsKeyboardScrollStop(
   active: boolean,
   elementRef: { readonly current: HTMLElement | null },
   dependency: unknown
@@ -495,7 +511,11 @@ const GridCell = ({
     shouldEnableOverflowScroll(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
   // A text-only scrollport is not in the tab order. Widgets already inside
   // the cell are, so do not add a second stop in that case.
-  const keyboardScrollTarget = useExposeScrollTarget(scroll, bodyRef, children)
+  const keyboardScrollTarget = useNeedsKeyboardScrollStop(
+    scroll,
+    bodyRef,
+    children
+  )
 
   return (
     <StyledGridCell
@@ -572,7 +592,7 @@ const OverflowAwareGridPort = ({
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Width is needed before the first paint.
     onPortWidthPx(element.clientWidth)
   }, [bounded, observedPortWidth, scroll, onPortWidthPx, portRef])
-  const keyboardScrollTarget = useExposeScrollTarget(
+  const keyboardScrollTarget = useNeedsKeyboardScrollStop(
     bounded && (scroll || horizontalScroll),
     portRef,
     children
@@ -872,7 +892,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   )
   const trackMinWidthPx =
     gridHasBoundedHeight && horizontalScroll ? tracksMinWidthPx : undefined
-  const gridKeyboardScrollTarget = useExposeScrollTarget(
+  const gridKeyboardScrollTarget = useNeedsKeyboardScrollStop(
     !gridHasBoundedHeight && horizontalScroll,
     elementRef,
     childrenWithCells

@@ -211,6 +211,9 @@ def validate_width(width: Width | None, allow_content: bool = False) -> None:
             raise StreamlitInvalidWidthError(width, allow_content)
     elif width <= 0:
         raise StreamlitInvalidWidthError(width, allow_content)
+    else:
+        # Pixel widths are stored in a protobuf uint32.
+        validate_uint32_max("width", width)
 
 
 def validate_height(
@@ -254,6 +257,9 @@ def validate_height(
 
     elif height <= 0:
         raise StreamlitInvalidHeightError(height, allow_content)
+    else:
+        # Pixel heights are stored in a protobuf uint32.
+        validate_uint32_max("height", height)
 
 
 def validate_space_size(size: SpaceSize) -> None:
@@ -349,6 +355,8 @@ def get_gap_config(
     # ``bool`` is a subclass of ``int`` in Python, but should not be accepted
     # as a pixel value.
     if isinstance(gap, int) and not isinstance(gap, bool) and gap >= 0:
+        # Pixel gaps are stored in a protobuf uint32.
+        validate_uint32_max(parameter, gap)
         gap_config.pixel_gap = gap
         return gap_config
 

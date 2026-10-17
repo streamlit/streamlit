@@ -1013,20 +1013,15 @@ class LayoutsMixin:
             The preferred outer width of each column, used as the wrapping
             threshold. This can be one of the following:
 
-            - ``"auto"`` (default): Streamlit uses a theme-based width of
-              about 200 pixels. Cell border and padding sit inside that
-              width and do not increase it. With ``wrap=True``, this is
-              a wrapping threshold: once one column remains, that column
-              uses the container width and may be narrower. With
-              ``wrap=False``, cells shrink to this width and the grid
-              then scrolls horizontally.
-            - An integer specifying the minimum width in pixels: With
-              ``wrap=True``, this is a wrapping threshold. The grid drops
-              a column before cells would become narrower than this
-              width. Once one column remains, that column uses the
-              container width and may be narrower. With ``wrap=False``,
-              cells shrink to this width and the grid then scrolls
-              horizontally.
+            - ``"auto"`` (default): A theme-based width of about 200 pixels.
+            - An integer: A width in pixels.
+
+            Cell border and padding sit inside this width. With
+            ``wrap=True``, the grid drops a column before cells would be
+            narrower than this width; once one column remains, it uses the
+            container width and may be narrower. With ``wrap=False``,
+            cells shrink to this width and the grid then scrolls
+            horizontally.
 
         wrap : bool
             Whether the number of columns can decrease as the container
@@ -1134,18 +1129,21 @@ class LayoutsMixin:
         --------
         **Example 1: Metric cards**
 
-        >>> import streamlit as st
-        >>>
-        >>> metrics = [
-        ...     ("Revenue", "$1.2M", "+8%"),
-        ...     ("Pipeline", "$4.8M", "+12%"),
-        ...     ("Conversion", "12.4%", "+1.1%"),
-        ...     ("Retention", "96%", "-0.4%"),
-        ... ]
-        >>> grid = st.grid(4, border=True)
-        >>> for label, value, delta in metrics:
-        ...     with grid.cell():
-        ...         st.metric(label, value, delta)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            metrics = [
+                ("Revenue", "$1.2M", "+8%"),
+                ("Pipeline", "$4.8M", "+12%"),
+                ("Conversion", "12.4%", "+1.1%"),
+                ("Retention", "96%", "-0.4%"),
+            ]
+            grid = st.grid(4, border=True)
+            for label, value, delta in metrics:
+                with grid.cell():
+                    st.metric(label, value, delta)
 
         .. output::
             https://doc-grid1.streamlit.app/
@@ -1153,13 +1151,16 @@ class LayoutsMixin:
 
         **Example 2: Full-width cell**
 
-        >>> import streamlit as st
-        >>>
-        >>> grid = st.grid("auto", min_column_width=220)
-        >>> with grid.cell(column_span="all"):
-        ...     st.markdown("**Featured**")
-        >>> with grid.cell():
-        ...     st.markdown("Card")
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            grid = st.grid("auto", min_column_width=220)
+            with grid.cell(column_span="all"):
+                st.markdown("**Featured**")
+            with grid.cell():
+                st.markdown("Card")
 
         .. output::
             https://doc-grid2.streamlit.app/
@@ -1167,14 +1168,17 @@ class LayoutsMixin:
 
         **Example 3: Fixed column count (no wrap)**
 
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df = rng(0).standard_normal((20, 3))
-        >>> grid = st.grid(3, wrap=False, border=True)
-        >>> grid.cell().line_chart(df, height=220)
-        >>> grid.cell().bar_chart(df, height=220)
-        >>> grid.cell().dataframe(df, height=220)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+            from numpy.random import default_rng as rng
+
+            df = rng(0).standard_normal((20, 3))
+            grid = st.grid(3, wrap=False, border=True)
+            grid.cell().line_chart(df, height=220)
+            grid.cell().bar_chart(df, height=220)
+            grid.cell().dataframe(df, height=220)
 
         .. output::
             https://doc-grid3.streamlit.app/

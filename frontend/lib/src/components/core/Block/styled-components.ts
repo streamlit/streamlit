@@ -715,9 +715,10 @@ interface StyledGridCellContentProps {
  * In-flow content of a grid cell. `min-height: min-content` lets this box
  * grow with tall children so ResizeObserver can detect overflow without
  * reading scrollHeight. `height: 100%` keeps stretch children resolving
- * against the cell when content is shorter than the row. Alignment lives
- * here because this box fills the cell; justify-content on the outer cell
- * would otherwise be a no-op.
+ * against the cell when content is shorter than the row. In pixel-height
+ * rows this box fills the cell, so alignment must live here. In content
+ * rows this box is `display: contents` and `StyledGridCell` aligns the
+ * children instead.
  */
 export const StyledGridCellContent = styled.div<StyledGridCellContentProps>(
   ({ verticalAlignment, $passthrough }) => {

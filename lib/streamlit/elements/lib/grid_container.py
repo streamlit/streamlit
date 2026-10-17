@@ -96,14 +96,17 @@ class GridContainer(DeltaGenerator):
         --------
         Group a metric and caption in one cell, and span a featured card.
 
-        >>> import streamlit as st
-        >>>
-        >>> grid = st.grid(4, border=True)
-        >>> with grid.cell():
-        ...     st.metric("Revenue", "$1.2M", "+8%")
-        ...     st.caption("Trailing 30 days")
-        >>> with grid.cell(column_span="all"):
-        ...     st.markdown("**Featured**")
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            grid = st.grid(4, border=True)
+            with grid.cell():
+                st.metric("Revenue", "$1.2M", "+8%")
+                st.caption("Trailing 30 days")
+            with grid.cell(column_span="all"):
+                st.markdown("**Featured**")
 
         .. output::
             https://doc-grid-cell.streamlit.app/

@@ -3490,18 +3490,12 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
-    def grid(self) -> BlockList[Block]:
+    def grid(self) -> BlockList[Grid]:
         """``st.grid`` blocks.
 
         ``grid.cell()`` is a flex container and is not included here.
         """
-        return BlockList(
-            [
-                e
-                for e in self
-                if isinstance(e, Block) and e is not self and e.type == "grid_container"
-            ]
-        )
+        return BlockList([e for e in self if isinstance(e, Grid) and e is not self])
 
     @property
     def form(self) -> BlockList[Block]:
@@ -3810,6 +3804,45 @@ class ChatMessage(Block):
         self.type = "chat_message"
         self.name = proto.name
         self.avatar = proto.avatar
+
+
+@dataclass(repr=False)
+class Grid(Block):
+    """A representation of ``st.grid``.
+
+    ``grid.cell()`` is a separate flex container and is not a ``Grid``.
+    """
+
+    type: str = field(repr=False)
+    proto: BlockProto.GridContainer = field(repr=False)
+    # Not `columns`: Block.columns is the nested st.columns collection.
+    column_count: int | str
+    wrap: bool
+    border: bool
+    row_height: int | str
+
+    def __init__(
+        self,
+        proto: BlockProto.GridContainer,
+        root: ElementTree,
+    ) -> None:
+        self.children = {}
+        self.proto = proto
+        self.root = root
+        # Node type stays the proto field name. ``AppTest.grid`` is the
+        # public collection.
+        self.type = "grid_container"
+        self.column_count = "auto" if proto.max_columns == 0 else proto.max_columns
+        self.wrap = proto.wrap if proto.HasField("wrap") else True
+        self.border = bool(proto.show_cell_border)
+        # FIXED is the pixel row-height mode. CONTENT and the reserved EQUAL
+        # value both surface as "content".
+        if proto.cell_height_mode == type(
+            proto
+        ).CellHeightMode.FIXED and proto.HasField("cell_height_config"):
+            self.row_height = proto.cell_height_config.pixel_height
+        else:
+            self.row_height = "content"
 
 
 @dataclass(repr=False)
@@ -4297,6 +4330,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             bty = block.WhichOneof("type")
             if bty == "chat_message":
                 new_node = ChatMessage(block.chat_message, root=root)
+            elif bty == "grid_container":
+                new_node = Grid(block.grid_container, root=root)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "expandable":

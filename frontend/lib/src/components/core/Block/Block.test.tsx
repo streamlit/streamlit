@@ -1448,6 +1448,31 @@ describe("GridContainer Component", () => {
     expect(gridContainer).not.toHaveAttribute("role")
   })
 
+  it("does not add a tab stop when a scrolling grid contains an iframe", async () => {
+    const block = makeGridBlock(
+      {
+        maxColumns: 4,
+        minColumnWidthPx: 200,
+        wrap: false,
+      },
+      [makeTextElement("Note")]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    await waitFor(() => {
+      expect(gridContainer).toHaveAttribute("tabindex", "0")
+    })
+
+    const iframe = document.createElement("iframe")
+    iframe.title = "Embedded"
+    gridContainer.appendChild(iframe)
+
+    await waitFor(() => {
+      expect(gridContainer).not.toHaveAttribute("tabindex")
+    })
+  })
+
   it("does not add a tab stop on a no-wrap grid that already has a widget", async () => {
     const block = makeGridBlock(
       {
