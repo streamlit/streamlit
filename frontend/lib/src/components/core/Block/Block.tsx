@@ -532,9 +532,15 @@ const OverflowAwareGridPort = ({
   const { values: contentHeights, elementRef: contentRef } =
     useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
   const observedPortWidth = portSize[1] ?? 0
+  const scroll =
+    bounded &&
+    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portSize[0] ?? 0)
   // The grid inside this port grows to the track floor once horizontal
-  // scrolling is on. Report the port's own border box so that decision
-  // does not feed on the width it just created.
+  // scrolling is on. Report the port's client width, not that grid and not
+  // the border box: a classic vertical scrollbar sits inside the border box
+  // and would otherwise leave the tracks looking like they fit. Remeasure
+  // when vertical scrolling toggles, because that gutter does not change
+  // the border box the resize observer reports.
   useLayoutEffect(() => {
     if (!onPortWidthPx) {
       return
@@ -548,11 +554,8 @@ const OverflowAwareGridPort = ({
       return
     }
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Width is needed before the first paint.
-    onPortWidthPx(element.getBoundingClientRect().width)
-  }, [bounded, observedPortWidth, onPortWidthPx, portRef])
-  const scroll =
-    bounded &&
-    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portSize[0] ?? 0)
+    onPortWidthPx(element.clientWidth)
+  }, [bounded, observedPortWidth, scroll, onPortWidthPx, portRef])
   const keyboardScrollTarget = useExposeScrollTarget(
     bounded && (scroll || horizontalScroll),
     portRef,
@@ -833,9 +836,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   //
   // A bounded grid must not use its own measured width here. Applying the
   // track floor makes that element wider, the next measure clears the
-  // scroll flag, and the floor drops — a loop. The scrollport width does
-  // not follow the floor. Unbounded grids scroll on the grid itself and
-  // never apply that floor, so their own width is the available width.
+  // scroll flag, and the floor drops — a loop. The scrollport's client
+  // width does not follow the floor, and it excludes a classic vertical
+  // scrollbar. Unbounded grids scroll on the grid itself and never apply
+  // that floor, so their own width is the available width.
   const tracksMinWidthPx = gridTracksMinWidthPx(
     columnCount,
     minColumnWidthPx,

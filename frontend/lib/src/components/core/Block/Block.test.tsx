@@ -1551,9 +1551,10 @@ describe("GridContainer Component", () => {
 
   function mockGridAndPortWidths(
     gridWidth: number,
-    portWidth: number
+    portWidth: number,
+    portClientWidth = portWidth
   ): () => void {
-    const spy = vi
+    const rectSpy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function (this: HTMLElement) {
         const width =
@@ -1570,7 +1571,17 @@ describe("GridContainer Component", () => {
           toJSON: () => ({}),
         }
       })
-    return () => spy.mockRestore()
+    const clientSpy = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === "stGridScrollBody"
+          ? portClientWidth
+          : gridWidth
+      })
+    return () => {
+      rectSpy.mockRestore()
+      clientSpy.mockRestore()
+    }
   }
 
   function renderBoundedNoWrapGrid(): void {
@@ -1627,6 +1638,25 @@ describe("GridContainer Component", () => {
       })
       expect(screen.getByTestId("stGridScrollBody")).not.toHaveStyle(
         "overflow-x: auto"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it("scrolls a bounded no-wrap grid when a vertical scrollbar narrows the port", async () => {
+    // The border box fits the 848px tracks. The content box beside a classic
+    // scrollbar does not, so the right edge must scroll instead of clipping.
+    const restore = mockGridAndPortWidths(900, 900, 820)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+          "overflow-x: auto"
+        )
+      })
+      expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+        "min-width: 848px"
       )
     } finally {
       restore()
