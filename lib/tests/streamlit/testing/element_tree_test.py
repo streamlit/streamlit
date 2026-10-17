@@ -4033,6 +4033,25 @@ def test_get_by_key_rejects_ambiguous_key() -> None:
         at.get_by_key("shared")
 
 
+def test_container_excludes_grid_cells() -> None:
+    """``grid.cell()`` is a flex container and must not appear in ``at.container``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        grid = st.grid(2, key="cards")
+        with grid.cell():
+            st.text("grouped")
+        grid.container(key="panel").text("panel")
+        with st.container(key="filters"):
+            st.text("inside")
+
+    at = AppTest.from_function(script).run()
+    assert {node.key for node in at.container} == {"panel", "filters"}
+    assert len(at.grid) == 1
+    assert at.grid[0].text[0].value == "grouped"
+
+
 def test_container_excludes_columns_row() -> None:
     """st.columns emits a flex_container row that must not appear in at.container."""
 

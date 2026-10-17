@@ -84,7 +84,9 @@ to wrap even in a column.
 Use `st.grid` for metric walls, galleries, and dashboard cards that should
 reflow with the available width. Direct children become cells. Group multiple
 elements or span tracks with `grid.cell()`. Keep section headings outside the
-grid — a bare `st.header` inside it takes one cell.
+grid — a bare `st.header` inside it takes one cell. A fragment called inside
+the grid is one cell. A fragment that writes into a grid captured outside the
+fragment adds one cell per child.
 
 ```python
 metrics = [

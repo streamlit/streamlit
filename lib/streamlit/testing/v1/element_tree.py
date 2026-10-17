@@ -3420,6 +3420,7 @@ class Block:
         """``st.container`` blocks, including horizontal/flex containers.
 
         The implicit row wrapper created by ``st.columns`` is excluded.
+        ``grid.cell()`` blocks are excluded.
         """
         return BlockList(
             [
@@ -3431,6 +3432,9 @@ class Block:
                 # st.columns currently emits a flex-container whose direct
                 # children are Column blocks; that wrapper is not st.container.
                 and not any(isinstance(child, Column) for child in e.children.values())
+                # grid.cell() is a flex container tagged with grid_cell.
+                # A nested st.container has no grid_cell and stays included.
+                and not (e.proto is not None and e.proto.HasField("grid_cell"))
             ]
         )
 
