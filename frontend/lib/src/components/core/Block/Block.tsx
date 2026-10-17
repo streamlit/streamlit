@@ -22,6 +22,7 @@ import {
   useContext,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -444,18 +445,25 @@ function useNeedsKeyboardScrollStop(
   dependency: unknown
 ): boolean {
   const [exposed, setExposed] = useState(false)
+  const exposedRef = useRef(false)
   useLayoutEffect(() => {
     const element = elementRef.current
+    const publish = (next: boolean): void => {
+      if (exposedRef.current === next) {
+        return
+      }
+      exposedRef.current = next
+      setExposed(next)
+    }
     if (!active || !element) {
-      setExposed(current => (current ? false : current))
+      publish(false)
       return
     }
 
     // Widgets such as buttons load lazily. A check that only runs when the
     // React child list changes misses that mount and leaves an extra tab stop.
     const update = (): void => {
-      const next = element.querySelector(FOCUSABLE_DESCENDANT) === null
-      setExposed(current => (current === next ? current : next))
+      publish(element.querySelector(FOCUSABLE_DESCENDANT) === null)
     }
     update()
 
@@ -472,7 +480,7 @@ function useNeedsKeyboardScrollStop(
 }
 
 interface GridCellProps {
-  constrainOverflow: boolean
+  hasFixedRowHeight: boolean
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
   showBorder: boolean
   columnSpan?: number
@@ -490,7 +498,7 @@ interface GridCellProps {
  * cell and switch to `overflow: auto` only if in-flow content exceeds it.
  */
 const GridCell = ({
-  constrainOverflow,
+  hasFixedRowHeight,
   verticalAlignment,
   showBorder,
   columnSpan,
@@ -500,14 +508,14 @@ const GridCell = ({
 }: GridCellProps): ReactElement => {
   const { values: bodyHeights, elementRef: bodyRef } =
     useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [
-      constrainOverflow,
+      hasFixedRowHeight,
     ])
   const { values: contentHeights, elementRef: contentRef } =
     useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [
-      constrainOverflow,
+      hasFixedRowHeight,
     ])
   const scroll =
-    constrainOverflow &&
+    hasFixedRowHeight &&
     shouldEnableOverflowScroll(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
   // A text-only scrollport is not in the tab order. Widgets already inside
   // the cell are, so do not add a second stop in that case.
@@ -520,25 +528,25 @@ const GridCell = ({
   return (
     <StyledGridCell
       verticalAlignment={verticalAlignment}
-      showBorder={showBorder}
+      $showBorder={showBorder}
       className="stGridCell"
       data-testid="stGridCell"
-      columnSpan={columnSpan}
-      columnSpanAll={columnSpanAll}
-      rowSpan={rowSpan}
+      $columnSpan={columnSpan}
+      $columnSpanAll={columnSpanAll}
+      $rowSpan={rowSpan}
     >
       <StyledGridCellBody
-        ref={constrainOverflow ? bodyRef : undefined}
+        ref={hasFixedRowHeight ? bodyRef : undefined}
         $scroll={scroll}
-        $passthrough={!constrainOverflow}
+        $passthrough={!hasFixedRowHeight}
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
         tabIndex={keyboardScrollTarget ? 0 : undefined}
       >
         <StyledGridCellContent
-          ref={constrainOverflow ? contentRef : undefined}
+          ref={hasFixedRowHeight ? contentRef : undefined}
           verticalAlignment={verticalAlignment}
-          $passthrough={!constrainOverflow}
+          $passthrough={!hasFixedRowHeight}
           data-testid="stGridCellContent"
         >
           {children}
@@ -554,6 +562,7 @@ const OverflowAwareGridPort = ({
   horizontalScroll,
   trackMinWidthPx,
   onPortWidthPx,
+  scrollTargetDependency,
   children,
 }: {
   bounded: boolean
@@ -561,6 +570,9 @@ const OverflowAwareGridPort = ({
   horizontalScroll: boolean
   trackMinWidthPx?: number
   onPortWidthPx?: (widthPx: number) => void
+  // Stable identity for the keyboard-scroll effect. The element `children`
+  // is a new object on every parent render.
+  scrollTargetDependency?: unknown
   children: ReactNode
 }): ReactElement => {
   const { values: portSize, elementRef: portRef } =
@@ -595,7 +607,7 @@ const OverflowAwareGridPort = ({
   const keyboardScrollTarget = useNeedsKeyboardScrollStop(
     bounded && (scroll || horizontalScroll),
     portRef,
-    children
+    scrollTargetDependency
   )
 
   return (
@@ -858,7 +870,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     componentRegistry,
   ])
 
-  const constrainOverflow =
+  const hasFixedRowHeight =
     cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
 
   // wrap=False tracks will not shrink below this floor. The scrollport's
@@ -890,7 +902,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     tracksMinWidthPx,
     horizontalScrollAvailableWidthPx
   )
-  const trackMinWidthPx =
+  const boundedScrollMinWidthPx =
     gridHasBoundedHeight && horizontalScroll ? tracksMinWidthPx : undefined
   const gridKeyboardScrollTarget = useNeedsKeyboardScrollStop(
     !gridHasBoundedHeight && horizontalScroll,
@@ -907,7 +919,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       childrenWithCells.map(child => (
         <GridCell
           key={child.nodeId ?? `grid-child-${child.sourceKey}`}
-          constrainOverflow={constrainOverflow}
+          hasFixedRowHeight={hasFixedRowHeight}
           verticalAlignment={verticalAlignment}
           showBorder={showCellBorder}
           columnSpan={
@@ -921,16 +933,16 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
           <FlexContextProvider
             direction={Direction.VERTICAL}
             isDirectlyInColumn
-            fillAvailableHeight={constrainOverflow}
+            fillAvailableHeight={hasFixedRowHeight}
             fillJustify={
-              constrainOverflow
+              hasFixedRowHeight
                 ? gridCellJustifyContent(verticalAlignment)
                 : undefined
             }
             // Direct children of a fixed-height cell (not wrapped in
             // grid.cell()) still need a definite height so stretch charts
             // fill the track instead of falling back to their default size.
-            hasFixedHeight={constrainOverflow}
+            hasFixedHeight={hasFixedRowHeight}
             parentContext={parentContext}
           >
             {child.element}
@@ -942,7 +954,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       columnCount,
       verticalAlignment,
       showCellBorder,
-      constrainOverflow,
+      hasFixedRowHeight,
       parentContext,
     ]
   )
@@ -954,7 +966,8 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       bounded={gridHasBoundedHeight}
       wrap={wrap}
       horizontalScroll={horizontalScroll}
-      trackMinWidthPx={trackMinWidthPx}
+      trackMinWidthPx={boundedScrollMinWidthPx}
+      scrollTargetDependency={wrappedChildren}
       onPortWidthPx={handlePortWidthPx}
     >
       <StyledGridContainerBlock

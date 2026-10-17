@@ -1010,8 +1010,8 @@ class LayoutsMixin:
               ``min_column_width``.
 
         min_column_width : "auto" or int
-            The preferred outer width of each column, used as the wrapping
-            threshold. This can be one of the following:
+            The minimum width of each column before the grid wraps to fewer
+            columns. This can be one of the following:
 
             - ``"auto"`` (default): A theme-based width of about 200 pixels.
             - An integer: A width in pixels.

@@ -24,7 +24,10 @@ import { convertRemToPx } from "~lib/theme/utils"
 export const GRID_AUTO_COLUMN_CAP = 24
 
 /**
- * Convert a CSS length used by grid layout (px, rem, or "0") to pixels.
+ * Convert a CSS length used by grid layout to pixels.
+ *
+ * Handles px, rem, and "0". A unitless token is a rem count times the
+ * root font size.
  */
 export function cssLengthToPx(value: string, rootFontSizePx: number): number {
   if (value === "0" || value === "0px" || value === "0rem") {

@@ -624,20 +624,20 @@ export function gridCellJustifyContent(
 
 export interface StyledGridCellProps {
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
-  showBorder: boolean
-  columnSpan?: number
-  columnSpanAll?: boolean
-  rowSpan?: number
+  $showBorder: boolean
+  $columnSpan?: number
+  $columnSpanAll?: boolean
+  $rowSpan?: number
 }
 
 export const StyledGridCell = styled.div<StyledGridCellProps>(
   ({
     theme,
     verticalAlignment,
-    showBorder,
-    columnSpan,
-    columnSpanAll,
-    rowSpan,
+    $showBorder,
+    $columnSpan,
+    $columnSpanAll,
+    $rowSpan,
   }) => {
     const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
 
@@ -657,16 +657,16 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
         // above a chart) can paint. In-flow scrolling is applied on
         // StyledGridCellBody only when content actually exceeds the cell.
         overflow: "visible",
-        ...(showBorder && {
+        ...($showBorder && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
-        ...(columnSpanAll && { gridColumn: "1 / -1" }),
-        ...(!columnSpanAll &&
-          columnSpan &&
-          columnSpan > 1 && { gridColumn: `span ${columnSpan}` }),
-        ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
+        ...($columnSpanAll && { gridColumn: "1 / -1" }),
+        ...(!$columnSpanAll &&
+          $columnSpan &&
+          $columnSpan > 1 && { gridColumn: `span ${$columnSpan}` }),
+        ...($rowSpan && $rowSpan > 1 && { gridRow: `span ${$rowSpan}` }),
       },
       // Second declaration so unknown `safe` does not drop the fallback.
       safe &&
