@@ -18,7 +18,7 @@ import fs from "fs"
 import path from "path"
 
 // Current hash for our preloaded font asset:
-const SOURCE_SANS_REGULAR_HASH = "BsWL4Kly"
+const FIGTREE_REGULAR_HASH = "aRmp725X"
 
 // Render a copy of index.html file to test
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
@@ -41,5 +41,5 @@ it("index.html preloads expected font with expected hash", () => {
   // <font>-<weight>.otf.<fontHash>.woff2
   const fontFullName = fontHref.split("/").pop()
   const fontHash = fontFullName ? fontFullName.split(".")[2] : ""
-  expect(fontHash).toBe(SOURCE_SANS_REGULAR_HASH)
+  expect(fontHash).toBe(FIGTREE_REGULAR_HASH)
 })

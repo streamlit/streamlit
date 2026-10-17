@@ -283,9 +283,9 @@ def test_slider_with_float_formatting(
     # Once unhovered the tick bar fades out (opacity 300ms after a 200ms delay), so
     # wait for it to reach 0 rather than capturing it mid-fade.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
-    # Figtree sets no font-display, so until it loads the label renders invisible
-    # rather than shifted. Waiting reports that as a font timeout instead of an opaque
-    # snapshot mismatch.
+    # The Figtree @font-face sets no font-display, so until it loads the label renders
+    # invisible rather than shifted. Waiting reports that as a font timeout instead of
+    # an opaque snapshot mismatch.
     expect_font(app, "Figtree")
     # This label is fractionally positioned, so its glyphs can snap one pixel up or
     # down. Of the 704x69 capture, Chromium's 0.003 lets up to 144 pixels differ, which
