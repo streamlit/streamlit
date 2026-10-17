@@ -1473,6 +1473,32 @@ describe("GridContainer Component", () => {
     })
   })
 
+  it("keeps a tab stop when the only iframe is removed from tab order", async () => {
+    const block = makeGridBlock(
+      {
+        maxColumns: 4,
+        minColumnWidthPx: 200,
+        wrap: false,
+      },
+      [makeTextElement("Note")]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    await waitFor(() => {
+      expect(gridContainer).toHaveAttribute("tabindex", "0")
+    })
+
+    const iframe = document.createElement("iframe")
+    iframe.title = "Embedded"
+    iframe.tabIndex = -1
+    gridContainer.appendChild(iframe)
+
+    await waitFor(() => {
+      expect(gridContainer).toHaveAttribute("tabindex", "0")
+    })
+  })
+
   it("does not add a tab stop on a no-wrap grid that already has a widget", async () => {
     const block = makeGridBlock(
       {

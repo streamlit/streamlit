@@ -3285,10 +3285,16 @@ class Block:
         self,
         proto: BlockProto | None,
         root: ElementTree,
+        *,
+        type: str | None = None,
     ) -> None:
         self.children = {}
         self.proto = proto
-        if proto:
+        if type is not None:
+            # A subclass that only has a sub-message passes its public type
+            # here so it does not assign `type` again after this init.
+            self.type = type
+        elif proto:
             ty = proto.WhichOneof("type")
             if ty is not None:
                 self.type = ty
@@ -3826,13 +3832,10 @@ class Grid(Block):
         proto: BlockProto.GridContainer,
         root: ElementTree,
     ) -> None:
-        # The superclass expects the full block proto. This node only has the
-        # grid sub-message, so start from an empty block and fill the fields.
-        super().__init__(None, root)
-        self.proto = proto
-        # Node type stays the proto field name. ``AppTest.grid`` is the
-        # public collection.
-        self.type = "grid_container"
+        # Pass the sub-message and the node type into Block so this class
+        # does not assign `proto` or `type` again. WhichOneof("type") does
+        # not apply to the grid sub-message.
+        super().__init__(cast("BlockProto", proto), root, type="grid_container")
         self.column_count = "auto" if proto.max_columns == 0 else proto.max_columns
         self.wrap = proto.wrap if proto.HasField("wrap") else True
         self.border = bool(proto.show_cell_border)

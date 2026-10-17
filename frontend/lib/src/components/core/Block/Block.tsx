@@ -421,11 +421,11 @@ const FOCUSABLE_DESCENDANT = [
   "input:not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
-  "summary",
-  "iframe",
-  "audio[controls]",
-  "video[controls]",
-  "[contenteditable]:not([contenteditable='false'])",
+  "summary:not([tabindex='-1'])",
+  "iframe:not([tabindex='-1'])",
+  "audio[controls]:not([tabindex='-1'])",
+  "video[controls]:not([tabindex='-1'])",
+  "[contenteditable]:not([contenteditable='false']):not([tabindex='-1'])",
   "[tabindex]:not([tabindex='-1'])",
 ].join(", ")
 
