@@ -3826,9 +3826,10 @@ class Grid(Block):
         proto: BlockProto.GridContainer,
         root: ElementTree,
     ) -> None:
-        self.children = {}
+        # The superclass expects the full block proto. This node only has the
+        # grid sub-message, so start from an empty block and fill the fields.
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         # Node type stays the proto field name. ``AppTest.grid`` is the
         # public collection.
         self.type = "grid_container"
