@@ -4033,6 +4033,25 @@ def test_get_by_key_rejects_ambiguous_key() -> None:
         at.get_by_key("shared")
 
 
+def test_container_excludes_grid_cells() -> None:
+    """``grid.cell()`` is a flex container and must not appear in ``at.container``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        grid = st.grid(2, key="cards")
+        with grid.cell():
+            st.text("grouped")
+        grid.container(key="panel").text("panel")
+        with st.container(key="filters"):
+            st.text("inside")
+
+    at = AppTest.from_function(script).run()
+    assert {node.key for node in at.container} == {"panel", "filters"}
+    assert len(at.grid) == 1
+    assert at.grid[0].text[0].value == "grouped"
+
+
 def test_container_excludes_columns_row() -> None:
     """st.columns emits a flex_container row that must not appear in at.container."""
 
@@ -4107,6 +4126,57 @@ def test_get_accepts_public_attribute_names() -> None:
     assert list(at.get("tab")) == list(at.tabs)
     assert len(at.get("tabs")) == 2
     assert list(at.get("not_an_element")) == []
+
+
+def test_get_grid_accepts_public_name() -> None:
+    """``AppTest.get("grid")`` is the public name for a grid_container node."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.grid(
+            2,
+            min_column_width=180,
+            wrap=False,
+            gap=(None, 12),
+            vertical_alignment="center",
+            border=True,
+            row_height=120,
+            width=400,
+            height=300,
+            dense=True,
+            key="cards",
+        )
+        st.grid(key="auto")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.grid) == 2
+    assert list(at.grid) == list(at.get("grid"))
+    assert list(at.get("grid")) == list(at.get("grid_container"))
+    cards = at.grid[0]
+    assert cards.key == "cards"
+    assert cards.column_count == 2
+    assert cards.min_column_width == 180
+    assert cards.wrap is False
+    assert cards.gap == (None, 12)
+    assert cards.vertical_alignment == "center"
+    assert cards.border is True
+    assert cards.row_height == 120
+    assert cards.width == 400
+    assert cards.height == 300
+    assert cards.dense is True
+    assert len(cards.grid) == 0
+    auto = at.grid(key="auto")
+    assert auto.column_count == "auto"
+    assert auto.min_column_width == "auto"
+    assert auto.wrap is True
+    assert auto.gap == "small"
+    assert auto.vertical_alignment == "top"
+    assert auto.border is False
+    assert auto.row_height == "content"
+    assert auto.width == "stretch"
+    assert auto.height == "content"
+    assert auto.dense is False
 
 
 def test_expander_key_and_get_by_key() -> None:

@@ -455,9 +455,11 @@ The name is `row_height` rather than `cell_height` because these modes size **ro
 | `"content"` (default) | Each row is as tall as its tallest cell. The cell frame, including its border, fills that row. Content inside the frame follows `vertical_alignment`. A `row_span=N` cell's height is distributed across the N rows it covers (CSS Grid default), so it can grow unrelated cells in those rows. Use a pixel `row_height` when row-span math must stay predictable. |
 | `<int>` | Every row is that many pixels. `cell(row_span=2)` is `2 * row_height + row_gap`. Overflow scrolls inside the cell. |
 
-An integer `height` bounds the grid the way `st.container(height=…)` does. Rows stay
-content-sized or pixel-sized inside that box; leftover space is not divided across rows.
-`"stretch"` on the grid itself follows the shared `Height` rule ([Risks](#risks)).
+An integer `height` bounds the grid the way `st.container(height=…)` does and scrolls
+inside that box. Rows stay content-sized or pixel-sized; leftover space is not divided
+across rows. `"stretch"` follows the shared `Height` rule ([Risks](#risks)): the grid
+is as tall as its content or its parent, whichever is larger, and is not its own
+scrollport.
 
 The cell frame always fills its grid area. `vertical_alignment` aligns the content inside
 that frame. It does not shrink the cell the way `st.columns` aligns a column with margin,
@@ -490,9 +492,11 @@ stretch — a [known gap](#risks), not a grid ship gate.
 Grid cells nest like any other container. Keep nested layout shallow; no CSS `subgrid` in
 the MVP.
 
-`st.grid` works inside `@st.fragment`. A fragment that writes through a layout-transparent
-wrapper has no extra DOM node, so its direct children become cells. To keep fragment
-output in one cell, wrap it in `grid.cell()` inside the fragment.
+`st.grid` works inside `@st.fragment`. A fragment called as a direct child of the grid
+wraps its output in a container, so that output is one cell. A fragment that writes
+into a grid it captured from outside uses a layout-transparent wrapper and has no extra
+DOM node, so each child is a cell. To keep that output in one cell, wrap it in
+`grid.cell()` inside the fragment.
 
 #### Accessibility
 
@@ -836,5 +840,5 @@ cell; `height="stretch"` on the grid does nothing at page top.
 | Any docs changes needed? | ✅ Add API docs and update layout guide/examples. |
 | Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). `dense` stays opt-in (`False` by default) and ships only with that check. No ARIA `grid`/`row`/`gridcell`. Integer `row_height` overflow is keyboard-scrollable. See [Accessibility](#accessibility). |
 | First-paint column count | Estimate the grid width as `contentMaxWidth` minus `2 * theme.spacing.lg` (704px at the default layout), not the raw 736px content max width. `st.grid(4)` is 3 columns either way; other floors can paint one count and then jump. See [Responsive placement](#responsive-placement). |
-| Fragment cells | A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
+| Fragment cells | A fragment called as a direct child is one cell, because it wraps its output in a container. A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
 | Depends on other work? | `st.card` is planned as a separate spec and is not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate. This PR adds `st.grid` to the wrap spec's command table (`wrap=False` keeps column tracks in one row, not cells) and a grid-cell row to its `wrap=None` table (resolves to `False`, like a column). |
