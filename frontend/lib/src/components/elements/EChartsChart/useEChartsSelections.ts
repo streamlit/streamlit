@@ -28,7 +28,6 @@ import {
   withDefaultSeriesCursor,
 } from "./CustomTheme"
 import {
-  applyBrushEndToSelection,
   brushAreasEqual,
   brushEndMatchesSelection,
   type BrushEndParams,
@@ -74,6 +73,81 @@ export interface EChartsSelectionInstance {
   getZr(): {
     on(eventName: string, handler: (params: unknown) => void): void
     off(eventName: string, handler?: (params: unknown) => void): void
+  }
+  /**
+   * Private on ECharts' public type, but present on the runtime instance.
+   * Form submit uses it to bypass ``brush.throttleDelay`` for one hit-test.
+   * ``setOption`` would do the same and also re-render the chart.
+   */
+  getModel?: () => {
+    eachComponent(
+      query: { mainType: string },
+      callback: (model: BrushComponentModel) => void
+    ): void
+  }
+}
+
+/** Brush component option fields that control ``brushSelected`` delivery. */
+interface BrushComponentModel {
+  option?: {
+    throttleType?: string
+    throttleDelay?: number
+  }
+}
+
+/**
+ * ECharts installs the throttled ``brushSelected`` dispatcher on zrender
+ * under this key (``visualEncoding`` ``DISPATCH_METHOD``). ``clear`` cancels
+ * a pending callback without flushing its stale snapshot.
+ */
+const BRUSH_SELECT_DISPATCH_KEY = "__ecBrushSelect"
+
+interface BrushSelectDispatcher {
+  clear?: () => void
+}
+
+function brushSelectDispatcher(
+  chart: EChartsSelectionInstance
+): BrushSelectDispatcher | undefined {
+  const zr = chart.getZr() as {
+    [BRUSH_SELECT_DISPATCH_KEY]?: BrushSelectDispatcher
+  }
+  return zr[BRUSH_SELECT_DISPATCH_KEY]
+}
+
+/**
+ * Run one brush hit-test outside the user's throttle.
+ *
+ * ``debounce`` always defers ``brushSelected``, even at delay 0, and
+ * ``fixRate`` defers while a drag is still inside ``throttleDelay``. Either
+ * one can still be pending when a form submits. ``fixRate`` at delay 0
+ * publishes the snapshot on this turn; the user's settings are restored
+ * before we return.
+ */
+function runWithSynchronousBrushHitTest(
+  chart: EChartsSelectionInstance,
+  run: () => void
+): void {
+  const restores: Array<() => void> = []
+  chart.getModel?.().eachComponent({ mainType: "brush" }, model => {
+    const option = model.option
+    if (!option) {
+      return
+    }
+    const { throttleType, throttleDelay } = option
+    option.throttleType = "fixRate"
+    option.throttleDelay = 0
+    restores.push(() => {
+      option.throttleType = throttleType
+      option.throttleDelay = throttleDelay
+    })
+  })
+  try {
+    run()
+  } finally {
+    for (const restore of restores) {
+      restore()
+    }
   }
 }
 
@@ -203,7 +277,7 @@ export function useEChartsSelections(
   const awaitingPrunedBrushRef = useRef(false)
   const latestBrushSelectionRef = useRef<BrushSelection[]>([])
   const committedBrushSelectionRef = useRef<BrushSelection[]>([])
-  const flushPendingBrushForSubmitRef = useRef<(() => void) | null>(null)
+  const flushPendingBrushForSubmitRef = useRef<(() => boolean) | null>(null)
 
   const widgetInfo: WidgetInfo = useMemo(
     () => ({ id: chartId, formId }),
@@ -523,48 +597,48 @@ export function useEChartsSelections(
         emitSelection()
       }
 
-      const flushPendingBrushForSubmit = (): void => {
+      const flushPendingBrushForSubmit = (): boolean => {
         if (!pendingBrushEnd) {
-          return
+          return true
         }
         const pending = pendingBrushEnd
         const existing = findBrushSelectionForEnd(
           latestBrushSelectionRef.current,
           pending
         )
-        // Ask ECharts to hit-test the finished areas now so submit can copy
-        // the final indices, not an empty/stale snapshot. When throttle
-        // delay is 0 this is synchronous and ``handleBrushSelected`` commits.
+        // Captured before the hit-test replaces the dispatcher. The in-flight
+        // callback still closes over the pre-submit snapshot.
+        const scheduledHitTest = brushSelectDispatcher(chart)
+        // Hit-test the finished areas on this turn. A throttled
+        // ``brushSelected`` can still hold the previous point indices (or
+        // none). Submitting those with the new areas would persist after
+        // the delayed event, which only updates the next pending form value.
+        const brushTarget: Record<string, unknown> = {}
+        if (typeof existing?.brushIndex === "number") {
+          brushTarget.brushIndex = existing.brushIndex
+        } else if (pending.brushId !== undefined) {
+          brushTarget.brushId = pending.brushId
+        }
         try {
-          chart.dispatchAction({
-            type: "brush",
-            ...(typeof existing?.brushIndex === "number"
-              ? { brushIndex: existing.brushIndex }
-              : {}),
-            areas: pending.areas ?? [],
+          runWithSynchronousBrushHitTest(chart, () => {
+            chart.dispatchAction({
+              type: "brush",
+              ...brushTarget,
+              areas: pending.areas ?? [],
+            })
           })
         } catch (error) {
           LOG.warn("Failed to flush pending form brush snapshot", error)
         }
         if (!pendingBrushEnd) {
-          return
+          scheduledHitTest?.clear?.()
+          return true
         }
-        // Still throttled: overlay the finished areas and keep
-        // ``pendingBrushEnd`` so a delayed ``brushSelected`` can replace
-        // this with the full hit indices on the next pending write.
-        latestBrushSelectionRef.current = applyBrushEndToSelection(
-          latestBrushSelectionRef.current,
-          pending
-        )
-        committedBrushSelectionRef.current = latestBrushSelectionRef.current
-        if (chartId) {
-          widgetMgr.setElementState(
-            chartId,
-            BRUSH_SELECTION_STATE_KEY,
-            latestBrushSelectionRef.current
-          )
-        }
-        emitSelection()
+        // The hit-test did not publish indices. Refuse the submit so the
+        // in-flight snapshot can fill the pending value; the next submit
+        // sends that instead of the previous indices.
+        LOG.warn("Form submit is waiting for the final brush hit indices")
+        return false
       }
       flushPendingBrushForSubmitRef.current = flushPendingBrushForSubmit
 
@@ -781,10 +855,8 @@ export function useEChartsSelections(
     if (!formId || !chartId || !isSelectionActivated) {
       return
     }
-    const validator = (): boolean => {
-      flushPendingBrushForSubmitRef.current?.()
-      return true
-    }
+    const validator = (): boolean =>
+      flushPendingBrushForSubmitRef.current?.() ?? true
     widgetMgr.addFormSubmitValidator(formId, chartId, validator)
     return () => {
       widgetMgr.removeFormSubmitValidator(formId, chartId)

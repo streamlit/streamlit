@@ -15,6 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
+import * as echarts from "echarts"
 import type { Mock, Mocked } from "vitest"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
@@ -80,6 +81,74 @@ function createFakeChart(): Mocked<FakeChart> {
     },
   }
   return chart as unknown as Mocked<FakeChart>
+}
+
+function captureBrushAreas(
+  chart: echarts.ECharts,
+  areas: Array<Record<string, unknown>>
+): Array<Record<string, unknown>> {
+  let captured: Array<Record<string, unknown>> | undefined
+  const onBrushSelected = (event: unknown): void => {
+    const batch = (
+      event as {
+        batch?: Array<{ areas?: Array<Record<string, unknown>> }>
+      }
+    ).batch
+    const eventAreas = batch?.[0]?.areas
+    if (!eventAreas || eventAreas.length === 0) {
+      return
+    }
+    captured = eventAreas.map(area => {
+      const geometry = { ...area }
+      // Drop fields ECharts adds when storing the area. brushEnd carries the
+      // geometry from setOutputRanges, not this enriched copy.
+      delete geometry.brushMode
+      delete geometry.transformable
+      delete geometry.brushStyle
+      delete geometry.removeOnClick
+      delete geometry.z
+      return geometry
+    })
+  }
+  chart.on("brushSelected", onBrushSelected)
+  chart.dispatchAction({ type: "brush", areas })
+  chart.off("brushSelected", onBrushSelected)
+  if (!captured) {
+    throw new Error("brushSelected did not report areas")
+  }
+  return captured
+}
+
+function readBrushModel(chart: echarts.ECharts): {
+  id: string
+  option: { throttleType?: string; throttleDelay?: number }
+} {
+  const model = (
+    chart as unknown as {
+      getModel: () => {
+        eachComponent: (
+          query: { mainType: string },
+          callback: (component: {
+            id: string
+            option: { throttleType?: string; throttleDelay?: number }
+          }) => void
+        ) => void
+      }
+    }
+  ).getModel()
+  let component:
+    | {
+        id: string
+        option: { throttleType?: string; throttleDelay?: number }
+      }
+    | undefined
+  model.eachComponent({ mainType: "brush" }, item => {
+    component = item
+  })
+  if (!component) {
+    throw new Error("missing brush component")
+  }
+  return component
 }
 
 function createElement(id = "chart-id", formId = ""): EChartsChartProto {
@@ -2861,6 +2930,7 @@ describe("useEChartsSelections", () => {
 
     expect(chart.dispatchAction).toHaveBeenCalledWith({
       type: "brush",
+      brushId: brush.brushId,
       areas: brush.areas,
     })
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -2920,7 +2990,7 @@ describe("useEChartsSelections", () => {
     expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
   })
 
-  it("overlays finished form brush areas when submit dispatch stays throttled", () => {
+  it("does not submit the previous brush indices when the hit-test stays pending", () => {
     let submitValidator: () => boolean = () => true
     widgetMgr.addFormSubmitValidator.mockImplementation(
       (_formId: string, _widgetId: string, validator: () => boolean) => {
@@ -2931,6 +3001,117 @@ describe("useEChartsSelections", () => {
       useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
     )
     const chart = createFakeChart()
+    const clearScheduledHitTest = vi.fn()
+    ;(
+      chart.zr as { __ecBrushSelect?: { clear: () => void } }
+    ).__ecBrushSelect = { clear: clearScheduledHitTest }
+    const previousArea = {
+      brushType: "rect",
+      coordRange: [
+        [0, 1],
+        [0, 1],
+      ],
+    }
+    const nextArea = {
+      brushType: "rect",
+      coordRange: [
+        [4, 5],
+        [4, 5],
+      ],
+    }
+    const previous = createBrushSelection({
+      areas: [previousArea],
+      selected: selectedWithMainHits([1]),
+    })
+    const next = createBrushSelection({
+      areas: [nextArea],
+      selected: selectedWithMainHits([4]),
+    })
+
+    act(() => {
+      result.current.bindSelections(chart)
+      triggerBrushGesture(chart, previous)
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        brushId: previous.brushId,
+        areas: [nextArea],
+      })
+    })
+
+    act(() => {
+      expect(submitValidator()).toBe(false)
+    })
+
+    expect(chart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: previous.brushIndex,
+      areas: [nextArea],
+    })
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    expect(clearScheduledHitTest).not.toHaveBeenCalled()
+
+    act(() => {
+      chart.trigger("brushSelected", { batch: [next] })
+    })
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [4],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "rect",
+              coord_range: nextArea.coordRange,
+            },
+          ],
+        },
+      }),
+      { formId: "form-id", fragmentId: undefined, fromUser: true }
+    )
+
+    act(() => {
+      expect(submitValidator()).toBe(true)
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("hit-tests a pending form brush with the user's throttle disabled", () => {
+    let submitValidator: () => boolean = () => true
+    widgetMgr.addFormSubmitValidator.mockImplementation(
+      (_formId: string, _widgetId: string, validator: () => boolean) => {
+        submitValidator = validator
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const brushOption = { throttleType: "debounce", throttleDelay: 400 }
+    const brushModel = { option: { ...brushOption } }
+    const clearScheduledHitTest = vi.fn()
+    chart.getModel = () => ({
+      eachComponent: (_query, callback) => {
+        callback(brushModel)
+      },
+    })
+    ;(
+      chart.zr as { __ecBrushSelect?: { clear: () => void } }
+    ).__ecBrushSelect = { clear: clearScheduledHitTest }
     const area = {
       brushType: "rect",
       coordRange: [
@@ -2941,6 +3122,15 @@ describe("useEChartsSelections", () => {
     const brush = createBrushSelection({
       areas: [area],
       selected: selectedWithMainHits([2]),
+    })
+    let throttleDuringDispatch:
+      | { throttleType?: string; throttleDelay?: number }
+      | undefined
+    chart.dispatchAction.mockImplementation(action => {
+      if (action.type === "brush") {
+        throttleDuringDispatch = { ...brushModel.option }
+        chart.trigger("brushSelected", { batch: [brush] })
+      }
     })
 
     act(() => {
@@ -2955,11 +3145,25 @@ describe("useEChartsSelections", () => {
       expect(submitValidator()).toBe(true)
     })
 
+    expect(throttleDuringDispatch).toEqual({
+      throttleType: "fixRate",
+      throttleDelay: 0,
+    })
+    expect(brushModel.option).toEqual(brushOption)
+    expect(clearScheduledHitTest).toHaveBeenCalledTimes(1)
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       "chart-id",
       JSON.stringify({
         selection: {
-          selected: [],
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [2],
+            },
+          ],
           areas: [
             {
               brush_index: 0,
@@ -2971,6 +3175,125 @@ describe("useEChartsSelections", () => {
       }),
       { formId: "form-id", fragmentId: undefined, fromUser: true }
     )
+  })
+
+  it("submits final indices for a throttled form brush on the submit turn", () => {
+    let submitValidator: () => boolean = () => true
+    widgetMgr.addFormSubmitValidator.mockImplementation(
+      (_formId: string, _widgetId: string, validator: () => boolean) => {
+        submitValidator = validator
+      }
+    )
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      chart.setOption({
+        animation: false,
+        xAxis: { type: "value" },
+        yAxis: { type: "value" },
+        brush: {
+          xAxisIndex: "all",
+          yAxisIndex: "all",
+          throttleType: "fixRate",
+          throttleDelay: 0,
+        },
+        series: {
+          type: "scatter",
+          data: [
+            [0, 0],
+            [1, 1],
+            [5, 5],
+          ],
+        },
+      })
+      // Learn the brushEnd shape ECharts actually emits (pixel range plus
+      // panel id). A coordRange-only area does not compare equal to the
+      // hit-test snapshot.
+      const finishedAreas = captureBrushAreas(chart, [
+        {
+          brushType: "rect",
+          coordRange: [
+            [-1, 10],
+            [-1, 10],
+          ],
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+        },
+      ])
+      const brushModel = readBrushModel(chart)
+      brushModel.option.throttleType = "debounce"
+      brushModel.option.throttleDelay = 10_000
+
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+      )
+
+      act(() => {
+        result.current.bindSelections(chart)
+        // Throttled in-progress snapshot. It must not win over the finished
+        // areas once submit asks for a fresh hit-test.
+        chart.dispatchAction({
+          type: "brush",
+          brushId: brushModel.id,
+          areas: [],
+        })
+        chart.dispatchAction({
+          type: "brushEnd",
+          brushId: brushModel.id,
+          areas: finishedAreas,
+        })
+      })
+
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      act(() => {
+        expect(submitValidator()).toBe(true)
+      })
+
+      expect(brushModel.option).toMatchObject({
+        throttleType: "debounce",
+        throttleDelay: 10_000,
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        "chart-id",
+        JSON.stringify({
+          selection: {
+            selected: [
+              {
+                series_index: 0,
+                series_id: null,
+                series_name: null,
+                data_type: "main",
+                data_indices: [0, 1, 2],
+              },
+            ],
+            areas: [
+              {
+                brush_index: 0,
+                brush_type: "rect",
+                coord_range: [
+                  [-1, 10],
+                  [-1, 10],
+                ],
+              },
+            ],
+          },
+        }),
+        { formId: "form-id", fragmentId: undefined, fromUser: true }
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    } finally {
+      chart.dispose()
+    }
   })
 
   it("clears selection state when its form is cleared", () => {

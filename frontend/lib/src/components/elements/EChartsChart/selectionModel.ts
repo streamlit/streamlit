@@ -560,29 +560,3 @@ export function brushEndMatchesSelection(
     brushAreasEqual(brush.areas ?? [], params.areas ?? [])
   )
 }
-
-/**
- * Overlay a ``brushEnd`` onto the latest snapshot so a form submit can flush
- * before a throttled ``brushSelected`` arrives. Hit indices stay as they were
- * on the last snapshot (or empty); the delayed event replaces them.
- */
-export function applyBrushEndToSelection(
-  brushSelection: BrushSelection[],
-  params: BrushEndParams
-): BrushSelection[] {
-  const existing = findBrushSelectionForEnd(brushSelection, params)
-  if (existing !== undefined) {
-    return brushSelection.map(item =>
-      item === existing ? { ...item, areas: params.areas ?? [] } : item
-    )
-  }
-  return [
-    ...brushSelection,
-    {
-      brushId: params.brushId,
-      brushIndex: brushSelection.length,
-      areas: params.areas ?? [],
-      selected: [],
-    },
-  ]
-}
