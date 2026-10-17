@@ -127,7 +127,6 @@ _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
     # Public collection name. The node type stays the proto field name.
     "help": "help_info",
-    "grid": "grid_container",
 }
 
 
@@ -3487,6 +3486,20 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
+    def grid(self) -> BlockList[Block]:
+        """``st.grid`` blocks.
+
+        ``grid.cell()`` is a flex container and is not included here.
+        """
+        return BlockList(
+            [
+                e
+                for e in self
+                if isinstance(e, Block) and e is not self and e.type == "grid_container"
+            ]
+        )
+
+    @property
     def form(self) -> BlockList[Block]:
         """``st.form`` blocks. The form ID is ``Block.key``."""
         return BlockList(
@@ -3658,9 +3671,9 @@ class Block:
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
         ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
-        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
-        the matching attributes. ``grid`` is the public name for a
-        ``grid_container`` node.
+        ``columns`` / ``status`` / ``chat_message`` / ``grid`` use the same
+        filtering as the matching attributes. ``grid_container`` is the node
+        type for ``st.grid``.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -3668,6 +3681,8 @@ class Block:
             return list(self.segmented_control)
         if element_type == "container":
             return list(self.container)
+        if element_type == "grid":
+            return list(self.grid)
         if element_type == "form":
             return list(self.form)
         if element_type == "form_submit_button":

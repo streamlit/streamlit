@@ -430,11 +430,27 @@ function useExposeScrollTarget(
   const [exposed, setExposed] = useState(false)
   useLayoutEffect(() => {
     const element = elementRef.current
-    const next =
-      active &&
-      !!element &&
-      element.querySelector(FOCUSABLE_DESCENDANT) === null
-    setExposed(current => (current === next ? current : next))
+    if (!active || !element) {
+      setExposed(current => (current ? false : current))
+      return
+    }
+
+    // Widgets such as buttons load lazily. A check that only runs when the
+    // React child list changes misses that mount and leaves an extra tab stop.
+    const update = (): void => {
+      const next = element.querySelector(FOCUSABLE_DESCENDANT) === null
+      setExposed(current => (current === next ? current : next))
+    }
+    update()
+
+    const observer = new MutationObserver(update)
+    observer.observe(element, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["disabled", "href", "tabindex"],
+    })
+    return () => observer.disconnect()
   }, [active, elementRef, dependency])
   return exposed
 }
@@ -636,13 +652,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   const userKey = getKeyFromId(node.deltaBlock.id)
   const heightConfig = node.deltaBlock.heightConfig
-  const gridHasBoundedHeight = Boolean(
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch still lets a pixel or rem height count
-    heightConfig?.useStretch ||
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a zero pixel height is not a bounded grid
-    heightConfig?.pixelHeight ||
-    heightConfig?.remHeight
-  )
+  // Pixel and rem heights are scrollports. Stretch matches st.container: the
+  // grid fills a bounded parent and grows with its content.
+  const gridHasBoundedHeight =
+    (heightConfig?.pixelHeight ?? 0) > 0 || (heightConfig?.remHeight ?? 0) > 0
 
   const { values: observedWidths, elementRef } =
     useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES, [
@@ -915,7 +928,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   )
 
   // Always render the port so switching height does not remount the grid.
-  // Content height styles the port as `display: contents`.
+  // Content and stretch heights style the port as `display: contents`.
   return (
     <OverflowAwareGridPort
       bounded={gridHasBoundedHeight}
@@ -1046,14 +1059,14 @@ export const BlockNodeRenderer = (
     node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
 
   const isStretchHeight = node.deltaBlock.heightConfig?.useStretch ?? false
-  // Stretch containers grow with their content. A stretch grid stays a
-  // bounded scrollport, so it keeps the percentage height from useLayoutStyles.
-  const stretchWrapperStyles =
-    isStretchHeight && !node.deltaBlock.gridContainer
-      ? STRETCH_BLOCK_WRAPPER_STYLES[
-          flexContext?.direction ?? Direction.VERTICAL
-        ]
-      : undefined
+  // Stretch containers, including grids, grow with their content. They fill a
+  // height-bounded parent and get taller when the content does. An integer
+  // height is what turns a grid into a scrollport.
+  const stretchWrapperStyles = isStretchHeight
+    ? STRETCH_BLOCK_WRAPPER_STYLES[
+        flexContext?.direction ?? Direction.VERTICAL
+      ]
+    : undefined
   // A filling grid cell wins over the stretch-container wrapper, which would
   // size the block to its content and collapse stretch children.
   const layoutWrapperStyles = fillGridCell

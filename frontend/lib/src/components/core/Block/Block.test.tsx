@@ -1462,11 +1462,14 @@ describe("GridContainer Component", () => {
     const gridContainer = screen.getByTestId("stGrid")
     await waitFor(() => {
       expect(gridContainer).toHaveStyle("overflow-x: auto")
+      // The button mounts lazily. The scrollport must drop its own tab stop
+      // once that button is a descendant.
+      expect(screen.getByRole("button", { name: "Edit" })).toBeVisible()
+      expect(gridContainer).not.toHaveAttribute("tabindex")
     })
-    expect(gridContainer).not.toHaveAttribute("tabindex")
   })
 
-  it("fills the layout wrapper when the grid has a bounded height", () => {
+  it("grows a stretch-height grid with its content instead of scrolling", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
       [],
@@ -1486,10 +1489,30 @@ describe("GridContainer Component", () => {
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
-    const scrollBody = screen.getByTestId("stGridScrollBody")
-    expect(scrollBody).toHaveStyle("height: 100%")
-    expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+    // Same rule as st.container: fill a bounded parent via flex basis, and
+    // grow past it when the content is taller. Not an inner scrollport.
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
+    expect(layoutWrapper).toHaveStyle("height: auto;")
+    expect(layoutWrapper).not.toHaveStyle("height: 100%;")
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "display: contents"
+    )
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
+  })
+
+  it("uses dense packing only when dense is set", () => {
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock())
+    )
+    expect(screen.getByTestId("stGrid")).not.toHaveStyle(
+      "grid-auto-flow: dense"
+    )
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({ dense: true }))
+    )
+    expect(screen.getByTestId("stGrid")).toHaveStyle("grid-auto-flow: dense")
   })
 
   it("does not clip a pixel-height grid until in-flow tracks overflow", () => {
@@ -1880,9 +1903,11 @@ describe("GridContainer Component", () => {
       const body = screen.getByTestId("stGridCellBody")
       await waitFor(() => {
         expect(body).toHaveAttribute("data-test-scroll", "true")
+        // The button mounts lazily. The cell must drop its own tab stop
+        // once that button is inside the scrollport.
+        expect(screen.getByRole("button", { name: "Edit" })).toBeVisible()
+        expect(body).not.toHaveAttribute("tabindex")
       })
-      expect(body).not.toHaveAttribute("tabindex")
-      expect(await screen.findByRole("button", { name: "Edit" })).toBeVisible()
     } finally {
       restore()
     }

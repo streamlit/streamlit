@@ -4118,9 +4118,11 @@ def test_get_grid_accepts_public_name() -> None:
         st.grid(2, key="cards")
 
     at = AppTest.from_function(script).run()
-    assert len(at.get("grid")) == 1
+    assert len(at.grid) == 1
+    assert list(at.grid) == list(at.get("grid"))
     assert list(at.get("grid")) == list(at.get("grid_container"))
-    assert at.get("grid")[0].key == "cards"
+    assert at.grid[0].key == "cards"
+    assert len(at.grid[0].grid) == 0
 
 
 def test_expander_key_and_get_by_key() -> None:

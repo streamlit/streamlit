@@ -1163,6 +1163,18 @@ class AppTest:
         return self._tree.form_submit_button
 
     @property
+    def grid(self) -> BlockList[Block]:
+        """Sequence of all ``st.grid`` blocks.
+
+        Returns
+        -------
+        BlockList
+            Individual grids can be accessed by index or key. For example,
+            ``at.grid[0]`` or ``at.grid(key="cards")``.
+        """
+        return self._tree.grid
+
+    @property
     def expander(self) -> BlockList[Expander]:
         """Sequence of all ``st.expander`` blocks.
 

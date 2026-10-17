@@ -519,17 +519,20 @@ export const StyledGridContainerBlock =
   )
 
 /**
- * Bounded-height port around a content-sized grid. Fills the layout wrapper
- * and becomes a vertical scrollport only when in-flow tracks exceed it, so
- * chart hover toolbars stay visible when nothing actually overflows.
+ * Pixel- or rem-height port around a content-sized grid. Fills the layout
+ * wrapper and becomes a vertical scrollport only when in-flow tracks exceed
+ * it, so chart hover toolbars stay visible when nothing actually overflows.
+ * Content and stretch heights keep the node mounted but out of layout.
  */
 export const StyledGridScrollBody = styled.div<{
   $scroll: boolean
   $horizontalScroll: boolean
   $bounded: boolean
 }>(({ theme, $scroll, $horizontalScroll, $bounded }) => {
-  // Content-height grids keep this node so a later pixel/stretch height
-  // does not remount the grid. `display: contents` leaves layout unchanged.
+  // Content and stretch heights keep this node so a later pixel or rem
+  // height does not remount the grid. `display: contents` leaves layout
+  // unchanged. Stretch grows with the shared container rule instead of
+  // scrolling inside this port.
   if (!$bounded) {
     return { display: "contents" }
   }

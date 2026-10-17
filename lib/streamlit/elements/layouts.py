@@ -1080,10 +1080,9 @@ class LayoutsMixin:
               tallest cell.
             - A positive integer: Every row is that many pixels.
               Content that is taller scrolls inside the cell. Content
-              does not stretch automatically. Inside ``grid.cell()``,
-              pass ``height="stretch"`` to a chart or dataframe to fill
-              the cell. Direct children of the grid do not stretch that
-              way.
+              does not stretch automatically. Pass ``height="stretch"``
+              to a chart or dataframe to fill the cell, either as a
+              direct child of the grid or inside ``grid.cell()``.
 
         width : "stretch" or int
             The width of the grid. This can be one of the following:
