@@ -1524,6 +1524,14 @@ class SessionState:
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
 
+    def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
+        """Return the metadata registered for a widget id this run, if any.
+
+        The agent snapshot reads a widget's serializer and ``bind`` from here
+        instead of from the widget-state dict.
+        """
+        return self._get_widget_metadata(widget_id)
+
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
         return self._new_widget_state.widget_metadata.get(widget_id)

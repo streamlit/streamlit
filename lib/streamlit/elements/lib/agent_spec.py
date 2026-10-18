@@ -354,3 +354,12 @@ def block(
         value_schema=value_schema,
         transparent=transparent,
     )
+
+
+def decode(agent_props: str) -> dict[str, Any]:
+    """Decode a command's description. Malformed input is ignored."""
+    try:
+        decoded = json.loads(agent_props)
+    except json.JSONDecodeError:
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
