@@ -169,6 +169,8 @@ The theming uses Mermaid's "base" theme with Streamlit-specific color overrides:
 - Gantt chart completion uses Streamlit green
 - Git graph branches use the full Streamlit color palette
 
+Diagrams use Mermaid's "classic" look. Mermaid 12 otherwise defaults several diagram types to "neo" (drop shadows and heavier strokes), which is not driven by these theme variables. A diagram can still select `neo` or `handDrawn` in its own front matter. Layout stays on Mermaid's default.
+
 #### Loading State
 
 While the diagram is rendering:
