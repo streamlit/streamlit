@@ -1,0 +1,77 @@
+# Close autofix and snapshot PRs whose target PR is merged or closed, or whose
+# target branch was deleted. GitHub retargets those PRs at the default branch
+# and otherwise leaves them open.
+name: Cleanup orphaned fix PRs
+
+on:
+  schedule:
+    # Daily at 08:00 UTC, after the stale-PR job.
+    - cron: "0 8 * * *"
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run in dry-run mode (do not close or edit PRs)
+        required: false
+        default: false
+        type: boolean
+
+# One cleanup pass at a time. A follow-up run waits instead of cancelling
+# a pass that is already closing pull requests.
+concurrency:
+  group: cleanup-orphaned-fix-prs
+  cancel-in-progress: false
+
+permissions:
+  # contents: write is required to delete generated autofix/ and snapshots/ branches.
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  cleanup-orphaned-fix-prs:
+    if: >-
+      github.repository == 'streamlit/streamlit' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip follow-up runs from bot pull requests
+        id: gate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request.title || '' }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            case "$PR_TITLE" in
+              "[autofix] Automated fixes for #"*| "[snapshots] Update E2E snapshots for #"*)
+                skip=true
+                echo "Closed pull request is an autofix or snapshot PR; skipping follow-up cleanup."
+                ;;
+            esac
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Streamlit code
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Close orphaned autofix and snapshot PRs
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN_INPUT" = "true" ]; then
+            python3 scripts/cleanup_orphaned_fix_prs.py --dry-run
+          else
+            python3 scripts/cleanup_orphaned_fix_prs.py
+          fi

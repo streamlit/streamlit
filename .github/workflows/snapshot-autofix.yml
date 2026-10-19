@@ -140,6 +140,8 @@ jobs:
             ⚠️ **Please review the snapshot changes carefully** - they could mask visual bugs if accepted blindly.
 
             This PR targets a feature branch and can be merged without review approval.
+
+            This pull request is closed automatically once #${{ github.event.pull_request.number }} is merged or closed, or once its branch is deleted.
         run: |
           gh pr create \
             --head "snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}" \

@@ -95,6 +95,8 @@ jobs:
             Automated fixes for #${{ github.event.pull_request.number }} created via the autofix CI workflow. The autofix workflow is triggered by adding the `autofix` label to a PR. This runs formatting, linting, pre-commit, and other automatically fixable tasks (see `make autofix`).
 
             This PR targets a feature branch and can be merged without review approval.
+
+            This pull request is closed automatically once #${{ github.event.pull_request.number }} is merged or closed, or once its branch is deleted.
         run: |
           gh pr create \
             --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
