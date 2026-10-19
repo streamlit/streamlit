@@ -31,6 +31,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import file_util
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -284,6 +285,53 @@ If you think this is actually a Streamlit bug, please
         # calling foo.clear() should clear all cached values:
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
+
+    def test_max_size_evicts_by_serialized_bytes(self) -> None:
+        """A per-function byte limit evicts entries by serialized size."""
+        executions: dict[str, int] = {}
+
+        @st.cache_data(max_size="1MiB")
+        def foo(key: str) -> bytes:
+            executions[key] = executions.get(key, 0) + 1
+            return bytes(400_000)
+
+        foo("a")
+        foo("b")
+        foo("a")
+        foo("c")
+        foo("a")
+        foo("b")
+
+        assert executions == {"a": 1, "b": 2, "c": 1}
+
+    def test_oversized_value_remains_cached(self) -> None:
+        """A single value larger than max_size remains cached."""
+        executions = 0
+
+        @st.cache_data(max_size=1)
+        def foo() -> bytes:
+            nonlocal executions
+            executions += 1
+            return bytes(100)
+
+        assert foo() == bytes(100)
+        assert foo() == bytes(100)
+        assert executions == 1
+
+    def test_cache_recreated_when_max_size_changes(self) -> None:
+        """A changed max_size replaces the previous function cache."""
+        common_kwargs = {
+            "key": "max_size_change",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "max_size_change",
+        }
+        first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
+        second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
+
+        assert second is not first
+        assert first.is_active is False
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
@@ -669,6 +717,26 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         assert str(e.value) == "This CacheStorageManager always fails"
         output = "".join(logs.output)
         assert "This CacheStorageManager always fails" in output
+
+    @parameterized.expand(
+        [
+            ("boolean", True),
+            ("zero", 0),
+            ("negative", -1),
+            ("unitless_string", "10"),
+            ("unknown_unit", "10XB"),
+            ("float", 1.5),
+        ]
+    )
+    def test_invalid_max_size_fails_at_decoration(
+        self, _name: str, max_size: object
+    ) -> None:
+        """Invalid max_size values fail when the decorator is created."""
+        with pytest.raises(StreamlitAPIException):
+
+            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
+            def foo() -> int:
+                return 1
 
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):

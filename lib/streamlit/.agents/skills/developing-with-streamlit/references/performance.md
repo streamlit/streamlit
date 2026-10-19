@@ -99,30 +99,30 @@ config = asyncio.run(load_config())
 
 Do not cache live async clients or connections bound to the event loop that created them — that loop may already be closed on a later rerun, and the object will raise `Event loop closed`. Cache results that stay valid across loops, such as API payloads, dataframes, and config.
 
-### Prevent unbounded cache growth
+### Bound cache growth
 
-**Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
+**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
+Use `ttl` to expire stale results and `max_entries` to cap how many argument combinations either decorator retains.
+For `st.cache_data`, add `max_size` when entry count is a poor proxy for serialized cache size. Integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
-# BAD: Unbounded cache - memory will grow indefinitely
+# BAD: No growth bound
 @st.cache_data
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with TTL
-@st.cache_data(ttl="1h")
+# GOOD: Bound by age and number of argument combinations
+@st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with max entries
-@st.cache_data(max_entries=100)
-def get_user_data(user_id):
-    return fetch_user(user_id)
+# GOOD: Evict by serialized size (one oversized value is retained)
+@st.cache_data(max_size="500MB")
+def get_large_report(report_id):
+    return build_report(report_id)
 ```
-
-Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
 
 ## Fragments
 

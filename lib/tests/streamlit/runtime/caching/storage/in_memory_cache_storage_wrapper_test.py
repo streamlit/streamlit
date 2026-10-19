@@ -214,3 +214,73 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         ) as mock_persist_close:
             wrapped_storage.close()
             mock_persist_close.assert_called_once()
+
+    def test_max_size_and_max_entries_are_both_enforced(self) -> None:
+        """Byte and entry-count limits are enforced together."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            max_entries=2,
+            max_size_bytes=5,
+        )
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(), context=context
+        )
+
+        wrapped_storage.set("a", b"aaa")
+        wrapped_storage.set("b", b"bb")
+        wrapped_storage.set("c", b"c")
+
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("a")
+        assert wrapped_storage._read_from_mem_cache("b") == b"bb"
+        assert wrapped_storage._read_from_mem_cache("c") == b"c"
+
+        # Updating an existing key keeps the entry count at two but exceeds the
+        # byte limit, so the other entry must be evicted.
+        wrapped_storage.set("c", b"ccccc")
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("b")
+        assert wrapped_storage._read_from_mem_cache("c") == b"ccccc"
+
+    def test_oversized_entry_is_retained_and_warns_once(self) -> None:
+        """A lone oversized entry is retained and warns only once."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            max_size_bytes=2,
+        )
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(), context=context
+        )
+
+        with patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "_LOGGER.warning"
+        ) as warning:
+            wrapped_storage.set("first", b"large")
+            wrapped_storage.set("second", b"larger")
+
+        assert wrapped_storage.get("second") == b"larger"
+        warning.assert_called_once()
+
+    def test_byte_eviction_preserves_persisted_entry(self) -> None:
+        """Byte eviction leaves the persisted copy available for reload."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            max_size_bytes=3,
+        )
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("a", b"aa")
+        wrapped_storage.set("b", b"bb")
+
+        with patch.object(
+            persist_storage, "get", wraps=persist_storage.get
+        ) as persist_get:
+            assert wrapped_storage.get("a") == b"aa"
+            persist_get.assert_called_once_with("a")
