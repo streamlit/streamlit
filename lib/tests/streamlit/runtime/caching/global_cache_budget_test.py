@@ -318,6 +318,60 @@ def test_read_that_observed_disabled_budget_survives_activation() -> None:
         storage.get("cold")
 
 
+def test_activation_after_retry_check_does_not_require_generation() -> None:
+    """A lock-free read cannot access generations installed by activation."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "raw-mode")
+    storage.set("key", b"value")
+    read_reached_budget_check = threading.Event()
+    continue_read = threading.Event()
+    activation_reached_snapshot = threading.Event()
+    result: list[bytes] = []
+    errors: list[BaseException] = []
+    original_budget_check = storage._budget_enabled_for_read
+    original_activate = storage._activate_global_budget_entries
+
+    def paused_budget_check(enforcement_required: bool) -> bool:
+        read_reached_budget_check.set()
+        assert continue_read.wait(timeout=5)
+        return original_budget_check(enforcement_required)
+
+    def observed_activate() -> None:
+        activation_reached_snapshot.set()
+        original_activate()
+
+    def read() -> None:
+        try:
+            result.append(storage.get("key"))
+        except BaseException as ex:
+            errors.append(ex)
+
+    with (
+        patch.object(
+            storage, "_budget_enabled_for_read", side_effect=paused_budget_check
+        ),
+        patch.object(
+            storage, "_activate_global_budget_entries", side_effect=observed_activate
+        ),
+    ):
+        reader = threading.Thread(target=read)
+        reader.start()
+        assert read_reached_budget_check.wait(timeout=5)
+
+        activation = threading.Thread(target=lambda: budget.reconfigure(max_bytes=10))
+        activation.start()
+        assert activation_reached_snapshot.wait(timeout=5)
+        continue_read.set()
+        reader.join(timeout=5)
+        activation.join(timeout=5)
+
+    assert not reader.is_alive()
+    assert not activation.is_alive()
+    assert errors == []
+    assert result == [b"value"]
+    assert budget.total_bytes == len(b"value")
+
+
 def test_read_that_observed_enabled_budget_survives_deactivation() -> None:
     """A read that races deactivation does not require a removed generation."""
     budget = GlobalCacheBudget(max_bytes=10)

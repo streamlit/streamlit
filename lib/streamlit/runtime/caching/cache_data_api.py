@@ -173,7 +173,11 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
 
 
 class _SessionCacheLifecycle:
-    """Stop an in-flight lookup from registering a cache after session teardown."""
+    """One connection's right to create session-scoped data caches.
+
+    Disconnect marks this object invalid so an in-flight lookup cannot register a
+    cache after a new connection reuses the session ID.
+    """
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -284,11 +288,11 @@ class DataCaches(StatsProvider):
             session_lifecycle = (
                 None
                 if session_id is None
-                else bound_session_lifecycle
-                or self._get_session_lifecycle_locked(session_id)
+                else bound_session_lifecycle or self._session_lifecycles.get(session_id)
             )
             lifecycle_is_current = session_lifecycle is None or (
-                session_id is not None
+                not session_lifecycle.invalidated
+                and session_id is not None
                 and self._session_lifecycles.get(session_id) is session_lifecycle
             )
             session_caches = self._function_caches.get(session_id)
@@ -338,10 +342,8 @@ class DataCaches(StatsProvider):
                         del session_caches[key]
 
             if cache is not None:
-                # mark_detached() waits for any in-progress storage write, then:
-                # - computations that finish later skip their write;
-                # - close() drops entries written before detachment.
                 cache.mark_detached()
+                cache.wait_for_writes()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
                     "(key=%s, persist=%s, max_entries=%s, max_size=%s, ttl=%s) "
@@ -400,9 +402,11 @@ class DataCaches(StatsProvider):
         """Clears all caches for the given session ID."""
         # Do not take the process-wide lifecycle lock on the event-loop disconnect
         # path. Only same-session creation or replacement must finish first.
-        session_lifecycle = self._get_session_lifecycle(session_id)
-        with session_lifecycle.lock:
-            session_lifecycle.invalidated = True
+        with self._caches_lock:
+            session_lifecycle = self._session_lifecycles.get(session_id)
+        with nullcontext() if session_lifecycle is None else session_lifecycle.lock:
+            if session_lifecycle is not None:
+                session_lifecycle.invalidated = True
             # Hold the registry lock while removing the cache, but release it before
             # waiting for writes or touching storage.
             with self._caches_lock:
@@ -463,6 +467,8 @@ class DataCaches(StatsProvider):
             # reject later writes, neither memory nor disk can be restored afterward.
             for data_cache in all_caches:
                 data_cache.mark_detached()
+            for data_cache in all_caches:
+                data_cache.wait_for_writes()
             clear_error: BaseException | None = None
             try:
                 # try to remove in optimal way if such ability provided by
@@ -1052,10 +1058,12 @@ class DataCache(Cache[R]):
         self.fresh_ttl_seconds = (
             fresh_ttl_seconds if fresh_ttl_seconds is not None else ttl_seconds
         )
-        # Serializes a background refresh write-back against a concurrent clear so the
-        # orphan check (generation/presence) and the write stay atomic relative to a
-        # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
-        self._write_lock = threading.Lock()
+        # Different keys may persist concurrently. Explicit user clears wait for
+        # writes that already passed their invalidation check; lifecycle teardown
+        # invalidates immediately and lets storage versions reject late writes.
+        self._write_condition = threading.Condition()
+        self._active_writes = 0
+        self._clear_in_progress = False
 
     @property
     def discard_sync_write_after_clear(self) -> bool:
@@ -1063,9 +1071,35 @@ class DataCache(Cache[R]):
         return True
 
     def mark_detached(self) -> None:
-        """Detach this cache atomically with respect to result write-back."""
-        with self._write_lock:
-            super().mark_detached()
+        """Detach immediately so lifecycle teardown never waits on storage I/O."""
+        super().mark_detached()
+
+    def wait_for_writes(self) -> None:
+        """Wait for writes that already passed their invalidation checks."""
+        with self._write_condition:
+            self._write_condition.wait_for(lambda: self._active_writes == 0)
+
+    def _begin_write(
+        self,
+        value_key: str,
+        invalidation_token: cache_utils.CacheInvalidationToken | None = None,
+    ) -> bool:
+        """Reserve a write if this cache generation is still current."""
+        with self._write_condition:
+            self._write_condition.wait_for(lambda: not self._clear_in_progress)
+            if invalidation_token is None:
+                if not self.is_active:
+                    return False
+            elif not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
+            self._active_writes += 1
+            return True
+
+    def _finish_write(self) -> None:
+        with self._write_condition:
+            self._active_writes -= 1
+            if self._active_writes == 0:
+                self._write_condition.notify_all()
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -1122,14 +1156,12 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
-        # Keep the active-cache check and the complete storage write atomic with
-        # mark_detached(). A storage write can include disk I/O, so writes for one
-        # function are intentionally serialized to prevent clear from returning
-        # before a late persistent write restores the entry.
-        with self._write_lock:
-            if not self.is_active:
-                return
+        if not self._begin_write(value_key):
+            return
+        try:
             self.storage.set(value_key, pickled_entry)
+        finally:
+            self._finish_write()
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
@@ -1177,12 +1209,13 @@ class DataCache(Cache[R]):
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
             raise
-        # See write_result: clear must wait through any persistent storage write.
-        with self._write_lock:
-            if not self._invalidation_token_is_current(value_key, invalidation_token):
-                return False
+        if not self._begin_write(value_key, invalidation_token):
+            return False
+        try:
             self.storage.set(value_key, pickled_entry)
             return True
+        finally:
+            self._finish_write()
 
     def write_background_refresh_result(
         self,
@@ -1219,18 +1252,12 @@ class DataCache(Cache[R]):
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {value_key}") from exc
 
-        # Hold the write lock across the orphan check and the write so a concurrent
-        # clear can't slip in between (which would otherwise repopulate a just-cleared
-        # entry). _clear takes the same lock.
-        with self._write_lock:
-            # Re-check the orphan conditions under the lock (a clear may have landed
-            # after the early-out check above).
-            if self._refresh_is_orphaned(
-                value_key,
-                expected_generation=expected_generation,
-                expected_key_generation=expected_key_generation,
-            ):
-                return
+        invalidation_token = cache_utils.CacheInvalidationToken(
+            expected_generation, expected_key_generation
+        )
+        if not self._begin_write(value_key, invalidation_token):
+            return
+        try:
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
             if isinstance(self.storage, InMemoryCacheStorageWrapper):
@@ -1244,10 +1271,22 @@ class DataCache(Cache[R]):
             # Keep the write outside the presence-check exception handler so storage
             # write failures still propagate.
             self.storage.set(value_key, pickled_entry)
+        finally:
+            self._finish_write()
 
     def _clear(self, key: str | None = None) -> None:
-        with self._write_lock:
+        wait_for_writes = self.is_active
+        with self._write_condition:
+            if wait_for_writes:
+                self._clear_in_progress = True
+                self._write_condition.wait_for(lambda: self._active_writes == 0)
+        try:
             if not key:
                 self.storage.clear()
             else:
                 self.storage.delete(key)
+        finally:
+            if wait_for_writes:
+                with self._write_condition:
+                    self._clear_in_progress = False
+                    self._write_condition.notify_all()

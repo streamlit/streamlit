@@ -603,6 +603,7 @@ If you think this is actually a Streamlit bug, please
 
     def test_clear_session_does_not_wait_for_process_lifecycle_lock(self) -> None:
         """Session disconnect cleanup is not blocked by unrelated lifecycle work."""
+        _data_caches.activate_session("session")
         with patch(
             "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
             return_value="session",
@@ -629,14 +630,95 @@ If you think this is actually a Streamlit bug, please
         assert completed_without_process_lock
         assert cache.is_active is False
 
+    def test_clear_session_does_not_wait_for_inflight_data_write(self) -> None:
+        """Session invalidation returns without waiting for persistent write I/O."""
+        _data_caches.activate_session("session")
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(
+                key="session_cache",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="session_cache",
+                scope="session",
+            )
+
+        write_started = threading.Event()
+        continue_write = threading.Event()
+        clear_finished = threading.Event()
+        assert isinstance(cache.storage, InMemoryCacheStorageWrapper)
+        original_set = cache.storage._persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            write_started.set()
+            assert continue_write.wait(timeout=5)
+            original_set(key, value)
+
+        def clear_session() -> None:
+            clear_session_cache("session")
+            clear_finished.set()
+
+        with patch.object(
+            cache.storage._persist_storage, "set", side_effect=delayed_set
+        ):
+            writer = threading.Thread(target=cache.write_result, args=("key", 1, []))
+            writer.start()
+            assert write_started.wait(timeout=5)
+
+            clearer = threading.Thread(target=clear_session)
+            clearer.start()
+            assert clear_finished.wait(timeout=1)
+            assert writer.is_alive()
+
+            continue_write.set()
+            writer.join(timeout=5)
+            clearer.join(timeout=5)
+
+        assert not writer.is_alive()
+        assert not clearer.is_alive()
+        assert cache.is_active is False
+
+    def test_different_key_data_writes_run_concurrently(self) -> None:
+        """DataCache does not serialize storage writes for unrelated keys."""
+        cache = _data_caches.get_cache(
+            key="concurrent_writes",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="concurrent_writes",
+        )
+        writes_started = threading.Barrier(3)
+        continue_writes = threading.Event()
+        original_set = cache.storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            writes_started.wait(timeout=5)
+            assert continue_writes.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(cache.storage, "set", side_effect=delayed_set):
+            first = threading.Thread(target=cache.write_result, args=("first", 1, []))
+            second = threading.Thread(target=cache.write_result, args=("second", 2, []))
+            first.start()
+            second.start()
+            writes_started.wait(timeout=5)
+            continue_writes.set()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        assert not first.is_alive()
+        assert not second.is_alive()
+
     def test_slow_lookup_cannot_install_cache_after_session_clear(self) -> None:
         """A lookup already waiting on lifecycle work observes session teardown."""
         lookup_started = threading.Event()
         returned: list[DataCache[Any]] = []
-        original_get_lifecycle = _data_caches._get_session_lifecycle_locked
+        lifecycle = _data_caches.activate_session("session")
 
-        def observed_get_lifecycle(session_id: str) -> Any:
-            lifecycle = original_get_lifecycle(session_id)
+        def observed_get_lifecycle(_session_id: str) -> Any:
             lookup_started.set()
             return lifecycle
 
@@ -659,7 +741,7 @@ If you think this is actually a Streamlit bug, please
             ),
             patch.object(
                 _data_caches,
-                "_get_session_lifecycle_locked",
+                "_get_bound_session_lifecycle",
                 side_effect=observed_get_lifecycle,
             ),
         ):
@@ -710,6 +792,7 @@ If you think this is actually a Streamlit bug, please
 
     def test_lookup_after_session_clear_stays_detached_until_reconnect(self) -> None:
         """Work started after disconnect cannot recreate a session cache."""
+        old_lifecycle = _data_caches.activate_session("session")
         clear_session_cache("session")
         kwargs = {
             "key": "late_session_cache",
@@ -724,7 +807,12 @@ If you think this is actually a Streamlit bug, please
             "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
             return_value="session",
         ):
-            detached = _data_caches.get_cache(**kwargs)
+            with patch.object(
+                _data_caches,
+                "_get_bound_session_lifecycle",
+                return_value=old_lifecycle,
+            ):
+                detached = _data_caches.get_cache(**kwargs)
             _data_caches.activate_session("session")
             reconnected = _data_caches.get_cache(**kwargs)
 
@@ -734,6 +822,53 @@ If you think this is actually a Streamlit bug, please
             _data_caches._function_caches["session"]["late_session_cache"]
             is reconnected
         )
+
+    def test_unbound_session_lookup_does_not_retain_lifecycle(self) -> None:
+        """Calls without an AppSession lifecycle do not grow the lifecycle map."""
+        kwargs = {
+            "key": "unbound_session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "unbound_session_cache",
+            "scope": "session",
+        }
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="unbound-session",
+            ),
+            patch.object(
+                _data_caches, "_get_bound_session_lifecycle", return_value=None
+            ),
+        ):
+            cache = _data_caches.get_cache(**kwargs)
+
+        assert cache.is_active
+        assert "unbound-session" not in _data_caches._session_lifecycles
+
+    def test_invalidated_lifecycle_is_not_a_fast_path_hit(self) -> None:
+        """A cache lookup cannot reuse a cache being disconnected."""
+        lifecycle = _data_caches.activate_session("session")
+        kwargs = {
+            "key": "session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "session_cache",
+            "scope": "session",
+        }
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(**kwargs)
+            lifecycle.invalidated = True
+            returned = _data_caches.get_cache(**kwargs)
+
+        assert returned is not cache
+        assert returned.is_active is False
 
     @parameterized.expand(
         [

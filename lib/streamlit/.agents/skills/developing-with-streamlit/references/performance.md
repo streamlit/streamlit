@@ -118,7 +118,7 @@ def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bound by serialized size
+# GOOD: Evict by serialized size (one oversized value is retained)
 @st.cache_data(max_size="500MB")
 def get_large_report(report_id):
     return build_report(report_id)

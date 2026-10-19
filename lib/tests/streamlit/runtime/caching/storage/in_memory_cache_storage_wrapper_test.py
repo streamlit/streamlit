@@ -196,6 +196,147 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert read_results == [b"target-value"]
         assert wrapped_storage.get("target") == b"target-value"
 
+    def test_persistent_read_does_not_wait_for_unrelated_write(self) -> None:
+        """A persistent miss proceeds while another key is being written."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("target", b"target-value")
+        wrapped_storage._remove_from_mem_cache("target")
+
+        write_started = threading.Event()
+        continue_write = threading.Event()
+        read_finished = threading.Event()
+        original_set = persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            write_started.set()
+            assert continue_write.wait(timeout=5)
+            original_set(key, value)
+
+        def read_target() -> None:
+            wrapped_storage.get("target")
+            read_finished.set()
+
+        with patch.object(persist_storage, "set", side_effect=delayed_set):
+            writer = threading.Thread(
+                target=wrapped_storage.set, args=("other", b"other-value")
+            )
+            writer.start()
+            assert write_started.wait(timeout=5)
+
+            reader = threading.Thread(target=read_target)
+            reader.start()
+            assert read_finished.wait(timeout=1)
+
+            continue_write.set()
+            writer.join(timeout=5)
+            reader.join(timeout=5)
+
+        assert not writer.is_alive()
+        assert not reader.is_alive()
+
+    def test_persistent_writes_to_different_keys_run_concurrently(self) -> None:
+        """Different-key writes do not share a persistent-I/O lock."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        writes_started = threading.Barrier(3)
+        continue_writes = threading.Event()
+        original_set = persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            writes_started.wait(timeout=5)
+            assert continue_writes.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(persist_storage, "set", side_effect=delayed_set):
+            first = threading.Thread(
+                target=wrapped_storage.set, args=("first", b"first-value")
+            )
+            second = threading.Thread(
+                target=wrapped_storage.set, args=("second", b"second-value")
+            )
+            first.start()
+            second.start()
+            writes_started.wait(timeout=5)
+            continue_writes.set()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        assert not first.is_alive()
+        assert not second.is_alive()
+        assert wrapped_storage.get("first") == b"first-value"
+        assert wrapped_storage.get("second") == b"second-value"
+
+    def test_later_same_key_write_supersedes_inflight_write(self) -> None:
+        """Per-key versions preserve logical order around slow persistence."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        first_write_started = threading.Event()
+        continue_first_write = threading.Event()
+        original_set = persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            if value == b"first":
+                first_write_started.set()
+                assert continue_first_write.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(persist_storage, "set", side_effect=delayed_set):
+            first = threading.Thread(target=wrapped_storage.set, args=("key", b"first"))
+            first.start()
+            assert first_write_started.wait(timeout=5)
+            second = threading.Thread(
+                target=wrapped_storage.set, args=("key", b"second")
+            )
+            second.start()
+            continue_first_write.set()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        assert not first.is_alive()
+        assert not second.is_alive()
+        assert wrapped_storage.get("key") == b"second"
+        assert wrapped_storage._persistent_key_states == {}
+
+    def test_clear_removes_write_that_finishes_after_invalidation(self) -> None:
+        """A write invalidated by clear cannot restore its persistent entry."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        write_started = threading.Event()
+        continue_write = threading.Event()
+        original_set = persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            write_started.set()
+            assert continue_write.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(persist_storage, "set", side_effect=delayed_set):
+            writer = threading.Thread(
+                target=wrapped_storage.set, args=("key", b"value")
+            )
+            writer.start()
+            assert write_started.wait(timeout=5)
+            wrapped_storage.clear()
+            continue_write.set()
+            writer.join(timeout=5)
+
+        assert not writer.is_alive()
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            persist_storage.get("key")
+
     def test_in_memory_cache_storage_wrapper_get_key_in_memory_storage(self):
         """
         Test that storage.get() returns the value from in_memory storage
@@ -324,6 +465,68 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         ) as mock_persist_close:
             wrapped_storage.close()
             mock_persist_close.assert_called_once()
+
+    def test_close_defers_persistent_close_until_inflight_write_finishes(self) -> None:
+        """Lifecycle invalidation returns before I/O and closes afterward."""
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        write_started = threading.Event()
+        continue_write = threading.Event()
+        original_set = persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            write_started.set()
+            assert continue_write.wait(timeout=5)
+            original_set(key, value)
+
+        with (
+            patch.object(persist_storage, "set", side_effect=delayed_set),
+            patch.object(
+                persist_storage, "close", wraps=persist_storage.close
+            ) as persist_close,
+        ):
+            writer = threading.Thread(
+                target=wrapped_storage.set, args=("key", b"value")
+            )
+            writer.start()
+            assert write_started.wait(timeout=5)
+
+            wrapped_storage.close()
+            persist_close.assert_not_called()
+
+            continue_write.set()
+            writer.join(timeout=5)
+
+        assert not writer.is_alive()
+        persist_close.assert_called_once_with()
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            persist_storage.get("key")
+
+    def test_mutation_after_close_does_not_touch_replacement_storage(self) -> None:
+        """A closed wrapper cannot delete files written by its replacement."""
+        for operation in ("delete", "clear"):
+            with self.subTest(operation=operation):
+                context = self.get_storage_context()
+                old_storage = InMemoryCacheStorageWrapper(
+                    persist_storage=LocalDiskCacheStorage(context), context=context
+                )
+                old_storage.close()
+                replacement = InMemoryCacheStorageWrapper(
+                    persist_storage=LocalDiskCacheStorage(context), context=context
+                )
+                replacement.set("key", b"replacement")
+
+                if operation == "delete":
+                    old_storage.delete("key")
+                else:
+                    old_storage.clear()
+
+                replacement._remove_from_mem_cache("key")
+                assert replacement.get("key") == b"replacement"
+                replacement.close()
 
     def test_max_size_and_max_entries_are_both_enforced(self) -> None:
         """Byte and entry-count limits are enforced together."""

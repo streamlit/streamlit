@@ -62,6 +62,11 @@ class GlobalCacheBudget(StatsProvider):
     are serialized with eviction. Because a victim is chosen without holding its
     storage's lock, each record carries the entry's write generation. The storage
     validates that generation before deletion.
+
+    Lock order for ordinary mutations is storage mutation, budget enforcement,
+    storage memory, then budget bookkeeping. Reconfiguration first takes the
+    configuration lock. Persistent I/O and eviction never take a storage mutation
+    lock.
     """
 
     def __init__(self, max_bytes: int | None) -> None:
@@ -134,6 +139,7 @@ class GlobalCacheBudget(StatsProvider):
 
     @contextmanager
     def _reconfiguration(self) -> Generator[None, None, None]:
+        """Make lock-free readers retry while budget configuration changes."""
         with self._enforcement_lock:
             self._reconfiguring = True
             try:
@@ -284,7 +290,7 @@ class GlobalCacheBudget(StatsProvider):
             self._warned = True
         _LOGGER.warning(
             "A value from %s is larger than server.maxCachedDataSize. Streamlit "
-            "kept that value and evicted every other in-memory st.cache_data entry. "
+            "kept that value even though it exceeds the process-wide budget. "
             "Raise server.maxCachedDataSize, or set it to "
             '"0" to disable the process-wide budget. This warning is logged once '
             "per process.",

@@ -72,7 +72,11 @@ class _ByteSizeTooLongError(ValueError):
 
 
 def _parse_byte_size(value: str) -> tuple[int, str]:
-    """Return a unit-bearing size in bytes and its decimal digits."""
+    """Parse a unit-bearing size and return bytes plus its numeral's digits.
+
+    The digits exclude the decimal point so callers can distinguish an explicit
+    zero such as ``"0gb"`` from a positive fraction that rounds down to zero bytes.
+    """
     match = _BYTE_SIZE_RE.fullmatch(value)
     if match is None:
         raise _InvalidByteSizeError
