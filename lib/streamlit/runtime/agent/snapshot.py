@@ -354,7 +354,9 @@ class _SnapshotBuilder:
         action = description.get("action")
         if action and (element_id := description.get("key")):
             value = self._widget_value(
-                element_id, value_schema=description.get("value_schema")
+                element_id,
+                value_schema=description.get("value_schema"),
+                options_open=props.get("accept_new_options") is True,
             )
             # As for elements, a trigger's value only means anything while set.
             # An empty string is a fired payload. False is an unclicked button.
@@ -421,11 +423,13 @@ class _SnapshotBuilder:
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
-            options = (description.get("props") or {}).get("options")
+            props = description.get("props") or {}
+            options = props.get("options")
             value = self._widget_value(
                 element_id,
                 options=options if isinstance(options, list) else None,
                 value_schema=description.get("value_schema"),
+                options_open=props.get("accept_new_options") is True,
             )
             # An empty string is a fired payload. False is an unclicked button.
             if action == "value" or (value is not None and value is not False):
@@ -559,6 +563,7 @@ class _SnapshotBuilder:
         *,
         options: list[Any] | None = None,
         value_schema: dict[str, Any] | None = None,
+        options_open: bool = False,
     ) -> Any:
         """Read a widget's live value, in the form a request may send back.
 
@@ -579,8 +584,9 @@ class _SnapshotBuilder:
 
         A value typed into a widget that accepts new options is already its own
         wire form. The serializer runs `format_func` on it anyway, so echoing
-        that back would format it again on every round trip; only a serialized
-        value that is one of the options is reported in that form.
+        that back would format it again on every round trip. A closed option
+        set has no such text: a stored value that formats to a label is that
+        option, and the label is what a request sends.
         """
         if self._session_state is None:
             return None
@@ -621,6 +627,7 @@ class _SnapshotBuilder:
                     serialized,
                     options,
                     _authored_options(metadata.serializer),
+                    options_open=options_open,
                 )
             except Exception:
                 # The stored object is not a value a request can send back.
@@ -646,10 +653,19 @@ def _string_payload(serialized: Any) -> Any:
     """The string a trigger proto carries, or ``serialized`` unchanged.
 
     ``st.menu_button`` and ``st.chat_input`` serialize to a protobuf whose
-    ``data`` field is the text a request sends. The proto itself is not JSON.
+    ``data`` field is the text a request sends. The field is optional, and an
+    unset one reads back as ``""``, which is an unfired trigger rather than a
+    payload. The proto itself is not JSON.
     """
+    if hasattr(serialized, "HasField"):
+        try:
+            if not serialized.HasField("data"):
+                return None
+        except ValueError:
+            # A proto whose `data` field is always present has no presence bit.
+            pass
     data = getattr(serialized, "data", None)
-    if isinstance(data, str) and hasattr(serialized, "HasField"):
+    if isinstance(data, str):
         return data
     return serialized
 
@@ -662,17 +678,34 @@ def _authored_options(serializer: Any) -> list[Any] | tuple[Any, ...] | None:
     return None
 
 
+def _option_equals(item: Any, option: Any) -> bool:
+    """Whether ``item`` is ``option``.
+
+    Equality on an array-like option returns another array, and using that
+    result as a condition raises. A non-boolean result is not a match.
+    """
+    try:
+        result = item == option
+    except Exception:
+        return False
+    return isinstance(result, bool) and result
+
+
 def _keep_typed_text(
     stored: Any,
     serialized: Any,
     options: list[Any] | None,
     authored: list[Any] | tuple[Any, ...] | None = None,
+    *,
+    options_open: bool = False,
 ) -> Any:
     """Return the serialized value, but keep text a user typed.
 
-    An ``accept_new_options`` widget runs ``format_func`` on that text, so
-    echoing the result back would reformat it on every round trip. Text that
-    is one of the authored options is still reported as its label.
+    Only a widget that accepts new options can hold text that is not one of
+    its options. ``format_func`` runs on that text, so echoing the result back
+    would reformat it on every round trip. Text that is one of the authored
+    options is still reported as its label. A closed option set reports the
+    label, including when the stored value merely formats to one.
     """
     if options is None:
         return serialized
@@ -687,11 +720,13 @@ def _keep_typed_text(
         return label in allowed
 
     def _report(item: Any, label: Any) -> Any:
-        # Typed text can format to a label without being that option.
+        # Typed text can format to a label without being that option. A closed
+        # set has no typed text, so a value that formats to a label is it.
         if (
-            isinstance(item, str)
+            options_open
+            and isinstance(item, str)
             and authored is not None
-            and not any(item == option for option in authored)
+            and not any(_option_equals(item, option) for option in authored)
         ):
             return item
         if _is_option(label) or not isinstance(item, str):

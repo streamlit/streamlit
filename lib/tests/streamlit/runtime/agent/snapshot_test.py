@@ -597,6 +597,13 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             "United States"
         )
 
+        st.session_state.matched_city = "paris"
+        st.selectbox(
+            "Matched",
+            ["Paris"],
+            format_func=str.upper,
+            key="matched_city",
+        )
         st.session_state.typed_city = "paris"
         st.selectbox(
             "Typed",
@@ -621,8 +628,26 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             accept_new_options=True,
             key="mixed",
         )
+
+        class _Ambiguous:
+            """Equality with anything else returns a value that cannot be bool()."""
+
+            __hash__ = None
+
+            def __eq__(self, other: object) -> Any:
+                if other is self:
+                    return True
+                return _NotABool()
+
+        class _NotABool:
+            def __bool__(self) -> bool:
+                raise ValueError("ambiguous")
+
+        st.selectbox("Comparable", ["a", _Ambiguous()], index=0, key="comparable")
         typed = self._build().document
+        assert _one_keyed(typed, "selectbox", "matched_city")["value"] == "PARIS"
         assert _one_keyed(typed, "selectbox", "typed_city")["value"] == "paris"
+        assert _one_keyed(typed, "selectbox", "comparable")["value"] == "a"
         assert _one_keyed(typed, "selectbox", "raw_city")["value"] == "PARIS"
         assert _one_keyed(typed, "multiselect", "mixed")["value"] == [
             "paris",
@@ -872,8 +897,14 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             "chat", ChatInputValue(text="hello there", _include_files=True)
         )
 
+        st.menu_button("Idle", ["January", "December"], key="idle")
+        st.menu_button("Blank", [""], key="blank")
+        self._set_stored("blank", "")
+
         document = self._build().document
         assert _one_keyed(document, "menu_button", "menu")["value"] == "December"
+        assert "value" not in _one_keyed(document, "menu_button", "idle")
+        assert _one_keyed(document, "menu_button", "blank")["value"] == ""
         chat = _one_keyed(document, "chat_input", "chat")
         assert chat["value"] == "hello there"
         assert "UploadedFile" not in json.dumps(chat)
