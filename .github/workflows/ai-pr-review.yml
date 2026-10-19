@@ -611,25 +611,24 @@ jobs:
             gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
           fi
 
-      # Auto-approve ai-final-review PRs with an APPROVED verdict, except when:
-      # - the PR has change:spec
-      # - the PR has change:feature and impact:users without a QA pass on the current head
-      # - the PR changes more than 5000 lines (additions + deletions)
-      # - the PR originates from a fork
-      # - fewer reviews were reported than configured models
+      # Auto-approve an ai-final-review PR with an APPROVED verdict, except when:
+      # - it has change:spec
+      # - it has change:feature and impact:users without a QA pass on this head
+      # - additions plus deletions exceed 5000
+      # - it comes from a fork
+      # - the run reported fewer reviews than the configured model count
       # Bugfix, chore, docs, impact:internal, and other non-feature PRs stay
       # eligible without a QA pass.
-      # For change:feature + impact:users, a QA pass is the qa-approved label plus
-      # a successful commit status named qa-approved on this head SHA. QA sets both
-      # after a PASS on that commit. A label left from an older head is not a pass.
+      # A QA pass is the qa-approved label plus a successful qa-approved status on
+      # this head. QA sets both after PASS. A label from an older head is not a pass.
+      # If QA passes after this review finishes, re-add ai-final-review to auto-approve.
       # Requires the repository/organization Actions setting "Allow GitHub
       # Actions to create and approve pull requests" (Settings > Actions >
       # General > Workflow permissions).
       # GitHub does not count GITHUB_TOKEN approvals toward required
       # CODEOWNERS reviews.
-      # This step approves the current PR head. For change:feature + impact:users,
-      # the QA pass must be for this same head. Authors are trusted not to push
-      # unreviewed changes after that approval.
+      # This step approves the current head. Trust authors not to push unreviewed
+      # commits after that approval.
       - name: Auto-approve on final review
         if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:

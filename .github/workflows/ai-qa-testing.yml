@@ -180,9 +180,11 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # Required to create the qa-approved label if it does not exist.
       issues: write
       pull-requests: write
-      # Commit status on the tested SHA is what auto-approve checks.
+      # Writes the qa-approved commit status that ai-pr-review.yml requires
+      # for auto-approval.
       statuses: write
 
     steps:
@@ -280,8 +282,8 @@ jobs:
           fi
 
           # Only a QA run for the current head may change qa-approved or do-not-merge.
-          # A run that started before a later push must leave the new head's labels alone.
-          # The tested commit always gets a qa-approved status so a later head cannot reuse this pass.
+          # Always record the qa-approved status on the tested commit. Statuses are per-SHA,
+          # so a later push never inherits this result.
           SHA_MATCH=false
           if CURRENT_JSON=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV"); then
             CURRENT_SHA=$(echo "$CURRENT_JSON" | jq -r .head.sha)
@@ -294,8 +296,8 @@ jobs:
             echo "::warning::Failed to fetch PR head; will not change qa-approved or do-not-merge"
           fi
 
-          # A missing label is success. Retry once, then fail if it is still present
-          # so an API error cannot keep a pass after QA did not pass.
+          # Treat an already-absent qa-approved label as removed. Retry once, then fail
+          # if it is still present, so an API error cannot leave a pass after QA did not pass.
           remove_qa_approved() {
             local attempt
             for attempt in 1 2; do
@@ -370,8 +372,8 @@ jobs:
               echo "QA PASS does not remove 'do-not-merge'; re-add 'ai-review' or remove the label manually"
               ;;
             *)
-              # BLOCKED and UNKNOWN are not a pass. Drop a leftover label on this head
-              # and record a non-success status so auto-approve cannot reuse an older PASS.
+              # BLOCKED and UNKNOWN are not a pass. Remove a leftover qa-approved label on
+              # this head and record a non-success status so auto-approve cannot reuse an older PASS.
               echo "Verdict is $VERDICT - not a QA pass"
               status_ok=true
               label_ok=true
