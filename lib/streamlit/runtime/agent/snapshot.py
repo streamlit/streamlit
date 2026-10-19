@@ -151,11 +151,38 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
         position = delta_path[-1]
         if node.is_container:
             existing = parent.children.get(position)
-            if existing is not None:
+            if existing is not None and _keep_existing_children(existing, node):
                 node.children = existing.children
         parent.children[position] = node
 
     return root
+
+
+def _keep_existing_children(existing: _Node, incoming: _Node) -> bool:
+    """Whether a newly arrived container keeps the children already there.
+
+    A placeholder has no block of its own: a descendant arrived first, and the
+    block that claims the position adopts those children. A container re-sent
+    with the same proto type, such as a dialog updating ``is_open``, is the
+    same container. A different type replaces it, the way the frontend replaces
+    a block, so the previous children are gone.
+    """
+    if not existing.is_container:
+        return False
+    if existing.block is None:
+        return True
+    if incoming.block is None:
+        return False
+    if existing.block.WhichOneof("type") != incoming.block.WhichOneof("type"):
+        return False
+    # A dialog's id is its identity. A different dialog at the same path must
+    # not keep the previous dialog's body.
+    return not (
+        incoming.block.HasField("dialog")
+        and existing.block.id
+        and incoming.block.id
+        and existing.block.id != incoming.block.id
+    )
 
 
 class ElementState(NamedTuple):
@@ -316,7 +343,9 @@ class _SnapshotBuilder:
         # other tabs would be unreachable.
         action = description.get("action")
         if action and (element_id := description.get("key")):
-            value = self._widget_value(element_id)
+            value = self._widget_value(
+                element_id, value_schema=description.get("value_schema")
+            )
             # As for elements, a trigger's value only means anything while set.
             if action == "value" or value:
                 result["value"] = value
@@ -362,9 +391,11 @@ class _SnapshotBuilder:
         if proto_field == "exception":
             # `st.exception` is a display command, so an app rendering an error
             # it caught and handled is not a failed run. Only the runtime's own
-            # error display means the script did not finish.
+            # error display sets `uncaught`. An undescribed exception, such as
+            # one replayed from a cache a browser filled, is that display
+            # command too: a failed run is still reported by the run's own flag.
             props = description.get("props") or {}
-            self.saw_uncaught_exception |= bool(props.get("uncaught", True))
+            self.saw_uncaught_exception |= props.get("uncaught") is True
 
         result = self._base(description, inherited_support)
         self._note_fragment(node, result)
@@ -375,7 +406,9 @@ class _SnapshotBuilder:
         if element_id and action and not _is_write_only(description):
             options = (description.get("props") or {}).get("options")
             value = self._widget_value(
-                element_id, options=options if isinstance(options, list) else None
+                element_id,
+                options=options if isinstance(options, list) else None,
+                value_schema=description.get("value_schema"),
             )
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
@@ -434,7 +467,9 @@ class _SnapshotBuilder:
             from streamlit.elements.widgets.feedback import _get_num_options
 
             count = _get_num_options(cast("Any", options))
-            options = [str(index) for index in range(count)]
+            # The value is the index, and `value_schema` is an integer, so the
+            # options a request is checked against are those indexes.
+            options = list(range(count))
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(
@@ -492,7 +527,11 @@ class _SnapshotBuilder:
         return result
 
     def _widget_value(
-        self, element_id: str, *, options: list[Any] | None = None
+        self,
+        element_id: str,
+        *,
+        options: list[Any] | None = None,
+        value_schema: dict[str, Any] | None = None,
     ) -> Any:
         """Read a widget's live value, in the form a request may send back.
 
@@ -535,13 +574,14 @@ class _SnapshotBuilder:
         ):
             try:
                 serialized = metadata.serializer(value)
-                if not isinstance(value, (list, tuple)) and isinstance(
-                    serialized, list
+                if (
+                    isinstance(serialized, list)
+                    and (value_schema or {}).get("type") != "array"
                 ):
-                    # Some single-select widgets serialize to a one-item list.
-                    # Keep the stored value's own shape, so a single choice
-                    # reads back as a single choice.
-                    serialized = serialized[0] if serialized else None
+                    # A single choice is a one-item list on the wire, including
+                    # when the option itself is a tuple or list. A list-valued
+                    # widget's schema is an array, so that list stays a list.
+                    serialized = serialized[0] if len(serialized) == 1 else None
                 value = _keep_typed(value, serialized, options)
             except Exception:
                 _LOGGER.debug(
@@ -565,16 +605,26 @@ def _keep_typed(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
     """The serialized value, except where it formats text that is no option."""
     if options is None:
         return serialized
+    try:
+        allowed: set[Any] | None = set(options)
+    except TypeError:
+        allowed = None
+
+    def _is_option(label: Any) -> bool:
+        if allowed is None:
+            return label in options
+        return label in allowed
+
     if (
         isinstance(stored, (list, tuple))
         and isinstance(serialized, list)
         and len(stored) == len(serialized)
     ):
         return [
-            label if label in options or not isinstance(item, str) else item
+            label if _is_option(label) or not isinstance(item, str) else item
             for item, label in zip(stored, serialized, strict=True)
         ]
-    if isinstance(stored, str) and serialized not in options:
+    if isinstance(stored, str) and not _is_option(serialized):
         return stored
     return serialized
 

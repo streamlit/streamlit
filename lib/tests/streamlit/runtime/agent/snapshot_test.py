@@ -188,6 +188,92 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             {"type": "markdown", "props": {"body": "inside"}}
         ]
 
+        # Re-sending the same block, as a dialog does when it updates, keeps
+        # the children. A different block type replaces them.
+        again = ForwardMsg()
+        again.metadata.delta_path[:] = [0, 0]
+        again.metadata.agent_props = json.dumps(
+            {
+                "type": "expander",
+                "props": {"label": "More", "expanded": True},
+            }
+        )
+        again.delta.add_block.expandable.label = "More"
+        updated = self._build(child, block, again).document
+        assert _one(updated, "expander")["props"]["expanded"] is True
+        assert _one(updated, "expander")["children"][0]["props"]["body"] == "inside"
+
+    def test_replacing_a_container_drops_its_children(self) -> None:
+        """A different block replaces the previous one, as the frontend does.
+
+        The same proto type keeps its children. A dialog with a new identity
+        does not, so the previous dialog's widgets do not stay mounted.
+        """
+        container = ForwardMsg()
+        container.metadata.delta_path[:] = [0, 0]
+        container.metadata.agent_props = json.dumps({"type": "container"})
+        container.delta.add_block.flex_container.SetInParent()
+        first = _describe(
+            [0, 0, 0],
+            {
+                "type": "button",
+                "key": "$$ID-1-one",
+                "action": "trigger",
+                "props": {"label": "One"},
+            },
+        )
+        second = _describe(
+            [0, 0, 1],
+            {
+                "type": "button",
+                "key": "$$ID-2-two",
+                "action": "trigger",
+                "props": {"label": "Two"},
+            },
+        )
+        expander = ForwardMsg()
+        expander.metadata.delta_path[:] = [0, 0]
+        expander.metadata.agent_props = json.dumps(
+            {"type": "expander", "props": {"label": "More", "expanded": False}}
+        )
+        expander.delta.add_block.expandable.label = "More"
+        only = _describe([0, 0, 0], {"type": "text", "props": {"body": "only"}})
+
+        document = self._build(container, first, second, expander, only).document
+        assert document["actions"] == []
+        assert [
+            child["props"]["body"] for child in _one(document, "expander")["children"]
+        ] == ["only"]
+
+        previous = ForwardMsg()
+        previous.metadata.delta_path[:] = [2, 0]
+        previous.metadata.agent_props = json.dumps(
+            {"type": "dialog", "props": {"title": "A", "is_open": True}}
+        )
+        previous.delta.add_block.id = "dialog-a"
+        previous.delta.add_block.dialog.title = "A"
+        body = _describe([2, 0, 0], {"type": "markdown", "props": {"body": "secret"}})
+        same = ForwardMsg()
+        same.metadata.delta_path[:] = [2, 0]
+        same.metadata.agent_props = json.dumps(
+            {"type": "dialog", "props": {"title": "A", "is_open": False}}
+        )
+        same.delta.add_block.id = "dialog-a"
+        same.delta.add_block.dialog.title = "A"
+        kept = self._build(previous, body, same).document
+        assert _one(kept, "dialog")["children"][0]["props"]["body"] == "secret"
+
+        replacement = ForwardMsg()
+        replacement.metadata.delta_path[:] = [2, 0]
+        replacement.metadata.agent_props = json.dumps(
+            {"type": "dialog", "props": {"title": "B", "is_open": True}}
+        )
+        replacement.delta.add_block.id = "dialog-b"
+        replacement.delta.add_block.dialog.title = "B"
+        replaced = self._build(previous, body, replacement).document
+        assert _one(replaced, "dialog")["props"]["title"] == "B"
+        assert _one(replaced, "dialog")["children"] == []
+
     def test_contentless_and_transparent_nodes_drop_out(self) -> None:
         """Placeholders, blank space, and internal wrappers are not nodes."""
         st.empty()
@@ -376,7 +462,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert by_key["name"]["kind"] == "value"
 
         mood = _state(snapshot, "feedback", "mood")
-        assert mood.options == ["0", "1", "2", "3", "4"]
+        assert mood.options == [0, 1, 2, 3, 4]
         assert mood.clearable is True
         assert mood.actionable is True
         upload = _state(snapshot, "file_uploader", "upload")
@@ -478,6 +564,25 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         city = _one_keyed(document, "selectbox", "city")
         assert city["value"] == "Berlin"
         assert city["props"]["options"] == ["PARIS"]
+
+        st.pills(
+            "Pair",
+            [("a", "b")],
+            default=[("a", "b")],
+            format_func=lambda option: option[1],
+            key="pair",
+        )
+        st.select_slider(
+            "Country",
+            options=[["us", "United States"], ["ca", "Canada"]],
+            format_func=lambda option: option[1],
+            key="country",
+        )
+        sequenced = self._build().document
+        assert _one_keyed(sequenced, "pills", "pair")["value"] == "b"
+        assert _one_keyed(sequenced, "select_slider", "country")["value"] == (
+            "United States"
+        )
 
     def test_widget_values_match_their_value_schema(self) -> None:
         """Every reported value is null or the JSON type its schema names."""
@@ -624,6 +729,15 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         ready = self._build().document
         assert ready["status"] == "ready"
         assert _one(ready, "exception")["props"]["uncaught"] is False
+
+        self.clear_queue()
+        undescribed = ForwardMsg()
+        undescribed.metadata.delta_path[:] = [0, 0]
+        undescribed.delta.new_element.exception.type = "ValueError"
+        undescribed.delta.new_element.exception.message = "from a browser cache"
+        replayed = self._build(undescribed).document
+        assert replayed["status"] == "ready"
+        assert "uncaught" not in _one(replayed, "exception")["props"]
 
         self.clear_queue()
         show_uncaught_app_exception(ValueError("boom"))
