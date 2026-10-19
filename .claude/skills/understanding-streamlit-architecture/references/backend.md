@@ -130,7 +130,7 @@ st.button("Click")
   -> ScriptRunContext.enqueue()
 ```
 
-`agent_props` is the command's JSON description, or `None` for a session that is not recording. See [communication.md](communication.md#agent-command-descriptions).
+`agent_props` is JSON describing the command that emitted the delta: the public command name, its parameters, and a widget's value schema. Only a session the agent API created attaches it (`agent_spec.is_recording()`); a browser session passes `None`. See [communication.md](communication.md#agent-command-descriptions).
 
 ## SessionState (`lib/streamlit/runtime/state/session_state.py`)
 
