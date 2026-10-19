@@ -20,8 +20,8 @@ merges the run's deltas by ``delta_path`` the way the frontend does, then fills
 in ``value``, read from reconciled session state, because proto defaults stop
 being accurate after the first interaction.
 
-``data``, the derived facts about a dataframe or chart, is attached by
-``_attach_data``. That step adds nothing until complete data is served.
+``data``, the derived facts about a dataframe or chart, is not attached yet.
+A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
@@ -99,10 +99,11 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
     fragment run would clear; the caller passes the messages that already
     make up the page.
 
-    The walk matches the frontend: follow ``delta_path``, creating placeholder
-    containers for positions not claimed yet, and write the node at the final
-    index. A block adopts children already collected at its position only when
-    it is the same container, or a placeholder whose own block has not arrived.
+    Block replacement follows the frontend: a block of the same type keeps its
+    children, and a different type or dialog identity drops them. Unlike the
+    frontend, which rejects a delta whose parent container is missing, this
+    creates a placeholder and lets the block that later claims the position
+    adopt its children.
     """
     root = _Node(
         root_name="root",
@@ -437,10 +438,6 @@ class _SnapshotBuilder:
                 # resets right after the run that observed it.
                 result["value"] = value
 
-        # Tables and charts attach their data here. Nothing is attached until
-        # that step is filled in, so a snapshot has no `data` block yet.
-        self._attach_data(node, proto_field, payload)
-
         form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
@@ -449,14 +446,6 @@ class _SnapshotBuilder:
             description, inherited_support, form_id or None, node.fragment_id
         )
         return result
-
-    def _attach_data(self, _node: _Node, _proto_field: str, _payload: Any) -> None:
-        """Attach a table or chart's data block.
-
-        Filled in when complete data is served. Until then the command's
-        parameters stay in ``props`` and the snapshot has no ``data`` object.
-        """
-        return
 
     def _record_element_state(
         self,
@@ -671,7 +660,11 @@ def _string_payload(serialized: Any) -> Any:
 
 
 def _authored_options(serializer: Any) -> list[Any] | tuple[Any, ...] | None:
-    """The option objects the serializer was built with, when it has them."""
+    """The option objects the serializer was built with, when it has them.
+
+    Selection serdes keep those objects on ``options``. Typed text is detected
+    by comparing against that list.
+    """
     options = getattr(getattr(serializer, "__self__", None), "options", None)
     if isinstance(options, (list, tuple)):
         return options
@@ -701,6 +694,33 @@ def _option_equals(item: Any, option: Any) -> bool:
         return False
 
 
+def _index_authored(
+    authored: list[Any] | tuple[Any, ...] | None,
+) -> tuple[set[Any], list[Any]] | None:
+    """Split authored options into a hash lookup and an unhashable remainder."""
+    if authored is None:
+        return None
+    hashed: set[Any] = set()
+    linear: list[Any] = []
+    for option in authored:
+        try:
+            hashed.add(option)
+        except TypeError:
+            linear.append(option)
+    return hashed, linear
+
+
+def _is_authored(item: Any, index: tuple[set[Any], list[Any]]) -> bool:
+    """Whether ``item`` is one of the indexed authored options."""
+    hashed, linear = index
+    try:
+        if item in hashed:
+            return True
+    except TypeError:
+        return any(_option_equals(item, option) for option in (*hashed, *linear))
+    return any(_option_equals(item, option) for option in linear)
+
+
 def _keep_typed_text(
     stored: Any,
     serialized: Any,
@@ -723,6 +743,7 @@ def _keep_typed_text(
         allowed: set[Any] | None = set(options)
     except TypeError:
         allowed = None
+    authored_index = _index_authored(authored)
 
     def _is_option(label: Any) -> bool:
         if allowed is None:
@@ -735,8 +756,8 @@ def _keep_typed_text(
         if (
             options_open
             and isinstance(item, str)
-            and authored is not None
-            and not any(_option_equals(item, option) for option in authored)
+            and authored_index is not None
+            and not _is_authored(item, authored_index)
         ):
             return item
         if _is_option(label) or not isinstance(item, str):
@@ -914,8 +935,10 @@ def _compilation_exception(messages: list[ForwardMsg]) -> Any:
 def _redacted_compile_props(exception: Any) -> dict[str, Any]:
     """Compile-error fields after ``client.showErrorDetails`` redaction.
 
-    The session event carries the full exception. An uncaught exception
-    element applies the same visibility rules, so the snapshot does too.
+    The session event is marshalled without ``apply_show_error_details``, so
+    the snapshot applies those rules here and can be stricter than the page.
+    ``stack_trace`` is copied as already formatted. Chained messages baked
+    into those rows are not parsed back out.
     """
     from streamlit.elements.exception import (
         _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
@@ -982,6 +1005,7 @@ def _pages(
             entry["icon"] = page.icon
         pages.append(entry)
         if page.page_script_hash == current_hash:
-            current_page = entry
+            # A copy, so a caller can change `page` without changing `pages`.
+            current_page = dict(entry)
 
     return pages, current_page

@@ -34,6 +34,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import (
     ElementState,
     Snapshot,
+    _authored_options,
     _public_key,
     build_snapshot,
 )
@@ -656,6 +657,13 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             accept_new_options=True,
             key="numpy_city",
         )
+        st.selectbox(
+            "Array",
+            np.array(["alpha", "beta"]),
+            format_func=str.upper,
+            accept_new_options=True,
+            key="numpy_array",
+        )
 
         class _ScalarEqual:
             """Equality with the typed text returns a NumPy scalar bool."""
@@ -678,6 +686,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert _one_keyed(typed, "selectbox", "typed_city")["value"] == "paris"
         assert _one_keyed(typed, "selectbox", "comparable")["value"] == "a"
         assert _one_keyed(typed, "selectbox", "numpy_city")["value"] == "PARIS"
+        assert _one_keyed(typed, "selectbox", "numpy_array")["value"] == "ALPHA"
         assert _one_keyed(typed, "selectbox", "scalar_city")["value"] == "SCALAR"
         assert _one_keyed(typed, "selectbox", "raw_city")["value"] == "PARIS"
         assert _one_keyed(typed, "multiselect", "mixed")["value"] == [
@@ -958,6 +967,31 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert keys.index("tabs") < keys.index("inside")
         assert _state(self._build(), "tabs", "tabs").options == ["One", "Two"]
 
+    def test_option_widgets_expose_authored_options(self) -> None:
+        """Typed-text detection reads the option objects from the serde."""
+        st.selectbox("Select", ["a"], key="s")
+        st.multiselect("Many", ["a", "b"], key="m")
+        st.radio("Choose", ["a"], key="r")
+        st.pills("Pills", ["a"], key="p")
+        st.menu_button("Menu", ["a"], key="menu")
+
+        state = self._session_state()
+        for key, expected in (
+            ("s", ["a"]),
+            ("m", ["a", "b"]),
+            ("r", ["a"]),
+            ("p", ["a"]),
+            ("menu", ["a"]),
+        ):
+            element_id = next(
+                widget_id
+                for widget_id in state._new_widget_state.widget_metadata
+                if _public_key(widget_id) == key
+            )
+            metadata = state.get_widget_metadata(element_id)
+            assert metadata is not None
+            assert list(_authored_options(metadata.serializer) or []) == expected
+
     def test_a_form_and_a_widget_may_share_an_authored_key(self) -> None:
         """Both nodes report the authored key. The request validator tells them apart."""
         with st.form("name"):
@@ -1009,6 +1043,8 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             },
         ]
         assert navigated["page"] == navigated["pages"][1]
+        navigated["page"]["title"] = "changed"
+        assert navigated["pages"][1]["title"] == "Reports"
 
 
 def _one_keyed(
