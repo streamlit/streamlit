@@ -9,11 +9,12 @@ created: 2026-08-02
 
 Describes the implementation of the [`max_size` product spec](./product-spec.md) for
 `st.cache_data`: a per-function `max_size` parameter and a process-wide budget that
-defaults to 4 GB of serialized cache (`"0"` disables it), both evicting LRU by serialized
-byte size. The work has three parts: (1) teach the internal `TTLCache` to evict by size,
-(2) plumb `max_size` through the `st.cache_data` → storage layers, and
-(3) add a cross-cache global budget with global LRU eviction. `st.cache_resource` is
-untouched.
+is opt-in through `server.maxCacheDataSize`. The config defaults to `None`, so v1 does not
+enforce a global cache size for existing apps; changing the default to 4 GB is a proposed
+follow-up. Both controls evict LRU by serialized byte size when enabled. The work has three
+parts: (1) teach the internal `TTLCache` to evict by size, (2) plumb `max_size` through the
+`st.cache_data` → storage layers, and (3) add a cross-cache global budget with global LRU
+eviction. `st.cache_resource` is untouched.
 
 ## Problem
 
@@ -151,14 +152,15 @@ one `maxsize` axis. Two clean options:
 
 The oversized-entry warning (product spec [Behavior](./product-spec.md#behavior)) is
 logged with `_LOGGER.warning` from `InMemoryCacheStorageWrapper._write_to_mem_cache` when
-`len(value)` exceeds `max_size_bytes` or the global budget, throttled to once per storage
-instance via a boolean flag.
+`len(value)` exceeds `max_size_bytes` or an explicitly configured global budget, throttled
+to once per storage instance via a boolean flag.
 
-### Part 3 — global default budget (cross-cache LRU)
+### Part 3 — opt-in global budget (cross-cache LRU)
 
-A per-function cap can't bound *total* `cache_data` memory, so the global budget
+A per-function cap can't bound *total* `cache_data` memory, so an enabled global budget
 (`config: server.maxCacheDataSize`) needs process-wide accounting and a global victim
-selection. Design:
+selection. With the config unset (`None`) or explicitly disabled (`0` / `"0"`), wrappers
+do not register entries or recency hints with the global structure. Design:
 
 - **Central registry**: a process-global `GlobalCacheBudget` singleton tracks
   `(storage_id, key) -> size` in access order and a running total. `storage_id` is unique
@@ -240,8 +242,8 @@ it that way. A hit appends `(storage_id, key)` to a bounded recency buffer
 global lock. Writes, which already pay for pickling, take the global lock, drain the buffer
 into the `OrderedDict`, and then pick victims. Hints for keys that are no longer tracked are
 skipped. A full buffer drops its oldest hints, which only makes the recency order
-approximate; the byte total stays exact. When the budget is disabled (`"0"`), neither path
-touches the global structure.
+approximate; the byte total stays exact. When the budget is disabled (`None`, `0`, or
+`"0"`), neither path touches the global structure.
 
 Acceptance bar: with the budget enabled and the app under budget, median and p99 cache-hit
 latency stay within 5% of the budget-disabled baseline at 1 and 50 concurrent sessions. If
@@ -252,9 +254,9 @@ LRU, periodically (e.g. every N writes or on a timer) sum per-cache `currsize` v
 if over budget, evict from the largest cache. Simpler and lock-light, but less precise, can
 overshoot the budget between sweeps, and trims a large hot cache while a small cold one
 survives. That breaks the product spec's promise to evict globally least-recently-used
-entries across functions, so exact global LRU is the v1 design. Switching to the sweep
-(for example, because the exact design misses the [Performance](#performance) acceptance
-bar) requires updating the product spec first.
+entries across functions, so exact global LRU is the v1 design whenever the option is
+enabled. Switching to the sweep (for example, because the exact design misses the
+[Performance](#performance) acceptance bar) requires updating the product spec first.
 
 ### Config option
 
@@ -264,12 +266,12 @@ _create_option(
     "server.maxCacheDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
-        Requires an explicit unit string like "4gb"/"500mb" (or "0" to disable).
-        When exceeded, Streamlit evicts least-recently-used cached entries across
-        functions until the total fits. This bounds serialized cache size, not
-        process RSS.
+        Leave unset or set to "0" to disable the global limit. Otherwise, use an
+        explicit unit string such as "4gb" or "500mb". When exceeded, Streamlit
+        evicts least-recently-used cached entries across functions until the total
+        fits. This bounds serialized cache size, not process RSS.
     """,
-    default_val="4gb",
+    default_val=None,
     type_=str,
 )
 ```
@@ -279,32 +281,36 @@ layered on top (see below).
 
 **Config contract (resolved):** Existing `server.*` size caps (`server.maxUploadSize`,
 `server.maxMessageSize`) use `type_=int` in **megabytes**. Reusing that pattern here would
-clash with the `max_size` parameter's unit-string UX (`"500MB"`) and with the recommended
-default (`"4gb"`). Accepting bare ints as **bytes** would be a worse footgun: a user who
-writes `maxCacheDataSize = 500` (or `1`) almost certainly expects MB-scale behavior from
-the other `server.*` size options, not 500 bytes.
+clash with the `max_size` parameter's unit-string UX (`"500MB"`). Accepting bare ints as
+**bytes** would be a worse footgun: a user who writes `maxCacheDataSize = 500` (or `1`)
+almost certainly expects MB-scale behavior from the other `server.*` size options, not 500
+bytes.
 
 Therefore `server.maxCacheDataSize` **requires an explicit unit for any non-zero
 value**. Accepted forms:
 
-- Unit string: `"4gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`)
-- Disable sentinel only: `0` or `"0"` (unbounded / legacy behavior; handled before the
+- Unset / `None`: v1 default; no global budget is enforced.
+- Unit string: `"4gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`).
+- Disable sentinel: `0` or `"0"` (unbounded behavior; handled before the
   `> 0` validation that `to_bytes` otherwise enforces)
 
 Bare non-zero integers (`500`, `1`, …) and unit-less numeric strings (`"500"`) are
 **rejected** with a clear config error pointing at the unit requirement. Because the
 option is `type_=str`, document that values in `config.toml` are written as strings
-(`maxCacheDataSize = "4gb"`, `maxCacheDataSize = "0"`). The Python `max_size`
-parameter still accepts int-as-bytes — that is a different surface (call-site API, not
-`server.*` config) and is unaffected.
+(`maxCacheDataSize = "4gb"`, `maxCacheDataSize = "0"`). Omitting the option produces the
+internal `None` default; TOML does not need a `None` literal. The explicit `"0"` escape
+hatch remains important if a follow-up later changes `default_val` to `"4gb"`. The Python
+`max_size` parameter still accepts int-as-bytes — that is a different surface (call-site
+API, not `server.*` config) and is unaffected.
 
 ### Metrics
 
 - `max_size` adoption needs no new instrumentation: the `cache_data` decorator is wrapped in
   `gather_metrics`, which already records the parameters each decorator call uses.
 - Global-budget evictions are counted in a new `CounterStat` family exposed next to
-  `cache_memory_bytes` on `/_stcore/metrics`, so operators can see whether the default
-  budget evicts and the 4 GB value can be tuned from real eviction rates.
+  `cache_memory_bytes` on `/_stcore/metrics`, so operators can evaluate opt-in behavior.
+  Together with existing cache-size distributions, performance results, and customer
+  feedback, this informs the separate decision about a future 4 GB default.
 
 ## Testing
 
@@ -322,8 +328,8 @@ parameter still accepts int-as-bytes — that is a different surface (call-site 
   (no phantom bytes); deleting an expired-but-not-reaped key decrements the budget once.
 - `cache_data_api` tests: parameter parsing/validation (`"500MB"`, `"1.5 GB"`, int bytes,
   bad unit, `bool`, `float`, `<= 0`), cache-recreation on `max_size` change.
-- Config parsing: the default resolves to 4 GB; unit strings accepted; `0`/`"0"` disables;
-  bare non-zero ints / unit-less strings rejected.
+- Config parsing: the default resolves to `None` and creates no global budget; unit strings
+  enable it; `0` / `"0"` disables it; bare non-zero ints / unit-less strings are rejected.
 - Global budget: cross-cache eviction picks the global LRU victim via the memory-only
   path; concurrency/lock-order stress test (many caches, concurrent read/write/delete and
   cache replacement) with no deadlock; budget respected under churn; total returns to zero
@@ -336,12 +342,12 @@ parameter still accepts int-as-bytes — that is a different surface (call-site 
   caches, a replaced cache) are tracked separately. Tests reset the `GlobalCacheBudget`
   singleton between cases.
 - Performance: the cache-hit latency benchmark from [Performance](#performance) (budget
-  enabled vs. disabled, 1 and 50 concurrent sessions, app under budget), checked against
-  its acceptance bar.
-- Global-budget warning (Option D): the one-time warning emitted when the global budget
-  first starts evicting fires once per process (throttled), is logged with the copy from
-  the product spec's [Behavior](./product-spec.md#behavior) section, and does not fire when
-  the budget is disabled (`0`) or never exceeded.
+  enabled vs. disabled through `None` / `0`, 1 and 50 concurrent sessions, app under
+  budget), checked against its acceptance bar.
+- Global-budget eviction warning: the one-time warning emitted when an explicitly enabled
+  global budget first starts evicting fires once per process (throttled), is logged with
+  the copy from the product spec's [Behavior](./product-spec.md#behavior) section, and does
+  not fire when the budget is disabled (`None`, `0`, or `"0"`) or never exceeded.
 - Type tests in `lib/tests/streamlit/typing/` for the new `max_size` overloads.
 - E2E: a `cache_data` app with `max_size` that evicts under load (public-API coverage).
 
