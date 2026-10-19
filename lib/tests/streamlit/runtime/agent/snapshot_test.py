@@ -23,6 +23,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 
 import streamlit as st
@@ -646,8 +647,6 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
 
         st.selectbox("Comparable", ["a", _Ambiguous()], index=0, key="comparable")
 
-        import numpy as np
-
         numpy_city = np.str_("Paris")
         st.session_state.numpy_city = numpy_city
         st.selectbox(
@@ -663,6 +662,12 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             format_func=str.upper,
             accept_new_options=True,
             key="numpy_array",
+        )
+        st.selectbox(
+            "Buffer",
+            ["a", memoryview(bytearray(b"b"))],
+            accept_new_options=True,
+            key="buffer",
         )
 
         class _ScalarEqual:
@@ -687,6 +692,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert _one_keyed(typed, "selectbox", "comparable")["value"] == "a"
         assert _one_keyed(typed, "selectbox", "numpy_city")["value"] == "PARIS"
         assert _one_keyed(typed, "selectbox", "numpy_array")["value"] == "ALPHA"
+        assert _one_keyed(typed, "selectbox", "buffer")["value"] == "a"
         assert _one_keyed(typed, "selectbox", "scalar_city")["value"] == "SCALAR"
         assert _one_keyed(typed, "selectbox", "raw_city")["value"] == "PARIS"
         assert _one_keyed(typed, "multiselect", "mixed")["value"] == [
@@ -752,6 +758,9 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             "2026-01-31",
         ]
         assert _one_keyed(document, "time_input", "time")["value"] == "09:30"
+        assert _one_keyed(document, "datetime_input", "when")["value"] == (
+            "2026-01-02T09:30"
+        )
         assert _one_keyed(document, "select_slider", "span")["value"] == ["a", "c"]
         assert _one_keyed(document, "pills", "pills")["value"] == "a"
         assert _one_keyed(document, "segmented_control", "segments")["value"] == ["a"]
@@ -847,6 +856,20 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert button["fragment"] != opener_fragment
         assert _state(snapshot, "button", "yes").in_dialog is True
         assert _state(snapshot, "button", "yes").fragment_id == button["fragment"]
+
+    def test_a_closed_dialog_does_not_mark_its_body(self) -> None:
+        """Widgets in a dialog closed this run are not inside an open dialog."""
+        from streamlit.delta_generator_singletons import get_dg_singleton_instance
+
+        dialog = get_dg_singleton_instance().event_dg._dialog(title="Closed")
+        dialog.open()
+        with dialog:
+            st.button("Inside", key="inside")
+        dialog.close()
+
+        snapshot = self._build()
+        assert _one(snapshot.document, "dialog")["props"]["is_open"] is False
+        assert _state(snapshot, "button", "inside").in_dialog is False
 
     def test_status_uses_both_failure_signals(self) -> None:
         """A caught exception is not a failure. Either real signal is."""

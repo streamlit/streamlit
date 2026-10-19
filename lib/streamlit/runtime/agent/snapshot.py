@@ -308,7 +308,9 @@ class _SnapshotBuilder:
         # own `support` denies, and the document would contradict itself.
         is_dialog = node.description.get("type") == "dialog"
         actions_before_children = len(self.actions)
-        if is_dialog:
+        # A dialog closed in this run still has its body in the tree. Only an
+        # open one makes those widgets cross-dialog writes.
+        if is_dialog and (node.description.get("props") or {}).get("is_open") is True:
             self._in_dialog = True
         children = self.serialize_children(node, support)
         if is_dialog:
@@ -497,7 +499,9 @@ class _SnapshotBuilder:
             disabled=disabled,
             support=support,
             form_id=form_id,
-            options=options if isinstance(options, list) else None,
+            # A copy, so a later check can filter this list without rewriting
+            # the options already published on the element.
+            options=list(options) if isinstance(options, list) else None,
             options_open=bool(props.get("accept_new_options")),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
@@ -705,7 +709,9 @@ def _index_authored(
     for option in authored:
         try:
             hashed.add(option)
-        except TypeError:
+        except Exception:
+            # Unhashable options, and options whose equality raises while the
+            # set checks a collision, stay on the linear scan.
             linear.append(option)
     return hashed, linear
 
@@ -716,7 +722,7 @@ def _is_authored(item: Any, index: tuple[set[Any], list[Any]]) -> bool:
     try:
         if item in hashed:
             return True
-    except TypeError:
+    except Exception:
         return any(_option_equals(item, option) for option in (*hashed, *linear))
     return any(_option_equals(item, option) for option in linear)
 
@@ -743,7 +749,7 @@ def _keep_typed_text(
         allowed: set[Any] | None = set(options)
     except TypeError:
         allowed = None
-    authored_index = _index_authored(authored)
+    authored_index = _index_authored(authored) if options_open else None
 
     def _is_option(label: Any) -> bool:
         if allowed is None:
@@ -798,7 +804,7 @@ def _fallback_description(proto_field: str, payload: Message | None) -> dict[str
     skipped = {"id", "form_id", "set_value"}
     if element_id:
         # A widget: its value and default are state, not construction.
-        skipped |= {"value", "default"}
+        skipped |= {"value", "default", "raw_value", "raw_values"}
 
     props: dict[str, Any] = {}
     if payload is not None:
