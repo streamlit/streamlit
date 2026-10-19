@@ -177,10 +177,12 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._mem_cache[key] = entry_bytes
         if should_warn:
             _LOGGER.warning(
-                "A value from %s is larger than its max_size. Streamlit kept this "
-                "value and will not keep another in-memory entry alongside it. "
-                "Increase max_size to keep more than one value.",
+                "A cached value from %s is %d bytes, which exceeds its max_size of "
+                "%d bytes. Streamlit keeps it in memory until the next new value "
+                "replaces it. Increase max_size to cache more than one value.",
                 self.function_display_name,
+                len(entry_bytes),
+                self._max_size_bytes,
                 stack_info=True,
             )
 

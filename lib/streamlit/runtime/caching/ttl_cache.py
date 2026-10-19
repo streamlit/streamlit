@@ -23,7 +23,9 @@ preserves the exact subset of behavior Streamlit relies on:
 - Every entry shares the same ``ttl``, so write order is also expiry order.
   Expired entries are reported as absent on reads (``__getitem__`` /
   ``in``) but are only actually removed by a write, by ``expire()``, or by a
-  length/size query. Some of Streamlit's cache-cleanup hooks depend on this.
+  length query. ``len(cache)`` may invoke subclass removal or release callbacks
+  while reaping expired entries. Some of Streamlit's cache-cleanup hooks depend
+  on this.
 
 Like ``cachetools.TTLCache``, this cache is **not** thread-safe. Callers that
 share an instance across threads must provide their own locking.
@@ -114,18 +116,24 @@ class TTLCache(MutableMapping[K, V]):
 
     @property
     def currsize(self) -> int:
-        """The current number of non-expired entries."""
-        return len(self)
+        """The number of non-expired entries, without reaping expired entries."""
+        now = self._timer()
+        return sum(now < expires for expires in self._expirations.values())
 
     @property
     def curr_total_size(self) -> int | None:
-        """The current aggregate size, or ``None`` when size is not tracked."""
-        self.expire()
-        return self._curr_total_size if self._sizes is not None else None
+        """The aggregate size of non-expired entries, without reaping them."""
+        if self._sizes is None:
+            return None
+        now = self._timer()
+        return sum(
+            self._sizes[key]
+            for key, expires in self._expirations.items()
+            if now < expires
+        )
 
     def __repr__(self) -> str:
-        # Use raw values because the size properties reap expired entries, and
-        # repr must not mutate the cache or fire removal callbacks.
+        # Use raw values so repr reports stored-entry bookkeeping without a timer read.
         representation = (
             f"{type(self).__name__}(maxsize={self._maxsize!r}, "
             f"ttl={self._ttl!r}, currsize={len(self._data)!r}"
@@ -228,7 +236,10 @@ class TTLCache(MutableMapping[K, V]):
         return self._live_snapshot().values()
 
     def __len__(self) -> int:
-        # Matches cachetools: querying the length reaps expired entries first.
+        """Return the live entry count after reaping expired entries.
+
+        Reaping may invoke subclass removal or release callbacks.
+        """
         self.expire()
         return len(self._data)
 

@@ -262,7 +262,15 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.set("second", b"larger")
 
         assert wrapped_storage.get("second") == b"larger"
-        warning.assert_called_once()
+        warning.assert_called_once_with(
+            "A cached value from %s is %d bytes, which exceeds its max_size of "
+            "%d bytes. Streamlit keeps it in memory until the next new value "
+            "replaces it. Increase max_size to cache more than one value.",
+            "func-display-name",
+            5,
+            2,
+            stack_info=True,
+        )
 
     def test_byte_eviction_preserves_persisted_entry(self) -> None:
         """Byte eviction leaves the persisted copy available for reload."""

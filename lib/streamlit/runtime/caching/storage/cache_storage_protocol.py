@@ -107,7 +107,8 @@ class CacheStorageContext:
     max_size_bytes : int or None
         The maximum serialized size of the in-memory cache in bytes.
         If None, the cache storage will not limit its byte size. Custom storage
-        implementations are responsible for honoring this limit.
+        managers honor this setting only if they use
+        ``InMemoryCacheStorageWrapper`` or implement equivalent byte-size eviction.
     """
 
     function_key: str

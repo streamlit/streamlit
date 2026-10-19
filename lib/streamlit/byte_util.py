@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import re
+from numbers import Integral
 from typing import Final
 
 from streamlit.errors import StreamlitInvalidParameterTypeError, StreamlitValueError
@@ -72,7 +73,7 @@ def _parse_byte_size(value: str) -> tuple[int, str]:
     return size, digits
 
 
-def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
+def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | None:
     """Convert an ``st.cache_data`` max-size value to a positive byte count.
 
     Integers represent byte counts directly. Strings require an explicit binary
@@ -89,6 +90,8 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
 
     if isinstance(value, int):
         size = value
+    elif isinstance(value, Integral):
+        size = int(value)
     elif isinstance(value, str):
         try:
             size, _ = _parse_byte_size(value)

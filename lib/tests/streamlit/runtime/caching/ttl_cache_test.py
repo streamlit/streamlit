@@ -402,18 +402,42 @@ def test_total_size_configuration_requires_limit_and_size_function() -> None:
 
 
 def test_currsize_reflects_non_expired_entries() -> None:
-    """``currsize`` counts only entries that have not expired."""
+    """``currsize`` counts only live entries without reaping expired entries."""
     clock = _FakeClock()
     cache: TTLCache[str, int] = TTLCache(maxsize=10, ttl=10, timer=clock)
 
     cache["a"] = 1
+    clock.now = 5
     cache["b"] = 2
     assert cache.currsize == 2
     assert cache.curr_total_size is None
     assert cache._sizes is None
 
-    clock.now = 10
-    assert cache.currsize == 0
+    clock.now = 12
+    assert cache.currsize == 1
+    assert set(cache._data) == {"a", "b"}
+
+
+def test_curr_total_size_reflects_live_entries_without_reaping() -> None:
+    """Size properties exclude expired entries without removing them."""
+    clock = _FakeClock()
+    cache = TTLCache[str, bytes](
+        maxsize=10,
+        max_total_size=100,
+        ttl=10,
+        timer=clock,
+        getsizeof=len,
+    )
+
+    cache["a"] = b"aa"
+    clock.now = 5
+    cache["b"] = b"bbb"
+
+    clock.now = 12
+    assert cache.currsize == 1
+    assert cache.curr_total_size == 3
+    assert set(cache._data) == {"a", "b"}
+    assert cache._curr_total_size == 5
 
 
 def test_contains_does_not_affect_eviction_order() -> None:

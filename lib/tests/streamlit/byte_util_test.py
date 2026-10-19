@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from decimal import Inexact, localcontext
 
+import numpy as np
 import pytest
 
 from streamlit.byte_util import cache_data_max_size_to_bytes
@@ -46,6 +47,11 @@ def test_cache_data_max_size_to_bytes(
 ) -> None:
     """Supported byte-size values convert to their binary byte count."""
     assert cache_data_max_size_to_bytes(value) == expected
+
+
+def test_cache_data_max_size_to_bytes_accepts_numpy_integer() -> None:
+    """NumPy integers are converted to built-in integer byte counts."""
+    assert cache_data_max_size_to_bytes(np.int64(1024)) == 1024  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

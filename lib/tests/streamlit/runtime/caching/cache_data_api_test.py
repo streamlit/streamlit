@@ -25,6 +25,7 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -317,6 +318,15 @@ If you think this is actually a Streamlit bug, please
         assert foo() == bytes(100)
         assert foo() == bytes(100)
         assert executions == 1
+
+    def test_numpy_integer_max_size(self) -> None:
+        """A NumPy integer is accepted as a max_size byte count."""
+
+        @st.cache_data(max_size=np.int64(1024))  # type: ignore[arg-type]
+        def foo() -> int:
+            return 1
+
+        assert foo() == 1
 
     def test_cache_recreated_when_max_size_changes(self) -> None:
         """A changed max_size replaces the previous function cache."""
