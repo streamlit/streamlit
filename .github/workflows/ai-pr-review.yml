@@ -421,6 +421,8 @@ jobs:
       contents: read
       # Required for posting comments, but this step is safe since it is not running the agent operation:
       pull-requests: write
+      # Required to read the qa-approved commit status before auto-approve.
+      statuses: read
 
     steps:
       - name: Remove AI review request label
