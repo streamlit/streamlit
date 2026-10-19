@@ -44,6 +44,8 @@ jobs:
     if: needs.check-secrets.outputs.has_key == 'true'
     runs-on: ubuntu-latest-8-cores
     timeout-minutes: 90
+    outputs:
+      head_sha: ${{ steps.pr-info.outputs.head_sha }}
     permissions:
       contents: read
       pull-requests: read
@@ -178,6 +180,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      issues: write
       pull-requests: write
 
     steps:
@@ -265,21 +268,56 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ needs.ai-qa-testing.outputs.head_sha }}
         run: |
           if [ ! -f "qa-artifacts/verdict.txt" ]; then
             echo "Warning: verdict.txt not found, skipping label"
             exit 0
           fi
 
+          # Only the QA run for the current head may grant or revoke qa-approved.
+          # A run that started before a later push must not label the new commits.
+          SHA_MATCH=false
+          if CURRENT_JSON=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV"); then
+            CURRENT_SHA=$(echo "$CURRENT_JSON" | jq -r .head.sha)
+            if [ -n "$TESTED_SHA" ] && [ "$TESTED_SHA" = "$CURRENT_SHA" ]; then
+              SHA_MATCH=true
+            else
+              echo "QA commit ${TESTED_SHA:-unknown} does not match current PR head ${CURRENT_SHA:-unknown}"
+            fi
+          else
+            echo "::warning::Failed to fetch PR head; will not change qa-approved"
+          fi
+
           VERDICT=$(tr -d '[:space:]' < "qa-artifacts/verdict.txt")
           case "$VERDICT" in
             FAIL)
+              if [ "$SHA_MATCH" = "true" ]; then
+                echo "Removing 'qa-approved' label if present"
+                gh pr edit "$PR_NUMBER_ENV" --remove-label "qa-approved" --repo "$REPOSITORY" || true
+              else
+                echo "Leaving 'qa-approved' unchanged because this FAIL is not for the current PR head"
+              fi
               echo "Adding 'do-not-merge' label"
               gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
               ;;
             PASS)
               # A QA PASS must not lift a review hold. Only ai-pr-review.yml
               # or a human may remove do-not-merge, including a hold this job added on FAIL.
+              if [ "$SHA_MATCH" != "true" ]; then
+                echo "Skipping 'qa-approved': QA result is not for the current PR head"
+              else
+                if ! gh api --silent "repos/$REPOSITORY/labels/qa-approved" 2>/dev/null; then
+                  echo "Creating 'qa-approved' label"
+                  # Ignore create races; adding the label below still fails if it does not exist.
+                  gh label create "qa-approved" \
+                    --repo "$REPOSITORY" \
+                    --description "AI QA testing passed" \
+                    --color "0E8A16" || true
+                fi
+                echo "Adding 'qa-approved' label"
+                gh pr edit "$PR_NUMBER_ENV" --add-label "qa-approved" --repo "$REPOSITORY"
+              fi
               echo "QA PASS does not remove 'do-not-merge'; re-add 'ai-review' or remove the label manually"
               ;;
             *)
