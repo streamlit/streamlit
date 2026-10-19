@@ -366,7 +366,7 @@ class CameraInputMixin:
             agent_props=agent_spec.element(
                 "camera_input",
                 key=element_id,
-                support="read_only",
+                support="action_unsupported",
                 label=label,
                 resolution=resolution,
                 help=camera_input_proto.help or None,

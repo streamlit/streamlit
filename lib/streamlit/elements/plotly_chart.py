@@ -837,7 +837,7 @@ class PlotlyMixin:
                 agent_props=agent_spec.element(
                     "plotly_chart",
                     key=plotly_chart_proto.id,
-                    support="read_only",
+                    support="action_unsupported",
                     selection_mode=sorted(
                         _SELECTION_MODE_FROM_PROTO[mode]
                         for mode in plotly_chart_proto.selection_mode

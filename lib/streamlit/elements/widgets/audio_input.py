@@ -372,7 +372,7 @@ class AudioInputMixin:
             agent_props=agent_spec.element(
                 "audio_input",
                 key=element_id,
-                support="read_only",
+                support="action_unsupported",
                 label=label,
                 sample_rate=sample_rate,
                 help=audio_input_proto.help or None,

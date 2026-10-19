@@ -1560,7 +1560,7 @@ class DataEditorMixin:
                 # Kept even when the app locks the editor: unlike a chart
                 # without selections, it is still an editor, and a rejection
                 # should say this API does not accept the edit.
-                support="read_only",
+                support="action_unsupported",
                 column_config=described_column_config(column_config_mapping),
                 column_order=list(proto.column_order) or None,
                 hide_index=described_hide_index(column_config_mapping),

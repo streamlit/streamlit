@@ -2849,7 +2849,7 @@ class VegaChartsMixin:
             # A browser user can select marks. This API only reports that. A
             # chart without selections has nothing to withhold, so it is fully
             # supported.
-            support="read_only" if selection_mode else None,
+            support="action_unsupported" if selection_mode else None,
             alt=proto.alt or None,
             **own_arguments,
         )

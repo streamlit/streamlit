@@ -253,16 +253,16 @@ _RESERVED_FIELDS: dict[
     str, frozenset[tuple[str | None, bool, str | None, str | None]]
 ] = {
     "altair_chart": frozenset(
-        {(None, False, None, None), (None, True, "read_only", None)}
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
     ),
     "area_chart": frozenset({(None, False, None, None)}),
     "audio": frozenset({(None, False, None, None)}),
-    "audio_input": frozenset({(None, True, "read_only", None)}),
+    "audio_input": frozenset({(None, True, "action_unsupported", None)}),
     "badge": frozenset({(None, False, None, None)}),
     "balloons": frozenset({(None, False, None, None)}),
     "bar_chart": frozenset({(None, False, None, None)}),
     "button": frozenset({("trigger", True, None, None)}),
-    "camera_input": frozenset({(None, True, "read_only", None)}),
+    "camera_input": frozenset({(None, True, "action_unsupported", None)}),
     "caption": frozenset({(None, False, None, None)}),
     "chat_input": frozenset({("trigger", True, None, "string")}),
     "chat_message": frozenset({(None, False, None, None)}),
@@ -271,9 +271,9 @@ _RESERVED_FIELDS: dict[
     "color_picker": frozenset({("value", True, None, "string")}),
     "columns": frozenset({(None, False, None, None)}),
     "container": frozenset({(None, False, None, None)}),
-    "data_editor": frozenset({(None, True, "read_only", None)}),
+    "data_editor": frozenset({(None, True, "action_unsupported", None)}),
     "dataframe": frozenset(
-        {(None, False, None, None), (None, True, "read_only", None)}
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
     ),
     "date_input": frozenset({("value", True, None, "string")}),
     "datetime_input": frozenset({("value", True, None, "string")}),
@@ -286,7 +286,7 @@ _RESERVED_FIELDS: dict[
     "exception": frozenset({(None, False, None, None)}),
     "expander": frozenset({(None, False, None, None)}),
     "feedback": frozenset({("value", True, None, "integer")}),
-    "file_uploader": frozenset({(None, True, "read_only", None)}),
+    "file_uploader": frozenset({(None, True, "action_unsupported", None)}),
     "form": frozenset({(None, True, None, None)}),
     "form_submit_button": frozenset({("trigger", True, None, None)}),
     "graphviz_chart": frozenset({(None, False, None, None)}),
@@ -315,12 +315,12 @@ _RESERVED_FIELDS: dict[
     "pagination": frozenset({("value", True, None, "integer")}),
     "pills": frozenset({("value", True, None, "string")}),
     "plotly_chart": frozenset(
-        {(None, False, None, None), (None, True, "read_only", None)}
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
     ),
     "popover": frozenset({(None, False, None, None)}),
     "progress": frozenset({(None, False, None, None)}),
     "pydeck_chart": frozenset(
-        {(None, False, None, None), (None, True, "read_only", None)}
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
     ),
     "pyplot": frozenset({(None, False, None, None)}),
     "radio": frozenset({("value", True, None, "string")}),
@@ -345,7 +345,7 @@ _RESERVED_FIELDS: dict[
     "toast": frozenset({(None, False, None, None)}),
     "toggle": frozenset({("value", True, None, "boolean")}),
     "vega_lite_chart": frozenset(
-        {(None, False, None, None), (None, True, "read_only", None)}
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
     ),
     "video": frozenset({(None, False, None, None)}),
     "warning": frozenset({(None, False, None, None)}),

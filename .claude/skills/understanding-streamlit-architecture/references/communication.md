@@ -66,7 +66,7 @@ Agent sessions store a command description on `ForwardMsg.metadata.agent_props` 
 
 `ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`.
 
-`element` and `block` return `None` unless `agent_spec.register_agent_session` has marked the current session.
+`element` and `block` return `None` unless `agent_spec.register_agent_session` has marked the current session. `agent_spec.is_recording()` is that check: a marked session is recording, meaning each command attaches its description. A browser session on the same server is not recording, so its messages carry none.
 
 The field is metadata, so `populate_hash_if_needed` leaves it out of the ForwardMsg hash. A `ref_hash` message copies the source metadata, so a cache hit still carries the description. How to write a description is in `lib/streamlit/AGENTS.md` under "Agent API element descriptions".
 

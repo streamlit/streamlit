@@ -458,14 +458,18 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert "label" not in by_key["mood"]
         assert by_key["mood"]["type"] == "feedback"
         assert "upload" not in by_key
-        assert _one_keyed(document, "file_uploader", "upload")["support"] == "read_only"
+        assert (
+            _one_keyed(document, "file_uploader", "upload")["support"]
+            == "action_unsupported"
+        )
         assert "table" not in by_key
-        assert _one(document, "dataframe")["support"] == "read_only"
+        assert _one(document, "dataframe")["support"] == "action_unsupported"
         assert "data" not in _one(document, "dataframe")
         assert by_key["save"]["kind"] == "trigger"
         assert "later" not in by_key
         assert (
-            _one_keyed(document, "download_button", "later")["support"] == "read_only"
+            _one_keyed(document, "download_button", "later")["support"]
+            == "action_unsupported"
         )
         assert by_key["docs"] == {
             "key": "docs",
@@ -481,7 +485,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert mood.clearable is True
         assert mood.actionable is True
         upload = _state(snapshot, "file_uploader", "upload")
-        assert upload.support == "read_only"
+        assert upload.support == "action_unsupported"
         assert upload.actionable is False
         waiting = _state(snapshot, "button", "wait")
         assert waiting.disabled is True

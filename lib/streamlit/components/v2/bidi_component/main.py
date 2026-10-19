@@ -77,10 +77,10 @@ if TYPE_CHECKING:
 
 
 def _described_bidi_data(proto: BidiComponentProto) -> Any:
-    """The agent-facing payload, or None when it is an Arrow blob.
+    """The agent-facing payload, or None when it is none of json, bytes, or mixed.
 
     JSON and the JSON half of mixed data are reported. Bytes are their length.
-    Arrow tables stay omitted until table payloads land.
+    Arrow is one of those omitted kinds and stays out until table payloads land.
     """
     kind = proto.WhichOneof("data")
     if kind == "json" and proto.json:

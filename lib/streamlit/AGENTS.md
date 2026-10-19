@@ -80,7 +80,7 @@ The JSON is stored on `ForwardMsg.metadata.agent_props`. The builders return `No
 - **Publish nothing the browser does not receive:** a description must not reveal data the page never gets, such as a secret, a field the proto drops, or the unreduced form of a value the browser only receives rounded. A processed parameter value is fine; extra information is not.
 - **Widgets:** pass `action="value"` (or `"trigger"`) and a `value_schema` built from the `agent_spec` constants (`STRING`, `INTEGER`, `DATE`, `list_of`, `range_of`, …). A widget with options reports the `format_func` labels, so its schema is `STRING`.
 - **Arguments are evaluated in every session, browsers included.** They must never raise for an input the command accepts (never truth-test a sequence parameter: a NumPy array or pandas Series has no truth value), and expensive preparation belongs behind `agent_spec.is_recording()`.
-- **Gaps are explicit:** set `support="browser_required"` when rendering depends on JavaScript the agent API does not run, and `support="read_only"` when a browser user can act on the element and this API only reports that action. A display-only element has no `support` field.
+- **Gaps are explicit:** set `support="browser_required"` when rendering depends on JavaScript the agent API does not run, and `support="action_unsupported"` when a browser user can act on the element and this API only reports that action. A display-only element has no `support` field.
 - **Every parameter is decided:** report it, or list it in the coverage test's `_OMITTED_EVERYWHERE` or `_OMITTED` with the reason. A reported name that is not a parameter goes in `_DERIVED_PROPS`. The test fails until one of these is done.
 
 ## Embedded agent skills
