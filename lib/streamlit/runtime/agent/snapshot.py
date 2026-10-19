@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit.elements.lib import agent_spec
@@ -356,7 +357,8 @@ class _SnapshotBuilder:
                 element_id, value_schema=description.get("value_schema")
             )
             # As for elements, a trigger's value only means anything while set.
-            if action == "value" or value:
+            # An empty string is a fired payload. False is an unclicked button.
+            if action == "value" or (value is not None and value is not False):
                 result["value"] = value
         # The container is recorded after its body so a dialog's own state
         # stays outside the in-dialog window. Its action is then moved in
@@ -425,7 +427,8 @@ class _SnapshotBuilder:
                 options=options if isinstance(options, list) else None,
                 value_schema=description.get("value_schema"),
             )
-            if action == "value" or value:
+            # An empty string is a fired payload. False is an unclicked button.
+            if action == "value" or (value is not None and value is not False):
                 # A trigger's value only means anything while it is set, and it
                 # resets right after the run that observed it.
                 result["value"] = value
@@ -477,6 +480,13 @@ class _SnapshotBuilder:
         # `st.menu_button`'s, and the options of a widget that registers none
         # of its own. Not a limit for a widget that accepts new options.
         options = props.get("options")
+        if (
+            options is None
+            and command == "tabs"
+            and isinstance(props.get("tabs"), list)
+        ):
+            # Stateful tabs advertise the legal values as `tabs`, not `options`.
+            options = props["tabs"]
         if command == "feedback" and isinstance(options, str):
             # `st.feedback` names its option set, and its value is an index
             # into it. The description does not list those indexes; that stays
@@ -606,13 +616,20 @@ class _SnapshotBuilder:
                     # when the option itself is a tuple or list. A list-valued
                     # widget's schema is an array, so that list stays a list.
                     serialized = serialized[0] if len(serialized) == 1 else None
-                value = _keep_typed_text(value, serialized, options)
+                value = _keep_typed_text(
+                    value,
+                    serialized,
+                    options,
+                    _authored_options(metadata.serializer),
+                )
             except Exception:
+                # The stored object is not a value a request can send back.
                 _LOGGER.warning(
-                    "Could not serialize the value of %s; reporting it as stored.",
+                    "Could not serialize the value of %s; reporting null.",
                     element_id,
                     exc_info=True,
                 )
+                return None
 
         try:
             return json_encoding.to_json_value(value)
@@ -637,11 +654,25 @@ def _string_payload(serialized: Any) -> Any:
     return serialized
 
 
-def _keep_typed_text(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
+def _authored_options(serializer: Any) -> list[Any] | tuple[Any, ...] | None:
+    """The option objects the serializer was built with, when it has them."""
+    options = getattr(getattr(serializer, "__self__", None), "options", None)
+    if isinstance(options, (list, tuple)):
+        return options
+    return None
+
+
+def _keep_typed_text(
+    stored: Any,
+    serialized: Any,
+    options: list[Any] | None,
+    authored: list[Any] | tuple[Any, ...] | None = None,
+) -> Any:
     """Return the serialized value, but keep text a user typed.
 
     An ``accept_new_options`` widget runs ``format_func`` on that text, so
-    echoing the result back would reformat it on every round trip.
+    echoing the result back would reformat it on every round trip. Text that
+    is one of the authored options is still reported as its label.
     """
     if options is None:
         return serialized
@@ -655,18 +686,25 @@ def _keep_typed_text(stored: Any, serialized: Any, options: list[Any] | None) ->
             return label in options
         return label in allowed
 
+    def _report(item: Any, label: Any) -> Any:
+        # Typed text can format to a label without being that option.
+        if (
+            isinstance(item, str)
+            and authored is not None
+            and not any(item == option for option in authored)
+        ):
+            return item
+        if _is_option(label) or not isinstance(item, str):
+            return label
+        return item
+
     if (
         isinstance(stored, (list, tuple))
         and isinstance(serialized, list)
         and len(stored) == len(serialized)
     ):
-        return [
-            label if _is_option(label) or not isinstance(item, str) else item
-            for item, label in zip(stored, serialized, strict=True)
-        ]
-    if isinstance(stored, str) and not _is_option(serialized):
-        return stored
-    return serialized
+        return list(starmap(_report, zip(stored, serialized, strict=True)))
+    return _report(stored, serialized)
 
 
 def _public_key(element_id: str) -> str:
@@ -729,7 +767,9 @@ def build_snapshot(
 
     Trigger payloads are cleared in ``on_script_finished``, so a caller that
     wants a fired ``st.chat_input`` or ``st.menu_button`` value has to read
-    session state before that reset.
+    session state before that reset. ``page`` and ``pages`` come from the
+    run's ``new_session`` message; a later ``navigation`` message replaces
+    that page list. Pass those messages or the fields stay empty.
     """
     tree = merge_deltas(messages)
     builder = _SnapshotBuilder(session_state)

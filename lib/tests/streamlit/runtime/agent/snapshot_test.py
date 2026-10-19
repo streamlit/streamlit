@@ -597,6 +597,38 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             "United States"
         )
 
+        st.session_state.typed_city = "paris"
+        st.selectbox(
+            "Typed",
+            ["Paris"],
+            format_func=str.upper,
+            accept_new_options=True,
+            key="typed_city",
+        )
+        st.session_state.raw_city = "paris"
+        st.selectbox(
+            "Raw",
+            ["paris"],
+            format_func=str.upper,
+            accept_new_options=True,
+            key="raw_city",
+        )
+        st.session_state.mixed = ["paris", "Berlin"]
+        st.multiselect(
+            "Mixed",
+            ["Paris", "Berlin"],
+            format_func=str.upper,
+            accept_new_options=True,
+            key="mixed",
+        )
+        typed = self._build().document
+        assert _one_keyed(typed, "selectbox", "typed_city")["value"] == "paris"
+        assert _one_keyed(typed, "selectbox", "raw_city")["value"] == "PARIS"
+        assert _one_keyed(typed, "multiselect", "mixed")["value"] == [
+            "paris",
+            "BERLIN",
+        ]
+
     def test_widget_values_match_their_value_schema(self) -> None:
         """Every reported value is null or the JSON type its schema names."""
         st.checkbox("Check", key="check")
@@ -670,7 +702,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         """No session, a missing key, and a failing serializer still build."""
         st.selectbox("Pick", ["a", "b"], key="pick")
         missing = _describe(
-            [0, 1],
+            [0, 2],
             {
                 "type": "text_input",
                 "key": "$$ID-missing-None",
@@ -696,8 +728,23 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         metadata = state.get_widget_metadata(element_id)
         assert metadata is not None
         state._set_widget_metadata(replace(metadata, serializer=_fail))
+        st.selectbox(
+            "Num",
+            [1, 12],
+            format_func=str,
+            key="num",
+        )
+        num_id = next(
+            widget_id
+            for widget_id in state._new_widget_state.widget_metadata
+            if _public_key(widget_id) == "num"
+        )
+        num_meta = state.get_widget_metadata(num_id)
+        assert num_meta is not None
+        state._set_widget_metadata(replace(num_meta, serializer=_fail))
         document = self._build(missing).document
-        assert _one_keyed(document, "selectbox", "pick")["value"] == "a"
+        assert _one_keyed(document, "selectbox", "pick")["value"] is None
+        assert _one_keyed(document, "selectbox", "num")["value"] is None
         with patch(
             "streamlit.runtime.agent.snapshot.json_encoding.to_json_value",
             side_effect=TypeError("unencodable"),
@@ -831,6 +878,14 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert chat["value"] == "hello there"
         assert "UploadedFile" not in json.dumps(chat)
 
+    def test_empty_chat_text_is_still_a_fired_value(self) -> None:
+        """A file-only chat submission is an empty string, not an unset trigger."""
+        st.chat_input("Say", accept_file=True, key="chat")
+        self._set_stored("chat", ChatInputValue(text="", _include_files=True))
+
+        document = self._build().document
+        assert _one_keyed(document, "chat_input", "chat")["value"] == ""
+
     def test_container_actions_precede_their_children(self) -> None:
         """A stateful container is listed before the actions inside it."""
         one, _two = st.tabs(["One", "Two"], on_change="rerun", key="tabs")
@@ -839,6 +894,16 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         document = self._build().document
         keys = [entry["key"] for entry in document["actions"]]
         assert keys.index("tabs") < keys.index("inside")
+        assert _state(self._build(), "tabs", "tabs").options == ["One", "Two"]
+
+    def test_a_form_and_a_widget_may_share_an_authored_key(self) -> None:
+        """Both nodes report the authored key. The request validator tells them apart."""
+        with st.form("name"):
+            st.text_input("Name", key="name")
+
+        document = self._build().document
+        named = [node for node in _walk(document["tree"]) if node.get("key") == "name"]
+        assert [node["type"] for node in named] == ["form", "text_input"]
 
     def test_pages_come_from_navigation_or_the_single_script(self) -> None:
         """A single script is one page. Navigation replaces the session list."""
