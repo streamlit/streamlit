@@ -192,14 +192,18 @@ function TimeInput({
   // An ordinary rerun leaves a blocked required clear empty. A session-state
   // assignment sends setValue even when the time is unchanged, and that
   // assignment replaces the empty display.
+  // On this render the hook still holds the previous commit. The proto value
+  // is what session state just wrote, so a different time or None must not
+  // be painted as the old time before the hook catches up.
   const [prevValue, setPrevValue] = useState(value)
+  const incomingValue = getCurrStateFromProto(element)
   if (
     element.setValue &&
-    prevValue === value &&
+    prevValue === incomingValue &&
     dirty &&
     isNullOrUndefined(displayValue)
   ) {
-    setDisplayValue(value)
+    setDisplayValue(incomingValue)
     setDirty(false)
     setHasRequiredError(false)
     setValidationError(null)

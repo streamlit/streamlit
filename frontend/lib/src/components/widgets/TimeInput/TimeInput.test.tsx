@@ -2949,6 +2949,48 @@ describe("required", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
+  it.each([
+    ["a different time", "09:30", "09", "30"],
+    ["None", null, "HH", "mm"],
+  ] as const)(
+    "applies session state set to %s over a dirty empty required field",
+    async (_label, nextValue, hourText, minuteText) => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({
+        value: "12:45",
+        setValue: true,
+      })
+      const { rerender } = render(<TimeInput {...props} />)
+
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await clearAllSegments(user)
+      await user.click(document.body)
+
+      expect(hourSegment).toHaveTextContent("HH")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <TimeInput
+          {...props}
+          element={TimeInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: nextValue,
+            required: true,
+            default: undefined,
+          })}
+        />
+      )
+
+      expect(hourSegment).toHaveTextContent(hourText)
+      expect(minuteSegment).toHaveTextContent(minuteText)
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    }
+  )
+
   it("does not submit a form on Enter after clearing a required field", async () => {
     const user = userEvent.setup()
     const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
