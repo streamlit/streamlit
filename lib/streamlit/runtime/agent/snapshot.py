@@ -682,13 +682,23 @@ def _option_equals(item: Any, option: Any) -> bool:
     """Whether ``item`` is ``option``.
 
     Equality on an array-like option returns another array, and using that
-    result as a condition raises. A non-boolean result is not a match.
+    result as a condition raises. A scalar result, including a NumPy ``bool_``,
+    is a match when it is true. An array is not.
     """
     try:
         result = item == option
     except Exception:
         return False
-    return isinstance(result, bool) and result
+    if isinstance(result, bool):
+        return result
+    # NumPy's scalar bool is not a builtin bool. A 0-d result has one truth
+    # value; an array or a Series does not, and ``bool()`` on it raises.
+    if getattr(result, "ndim", None) != 0:
+        return False
+    try:
+        return bool(result)
+    except Exception:
+        return False
 
 
 def _keep_typed_text(

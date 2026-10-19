@@ -644,10 +644,41 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
                 raise ValueError("ambiguous")
 
         st.selectbox("Comparable", ["a", _Ambiguous()], index=0, key="comparable")
+
+        import numpy as np
+
+        numpy_city = np.str_("Paris")
+        st.session_state.numpy_city = numpy_city
+        st.selectbox(
+            "Numpy",
+            [numpy_city],
+            format_func=str.upper,
+            accept_new_options=True,
+            key="numpy_city",
+        )
+
+        class _ScalarEqual:
+            """Equality with the typed text returns a NumPy scalar bool."""
+
+            __hash__ = None
+
+            def __eq__(self, other: object) -> Any:
+                return np.bool_(other == "scalar")
+
+        st.session_state.scalar_city = "scalar"
+        st.selectbox(
+            "Scalar",
+            [_ScalarEqual()],
+            format_func=lambda _option: "SCALAR",
+            accept_new_options=True,
+            key="scalar_city",
+        )
         typed = self._build().document
         assert _one_keyed(typed, "selectbox", "matched_city")["value"] == "PARIS"
         assert _one_keyed(typed, "selectbox", "typed_city")["value"] == "paris"
         assert _one_keyed(typed, "selectbox", "comparable")["value"] == "a"
+        assert _one_keyed(typed, "selectbox", "numpy_city")["value"] == "PARIS"
+        assert _one_keyed(typed, "selectbox", "scalar_city")["value"] == "SCALAR"
         assert _one_keyed(typed, "selectbox", "raw_city")["value"] == "PARIS"
         assert _one_keyed(typed, "multiselect", "mixed")["value"] == [
             "paris",
