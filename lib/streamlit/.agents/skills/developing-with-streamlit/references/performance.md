@@ -331,7 +331,7 @@ Use client-side validation and limits whenever the widget already supports them.
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
 - `st.text_area` and `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
-- `st.date_input` and `st.datetime_input`: `min_value` and `max_value`. `st.datetime_input` also takes `step`.
+- `st.date_input` and `st.datetime_input`: `min_value`, `max_value`, and `required`. `st.datetime_input` also takes `step`.
 - `st.data_editor`: the same kinds of limits via `st.column_config`.
 - `st.file_uploader`: `type` rejects a disallowed file before upload.
 

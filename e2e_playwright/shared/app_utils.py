@@ -434,6 +434,30 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         date_input_field.page.keyboard.press("Escape")
 
 
+def clear_date_segments(date_input_field: Locator) -> None:
+    """Backspace every segment of a date or datetime field, then press Escape.
+
+    Escape closes the popover and tries to commit the empty field: optional
+    fields commit it, required fields block it, and fields with a non-empty
+    default revert.
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The segmented field container (``stDateInputField`` or
+        ``stDateTimeInputField``).
+    """
+    page = date_input_field.page
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i in range(spinbuttons.count()):
+        spinbuttons.nth(i).click()
+        # Four presses cover the year segment; extra presses are harmless
+        # after a segment is empty.
+        for _ in range(4):
+            page.keyboard.press("Backspace")
+    page.keyboard.press("Escape")
+
+
 def paste_into(locator: Locator, text: str) -> None:
     """Dispatch a synthetic ``paste`` event carrying ``text`` on the given element.
 
