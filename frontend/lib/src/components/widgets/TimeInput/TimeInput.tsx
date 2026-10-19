@@ -771,7 +771,12 @@ function TimeInput({
   if (hasRequiredError && requiredError === null) {
     setHasRequiredError(false)
   }
-  const displayedError = requiredError ?? validationError
+  // A paste or format error describes the text on screen. Prefer it over
+  // a required message, which only sees the empty display value and would
+  // hide the out-of-range error. The required flag stays set, so that
+  // message returns when the paste error is dismissed and the field is
+  // still empty.
+  const displayedError = validationError ?? requiredError
   let pasteErrorAlert: string | null = null
   if (validationError) {
     if (pasteOverride) {
@@ -781,9 +786,10 @@ function TimeInput({
       pasteErrorAlert = `Error: ${validationError}`
     }
   }
-  const errorAlertText = requiredError ?? pasteErrorAlert
-  const errorTooltipSource =
-    requiredError ?? (validationError ? `**Error**: ${validationError}` : null)
+  const errorAlertText = pasteErrorAlert ?? requiredError
+  const errorTooltipSource = validationError
+    ? `**Error**: ${validationError}`
+    : requiredError
 
   return (
     <div className="stTimeInput" data-testid="stTimeInput" ref={elementRef}>

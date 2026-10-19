@@ -2969,4 +2969,37 @@ describe("required", () => {
       "This field is required."
     )
   })
+
+  it("shows an out-of-range paste over a required error and restores it when dismissed", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr } = createFormWidgetMgr()
+    const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+    render(<TimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    expect(hourSegment).toHaveTextContent("25")
+    expect(minuteSegment).toHaveTextContent("00")
+    const pasteAlert = screen.getByRole("alert")
+    expect(pasteAlert).toHaveTextContent("Time is out of range")
+    expect(pasteAlert).not.toHaveTextContent("This field is required.")
+    expectSegmentAttribute("aria-invalid", "true")
+
+    await user.keyboard("{ArrowUp}")
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+  })
 })

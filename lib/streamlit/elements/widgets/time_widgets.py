@@ -1218,6 +1218,7 @@ class TimeWidgetsMixin:
                 format=time_input_proto.format,
                 help=time_input_proto.help or None,
                 disabled=disabled,
+                required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),
