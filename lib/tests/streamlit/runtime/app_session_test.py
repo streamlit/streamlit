@@ -649,6 +649,25 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
         session.request_rerun.assert_called_once_with(session._client_state)
 
+    def test_schedules_file_change_message_when_run_on_save_disabled(self):
+        session = _create_test_session()
+        session._run_on_save = False
+        session._call_soon_on_event_loop = MagicMock()
+        session._enqueue_forward_msg = MagicMock()
+
+        session._on_source_file_changed()
+
+        session._script_cache.clear.assert_called_once()
+        session._call_soon_on_event_loop.assert_called_once()
+        session._enqueue_forward_msg.assert_not_called()
+
+        scheduled_callback = session._call_soon_on_event_loop.call_args.args[0]
+        scheduled_callback()
+
+        session._enqueue_forward_msg.assert_called_once()
+        msg = session._enqueue_forward_msg.call_args.args[0]
+        assert msg.session_event.script_changed_on_disk is True
+
     @patch(
         "streamlit.runtime.app_session.AppSession._should_rerun_on_file_change",
         MagicMock(return_value=False),
