@@ -425,6 +425,7 @@ class Element(ABC):
     type: str = field(repr=False)
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
+    # Writable. Subclasses must not narrow this type.
     key: str | None
 
     @abstractmethod
@@ -1060,7 +1061,6 @@ class Code(Element):
 
     language: str
     show_line_numbers: bool
-    key: None
 
     def __init__(self, proto: CodeProto, root: ElementTree) -> None:
         self.proto = proto
@@ -1269,7 +1269,6 @@ class HeadingBase(Element, ABC):
     tag: str
     anchor: str | None
     hide_anchor: bool
-    key: None
 
     def __init__(self, proto: HeadingProto, root: ElementTree, type_: str) -> None:
         self.proto = proto
@@ -1310,7 +1309,6 @@ class Image(Element):
     """A representation of ``st.image``."""
 
     proto: ImageListProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: ImageListProto, root: ElementTree) -> None:
         self.proto = proto
@@ -1334,7 +1332,6 @@ class Help(Element):
     """A representation of ``st.help``."""
 
     proto: HelpProto = field(repr=False)
-    key: None
     name: str
 
     def __init__(self, proto: HelpProto, root: ElementTree) -> None:
@@ -1373,7 +1370,6 @@ class Html(Element):
     """A representation of ``st.html``."""
 
     proto: HtmlProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: HtmlProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1391,7 +1387,6 @@ class Progress(Element):
     """A representation of ``st.progress``."""
 
     proto: ProgressProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: ProgressProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1453,7 +1448,6 @@ class PageLink(Element):
     """
 
     proto: PageLinkProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: PageLinkProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1498,7 +1492,6 @@ class Markdown(Element):
     proto: MarkdownProto = field(repr=False)
 
     allow_html: bool
-    key: None
 
     def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         self.proto = proto
@@ -1542,7 +1535,6 @@ class Space(Element):
     """A representation of ``st.space``."""
 
     proto: SpaceProto = field(repr=False)
-    key: None
     size: SpaceSize | None
 
     def __init__(
@@ -2979,7 +2971,7 @@ class Table(Element):
 class Text(Element):
     proto: TextProto = field(repr=False)
 
-    key: None = None
+    key: str | None = None
 
     def __init__(self, proto: TextProto, root: ElementTree) -> None:
         self.proto = proto
