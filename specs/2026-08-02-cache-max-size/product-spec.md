@@ -13,9 +13,10 @@ combinations can slowly grow the cache until the process runs out of memory. Thi
 proposes two complementary additions for `st.cache_data`: a per-function `max_size`
 parameter for developers who want explicit control, and a process-wide default memory
 budget (via config) that catches the far more common case of a developer who never set
-any limit at all. Both evict least-recently-used entries by their serialized byte size —
-which for `st.cache_data` is exact and cheap because entries are already stored as pickled
-bytes. `st.cache_resource` is intentionally out of scope (see
+any limit at all. Both bound the in-memory cache (`persist="disk"` storage stays unbounded)
+and evict least-recently-used entries by their serialized byte size — which for
+`st.cache_data` is exact and cheap because entries are already stored as pickled bytes.
+`st.cache_resource` is intentionally out of scope (see
 [Why `st.cache_resource` is out of scope](#why-stcache_resource-is-out-of-scope)).
 
 ## Problem
@@ -88,10 +89,11 @@ st.cache_data(
 
 `max_size` accepts either an integer number of **bytes**, or a human-readable **string**
 with a unit (`"500MB"`, `"1.5GB"`, `"200KB"`) — mirroring how `ttl` already accepts either
-a number of seconds or a string like `"1h30m"`. When the cache's total serialized size
-would exceed `max_size`, the least-recently-used entries are evicted (same LRU order as
-`max_entries`) until it fits. A single result larger than `max_size` is still cached, and
-Streamlit logs a warning (see [Behavior](#behavior)).
+a number of seconds or a string like `"1h30m"`. Units are case-insensitive and binary:
+`"1KB"` is 1024 bytes, and `KiB`/`MiB`/`GiB`/`TiB` are accepted as aliases. When the cache's
+total serialized size would exceed `max_size`, the least-recently-used entries are evicted
+(same LRU order as `max_entries`) until it fits. A single result larger than `max_size` is
+still cached, and Streamlit logs a warning (see [Behavior](#behavior)).
 
 ```python
 import streamlit as st
@@ -118,12 +120,11 @@ def transform(key: str) -> pd.DataFrame: ...
 ```
 
 **What "size" means:** For `st.cache_data`, entries are stored as **pickled bytes**, so
-`max_size` bounds the *total serialized size* of the cache. This is an exact, cheap,
-monotonic measure (Streamlit already records `len(pickled_bytes)` per entry for the
-`cache_memory_bytes` metric). It is **not** the same as live heap usage or process RSS —
-an unpickled dataframe occupies more memory than its pickle — so `max_size` is a
-predictable proxy for cache memory, not a hard cap on the app's total RAM. This trade-off
-is called out explicitly in the docstring.
+`max_size` bounds the *total serialized size* of the cache. `len(pickled_bytes)` is exact
+and cheap (the `cache_memory_bytes` metric already sums those lengths), but it is **not**
+the same as live heap usage or process RSS — an unpickled dataframe occupies more memory
+than its pickle — so `max_size` is a predictable proxy for cache memory, not a hard cap on
+the app's total RAM. This trade-off is called out explicitly in the docstring.
 
 **Unit options for a bare number.** The unit of an unsuffixed `max_size` is a lasting public
 choice, so the alternatives are recorded here:
@@ -156,7 +157,7 @@ combined serialized size of **all** `st.cache_data` in-memory caches:
 ```toml
 # .streamlit/config.toml
 [server]
-maxCacheDataSize = "2gb"   # applies across all @st.cache_data functions
+maxCacheDataSize = "4gb"   # applies across all @st.cache_data functions
 ```
 
 The option lives under `[server]` next to the other size caps (`server.maxUploadSize`,
@@ -166,8 +167,9 @@ reads as if it also covered `st.cache_resource`.
 
 When the combined size of all `st.cache_data` caches exceeds this budget, Streamlit evicts
 globally least-recently-used entries (across functions) until it fits. A per-function
-`max_size` is enforced *in addition to* the global budget (the function cap can only make a
-cache smaller, never exceed the global budget).
+`max_size` is a second ceiling: it can only shrink that function's cache and does not raise
+the process-wide budget. A single stored entry may still exceed either limit (see
+[Behavior](#behavior)).
 
 Because eviction only ever drops recomputable cached data, an app that stays under the
 budget sees **no behavior change**, and an app whose cache would otherwise grow without
@@ -175,16 +177,18 @@ bound degrades gracefully (slower, because of recomputation). This is the core r
 default here is far safer than, say, a default `ttl`. The budget reduces out-of-memory risk
 from unbounded cache growth but does not guarantee the process stays up: it counts
 serialized values only (not unpickled copies or cache metadata), and a single entry larger
-than the budget is still stored.
+than the budget is still stored. On a host whose memory limit is close to or below the 4 GB
+default, the process can run out of memory before the budget evicts anything, so such
+deployments should set a smaller `maxCacheDataSize`.
 
-`maxCacheDataSize` defaults to `"2gb"`. The alternatives considered are documented in
+`maxCacheDataSize` defaults to `"4gb"`. The alternatives considered are documented in
 [Default-value options](#default-value-options-for-the-global-budget) below.
 
 ### Behavior
 
 - **No explicit `max_size`** → the cache is bounded only by the global budget (and by
-  `max_entries`/`ttl` if set). Unbounded-by-anything behavior — exactly as today — requires
-  *both* `max_size=None` and a disabled global budget (`0`).
+  `max_entries`/`ttl` if set). To keep today's unbounded behavior, leave `max_size` unset
+  and set `server.maxCacheDataSize = "0"` (and leave `max_entries` and `ttl` unset).
 - **Eviction order**: least-recently-used first, identical to `max_entries` (recency is
   refreshed on both read and write).
 - **A single entry larger than the limit**: A write is never rejected. If the entry alone
@@ -192,11 +196,17 @@ than the budget is still stored.
   exceeded — eviction never drops the entry currently being written. Streamlit logs a
   warning once per cache when a stored entry exceeds the configured `max_size` or the
   global budget, so the developer learns the limit is smaller than a single result.
-- **Global eviction can empty a function's cache**: The per-function `max_size` keeps at
-  least one entry per function, but the process-wide budget evicts the globally
-  least-recently-used entries across *all* functions and can therefore shrink an individual
-  function's cache to zero (each evicted entry is simply recomputed as a normal miss on the
-  next access). The only entry it never evicts is the one a write is currently inserting.
+- **Global-budget eviction warning**: The first time the global budget evicts an entry,
+  Streamlit logs a one-time warning per process, for example: *"st.cache_data reached its
+  4.0 GB memory budget (server.maxCacheDataSize) and is evicting least-recently-used
+  entries, which are recomputed on their next use. Set server.maxCacheDataSize to change
+  the budget, or to "0" to disable it."* Both warnings go to the console log only, because
+  an in-app message would appear in every app that reaches the default budget.
+- **Global eviction can empty a function's cache**: Right after a write, that function's
+  cache holds at least the entry just written. The process-wide budget, however, evicts the
+  globally least-recently-used entries across *all* functions and can later shrink an
+  individual function's cache to zero (each evicted entry is simply recomputed as a normal
+  miss on the next access).
 - **`max_size` + `max_entries` together**: both are enforced; a write evicts until *both*
   constraints are satisfied.
 - **Interaction with `persist="disk"`**: `max_size` bounds the in-memory layer (the LRU
@@ -213,13 +223,15 @@ than the budget is still stored.
   intentional — the budget bounds *total* process memory, so under pressure a busy session
   can evict another session's least-recently-used entries. The per-function `max_size` still
   applies independently within each function's cache regardless of scope.
-- **Validation**: A `max_size` that is a `bool`, parses to `<= 0`, or uses an unrecognized
-  unit raises `StreamlitValueError` at decoration time (fail fast, fail helpfully).
+- **Validation**: Invalid `max_size` values fail at decoration time (fail fast, fail
+  helpfully). A `bool` or a `float` raises `StreamlitInvalidParameterTypeError`; pass an
+  `int` byte count or a unit string such as `"1.5GB"` instead. A value that parses to
+  `<= 0` or uses an unrecognized unit raises `StreamlitValueError`.
 
 ### Default-value options for the global budget
 
 The parameter (Part 1) is uncontroversial and low-risk. The main judgment call was what
-`maxCacheDataSize` should default to; this proposal selects 2 GB. Alternatives are ordered
+`maxCacheDataSize` should default to; this proposal selects 4 GB. Alternatives are ordered
 from safest-but-least-effective to most-protective:
 
 **Option A — default off (`0` / unlimited), opt-in only.**
@@ -227,11 +239,11 @@ from safest-but-least-effective to most-protective:
 - Cons: Doesn't solve the majority problem (developers who never set anything still OOM).
   Effectively ships only Part 1.
 
-**Option B — generous fixed default (`"2gb"` of serialized data). ✅ RECOMMENDED**
-- Pros: Normal apps (well under 2 GB of *serialized* cache) see no change; runaway caches
+**Option B — generous fixed default (`"4gb"` of serialized data). ✅ RECOMMENDED**
+- Pros: Normal apps (well under 4 GB of *serialized* cache) see no change; runaway caches
   evict LRU instead of crashing. Simple, predictable, no new dependency, easy to document
   and override. Directly addresses the crash-instead-of-degrade use case.
-- Cons: It's a behavior change — an app that legitimately relied on caching >2 GB of
+- Cons: It's a behavior change — an app that legitimately relied on caching >4 GB of
   serialized data now recomputes evicted entries (slower, but not broken). The value is a
   heuristic, not tailored to the machine. Both are mitigated by documenting the default,
   the one-time eviction warning (Option D), and the config override.
@@ -254,7 +266,7 @@ from safest-but-least-effective to most-protective:
 **Recommendation:** Ship **Part 1 (`max_size`) unconditionally**, and adopt **Option B**
 for the default global budget, combined with the Option D one-time warning (so developers
 who hit the budget are told why entries are being evicted and how to tune it). Start with a
-conservative, clearly documented 2 GB default to reduce the chance of disrupting apps that
+conservative, clearly documented 4 GB default to reduce the chance of disrupting apps that
 legitimately cache large amounts of data, and revisit it based on eviction metrics (see the
 tech spec's [Metrics](./tech-spec.md#metrics)) and customer feedback. The release notes call
 out the new default and how to restore unbounded caching (`"0"`). This gives explicit
@@ -317,7 +329,7 @@ can be revisited if there's clear demand.
 
 | Item                       | ✅ or comment                                                                                                                                                              |
 |----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ✅ Pure Python, no new dependency. SiS and Community Cloud use Streamlit's built-in cache storage, so `max_size` and the `"2gb"` global budget behave the same as locally. |
+| Works on SiS, Cloud, etc?  | ✅ Pure Python, no new dependency. SiS and Community Cloud use Streamlit's built-in cache storage, so `max_size` and the `"4gb"` global budget behave the same as locally. |
 | No breaking API changes    | ✅ `max_size` is a new optional parameter defaulting to `None`. ⚠️ A non-zero global default (Option B/C) is a behavior change — but only evicts recomputable data, never errors. Option A avoids even that. |
 | No new dependencies        | ✅ Byte sizes come from `len(pickled_bytes)`. Option C (memory-fraction default) is the only variant that would need memory detection; the recommendation (Option B) avoids it. |
 | Metrics collected          | ✅ `cache_memory_bytes` already reports per-cache serialized size, and the existing `cache_data` command metrics record `max_size` usage. Global-budget eviction counts need a new counter (tech spec). |
