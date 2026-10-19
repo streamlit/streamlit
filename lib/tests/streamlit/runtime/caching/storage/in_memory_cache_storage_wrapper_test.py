@@ -261,7 +261,9 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.set("first", b"large")
             wrapped_storage.set("second", b"larger")
 
-        assert wrapped_storage.get("second") == b"larger"
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("first")
+        assert wrapped_storage._read_from_mem_cache("second") == b"larger"
         warning.assert_called_once_with(
             "A cached value from %s is %d bytes, which exceeds its max_size of "
             "%d bytes. Streamlit keeps it in memory until the next new value "

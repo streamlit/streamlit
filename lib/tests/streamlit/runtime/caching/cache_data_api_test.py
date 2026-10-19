@@ -343,6 +343,36 @@ If you think this is actually a Streamlit bug, please
         assert second is not first
         assert first.is_active is False
 
+    def test_max_size_is_propagated_to_custom_storage_manager(self) -> None:
+        """Custom storage managers receive the parsed limit during validation and use."""
+        manager = RecordingMaxSizeStorageManager()
+        Runtime._instance.cache_storage_manager = manager
+        executions = 0
+
+        @st.cache_data(max_entries=7, max_size="2KiB")
+        def foo() -> int:
+            nonlocal executions
+            executions += 1
+            return executions
+
+        assert foo() == 1
+        assert foo() == 1
+
+        assert len(manager.checked_contexts) == 1
+        checked_context = manager.checked_contexts[0]
+        assert checked_context.function_key == "DUMMY_KEY"
+        assert checked_context.function_display_name == "foo"
+        assert checked_context.max_entries == 7
+        assert checked_context.max_size_bytes == 2048
+
+        assert len(manager.created_contexts) == 1
+        created_context = manager.created_contexts[0]
+        assert created_context.function_key != "DUMMY_KEY"
+        assert created_context.function_display_name.endswith(".foo")
+        assert created_context.max_entries == 7
+        assert created_context.max_size_bytes == 2048
+        assert executions == 1
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -976,6 +1006,24 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class RecordingMaxSizeStorageManager(CacheStorageManager):
+    """Storage manager that records contexts before using the built-in wrapper."""
+
+    def __init__(self) -> None:
+        self.checked_contexts: list[CacheStorageContext] = []
+        self.created_contexts: list[CacheStorageContext] = []
+
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        self.created_contexts.append(context)
+        return MemoryCacheStorageManager().create(context)
+
+    def clear_all(self) -> None:
+        pass
+
+    def check_context(self, context: CacheStorageContext) -> None:
+        self.checked_contexts.append(context)
 
 
 class CacheDataBackgroundRefreshTest(unittest.TestCase):

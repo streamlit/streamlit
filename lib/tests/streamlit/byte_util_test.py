@@ -54,9 +54,24 @@ def test_private_parser_returns_only_byte_count() -> None:
     assert _parse_byte_size("1.5KiB") == 1536
 
 
-def test_cache_data_max_size_to_bytes_accepts_numpy_integer() -> None:
-    """NumPy integers are converted to built-in integer byte counts."""
-    assert cache_data_max_size_to_bytes(np.int64(1024)) == 1024  # type: ignore[arg-type]
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(np.int64(1024), 1024), (np.uint64(2048), 2048)],
+)
+def test_cache_data_max_size_to_bytes_accepts_integral_types(
+    value: object, expected: int
+) -> None:
+    """Non-bool Integral values are converted to built-in byte counts."""
+    assert cache_data_max_size_to_bytes(value) == expected  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("value", [np.int64(0), np.int64(-1)])
+def test_cache_data_max_size_to_bytes_rejects_nonpositive_integral_types(
+    value: object,
+) -> None:
+    """Non-builtin Integral values still require a positive byte count."""
+    with pytest.raises(StreamlitValueError, match="integer number of bytes"):
+        cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

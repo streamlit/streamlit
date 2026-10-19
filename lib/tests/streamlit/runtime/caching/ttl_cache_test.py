@@ -539,7 +539,7 @@ def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
     """Byte and entry-count limits are enforced together."""
     cache = TTLCache[str, bytes](
         maxsize=2,
-        max_total_size=100,
+        max_total_size=3,
         ttl=100,
         timer=_FakeClock(),
         getsizeof=len,
@@ -551,6 +551,15 @@ def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
     assert set(cache) == {"b", "c"}
     assert cache.currsize == 2
     assert cache.curr_total_size == 2
+
+    # Replacing an existing key doesn't exceed the entry limit, but its larger
+    # value exceeds the byte limit and therefore evicts the other LRU entry.
+    cache["c"] = b"ccc"
+
+    assert set(cache) == {"c"}
+    assert cache["c"] == b"ccc"
+    assert cache.currsize == 1
+    assert cache.curr_total_size == 3
 
 
 def test_byte_sizing_retains_one_oversized_entry() -> None:
@@ -592,6 +601,9 @@ def test_byte_size_is_updated_by_all_removal_paths() -> None:
     clock.now = 10
     assert cache.currsize == 0
     assert cache.curr_total_size == 0
+    assert cache._curr_total_size == 1
+    assert cache.expire() == [("a", b"a")]
+    assert cache._curr_total_size == 0
 
     cache["c"] = b"ccc"
     del cache["c"]
