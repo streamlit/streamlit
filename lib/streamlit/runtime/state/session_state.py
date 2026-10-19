@@ -1525,12 +1525,17 @@ class SessionState:
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
 
     def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
-        """Return the metadata registered for a widget id this run, if any.
-
-        The agent snapshot reads a widget's serializer and ``bind`` from here
-        instead of from the widget-state dict.
-        """
+        """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
+
+    def get_widget_value(self, widget_id: str) -> Any:
+        """Return the base value retained for a widget id.
+
+        Raises KeyError when no value is stored. A presenter is not applied.
+        """
+        return self._getitem(
+            widget_id, self._key_id_mapper.id_key_mapping.get(widget_id)
+        )
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""

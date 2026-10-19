@@ -91,11 +91,17 @@ class _Node:
 
 
 def merge_deltas(messages: list[ForwardMsg]) -> _Node:
-    """Merge a run's deltas into a tree of the four root containers.
+    """Merge one run's deltas into a tree of the four root containers.
 
-    Mirrors the frontend: walk ``delta_path``, creating placeholder containers
-    for positions not claimed yet, and write the node at the final index. A
-    block arriving where a placeholder already collected children adopts them.
+    ``messages`` are the forward messages for the page as the frontend would
+    apply them for that run, in order. This does not drop nodes a later
+    fragment run would clear; the caller passes the messages that already
+    make up the page.
+
+    The walk matches the frontend: follow ``delta_path``, creating placeholder
+    containers for positions not claimed yet, and write the node at the final
+    index. A block adopts children already collected at its position only when
+    it is the same container, or a placeholder whose own block has not arrived.
     """
     root = _Node(
         root_name="root",
@@ -297,6 +303,7 @@ class _SnapshotBuilder:
         # Without this, `actions` would advertise children that the container's
         # own `support` denies, and the document would contradict itself.
         is_dialog = node.description.get("type") == "dialog"
+        actions_before_children = len(self.actions)
         if is_dialog:
             self._in_dialog = True
         children = self.serialize_children(node, support)
@@ -349,9 +356,15 @@ class _SnapshotBuilder:
             # As for elements, a trigger's value only means anything while set.
             if action == "value" or value:
                 result["value"] = value
+        # The container is recorded after its body so a dialog's own state
+        # stays outside the in-dialog window. Its action is then moved in
+        # front of the children's, so `actions` follows tree order.
+        before_record = len(self.actions)
         self._record_element_state(
             description, inherited_support, None, node.fragment_id
         )
+        if len(self.actions) == before_record + 1:
+            self.actions.insert(actions_before_children, self.actions.pop())
 
         result["children"] = children
         return [result]
@@ -463,7 +476,8 @@ class _SnapshotBuilder:
         options = props.get("options")
         if description["type"] == "feedback" and isinstance(options, str):
             # `st.feedback` names its option set, and its value is an index
-            # into it.
+            # into it. The description does not list those indexes; that stays
+            # with the command's declaration.
             from streamlit.elements.widgets.feedback import _get_num_options
 
             count = _get_num_options(cast("Any", options))
@@ -558,9 +572,13 @@ class _SnapshotBuilder:
         if self._session_state is None:
             return None
         try:
-            value = self._session_state[element_id]
-        except Exception:
+            # The base stored value, not a presenter view of it.
+            value = self._session_state.get_widget_value(element_id)
+        except KeyError:
             return None
+        if type(value).__name__ == "ChatInputValue":
+            # Files and audio stay with the upload. The schema is the text.
+            value = getattr(value, "text", None)
 
         metadata = self._session_state.get_widget_metadata(element_id)
         if options is None and metadata is not None:
@@ -573,7 +591,7 @@ class _SnapshotBuilder:
             )
         ):
             try:
-                serialized = metadata.serializer(value)
+                serialized = _string_payload(metadata.serializer(value))
                 if (
                     isinstance(serialized, list)
                     and (value_schema or {}).get("type") != "array"
@@ -582,9 +600,9 @@ class _SnapshotBuilder:
                     # when the option itself is a tuple or list. A list-valued
                     # widget's schema is an array, so that list stays a list.
                     serialized = serialized[0] if len(serialized) == 1 else None
-                value = _keep_typed(value, serialized, options)
+                value = _keep_typed_text(value, serialized, options)
             except Exception:
-                _LOGGER.debug(
+                _LOGGER.warning(
                     "Could not serialize the value of %s; reporting it as stored.",
                     element_id,
                     exc_info=True,
@@ -593,7 +611,7 @@ class _SnapshotBuilder:
         try:
             return json_encoding.to_json_value(value)
         except Exception:
-            _LOGGER.debug(
+            _LOGGER.warning(
                 "Could not encode the value of %s.",
                 element_id,
                 exc_info=True,
@@ -601,8 +619,24 @@ class _SnapshotBuilder:
             return None
 
 
-def _keep_typed(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
-    """The serialized value, except where it formats text that is no option."""
+def _string_payload(serialized: Any) -> Any:
+    """The string a trigger proto carries, or ``serialized`` unchanged.
+
+    ``st.menu_button`` and ``st.chat_input`` serialize to a protobuf whose
+    ``data`` field is the text a request sends. The proto itself is not JSON.
+    """
+    data = getattr(serialized, "data", None)
+    if isinstance(data, str) and hasattr(serialized, "HasField"):
+        return data
+    return serialized
+
+
+def _keep_typed_text(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
+    """Return the serialized value, but keep text a user typed.
+
+    An ``accept_new_options`` widget runs ``format_func`` on that text, so
+    echoing the result back would reformat it on every round trip.
+    """
     if options is None:
         return serialized
     try:
@@ -691,10 +725,10 @@ def build_snapshot(
     children = builder.serialize_children(tree)
 
     new_session = _last_message(messages, "new_session")
-    compile_error = any(
-        msg.WhichOneof("type") == "script_finished"
-        and msg.script_finished == ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-        for msg in messages
+    finished = _last_message(messages, "script_finished")
+    compile_error = (
+        finished is not None
+        and finished.script_finished == ForwardMsg.FINISHED_WITH_COMPILE_ERROR
     )
     if compile_error:
         _add_compile_error(children, messages)
@@ -749,29 +783,54 @@ def _add_compile_error(
     element, so it never reaches the tree. Without it, a client that edited a
     script into a syntax error would see an empty app and no reason why.
     """
-    event = _last_message(messages, "session_event")
-    if event is None or not event.session_event.HasField(
-        "script_compilation_exception"
-    ):
+    exception = _compilation_exception(messages)
+    if exception is None:
         return
-    exception = event.session_event.script_compilation_exception
     main = next((child for child in children if child.get("type") == "main"), None)
     if main is None:  # pragma: no cover - merge_deltas always emits main
         return
-    props: dict[str, Any] = {
-        "type": exception.type or None,
-        "message": exception.message or None,
-        "stack_trace": list(exception.stack_trace) or None,
-        "uncaught": True,
-    }
     main.setdefault("children", []).append(
-        {
-            "type": "exception",
-            "props": {
-                name: value for name, value in props.items() if value is not None
-            },
-        }
+        {"type": "exception", "props": _redacted_compile_props(exception)}
     )
+
+
+def _compilation_exception(messages: list[ForwardMsg]) -> Any:
+    """The latest compile-error exception in ``messages``, if one was sent.
+
+    ``script_finished`` can precede the session event, and a later event such
+    as ``script_changed_on_disk`` must not hide the compile error.
+    """
+    for msg in reversed(messages):
+        if msg.WhichOneof("type") != "session_event":
+            continue
+        if msg.session_event.HasField("script_compilation_exception"):
+            return msg.session_event.script_compilation_exception
+    return None
+
+
+def _redacted_compile_props(exception: Any) -> dict[str, Any]:
+    """Compile-error fields after ``client.showErrorDetails`` redaction.
+
+    The session event carries the full exception. An uncaught exception
+    element applies the same visibility rules, so the snapshot does too.
+    """
+    from streamlit.elements.exception import (
+        _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
+        _error_detail_visibility,
+    )
+
+    visibility = _error_detail_visibility(True)
+    props: dict[str, Any] = {"uncaught": True}
+    if visibility.show_type and exception.type:
+        props["type"] = exception.type
+    if visibility.show_message:
+        if exception.message:
+            props["message"] = exception.message
+    else:
+        props["message"] = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+    if visibility.show_trace and exception.stack_trace:
+        props["stack_trace"] = list(exception.stack_trace)
+    return props
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:

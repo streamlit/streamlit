@@ -26,7 +26,9 @@ from unittest.mock import patch
 import pandas as pd
 
 import streamlit as st
+from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.elements.lib import agent_spec
+from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.error_util import show_uncaught_app_exception
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import (
@@ -36,6 +38,7 @@ from streamlit.runtime.agent.snapshot import (
     build_snapshot,
 )
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
+from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -109,6 +112,16 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
 
     def _session_state(self) -> SessionState:
         return self.script_run_ctx.session_state._state
+
+    def _set_stored(self, key: str, value: Any) -> None:
+        """Store ``value`` as the widget's base value, before a snapshot."""
+        state = self._session_state()
+        element_id = next(
+            widget_id
+            for widget_id in state._new_widget_state.widget_metadata
+            if _public_key(widget_id) == key
+        )
+        state._new_widget_state.set_from_value(element_id, value)
 
     def _build(
         self,
@@ -776,6 +789,53 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert reported["props"]["message"] == "invalid syntax"
         assert reported["props"]["stack_trace"] == ['File "app.py", line 1']
         assert reported in _one(document, "main")["children"]
+
+        changed = ForwardMsg()
+        changed.session_event.script_changed_on_disk = True
+        still = self._build(finished, event, changed).document
+        assert _one(still, "exception")["props"]["message"] == "invalid syntax"
+
+        with patch_config_options({"client.showErrorDetails": "stacktrace"}):
+            redacted = self._build(finished, event).document
+        redacted_props = _one(redacted, "exception")["props"]
+        assert redacted_props["message"] == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+        assert redacted_props["type"] == "SyntaxError"
+        assert redacted_props["stack_trace"] == ['File "app.py", line 1']
+
+        recovered = ForwardMsg()
+        recovered.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+        ready = self._build(finished, event, recovered).document
+        assert ready["status"] == "ready"
+        assert _by_type(ready, "exception") == []
+
+    def test_trigger_values_are_the_text_a_request_sends(self) -> None:
+        """A fired menu and a chat submission report strings, not protos."""
+        st.menu_button(
+            "Month",
+            [1, 12],
+            format_func=lambda month: "January" if month == 1 else "December",
+            key="menu",
+        )
+        st.chat_input("Say", accept_file=True, key="chat")
+        self._set_stored("menu", 12)
+        self._set_stored(
+            "chat", ChatInputValue(text="hello there", _include_files=True)
+        )
+
+        document = self._build().document
+        assert _one_keyed(document, "menu_button", "menu")["value"] == "December"
+        chat = _one_keyed(document, "chat_input", "chat")
+        assert chat["value"] == "hello there"
+        assert "UploadedFile" not in json.dumps(chat)
+
+    def test_container_actions_precede_their_children(self) -> None:
+        """A stateful container is listed before the actions inside it."""
+        one, _two = st.tabs(["One", "Two"], on_change="rerun", key="tabs")
+        one.button("Inside", key="inside")
+
+        document = self._build().document
+        keys = [entry["key"] for entry in document["actions"]]
+        assert keys.index("tabs") < keys.index("inside")
 
     def test_pages_come_from_navigation_or_the_single_script(self) -> None:
         """A single script is one page. Navigation replaces the session list."""
