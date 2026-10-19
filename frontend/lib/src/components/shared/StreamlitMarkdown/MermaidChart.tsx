@@ -309,6 +309,13 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
   return {
     darkMode: !isLightTheme,
     theme: "base",
+    // Mermaid 12 defaults several diagram types to the "neo" look: drop
+    // shadows, heavier strokes, and taller sequence actors. That skin is not
+    // driven by theme variables, so it sits on top of the flat Streamlit
+    // palette this config tunes. Classic keeps the borders and fills we set.
+    // A diagram can still opt into neo or handDrawn with front-matter `look`.
+    // Layout stays on Mermaid's ELK default; this only selects the skin.
+    look: "classic",
     fontFamily: theme.genericFonts.bodyFont,
     // Slightly smaller than the body font size. Because the SVG is displayed in
     // a sandboxed <img> (which can't access the app's web font), the browser
