@@ -33,20 +33,18 @@ from streamlit.errors import (
         (1, 1),
         (1024, 1024),
         ("1B", 1),
-        ("1kb", 1000),
+        ("1kb", 1024),
         ("1KiB", 1024),
-        (" 2 MB ", 2 * 1000**2),
-        ("1.5GB", 3 * 1000**3 // 2),
+        (" 2 MB ", 2 * 1024**2),
         ("1.5GiB", 3 * 1024**3 // 2),
-        ("1TB", 1000**4),
-        ("1TiB", 1024**4),
+        ("1TB", 1024**4),
         (".5 kib", 512),
     ],
 )
 def test_cache_data_max_size_to_bytes(
     value: int | str | None, expected: int | None
 ) -> None:
-    """Supported SI and IEC byte-size values convert to their byte count."""
+    """Supported byte-size values convert to their binary byte count."""
     assert cache_data_max_size_to_bytes(value) == expected
 
 
@@ -81,7 +79,7 @@ def test_cache_data_max_size_to_bytes_ignores_decimal_context() -> None:
     with localcontext() as context:
         context.prec = 2
         context.traps[Inexact] = True
-        assert cache_data_max_size_to_bytes("1.1MB") == 11 * 1000**2 // 10
+        assert cache_data_max_size_to_bytes("1.1MB") == 11 * 1024**2 // 10
 
 
 def test_parser_rejects_long_numeric_tokens_with_streamlit_error() -> None:

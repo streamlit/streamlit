@@ -28,13 +28,13 @@ _BYTE_SIZE_RE: Final = re.compile(
 )
 _MULTIPLIERS: Final = {
     "b": 1,
-    "kb": 1000,
+    "kb": 1024,
     "kib": 1024,
-    "mb": 1000**2,
+    "mb": 1024**2,
     "mib": 1024**2,
-    "gb": 1000**3,
+    "gb": 1024**3,
     "gib": 1024**3,
-    "tb": 1000**4,
+    "tb": 1024**4,
     "tib": 1024**4,
 }
 # Prevent unbounded integer-conversion work from pathological size strings.
@@ -75,10 +75,9 @@ def _parse_byte_size(value: str) -> tuple[int, str]:
 def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
     """Convert an ``st.cache_data`` max-size value to a positive byte count.
 
-    Integers represent byte counts directly. Strings require an explicit unit,
-    such as ``"500MB"`` or ``"1.5GiB"``. SI units (KB, MB, GB, and TB) use
-    powers of 1000. IEC units (KiB, MiB, GiB, and TiB) use powers of 1024.
-    Fractional values are rounded down to whole bytes.
+    Integers represent byte counts directly. Strings require an explicit binary
+    unit, such as ``"500MB"`` or ``"1.5GiB"``. Units are powers of 1024, and
+    fractional values are rounded down to whole bytes.
     """
     if value is None:
         return None
