@@ -189,6 +189,9 @@ describe("MermaidChart", () => {
 
     const config = initialize.mock.calls[0][0]
     expect(config.securityLevel).toBe("strict")
+    // Mermaid 12's per-diagram default is the neo skin. Pin classic so the
+    // Streamlit palette stays flat; front matter can still override `look`.
+    expect(config.look).toBe("classic")
     // Locked set must include Mermaid defaults plus Streamlit hardening keys.
     expect(config.secure).toEqual([
       // Mermaid defaults

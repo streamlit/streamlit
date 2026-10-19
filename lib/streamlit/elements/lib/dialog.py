@@ -34,23 +34,42 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large", "medium"]
+DialogWidth: TypeAlias = Literal["small", "medium", "large"] | int
 DialogPosition: TypeAlias = Literal["left", "center", "right"]
+
+# pixel_width is a uint32. Values above this cannot be stored on the proto.
+_MAX_DIALOG_PIXEL_WIDTH = 2**32 - 1
 
 
 def _process_dialog_width_input(
     width: DialogWidth,
-) -> BlockProto.Dialog.DialogWidth.ValueType:
-    """Maps the user-provided literal to a value of the DialogWidth proto enum.
+) -> tuple[BlockProto.Dialog.DialogWidth.ValueType, int | None]:
+    """Map a dialog width to the proto enum and an optional pixel width.
 
-    Returns the mapped enum field for "small" by default and otherwise the mapped type.
+    Presets map to the enum and leave the pixel width unset. A positive int
+    sets the pixel width and uses SMALL so a client that ignores the pixel
+    field still renders the small preset.
     """
     if width == "large":
-        return BlockProto.Dialog.DialogWidth.LARGE
+        return BlockProto.Dialog.DialogWidth.LARGE, None
     if width == "medium":
-        return BlockProto.Dialog.DialogWidth.MEDIUM
+        return BlockProto.Dialog.DialogWidth.MEDIUM, None
+    if width == "small":
+        return BlockProto.Dialog.DialogWidth.SMALL, None
+    # bool subclasses int. Reject it so True is not a 1px dialog.
+    # Also reject ints that do not fit in the uint32 proto field.
+    if (
+        isinstance(width, int)
+        and not isinstance(width, bool)
+        and 0 < width <= _MAX_DIALOG_PIXEL_WIDTH
+    ):
+        return BlockProto.Dialog.DialogWidth.SMALL, width
 
-    return BlockProto.Dialog.DialogWidth.SMALL
+    raise StreamlitValueError(
+        "width",
+        ["'small'", "'medium'", "'large'", "a positive integer"],
+        detail=f"Got {width!r}.",
+    )
 
 
 def _process_dialog_position_input(
@@ -58,8 +77,8 @@ def _process_dialog_position_input(
 ) -> BlockProto.Dialog.DialogPosition.ValueType:
     """Map a user-facing position literal to the DialogPosition proto enum.
 
-    Invalid values raise StreamlitValueError. Unlike width, which falls back
-    to SMALL, an unrecognized position does not default to center.
+    Unrecognized positions raise StreamlitValueError. There is no fallback
+    to center.
     """
     if position == "left":
         return BlockProto.Dialog.DialogPosition.LEFT
@@ -118,7 +137,11 @@ class Dialog(DeltaGenerator):
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
-        block_proto.dialog.width = _process_dialog_width_input(width)
+        dialog_width, pixel_width = _process_dialog_width_input(width)
+        block_proto.dialog.width = dialog_width
+        # Presets leave pixel_width unset so the frontend uses the enum.
+        if pixel_width is not None:
+            block_proto.dialog.pixel_width = pixel_width
         block_proto.dialog.position = _process_dialog_position_input(position)
         block_proto.dialog.icon = validate_icon_or_emoji(icon)
 

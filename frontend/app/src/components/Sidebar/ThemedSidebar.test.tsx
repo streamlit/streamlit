@@ -19,7 +19,6 @@ import { screen } from "@testing-library/react"
 import {
   createSidebarTheme,
   createTheme,
-  emotionLightTheme,
   mockEndpoints,
   mockTheme,
   type ThemeConfig,
@@ -55,11 +54,12 @@ describe("ThemedSidebar Component", () => {
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
-  it("should switch bgColor and secondaryBgColor", () => {
+  it("uses the stock light sidebar background color", () => {
     renderThemedSidebar()
 
+    // mockTheme keeps built-in light main surfaces → stock sidebar pair
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
-      backgroundColor: emotionLightTheme.colors.secondaryBg,
+      backgroundColor: "#F8F8F7",
     })
   })
 
@@ -205,7 +205,7 @@ describe("createSidebarTheme", () => {
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#FF0000")
   })
 
-  it("uses secondary background color as fallback when no sidebar background specified", () => {
+  it("swaps main surfaces when custom main colors leave sidebar unset", () => {
     const theme = createMockTheme({
       emotion: {
         colors: {
@@ -216,9 +216,10 @@ describe("createSidebarTheme", () => {
     })
     const sidebarTheme = createSidebarTheme(theme)
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F0F0F0")
   })
 
-  it("uses secondary background color as fallback when sidebar background is empty string", () => {
+  it("swaps main surfaces when sidebar background is an empty string", () => {
     const theme = createMockTheme({
       themeInput: {
         sidebar: {
@@ -234,6 +235,21 @@ describe("createSidebarTheme", () => {
     })
     const sidebarTheme = createSidebarTheme(theme)
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F0F0F0")
+  })
+
+  it("uses stock dark sidebar surfaces when main surfaces are built-in dark", () => {
+    const theme = createMockTheme({
+      emotion: {
+        colors: {
+          secondaryBg: "#2D2B27",
+          bgColor: "#171614",
+        },
+      },
+    })
+    const sidebarTheme = createSidebarTheme(theme)
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#21201D")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#2D2B27")
   })
 
   it("applies sidebar-specific overrides", () => {

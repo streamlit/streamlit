@@ -33,6 +33,10 @@ import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
+  focusNextTabbable,
+  focusPrevTabbable,
+} from "@streamlit/app/src/util/focusTabbable"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
@@ -50,7 +54,6 @@ import {
 } from "@streamlit/lib"
 import { Config, type PageConfig } from "@streamlit/protobuf"
 
-import { focusNextTabbable, focusPrevTabbable } from "./focusTabbable"
 import {
   StyledMainMenuContainer,
   StyledMainMenuPopoverBody,

@@ -139,7 +139,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md` first, then `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
-| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` |
+| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first; deeper sections as needed) |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, when to use each container type, and aligning side-by-side elements (widget heights, `vertical_alignment`, equal-height cards) | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |
 | **Apache ECharts or pyecharts** — render an existing ECharts option dict, JSON string, or `pyecharts` chart with native `st.echarts_chart` rather than a third-party component (pass `alt=` carefully — it replaces the generated description) | read `references/data-display.md` |
@@ -173,7 +173,7 @@ For **beautifying/improving an app**, read in order:
 3. `references/layouts.md`
 4. `references/selection-widgets.md`
 
-Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). Follow the decision table and key-placement rules in `references/theme.md`.
+Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). In `theme.md`, read **Choose a config shape**, **Where to put keys**, and **Cheat sheet** first; open deeper sections only when the ask needs them.
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`
@@ -201,11 +201,10 @@ When **editing an existing app**, use templates as reference for best practices:
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
 - Prefer `theme.base` (shared corporate/brand TOML or URL) when several apps should inherit the same brand tokens, then override per app for layout-specific tweaks
-- Choose **single-mode** (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) for a locked look
-- Choose **dual-mode** (`shadcn-dual`, `dense-dashboard`) only when the settings appearance toggle should stay available
+- Defaults: `shadcn-dual` for a general brand with the appearance toggle, `dense-dashboard` for KPI layouts with compact padding and the toggle, or locked `shadcn` (light) / `vscode` (dark). Other single-mode themes are aesthetic variants
 - Copy the chosen file to the app's `.streamlit/config.toml` (or point `theme.base` at a shared file)
 - Themes include custom fonts via Google Fonts
-- See `assets/templates/themes/README.md` for the theme list
+- See `assets/templates/themes/README.md` for picker defaults and the full theme list
 
 For **performance optimization**, read:
 1. `references/performance.md`

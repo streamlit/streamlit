@@ -310,15 +310,70 @@ class Runtime:
         return session_info.client
 
     def clear_user_info_for_session(self, session_id: str) -> None:
-        """Clear the user_info for the given session_id.
+        """Clear user info for ``session_id`` and prevent that session from resuming.
+
+        An active session stays connected so its client can still receive the
+        logout redirect. A session that exists only in storage is closed on
+        the event loop so a later connection cannot resume it.
 
         Notes
         -----
-        Threading: SAFE. May be called on any thread.
+        Threading: SAFE. May be called on any thread. The non-resumable mark
+        is published before this returns and does not touch session storage.
+        Storage lookup and deletion run on the event loop.
         """
-        session_info = self._session_mgr.get_session_info(session_id)
-        if session_info is not None:
-            session_info.session.clear_user_info()
+        # Publish the mark before looking at the active map. A concurrent
+        # disconnect or reconnect then cannot save or adopt this id, and this
+        # path never calls get_session_info() (that read mutates storage).
+        self._session_mgr.mark_session_nonresumable(session_id)
+
+        active_session = self._session_mgr.get_active_session_info(session_id)
+        if active_session is not None:
+            active_session.session.clear_user_info()
+            return
+
+        self._close_inactive_session_on_event_loop(session_id)
+
+    def _close_inactive_session_on_event_loop(self, session_id: str) -> None:
+        """Close a stored session on the event loop.
+
+        The session is already marked non-resumable, so a reconnect cannot
+        adopt it before this close runs. Session storage is only touched here,
+        on the event loop.
+        """
+        async_objs = self._get_async_objs()
+
+        def close_if_inactive() -> None:
+            active = self._session_mgr.get_active_session_info(session_id)
+            if active is not None:
+                # Only the logged-out session is cleared. A replacement that
+                # reused the id is left alone.
+                if not active.session.is_resumable():
+                    active.session.clear_user_info()
+            else:
+                # close_session drops the id even when storage no longer has
+                # it. get_session_info would skip that when the id is gone.
+                self._session_mgr.close_session(session_id)
+                self._on_session_disconnected()
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is async_objs.eventloop:
+            close_if_inactive()
+            return
+
+        try:
+            async_objs.eventloop.call_soon_threadsafe(close_if_inactive)
+        except RuntimeError:
+            if not async_objs.eventloop.is_closed():
+                raise
+            _LOGGER.debug(
+                "Dropped logout close for session %s because the event loop is closed.",
+                session_id,
+            )
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before
