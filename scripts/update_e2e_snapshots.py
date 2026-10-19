@@ -199,7 +199,7 @@ def download_artifact(artifact_url: str, token: str, download_path: str) -> None
 def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> bool:
     """Extract and merge the 'snapshot-updates/' folder from an artifact into the destination folder.
 
-    Returns false when the artifact has no snapshot updates, which happens when
+    Returns False when the artifact has no snapshot updates, which happens when
     Playwright failed for a reason other than a snapshot mismatch.
     """
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
@@ -306,9 +306,8 @@ def main() -> None:
         print(f"Expected artifact name: {artifact_name_for_commit(commit_sha)}")
 
         if args.run_id is not None:
-            # The caller already knows which finished run to use. Do not poll:
-            # a label applied when a PR opens would otherwise race the
-            # Playwright run, and an empty result used to abort the update.
+            # The caller already picked a finished run. Polling would treat
+            # "Playwright has not started" as a hard failure.
             run_id = args.run_id
             print(f"Using workflow run ID: {run_id}")
         else:
@@ -328,9 +327,18 @@ def main() -> None:
         artifacts = get_artifacts(GITHUB_OWNER, GITHUB_REPO, run_id, token)
         if not artifacts:
             print(f"No artifacts found for workflow run with ID {run_id}")
-            sys.exit(1)
-        artifact = select_snapshot_artifact(artifacts, commit_sha)
+        artifact = (
+            select_snapshot_artifact(artifacts, commit_sha) if artifacts else None
+        )
         if artifact is None:
+            # CI passes --run-id. A missing results artifact means Playwright
+            # failed before it could upload snapshots. Exit 10 so the workflow
+            # leaves the label in place instead of posting a failure comment.
+            # API errors raise above and stay real failures. Local runs still
+            # exit 1.
+            if args.run_id is not None:
+                print("SNAPSHOT_RESULT=no-snapshot-updates")
+                sys.exit(10)
             sys.exit(1)
 
         artifact_id = artifact["id"]

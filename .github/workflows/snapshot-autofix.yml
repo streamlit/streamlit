@@ -9,9 +9,8 @@
 #   Playwright is still queued or running, the label stays and `workflow_run`
 #   does the update when the run completes.
 #
-# `opened` is not a trigger. Starting from it used to remove the label and
-# look up a Playwright run that did not exist yet, so creation-time labels
-# failed and nothing retried them.
+# `opened` is not a trigger: Playwright has not run yet, so `workflow_run`
+# handles labels applied at creation.
 #
 # Successful and cancelled Playwright runs leave the label in place, so a
 # later failure on the same PR still updates snapshots. The `workflow_run`
@@ -155,6 +154,40 @@ jobs:
               return listed.find((candidate) => candidate.head.sha === headSha) || null;
             }
 
+            async function pullRequestForWorkflowRun(workflowRun) {
+              // workflow_run.pull_requests has no labels. Load the triggering
+              // pull request by number so two open PRs that share a head
+              // branch and commit cannot update the wrong one.
+              const linked = Array.isArray(workflowRun.pull_requests)
+                ? workflowRun.pull_requests
+                : [];
+              for (const candidate of linked) {
+                if (!candidate || typeof candidate.number !== "number") {
+                  continue;
+                }
+                try {
+                  const { data } = await github.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: candidate.number,
+                  });
+                  if (
+                    data.state === "open" &&
+                    data.head &&
+                    data.head.sha === workflowRun.head_sha &&
+                    data.head.ref === workflowRun.head_branch
+                  ) {
+                    return data;
+                  }
+                } catch (error) {
+                  core.warning(
+                    `Could not load pull request #${candidate.number}: ${error.message}`
+                  );
+                }
+              }
+              return findOpenPullRequest(workflowRun.head_sha, workflowRun.head_branch);
+            }
+
             if (context.eventName === "workflow_run") {
               const workflowRun = context.payload.workflow_run;
               const headRepo = workflowRun.head_repository && workflowRun.head_repository.full_name;
@@ -163,7 +196,7 @@ jobs:
                 return;
               }
 
-              const pr = await findOpenPullRequest(workflowRun.head_sha, workflowRun.head_branch);
+              const pr = await pullRequestForWorkflowRun(workflowRun);
               if (!pr) {
                 core.info(
                   `No open pull request at ${workflowRun.head_branch}@${workflowRun.head_sha}.`
@@ -357,9 +390,9 @@ jobs:
           status=$?
           set -e
           cat "$log"
-          # The script prints this marker and exits 10 when the artifact has no
-          # snapshot mismatches. Any other non-zero status is a real failure,
-          # including uv's own exit code 2.
+          # The script prints this marker and exits 10 when the run has no
+          # snapshot updates, including a missing results artifact. Any other
+          # non-zero status is a real failure, including uv's own exit code 2.
           if [[ "$status" -eq 10 ]] && grep -q 'SNAPSHOT_RESULT=no-snapshot-updates' "$log"; then
             echo "No snapshot updates in the Playwright artifact. Leaving update-snapshots in place."
             echo "has_snapshots=false" >> "$GITHUB_OUTPUT"
@@ -369,6 +402,31 @@ jobs:
             exit "$status"
           fi
           echo "has_snapshots=true" >> "$GITHUB_OUTPUT"
+
+      - name: Comment when a labeled run has no snapshot updates
+        if: >-
+          steps.precheck.outputs.proceed == 'true' &&
+          steps.download.outputs.has_snapshots == 'false' &&
+          github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            const sha = process.env.HEAD_SHA;
+            const body = [
+              `Playwright E2E tests failed for \`${sha}\`, but the results have no snapshot updates.`,
+              "",
+              "The `update-snapshots` label stays on this pull request. Snapshot autofix runs only after a failure that includes snapshot mismatches.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });
 
       - name: Open a pull request with the snapshot updates
         id: publish

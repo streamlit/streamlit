@@ -30,7 +30,8 @@ env:
   E2E_MARKER_EXPR: not performance
 
 jobs:
-  # snapshot-autofix.yml updates snapshots only when this job fails. Keep the id.
+  # snapshot-autofix.yml treats a failure of this job as the Playwright failure.
+  # It matches the job display name, which stays this id only when `name:` is unset.
   playwright-e2e-tests:
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 30
