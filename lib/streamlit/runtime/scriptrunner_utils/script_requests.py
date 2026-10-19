@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
@@ -22,7 +23,6 @@ from typing import TYPE_CHECKING, Any, cast
 from google.protobuf.message import Message
 
 from streamlit import util
-from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
@@ -130,9 +130,10 @@ def _coalesce_widget_states(
 ) -> WidgetStates | None:
     """Merge an older WidgetStates into a newer one, returning the result.
 
-    For most widgets the newer value wins.  Button and chat-input triggers are
-    special: an active trigger in ``old_states`` carries forward so rapid clicks
-    aren't lost.
+    For most widgets the newer value wins. Triggers are special: an active
+    trigger in ``old_states`` carries forward so rapid interactions aren't lost.
+    When both carry Custom Components v2 trigger events for the same widget, the
+    event lists are concatenated (older first).
     """
     if not old_states and not new_states:
         return None
@@ -145,41 +146,66 @@ def _coalesce_widget_states(
         wstate.id: wstate for wstate in new_states.widgets
     }
 
-    trigger_value_types = [
-        ("trigger_value", False),
-        ("chat_input_value", ChatInputValueProto(data=None)),
-    ]
     for old_state in old_states.widgets:
-        for trigger_value_type, unset_value in trigger_value_types:
-            if (
-                old_state.WhichOneof("value") == trigger_value_type
-                and getattr(old_state, trigger_value_type) != unset_value
-            ):
-                new_trigger_val = states_by_id.get(old_state.id)
-                # It should nearly always be the case that new_trigger_val
-                # is None here as trigger values are deleted from the
-                # client's WidgetStateManager as soon as a rerun_script
-                # BackMsg is sent to the server. Since it's impossible to
-                # test that the client sends us state in the expected
-                # format in a unit test, we test for this behavior in
-                # e2e_playwright/test_fragment_queue_test.py
-                if not new_trigger_val or (
-                    # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a
-                    # button/chat_input but no longer is could get a bad
-                    # value.
-                    new_trigger_val.WhichOneof("value") == trigger_value_type
-                    # We only want to take the value of old_state if
-                    # new_trigger_val is unset as the old value may be
-                    # stale if a newer one was entered.
-                    and getattr(new_trigger_val, trigger_value_type) == unset_value
-                ):
-                    states_by_id[old_state.id] = old_state
+        if not _has_active_trigger_value(old_state):
+            continue
+
+        trigger_value_type = old_state.WhichOneof("value")
+        new_state = states_by_id.get(old_state.id)
+        # It should nearly always be the case that new_state is None here as
+        # trigger values are deleted from the client's WidgetStateManager as
+        # soon as a rerun_script BackMsg is sent to the server. Since it's
+        # impossible to test that the client sends us state in the expected
+        # format in a unit test, we test for this behavior in
+        # e2e_playwright/st_fragment_queue_test.py
+        if new_state is None:
+            states_by_id[old_state.id] = old_state
+            continue
+
+        # Ensure the corresponding new_state is also a trigger of the same
+        # type; otherwise, a widget that was previously a trigger but no
+        # longer is could get a bad value.
+        if new_state.WhichOneof("value") != trigger_value_type:
+            continue
+
+        if not _has_active_trigger_value(new_state):
+            states_by_id[old_state.id] = old_state
+        elif trigger_value_type == "json_trigger_value":
+            states_by_id[old_state.id] = _concat_json_trigger_states(
+                old_state, new_state
+            )
+        # Otherwise the newer trigger wins, since the old value is stale.
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
 
     return coalesced
+
+
+def _concat_json_trigger_states(
+    old_state: WidgetState, new_state: WidgetState
+) -> WidgetState:
+    """Return ``new_state`` with ``old_state``'s CCv2 trigger events prepended.
+
+    The frontend encodes CCv2 trigger payloads as a JSON array, appending events
+    fired in the same macrotask. This mirrors that batching across queued
+    reruns. If either payload isn't valid JSON, the newer state wins.
+    """
+    try:
+        old_events = json.loads(old_state.json_trigger_value)
+        new_events = json.loads(new_state.json_trigger_value)
+    except ValueError:
+        return new_state
+
+    if not isinstance(old_events, list):
+        old_events = [old_events]
+    if not isinstance(new_events, list):
+        new_events = [new_events]
+
+    merged = WidgetState()
+    merged.CopyFrom(new_state)
+    merged.json_trigger_value = json.dumps(old_events + new_events)
+    return merged
 
 
 _TRIGGER_PROTO_FIELDS = frozenset(
