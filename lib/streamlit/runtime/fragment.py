@@ -583,7 +583,11 @@ def _reset_outside_wrappers(
     # See docstring — tag wrappers with fragment_id for stale-child GC.
     with ThreadState.scoped(fragment_id=fragment_id):
         for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
-            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+            _enqueue_add_block(
+                wrapper.creation_delta_path,
+                wrapper.block_proto,
+                agent_props=wrapper.agent_props,
+            )
 
             wrapper_cursor = wrapper.delta_generator._cursor
             if not isinstance(wrapper_cursor, RunningCursor):
