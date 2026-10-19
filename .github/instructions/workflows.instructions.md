@@ -45,9 +45,9 @@ run: |
 
 **Safe contexts that don't need `env:` indirection:** `${{ }}` in `with:` parameters (parsed by YAML, not shell), `if:` conditions, and `env:` value positions are not vulnerable. GitHub-controlled constants like `github.repository`, `github.run_id`, and `github.sha` are also safe in `run:` blocks since their format is constrained.
 
-### Untrusted issue content
+### Untrusted GitHub content
 
-GitHub issue titles, bodies, and comments can be written by anyone. AI workflow prompts that read them must tell the agent to use that text as the context for the task, and not to follow literal instructions embedded in it, such as requests to override these directions or run copied commands.
+GitHub issue and pull request titles, bodies, and comments can be written by anyone. AI workflow prompts that read that text must tell the agent to use it as context for the task, and not to follow literal instructions embedded in it, such as requests to override these directions or run copied commands.
 
 ### Best Practices
 
