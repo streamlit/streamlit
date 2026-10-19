@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
+from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -38,6 +39,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
+from streamlit.runtime.state.session_state import Serialized
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -584,8 +586,9 @@ class _SnapshotBuilder:
         if self._session_state is None:
             return None
         try:
-            # The base stored value, not a presenter view of it.
-            value = self._session_state.get_widget_value(element_id)
+            # The base stored value, not a presenter view of it. A serialized
+            # chat proto is read without its deserializer, which drops uploads.
+            value = _read_widget_value(self._session_state, element_id)
         except KeyError:
             return None
 
@@ -640,6 +643,35 @@ class _SnapshotBuilder:
                 exc_info=True,
             )
             return None
+
+
+def _read_widget_value(session_state: SessionState, element_id: str) -> Any:
+    """The stored value, without deserializing an ``st.chat_input`` proto.
+
+    A value set through ``st.session_state`` wins. A still-serialized chat
+    proto is read from its ``data`` field: deserializing it removes uploaded
+    files the script may not have received. Every other value goes through
+    ``get_widget_value``.
+    """
+    user_key = session_state._key_id_mapper.id_key_mapping.get(element_id)
+    if user_key is not None:
+        try:
+            return session_state._new_session_state[user_key]
+        except KeyError:
+            pass
+
+    wstate = session_state._new_widget_state.states.get(element_id)
+    if (
+        isinstance(wstate, Serialized)
+        and wstate.value.WhichOneof("value") == "chat_input_value"
+    ):
+        chat_value = wstate.value.chat_input_value
+        # An unset field reads back as ``""``, which is an unfired trigger.
+        if not chat_value.HasField("data"):
+            return None
+        return chat_value.data
+
+    return session_state.get_widget_value(element_id)
 
 
 def _string_payload(serialized: Any) -> Any:
@@ -770,12 +802,22 @@ def _keep_typed_text(
             return label
         return item
 
+    # A multi-select stored through session state may be a set, array, or
+    # Series. The serde lists those the same way, and each item lines up with
+    # its formatted label. A string is one option, not a sequence of characters.
+    items: list[Any] | tuple[Any, ...] | None
+    if isinstance(stored, (list, tuple)):
+        items = stored
+    elif isinstance(serialized, list) and not isinstance(stored, str):
+        items = convert_anything_to_list(stored)
+    else:
+        items = None
     if (
-        isinstance(stored, (list, tuple))
+        items is not None
         and isinstance(serialized, list)
-        and len(stored) == len(serialized)
+        and len(items) == len(serialized)
     ):
-        return list(starmap(_report, zip(stored, serialized, strict=True)))
+        return list(starmap(_report, zip(items, serialized, strict=True)))
     return _report(stored, serialized)
 
 
@@ -837,11 +879,13 @@ def build_snapshot(
 ) -> Snapshot:
     """Build the snapshot document for the run that just settled.
 
-    Trigger payloads are cleared in ``on_script_finished``, so a caller that
-    wants a fired ``st.chat_input`` or ``st.menu_button`` value has to read
-    session state before that reset. ``page`` and ``pages`` come from the
-    run's ``new_session`` message; a later ``navigation`` message replaces
-    that page list. Pass those messages or the fields stay empty.
+    Session state is read without the lock ``SafeSessionState`` takes, so call
+    this on the script thread or hold that lock. Trigger payloads are cleared
+    in ``on_script_finished``, and this read has to happen before that reset
+    to keep a fired ``st.chat_input`` or ``st.menu_button`` value. ``page`` and
+    ``pages`` come from the run's ``new_session`` message; a later
+    ``navigation`` message replaces that page list. Pass those messages or the
+    fields stay empty.
     """
     tree = merge_deltas(messages)
     builder = _SnapshotBuilder(session_state)

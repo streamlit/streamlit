@@ -32,6 +32,7 @@ from streamlit.elements.lib import agent_spec
 from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.error_util import show_uncaught_app_exception
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.agent.snapshot import (
     ElementState,
     Snapshot,
@@ -40,6 +41,8 @@ from streamlit.runtime.agent.snapshot import (
     build_snapshot,
 )
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
+from streamlit.runtime.state.session_state import Serialized
+from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -634,6 +637,8 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             accept_new_options=True,
             key="mixed",
         )
+        st.session_state.as_set = {"Berlin"}
+        st.multiselect("Set", ["Paris", "Berlin"], key="as_set")
 
         class _Ambiguous:
             """Equality with anything else returns a value that cannot be bool()."""
@@ -703,6 +708,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             "paris",
             "BERLIN",
         ]
+        assert _one_keyed(typed, "multiselect", "as_set")["value"] == ["Berlin"]
 
     def test_widget_values_match_their_value_schema(self) -> None:
         """Every reported value is null or the JSON type its schema names."""
@@ -975,6 +981,36 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         chat = _one_keyed(document, "chat_input", "chat")
         assert chat["value"] == "hello there"
         assert "UploadedFile" not in json.dumps(chat)
+
+    def test_serialized_chat_read_keeps_uploaded_files(self) -> None:
+        """A still-serialized chat proto is read without removing its upload."""
+        st.chat_input("Say", accept_file=True, key="chat")
+        rec = UploadedFileRec("file1", "doc.txt", "text/plain", b"abc")
+        self.script_run_ctx.uploaded_file_mgr.add_file(
+            session_id=self.script_run_ctx.session_id, file=rec
+        )
+
+        state = self._session_state()
+        element_id = next(
+            widget_id
+            for widget_id in state._new_widget_state.widget_metadata
+            if _public_key(widget_id) == "chat"
+        )
+        proto = WidgetStateProto()
+        proto.id = element_id
+        proto.chat_input_value.data = "hello"
+        info = proto.chat_input_value.file_uploader_state.uploaded_file_info.add()
+        info.file_id = "file1"
+        info.file_urls.file_id = "file1"
+        state._new_widget_state.set_widget_from_proto(proto)
+
+        document = self._build().document
+        assert _one_keyed(document, "chat_input", "chat")["value"] == "hello"
+        assert isinstance(state._new_widget_state.states[element_id], Serialized)
+        remaining = self.script_run_ctx.uploaded_file_mgr.get_files(
+            session_id=self.script_run_ctx.session_id, file_ids=["file1"]
+        )
+        assert [record.file_id for record in remaining] == ["file1"]
 
     def test_empty_chat_text_is_still_a_fired_value(self) -> None:
         """A file-only chat submission is an empty string, not an unset trigger."""
