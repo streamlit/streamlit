@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Update e2e snapshots."""
+"""Update e2e snapshots from a failed Playwright run.
+
+`make update-snapshots` waits until the run for the current commit fails, then
+downloads it. CI passes ``--run-id`` so it downloads a finished run directly.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +40,6 @@ GITHUB_WORKFLOW_FILE_NAME = "playwright.yml"
 GITHUB_WORKFLOW_FILE_NAME_CHANGED_FILES = "playwright-changed-files.yml"
 PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX = "playwright_test_results_"
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-E2E_SNAPSHOTS_DIR = os.path.join(BASE_DIR, "e2e_playwright", "__snapshots__")
 
 
 def get_token_from_credential_manager() -> str:
@@ -61,13 +64,50 @@ def get_token_from_credential_manager() -> str:
     return ""
 
 
-def get_last_commit_sha() -> str:
-    """Get the last commit SHA of the local branch."""
-    cmd = ["git", "rev-parse", "HEAD"]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+def get_last_commit_sha(repo_root: str) -> str:
+    """Get the HEAD SHA of a repository checkout."""
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     if result.returncode != 0:
         raise Exception(f"Error getting last commit SHA: {result.stderr.strip()}")
     return result.stdout.strip()
+
+
+def snapshots_dir_for(repo_root: str) -> str:
+    """Directory of committed e2e snapshots inside a checkout."""
+    return os.path.join(repo_root, "e2e_playwright", "__snapshots__")
+
+
+def artifact_name_for_commit(commit_sha: str) -> str:
+    """Artifact name Playwright uploads for a pull request head SHA.
+
+    Must match the ``playwright_test_results_<short sha>`` upload in
+    ``.github/workflows/playwright.yml``, which uses the first 6 characters of
+    the pull request head SHA.
+    """
+    return f"{PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX}{commit_sha[:6]}"
+
+
+def select_snapshot_artifact(
+    artifacts: list[dict[str, Any]], commit_sha: str
+) -> dict[str, Any] | None:
+    """Pick the newest Playwright result artifact for this commit."""
+    expected_name = artifact_name_for_commit(commit_sha)
+    matches = [artifact for artifact in artifacts if artifact["name"] == expected_name]
+    if not matches:
+        print(
+            f"Artifact '{expected_name}' not found. "
+            f"Available artifacts: {[artifact['name'] for artifact in artifacts]}"
+        )
+        return None
+    # A re-run can leave more than one artifact with the same name.
+    matches.sort(key=lambda artifact: artifact.get("created_at") or "", reverse=True)
+    return matches[0]
 
 
 def get_latest_workflow_run(
@@ -156,8 +196,12 @@ def download_artifact(artifact_url: str, token: str, download_path: str) -> None
         f.writelines(response.iter_content(chunk_size=8192))
 
 
-def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> None:
-    """Extract and merge the 'snapshot-updates/' folder from an artifact into the destination folder."""
+def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> bool:
+    """Extract and merge the 'snapshot-updates/' folder from an artifact into the destination folder.
+
+    Returns false when the artifact has no snapshot updates, which happens when
+    Playwright failed for a reason other than a snapshot mismatch.
+    """
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         namelist = zip_ref.namelist()
         snapshot_files = [
@@ -165,7 +209,7 @@ def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> None:
         ]
         if not snapshot_files:
             print(f"'{SNAPSHOT_UPDATE_FOLDER}' folder not found in the artifact.")
-            sys.exit(1)
+            return False
         # Extract the 'snapshot-updates/' folder to a temp directory
         temp_extract_dir = tempfile.mkdtemp()
         for file in snapshot_files:
@@ -177,6 +221,7 @@ def extract_and_merge_snapshots(zip_path: str, destination_folder: str) -> None:
         copy_tree(source_folder, destination_folder)
         # Clean up temp directory
         shutil.rmtree(temp_extract_dir)
+        return True
 
 
 def copy_tree(src: str, dst: str) -> None:
@@ -204,7 +249,28 @@ def main() -> None:
         action="store_true",
         help="Only update snapshots for changed files",
     )
+    parser.add_argument(
+        "--run-id",
+        type=int,
+        required=False,
+        help=(
+            "Download snapshots from this finished workflow run instead of "
+            "waiting for one. Used by CI."
+        ),
+    )
+    parser.add_argument(
+        "--repo-root",
+        required=False,
+        help="Checkout whose snapshots should be updated. Defaults to this repo.",
+    )
     args = parser.parse_args()
+    if args.run_id is not None and args.changed:
+        print("--run-id cannot be combined with --changed.")
+        sys.exit(1)
+    repo_root = os.path.abspath(args.repo_root) if args.repo_root else BASE_DIR
+    if not os.path.isdir(repo_root):
+        print(f"Repository root does not exist: {repo_root}")
+        sys.exit(1)
     token: str | None = args.token
 
     if not token:
@@ -230,62 +296,65 @@ def main() -> None:
             print("Token retrieved from git credential manager.")
     token = str(token)
 
-    print("Retrieving latest workflow run...")
+    if args.run_id is None:
+        print("Retrieving latest workflow run...")
 
     try:
-        commit_sha = get_last_commit_sha()
+        commit_sha = get_last_commit_sha(repo_root)
+        snapshots_dir = snapshots_dir_for(repo_root)
         print(f"Current head SHA: {commit_sha}")
+        print(f"Expected artifact name: {artifact_name_for_commit(commit_sha)}")
 
-        # Wait for the workflow to complete with status 'failure'
-        workflow_file_name = (
-            GITHUB_WORKFLOW_FILE_NAME_CHANGED_FILES
-            if args.changed
-            else GITHUB_WORKFLOW_FILE_NAME
-        )
-        workflow_run = wait_for_workflow_completion(
-            GITHUB_OWNER, GITHUB_REPO, workflow_file_name, commit_sha, token
-        )
-        run_id = workflow_run["id"]
-        print(f"Found completed workflow run with ID: {run_id}")
+        if args.run_id is not None:
+            # The caller already knows which finished run to use. Do not poll:
+            # a label applied when a PR opens would otherwise race the
+            # Playwright run, and an empty result used to abort the update.
+            run_id = args.run_id
+            print(f"Using workflow run ID: {run_id}")
+        else:
+            # Wait for the workflow to complete with status 'failure'.
+            workflow_file_name = (
+                GITHUB_WORKFLOW_FILE_NAME_CHANGED_FILES
+                if args.changed
+                else GITHUB_WORKFLOW_FILE_NAME
+            )
+            workflow_run = wait_for_workflow_completion(
+                GITHUB_OWNER, GITHUB_REPO, workflow_file_name, commit_sha, token
+            )
+            run_id = workflow_run["id"]
+            print(f"Found completed workflow run with ID: {run_id}")
 
         # Get artifacts for this run
         artifacts = get_artifacts(GITHUB_OWNER, GITHUB_REPO, run_id, token)
         if not artifacts:
             print(f"No artifacts found for workflow run with ID {run_id}")
             sys.exit(1)
-        # Find the correct artifact with the commit SHA in the name:
-        # Get the short SHA (first 6 characters)
-        short_sha = commit_sha[:6]
-        expected_artifact_name = f"{PLAYWRIGHT_RESULT_ARTIFACT_NAME_PREFIX}{short_sha}"
-
-        artifact = next(
-            (a for a in artifacts if a["name"] == expected_artifact_name), None
-        )
-
-        if not artifact:
-            print(
-                f"Artifact '{expected_artifact_name}' not found in workflow run with ID {run_id}"
-            )
-            print(f"Available artifacts: {[a['name'] for a in artifacts]}")
+        artifact = select_snapshot_artifact(artifacts, commit_sha)
+        if artifact is None:
             sys.exit(1)
-        else:
-            artifact_id = artifact["id"]
-            print(f"Found artifact ID: {artifact_id}")
 
-            # Download the artifact
-            download_url = artifact["archive_download_url"]
-            with tempfile.TemporaryDirectory() as temp_dir:
-                zip_path = os.path.join(temp_dir, "artifact.zip")
-                print(f"Downloading artifact to {zip_path}")
-                download_artifact(download_url, token, zip_path)
+        artifact_id = artifact["id"]
+        print(f"Found artifact ID: {artifact_id}")
 
-                # Extract and merge 'snapshot-updates' folder
-                print(
-                    f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {E2E_SNAPSHOTS_DIR}"
-                )
-                extract_and_merge_snapshots(zip_path, E2E_SNAPSHOTS_DIR)
+        # Download the artifact
+        download_url = artifact["archive_download_url"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            zip_path = os.path.join(temp_dir, "artifact.zip")
+            print(f"Downloading artifact to {zip_path}")
+            download_artifact(download_url, token, zip_path)
 
-            print("Artifact downloaded and snapshots merged successfully.")
+            # Extract and merge 'snapshot-updates' folder
+            print(
+                f"Extracting '{SNAPSHOT_UPDATE_FOLDER}' and merging into {snapshots_dir}"
+            )
+            # 10, plus the marker: the run failed, but not because snapshots
+            # differed. 2 is argparse/uv's usage-error code, so CI cannot use it
+            # to mean "nothing to update."
+            if not extract_and_merge_snapshots(zip_path, snapshots_dir):
+                print("SNAPSHOT_RESULT=no-snapshot-updates")
+                sys.exit(10)
+
+        print("Artifact downloaded and snapshots merged successfully.")
 
     except Exception as e:
         print(f"Error: {e}")

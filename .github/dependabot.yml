@@ -1,4 +1,8 @@
 version: 2
+# Every Dependabot PR gets `update-snapshots`. Snapshot autofix opens a
+# snapshot PR only when Playwright E2E tests fail with snapshot mismatches.
+# A passing run, or a failure that is not a snapshot mismatch, leaves the label
+# in place.
 updates:
   # Keep package.json (& lockfiles) up to date as soon as
   # new versions are published to the npm registry
@@ -19,6 +23,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "update-snapshots"
       - "never-stale"
 
     ignore:
@@ -150,6 +155,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "update-snapshots"
       - "never-stale"
 
     # Skip versions we intentionally cap out via upper bounds (`<`) in pyproject.toml,
@@ -230,6 +236,7 @@ updates:
       - "change:chore"
       - "impact:users"
       - "autofix"
+      - "update-snapshots"
       - "never-stale"
 
   # Maintain dependencies in GitHub Actions workflows
@@ -242,6 +249,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "update-snapshots"
       - "never-stale"
 
     groups:
@@ -267,6 +275,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "update-snapshots"
       - "never-stale"
 
     ignore:
