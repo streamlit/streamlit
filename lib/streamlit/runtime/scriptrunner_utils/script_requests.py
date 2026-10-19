@@ -129,10 +129,12 @@ def _coalesce_widget_states(
     old_states: WidgetStates | None,
     new_states: WidgetStates | None,
 ) -> WidgetStates | None:
-    """Merge an older WidgetStates into a newer one, returning the result.
+    """Merge an older WidgetStates into a newer one.
 
-    For most widgets the newer value wins. Active triggers are special: an active
-    trigger in ``old_states`` carries forward so rapid interactions aren't lost.
+    The client clears a trigger as soon as it sends the rerun, so a later request
+    often omits it. The merge keeps that active trigger. The newer value still
+    wins for ordinary widgets, for a different value type, and for a newer active
+    trigger of the same type.
     """
     if not old_states and not new_states:
         return None
