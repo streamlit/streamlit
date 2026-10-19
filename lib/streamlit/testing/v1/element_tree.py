@@ -3896,12 +3896,13 @@ class Grid(Block):
         # does not assign `proto` or `type` again. WhichOneof("type") does
         # not apply to the grid sub-message.
         super().__init__(cast("BlockProto", proto), root, type="grid_container")
-        self.column_count = "auto" if proto.max_columns == 0 else proto.max_columns
+        self.column_count = proto.columns if proto.HasField("columns") else "auto"
         self.wrap = proto.wrap if proto.HasField("wrap") else True
-        self.border = bool(proto.show_cell_border)
-        # 0 is the proto sentinel for min_column_width="auto".
+        self.border = bool(proto.border)
         self.min_column_width = (
-            "auto" if proto.min_column_width_px == 0 else proto.min_column_width_px
+            proto.min_column_width_px
+            if proto.HasField("min_column_width_px")
+            else "auto"
         )
         row_gap = _public_gap_value(proto.row_gap_config)
         column_gap = _public_gap_value(proto.column_gap_config)
@@ -3917,12 +3918,12 @@ class Grid(Block):
         # Width and height live on the parent block, same as the block id.
         self.width = _public_width(None if block is None else block.width_config)
         self.height = _public_height(None if block is None else block.height_config)
-        # FIXED is the pixel row-height mode. CONTENT and the reserved EQUAL
-        # value both surface as "content".
-        if proto.cell_height_mode == type(
-            proto
-        ).CellHeightMode.FIXED and proto.HasField("cell_height_config"):
-            self.row_height = proto.cell_height_config.pixel_height
+        # FIXED is the pixel row-height mode. Anything else surfaces as
+        # "content".
+        if proto.row_height_mode == type(proto).RowHeightMode.FIXED and proto.HasField(
+            "row_height_config"
+        ):
+            self.row_height = proto.row_height_config.pixel_height
         else:
             self.row_height = "content"
 

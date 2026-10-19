@@ -26,6 +26,7 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
+import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -448,16 +449,21 @@ export interface StyledGridContainerBlockProps {
   $wrap: boolean
   rowGap: streamlit.GapConfig.$Properties | undefined
   columnGap: streamlit.GapConfig.$Properties | undefined
-  cellHeightMode: BlockProto.GridContainer.CellHeightMode
-  cellHeightPx?: number
+  rowHeightMode: BlockProto.GridContainer.RowHeightMode
+  rowHeightPx?: number
   $dense?: boolean
   /**
    * When true, this element is the horizontal scrollport. Bounded-height
    * grids apply that overflow on StyledGridScrollBody instead. Only set
-   * once tracks are wider than the box: overflow-x: auto coerces
-   * overflow-y: visible to auto and clips hover toolbars.
+   * once tracks are wider than the box.
    */
   $horizontalScroll?: boolean
+  /**
+   * Room for a chart or dataframe toolbar above the first row. A horizontal
+   * scrollport clips the cross axis; this padding sits inside that clip.
+   * Bounded grids set it here even though the scrollport is the parent.
+   */
+  $overlayClearance?: boolean
 }
 
 export const StyledGridContainerBlock =
@@ -469,20 +475,26 @@ export const StyledGridContainerBlock =
       $wrap,
       rowGap,
       columnGap,
-      cellHeightMode,
-      cellHeightPx,
+      rowHeightMode,
+      rowHeightPx,
       $dense,
       $horizontalScroll = false,
+      $overlayClearance = false,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
+      // The scrollport clips anything outside its padding edge. Growing by
+      // the toolbar height keeps that chrome inside the edge. A negative
+      // margin would pull the same box over the element above and take its
+      // clicks; the focus-ring trick is only 0.2rem and fits in the gap.
+      const reserveToolbarSpace = $horizontalScroll || $overlayClearance
 
-      // Pixel row_height is a fixed track. Content, and the reserved EQUAL
-      // value, size each row to its tallest cell.
+      // Pixel row_height is a fixed track. Content sizes each row to its
+      // tallest cell.
       const gridAutoRows =
-        cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED &&
-        cellHeightPx
-          ? `${cellHeightPx}px`
+        rowHeightMode === BlockProto.GridContainer.RowHeightMode.FIXED &&
+        rowHeightPx
+          ? `${rowHeightPx}px`
           : "auto"
 
       return {
@@ -503,14 +515,16 @@ export const StyledGridContainerBlock =
         gridAutoRows,
         // wrap=False keeps the declared track count and scrolls locally,
         // but only once the tracks are wider than this box.
+        ...(reserveToolbarSpace && {
+          paddingTop: getBareEmbedOverlayToolbarPadding(theme),
+          paddingBottom: theme.sizes.focusRingWidth,
+        }),
         ...($horizontalScroll && {
           overflowX: "auto" as const,
-          overflowY: "visible" as const,
-          // One-axis overflow can coerce the other axis, which would clip
-          // child focus rings. Cancel the extra padding with a negative
-          // margin so the outer layout is unchanged.
-          paddingBlock: theme.sizes.focusRingWidth,
-          marginBlock: `-${theme.sizes.focusRingWidth}`,
+          // `visible` computes to `auto` and would clip the toolbar. `hidden`
+          // does not open a vertical scrollbar. The padding above is part of
+          // this auto height, so in-flow rows stay inside the clip.
+          overflowY: "hidden" as const,
         }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
@@ -528,7 +542,7 @@ export const StyledGridScrollBody = styled.div<{
   $scroll: boolean
   $horizontalScroll: boolean
   $bounded: boolean
-}>(({ theme, $scroll, $horizontalScroll, $bounded }) => {
+}>(({ $scroll, $horizontalScroll, $bounded }) => {
   // Content and stretch heights keep this node so a later pixel or rem
   // height does not remount the grid. `display: contents` leaves layout
   // unchanged. Stretch grows with the shared container rule instead of
@@ -557,9 +571,9 @@ export const StyledGridScrollBody = styled.div<{
     ...(!$scroll &&
       $horizontalScroll && {
         overflowX: "auto" as const,
-        overflowY: "visible" as const,
-        paddingBlock: theme.sizes.focusRingWidth,
-        marginBlock: `-${theme.sizes.focusRingWidth}`,
+        // Same cross-axis clip as the unbounded grid. Toolbar room lives on
+        // the grid, inside this port, so this axis does not scroll.
+        overflowY: "hidden" as const,
       }),
   }
 })

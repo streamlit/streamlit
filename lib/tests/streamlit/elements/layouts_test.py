@@ -2792,9 +2792,9 @@ class GridTest(DeltaGeneratorTestCase):
         st.grid()
         grid_block = self.get_delta_from_queue()
 
-        assert grid_block.add_block.grid_container.max_columns == 0
+        assert not grid_block.add_block.grid_container.HasField("columns")
         # "auto" min width is unset (frontend rem token)
-        assert grid_block.add_block.grid_container.min_column_width_px == 0
+        assert not grid_block.add_block.grid_container.HasField("min_column_width_px")
         assert grid_block.add_block.grid_container.wrap
         assert not grid_block.add_block.grid_container.dense
         assert (
@@ -2808,10 +2808,10 @@ class GridTest(DeltaGeneratorTestCase):
             grid_block.add_block.grid_container.vertical_alignment
             == BlockProto.GridContainer.VerticalAlignment.TOP
         )
-        assert not grid_block.add_block.grid_container.show_cell_border
+        assert not grid_block.add_block.grid_container.border
         assert (
-            grid_block.add_block.grid_container.cell_height_mode
-            == BlockProto.GridContainer.CellHeightMode.CONTENT
+            grid_block.add_block.grid_container.row_height_mode
+            == BlockProto.GridContainer.RowHeightMode.CONTENT
         )
         assert grid_block.add_block.height_config.use_content
         assert grid_block.add_block.allow_empty
@@ -2821,14 +2821,14 @@ class GridTest(DeltaGeneratorTestCase):
         st.grid(columns=3)
         grid_block = self.get_delta_from_queue()
 
-        assert grid_block.add_block.grid_container.max_columns == 3
+        assert grid_block.add_block.grid_container.columns == 3
 
     def test_grid_column_bounds(self):
         """Integer columns are a closed interval 1…24."""
         st.grid(1)
-        assert self.get_delta_from_queue().add_block.grid_container.max_columns == 1
+        assert self.get_delta_from_queue().add_block.grid_container.columns == 1
         st.grid(24)
-        assert self.get_delta_from_queue().add_block.grid_container.max_columns == 24
+        assert self.get_delta_from_queue().add_block.grid_container.columns == 24
 
         with pytest.raises(StreamlitValueOutOfRangeError):
             st.grid(0)
@@ -2840,7 +2840,7 @@ class GridTest(DeltaGeneratorTestCase):
         st.grid(columns="auto", min_column_width=300)
         grid_block = self.get_delta_from_queue()
 
-        assert grid_block.add_block.grid_container.max_columns == 0
+        assert not grid_block.add_block.grid_container.HasField("columns")
         assert grid_block.add_block.grid_container.min_column_width_px == 300
 
     def test_invalid_columns_string(self):
@@ -2988,7 +2988,7 @@ class GridTest(DeltaGeneratorTestCase):
         st.grid(border=True)
         grid_block = self.get_delta_from_queue()
 
-        assert grid_block.add_block.grid_container.show_cell_border
+        assert grid_block.add_block.grid_container.border
 
     def test_grid_row_height_content(self):
         """Explicit content row height keeps rows sized to their cells."""
@@ -2996,8 +2996,8 @@ class GridTest(DeltaGeneratorTestCase):
         grid_block = self.get_delta_from_queue()
 
         assert (
-            grid_block.add_block.grid_container.cell_height_mode
-            == BlockProto.GridContainer.CellHeightMode.CONTENT
+            grid_block.add_block.grid_container.row_height_mode
+            == BlockProto.GridContainer.RowHeightMode.CONTENT
         )
 
     def test_grid_fixed_row_height(self):
@@ -3006,12 +3006,10 @@ class GridTest(DeltaGeneratorTestCase):
         grid_block = self.get_delta_from_queue()
 
         assert (
-            grid_block.add_block.grid_container.cell_height_mode
-            == BlockProto.GridContainer.CellHeightMode.FIXED
+            grid_block.add_block.grid_container.row_height_mode
+            == BlockProto.GridContainer.RowHeightMode.FIXED
         )
-        assert (
-            grid_block.add_block.grid_container.cell_height_config.pixel_height == 150
-        )
+        assert grid_block.add_block.grid_container.row_height_config.pixel_height == 150
 
     @parameterized.expand(
         [

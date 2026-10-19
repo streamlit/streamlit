@@ -235,13 +235,13 @@ message Block {
   message Transparent {}
 
   message GridContainer {
-    // Number of columns. 0 means auto mode (columns determined by min_column_width_px).
-    int32 max_columns = 1;
+    // Number of columns. Absent means auto (determined by min_column_width_px).
+    optional uint32 columns = 1;
 
-    // Minimum column width in pixels. 0 means "auto": the frontend uses
+    // Minimum column width in pixels. Absent means "auto": the frontend uses
     // theme.sizes.gridMinColumnWidth (12.5rem, about 200px) as the wrap
     // threshold. With wrap=false, tracks do not shrink below it.
-    uint32 min_column_width_px = 2;
+    optional uint32 min_column_width_px = 2;
 
     // Gap configuration for row and column gaps.
     streamlit.GapConfig row_gap_config = 3;
@@ -256,23 +256,19 @@ message Block {
     VerticalAlignment vertical_alignment = 5;
 
     // Whether to show a border around each cell.
-    bool show_cell_border = 6;
+    bool border = 6;
 
     // How rows are sized.
     // CONTENT: each row is as tall as its tallest cell.
-    // FIXED: every row is cell_height_config pixels.
-    // EQUAL is reserved for a follow-up that sizes every row to the tallest
-    // cell while height is "content". st.grid does not accept it, and the
-    // frontend renders EQUAL as CONTENT.
-    enum CellHeightMode {
+    // FIXED: every row is row_height_config pixels.
+    enum RowHeightMode {
       CONTENT = 0;
-      EQUAL = 1;
-      FIXED = 2;
+      FIXED = 1;
     }
-    CellHeightMode cell_height_mode = 7;
+    RowHeightMode row_height_mode = 7;
 
-    // Optional fixed cell height configuration (used when cell_height_mode is FIXED).
-    optional streamlit.HeightConfig cell_height_config = 8;
+    // Optional fixed row height (used when row_height_mode is FIXED).
+    optional streamlit.HeightConfig row_height_config = 8;
 
     // Whether to use dense packing mode (grid-auto-flow: dense).
     // When true, the grid fills gaps by reordering items.

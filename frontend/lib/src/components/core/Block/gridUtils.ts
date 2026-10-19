@@ -45,7 +45,7 @@ export function cssLengthToPx(value: string, rootFontSizePx: number): number {
 /**
  * Resolve the floor used as a wrap threshold (or no-wrap shrink floor).
  *
- * Proto `min_column_width_px === 0` means `"auto"`: always
+ * An absent `min_column_width_px` means `"auto"`: always
  * `theme.sizes.gridMinColumnWidth`. Border and `padding: calc(spacing.lg -
  * borderWidth)` sit inside the track, so they do not change this floor. An
  * explicit pixel int is unchanged.
@@ -54,10 +54,10 @@ export function resolveMinColumnWidthPx({
   minColumnWidthPx,
   autoMinColumnWidthPx,
 }: {
-  minColumnWidthPx: number
+  minColumnWidthPx: number | undefined
   autoMinColumnWidthPx: number
 }): number {
-  if (minColumnWidthPx > 0) {
+  if (minColumnWidthPx !== undefined && minColumnWidthPx > 0) {
     return minColumnWidthPx
   }
   return autoMinColumnWidthPx
@@ -67,7 +67,7 @@ export function resolveMinColumnWidthPx({
  * Compute the resolved column count `N` shared by wrapping, last-row track
  * reservation, and span clamping.
  *
- * `maxColumns === 0` is `columns="auto"`. When `wrap` is false, `N` is the
+ * An absent `columns` is `columns="auto"`. When `wrap` is false, `N` is the
  * declared count. When the container is unmeasured, `fallbackWidthPx` is used
  * so first paint matches the eventual layout (a known parent width, or the
  * padded default content box).
@@ -76,7 +76,7 @@ export function resolveGridColumnCount({
   availableWidthPx,
   minColumnWidthPx,
   columnGapPx,
-  maxColumns,
+  columns,
   wrap,
   fallbackWidthPx,
   cap = GRID_AUTO_COLUMN_CAP,
@@ -84,13 +84,13 @@ export function resolveGridColumnCount({
   availableWidthPx: number | undefined
   minColumnWidthPx: number
   columnGapPx: number
-  maxColumns: number
+  columns: number | undefined
   wrap: boolean
   fallbackWidthPx: number
   cap?: number
 }): number {
-  if (!wrap && maxColumns > 0) {
-    return maxColumns
+  if (!wrap && columns !== undefined && columns > 0) {
+    return columns
   }
 
   const width =
@@ -102,8 +102,8 @@ export function resolveGridColumnCount({
   const fitted = denom <= 0 ? cap : Math.floor((width + columnGapPx) / denom)
   const n = Math.max(1, fitted)
 
-  if (maxColumns > 0) {
-    return Math.min(maxColumns, n)
+  if (columns !== undefined && columns > 0) {
+    return Math.min(columns, n)
   }
   return Math.min(cap, n)
 }
@@ -166,10 +166,8 @@ export function gridTracksMinWidthPx(
 /**
  * Whether a `wrap=False` grid should be a horizontal scrollport.
  *
- * `overflow-x: auto` coerces `overflow-y: visible` to `auto`, which clips
- * chart and dataframe toolbars. Only turn the scrollport on once the
- * tracks are wider than the box. One pixel of slack matches the vertical
- * overflow check.
+ * Only turn the scrollport on once the tracks are wider than the box.
+ * One pixel of slack matches the vertical overflow check.
  */
 export function shouldScrollHorizontally(
   wrap: boolean,

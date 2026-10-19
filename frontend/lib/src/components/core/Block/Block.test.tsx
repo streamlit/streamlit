@@ -919,7 +919,7 @@ describe("BlockNodeRenderer direct grid cell wrapping context", () => {
       new BlockProto({
         allowEmpty: true,
         gridContainer: {
-          maxColumns: 3,
+          columns: 3,
           wrap: true,
         },
       })
@@ -1292,13 +1292,12 @@ describe("GridContainer Component", () => {
       new BlockProto({
         allowEmpty: true,
         gridContainer: {
-          maxColumns: 0,
           minColumnWidthPx: 220,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
           ...gridContainerProps,
         },
       })
@@ -1357,7 +1356,6 @@ describe("GridContainer Component", () => {
 
   it("should apply an explicit column count from the default content width", () => {
     const block = makeGridBlock({
-      maxColumns: 0,
       minColumnWidthPx: 200,
     })
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1373,7 +1371,6 @@ describe("GridContainer Component", () => {
 
   it("uses the padded content box rather than raw contentMaxWidth", () => {
     const block = makeGridBlock({
-      maxColumns: 0,
       minColumnWidthPx: 170,
     })
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1388,8 +1385,7 @@ describe("GridContainer Component", () => {
 
   it("should cap integer columns at the declared count", () => {
     const block = makeGridBlock({
-      maxColumns: 3,
-      minColumnWidthPx: 0,
+      columns: 3,
     })
     renderWithContexts(makeGridNodeRendererComponent(block))
 
@@ -1401,7 +1397,7 @@ describe("GridContainer Component", () => {
 
   it("should keep the declared count and scroll when wrap is false", () => {
     const block = makeGridBlock({
-      maxColumns: 4,
+      columns: 4,
       minColumnWidthPx: 200,
       wrap: false,
     })
@@ -1412,14 +1408,21 @@ describe("GridContainer Component", () => {
       "grid-template-columns: repeat(4, minmax(200px, 1fr))"
     )
     expect(gridContainer).toHaveStyle("overflow-x: auto;")
-    expect(gridContainer).toHaveStyle("padding-block: 0.2rem")
-    expect(gridContainer).toHaveStyle("margin-block: -0.2rem")
+    expect(gridContainer).toHaveStyle("overflow-y: hidden;")
+    // Clearance for the hover toolbar, inside the cross-axis clip. Bottom
+    // padding is the focus ring. No negative margin, so this does not cover
+    // the element above.
+    expect(gridContainer).toHaveStyle(
+      "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+    )
+    expect(gridContainer).toHaveStyle("padding-bottom: 0.2rem")
+    expect(gridContainer).not.toHaveStyle("margin-block: -0.2rem")
     expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
   })
 
   it("does not scroll a no-wrap grid whose tracks fit", () => {
     const block = makeGridBlock({
-      maxColumns: 2,
+      columns: 2,
       minColumnWidthPx: 100,
       wrap: false,
     })
@@ -1427,13 +1430,13 @@ describe("GridContainer Component", () => {
 
     const gridContainer = screen.getByTestId("stGrid")
     expect(gridContainer).not.toHaveStyle("overflow-x: auto")
-    expect(gridContainer).not.toHaveStyle("padding-block: 0.2rem")
+    expect(getComputedStyle(gridContainer).paddingTop).toBe("")
   })
 
   it("makes a text-only overflowing no-wrap grid keyboard scrollable", async () => {
     const block = makeGridBlock(
       {
-        maxColumns: 4,
+        columns: 4,
         minColumnWidthPx: 200,
         wrap: false,
       },
@@ -1451,7 +1454,7 @@ describe("GridContainer Component", () => {
   it("does not add a tab stop when a scrolling grid contains an iframe", async () => {
     const block = makeGridBlock(
       {
-        maxColumns: 4,
+        columns: 4,
         minColumnWidthPx: 200,
         wrap: false,
       },
@@ -1476,7 +1479,7 @@ describe("GridContainer Component", () => {
   it("keeps a tab stop when the only iframe is removed from tab order", async () => {
     const block = makeGridBlock(
       {
-        maxColumns: 4,
+        columns: 4,
         minColumnWidthPx: 200,
         wrap: false,
       },
@@ -1502,7 +1505,7 @@ describe("GridContainer Component", () => {
   it("does not add a tab stop on a no-wrap grid that already has a widget", async () => {
     const block = makeGridBlock(
       {
-        maxColumns: 4,
+        columns: 4,
         minColumnWidthPx: 200,
         wrap: false,
       },
@@ -1528,13 +1531,12 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         heightConfig: { useStretch: true },
         gridContainer: {
-          maxColumns: 0,
           minColumnWidthPx: 220,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )
@@ -1574,13 +1576,13 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         heightConfig: { pixelHeight: 160 },
         gridContainer: {
-          maxColumns: 2,
+          columns: 2,
           minColumnWidthPx: 220,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )
@@ -1600,14 +1602,14 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         heightConfig: { pixelHeight: 160 },
         gridContainer: {
-          maxColumns: 4,
+          columns: 4,
           minColumnWidthPx: 200,
           wrap: false,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )
@@ -1620,6 +1622,14 @@ describe("GridContainer Component", () => {
     )
     expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
       "overflow-x: auto"
+    )
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "overflow-y: hidden"
+    )
+    // The port is a fixed height, so the toolbar room lives on the grid
+    // inside it rather than growing the port.
+    expect(screen.getByTestId("stGrid")).toHaveStyle(
+      "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
     )
   })
 
@@ -1666,14 +1676,14 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         heightConfig: { pixelHeight: 160 },
         gridContainer: {
-          maxColumns: 4,
+          columns: 4,
           minColumnWidthPx: 200,
           wrap: false,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )
@@ -1737,31 +1747,6 @@ describe("GridContainer Component", () => {
     }
   })
 
-  it("scrolls a bounded grid when reserved equal mode is set", () => {
-    const block = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({
-        allowEmpty: true,
-        heightConfig: { pixelHeight: 400 },
-        gridContainer: {
-          maxColumns: 2,
-          minColumnWidthPx: 220,
-          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
-          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
-          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL,
-        },
-      })
-    )
-    renderWithContexts(makeGridNodeRendererComponent(block))
-
-    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle("height: 100%")
-    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
-    expect(screen.getByTestId("stGrid")).toHaveStyle("grid-auto-rows: auto")
-  })
-
   it("keeps content-height grids auto-sized", () => {
     const block = makeGridBlock()
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1786,13 +1771,12 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         heightConfig: { pixelHeight: 400 },
         gridContainer: {
-          maxColumns: 0,
           minColumnWidthPx: 220,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )
@@ -1813,7 +1797,7 @@ describe("GridContainer Component", () => {
       })
     )
     const block = makeGridBlock(
-      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED },
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED },
       [cell]
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1860,9 +1844,9 @@ describe("GridContainer Component", () => {
     )
     const block = makeGridBlock(
       {
-        cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
         verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
-        cellHeightConfig: { pixelHeight: 240 },
+        rowHeightConfig: { pixelHeight: 240 },
       },
       [cell]
     )
@@ -1923,8 +1907,8 @@ describe("GridContainer Component", () => {
       makeGridNodeRendererComponent(
         makeGridBlock(
           {
-            cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
-            cellHeightConfig: { pixelHeight: 240 },
+            rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+            rowHeightConfig: { pixelHeight: 240 },
           },
           [cell]
         )
@@ -1976,7 +1960,7 @@ describe("GridContainer Component", () => {
     )
     const block = makeGridBlock(
       {
-        cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
       },
       [cell]
@@ -1997,7 +1981,7 @@ describe("GridContainer Component", () => {
 
   it("leaves a direct stretch child on height 100% without flex-grow", () => {
     const block = makeGridBlock(
-      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED },
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED },
       [makeTextElement("direct", true)]
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -2029,7 +2013,6 @@ describe("GridContainer Component", () => {
       .mockReturnValue(rect)
     try {
       const block = makeGridBlock({
-        maxColumns: 0,
         minColumnWidthPx: 200,
       })
       renderWithContexts(makeGridNodeRendererComponent(block))
@@ -2054,7 +2037,7 @@ describe("GridContainer Component", () => {
       })
     )
     const block = makeGridBlock(
-      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
       [cell]
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -2081,7 +2064,7 @@ describe("GridContainer Component", () => {
     const { rerenderWithContexts } = renderWithContexts(
       makeGridNodeRendererComponent(
         makeGridBlock(
-          { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
+          { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
           [cell]
         )
       )
@@ -2091,8 +2074,8 @@ describe("GridContainer Component", () => {
       makeGridNodeRendererComponent(
         makeGridBlock(
           {
-            cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
-            cellHeightConfig: { pixelHeight: 240 },
+            rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+            rowHeightConfig: { pixelHeight: 240 },
           },
           [cell]
         )
@@ -2113,7 +2096,7 @@ describe("GridContainer Component", () => {
         gridCell: { columnSpanAll: true },
       })
     )
-    const block = makeGridBlock({ maxColumns: 4 }, [cell])
+    const block = makeGridBlock({ columns: 4 }, [cell])
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
@@ -2153,19 +2136,14 @@ describe("GridContainer Component", () => {
   it.each([
     [
       "auto rows: auto for content mode",
-      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
-      "grid-auto-rows: auto;",
-    ],
-    [
-      "auto rows: auto for reserved equal mode",
-      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL },
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
       "grid-auto-rows: auto;",
     ],
     [
       "auto rows: fixed px for fixed mode",
       {
-        cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
-        cellHeightConfig: { pixelHeight: 100 },
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+        rowHeightConfig: { pixelHeight: 100 },
       },
       "grid-auto-rows: 100px;",
     ],
@@ -2182,7 +2160,6 @@ describe("GridContainer Component", () => {
       new BlockProto({
         allowEmpty: true,
         gridContainer: {
-          maxColumns: 0,
           minColumnWidthPx: 220,
         },
         id: "$$ID-abc123-my_grid",
@@ -2345,7 +2322,7 @@ describe("GridContainer Component", () => {
         gridCell: { columnSpanAll: true },
       })
     )
-    const block = makeGridBlock({ maxColumns: 4 }, [
+    const block = makeGridBlock({ columns: 4 }, [
       new TransientNode(FAKE_SCRIPT_HASH, cell, [text("Loading")]),
     ])
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -2363,13 +2340,12 @@ describe("GridContainer Component", () => {
         allowEmpty: true,
         widthConfig: { pixelWidth: 416 },
         gridContainer: {
-          maxColumns: 0,
           minColumnWidthPx: 200,
           rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
           columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
           verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         },
       })
     )

@@ -1118,9 +1118,9 @@ class LayoutsMixin:
         dense : bool
             Whether later cells can backfill holes left by spanning cells.
             If this is ``False`` (default), cells keep source order. If
-            this is ``True``, later cells can be placed visually ahead of
-            earlier ones to fill gaps, so keyboard and screen-reader
-            order (DOM order) may not match visual order.
+            this is ``True``, later cells can appear visually ahead of
+            earlier ones. That can hurt accessibility, because keyboard
+            and screen-reader order stay in source order.
 
         Returns
         -------
@@ -1301,9 +1301,9 @@ class LayoutsMixin:
         block_proto.allow_empty = True
 
         grid_container = block_proto.grid_container
-        grid_container.max_columns = (
-            0 if validated_columns == "auto" else validated_columns
-        )
+        # Absent columns / min_column_width_px means "auto".
+        if validated_columns != "auto":
+            grid_container.columns = validated_columns
         if validated_min_column_width != "auto":
             grid_container.min_column_width_px = validated_min_column_width
 
@@ -1320,19 +1320,19 @@ class LayoutsMixin:
             "bottom": BlockProto.GridContainer.VerticalAlignment.BOTTOM,
         }
         grid_container.vertical_alignment = alignment_mapping[vertical_alignment]
-        grid_container.show_cell_border = border
+        grid_container.border = border
         grid_container.wrap = wrap
         grid_container.dense = dense
 
         if validated_row_height == "content":
-            grid_container.cell_height_mode = (
-                BlockProto.GridContainer.CellHeightMode.CONTENT
+            grid_container.row_height_mode = (
+                BlockProto.GridContainer.RowHeightMode.CONTENT
             )
         else:
-            grid_container.cell_height_mode = (
-                BlockProto.GridContainer.CellHeightMode.FIXED
+            grid_container.row_height_mode = (
+                BlockProto.GridContainer.RowHeightMode.FIXED
             )
-            grid_container.cell_height_config.pixel_height = validated_row_height
+            grid_container.row_height_config.pixel_height = validated_row_height
 
         block_proto.width_config.CopyFrom(get_width_config(width))
         block_proto.height_config.CopyFrom(get_height_config(height))

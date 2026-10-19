@@ -50,7 +50,7 @@ describe("resolveMinColumnWidthPx", () => {
     expect(autoMinColumnWidthPx).toBe(200)
     expect(
       resolveMinColumnWidthPx({
-        minColumnWidthPx: 0,
+        minColumnWidthPx: undefined,
         autoMinColumnWidthPx,
       })
     ).toBe(200)
@@ -70,7 +70,7 @@ describe("resolveGridColumnCount", () => {
         availableWidthPx: 10_000,
         minColumnWidthPx: 1,
         columnGapPx: 0,
-        maxColumns: 0,
+        columns: undefined,
         wrap: true,
         fallbackWidthPx: 736,
       })
@@ -82,7 +82,7 @@ describe("resolveGridColumnCount", () => {
       resolveGridColumnCount({
         ...autoFloor,
         availableWidthPx: 704,
-        maxColumns: 4,
+        columns: 4,
         wrap: true,
       })
     ).toBe(3)
@@ -92,7 +92,7 @@ describe("resolveGridColumnCount", () => {
     const narrowFloor = {
       minColumnWidthPx: 170,
       columnGapPx: 16,
-      maxColumns: 0,
+      columns: undefined,
       wrap: true,
       fallbackWidthPx: 0,
     }
@@ -112,7 +112,7 @@ describe("resolveGridColumnCount", () => {
 
   it("resolves st.grid(4, border=True) to 3 columns at 704px", () => {
     const minColumnWidthPx = resolveMinColumnWidthPx({
-      minColumnWidthPx: 0,
+      minColumnWidthPx: undefined,
       autoMinColumnWidthPx: cssLengthToPx("12.5rem", 16),
     })
     expect(
@@ -120,7 +120,7 @@ describe("resolveGridColumnCount", () => {
         availableWidthPx: 704,
         minColumnWidthPx,
         columnGapPx: 16,
-        maxColumns: 4,
+        columns: 4,
         wrap: true,
         fallbackWidthPx: 736,
       })
@@ -132,7 +132,7 @@ describe("resolveGridColumnCount", () => {
       resolveGridColumnCount({
         ...autoFloor,
         availableWidthPx: undefined,
-        maxColumns: 4,
+        columns: 4,
         wrap: true,
         fallbackWidthPx: resolveDefaultGridContentBoxPx({
           contentMaxWidthPx: 736,
@@ -147,7 +147,7 @@ describe("resolveGridColumnCount", () => {
       resolveGridColumnCount({
         ...autoFloor,
         availableWidthPx: 320,
-        maxColumns: 4,
+        columns: 4,
         wrap: false,
       })
     ).toBe(4)
@@ -158,7 +158,7 @@ describe("resolveGridColumnCount", () => {
       resolveGridColumnCount({
         ...autoFloor,
         availableWidthPx: 180,
-        maxColumns: 4,
+        columns: 4,
         wrap: true,
       })
     ).toBe(1)
@@ -170,7 +170,7 @@ describe("resolveGridColumnCount", () => {
         availableWidthPx: 1100,
         minColumnWidthPx: 200,
         columnGapPx: 16,
-        maxColumns: 0,
+        columns: undefined,
         wrap: true,
         fallbackWidthPx: 736,
       })
