@@ -15,10 +15,10 @@
 """Turn a run's ForwardMsgs into the JSON snapshot an agent reads.
 
 Each command already described itself when it emitted its element (see
-``elements/lib/agent_spec.py``), so this module does not interpret protos. It
-merges the run's deltas by ``delta_path`` the way the frontend does, then fills
-in ``value``, read from reconciled session state, because proto defaults stop
-being accurate after the first interaction.
+``elements/lib/agent_spec.py``), so this module does not interpret protos.
+``tree`` merges the run's deltas by ``delta_path``. This walk then fills in
+``value`` from ``widget_values``, because proto defaults stop being accurate
+after the first interaction.
 
 ``data``, the derived facts about a dataframe or chart, is not attached yet.
 A command's parameters stay in ``props``.
@@ -27,27 +27,19 @@ A command's parameters stay in ``props``.
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass, field
-from itertools import starmap
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
-from streamlit.dataframe_util import convert_anything_to_list
-from streamlit.elements.lib import agent_spec
-from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.runtime.agent import json_encoding
+from streamlit.runtime.agent import json_encoding, tree, widget_values
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
-    from streamlit.proto.Block_pb2 import Block as BlockProto
-    from streamlit.proto.Element_pb2 import Element as ElementProto
+    from streamlit.runtime.agent.tree import _Node
     from streamlit.runtime.state.session_state import SessionState
-
-_LOGGER: Final = get_logger(__name__)
 
 SCHEMA_VERSION: Final = 1
 
@@ -56,139 +48,6 @@ SCHEMA_VERSION: Final = 1
 # time a run settles stands for nothing still to come. See
 # `_SnapshotBuilder._is_contentless`.
 _CONTENTLESS_TYPES: Final = {"empty", "space", "html", "skeleton"}
-
-# Widgets whose wire value is text. Their serializer is what turns a stored
-# Python value into that text -- a `format_func` label, an ISO date -- so a
-# value reported through it is one a request can send back, whether or not the
-# widget registered an option list.
-_STRING_WIRE_TYPES: Final = {"string_value", "string_array_value"}
-
-_ROOT_CONTAINER_NAMES: Final = {
-    RootContainer.MAIN: "main",
-    RootContainer.SIDEBAR: "sidebar",
-    RootContainer.EVENT: "event",
-    RootContainer.BOTTOM: "bottom",
-}
-
-
-@dataclass
-class _Node:
-    """A merged tree node: either a container or a single element."""
-
-    block: BlockProto | None = None
-    element: ElementProto | None = None
-    # What the command said about itself, from ForwardMsgMetadata.agent_props.
-    description: dict[str, Any] = field(default_factory=dict)
-    # The fragment that emitted this node, when one did. A dialog's block is
-    # emitted by the fragment that opened it, and the dialog body by the
-    # dialog's own fragment, so the two ids differ.
-    fragment_id: str | None = None
-    # Root containers have a fixed name rather than a proto.
-    root_name: str | None = None
-    children: dict[int, _Node] = field(default_factory=dict)
-
-    @property
-    def is_container(self) -> bool:
-        return self.element is None
-
-
-def merge_deltas(messages: list[ForwardMsg]) -> _Node:
-    """Merge one run's deltas into a tree of the four root containers.
-
-    ``messages`` are the forward messages for the page as the frontend would
-    apply them for that run, in order. This does not drop nodes a later
-    fragment run would clear; the caller passes the messages that already
-    make up the page.
-
-    Block replacement follows the frontend: a block of the same type keeps its
-    children, and a different type or dialog identity drops them. Unlike the
-    frontend, which rejects a delta whose parent container is missing, this
-    creates a placeholder and lets the block that later claims the position
-    adopt its children.
-    """
-    root = _Node(
-        root_name="root",
-        children={
-            index: _Node(root_name=name)
-            for index, name in _ROOT_CONTAINER_NAMES.items()
-        },
-    )
-
-    for msg in messages:
-        if not msg.HasField("delta"):
-            continue
-
-        description = (
-            agent_spec.decode(msg.metadata.agent_props)
-            if msg.metadata.HasField("agent_props")
-            else {}
-        )
-
-        delta_type = msg.delta.WhichOneof("type")
-        # Set on every delta written while a fragment was running, which is how
-        # a partial rerun says what it owns.
-        fragment_id = msg.delta.fragment_id or None
-        if delta_type == "new_element":
-            node = _Node(
-                element=msg.delta.new_element,
-                description=description,
-                fragment_id=fragment_id,
-            )
-        elif delta_type == "add_block":
-            node = _Node(
-                block=msg.delta.add_block,
-                description=description,
-                fragment_id=fragment_id,
-            )
-        else:
-            # Transient elements (spinners) report progress for a run that has
-            # already finished by the time a snapshot is built.
-            continue
-
-        delta_path = list(msg.metadata.delta_path)
-        if not delta_path:
-            continue
-
-        parent = root
-        for index in delta_path[:-1]:
-            child = parent.children.get(index)
-            if child is None or not child.is_container:
-                child = _Node()
-                parent.children[index] = child
-            parent = child
-
-        position = delta_path[-1]
-        if node.is_container:
-            existing = parent.children.get(position)
-            if existing is not None and _keep_existing_children(existing, node):
-                node.children = existing.children
-        parent.children[position] = node
-
-    return root
-
-
-def _keep_existing_children(existing: _Node, incoming: _Node) -> bool:
-    """Whether a newly arrived container keeps the children already there.
-
-    A placeholder has no block of its own: a descendant arrived first, and the
-    block that claims the position adopts those children. A container re-sent
-    with the same proto type, such as a dialog updating ``is_open``, is the
-    same container. A different type replaces it, the way the frontend replaces
-    a block, so the previous children are gone.
-    """
-    if not existing.is_container:
-        return False
-    if existing.block is None:
-        return True
-    if incoming.block is None:
-        return False
-    if existing.block.WhichOneof("type") != incoming.block.WhichOneof("type"):
-        return False
-    # A dialog's id is its identity. Any difference drops the previous body,
-    # including when only one of the two dialogs has an id.
-    if incoming.block.HasField("dialog"):
-        return existing.block.id == incoming.block.id
-    return True
 
 
 class ElementState(NamedTuple):
@@ -367,7 +226,8 @@ class _SnapshotBuilder:
         # other tabs would be unreachable.
         action = description.get("action")
         if action and (element_id := description.get("key")):
-            value = self._widget_value(
+            value = widget_values.reported_value(
+                self._session_state,
                 element_id,
                 value_schema=description.get("value_schema"),
                 options_open=props.get("accept_new_options") is True,
@@ -443,7 +303,8 @@ class _SnapshotBuilder:
         if element_id and action and not _is_write_only(description):
             props = description.get("props") or {}
             options = props.get("options")
-            value = self._widget_value(
+            value = widget_values.reported_value(
+                self._session_state,
                 element_id,
                 options=options if isinstance(options, list) else None,
                 value_schema=description.get("value_schema"),
@@ -574,246 +435,6 @@ class _SnapshotBuilder:
             result["value_schema"] = value_schema
         return result
 
-    def _widget_value(
-        self,
-        element_id: str,
-        *,
-        options: list[Any] | None = None,
-        value_schema: dict[str, Any] | None = None,
-        options_open: bool = False,
-    ) -> Any:
-        """Read a widget's live value, in the form a request may send back.
-
-        For a widget with a fixed option set, ``st.session_state`` holds the
-        author's Python option while the accepted wire value is the
-        ``format_func``-formatted string. Reporting the raw option would make
-        `value` unusable as input.
-
-        The widget's own serializer is the mapping the runtime will apply in
-        reverse, so it is what keeps read and write in the same space. It is
-        used for every widget with an option list, whether the registry holds
-        the list or only the snapshot lists it (`options`), as for
-        `st.select_slider`. It is also used for a widget whose wire value is
-        text when what it holds is not plain JSON already -- a date becomes its
-        ISO string. Others -- numbers, booleans, temporal sliders,
-        `st.feedback`'s integer -- are reported as their Python value in JSON,
-        which a request may also send.
-
-        A value typed into a widget that accepts new options is already its own
-        wire form. The serializer runs `format_func` on it anyway, so echoing
-        that back would format it again on every round trip. A closed option
-        set has no such text: a stored value that formats to a label is that
-        option, and the label is what a request sends.
-        """
-        if self._session_state is None:
-            return None
-        try:
-            # The stored value, which can differ from what st.session_state
-            # returns. A serialized chat proto is read without its
-            # deserializer, which drops uploads.
-            value = self._session_state.get_widget_value(element_id, deserialize=False)
-        except KeyError:
-            return None
-
-        metadata = self._session_state.get_widget_metadata(element_id)
-        if metadata is not None and metadata.value_type == "chat_input_value":
-            # Files and audio stay with the upload. The schema is the text.
-            from streamlit.elements.widgets.chat import ChatInputValue
-
-            if isinstance(value, ChatInputValue):
-                value = value.text
-        if options is None and metadata is not None:
-            options = metadata.formatted_options
-        if metadata is not None and (
-            options is not None
-            or (
-                metadata.value_type in _STRING_WIRE_TYPES
-                and not (value is None or isinstance(value, (str, int, float)))
-            )
-        ):
-            try:
-                serialized = _string_payload(metadata.serializer(value))
-                if (
-                    isinstance(serialized, list)
-                    and (value_schema or {}).get("type") != "array"
-                ):
-                    # A single choice is a one-item list on the wire, including
-                    # when the option itself is a tuple or list. A list-valued
-                    # widget's schema is an array, so that list stays a list.
-                    serialized = serialized[0] if len(serialized) == 1 else None
-                value = _keep_typed_text(
-                    value,
-                    serialized,
-                    options,
-                    _authored_options(metadata.serializer),
-                    options_open=options_open,
-                )
-            except Exception:
-                # The stored object is not a value a request can send back.
-                _LOGGER.warning(
-                    "Could not serialize the value of %s; reporting null.",
-                    element_id,
-                    exc_info=True,
-                )
-                return None
-
-        try:
-            return json_encoding.to_json_value(value)
-        except Exception:
-            _LOGGER.warning(
-                "Could not encode the value of %s.",
-                element_id,
-                exc_info=True,
-            )
-            return None
-
-
-def _string_payload(serialized: Any) -> Any:
-    """The string a trigger proto carries, or ``serialized`` unchanged.
-
-    ``st.menu_button`` and ``st.chat_input`` serialize to a protobuf whose
-    ``data`` field is the text a request sends. The field is optional, and an
-    unset one reads back as ``""``, which is an unfired trigger rather than a
-    payload. The proto itself is not JSON.
-    """
-    if hasattr(serialized, "HasField"):
-        try:
-            if not serialized.HasField("data"):
-                return None
-        except ValueError:
-            # A proto whose `data` field is always present has no presence bit.
-            pass
-    data = getattr(serialized, "data", None)
-    if isinstance(data, str):
-        return data
-    return serialized
-
-
-def _authored_options(serializer: Any) -> list[Any] | tuple[Any, ...] | None:
-    """The option objects the serializer was built with, when it has them.
-
-    Selection serdes keep those objects on ``options``. Typed text is detected
-    by comparing against that list.
-    """
-    options = getattr(getattr(serializer, "__self__", None), "options", None)
-    if isinstance(options, (list, tuple)):
-        return options
-    return None
-
-
-def _option_equals(item: Any, option: Any) -> bool:
-    """Whether ``item`` is ``option``.
-
-    Equality on an array-like option returns another array, and using that
-    result as a condition raises. A scalar result, including a NumPy ``bool_``,
-    is a match when it is true. An array is not.
-    """
-    try:
-        result = item == option
-    except Exception:
-        return False
-    if isinstance(result, bool):
-        return result
-    # NumPy's scalar bool is not a builtin bool. A 0-d result has one truth
-    # value; an array or a Series does not, and ``bool()`` on it raises.
-    if getattr(result, "ndim", None) != 0:
-        return False
-    try:
-        return bool(result)
-    except Exception:
-        return False
-
-
-def _index_authored(
-    authored: list[Any] | tuple[Any, ...] | None,
-) -> tuple[set[Any], list[Any]] | None:
-    """Split authored options into a hash lookup and an unhashable remainder."""
-    if authored is None:
-        return None
-    hashed: set[Any] = set()
-    linear: list[Any] = []
-    for option in authored:
-        try:
-            hashed.add(option)
-        except Exception:
-            # Unhashable options, and options whose equality raises while the
-            # set checks a collision, stay on the linear scan.
-            linear.append(option)
-    return hashed, linear
-
-
-def _is_authored(item: Any, index: tuple[set[Any], list[Any]]) -> bool:
-    """Whether ``item`` is one of the indexed authored options."""
-    hashed, linear = index
-    try:
-        if item in hashed:
-            return True
-    except Exception:
-        return any(_option_equals(item, option) for option in (*hashed, *linear))
-    return any(_option_equals(item, option) for option in linear)
-
-
-def _keep_typed_text(
-    stored: Any,
-    serialized: Any,
-    options: list[Any] | None,
-    authored: list[Any] | tuple[Any, ...] | None = None,
-    *,
-    options_open: bool = False,
-) -> Any:
-    """Return the serialized value, but keep text a user typed.
-
-    Only a widget that accepts new options can hold text that is not one of
-    its options. ``format_func`` runs on that text, so echoing the result back
-    would reformat it on every round trip. Text that is one of the authored
-    options is still reported as its label. A closed option set reports the
-    label, including when the stored value merely formats to one.
-    """
-    if options is None:
-        return serialized
-    try:
-        allowed: set[Any] | None = set(options)
-    except TypeError:
-        allowed = None
-    authored_index = _index_authored(authored) if options_open else None
-
-    def _is_option(label: Any) -> bool:
-        if allowed is None:
-            return label in options
-        return label in allowed
-
-    def _report(item: Any, label: Any) -> Any:
-        # Typed text can format to a label without being that option. A closed
-        # set has no typed text, so a value that formats to a label is it.
-        if (
-            options_open
-            and isinstance(item, str)
-            and authored_index is not None
-            and not _is_authored(item, authored_index)
-        ):
-            return item
-        if _is_option(label) or not isinstance(item, str):
-            return label
-        return item
-
-    # A multi-select stored through session state may be a set, array, or
-    # Series. The serde lists those the same way, and each item lines up with
-    # its formatted label. A string is one option, not a sequence of characters.
-    items: list[Any] | tuple[Any, ...] | None
-    if isinstance(stored, (list, tuple)):
-        items = stored
-    elif isinstance(serialized, list) and not isinstance(stored, str):
-        items = convert_anything_to_list(stored)
-    else:
-        items = None
-    if (
-        items is not None
-        and isinstance(serialized, list)
-        and len(items) == len(serialized)
-    ):
-        return list(starmap(_report, zip(items, serialized, strict=True)))
-    return _report(stored, serialized)
-
 
 def _public_key(element_id: str) -> str:
     """The key a client sends back: the author's key, or the opaque element ID.
@@ -881,9 +502,9 @@ def build_snapshot(
     ``navigation`` message replaces that page list. Pass those messages or the
     fields stay empty.
     """
-    tree = merge_deltas(messages)
+    root = tree.merge_deltas(messages)
     builder = _SnapshotBuilder(session_state)
-    children = builder.serialize_children(tree)
+    children = builder.serialize_children(root)
 
     new_session = _last_message(messages, "new_session")
     finished = _last_message(messages, "script_finished")
