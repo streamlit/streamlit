@@ -482,6 +482,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         }
         assert _one_keyed(document, "text_input", "name")["form_id"] == "edit"
         assert by_key["name"]["kind"] == "value"
+        assert _state(snapshot, "text_input", "name").form_id == "edit"
 
         mood = _state(snapshot, "feedback", "mood")
         assert mood.options == [0, 1, 2, 3, 4]
@@ -544,7 +545,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert snapshot.document["actions"][0]["kind"] == "value"
 
     def test_reported_values_are_what_a_request_can_send(self) -> None:
-        """Labels, null options, and typed text stay in the wire form."""
+        """A closed option set reports labels, including a null option."""
         st.selectbox(
             "Month",
             [1, 12],
@@ -587,6 +588,8 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert city["value"] == "Berlin"
         assert city["props"]["options"] == ["PARIS"]
 
+    def test_a_sequence_option_is_reported_as_its_label(self) -> None:
+        """A tuple or list option is the label string, not the sequence."""
         st.pills(
             "Pair",
             [("a", "b")],
@@ -600,12 +603,15 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
             format_func=lambda option: option[1],
             key="country",
         )
-        sequenced = self._build().document
-        assert _one_keyed(sequenced, "pills", "pair")["value"] == "b"
-        assert _one_keyed(sequenced, "select_slider", "country")["value"] == (
+
+        document = self._build().document
+        assert _one_keyed(document, "pills", "pair")["value"] == "b"
+        assert _one_keyed(document, "select_slider", "country")["value"] == (
             "United States"
         )
 
+    def test_typed_text_and_unusual_options_stay_requestable(self) -> None:
+        """Typed text, sets, and odd option types still report a wire value."""
         st.session_state.matched_city = "paris"
         st.selectbox(
             "Matched",
@@ -782,6 +788,34 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert tabs_action["kind"] == "value"
         assert tabs_action["type"] == "tabs"
 
+    def test_element_state_records_limits_a_request_is_checked_against(self) -> None:
+        """Constraints a later validator reads are stored on the element state."""
+        st.date_input(
+            "Days",
+            (dt.date(2026, 1, 1), dt.date(2026, 1, 31)),
+            key="days",
+        )
+        st.pills("Mood", ["a", "b"], key="mood")
+        st.pills("Required", ["a", "b"], required=True, key="required")
+        st.segmented_control("Mode", ["a", "b"], key="mode")
+        st.selectbox("City", ["Paris"], accept_new_options=True, key="open_city")
+        st.selectbox("Closed", ["Paris"], key="closed_city")
+        with st.form("edit"):
+            st.text_input("Name", key="name")
+
+        snapshot = self._build()
+        days = _state(snapshot, "date_input", "days")
+        assert days.max_items == 2
+        assert days.schema_type == "array"
+        assert _state(snapshot, "pills", "mood").clearable is True
+        assert _state(snapshot, "pills", "required").clearable is False
+        assert _state(snapshot, "segmented_control", "mode").clearable is True
+        assert _state(snapshot, "selectbox", "open_city").options_open is True
+        assert _state(snapshot, "selectbox", "closed_city").options_open is False
+        name = _state(snapshot, "text_input", "name")
+        assert name.form_id == "edit"
+        assert name.schema_type == "string"
+
     def test_a_missing_or_unserializable_value_does_not_raise(self) -> None:
         """No session, a missing key, and a failing serializer still build."""
         st.selectbox("Pick", ["a", "b"], key="pick")
@@ -866,20 +900,38 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert button["fragment"] != opener_fragment
         assert _state(snapshot, "button", "yes").in_dialog is True
         assert _state(snapshot, "button", "yes").fragment_id == button["fragment"]
+        assert "yes" in {entry["key"] for entry in document["actions"]}
 
     def test_a_closed_dialog_does_not_mark_its_body(self) -> None:
-        """Widgets in a dialog closed this run are not inside an open dialog."""
+        """A closed dialog keeps its body, and nothing in it can be used."""
         from streamlit.delta_generator_singletons import get_dg_singleton_instance
 
-        dialog = get_dg_singleton_instance().event_dg._dialog(title="Closed")
+        st.button("Outside", key="outside")
+        dialog = get_dg_singleton_instance().event_dg._dialog(
+            title="Closed", on_dismiss="rerun"
+        )
         dialog.open()
         with dialog:
             st.button("Inside", key="inside")
         dialog.close()
 
         snapshot = self._build()
-        assert _one(snapshot.document, "dialog")["props"]["is_open"] is False
-        assert _state(snapshot, "button", "inside").in_dialog is False
+        document = snapshot.document
+        assert _one(document, "dialog")["props"]["is_open"] is False
+        assert _one_keyed(document, "button", "inside")["props"]["label"] == "Inside"
+        inside = _state(snapshot, "button", "inside")
+        assert inside.in_dialog is False
+        assert inside.actionable is False
+        dialog_state = next(
+            state
+            for state in snapshot.element_states.values()
+            if state.command == "dialog"
+        )
+        assert dialog_state.actionable is False
+        keys = {entry["key"] for entry in document["actions"]}
+        assert "inside" not in keys
+        assert "outside" in keys
+        assert all(entry["type"] != "dialog" for entry in document["actions"])
 
     def test_status_uses_both_failure_signals(self) -> None:
         """A caught exception is not a failure. Either real signal is."""

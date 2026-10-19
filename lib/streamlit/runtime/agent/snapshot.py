@@ -39,7 +39,6 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
-from streamlit.runtime.state.session_state import Serialized
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -258,8 +257,10 @@ class _SnapshotBuilder:
         self.undescribed_types: set[str] = set()
         self.saw_uncaught_exception = False
         # Dialogs cannot nest, so a flag is enough to track the one being
-        # serialized.
+        # serialized. A closed one stays in the tree, but the frontend
+        # unmounts it, so nothing inside it can be used.
         self._in_dialog = False
+        self._closed_dialog = False
 
     def serialize_children(
         self, node: _Node, inherited_support: str | None = None
@@ -309,12 +310,20 @@ class _SnapshotBuilder:
         # Without this, `actions` would advertise children that the container's
         # own `support` denies, and the document would contradict itself.
         is_dialog = node.description.get("type") == "dialog"
+        dialog_props = (node.description.get("props") or {}) if is_dialog else {}
         actions_before_children = len(self.actions)
         # A dialog closed in this run still has its body in the tree. Only an
-        # open one makes those widgets cross-dialog writes.
-        if is_dialog and (node.description.get("props") or {}).get("is_open") is True:
+        # open one makes those widgets cross-dialog writes. A closed one is
+        # unmounted, so nothing in it can be set or fired. The flag covers the
+        # body; the dialog's own dismiss trigger is passed below.
+        if dialog_props.get("is_open") is True:
             self._in_dialog = True
+        closed_dialog = dialog_props.get("is_open") is False
+        if closed_dialog:
+            self._closed_dialog = True
         children = self.serialize_children(node, support)
+        if closed_dialog:
+            self._closed_dialog = False
         if is_dialog:
             self._in_dialog = False
 
@@ -372,7 +381,11 @@ class _SnapshotBuilder:
         # front of the children's, so `actions` follows tree order.
         before_record = len(self.actions)
         self._record_element_state(
-            description, inherited_support, None, node.fragment_id
+            description,
+            inherited_support,
+            None,
+            node.fragment_id,
+            unusable=closed_dialog,
         )
         if len(self.actions) == before_record + 1:
             self.actions.insert(actions_before_children, self.actions.pop())
@@ -457,6 +470,8 @@ class _SnapshotBuilder:
         inherited_support: str | None,
         form_id: str | None,
         fragment_id: str | None = None,
+        *,
+        unusable: bool = False,
     ) -> None:
         """Record what a node offers, and list it in `actions` if it is usable.
 
@@ -494,7 +509,14 @@ class _SnapshotBuilder:
             # The value is the index, and `value_schema` is an integer, so the
             # options a request is checked against are those indexes.
             options = list(range(count))
-        actionable = bool(action) and not support and not disabled
+        # A closed dialog is still in the tree, but the frontend unmounts it.
+        actionable = (
+            bool(action)
+            and not support
+            and not disabled
+            and not unusable
+            and not self._closed_dialog
+        )
 
         self.element_states[element_id] = ElementState(
             actionable=actionable,
@@ -586,9 +608,10 @@ class _SnapshotBuilder:
         if self._session_state is None:
             return None
         try:
-            # The base stored value, not a presenter view of it. A serialized
-            # chat proto is read without its deserializer, which drops uploads.
-            value = _read_widget_value(self._session_state, element_id)
+            # The stored value, which can differ from what st.session_state
+            # returns. A serialized chat proto is read without its
+            # deserializer, which drops uploads.
+            value = self._session_state.get_widget_value(element_id, deserialize=False)
         except KeyError:
             return None
 
@@ -643,35 +666,6 @@ class _SnapshotBuilder:
                 exc_info=True,
             )
             return None
-
-
-def _read_widget_value(session_state: SessionState, element_id: str) -> Any:
-    """The stored value, without deserializing an ``st.chat_input`` proto.
-
-    A value set through ``st.session_state`` wins. A still-serialized chat
-    proto is read from its ``data`` field: deserializing it removes uploaded
-    files the script may not have received. Every other value goes through
-    ``get_widget_value``.
-    """
-    user_key = session_state._key_id_mapper.id_key_mapping.get(element_id)
-    if user_key is not None:
-        try:
-            return session_state._new_session_state[user_key]
-        except KeyError:
-            pass
-
-    wstate = session_state._new_widget_state.states.get(element_id)
-    if (
-        isinstance(wstate, Serialized)
-        and wstate.value.WhichOneof("value") == "chat_input_value"
-    ):
-        chat_value = wstate.value.chat_input_value
-        # An unset field reads back as ``""``, which is an unfired trigger.
-        if not chat_value.HasField("data"):
-            return None
-        return chat_value.data
-
-    return session_state.get_widget_value(element_id)
 
 
 def _string_payload(serialized: Any) -> Any:
