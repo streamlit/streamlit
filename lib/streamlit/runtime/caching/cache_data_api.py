@@ -236,21 +236,24 @@ class DataCaches(StatsProvider):
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
-                    "(key=%s, persist=%s, max_entries=%s, ttl=%s) "
+                    "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s) "
                     "before creating new one with different params",
                     key,
                     persist,
                     max_entries,
+                    max_size_bytes,
                     ttl,
                 )
                 cache.storage.close()
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
-                "Creating new DataCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
+                "Creating new DataCache "
+                "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s)",
                 key,
                 persist,
                 max_entries,
+                max_size_bytes,
                 ttl,
             )
 

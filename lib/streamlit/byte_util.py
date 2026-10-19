@@ -23,9 +23,9 @@ from typing import Final
 from streamlit.errors import StreamlitInvalidParameterTypeError, StreamlitValueError
 
 _BYTE_SIZE_RE: Final[re.Pattern[str]] = re.compile(
-    r"^\s*(?P<value>(?:\d+(?:\.\d*)?|\.\d+))\s*"
-    r"(?P<unit>b|(?:k|ki)b|(?:m|mi)b|(?:g|gi)b|(?:t|ti)b)\s*$",
-    re.IGNORECASE,
+    r"(?P<value>(?:\d+(?:\.\d*)?|\.\d+)) ?"
+    r"(?P<unit>b|(?:k|ki)b|(?:m|mi)b|(?:g|gi)b|(?:t|ti)b)",
+    re.ASCII | re.IGNORECASE,
 )
 _MULTIPLIERS: Final[dict[str, int]] = {
     "b": 1,
@@ -43,6 +43,9 @@ _MAX_BYTE_SIZE_DIGITS: Final = 100
 _MAX_SIZE_DETAIL: Final = (
     "Use an integer number of bytes or a positive value with an explicit unit, "
     'such as "500MB", "1.5GB", or "200KiB".'
+)
+_MAX_SIZE_TYPE_DETAIL: Final = (
+    'Pass an integer byte count such as int(5e8), or a unit string such as "500MB".'
 )
 
 
@@ -82,7 +85,10 @@ def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | No
 
     if isinstance(value, bool):
         raise StreamlitInvalidParameterTypeError(
-            "max_size", type(value).__name__, ["int", "str"]
+            "max_size",
+            type(value).__name__,
+            ["int", "str"],
+            detail=_MAX_SIZE_TYPE_DETAIL,
         )
 
     if isinstance(value, int):
@@ -102,11 +108,16 @@ def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | No
             raise StreamlitValueError(
                 "max_size",
                 ["a positive byte size"],
-                detail="Use a byte size with at most 100 digits.",
+                detail=(
+                    f"Use a byte size with at most {_MAX_BYTE_SIZE_DIGITS} digits."
+                ),
             ) from None
     else:
         raise StreamlitInvalidParameterTypeError(
-            "max_size", type(value).__name__, ["int", "str"]
+            "max_size",
+            type(value).__name__,
+            ["int", "str"],
+            detail=_MAX_SIZE_TYPE_DETAIL,
         )
 
     if size <= 0:

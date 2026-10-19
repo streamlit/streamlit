@@ -36,7 +36,7 @@ from streamlit.errors import (
         ("1B", 1),
         ("1kb", 1024),
         ("1KiB", 1024),
-        (" 2 MB ", 2 * 1024**2),
+        ("2 MB", 2 * 1024**2),
         ("1.5GiB", 3 * 1024**3 // 2),
         ("1TB", 1024**4),
         (".5 kib", 512),
@@ -84,11 +84,42 @@ def test_cache_data_max_size_to_bytes_rejects_invalid_values(value: object) -> N
         cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        " 2MB",
+        "2MB ",
+        "2  MB",
+        "2\tMB",
+        "2\nMB",
+        "2MB\n",
+        "\uff12MB",
+        "1K\u0131B",
+        "1K\u0130B",
+    ],
+)
+def test_cache_data_max_size_to_bytes_rejects_invalid_string_grammar(
+    value: str,
+) -> None:
+    """Size strings use strict ASCII grammar with at most one literal space."""
+    with pytest.raises(StreamlitValueError):
+        cache_data_max_size_to_bytes(value)
+
+
 @pytest.mark.parametrize("value", [True, False, 1.5])
 def test_cache_data_max_size_to_bytes_uses_shared_type_error(value: object) -> None:
     """Incorrect value types use the shared parameter-type error."""
     with pytest.raises(StreamlitInvalidParameterTypeError):
         cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
+
+
+def test_float_max_size_error_explains_how_to_repair_value() -> None:
+    """Float errors recommend an integer byte count or unit string."""
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
+        cache_data_max_size_to_bytes(5e8)
+
+    assert "int(5e8)" in str(exc_info.value)
+    assert '"500MB"' in str(exc_info.value)
 
 
 @pytest.mark.parametrize("value", [0, -1, "0MB", ".0001B"])
@@ -112,5 +143,5 @@ def test_parser_rejects_long_numeric_tokens_with_streamlit_error() -> None:
     """Very long numbers raise Streamlit errors instead of Python's integer error."""
     value = f"{'1' * 5000}MB"
 
-    with pytest.raises(StreamlitValueError):
+    with pytest.raises(StreamlitValueError, match="at most 100 digits"):
         cache_data_max_size_to_bytes(value)

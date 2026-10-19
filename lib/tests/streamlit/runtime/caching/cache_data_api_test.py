@@ -337,11 +337,17 @@ If you think this is actually a Streamlit bug, please
             "ttl": None,
             "display_name": "max_size_change",
         }
-        first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
-        second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
+        with self.assertLogs(
+            "streamlit.runtime.caching.cache_data_api", level=logging.DEBUG
+        ) as logs:
+            first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
+            second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
 
         assert second is not first
         assert first.is_active is False
+        output = "\n".join(logs.output)
+        assert "max_size_bytes=100" in output
+        assert "max_size_bytes=200" in output
 
     def test_max_size_is_propagated_to_custom_storage_manager(self) -> None:
         """Custom storage managers receive the parsed limit during validation and use."""

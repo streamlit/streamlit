@@ -17,8 +17,9 @@
 This is a small, dependency-free replacement for ``cachetools.TTLCache`` that
 preserves the exact subset of behavior Streamlit relies on:
 
-- The cache evicts the least-recently-used entry when its entry count exceeds
-  ``maxsize`` or its optional aggregate value size exceeds ``max_total_size``.
+- The cache evicts least-recently-used entries until its entry count is within
+  ``maxsize`` and its optional aggregate value size is within
+  ``max_total_size``. One value larger than ``max_total_size`` is still stored.
   Reads and writes both refresh recency.
 - Every entry shares the same ``ttl``, so write order is also expiry order.
   Expired entries are reported as absent on reads (``__getitem__`` /
@@ -133,7 +134,8 @@ class TTLCache(MutableMapping[K, V]):
         )
 
     def __repr__(self) -> str:
-        # Use raw values so repr reports stored-entry bookkeeping without a timer read.
+        # Report raw stored counts: len(self) would reap entries and could fire
+        # subclass release hooks, and repr must not mutate the cache.
         representation = (
             f"{type(self).__name__}(maxsize={self._maxsize!r}, "
             f"ttl={self._ttl!r}, currsize={len(self._data)!r}"
@@ -174,6 +176,7 @@ class TTLCache(MutableMapping[K, V]):
         self.expire(now)
         if key in self._data:
             self._remove(key)
+        # Stop evicting when the cache is empty so one oversized value is retained.
         while self._data and (
             len(self._data) + 1 > self._maxsize
             or (
