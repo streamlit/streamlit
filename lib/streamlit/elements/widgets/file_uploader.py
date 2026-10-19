@@ -659,7 +659,7 @@ class FileUploaderMixin:
                 key=element_id,
                 # A browser user can upload. This API cannot deliver the bytes,
                 # so it only reports the widget.
-                support="read_only",
+                support="action_unsupported",
                 label=label,
                 type=list(file_uploader_proto.type) or None,
                 accept_multiple_files=accept_multiple_files,

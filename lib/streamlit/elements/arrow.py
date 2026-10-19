@@ -1298,7 +1298,7 @@ class ArrowMixin:
                 # A browser user can select rows or press a button column. This
                 # API only reports that. A display-only table has nothing to
                 # withhold, so it is fully supported.
-                support="read_only"
+                support="action_unsupported"
                 if is_selection_activated or button_columns
                 else None,
                 column_config=described_column_config(column_config_mapping),

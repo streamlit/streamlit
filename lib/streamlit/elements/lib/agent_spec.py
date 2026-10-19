@@ -80,12 +80,13 @@ ActionKind = Literal["value", "trigger"]
 
 # Why an element is not fully usable through the agent API. Omit it when the
 # element is fully supported. ``browser_required``: what renders may differ from
-# what is reported. ``read_only``: a browser user can act on the element, and
-# this API only reports that action. The limit is this API's, not the
-# element's. A display-only element has nothing to withhold, so it stays unset.
+# what is reported. ``action_unsupported``: a browser user can act on the
+# element, and this API only reports that action. The limit is this API's, not
+# the element's. A display-only element has nothing to withhold, so it stays
+# unset.
 SupportReason = Literal[
     "browser_required",
-    "read_only",
+    "action_unsupported",
 ]
 
 # Keys the snapshot serializer owns. A command's props are nested under "props"

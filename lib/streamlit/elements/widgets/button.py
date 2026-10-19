@@ -1522,7 +1522,7 @@ class ButtonMixin:
                 "download_button",
                 key=element_id,
                 action=None if is_deferred or on_click == "ignore" else "trigger",
-                support="read_only" if is_deferred else None,
+                support="action_unsupported" if is_deferred else None,
                 label=label,
                 help=download_button_proto.help or None,
                 icon=icon,
