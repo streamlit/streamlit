@@ -609,24 +609,25 @@ jobs:
             gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
           fi
 
-      # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
-      # - change:spec (always needs a human, regardless of impact)
-      # - change:feature + impact:users unless qa-approved is also present
-      #   (ai-qa-testing.yml adds qa-approved after a PASS verdict)
-      # - more than 5000 changed lines (additions + deletions)
-      # - PR originates from a fork
+      # Auto-approve ai-final-review PRs with an APPROVED verdict, except when:
+      # - the PR has change:spec
+      # - the PR has change:feature and impact:users without a QA pass on the current head
+      # - the PR changes more than 5000 lines (additions + deletions)
+      # - the PR originates from a fork
       # - fewer reviews were reported than configured models
-      # User-facing features are eligible once QA has passed. Bugfixes,
-      # chores, docs, internal features, and other impact:users PRs stay
-      # eligible without qa-approved.
+      # Bugfix, chore, docs, impact:internal, and other non-feature PRs stay
+      # eligible without a QA pass.
+      # For change:feature + impact:users, a QA pass is the qa-approved label plus
+      # a successful commit status named qa-approved on this head SHA. QA sets both
+      # after a PASS on that commit. A label left from an older head is not a pass.
       # Requires the repository/organization Actions setting "Allow GitHub
       # Actions to create and approve pull requests" (Settings > Actions >
       # General > Workflow permissions).
       # GitHub does not count GITHUB_TOKEN approvals toward required
       # CODEOWNERS reviews.
-      # Approval targets the current PR HEAD. We intentionally trust contributors
-      # not to push unreviewed changes after approval. qa-approved is not removed
-      # when new commits are pushed; a later QA run for that head updates it.
+      # This step approves the current PR head. For change:feature + impact:users,
+      # the QA pass must be for this same head. Authors are trusted not to push
+      # unreviewed changes after that approval.
       - name: Auto-approve on final review
         if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
@@ -702,7 +703,21 @@ jobs:
               echo "Skipping auto-approve: PR is labeled change:feature and impact:users without qa-approved"
               exit 0
             fi
-            echo "User-facing feature PR has qa-approved"
+            HEAD_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
+            if ! [[ "$HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "::warning::Could not parse PR head SHA, skipping auto-approve"
+              exit 0
+            fi
+            if ! STATUS_JSON=$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA/status"); then
+              echo "::warning::Failed to fetch commit status, skipping auto-approve"
+              exit 0
+            fi
+            QA_STATE=$(echo "$STATUS_JSON" | jq -r '[.statuses[]? | select(.context == "qa-approved") | .state] | first // ""')
+            if [ "$QA_STATE" != "success" ]; then
+              echo "Skipping auto-approve: qa-approved status on $HEAD_SHA is '${QA_STATE:-absent}', not success"
+              exit 0
+            fi
+            echo "User-facing feature PR has qa-approved on $HEAD_SHA"
           fi
 
           ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')

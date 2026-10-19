@@ -182,6 +182,8 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
+      # Commit status on the tested SHA is what auto-approve checks.
+      statuses: write
 
     steps:
       - name: Remove 'ai-qa-test' label
@@ -269,14 +271,17 @@ jobs:
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
           TESTED_SHA: ${{ needs.ai-qa-testing.outputs.head_sha }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           if [ ! -f "qa-artifacts/verdict.txt" ]; then
             echo "Warning: verdict.txt not found, skipping label"
             exit 0
           fi
 
-          # Only the QA run for the current head may grant or revoke qa-approved.
-          # A run that started before a later push must not label the new commits.
+          # Only a QA run for the current head may change qa-approved or do-not-merge.
+          # A run that started before a later push must leave the new head's labels alone.
+          # The tested commit always gets a qa-approved status so a later head cannot reuse this pass.
           SHA_MATCH=false
           if CURRENT_JSON=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV"); then
             CURRENT_SHA=$(echo "$CURRENT_JSON" | jq -r .head.sha)
@@ -286,24 +291,68 @@ jobs:
               echo "QA commit ${TESTED_SHA:-unknown} does not match current PR head ${CURRENT_SHA:-unknown}"
             fi
           else
-            echo "::warning::Failed to fetch PR head; will not change qa-approved"
+            echo "::warning::Failed to fetch PR head; will not change qa-approved or do-not-merge"
           fi
+
+          # A missing label is success. Retry once, then fail if it is still present
+          # so an API error cannot keep a pass after QA did not pass.
+          remove_qa_approved() {
+            local attempt
+            for attempt in 1 2; do
+              if gh pr edit "$PR_NUMBER_ENV" --remove-label "qa-approved" --repo "$REPOSITORY"; then
+                echo "Removed qa-approved"
+                return 0
+              fi
+              STILL_PRESENT=$(gh pr view "$PR_NUMBER_ENV" --repo "$REPOSITORY" --json labels \
+                --jq '[.labels[].name] | index("qa-approved") != null')
+              if [ "$STILL_PRESENT" = "false" ]; then
+                echo "qa-approved was not present"
+                return 0
+              fi
+              echo "qa-approved is still present after removal attempt $attempt"
+            done
+            echo "::error::Failed to remove qa-approved"
+            return 1
+          }
+
+          record_qa_status() {
+            local state="$1"
+            local description="$2"
+            if ! [[ "$TESTED_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "::error::Cannot record QA status; tested SHA is missing or invalid"
+              return 1
+            fi
+            gh api "repos/$REPOSITORY/statuses/$TESTED_SHA" -X POST \
+              -f state="$state" \
+              -f context="qa-approved" \
+              -f description="$description" \
+              -f target_url="${GITHUB_SERVER_URL}/${REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          }
 
           VERDICT=$(tr -d '[:space:]' < "qa-artifacts/verdict.txt")
           case "$VERDICT" in
             FAIL)
+              status_ok=true
+              label_ok=true
+              record_qa_status failure "AI QA testing failed" || status_ok=false
               if [ "$SHA_MATCH" = "true" ]; then
-                echo "Removing 'qa-approved' label if present"
-                gh pr edit "$PR_NUMBER_ENV" --remove-label "qa-approved" --repo "$REPOSITORY" || true
+                remove_qa_approved || label_ok=false
+                echo "Adding 'do-not-merge' label"
+                gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY" || label_ok=false
               else
-                echo "Leaving 'qa-approved' unchanged because this FAIL is not for the current PR head"
+                echo "Leaving labels unchanged because this FAIL is not for the current PR head"
               fi
-              echo "Adding 'do-not-merge' label"
-              gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
+              if [ "$status_ok" != "true" ] || [ "$label_ok" != "true" ]; then
+                exit 1
+              fi
               ;;
             PASS)
               # A QA PASS must not lift a review hold. Only ai-pr-review.yml
               # or a human may remove do-not-merge, including a hold this job added on FAIL.
+              if ! record_qa_status success "AI QA testing passed"; then
+                echo "::error::QA passed but the commit status was not recorded; not adding qa-approved"
+                exit 1
+              fi
               if [ "$SHA_MATCH" != "true" ]; then
                 echo "Skipping 'qa-approved': QA result is not for the current PR head"
               else
@@ -321,7 +370,20 @@ jobs:
               echo "QA PASS does not remove 'do-not-merge'; re-add 'ai-review' or remove the label manually"
               ;;
             *)
-              echo "Verdict is $VERDICT - no label changes"
+              # BLOCKED and UNKNOWN are not a pass. Drop a leftover label on this head
+              # and record a non-success status so auto-approve cannot reuse an older PASS.
+              echo "Verdict is $VERDICT - not a QA pass"
+              status_ok=true
+              label_ok=true
+              record_qa_status error "AI QA testing did not pass" || status_ok=false
+              if [ "$SHA_MATCH" = "true" ]; then
+                remove_qa_approved || label_ok=false
+              else
+                echo "Leaving labels unchanged because this result is not for the current PR head"
+              fi
+              if [ "$status_ok" != "true" ] || [ "$label_ok" != "true" ]; then
+                exit 1
+              fi
               ;;
           esac
 
