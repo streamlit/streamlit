@@ -101,13 +101,8 @@ Do not cache live async clients or connections bound to the event loop that crea
 
 ### Bound cache growth
 
-**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
-Use `ttl` to expire stale results. For `st.cache_data`, prefer `max_size` when
-the goal is to bound serialized cache growth. Use `max_entries` instead when
-values have predictable sizes, or combine both when many small entries could
-add significant key and container overhead. For `st.cache_resource`, use
-`max_entries`. `max_size` integers are bytes; strings use binary units
-(`"500MB"` and `"500MiB"` are equal):
+**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default. Use `ttl` to expire stale results.
+For `st.cache_data`, prefer `max_size` when the goal is to bound serialized cache growth. Use `max_entries` instead when values have predictable sizes, or combine both when many small entries could add significant key and container overhead. For `st.cache_resource`, use `max_entries`. `max_size` integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
 # BAD: No growth bound
