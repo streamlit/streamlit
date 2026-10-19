@@ -89,7 +89,7 @@ st.cache_data(
 
 | Parameter  | Type                 | Default | Description                                                                                                                                 |
 |------------|----------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of the cache. `None` = no per-function cap (an explicitly configured process-wide `server.maxCacheDataSize` budget may still apply). |
+| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of this function's in-memory cache. `None` = no per-function cap (an explicitly configured process-wide `server.maxCacheDataSize` budget may still apply). One entry larger than the cap is still stored; see [Behavior](#behavior). |
 
 `max_size` accepts either an integer number of **bytes**, or a human-readable **string**
 with a unit (`"500MB"`, `"1.5GB"`, `"200KB"`) — mirroring how `ttl` already accepts either
@@ -103,7 +103,7 @@ still cached, and Streamlit logs a warning (see [Behavior](#behavior)).
 import streamlit as st
 
 
-# Cap this function's cache at 500 MB of cached data.
+# Cap this function's in-memory cache at 500 MB of cached data.
 @st.cache_data(max_size="500MB")
 def load_filtered_data(user_filter: str) -> pd.DataFrame:
     return expensive_query(user_filter)
@@ -165,10 +165,20 @@ enforcement and preserves existing behavior. Operators can opt in explicitly:
 maxCacheDataSize = "4gb"   # opt in across all @st.cache_data functions
 ```
 
-The option lives under `[server]` next to the other size caps (`server.maxUploadSize`,
-`server.maxMessageSize`) and follows their `max{Noun}Size` pattern. It is named after
-`st.cache_data`, the only cache it bounds. `server.maxCacheSize` was rejected because it
-reads as if it also covered `st.cache_resource`.
+The option lives under `[server]` because it is a process-wide resource cap, in the same
+family as `server.maxUploadSize` and `server.maxMessageSize`, and it follows their
+`max{Noun}Size` name pattern. It is not a per-run cache policy, which is what `[runner]`
+is for (`runner.cacheBackgroundRefreshTTLMultiplier`). It is named after `st.cache_data`,
+the only cache it bounds. `server.maxCacheSize` was rejected because it reads as if it
+also covered `st.cache_resource`.
+
+**Config values.** Unset (the v1 default, internally `None`) disables the budget. A
+non-zero value must be a unit string with the same case-insensitive binary units as
+`max_size` (`"4gb"`, `"500MB"`, `"1.5GB"`; fractional magnitudes are allowed). `0` and
+`"0"` also disable it. A bare non-zero integer (`500`) or a unit-less string (`"500"`)
+is rejected at startup with an error that tells the operator to add a unit. Those values
+are neither megabytes nor bytes: the other `server.*` size options are integer megabytes,
+and a bare number here is too easy to misread as one of those.
 
 When the combined size of all `st.cache_data` caches exceeds this budget, Streamlit evicts
 globally least-recently-used entries (across functions) until it fits. A per-function
@@ -176,8 +186,9 @@ globally least-recently-used entries (across functions) until it fits. A per-fun
 the process-wide budget. A single stored entry may still exceed either limit (see
 [Behavior](#behavior)).
 
-Because eviction only drops recomputable cached data, an app with an explicitly configured
-budget degrades through recomputation instead of allowing unbounded cache growth. The
+Because eviction only drops cached data that can be recomputed or reloaded, an app with
+an explicitly configured budget degrades by reproducing that data instead of allowing
+unbounded cache growth. The
 budget reduces out-of-memory risk but does not guarantee the process stays up: it counts
 serialized values only (not unpickled copies or cache metadata), and a single entry larger
 than the budget is still stored. Operators should choose a value below their deployment's
@@ -195,41 +206,48 @@ enable it are documented in
   `st.cache_data` caches into the process-wide budget. `0` / `"0"` explicitly disables it.
 - **Eviction order**: least-recently-used first, identical to `max_entries` (recency is
   refreshed on both read and write).
-- **A single entry larger than the limit**: A write is never rejected. If the entry alone
-  exceeds `max_size` (or the global budget), it is still stored and the limit is temporarily
-  exceeded — eviction never drops the entry currently being written. Streamlit logs a
-  warning once per cache when a stored entry exceeds the configured `max_size` or the
-  global budget, so the developer learns the limit is smaller than a single result.
-- **Global-budget eviction warning**: The first time the global budget evicts an entry,
-  Streamlit logs a one-time warning per process, for example: *"st.cache_data reached its
-  4.0 GB memory budget (server.maxCacheDataSize) and is evicting least-recently-used
-  entries, which are recomputed on their next use. Set server.maxCacheDataSize to change
-  the budget, or to "0" to disable it."* Both warnings go to the console log only, because
-  an in-app message would appear in every app that reaches a configured process budget.
+- **A single entry larger than the limit**: A write is never rejected, and eviction never
+  drops the entry currently being written. One result larger than `max_size` or the global
+  budget is still stored. That is a soft ceiling for a single entry: it stays until a
+  later write evicts it, and for the life of the cache when it is the only entry. Keeping
+  it, and logging a warning once per cache, avoids recomputing that input on every call.
+- **Global-budget eviction warning**: The first time the global budget evicts some other
+  entry, Streamlit logs a one-time warning per process, for example: *"st.cache_data
+  reached its 4.0 GB serialized-size budget (server.maxCacheDataSize) and is evicting
+  least-recently-used entries, which are recomputed on their next use, or reloaded from
+  disk if they were persisted. Set server.maxCacheDataSize to change the budget, or to "0"
+  to disable it."* The oversized-entry warning and this global-budget warning both go to
+  the console log only. The write still succeeds, and an in-app message would appear in
+  every session that reaches a configured process budget.
 - **Global eviction can empty a function's cache**: Right after a write, that function's
   cache holds at least the entry just written. The process-wide budget, however, evicts the
   globally least-recently-used entries across *all* functions and can later shrink an
-  individual function's cache to zero (each evicted entry is simply recomputed as a normal
-  miss on the next access).
+  individual function's cache to zero. Each evicted entry is recomputed on its next
+  access, or reloaded from disk when `persist="disk"`.
 - **`max_size` + `max_entries` together**: both are enforced; a write evicts until *both*
   constraints are satisfied.
-- **Interaction with `persist="disk"`**: `max_size` bounds the in-memory layer (the LRU
-  front cache), which is where the memory-pressure problem lives. The on-disk layer is not
-  bounded by `max_size` (disk isn't the scarce resource); this matches how `max_entries`
-  and `ttl` already behave relative to the in-memory wrapper.
+- **Interaction with `persist="disk"`**: `max_size` and the global budget bound the
+  in-memory layer only (the LRU front cache). Eviction removes that layer and leaves the
+  on-disk file in place, matching `max_entries`: the in-memory LRU is bounded and the disk
+  layer stays unbounded. A later miss reloads the file. This is not how `ttl` behaves —
+  `persist="disk"` ignores `ttl`. `st.cache_data.clear()` removes both layers and drops
+  that cache's bytes from the global budget, so later writes are not charged for entries
+  that are gone.
 - **Interaction with `refresh_mode="background"`**: stale-but-retained entries (kept until
   hard expiry at `runner.cacheBackgroundRefreshTTLMultiplier × ttl`, 2 × `ttl` by default; see
   [background refresh spec](../2026-04-08-cache-background-refresh/product-spec.md)) count
   toward `max_size` like any other entry and participate in the same LRU eviction.
-- **Interaction with `scope="session"`**: When enabled, the global budget is process-wide.
-  Session-scoped entries (`@st.cache_data(scope="session")`) live in the same process and
-  compete in the same global LRU as every other session's entries and all `scope="global"`
-  caches. This is intentional — the budget bounds *total* process memory, so under pressure
-  a busy session can evict another session's least-recently-used entries. The per-function
-  `max_size` still applies independently within each function's cache regardless of scope.
+- **Interaction with `scope="session"`**: `max_size` applies to each cache instance.
+  A session-scoped function has a separate cache per session, the same way `max_entries`
+  does, so `max_size="500MB"` allows about 500 MB of serialized data *per session*, not
+  one shared cap. `server.maxCacheDataSize`, when set, is the process-wide ceiling on the
+  combined serialized size of every `st.cache_data` cache, including each session's
+  entries and all `scope="global"` caches. It does not bound process RSS. Under that
+  budget a busy session can evict another session's least-recently-used entries.
 - **Validation**: Invalid `max_size` values fail at decoration time (fail fast, fail
   helpfully). A `bool` or a `float` raises `StreamlitInvalidParameterTypeError`; pass an
-  `int` byte count or a unit string such as `"1.5GB"` instead. A value that parses to
+  `int` byte count or a unit string such as `"1.5GB"`. A computed float such as `5e8` or
+  `2 * 1024**3 / 2` is rejected too — use `int(5e8)` or `"500MB"`. A value that parses to
   `<= 0` or uses an unrecognized unit raises `StreamlitValueError`.
 
 ### Rollout plan for the global budget
@@ -276,14 +294,17 @@ split into two decisions.
 defaulting to `None`. This lands the API and lets early adopters validate global eviction
 without silently changing existing apps. A separate follow-up may change the default to
 `"4gb"` only after reviewing the existing `cache_memory_bytes` distribution, opt-in global
-eviction metrics, performance results, and G2K/customer feedback. That follow-up needs its
+eviction metrics, performance results, and customer feedback. That follow-up needs its
 own compatibility review and release-note callout; `"0"` remains the explicit escape hatch
 for restoring an unlimited global cache if the default is enabled later.
 
 ### Technical feasibility (validated against the current implementation)
 
 This section records what the current code makes easy vs. hard — the primary question the
-proposal hinges on. Implementation details are in the [tech spec](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/16293/tech-spec.md).
+proposal hinges on. User-visible rules — memory-only eviction, and `clear()` dropping the
+budget — are in [Behavior](#behavior). Lock order, hit-path cost, and accounting tests are
+in the [tech spec](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/16293/tech-spec.md),
+which should be reviewed with the implementation change.
 
 - **`st.cache_data` — cheap and exact.** Entries live as `bytes` in a `TTLCache[str, bytes]`
   inside `InMemoryCacheStorageWrapper`. Per-entry size is just `len(bytes)` — already
