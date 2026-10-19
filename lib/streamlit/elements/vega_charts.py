@@ -37,6 +37,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
@@ -1051,6 +1052,14 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="line_chart",
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                },
                 alt=alt,
             ),
         )
@@ -1363,6 +1372,15 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="area_chart",
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "stack": stack,
+                },
                 alt=alt,
             ),
         )
@@ -1717,6 +1735,17 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="bar_chart",
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "horizontal": horizontal,
+                    "sort": sort,
+                    "stack": stack,
+                },
                 alt=alt,
             ),
         )
@@ -1988,6 +2017,15 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                agent_command="scatter_chart",
+                agent_encoding={
+                    "x": x,
+                    "y": y,
+                    "x_label": x_label,
+                    "y_label": y_label,
+                    "color": color,
+                    "size": size,
+                },
                 alt=alt,
             ),
         )
@@ -2241,6 +2279,7 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            agent_command="altair_chart",
             alt=alt,
         )
 
@@ -2523,6 +2562,8 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        agent_command: str = "altair_chart",
+        agent_encoding: dict[str, Any] | None = None,
         alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
@@ -2550,6 +2591,8 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            agent_command=agent_command,
+            agent_encoding=agent_encoding,
             alt=alt,
         )
 
@@ -2564,6 +2607,8 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        agent_command: str = "vega_lite_chart",
+        agent_encoding: dict[str, Any] | None = None,
         alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
@@ -2743,6 +2788,13 @@ class VegaChartsMixin:
                 "vega_lite_chart",
                 vega_lite_proto,
                 layout_config=layout_config,
+                agent_props=self._chart_agent_props(
+                    vega_lite_proto,
+                    command=agent_command,
+                    encoding=agent_encoding,
+                    selection_mode=list(vega_lite_proto.selection_mode),
+                    on_select=on_select,
+                ),
             )
             return widget_state.value
 
@@ -2753,6 +2805,53 @@ class VegaChartsMixin:
             "vega_lite_chart",
             vega_lite_proto,
             layout_config=layout_config,
+            agent_props=self._chart_agent_props(
+                vega_lite_proto,
+                command=agent_command,
+                encoding=agent_encoding,
+                key=key,
+                on_select=on_select,
+            ),
+        )
+
+    def _chart_agent_props(
+        self,
+        proto: VegaLiteChartProto,
+        *,
+        command: str,
+        encoding: dict[str, Any] | None,
+        selection_mode: list[str] | None = None,
+        key: str | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback | None = None,
+    ) -> str | None:
+        """Describe a Vega chart for the agent API.
+
+        Built here because the element ID and normalized selection modes exist
+        only once the chart proto is filled. The public command passes its own
+        name and encoding arguments in.
+        """
+        if not agent_spec.is_recording():
+            return None
+        # A built-in chart has no selection parameter, so it reports its own
+        # arguments only. `theme` is surface styling and is left out.
+        own_arguments: dict[str, Any] = (
+            encoding
+            if encoding is not None
+            else {"selection_mode": selection_mode or None}
+        )
+        if command in {"altair_chart", "vega_lite_chart"}:
+            # A callback reaches the server, so it is the same mode as "rerun".
+            own_arguments["on_select"] = "ignore" if on_select == "ignore" else "rerun"
+        return agent_spec.element(
+            command,
+            # A chart without selections has no element ID, only the author's key.
+            key=proto.id or key,
+            # A browser user can select marks. This API only reports that. A
+            # chart without selections has nothing to withhold, so it is fully
+            # supported.
+            support="action_unsupported" if selection_mode else None,
+            alt=proto.alt or None,
+            **own_arguments,
         )
 
     @property

@@ -816,7 +816,9 @@ class ResetOutsideWrappersTest(unittest.TestCase):
 
         _reset_outside_wrappers(storage, "frag")
 
-        mock_enqueue.assert_called_once_with([0, 3], wrapper.block_proto)
+        mock_enqueue.assert_called_once_with(
+            [0, 3], wrapper.block_proto, agent_props=None
+        )
         assert cursor.index == 0
 
     @patch("streamlit.delta_generator._enqueue_add_block")
@@ -831,11 +833,32 @@ class ResetOutsideWrappersTest(unittest.TestCase):
 
         _reset_outside_wrappers(storage, "frag")
 
-        mock_enqueue.assert_called_once_with([0, 4], wrapper.block_proto)
+        mock_enqueue.assert_called_once_with(
+            [0, 4], wrapper.block_proto, agent_props=None
+        )
         # LockedCursor has no reset(); the isinstance check skips it.
         # Verify cursor identity is preserved and index unchanged.
         assert wrapper.delta_generator._cursor is cursor
         assert cursor.index == 0
+
+    @patch("streamlit.delta_generator._enqueue_add_block")
+    def test_reemits_the_stored_agent_description(
+        self, mock_enqueue: MagicMock
+    ) -> None:
+        """A fragment rerun resends the wrapper description stored at creation."""
+        storage = MemoryFragmentStorage()
+        description = '{"type": "container", "transparent": true, "props": {}}'
+        wrapper = self._make_wrapper(
+            RunningCursor(RootContainer.MAIN), creation_delta_path=[0, 6]
+        )
+        wrapper.agent_props = description
+        storage.register_outside_wrapper("frag", "container", wrapper)
+
+        _reset_outside_wrappers(storage, "frag")
+
+        mock_enqueue.assert_called_once_with(
+            [0, 6], wrapper.block_proto, agent_props=description
+        )
 
     def test_repeated_reruns_keep_delta_paths_stable(self) -> None:
         """Resetting between runs prevents element accumulation in the wrapper."""

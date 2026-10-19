@@ -650,6 +650,57 @@ def update_column_config(
     column_config_mapping[column].update(column_config)
 
 
+# Presentation keys carry no meaning for a non-visual client.
+_COLUMN_PRESENTATION_KEYS: Final = frozenset({"width", "pinned", "alignment"})
+
+
+def described_column_config(column_config_mapping: Any) -> Any:
+    """The agent-facing view of a resolved column configuration.
+
+    The resolved mapping already has defaults applied, and it states "hide this
+    column" as ``{"hidden": True}`` rather than the bare ``None`` the author may
+    have written. Width, pinning, and alignment are presentation and are
+    removed. The index entry keeps its label, type, format, and other semantic
+    settings; its ``hidden`` flag is removed because ``hide_index`` reports
+    whether the index is shown. A column left with nothing to say is dropped.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return column_config_mapping
+
+    described: dict[Any, Any] = {}
+    for name, config in column_config_mapping.items():
+        if not isinstance(config, dict):
+            described[name] = config
+            continue
+
+        dropped_keys = _COLUMN_PRESENTATION_KEYS
+        if name == INDEX_IDENTIFIER:
+            dropped_keys = _COLUMN_PRESENTATION_KEYS | {"hidden"}
+        kept = {key: value for key, value in config.items() if key not in dropped_keys}
+        if kept:
+            described[name] = kept
+    return described or None
+
+
+def described_hide_index(column_config_mapping: Any) -> bool | None:
+    """Whether the resolved index column is hidden.
+
+    ``apply_data_specific_configs`` hides the index for formats that have no
+    meaningful index, and the selection and data-editor paths write their own
+    override. ``described_column_config`` drops that ``hidden`` flag, so the
+    description reports it here. An index with no resolved flag is omitted.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return None
+    index_config = column_config_mapping.get(INDEX_IDENTIFIER)
+    if not isinstance(index_config, dict):
+        return None
+    hidden = index_config.get("hidden")
+    if isinstance(hidden, bool):
+        return hidden
+    return None
+
+
 def apply_data_specific_configs(
     columns_config: ColumnConfigMapping,
     data_format: DataFormat,
