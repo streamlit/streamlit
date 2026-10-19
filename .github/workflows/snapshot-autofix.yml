@@ -12,10 +12,11 @@
 # `opened` is not a trigger: Playwright has not run yet, so `workflow_run`
 # handles labels applied at creation.
 #
-# Successful and cancelled Playwright runs leave the label in place, so a
-# later failure on the same PR still updates snapshots. The `workflow_run`
-# listener runs from the default branch; `labeled` uses the workflow file on
-# the pull request.
+# The label is one-shot. The first finished Playwright run consumes it:
+# snapshot mismatches open a snapshot PR, and a pass or a failure with no
+# snapshot updates just removes the label. A cancelled run leaves it for the
+# replacement run. The `workflow_run` listener runs from the default branch;
+# `labeled` uses the workflow file on the pull request.
 name: Snapshot Autofix
 
 on:
@@ -31,13 +32,14 @@ permissions:
 
 jobs:
   decide:
-    # Failures only: a green or cancelled Playwright run must not consume a runner.
-    # `labeled` still runs so a label added after a finished run can update immediately.
+    # Success removes the label. Failure updates snapshots, or removes the label
+    # when the artifact has no snapshot mismatches. Cancelled runs are ignored.
+    # `labeled` still runs so a label added after a finished run is handled immediately.
     if: >-
       (
         github.event_name == 'workflow_run' &&
         github.event.workflow_run.event == 'pull_request' &&
-        github.event.workflow_run.conclusion == 'failure'
+        (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'success')
       ) || (
         github.event_name == 'pull_request' &&
         github.event.action == 'labeled' &&
@@ -107,6 +109,15 @@ jobs:
                 `${playwrightJobName} on run ${runId}: status=${job.status} conclusion=${job.conclusion}`
               );
               return job.conclusion;
+            }
+
+            function armClear(pr) {
+              core.setOutput("action", "clear-label");
+              core.setOutput("pr_number", String(pr.number));
+              core.setOutput("head_sha", pr.head.sha);
+              core.info(
+                `Removing update-snapshots from #${pr.number}; Playwright passed for ${pr.head.sha}.`
+              );
             }
 
             function armUpdate(pr, runId) {
@@ -191,10 +202,7 @@ jobs:
             if (context.eventName === "workflow_run") {
               const workflowRun = context.payload.workflow_run;
               const headRepo = workflowRun.head_repository && workflowRun.head_repository.full_name;
-              if (headRepo && headRepo !== sameRepo) {
-                skipFork();
-                return;
-              }
+              const forkRun = Boolean(headRepo && headRepo !== sameRepo);
 
               const pr = await pullRequestForWorkflowRun(workflowRun);
               if (!pr) {
@@ -207,14 +215,26 @@ jobs:
                 core.info(`#${pr.number} does not have update-snapshots.`);
                 return;
               }
-              const conclusion = await testJobConclusion(workflowRun.id);
-              if (conclusion !== "failure") {
-                core.info(
-                  `Playwright tests did not fail (conclusion=${conclusion}). Leaving update-snapshots in place.`
-                );
+              if (workflowRun.conclusion === "success") {
+                armClear(pr);
                 return;
               }
-              armUpdate(pr, workflowRun.id);
+              if (forkRun) {
+                skipFork();
+                return;
+              }
+              const conclusion = await testJobConclusion(workflowRun.id);
+              if (conclusion === "failure") {
+                armUpdate(pr, workflowRun.id);
+                return;
+              }
+              if (conclusion === "success") {
+                armClear(pr);
+                return;
+              }
+              core.info(
+                `Playwright job conclusion is ${conclusion}. Leaving update-snapshots for a completed run.`
+              );
               return;
             }
 
@@ -248,12 +268,40 @@ jobs:
               core.setOutput("action", "note-success");
               core.setOutput("pr_number", String(pr.number));
               core.setOutput("head_sha", pr.head.sha);
-              core.info("Playwright passed. Snapshot update only runs after a failure.");
+              core.info("Playwright passed. Removing update-snapshots.");
               return;
             }
             core.info(
               `Latest Playwright job conclusion is ${conclusion}. Leaving update-snapshots in place.`
             );
+
+  clear-label:
+    needs: decide
+    if: needs.decide.result == 'success' && needs.decide.outputs.action == 'clear-label'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Remove update-snapshots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved. Leaving update-snapshots for the current commit."
+            exit 0
+          fi
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if ! printf '%s\n' "$labels" | grep -Fxq "update-snapshots"; then
+            echo "update-snapshots is already gone."
+            exit 0
+          fi
+          gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
 
   note-passed:
     needs: decide
@@ -274,10 +322,31 @@ jobs:
           script: |
             const prNumber = Number(process.env.PR_NUMBER);
             const sha = process.env.HEAD_SHA;
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            if (pullRequest.head.sha !== sha) {
+              core.info("PR head moved. Leaving update-snapshots for the current commit.");
+              return;
+            }
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: "update-snapshots",
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
             const body = [
               `Playwright E2E tests passed for \`${sha}\`, so there are no snapshot mismatches to update.`,
               "",
-              "The `update-snapshots` label stays on this pull request. Snapshot autofix runs only after Playwright fails.",
+              "Removed the `update-snapshots` label.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -394,7 +463,7 @@ jobs:
           # snapshot updates, including a missing results artifact. Any other
           # non-zero status is a real failure, including uv's own exit code 2.
           if [[ "$status" -eq 10 ]] && grep -q 'SNAPSHOT_RESULT=no-snapshot-updates' "$log"; then
-            echo "No snapshot updates in the Playwright artifact. Leaving update-snapshots in place."
+            echo "No snapshot updates in the Playwright artifact."
             echo "has_snapshots=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -402,6 +471,24 @@ jobs:
             exit "$status"
           fi
           echo "has_snapshots=true" >> "$GITHUB_OUTPUT"
+
+      - name: Remove update-snapshots when there is nothing to commit
+        if: steps.precheck.outputs.proceed == 'true' && steps.download.outputs.has_snapshots == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved. Leaving update-snapshots for the current commit."
+            exit 0
+          fi
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if printf '%s\n' "$labels" | grep -Fxq "update-snapshots"; then
+            gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
+          fi
 
       - name: Comment when a labeled run has no snapshot updates
         if: >-
@@ -419,7 +506,7 @@ jobs:
             const body = [
               `Playwright E2E tests failed for \`${sha}\`, but the results have no snapshot updates.`,
               "",
-              "The `update-snapshots` label stays on this pull request. Snapshot autofix runs only after a failure that includes snapshot mismatches.",
+              "Removed the `update-snapshots` label.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -452,7 +539,8 @@ jobs:
           git config user.name "Streamlit Bot"
           git add e2e_playwright/__snapshots__
           if git diff --staged --quiet; then
-            echo "Snapshot files already match. Leaving update-snapshots in place."
+            echo "Snapshot files already match. Removing update-snapshots."
+            gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
             exit 0
           fi
 
@@ -511,7 +599,7 @@ jobs:
               "",
               `Details are in the [workflow run](${runUrl}).`,
               "",
-              "The label is removed only after a snapshot PR is opened. Re-run Playwright, or remove and re-add `update-snapshots`, to try again.",
+              "The label stays only when this update itself fails. Re-run Playwright, or remove and re-add `update-snapshots`, to try again.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,

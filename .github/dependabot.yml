@@ -1,8 +1,7 @@
 version: 2
-# Every Dependabot PR gets `update-snapshots`. Snapshot autofix opens a
-# snapshot PR only when Playwright E2E tests fail with snapshot mismatches.
-# A passing run, or a failure that is not a snapshot mismatch, leaves the label
-# in place.
+# Every Dependabot PR gets `update-snapshots`. The first finished Playwright
+# run consumes it: snapshot mismatches open a snapshot PR, and a pass or a
+# failure without snapshot updates removes the label.
 updates:
   # Keep package.json (& lockfiles) up to date as soon as
   # new versions are published to the npm registry
