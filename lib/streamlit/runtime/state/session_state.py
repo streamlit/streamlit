@@ -1529,11 +1529,13 @@ class SessionState:
         return self._get_widget_metadata(widget_id)
 
     def get_widget_value(self, widget_id: str) -> Any:
-        """Return a widget's stored value without applying its presenter.
+        """Return the value stored for a widget.
 
-        Checks a value set through ``st.session_state`` first, then widget
-        state, then the previous run's state. Raises KeyError when none holds
-        a value.
+        ``st.session_state`` can show a different value when the widget has a
+        presenter, which builds that display value from stored state. This
+        returns the stored value. A value set through ``st.session_state`` is
+        checked first, then widget state, then the previous run's state.
+        Raises KeyError when none holds a value.
         """
         return self._getitem(
             widget_id, self._key_id_mapper.id_key_mapping.get(widget_id)
