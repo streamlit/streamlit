@@ -283,7 +283,7 @@ for restoring an unlimited global cache if the default is enabled later.
 ### Technical feasibility (validated against the current implementation)
 
 This section records what the current code makes easy vs. hard — the primary question the
-proposal hinges on. Implementation details are in [`tech-spec.md`](./tech-spec.md).
+proposal hinges on. Implementation details are in the [tech spec](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/16293/tech-spec.md).
 
 - **`st.cache_data` — cheap and exact.** Entries live as `bytes` in a `TTLCache[str, bytes]`
   inside `InMemoryCacheStorageWrapper`. Per-entry size is just `len(bytes)` — already
