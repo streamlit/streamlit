@@ -388,8 +388,17 @@ def test_properties_expose_configuration() -> None:
     cache: TTLCache[str, int] = TTLCache(maxsize=5, ttl=42, timer=clock)
 
     assert cache.maxsize == 5
+    assert cache.max_total_size is None
     assert cache.ttl == 42
     assert cache.timer is clock
+
+
+def test_total_size_configuration_requires_limit_and_size_function() -> None:
+    """Size tracking requires both its independent limit and measurement function."""
+    with pytest.raises(ValueError, match="must be provided together"):
+        TTLCache[str, bytes](maxsize=5, ttl=42, max_total_size=10)
+    with pytest.raises(ValueError, match="must be provided together"):
+        TTLCache[str, bytes](maxsize=5, ttl=42, getsizeof=len)
 
 
 def test_currsize_reflects_non_expired_entries() -> None:
@@ -400,6 +409,7 @@ def test_currsize_reflects_non_expired_entries() -> None:
     cache["a"] = 1
     cache["b"] = 2
     assert cache.currsize == 2
+    assert cache.curr_total_size is None
     assert cache._sizes is None
 
     clock.now = 10
@@ -476,27 +486,36 @@ def test_get_and_pop_return_default_for_expired_keys() -> None:
 
 def test_byte_sizing_evicts_lru_and_tracks_current_size() -> None:
     """Byte sizing evicts the LRU entry and maintains the current size."""
-    cache: TTLCache[str, bytes] = TTLCache(
-        maxsize=6, ttl=100, timer=_FakeClock(), getsizeof=len
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=6,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
     )
     cache["a"] = b"aa"
     cache["b"] = b"bbb"
-    assert cache.currsize == 5
-    assert repr(cache) == "TTLCache(maxsize=6, ttl=100, currsize=5)"
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 5
+    assert repr(cache) == (
+        "TTLCache(maxsize=inf, ttl=100, currsize=2, "
+        "max_total_size=6, curr_total_size=5)"
+    )
 
     assert cache["a"] == b"aa"
     cache["c"] = b"cc"
 
     assert "b" not in cache
     assert set(cache) == {"a", "c"}
-    assert cache.currsize == 4
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 4
 
 
 def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
     """Byte and entry-count limits are enforced together."""
-    cache: TTLCache[str, bytes] = TTLCache(
-        maxsize=100,
-        max_count=2,
+    cache = TTLCache[str, bytes](
+        maxsize=2,
+        max_total_size=100,
         ttl=100,
         timer=_FakeClock(),
         getsizeof=len,
@@ -507,25 +526,32 @@ def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
 
     assert set(cache) == {"b", "c"}
     assert cache.currsize == 2
+    assert cache.curr_total_size == 2
 
 
 def test_byte_sizing_retains_one_oversized_entry() -> None:
     """A lone value larger than the byte limit remains cached."""
-    cache: TTLCache[str, bytes] = TTLCache(
-        maxsize=3, ttl=100, timer=_FakeClock(), getsizeof=len
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=3,
+        ttl=100,
+        timer=_FakeClock(),
+        getsizeof=len,
     )
     cache["small"] = b"aa"
     cache["large"] = b"oversized"
 
     assert list(cache.items()) == [("large", b"oversized")]
-    assert cache.currsize == len(b"oversized")
+    assert cache.currsize == 1
+    assert cache.curr_total_size == len(b"oversized")
 
 
 def test_byte_size_is_updated_by_all_removal_paths() -> None:
     """Every removal path updates byte size."""
     clock = _FakeClock()
-    cache: TTLCache[str, bytes] = TTLCache(
-        maxsize=100,
+    cache = TTLCache[str, bytes](
+        maxsize=math.inf,
+        max_total_size=100,
         ttl=10,
         timer=clock,
         getsizeof=len,
@@ -533,15 +559,19 @@ def test_byte_size_is_updated_by_all_removal_paths() -> None:
     cache["a"] = b"aaaa"
     cache["b"] = b"bb"
     cache["a"] = b"a"
-    assert cache.currsize == 3
+    assert cache.currsize == 2
+    assert cache.curr_total_size == 3
 
     assert cache.pop("b") == b"bb"
     assert cache.currsize == 1
+    assert cache.curr_total_size == 1
     clock.now = 10
     assert cache.currsize == 0
+    assert cache.curr_total_size == 0
 
     cache["c"] = b"ccc"
     del cache["c"]
     cache["d"] = b"dddd"
     cache.clear()
     assert cache.currsize == 0
+    assert cache.curr_total_size == 0

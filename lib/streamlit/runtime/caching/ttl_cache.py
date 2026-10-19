@@ -17,9 +17,9 @@
 This is a small, dependency-free replacement for ``cachetools.TTLCache`` that
 preserves the exact subset of behavior Streamlit relies on:
 
-- The cache evicts the least-recently-used entry when aggregate size (entry count
-  by default, or ``getsizeof`` totals) exceeds ``maxsize``, or when ``max_count``
-  is exceeded. Reads and writes both refresh recency.
+- The cache evicts the least-recently-used entry when its entry count exceeds
+  ``maxsize`` or its optional aggregate value size exceeds ``max_total_size``.
+  Reads and writes both refresh recency.
 - Every entry shares the same ``ttl``, so write order is also expiry order.
   Expired entries are reported as absent on reads (``__getitem__`` /
   ``in``) but are only actually removed by a write, by ``expire()``, or by a
@@ -52,33 +52,36 @@ class TTLCache(MutableMapping[K, V]):
         maxsize: float,
         ttl: float,
         timer: Callable[[], float] = time.monotonic,
+        max_total_size: float | None = None,
         getsizeof: Callable[[V], int] | None = None,
-        max_count: int | None = None,
     ) -> None:
         """Create a new TTLCache.
 
         Parameters
         ----------
         maxsize : float
-            Maximum aggregate value size. Values have size one unless
-            ``getsizeof`` is provided. Use ``math.inf`` for an unbounded cache.
+            The maximum number of entries the cache may hold. Use ``math.inf``
+            for an unbounded cache.
         ttl : float
             The time in seconds that an entry remains valid after it is written.
         timer : Callable[[], float]
             A zero-argument callable returning the current time. Defaults to
             ``time.monotonic``.
+        max_total_size : float | None
+            Optional maximum aggregate size of cached values.
         getsizeof : Callable[[V], int] | None
-            Function that measures values against ``maxsize``. By default,
-            each value has size one.
-        max_count : int | None
-            Optional entry-count limit enforced in addition to ``maxsize``.
+            Function that measures values against ``max_total_size``. This must
+            be provided together with ``max_total_size``.
         """
+        if (max_total_size is None) != (getsizeof is None):
+            raise ValueError("max_total_size and getsizeof must be provided together")
         self._maxsize = maxsize
-        self._getsizeof = getsizeof or (lambda _value: 1)
-        self._size_mode = getsizeof is not None
-        self._max_count = max_count
-        self._currsize = 0
-        self._sizes: dict[K, int] | None = {} if self._size_mode else None
+        self._max_total_size = max_total_size
+        self._getsizeof = getsizeof
+        self._curr_total_size = 0
+        self._sizes: dict[K, int] | None = (
+            {} if self._max_total_size is not None else None
+        )
         self._ttl = ttl
         self._timer = timer
         # Maps key -> value in least-recently-used order (oldest first). The LRU
@@ -91,8 +94,13 @@ class TTLCache(MutableMapping[K, V]):
 
     @property
     def maxsize(self) -> float:
-        """The maximum aggregate size of cached values."""
+        """The maximum number of entries the cache may hold."""
         return self._maxsize
+
+    @property
+    def max_total_size(self) -> float | None:
+        """The maximum aggregate size of cached values, if configured."""
+        return self._max_total_size
 
     @property
     def ttl(self) -> float:
@@ -106,17 +114,28 @@ class TTLCache(MutableMapping[K, V]):
 
     @property
     def currsize(self) -> int:
-        """The current size of the non-expired entries."""
+        """The current number of non-expired entries."""
+        return len(self)
+
+    @property
+    def curr_total_size(self) -> int | None:
+        """The current aggregate size, or ``None`` when size is not tracked."""
         self.expire()
-        return self._currsize
+        return self._curr_total_size if self._sizes is not None else None
 
     def __repr__(self) -> str:
-        # Use the raw size because the currsize property reaps expired entries,
-        # and repr must not mutate the cache or fire removal callbacks.
-        return (
+        # Use raw values because the size properties reap expired entries, and
+        # repr must not mutate the cache or fire removal callbacks.
+        representation = (
             f"{type(self).__name__}(maxsize={self._maxsize!r}, "
-            f"ttl={self._ttl!r}, currsize={self._currsize!r})"
+            f"ttl={self._ttl!r}, currsize={len(self._data)!r}"
         )
+        if self._max_total_size is not None:
+            representation += (
+                f", max_total_size={self._max_total_size!r}, "
+                f"curr_total_size={self._curr_total_size!r}"
+            )
+        return f"{representation})"
 
     def __contains__(self, key: object) -> bool:
         # Membership never reorders entries and never reaps expired ones, which
@@ -139,29 +158,29 @@ class TTLCache(MutableMapping[K, V]):
         return self._data[key]
 
     def __setitem__(self, key: K, value: V) -> None:
-        # Count mode must hold at least one entry. Size mode permits a limit smaller
-        # than one value because Streamlit retains a single oversized cache entry.
-        if (not self._size_mode and self._maxsize < 1) or (
-            self._max_count is not None and self._max_count < 1
-        ):
+        if self._maxsize < 1:
             raise ValueError("value too large")
-        size = self._getsizeof(value)
+        size = self._getsizeof(value) if self._getsizeof is not None else None
         now = self._timer()
         # Reap expired entries first so freed capacity is reused before evicting.
         self.expire(now)
         if key in self._data:
             self._remove(key)
         while self._data and (
-            self._currsize + size > self._maxsize
-            or (self._max_count is not None and len(self._data) + 1 > self._max_count)
+            len(self._data) + 1 > self._maxsize
+            or (
+                size is not None
+                and self._max_total_size is not None
+                and self._curr_total_size + size > self._max_total_size
+            )
         ):
             # Dispatch through popitem() so subclasses such as TTLCleanupCache
             # can run their release hooks for automatic capacity evictions.
             self.popitem()
         self._data[key] = value
-        if self._sizes is not None:
+        if self._sizes is not None and size is not None:
             self._sizes[key] = size
-        self._currsize += size
+            self._curr_total_size += size
         self._data.move_to_end(key)
         self._expirations[key] = now + self._ttl
         self._expirations.move_to_end(key)
@@ -244,7 +263,8 @@ class TTLCache(MutableMapping[K, V]):
     def _remove(self, key: K) -> V:
         value = self._data.pop(key)
         del self._expirations[key]
-        self._currsize -= 1 if self._sizes is None else self._sizes.pop(key)
+        if self._sizes is not None:
+            self._curr_total_size -= self._sizes.pop(key)
         return value
 
     def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:

@@ -70,15 +70,11 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._max_size_bytes = context.max_size_bytes
         self._oversized_warning_emitted = False
         self._mem_cache: TTLCache[str, bytes] = TTLCache[str, bytes](
-            maxsize=(
-                self.max_entries
-                if self._max_size_bytes is None
-                else self._max_size_bytes
-            ),
+            maxsize=self.max_entries,
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
+            max_total_size=self._max_size_bytes,
             getsizeof=None if self._max_size_bytes is None else len,
-            max_count=None if self._max_size_bytes is None else self._max_entries,
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
