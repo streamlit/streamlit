@@ -3104,8 +3104,11 @@ describe("useEChartsSelections", () => {
     const brushOption = { throttleType: "debounce", throttleDelay: 400 }
     const brushModel = { option: { ...brushOption } }
     const clearScheduledHitTest = vi.fn()
-    chart.getModel = () => ({
-      eachComponent: (_query, callback) => {
+    ;(chart as unknown as { getModel: () => unknown }).getModel = () => ({
+      eachComponent: (
+        _query: { mainType: string },
+        callback: (model: { option: typeof brushOption }) => void
+      ) => {
         callback(brushModel)
       },
     })

@@ -74,11 +74,13 @@ export interface EChartsSelectionInstance {
     on(eventName: string, handler: (params: unknown) => void): void
     off(eventName: string, handler?: (params: unknown) => void): void
   }
-  /**
-   * Private on ECharts' public type, but present on the runtime instance.
-   * Form submit uses it to bypass ``brush.throttleDelay`` for one hit-test.
-   * ``setOption`` would do the same and also re-render the chart.
-   */
+}
+
+/**
+ * ``getModel`` is private on ECharts' public type. Declaring it here would
+ * make ``EChartsType`` unassignable to ``EChartsSelectionInstance``.
+ */
+interface BrushModelReader {
   getModel?: () => {
     eachComponent(
       query: { mainType: string },
@@ -129,19 +131,23 @@ function runWithSynchronousBrushHitTest(
   run: () => void
 ): void {
   const restores: Array<() => void> = []
-  chart.getModel?.().eachComponent({ mainType: "brush" }, model => {
-    const option = model.option
-    if (!option) {
-      return
-    }
-    const { throttleType, throttleDelay } = option
-    option.throttleType = "fixRate"
-    option.throttleDelay = 0
-    restores.push(() => {
-      option.throttleType = throttleType
-      option.throttleDelay = throttleDelay
+  // Call as a method so ECharts keeps its ``this``. ``setOption`` would
+  // re-render the chart to change the same throttle fields.
+  ;(chart as BrushModelReader)
+    .getModel?.()
+    .eachComponent({ mainType: "brush" }, model => {
+      const option = model.option
+      if (!option) {
+        return
+      }
+      const { throttleType, throttleDelay } = option
+      option.throttleType = "fixRate"
+      option.throttleDelay = 0
+      restores.push(() => {
+        option.throttleType = throttleType
+        option.throttleDelay = throttleDelay
+      })
     })
-  })
   try {
     run()
   } finally {
