@@ -19,7 +19,7 @@ from decimal import Inexact, localcontext
 import numpy as np
 import pytest
 
-from streamlit.byte_util import cache_data_max_size_to_bytes
+from streamlit.byte_util import _parse_byte_size, cache_data_max_size_to_bytes
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -47,6 +47,11 @@ def test_cache_data_max_size_to_bytes(
 ) -> None:
     """Supported byte-size values convert to their binary byte count."""
     assert cache_data_max_size_to_bytes(value) == expected
+
+
+def test_private_parser_returns_only_byte_count() -> None:
+    """The per-function parser does not expose unused parsing metadata."""
+    assert _parse_byte_size("1.5KiB") == 1536
 
 
 def test_cache_data_max_size_to_bytes_accepts_numpy_integer() -> None:

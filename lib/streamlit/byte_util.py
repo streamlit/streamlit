@@ -22,12 +22,12 @@ from typing import Final
 
 from streamlit.errors import StreamlitInvalidParameterTypeError, StreamlitValueError
 
-_BYTE_SIZE_RE: Final = re.compile(
+_BYTE_SIZE_RE: Final[re.Pattern[str]] = re.compile(
     r"^\s*(?P<value>(?:\d+(?:\.\d*)?|\.\d+))\s*"
     r"(?P<unit>b|(?:k|ki)b|(?:m|mi)b|(?:g|gi)b|(?:t|ti)b)\s*$",
     re.IGNORECASE,
 )
-_MULTIPLIERS: Final = {
+_MULTIPLIERS: Final[dict[str, int]] = {
     "b": 1,
     "kb": 1024,
     "kib": 1024,
@@ -54,23 +54,20 @@ class _ByteSizeTooLongError(ValueError):
     pass
 
 
-def _parse_byte_size(value: str) -> tuple[int, str]:
-    """Parse a unit-bearing size and return bytes plus its numeral's digits.
-
-    The digits exclude the decimal point so callers can distinguish an explicit
-    zero such as ``"0gb"`` from a positive fraction that rounds down to zero bytes.
-    """
+def _parse_byte_size(value: str) -> int:
+    """Parse a unit-bearing size and return its whole-byte count."""
     match = _BYTE_SIZE_RE.fullmatch(value)
     if match is None:
         raise _InvalidByteSizeError
-    value_text = match.group("value")
+    value_text: str = match.group("value")
+    unit: str = match.group("unit")
     whole, _, fraction = value_text.partition(".")
     digits = f"{whole or '0'}{fraction}"
     if len(digits) > _MAX_BYTE_SIZE_DIGITS:
         raise _ByteSizeTooLongError
     denominator = 10 ** len(fraction)
-    size = int(digits) * _MULTIPLIERS[match.group("unit").lower()] // denominator
-    return size, digits
+    size: int = int(digits) * _MULTIPLIERS[unit.lower()] // denominator
+    return size
 
 
 def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | None:
@@ -94,7 +91,7 @@ def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | No
         size = int(value)
     elif isinstance(value, str):
         try:
-            size, _ = _parse_byte_size(value)
+            size = _parse_byte_size(value)
         except _InvalidByteSizeError:
             raise StreamlitValueError(
                 "max_size",

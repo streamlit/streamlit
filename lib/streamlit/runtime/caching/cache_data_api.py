@@ -581,17 +581,19 @@ class CacheDataAPI:
 
         max_size : int, str, or None
             The maximum serialized (pickled) size of this function's in-memory cache.
-            An integer is a number of bytes. A string must include a binary unit, like
-            ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"`` and
-            ``"MiB"`` are equivalent. If this is ``None`` (default), there is no
-            per-function byte limit. Reading a cached value makes it the most recently
-            used.
+            An integer is a number of bytes. A string must include a unit, such as
+            ``"500MB"`` or ``"1.5GiB"``. The ``KB`` / ``MB`` / ``GB`` / ``TB`` and
+            ``KiB`` / ``MiB`` / ``GiB`` / ``TiB`` aliases all use powers of 1024.
+            Fractional values round down to whole bytes, so ``"1.1KB"`` is 1126
+            bytes. If this is ``None`` (default), there is no per-function byte limit.
 
-            On a write that would exceed the limit, Streamlit drops
-            least-recently-used entries until the new value fits.
+            When adding a value would exceed the limit, Streamlit drops the
+            least-recently-used entries until the new value fits. Reading a cached
+            value makes it the most recently used. If one value alone is larger than
+            ``max_size``, Streamlit keeps that value, drops the other in-memory
+            entries, and logs a warning. The next new value replaces the oversized
+            value.
 
-            - If one value is larger than ``max_size``, Streamlit keeps only that
-              value and logs a warning.
             - With ``persist="disk"``, only the in-memory copy is dropped.
             - With ``scope="session"``, the limit applies to each session separately.
             - The limit counts pickled bytes, not total process memory.
