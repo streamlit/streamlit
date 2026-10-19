@@ -106,8 +106,9 @@ Use `ttl` to expire stale results. For `st.cache_data`, prefer `max_size` when
 the goal is to bound serialized cache growth. Use `max_entries` instead when
 values have predictable sizes, or combine both when many small entries could
 add significant key and container overhead. For `st.cache_resource`, use
-`max_entries`. `max_size` integers are bytes; strings use binary units
-(`"500MB"` and `"500MiB"` are equal):
+`max_entries`. `max_size` integers are bytes. In strings, SI units such as
+`"500MB"` use powers of 1000, while IEC units such as `"500MiB"` use powers
+of 1024:
 
 ```python
 # BAD: No growth bound
