@@ -978,7 +978,8 @@ def _pages(
     """List the app's pages and identify the current one by ``url_path``.
 
     ``st.navigation`` supersedes the page list in ``new_session``, so a later
-    navigation message wins.
+    navigation message wins. External links are left out: they open another
+    site, and ``st.navigation`` will not switch the app to them.
     """
     navigation = _last_message(messages, "navigation")
     if navigation is not None:
@@ -1003,6 +1004,9 @@ def _pages(
     pages: list[dict[str, Any]] = []
     current_page: dict[str, Any] = {}
     for page in app_pages:
+        # An external link is a nav item, not a page the app can show.
+        if page.HasField("external_url"):
+            continue
         entry: dict[str, Any] = {
             "url_path": "" if single_page else page.url_pathname,
             "title": default_title if single_page else page.page_name or default_title,

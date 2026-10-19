@@ -1073,6 +1073,24 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         navigated["page"]["title"] = "changed"
         assert navigated["pages"][1]["title"] == "Reports"
 
+    def test_external_navigation_links_are_not_pages(self) -> None:
+        """An external link is not a destination the app can switch to."""
+        navigation = ForwardMsg()
+        navigation.navigation.page_script_hash = "main"
+        home = navigation.navigation.app_pages.add()
+        home.page_script_hash = "main"
+        home.page_name = "Home"
+        home.url_pathname = ""
+        docs = navigation.navigation.app_pages.add()
+        docs.page_script_hash = "docs"
+        docs.page_name = "Docs"
+        docs.url_pathname = "Docs"
+        docs.external_url = "https://docs.streamlit.io"
+
+        document = self._build(navigation).document
+        assert document["pages"] == [{"url_path": "", "title": "Home"}]
+        assert document["page"] == document["pages"][0]
+
 
 def _one_keyed(
     document: dict[str, Any], element_type: str, key: str | None
