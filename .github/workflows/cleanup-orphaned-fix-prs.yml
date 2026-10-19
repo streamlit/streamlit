@@ -79,10 +79,10 @@ jobs:
 
           autofix_prs="$(gh pr list --repo "$REPO" --limit 200 \
             --search 'is:open "[autofix] Automated fixes for" in:title' \
-            --json number,title,baseRefName,headRefName,url)"
+            --json number,title,baseRefName,headRefName,url,isCrossRepository,headRepositoryOwner)"
           snapshot_prs="$(gh pr list --repo "$REPO" --limit 200 \
             --search 'is:open "[snapshots] Update E2E snapshots for" in:title' \
-            --json number,title,baseRefName,headRefName,url)"
+            --json number,title,baseRefName,headRefName,url,isCrossRepository,headRepositoryOwner)"
           prs="$(jq -n --argjson autofix "$autofix_prs" --argjson snapshots "$snapshot_prs" \
             '$autofix + $snapshots | unique_by(.number) | sort_by(.number)')"
           echo "Found $(jq 'length' <<<"$prs") open autofix/snapshot pull request(s)."
@@ -93,6 +93,16 @@ jobs:
             base="$(jq -r '.baseRefName' <<<"$pr")"
             head="$(jq -r '.headRefName' <<<"$pr")"
             url="$(jq -r '.url' <<<"$pr")"
+            cross="$(jq -r '.isCrossRepository' <<<"$pr")"
+            head_owner="$(jq -r '.headRepositoryOwner.login // ""' <<<"$pr")"
+            repo_owner="${REPO%%/*}"
+
+            # Fork PRs are not bot PRs. Never close them or delete a same-named
+            # branch in this repository.
+            if [ "$cross" = "true" ] || [ "$head_owner" != "$repo_owner" ]; then
+              echo "Skipping #${number}: head repository is ${head_owner:-unknown}"
+              continue
+            fi
 
             if [[ "$title" =~ ^\[autofix\]\ Automated\ fixes\ for\ #([0-9]+) ]]; then
               target="${BASH_REMATCH[1]}"
@@ -141,13 +151,9 @@ jobs:
             echo "Closing #${number}: ${reason} (${url})"
             comment="Closing this automated pull request because ${reason}."
             comment+=$'\n\nAutofix and snapshot pull requests stay open only while their target pull request is open and its branch still exists.'
-            gh pr close "$number" --repo "$REPO" --comment "$comment"
+            close_args=(pr close "$number" --repo "$REPO" --comment "$comment")
             case "$head" in
-              autofix/*|snapshots/*)
-                encoded="$(jq -rn --arg branch "$head" '$branch | @uri')"
-                if ! gh api --method DELETE "repos/${REPO}/git/refs/heads/${encoded}" >/dev/null; then
-                  echo "Warning: could not delete branch ${head}"
-                fi
-                ;;
+              autofix/*|snapshots/*) close_args+=(--delete-branch) ;;
             esac
+            gh "${close_args[@]}"
           done < <(jq -c '.[]' <<<"$prs")
