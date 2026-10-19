@@ -682,6 +682,9 @@ class AppSession:
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
+            # File watchers run off the event loop, and ForwardMsgQueue is
+            # single-threaded. This handoff prevents delta coalescing from
+            # overwriting the notification.
             self._call_soon_on_event_loop(
                 lambda: self._enqueue_forward_msg(self._create_file_change_message())
             )

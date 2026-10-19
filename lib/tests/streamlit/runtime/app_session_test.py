@@ -649,7 +649,8 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
         session.request_rerun.assert_called_once_with(session._client_state)
 
-    def test_schedules_file_change_message_when_run_on_save_disabled(self):
+    def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
+        """File-change notifications enqueue from the event-loop callback."""
         session = _create_test_session()
         session._run_on_save = False
         session._call_soon_on_event_loop = MagicMock()
