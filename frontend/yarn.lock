@@ -3632,7 +3632,7 @@ __metadata:
     color2k: "npm:^2.0.2"
     d3-graphviz: "npm:^5.6.0"
     d3-selection: "npm:^3.0.0"
-    dompurify: "npm:^3.4.16"
+    dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
     hotkeys-js: "npm:^4.0.8"
@@ -3643,7 +3643,7 @@ __metadata:
     lodash-es: "npm:^4.18.1"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
-    marked: "npm:^18.1.0"
+    marked: "npm:^18.1.1"
     mdast-util-find-and-replace: "npm:^3.0.3"
     mermaid: "npm:^12.2.0"
     moment: "npm:^2.31.0"
@@ -10555,12 +10555,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^18.1.0":
-  version: 18.1.0
-  resolution: "marked@npm:18.1.0"
+"marked@npm:^18.1.1":
+  version: 18.1.1
+  resolution: "marked@npm:18.1.1"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/6022a30a15d25fe0eb2958f84ebb45518290e512b61afbf9a0b9452297b30cb5f1af8289fc0057a83fa8232e6115d902d85546aba5036063a97f93be88f4df70
+  checksum: 10c0/650d37ef22d39cc28e9afb194517dc7a23baa7c93971ccd518583907ac9b61ce90affb654e0f37b1505f7809988b6c35e45fbb8023bc03a33104bcdfe26324b1
   languageName: node
   linkType: hard
 
