@@ -98,7 +98,7 @@
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
     "plotly.js": "^4.1.2",
-    "protobufjs": "^8.8.0",
+    "protobufjs": "^8.8.1",
     "query-string": "^9.5.1",
     "re-resizable": "^6.11.2",
     "react-aria": "^3.53.1",
