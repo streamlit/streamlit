@@ -287,6 +287,8 @@ jobs:
       - name: Remove update-snapshots
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This job does not check out the repo, so gh cannot infer it from a git remote.
+          GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
           HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
         run: |
