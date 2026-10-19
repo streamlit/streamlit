@@ -621,6 +621,11 @@ class App:
             self._resolved_script_path = self._resolve_script_path()
 
         bootstrap.load_config_options(config_overrides)
+        from streamlit.runtime.caching.global_cache_budget import (
+            reconfigure_global_cache_budget_from_config,
+        )
+
+        reconfigure_global_cache_budget_from_config()
         bootstrap._prepare_asgi_app_run_context(
             launcher_path,
             script_args,

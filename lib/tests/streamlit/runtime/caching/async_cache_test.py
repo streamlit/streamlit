@@ -35,6 +35,9 @@ from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+)
 from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
@@ -50,11 +53,16 @@ CACHE_DECORATORS: list[tuple[str, Any]] = [
 @pytest.fixture(autouse=True)
 def _clear_caches() -> Any:
     """Clear both caches around every test so entries don't leak between tests."""
+    thread = threading.current_thread()
+    if hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
     st.cache_data.clear()
     st.cache_resource.clear()
     yield
     st.cache_data.clear()
     st.cache_resource.clear()
+    if hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+        delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
@@ -701,6 +709,42 @@ def test_async_max_entries_still_evicts() -> None:
     assert asyncio.run(load(2)) == 2
     # Re-accessing the evicted entry recomputes it.
     assert asyncio.run(load(1)) == 1
+    assert calls == [1, 2, 1]
+
+
+def test_async_max_size_insert_after_concurrent_hit_evicts_lru() -> None:
+    """An async miss can finish and evict the entry touched before its insert."""
+    calls: list[int] = []
+
+    @st.cache_data(max_size="1kb")
+    async def load(
+        x: int,
+        _started: asyncio.Event | None = None,
+        _release: asyncio.Event | None = None,
+    ) -> bytes:
+        calls.append(x)
+        if _started is not None and _release is not None:
+            _started.set()
+            await _release.wait()
+        return bytes([x]) * 700
+
+    async def run_race() -> None:
+        assert await load(1) == bytes([1]) * 700
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+        second_load = asyncio.create_task(load(2, started, release))
+        await started.wait()
+
+        # Keep key 1 current while key 2 is computing outside the cache locks.
+        assert await load(1) == bytes([1]) * 700
+        release.set()
+        assert await second_load == bytes([2]) * 700
+
+        # Both serialized entries cannot fit, so the completed miss evicts key 1.
+        assert await load(1) == bytes([1]) * 700
+
+    asyncio.run(run_race())
     assert calls == [1, 2, 1]
 
 

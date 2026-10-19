@@ -19,7 +19,11 @@ from decimal import Inexact, localcontext
 import numpy as np
 import pytest
 
-from streamlit.byte_util import _parse_byte_size, cache_data_max_size_to_bytes
+from streamlit.byte_util import (
+    _parse_byte_size,
+    cache_data_max_size_to_bytes,
+    config_max_cached_data_size_to_bytes,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -139,9 +143,40 @@ def test_cache_data_max_size_to_bytes_ignores_decimal_context() -> None:
         assert cache_data_max_size_to_bytes("1.1MB") == 11 * 1024**2 // 10
 
 
-def test_parser_rejects_long_numeric_tokens_with_streamlit_error() -> None:
+def test_parsers_reject_long_numeric_tokens_with_streamlit_errors() -> None:
     """Very long numbers raise Streamlit errors instead of Python's integer error."""
     value = f"{'1' * 5000}MB"
 
     with pytest.raises(StreamlitValueError, match="at most 100 digits"):
         cache_data_max_size_to_bytes(value)
+    with pytest.raises(StreamlitAPIException, match="supported byte-size range"):
+        config_max_cached_data_size_to_bytes(value)
+
+
+@pytest.mark.parametrize("value", [0, "0", " 0 "])
+def test_config_parser_accepts_disable_sentinel(value: object) -> None:
+    """The config parser accepts numeric and string disable sentinels."""
+    assert config_max_cached_data_size_to_bytes(value) is None
+
+
+def test_config_parser_uses_explicit_units() -> None:
+    """The config parser requires binary unit strings for nonzero values."""
+    assert config_max_cached_data_size_to_bytes("2gb") == 2 * 1024**3
+
+    for value in (1, "1", True):
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
+            config_max_cached_data_size_to_bytes(value)
+
+    for value in ("-1mb", "1XB"):
+        with pytest.raises(StreamlitAPIException, match="positive binary-unit"):
+            config_max_cached_data_size_to_bytes(value)
+
+    for value in ("0MB", "0.0GB"):
+        with pytest.raises(StreamlitAPIException, match="without a unit"):
+            config_max_cached_data_size_to_bytes(value)
+
+
+def test_config_parser_rejects_sub_byte_values_accurately() -> None:
+    """A unit-bearing value below one byte reports the actual constraint."""
+    with pytest.raises(StreamlitAPIException, match="at least 1 byte"):
+        config_max_cached_data_size_to_bytes("0.5b")

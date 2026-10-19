@@ -68,6 +68,7 @@ if TYPE_CHECKING:
         BackendOperationRequest,
         BackMsg,
     )
+    from streamlit.runtime.caching.cache_data_api import _SessionCacheLifecycle
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -220,6 +221,7 @@ class AppSession:
 
         # Each AppSession has a unique string ID.
         self.id = session_id_override or str(uuid.uuid4())
+        self.activate_session_caches()
 
         self._event_loop = asyncio.get_running_loop()
 
@@ -361,6 +363,12 @@ class AppSession:
         caching.clear_session_data_cache(self.id)
         caching.clear_session_resource_cache(self.id)
 
+    def activate_session_caches(self) -> None:
+        """Allow session cache creation for a new connection."""
+        self._session_cache_lifecycle: _SessionCacheLifecycle = (
+            caching.activate_session_data_cache(self.id)
+        )
+
     def flush_browser_queue(self) -> list[ForwardMsg]:
         """Clear the forward message queue and return the messages it contained.
 
@@ -406,7 +414,11 @@ class AppSession:
             self.disconnect_file_watchers()
 
             # Clear any session caches. This ensures shutdown hooks are called.
-            self.clear_session_caches()
+            try:
+                self.clear_session_caches()
+            finally:
+                if self._scriptrunner is None:
+                    caching.release_session_data_cache(self.id)
 
             # Close the script-thread event loop only when there is no active
             # ScriptRunner to wait for. When a runner exists, its SHUTDOWN event
@@ -648,6 +660,7 @@ class AppSession:
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,
             event_loop=self._script_event_loop,
+            session_cache_lifecycle=self._session_cache_lifecycle,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -900,7 +913,10 @@ class AppSession:
                     runtime.get_instance().dataframe_source_mgr.clear_all_for_session(
                         self.id
                     )
-                    self.clear_session_caches()
+                    try:
+                        self.clear_session_caches()
+                    finally:
+                        caching.release_session_data_cache(self.id)
                     _close_script_event_loop(self._script_event_loop)
             finally:
                 if client_state is not None:

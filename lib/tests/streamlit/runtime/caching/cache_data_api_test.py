@@ -20,6 +20,7 @@ import logging
 import os
 import pickle
 import re
+import tempfile
 import threading
 import unittest
 from typing import Any
@@ -43,13 +44,15 @@ from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
     DataCache,
     _data_caches,
+    clear_session_cache,
     get_data_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_errors import CacheError
+from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     ElementMsgData,
 )
+from streamlit.runtime.caching.global_cache_budget import GlobalCacheBudget
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.caching.storage import (
     CacheStorage,
@@ -63,6 +66,9 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
     MemoryCacheStorageManager,
+)
+from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
+    InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -112,11 +118,14 @@ class CacheDataTest(unittest.TestCase):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
         Runtime._instance = mock_runtime
+        with _data_caches._caches_lock:
+            _data_caches._session_lifecycles.clear()
 
     def tearDown(self):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         st.cache_data.clear()
+        Runtime._instance = None
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -137,6 +146,49 @@ class CacheDataTest(unittest.TestCase):
 
         assert r1 == [1, 1]
         assert r2 == [0, 1]
+
+    def test_global_budget_accounts_global_and_session_scoped_caches(self) -> None:
+        """The global budget includes both global and session-scoped data caches."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        calls = {"global": 0, "session": 0}
+
+        @st.cache_data
+        def global_value() -> bytes:
+            calls["global"] += 1
+            return b"global"
+
+        @st.cache_data(scope="session")
+        def session_value() -> bytes:
+            calls["session"] += 1
+            return b"session"
+
+        with (
+            patch(
+                "streamlit.runtime.caching.storage."
+                "in_memory_cache_storage_wrapper.get_global_cache_budget",
+                return_value=budget,
+            ),
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw"
+            ) as get_session_id,
+        ):
+            assert global_value() == b"global"
+            get_session_id.return_value = "session-a"
+            assert session_value() == b"session"
+            get_session_id.return_value = "session-b"
+            assert session_value() == b"session"
+
+            all_scopes_bytes = budget.total_bytes
+            clear_session_cache("session-a")
+            assert 0 < budget.total_bytes < all_scopes_bytes
+
+            assert global_value() == b"global"
+            assert session_value() == b"session"
+            get_session_id.return_value = "session-a"
+            _data_caches.activate_session("session-a")
+            assert session_value() == b"session"
+
+        assert calls == {"global": 1, "session": 3}
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
@@ -238,6 +290,193 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
+    def test_clear_invalidates_inflight_sync_write(self) -> None:
+        """A clear during synchronous computation discards the older write."""
+        compute_started = threading.Event()
+        continue_compute = threading.Event()
+        calls = 0
+
+        @st.cache_data
+        def foo() -> int:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                compute_started.set()
+                assert continue_compute.wait(timeout=5)
+            return calls
+
+        def clear_during_compute() -> None:
+            assert compute_started.wait(timeout=5)
+            foo.clear()
+            continue_compute.set()
+
+        clearer = threading.Thread(target=clear_during_compute)
+        clearer.start()
+        assert foo() == 1
+        clearer.join(timeout=5)
+
+        assert not clearer.is_alive()
+        assert foo() == 2
+        assert foo() == 2
+
+    def test_clear_all_closes_storage_when_manager_clear_fails(self) -> None:
+        """Storage closes even when the manager cannot clear persistent data."""
+        cache = _data_caches.get_cache(
+            key="clear_failure",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="clear_failure",
+        )
+        cache.write_result("vk", 1, [])
+        manager = _data_caches.get_storage_manager()
+
+        with (
+            patch.object(manager, "clear_all", side_effect=OSError("clear failed")),
+            patch.object(
+                cache.storage, "close", side_effect=OSError("close failed")
+            ) as close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            _data_caches.clear_all()
+
+        close.assert_called_once_with()
+
+    def test_clear_all_attempts_all_storage_closes_after_failure(self) -> None:
+        """A failed storage close does not skip later detached storages."""
+        first = _data_caches.get_cache(
+            key="first",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="first",
+        )
+        second = _data_caches.get_cache(
+            key="second",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="second",
+        )
+
+        with (
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="close failed"),
+        ):
+            _data_caches.clear_all()
+
+        second_close.assert_called_once_with()
+
+    def test_clear_all_attempts_all_fallback_cleanup_after_failure(self) -> None:
+        """Fallback cleanup attempts every clear and preserves its first failure."""
+        first = _data_caches.get_cache(
+            key="first",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="first",
+        )
+        second = _data_caches.get_cache(
+            key="second",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="second",
+        )
+        manager = _data_caches.get_storage_manager()
+
+        with (
+            patch.object(manager, "clear_all", side_effect=NotImplementedError),
+            patch.object(first, "clear", side_effect=OSError("clear failed")),
+            patch.object(second, "clear", wraps=second.clear) as second_clear,
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            _data_caches.clear_all()
+
+        second_clear.assert_called_once_with()
+        second_close.assert_called_once_with()
+
+    def test_clear_session_closes_all_storages_when_clear_fails(self) -> None:
+        """A failed cache clear still closes every storage in the session."""
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            first = _data_caches.get_cache(
+                key="first",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="first",
+                scope="session",
+            )
+            second = _data_caches.get_cache(
+                key="second",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="second",
+                scope="session",
+            )
+
+        with (
+            patch.object(first, "clear", side_effect=OSError("clear failed")),
+            patch.object(second, "clear", wraps=second.clear) as second_clear,
+            patch.object(
+                first.storage, "close", wraps=first.storage.close
+            ) as first_close,
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            clear_session_cache("session")
+
+        second_clear.assert_called_once_with()
+        first_close.assert_called_once_with()
+        second_close.assert_called_once_with()
+
+    def test_clear_session_attempts_all_storage_closes_after_failure(self) -> None:
+        """A failed storage close does not skip later detached storages."""
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            first = _data_caches.get_cache(
+                key="first",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="first",
+                scope="session",
+            )
+            second = _data_caches.get_cache(
+                key="second",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="second",
+                scope="session",
+            )
+
+        with (
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="close failed"),
+        ):
+            clear_session_cache("session")
+
+        second_close.assert_called_once_with()
+
     def test_cached_class_method_clear_args(self):
         self.x = 0
 
@@ -329,7 +568,7 @@ If you think this is actually a Streamlit bug, please
         assert foo() == 1
 
     def test_cache_recreated_when_max_size_changes(self) -> None:
-        """A changed max_size replaces the previous function cache."""
+        """A changed max_size replaces and closes the previous function cache."""
         common_kwargs = {
             "key": "max_size_change",
             "persist": None,
@@ -348,6 +587,324 @@ If you think this is actually a Streamlit bug, please
         output = "\n".join(logs.output)
         assert "max_size_bytes=100" in output
         assert "max_size_bytes=200" in output
+        assert isinstance(first.storage, InMemoryCacheStorageWrapper)
+        assert first.storage._closed is True
+
+    def test_existing_cache_does_not_wait_for_lifecycle_lock(self) -> None:
+        """A cache hit is not blocked by unrelated cache lifecycle work."""
+        kwargs = {
+            "key": "existing_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "existing_cache",
+        }
+        cache = _data_caches.get_cache(**kwargs)
+        returned: list[DataCache[Any]] = []
+
+        _data_caches._lifecycle_lock.acquire()
+        try:
+            lookup = threading.Thread(
+                target=lambda: returned.append(_data_caches.get_cache(**kwargs))
+            )
+            lookup.start()
+            lookup.join(timeout=1)
+            completed_without_lifecycle_lock = not lookup.is_alive()
+        finally:
+            _data_caches._lifecycle_lock.release()
+        lookup.join(timeout=5)
+
+        assert completed_without_lifecycle_lock
+        assert returned == [cache]
+
+    def test_clear_session_does_not_wait_for_process_lifecycle_lock(self) -> None:
+        """Session disconnect cleanup is not blocked by unrelated lifecycle work."""
+        _data_caches.activate_session("session")
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(
+                key="session_cache",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="session_cache",
+                scope="session",
+            )
+
+        _data_caches._lifecycle_lock.acquire()
+        try:
+            clearer = threading.Thread(target=clear_session_cache, args=("session",))
+            clearer.start()
+            clearer.join(timeout=1)
+            completed_without_process_lock = not clearer.is_alive()
+        finally:
+            _data_caches._lifecycle_lock.release()
+        clearer.join(timeout=5)
+
+        assert completed_without_process_lock
+        assert cache.is_active is False
+
+    def test_clear_session_does_not_wait_for_inflight_data_write(self) -> None:
+        """Session invalidation returns without waiting for persistent write I/O."""
+        _data_caches.activate_session("session")
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(
+                key="session_cache",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="session_cache",
+                scope="session",
+            )
+
+        write_started = threading.Event()
+        continue_write = threading.Event()
+        clear_finished = threading.Event()
+        assert isinstance(cache.storage, InMemoryCacheStorageWrapper)
+        original_set = cache.storage._persist_storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            write_started.set()
+            assert continue_write.wait(timeout=5)
+            original_set(key, value)
+
+        def clear_session() -> None:
+            clear_session_cache("session")
+            clear_finished.set()
+
+        with patch.object(
+            cache.storage._persist_storage, "set", side_effect=delayed_set
+        ):
+            writer = threading.Thread(target=cache.write_result, args=("key", 1, []))
+            writer.start()
+            assert write_started.wait(timeout=5)
+
+            clearer = threading.Thread(target=clear_session)
+            clearer.start()
+            assert clear_finished.wait(timeout=1)
+            assert writer.is_alive()
+
+            continue_write.set()
+            writer.join(timeout=5)
+            clearer.join(timeout=5)
+
+        assert not writer.is_alive()
+        assert not clearer.is_alive()
+        assert cache.is_active is False
+
+    def test_different_key_data_writes_run_concurrently(self) -> None:
+        """DataCache does not serialize storage writes for unrelated keys."""
+        cache = _data_caches.get_cache(
+            key="concurrent_writes",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="concurrent_writes",
+        )
+        writes_started = threading.Barrier(3)
+        continue_writes = threading.Event()
+        original_set = cache.storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            writes_started.wait(timeout=5)
+            assert continue_writes.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(cache.storage, "set", side_effect=delayed_set):
+            first = threading.Thread(target=cache.write_result, args=("first", 1, []))
+            second = threading.Thread(target=cache.write_result, args=("second", 2, []))
+            first.start()
+            second.start()
+            writes_started.wait(timeout=5)
+            continue_writes.set()
+            first.join(timeout=5)
+            second.join(timeout=5)
+
+        assert not first.is_alive()
+        assert not second.is_alive()
+
+    def test_slow_lookup_cannot_install_cache_after_session_clear(self) -> None:
+        """A lookup already waiting on lifecycle work observes session teardown."""
+        lookup_started = threading.Event()
+        returned: list[DataCache[Any]] = []
+        lifecycle = _data_caches.activate_session("session")
+
+        def observed_get_lifecycle(_session_id: str) -> Any:
+            lookup_started.set()
+            return lifecycle
+
+        def get_session_cache() -> None:
+            returned.append(
+                _data_caches.get_cache(
+                    key="late_session_cache",
+                    persist=None,
+                    max_entries=None,
+                    ttl=None,
+                    display_name="late_session_cache",
+                    scope="session",
+                )
+            )
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ),
+            patch.object(
+                _data_caches,
+                "_get_bound_session_lifecycle",
+                side_effect=observed_get_lifecycle,
+            ),
+        ):
+            _data_caches._lifecycle_lock.acquire()
+            try:
+                lookup = threading.Thread(target=get_session_cache)
+                lookup.start()
+                assert lookup_started.wait(timeout=5)
+                clear_session_cache("session")
+            finally:
+                _data_caches._lifecycle_lock.release()
+            lookup.join(timeout=5)
+
+        assert not lookup.is_alive()
+        assert len(returned) == 1
+        assert returned[0].is_active is False
+        assert "session" not in _data_caches._function_caches
+
+    def test_disconnected_runner_cannot_replace_reconnected_cache(self) -> None:
+        """A lookup bound to an old connection leaves the new cache intact."""
+        old_lifecycle = _data_caches._get_session_lifecycle("session")
+        clear_session_cache("session")
+        _data_caches.activate_session("session")
+        kwargs = {
+            "key": "session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "session_cache",
+            "scope": "session",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            reconnected = _data_caches.get_cache(**kwargs)
+            with patch.object(
+                _data_caches,
+                "_get_bound_session_lifecycle",
+                return_value=old_lifecycle,
+            ):
+                disconnected = _data_caches.get_cache(**kwargs)
+
+        assert disconnected.is_active is False
+        assert reconnected.is_active is True
+        assert _data_caches._function_caches["session"]["session_cache"] is reconnected
+
+    def test_lookup_after_session_clear_stays_detached_until_reconnect(self) -> None:
+        """Work started after disconnect cannot recreate a session cache."""
+        old_lifecycle = _data_caches.activate_session("session")
+        clear_session_cache("session")
+        kwargs = {
+            "key": "late_session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "late_session_cache",
+            "scope": "session",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            with patch.object(
+                _data_caches,
+                "_get_bound_session_lifecycle",
+                return_value=old_lifecycle,
+            ):
+                detached = _data_caches.get_cache(**kwargs)
+            _data_caches.activate_session("session")
+            reconnected = _data_caches.get_cache(**kwargs)
+
+        assert detached.is_active is False
+        assert reconnected.is_active is True
+        assert (
+            _data_caches._function_caches["session"]["late_session_cache"]
+            is reconnected
+        )
+
+    def test_unbound_session_lookup_does_not_retain_lifecycle(self) -> None:
+        """Calls without an AppSession lifecycle do not grow the lifecycle map."""
+        kwargs = {
+            "key": "unbound_session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "unbound_session_cache",
+            "scope": "session",
+        }
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="unbound-session",
+            ),
+            patch.object(
+                _data_caches, "_get_bound_session_lifecycle", return_value=None
+            ),
+        ):
+            cache = _data_caches.get_cache(**kwargs)
+
+        assert cache.is_active
+        assert "unbound-session" not in _data_caches._session_lifecycles
+
+    def test_invalidated_lifecycle_is_not_a_fast_path_hit(self) -> None:
+        """A cache lookup cannot reuse a cache being disconnected."""
+        lifecycle = _data_caches.activate_session("session")
+        kwargs = {
+            "key": "session_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "session_cache",
+            "scope": "session",
+        }
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            cache = _data_caches.get_cache(**kwargs)
+            lifecycle.invalidated = True
+            returned = _data_caches.get_cache(**kwargs)
+
+        assert returned is not cache
+        assert returned.is_active is False
+
+    @parameterized.expand(
+        [
+            ("boolean", True),
+            ("zero", 0),
+            ("negative", -1),
+            ("unitless_string", "10"),
+            ("unknown_unit", "10XB"),
+            ("float", 1.5),
+        ]
+    )
+    def test_invalid_max_size_fails_at_decoration(
+        self, _name: str, max_size: object
+    ) -> None:
+        """Invalid max_size values fail when the decorator is created."""
+        with pytest.raises(StreamlitAPIException):
+
+            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
+            def foo() -> int:
+                return 1
 
     def test_max_size_is_propagated_to_custom_storage_manager(self) -> None:
         """Custom storage managers receive the parsed limit during validation and use."""
@@ -391,6 +948,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     def tearDown(self) -> None:
         st.cache_data.clear()
+        Runtime._instance = None
         super().tearDown()
 
     @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
@@ -502,6 +1060,70 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             st.cache_data.clear()
             mock_rmtree.assert_not_called()
+
+    def test_clear_all_removes_inflight_disk_write(self) -> None:
+        """A committed disk write finishes before clear_all removes its file."""
+        with (
+            tempfile.TemporaryDirectory() as cache_dir,
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage."
+                "get_cache_folder_path",
+                return_value=cache_dir,
+            ),
+        ):
+            cache = _data_caches.get_cache(
+                key="disk_write_race",
+                persist="disk",
+                max_entries=None,
+                ttl=None,
+                display_name="disk_write_race",
+            )
+            storage = cache.storage
+            assert isinstance(storage, InMemoryCacheStorageWrapper)
+            original_set = storage._persist_storage.set
+            storage_write_started = threading.Event()
+            continue_storage_write = threading.Event()
+            detach_started = threading.Event()
+
+            def delayed_set(key: str, value: bytes) -> None:
+                storage_write_started.set()
+                assert continue_storage_write.wait(timeout=5)
+                original_set(key, value)
+
+            original_mark_detached = cache.mark_detached
+
+            def observed_mark_detached() -> None:
+                detach_started.set()
+                original_mark_detached()
+
+            with (
+                patch.object(storage._persist_storage, "set", side_effect=delayed_set),
+                patch.object(
+                    cache, "mark_detached", side_effect=observed_mark_detached
+                ),
+            ):
+                writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+                writer.start()
+                assert storage_write_started.wait(timeout=5)
+
+                clearer = threading.Thread(target=_data_caches.clear_all)
+                clearer.start()
+                assert detach_started.wait(timeout=5)
+
+                # clear_all may wait for the committed write, but it must not hold
+                # the registry lock while doing so.
+                assert _data_caches._caches_lock.acquire(timeout=1)
+                _data_caches._caches_lock.release()
+
+                continue_storage_write.set()
+                writer.join(timeout=5)
+                clearer.join(timeout=5)
+
+            assert not writer.is_alive()
+            assert not clearer.is_alive()
+            assert not os.path.exists(cache_dir)
+            with pytest.raises(CacheKeyNotFoundError):
+                cache.read_result("vk")
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -680,6 +1302,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
     def tearDown(self):
         st.cache_data.clear()
+        Runtime._instance = None
 
     def test_no_stats(self):
         assert get_data_cache_stats_provider().get_stats() == {}
@@ -748,6 +1371,11 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         mock_runtime.cache_storage_manager = AlwaysFailingTestCacheStorageManager()
         Runtime._instance = mock_runtime
 
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+        Runtime._instance = None
+        super().tearDown()
+
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
         with (
             pytest.raises(InvalidCacheStorageContextError) as e,
@@ -763,26 +1391,6 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         assert str(e.value) == "This CacheStorageManager always fails"
         output = "".join(logs.output)
         assert "This CacheStorageManager always fails" in output
-
-    @parameterized.expand(
-        [
-            ("boolean", True),
-            ("zero", 0),
-            ("negative", -1),
-            ("unitless_string", "10"),
-            ("unknown_unit", "10XB"),
-            ("float", 1.5),
-        ]
-    )
-    def test_invalid_max_size_fails_at_decoration(
-        self, _name: str, max_size: object
-    ) -> None:
-        """Invalid max_size values fail when the decorator is created."""
-        with pytest.raises(StreamlitAPIException):
-
-            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
-            def foo() -> int:
-                return 1
 
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
@@ -1043,6 +1651,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         st.cache_data.clear()
+        Runtime._instance = None
 
     def _cache(self, key: str, **kwargs: Any) -> DataCache[Any]:
         params: dict[str, Any] = {
@@ -1186,8 +1795,8 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         fg_cache.write_result("vk", 456, [])
         assert fg_cache.read_result("vk").stored_at is None
 
-    def test_background_writeback_checks_presence_without_reading_value(self) -> None:
-        """A background write-back doesn't deserialize the existing cached value."""
+    def test_background_writeback_atomically_checks_presence(self) -> None:
+        """A background write-back cannot repopulate an entry during eviction."""
         cache = _data_caches.get_cache(
             key="bg_presence",
             persist=None,
@@ -1199,7 +1808,11 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         cache.write_result("vk", 123, [])
 
         with (
-            patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
+            patch.object(
+                cache.storage,
+                "set_if_present",
+                wraps=cache.storage.set_if_present,
+            ) as mock_set_if_present,
             patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
         ):
             cache.write_background_refresh_result(
@@ -1208,10 +1821,41 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 expected_generation=cache.generation,
                 expected_key_generation=cache.key_generation("vk"),
             )
-            mock_has.assert_called_once_with("vk")
+            mock_set_if_present.assert_called_once()
             mock_get.assert_not_called()
 
         assert cache.read_result("vk").value == 456
+
+    def test_background_writeback_does_not_repopulate_globally_evicted_entry(
+        self,
+    ) -> None:
+        """A refresh finishing after memory eviction leaves the key absent."""
+        budget = GlobalCacheBudget(max_bytes=1024)
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            cache = self._background_cache("bg_global_eviction")
+        storage = cache.storage
+        assert isinstance(storage, InMemoryCacheStorageWrapper)
+        expected_generation = cache.generation
+        expected_key_generation = cache.key_generation("vk")
+
+        assert storage._evict_from_mem_cache(
+            "vk",
+            expected_generation=storage._generations["vk"],
+        )
+
+        cache.write_background_refresh_result(
+            "vk",
+            456,
+            expected_generation=expected_generation,
+            expected_key_generation=expected_key_generation,
+        )
+
+        with pytest.raises(CacheKeyNotFoundError):
+            cache.read_result("vk")
 
     def test_cache_recreated_on_mode_change(self) -> None:
         """Changing refresh_mode across reruns rebuilds the cache."""
@@ -1262,6 +1906,67 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 cache.write_result_if_current("vk", 1, [], invalidation_token=token)
                 is False
             )
+
+    def test_sync_write_is_discarded_if_cache_detaches_during_pickle(self) -> None:
+        """A synchronous result cannot repopulate a cache detached while pickling."""
+        cache = self._cache("sync_detached")
+        pickle_started = threading.Event()
+        continue_pickle = threading.Event()
+        original_pickle = cache._pickle_result
+
+        def delayed_pickle(*args: object, **kwargs: object) -> bytes:
+            pickle_started.set()
+            assert continue_pickle.wait(timeout=5)
+            return original_pickle(*args, **kwargs)  # type: ignore[arg-type]
+
+        with (
+            patch.object(cache, "_pickle_result", side_effect=delayed_pickle),
+            patch.object(cache.storage, "set") as storage_set,
+        ):
+            writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+            writer.start()
+            assert pickle_started.wait(timeout=5)
+            cache.mark_detached()
+            continue_pickle.set()
+            writer.join(timeout=5)
+
+        assert not writer.is_alive()
+        storage_set.assert_not_called()
+
+    def test_clear_waits_for_inflight_sync_write_then_removes_it(self) -> None:
+        """A per-function clear cannot be followed by an older committed write."""
+        cache = self._cache("clear_during_storage_write")
+        storage_write_started = threading.Event()
+        continue_storage_write = threading.Event()
+        clear_completed = threading.Event()
+        original_set = cache.storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            storage_write_started.set()
+            assert continue_storage_write.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(cache.storage, "set", side_effect=delayed_set):
+            writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+            writer.start()
+            assert storage_write_started.wait(timeout=5)
+
+            def clear_cache() -> None:
+                cache.clear()
+                clear_completed.set()
+
+            clearer = threading.Thread(target=clear_cache)
+            clearer.start()
+            assert not clear_completed.wait(timeout=0.1)
+            continue_storage_write.set()
+            writer.join(timeout=5)
+            clearer.join(timeout=5)
+
+        assert not writer.is_alive()
+        assert not clearer.is_alive()
+        assert clear_completed.is_set()
+        with pytest.raises(CacheKeyNotFoundError):
+            cache.read_result("vk")
 
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""
