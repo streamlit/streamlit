@@ -102,8 +102,12 @@ Do not cache live async clients or connections bound to the event loop that crea
 ### Bound cache growth
 
 **Important:** `st.cache_data` and `st.cache_resource` are unbounded by default.
-Use `ttl` to expire stale results and `max_entries` to cap how many argument combinations either decorator retains.
-For `st.cache_data`, add `max_size` when entry count is a poor proxy for serialized cache size. Integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
+Use `ttl` to expire stale results. For `st.cache_data`, prefer `max_size` when
+the goal is to bound serialized cache growth. Use `max_entries` instead when
+values have predictable sizes, or combine both when many small entries could
+add significant key and container overhead. For `st.cache_resource`, use
+`max_entries`. `max_size` integers are bytes; strings use binary units
+(`"500MB"` and `"500MiB"` are equal):
 
 ```python
 # BAD: No growth bound
@@ -112,8 +116,8 @@ def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bound by age and number of argument combinations
-@st.cache_data(ttl="1h", max_entries=1000)
+# GOOD: Bound by age, serialized size, and argument combinations
+@st.cache_data(ttl="1h", max_size="500MB", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
