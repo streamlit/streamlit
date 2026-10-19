@@ -147,3 +147,4 @@ def test_decode_returns_an_object_and_ignores_malformed_input() -> None:
     assert agent_spec.decode("{") == {}
     assert agent_spec.decode("[]") == {}
     assert agent_spec.decode("null") == {}
+    assert agent_spec.decode(None) == {}

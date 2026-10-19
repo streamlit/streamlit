@@ -181,14 +181,11 @@ def _keep_existing_children(existing: _Node, incoming: _Node) -> bool:
         return False
     if existing.block.WhichOneof("type") != incoming.block.WhichOneof("type"):
         return False
-    # A dialog's id is its identity. A different dialog at the same path must
-    # not keep the previous dialog's body.
-    return not (
-        incoming.block.HasField("dialog")
-        and existing.block.id
-        and incoming.block.id
-        and existing.block.id != incoming.block.id
-    )
+    # A dialog's id is its identity. Any difference drops the previous body,
+    # including when only one of the two dialogs has an id.
+    if incoming.block.HasField("dialog"):
+        return existing.block.id == incoming.block.id
+    return True
 
 
 class ElementState(NamedTuple):
@@ -245,6 +242,11 @@ class Snapshot:
 
 
 class _SnapshotBuilder:
+    """Serialize a merged tree into snapshot nodes.
+
+    Collects the actions index and each keyed element's state along the way.
+    """
+
     def __init__(self, session_state: SessionState | None) -> None:
         self._session_state = session_state
         self.actions: list[dict[str, Any]] = []
@@ -331,7 +333,7 @@ class _SnapshotBuilder:
 
         props = description.get("props") or {}
         if (
-            description["type"] == "container"
+            description.get("type") == "container"
             and not props
             and not description.get("key")
             and len(children) == 1
@@ -463,7 +465,8 @@ class _SnapshotBuilder:
         told it is on the wrong page.
         """
         element_id = description.get("key")
-        if not element_id:
+        command = description.get("type")
+        if not element_id or not isinstance(command, str):
             return
 
         props = description.get("props") or {}
@@ -474,7 +477,7 @@ class _SnapshotBuilder:
         # `st.menu_button`'s, and the options of a widget that registers none
         # of its own. Not a limit for a widget that accepts new options.
         options = props.get("options")
-        if description["type"] == "feedback" and isinstance(options, str):
+        if command == "feedback" and isinstance(options, str):
             # `st.feedback` names its option set, and its value is an index
             # into it. The description does not list those indexes; that stays
             # with the command's declaration.
@@ -495,14 +498,14 @@ class _SnapshotBuilder:
             options_open=bool(props.get("accept_new_options")),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
-            command=description["type"],
+            command=command,
             max_items=(description.get("value_schema") or {}).get("maxItems"),
             schema_type=(description.get("value_schema") or {}).get("type"),
             # Clicking the selected option empties a single-select group
             # unless it is required, and `st.feedback` always.
-            clearable=description["type"] == "feedback"
+            clearable=command == "feedback"
             or (
-                description["type"] in {"segmented_control", "pills"}
+                command in {"segmented_control", "pills"}
                 and props.get("selection_mode") == "single"
                 and not props.get("required")
             ),
@@ -513,7 +516,7 @@ class _SnapshotBuilder:
             entry: dict[str, Any] = {
                 "key": _public_key(element_id),
                 "kind": str(action),
-                "type": description["type"],
+                "type": command,
             }
             if isinstance(label := props.get("label"), str) and label:
                 entry["label"] = label
@@ -523,7 +526,7 @@ class _SnapshotBuilder:
         self, description: dict[str, Any], inherited_support: str | None = None
     ) -> dict[str, Any]:
         """Build the node fields common to elements and containers."""
-        result: dict[str, Any] = {"type": description["type"]}
+        result: dict[str, Any] = {"type": description.get("type") or "unknown"}
 
         element_id = description.get("key")
         if element_id:
@@ -576,11 +579,14 @@ class _SnapshotBuilder:
             value = self._session_state.get_widget_value(element_id)
         except KeyError:
             return None
-        if type(value).__name__ == "ChatInputValue":
-            # Files and audio stay with the upload. The schema is the text.
-            value = getattr(value, "text", None)
 
         metadata = self._session_state.get_widget_metadata(element_id)
+        if metadata is not None and metadata.value_type == "chat_input_value":
+            # Files and audio stay with the upload. The schema is the text.
+            from streamlit.elements.widgets.chat import ChatInputValue
+
+            if isinstance(value, ChatInputValue):
+                value = value.text
         if options is None and metadata is not None:
             options = metadata.formatted_options
         if metadata is not None and (
@@ -719,7 +725,12 @@ def build_snapshot(
     session_state: SessionState | None,
     query_params: dict[str, list[str]],
 ) -> Snapshot:
-    """Build the complete snapshot document for the run that just settled."""
+    """Build the snapshot document for the run that just settled.
+
+    Trigger payloads are cleared in ``on_script_finished``, so a caller that
+    wants a fired ``st.chat_input`` or ``st.menu_button`` value has to read
+    session state before that reset.
+    """
     tree = merge_deltas(messages)
     builder = _SnapshotBuilder(session_state)
     children = builder.serialize_children(tree)
@@ -732,6 +743,13 @@ def build_snapshot(
     )
     if compile_error:
         _add_compile_error(children, messages)
+        # The page did not run. Widgets from an earlier run stay in the tree
+        # the caller passed, and none of them can be used.
+        builder.actions.clear()
+        builder.element_states = {
+            element_id: state._replace(actionable=False)
+            for element_id, state in builder.element_states.items()
+        }
 
     pages, current_page = _pages(messages, new_session)
 

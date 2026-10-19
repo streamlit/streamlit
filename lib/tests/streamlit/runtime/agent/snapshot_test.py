@@ -768,6 +768,7 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
 
     def test_compile_error_is_reported_in_main(self) -> None:
         """A script that did not compile is an uncaught exception and no actions."""
+        st.button("Go", key="go")
         finished = ForwardMsg()
         finished.script_finished = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
         event = ForwardMsg()
@@ -780,9 +781,11 @@ class SnapshotBuilderTest(DeltaGeneratorTestCase):
         assert without_detail["status"] == "error"
         assert _by_type(without_detail, "exception") == []
 
-        document = self._build(finished, event).document
+        snapshot = self._build(finished, event)
+        document = snapshot.document
         assert document["status"] == "error"
         assert document["actions"] == []
+        assert _state(snapshot, "button", "go").actionable is False
         reported = _one(document, "exception")
         assert reported["props"]["uncaught"] is True
         assert reported["props"]["type"] == "SyntaxError"

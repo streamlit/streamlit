@@ -356,8 +356,10 @@ def block(
     )
 
 
-def decode(agent_props: str) -> dict[str, Any]:
+def decode(agent_props: Any) -> dict[str, Any]:
     """Decode a command's description. Malformed input is ignored."""
+    if not isinstance(agent_props, str):
+        return {}
     try:
         decoded = json.loads(agent_props)
     except json.JSONDecodeError:
