@@ -17,6 +17,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
@@ -40,6 +41,33 @@ class HeadingProtoTag(Enum):
 
 Anchor: TypeAlias = str | Literal[False] | None
 Divider: TypeAlias = bool | str | None
+
+
+def _heading_agent_props(
+    command: str,
+    body: SupportsStr,
+    *,
+    anchor: Anchor = None,
+    help: str | None = None,
+    icon: str | None = None,
+) -> str | None:
+    """Describe a heading for the agent API.
+
+    st.title, st.header, and st.subheader differ only in the HTML tag they
+    emit, so each passes its own command name.
+
+    `divider` is deliberately not a parameter here: it draws a rule under the
+    heading, which is styling on an element whose meaning is its text, and
+    reporting it would put a key on every heading in every snapshot that no
+    reader can act on.
+    """
+    return agent_spec.element(
+        command,
+        body=str(body),
+        anchor=anchor,
+        help=help,
+        icon=icon,
+    )
 
 
 class HeadingMixin:
@@ -192,6 +220,9 @@ class HeadingMixin:
                 wrap=wrap,
             ),
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "header", body, anchor=anchor, help=help, icon=icon
+            ),
         )
 
     @gather_metrics("subheader")
@@ -343,6 +374,9 @@ class HeadingMixin:
                 wrap=wrap,
             ),
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "subheader", body, anchor=anchor, help=help, icon=icon
+            ),
         )
 
     @gather_metrics("title")
@@ -482,6 +516,9 @@ class HeadingMixin:
                 wrap=wrap,
             ),
             layout_config=layout_config,
+            agent_props=_heading_agent_props(
+                "title", body, anchor=anchor, help=help, icon=icon
+            ),
         )
 
     @property
