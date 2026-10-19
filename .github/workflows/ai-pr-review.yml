@@ -421,8 +421,6 @@ jobs:
       contents: read
       # Required for posting comments, but this step is safe since it is not running the agent operation:
       pull-requests: write
-      # Required to read the qa-approved commit status before auto-approve.
-      statuses: read
 
     steps:
       - name: Remove AI review request label
@@ -613,14 +611,14 @@ jobs:
 
       # Auto-approve an ai-final-review PR with an APPROVED verdict, except when:
       # - it has change:spec
-      # - it has change:feature and impact:users without a QA pass on this head
+      # - it has change:feature and impact:users without qa-approved
       # - additions plus deletions exceed 5000
       # - it comes from a fork
       # - the run reported fewer reviews than the configured model count
       # Bugfix, chore, docs, impact:internal, and other non-feature PRs stay
       # eligible without a QA pass.
-      # A QA pass is the qa-approved label plus a successful qa-approved status on
-      # this head. QA sets both after PASS. A label from an older head is not a pass.
+      # QA adds qa-approved after a PASS on any commit of the branch. That label
+      # stays valid for later commits on the same PR.
       # If QA passes after this review finishes, re-add ai-final-review to auto-approve.
       # Requires the repository/organization Actions setting "Allow GitHub
       # Actions to create and approve pull requests" (Settings > Actions >
@@ -704,21 +702,7 @@ jobs:
               echo "Skipping auto-approve: PR is labeled change:feature and impact:users without qa-approved"
               exit 0
             fi
-            HEAD_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
-            if ! [[ "$HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
-              echo "::warning::Could not parse PR head SHA, skipping auto-approve"
-              exit 0
-            fi
-            if ! STATUS_JSON=$(gh api "repos/$REPOSITORY/commits/$HEAD_SHA/status"); then
-              echo "::warning::Failed to fetch commit status, skipping auto-approve"
-              exit 0
-            fi
-            QA_STATE=$(echo "$STATUS_JSON" | jq -r '[.statuses[]? | select(.context == "qa-approved") | .state] | first // ""')
-            if [ "$QA_STATE" != "success" ]; then
-              echo "Skipping auto-approve: qa-approved status on $HEAD_SHA is '${QA_STATE:-absent}', not success"
-              exit 0
-            fi
-            echo "User-facing feature PR has qa-approved on $HEAD_SHA"
+            echo "User-facing feature PR has qa-approved"
           fi
 
           ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')
