@@ -332,7 +332,7 @@ Use client-side validation and limits whenever the widget already supports them.
 - `st.text_area` and `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
 - `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, and `step`.
-- `required=True` on a date or time input does not clear its default (today, or the current time). Pass `value=None` for an empty field, or `value=[]` for an empty required date range.
+- `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` still starts at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
 - `st.data_editor`: the same kinds of limits via `st.column_config`.
 - `st.file_uploader`: `type` rejects a disallowed file before upload.
 

@@ -56,15 +56,15 @@ Upon completion of every [Playwright E2E Tests workflow](../.github/workflows/pl
 
 <img width="700" alt="image" src="https://github.com/streamlit/streamlit/assets/2852129/3c7f7739-7ced-4d93-b131-9628c83bc49e">
 
-A failed Playwright run uploads `playwright_test_results_<short sha>`. That artifact contains videos, differential screenshots, and a `snapshot-updates` folder when snapshots were missing or mismatched.
+Each Playwright run uploads `playwright_test_results_` plus the first 6 characters of the head SHA (the pull request head on a PR). When tests fail, that artifact contains videos, differential screenshots, and a `snapshot-updates` folder for missing or mismatched snapshots.
 
 ## Updating screenshots
 
-CI checks the `linux` snapshots. On a pull request, add the `update-snapshots` label before the Playwright run or after it has failed. When that run fails with snapshot mismatches, [Snapshot Autofix](../.github/workflows/snapshot-autofix.yml) opens a pull request with the updated `linux` images. A pass, or a failure that produced no snapshot updates, removes the label. Review that pull request before merging it.
+CI checks the `linux` snapshots. On a pull request in this repository, add the `update-snapshots` label before the Playwright run or after it has failed. When that run fails because snapshots are missing or mismatched, [Snapshot Autofix](../.github/workflows/snapshot-autofix.yml) opens a pull request with the updated `linux` images. A pass, or a failure that produced no snapshot updates, removes the label. Review that pull request before merging it. Autofix skips fork pull requests: the workflow token cannot push to a fork, and fork authors usually cannot add the label. Those contributors can use `make update-snapshots` below.
 
-To apply the same images in your checkout, run `make update-snapshots` after the Playwright run for the current commit has failed. It waits for that failed run, then merges the artifact's `snapshot-updates` folder into `e2e_playwright/__snapshots__/`. `make update-snapshots-changed` does this for the changed-files Playwright workflow. The command only accepts a failed run.
+To pull the same images into your checkout, push your branch and run `make update-snapshots`. The script looks up the Playwright run for your local `HEAD`. If that run failed, it merges the artifact's `snapshot-updates` folder into `e2e_playwright/__snapshots__/`. If the run passed, or there is no run for that commit yet, it exits. It waits while the run is still in progress. `make update-snapshots-changed` does the same for the changed-files workflow.
 
-`make update-snapshots` does not regenerate snapshots for your local OS. Re-run the test locally to write missing images under `__snapshots__/<os>/`. Commit the `linux` images produced by CI, not a local OS folder.
+`make update-snapshots` does not regenerate snapshots for your local OS. Re-run the test locally to write missing images under `__snapshots__/<os>/`. Only `__snapshots__/linux/` is committed. Other OS folders are gitignored. On Linux, a local run writes into that committed folder, so prefer the images CI produces.
 
 After either path, commit only the snapshots you expect to change. Flaky tests can change unrelated images.
 
