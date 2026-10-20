@@ -43,7 +43,7 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
 ## AppSession (`lib/streamlit/runtime/app_session.py`)
 
-Represents a single browser tab.
+Represents a single browser tab or agent API session.
 
 **Lifecycle**:
 1. WebSocket connects -> `Runtime.connect_session()`

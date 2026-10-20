@@ -107,7 +107,7 @@ Streamlit's execution model differs from traditional web frameworks:
 | Component | File | Purpose |
 |-----------|------|---------|
 | Runtime | `lib/streamlit/runtime/runtime.py` | Singleton managing app lifecycle and sessions |
-| AppSession | `lib/streamlit/runtime/app_session.py` | Per-browser-tab: ScriptRunner + SessionState + ForwardMsgQueue |
+| AppSession | `lib/streamlit/runtime/app_session.py` | Per browser tab or agent API session: ScriptRunner + SessionState + ForwardMsgQueue |
 | ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in separate thread |
 | DeltaGenerator | `lib/streamlit/delta_generator.py` | API entry point using mixin pattern |
 | SessionState | `lib/streamlit/runtime/state/session_state.py` | Widget values and user variables |
