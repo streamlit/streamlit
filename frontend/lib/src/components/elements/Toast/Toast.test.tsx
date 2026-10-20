@@ -70,7 +70,7 @@ const renderComponent = (props: ToastProps): RenderResult =>
  *   run (same instance).
  * - A new `runId` models a rerun (remount).
  */
-const toastTree = (props: ToastProps, runId = "run-1"): ReactElement => (
+const createToastTree = (props: ToastProps, runId = "run-1"): ReactElement => (
   <>
     {createContainer()}
     <Toast key={runId} {...props} />
@@ -312,20 +312,20 @@ describe("Toast Component", () => {
   describe("updates and reruns at the same toastId", () => {
     it("updates the visible toast in place with a new body and icon", () => {
       const { rerender } = render(
-        toastTree(getProps({ body: "Gathering ingredients..." }))
+        createToastTree(getProps({ body: "Gathering ingredients..." }))
       )
       expect(screen.getByRole("alertdialog")).toHaveTextContent(
         "Gathering ingredients..."
       )
 
-      rerender(toastTree(getProps({ body: "Cooking..." })))
+      rerender(createToastTree(getProps({ body: "Cooking..." })))
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       expect(screen.getByRole("alertdialog")).toHaveTextContent("Cooking...")
       expect(
         screen.queryByText("Gathering ingredients...")
       ).not.toBeInTheDocument()
 
-      rerender(toastTree(getProps({ body: "Ready!", icon: "🥞" })))
+      rerender(createToastTree(getProps({ body: "Ready!", icon: "🥞" })))
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       const toast = screen.getByRole("alertdialog")
       expect(toast).toHaveTextContent("🥞Ready!")
@@ -334,10 +334,12 @@ describe("Toast Component", () => {
     })
 
     it("updates the visible toast when only the icon changes", () => {
-      const { rerender } = render(toastTree(getProps({ body: "Ready!" })))
+      const { rerender } = render(
+        createToastTree(getProps({ body: "Ready!" }))
+      )
       expect(screen.getByRole("alertdialog")).toHaveTextContent("🐶Ready!")
 
-      rerender(toastTree(getProps({ body: "Ready!", icon: "🥞" })))
+      rerender(createToastTree(getProps({ body: "Ready!", icon: "🥞" })))
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       const toast = screen.getByRole("alertdialog")
       expect(toast).toHaveTextContent("🥞Ready!")
@@ -350,13 +352,13 @@ describe("Toast Component", () => {
     ])(
       "keeps the running timer when %s has identical content",
       (_description, runId) => {
-        const { rerender } = render(toastTree(getProps({ duration: 1 })))
+        const { rerender } = render(createToastTree(getProps({ duration: 1 })))
         act(() => {
           vi.advanceTimersByTime(600)
         })
 
         // getProps creates a new proto object with identical values.
-        rerender(toastTree(getProps({ duration: 1 }), runId))
+        rerender(createToastTree(getProps({ duration: 1 }), runId))
         expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
 
         // Still expires 1s after the first render: the timer was not restarted.
@@ -368,12 +370,12 @@ describe("Toast Component", () => {
     )
 
     it("restarts the timer when the content changes", () => {
-      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      const { rerender } = render(createToastTree(getProps({ duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(600)
       })
 
-      rerender(toastTree(getProps({ body: "Updated", duration: 1 })))
+      rerender(createToastTree(getProps({ body: "Updated", duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(600)
       })
@@ -386,9 +388,9 @@ describe("Toast Component", () => {
     })
 
     it("applies a changed duration", () => {
-      const { rerender } = render(toastTree(getProps({ duration: 0 })))
+      const { rerender } = render(createToastTree(getProps({ duration: 0 })))
 
-      rerender(toastTree(getProps({ duration: 1 })))
+      rerender(createToastTree(getProps({ duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(900)
       })
@@ -402,7 +404,7 @@ describe("Toast Component", () => {
 
     it("does not revive a dismissed toast on a later update", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const { rerender } = render(toastTree(getProps()))
+      const { rerender } = render(createToastTree(getProps()))
 
       await user.click(screen.getByRole("button", { name: "Close" }))
       act(() => {
@@ -410,31 +412,31 @@ describe("Toast Component", () => {
       })
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
 
-      rerender(toastTree(getProps({ body: "Updated" })))
+      rerender(createToastTree(getProps({ body: "Updated" })))
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
       expect(screen.queryByText("Updated")).not.toBeInTheDocument()
     })
 
     it("does not revive an expired toast on a same-run update", () => {
-      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      const { rerender } = render(createToastTree(getProps({ duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(1100)
       })
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
 
-      rerender(toastTree(getProps({ body: "Updated", duration: 1 })))
+      rerender(createToastTree(getProps({ body: "Updated", duration: 1 })))
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
       expect(screen.queryByText("Updated")).not.toBeInTheDocument()
     })
 
     it("shows an expired toast again when a rerun re-emits it", () => {
-      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      const { rerender } = render(createToastTree(getProps({ duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(1100)
       })
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
 
-      rerender(toastTree(getProps({ duration: 1 }), "run-2"))
+      rerender(createToastTree(getProps({ duration: 1 }), "run-2"))
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       expect(screen.getByRole("alertdialog")).toHaveTextContent(
         "This is a toast message"
@@ -442,29 +444,36 @@ describe("Toast Component", () => {
     })
 
     it("does not revive a toast kept by a rerun on a later update after it expires", () => {
-      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      const { rerender } = render(createToastTree(getProps({ duration: 1 })))
       act(() => {
         vi.advanceTimersByTime(600)
       })
 
       // The rerun re-emits identical content, so it keeps the visible toast.
-      rerender(toastTree(getProps({ duration: 1 }), "run-2"))
+      rerender(createToastTree(getProps({ duration: 1 }), "run-2"))
       act(() => {
         vi.advanceTimersByTime(500)
       })
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
 
       // A msg.toast() update within that rerun must not bring it back.
-      rerender(toastTree(getProps({ body: "Updated", duration: 1 }), "run-2"))
+      rerender(
+        createToastTree(getProps({ body: "Updated", duration: 1 }), "run-2")
+      )
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
       expect(screen.queryByText("Updated")).not.toBeInTheDocument()
     })
 
     it("replaces a visible toast when a rerun emits different content", () => {
-      const { rerender } = render(toastTree(getProps({ body: "Ready!" })))
+      const { rerender } = render(
+        createToastTree(getProps({ body: "Ready!" }))
+      )
 
       rerender(
-        toastTree(getProps({ body: "Gathering ingredients..." }), "run-2")
+        createToastTree(
+          getProps({ body: "Gathering ingredients..." }),
+          "run-2"
+        )
       )
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       expect(screen.getByRole("alertdialog")).toHaveTextContent(
@@ -492,12 +501,14 @@ describe("Toast Component", () => {
 
     it("shows a single toast and applies updates under StrictMode", () => {
       const { rerender } = render(
-        <StrictMode>{toastTree(getProps())}</StrictMode>
+        <StrictMode>{createToastTree(getProps())}</StrictMode>
       )
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
 
       rerender(
-        <StrictMode>{toastTree(getProps({ body: "Updated" }))}</StrictMode>
+        <StrictMode>
+          {createToastTree(getProps({ body: "Updated" }))}
+        </StrictMode>
       )
       expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
       expect(screen.getByRole("alertdialog")).toHaveTextContent("Updated")

@@ -217,8 +217,8 @@ def test_toast_updates_in_place(app: Page):
     breakfast_toast = app.get_by_test_id("stToast").filter(
         has_text=re.compile(r"Gathering ingredients|Cooking|Ready!")
     )
-    # to_have_text is strict, so it also fails if the updates stack up as
-    # separate toasts.
+    # The locator must resolve to one toast, so this also detects stacked
+    # updates.
     toast_text = breakfast_toast.get_by_test_id("stToastText")
 
     # Don't wait for the run so the intermediate updates can be observed.

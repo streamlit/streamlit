@@ -97,15 +97,13 @@ function Toast({
     // updates the props of this same instance. Distinct st.toast() calls live
     // at distinct delta paths, so they don't affect each other.
     //
-    // Caveat: toastId is the delta path, which is a *position* in the shared
-    // EVENT container (toasts and dialogs are interleaved there by call order).
-    // If the EVENT elements emitted before a toast change across reruns (e.g. a
-    // conditional st.toast() or st.dialog, or a toast from a callback or a
-    // fragment run) while the toast is still visible, toasts shift positions:
-    // a shifted toast can briefly show as a duplicate, or close the toast
-    // visible at its new position early. Identifying toasts by their
-    // parameters would avoid this but would also collapse
-    // intentionally-identical toasts (e.g. the "Three cheers" example).
+    // Caveat: toastId is a position in the shared EVENT container (toasts and
+    // dialogs are interleaved there by call order). If earlier EVENT elements
+    // change across reruns while a toast is still visible, that toast can:
+    // - briefly show as a duplicate when its path shifts
+    // - replace the toast visible at its new path
+    // Identifying toasts by their parameters would avoid this but would also
+    // collapse intentionally identical toasts (the "Three cheers" example).
     const existing = toastQueue.visibleToasts.find(
       toast => toast.content.toastId === toastId
     )
