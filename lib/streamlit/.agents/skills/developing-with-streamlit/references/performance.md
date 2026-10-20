@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached, bounded by serialized size
-@st.cache_data(max_size="500MB")
+# GOOD: Cached, bounded to the app's 100 supported paths
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -102,7 +102,8 @@ Do not cache live async clients or connections bound to the event loop that crea
 ### Bound cache growth
 
 **Important:** `st.cache_data` and `st.cache_resource` are unbounded by default. Use `ttl` to expire stale results.
-For `st.cache_data`, prefer `max_size` when the goal is to bound serialized cache growth. Use `max_entries` instead when values have predictable sizes, or combine both when many small entries could add significant key and container overhead. For `st.cache_resource`, use `max_entries`. `max_size` integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
+Use `max_entries` when the workload gives a practical entry-count bound. For `st.cache_resource`, this is the available count-based limit.
+For `st.cache_data`, use `max_size` only when the user provides a byte budget or deployment memory constraints and the intended allocation across caches determine a per-cache budget. It limits serialized bytes for one decorated function, not total process memory or RSS. Do not guess it from source dataset size, representative or example values, or arbitrary constants; ask the user when the memory budget is unknown. Combine limits when they address different risks. `max_size` integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
 # BAD: No growth bound
@@ -111,14 +112,14 @@ def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bound by age, serialized size, and argument combinations
-@st.cache_data(ttl="1h", max_size="500MB", max_entries=1000)
+# GOOD: Bound by age and the workload's practical argument limit
+@st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Evict by serialized size (one oversized value is retained)
-@st.cache_data(max_size="500MB")
+# GOOD: Enforce the user's 500 MiB allocation (one oversized value is retained)
+@st.cache_data(max_size="500MiB")
 def get_large_report(report_id):
     return build_report(report_id)
 ```

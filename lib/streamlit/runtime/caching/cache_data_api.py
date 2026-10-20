@@ -585,10 +585,11 @@ class CacheDataAPI:
         max_size : int, str, or None
             The maximum serialized (pickled) size of this function's in-memory cache.
             An integer is a number of bytes. A string must include a unit, such as
-            ``"500MB"`` or ``"1.5GiB"``. The ``KB`` / ``MB`` / ``GB`` / ``TB`` and
-            ``KiB`` / ``MiB`` / ``GiB`` / ``TiB`` aliases all use powers of 1024.
-            Fractional values round down to whole bytes, so ``"1.1KB"`` is 1126
-            bytes. If this is ``None`` (default), there is no per-function byte limit.
+            ``"500MB"`` or ``"1.5GiB"``. Units are case-insensitive. The ``KB`` /
+            ``MB`` / ``GB`` / ``TB`` and ``KiB`` / ``MiB`` / ``GiB`` / ``TiB``
+            aliases all use powers of 1024. Fractional values round down to whole
+            bytes, so ``"1.1KB"`` is 1126 bytes. If this is ``None`` (default),
+            there is no per-function byte limit.
 
             When adding a value would exceed the limit, Streamlit drops the
             least-recently-used entries until the new value fits. Reading a cached
