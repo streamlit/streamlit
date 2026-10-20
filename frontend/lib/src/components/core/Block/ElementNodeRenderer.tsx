@@ -685,12 +685,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // Keyed by scriptRunId so the toast remounts on each run; a
-            // still-visible toast at the same position is de-duped in Toast.
+            // Keyed by scriptRunId so the toast remounts on each run, while
+            // msg.toast() updates within a run reach the same instance.
             key={node.scriptRunId}
             element={toastProto}
-            // The delta path is a stable per-position identity used to de-dupe
-            // the toast across the remounts that happen on every rerun.
+            // The delta path is a stable per-position identity. Toast uses it
+            // to keep a still-visible toast with identical content, or replace
+            // it when the content changed.
             toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />

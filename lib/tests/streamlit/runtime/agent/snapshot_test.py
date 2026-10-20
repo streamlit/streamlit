@@ -365,6 +365,7 @@ class SnapshotBuilderTest(SnapshotCase):
         st.time_input("When", value=None, key="when")
         st.time_input("Due time", value=None, required=True, key="due_time")
         st.datetime_input("Moment", value=None, key="moment")
+        st.datetime_input("Due moment", value=None, required=True, key="due_moment")
 
         snapshot = self._build()
         optional = _one_keyed(snapshot.document, "selectbox", "optional_city")
@@ -394,11 +395,21 @@ class SnapshotBuilderTest(SnapshotCase):
             _one_keyed(snapshot.document, "datetime_input", "moment")["clearable"]
             is True
         )
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "datetime_input", "due_moment"
+        )
 
     def test_datetime_clearable_follows_the_default_sent_to_the_browser(self) -> None:
         """Session state None empties the datetime default the browser can clear."""
         st.session_state.cleared = None
+        st.session_state.cleared_required = None
         st.datetime_input("Cleared", dt.datetime(2026, 1, 1, 12, 0), key="cleared")
+        st.datetime_input(
+            "Cleared required",
+            dt.datetime(2026, 1, 1, 12, 0),
+            key="cleared_required",
+            required=True,
+        )
         st.datetime_input("Fixed", dt.datetime(2026, 1, 1, 12, 0), key="fixed")
 
         snapshot = self._build()
@@ -407,6 +418,9 @@ class SnapshotBuilderTest(SnapshotCase):
             is True
         )
         assert _state(snapshot, "datetime_input", "cleared").clearable is True
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "datetime_input", "cleared_required"
+        )
         assert "clearable" not in _one_keyed(
             snapshot.document, "datetime_input", "fixed"
         )

@@ -175,6 +175,8 @@ function ChatInput({
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
+  /** Whether the controller reported an error during the current mic attempt. */
+  const recordingErrorReportedRef = useRef(false)
   const [isStacked, setIsStacked] = useState(false)
 
   // Forces dropzone to remount when files are cleared
@@ -811,11 +813,13 @@ function ChatInput({
       onApprove: handleAudioApprove,
       onPermissionDenied: () => {
         const errorMessage = "Microphone access denied"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Permission denied:", errorMessage)
       },
       onError: (error: Error) => {
         const errorMessage = "Recording failed"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Recording error:", error)
       },
@@ -866,6 +870,7 @@ function ChatInput({
   }
 
   const handleMicClick = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setRecordingError is a stable setter
     async (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
@@ -879,7 +884,22 @@ function ChatInput({
         return
       }
 
-      await controller.start()
+      // An earlier attempt's error stays visible until this attempt resolves:
+      // clearing it here would swap the mic button out of its error tooltip
+      // and drop keyboard focus.
+      recordingErrorReportedRef.current = false
+      try {
+        await controller.start()
+      } catch (error) {
+        LOG.error("Failed to start recording:", error)
+        // The controller reports most failures (e.g. permission denied) via
+        // its events before rejecting; keep that message and fall back to a
+        // generic one only for failures it didn't report.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- onPermissionDenied/onError set this ref while start() is awaited; TypeScript only sees the reset above
+        if (!recordingErrorReportedRef.current) {
+          setRecordingError("Recording failed")
+        }
+      }
     },
     [acceptAudio, disabled, isDisabledDuringRun, controller]
   )
@@ -1124,6 +1144,18 @@ function ChatInput({
             </StyledTextareaWrapper>
           )}
 
+          {/* Keep this node mounted in every layout. WaveSurfer binds to it
+              once, and a remount leaves later recordings drawing into a
+              detached node. It is hidden while idle. While recording, the
+              left cluster's `order: -1` places the waveform between the
+              button clusters. */}
+          <StyledWaveformContainer isRecording={isRecording}>
+            <StyledChatAudioWave
+              ref={waveformContainerRef}
+              data-testid="stChatInputWaveform"
+            />
+          </StyledWaveformContainer>
+
           {/* Toolbar/buttons section - wrapped in StyledToolbarRow when expanded */}
           {hasExpandedHeight && !isRecording ? (
             <StyledToolbarRow>
@@ -1218,11 +1250,6 @@ function ChatInput({
                   />
                 )}
               </StyledLeftCluster>
-
-              {/* Waveform - shown inline when recording */}
-              <StyledWaveformContainer isRecording={isRecording}>
-                <StyledChatAudioWave ref={waveformContainerRef} />
-              </StyledWaveformContainer>
 
               <StyledRightCluster>
                 {isRecording ? (
