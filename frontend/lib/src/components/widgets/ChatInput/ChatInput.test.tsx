@@ -1979,6 +1979,42 @@ describe("ChatInput widget", () => {
     }
   )
 
+  it("replaces an earlier attempt's error when a later start() rejects", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
+    let attempt = 0
+    const startRecording = (): Promise<void> => {
+      attempt += 1
+      if (attempt === 1) {
+        getWaveformEvents().onPermissionDenied()
+        return Promise.reject(new Error("Microphone permission denied"))
+      }
+      // A failure the controller doesn't report through its events
+      return Promise.reject(new Error("Record plugin not initialized"))
+    }
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start: vi.fn(startRecording),
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+    // The mic button remounts when the error tooltip toggles, so re-query it.
+    const getMicButton = (): HTMLElement =>
+      screen.getByTestId("stChatInputMicButton")
+
+    await user.click(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+
+    await user.click(getMicButton())
+    await user.unhover(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+    expect(
+      screen.queryByText("Microphone access denied")
+    ).not.toBeInTheDocument()
+    expect(attempt).toBe(2)
+  })
+
   it("clears a recording error when the user starts typing", async () => {
     const user = userEvent.setup()
     render(<ChatInput {...getProps({ acceptAudio: true })} />)

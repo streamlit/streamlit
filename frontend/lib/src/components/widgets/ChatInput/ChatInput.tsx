@@ -878,6 +878,9 @@ function ChatInput({
         return
       }
 
+      // Drop an error left by an earlier attempt so the tooltip only reflects
+      // this one.
+      setRecordingError(null)
       try {
         await controller.start()
       } catch (error) {
@@ -1122,11 +1125,11 @@ function ChatInput({
             </StyledTextareaWrapper>
           )}
 
-          {/* Waveform - visible only while recording. It sits outside the
-              layout branches below because WaveSurfer binds to this node
-              once; a remount would leave it drawing into a detached node.
-              While recording, the left cluster's `order: -1` places it
-              between the button clusters. */}
+          {/* Keep this node mounted in every layout. WaveSurfer binds to it
+              once, and a remount leaves later recordings drawing into a
+              detached node. It is hidden while idle. While recording, the
+              left cluster's `order: -1` places the waveform between the
+              button clusters. */}
           <StyledWaveformContainer isRecording={isRecording}>
             <StyledChatAudioWave
               ref={waveformContainerRef}

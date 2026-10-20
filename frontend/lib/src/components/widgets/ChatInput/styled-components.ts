@@ -109,7 +109,6 @@ export const StyledLeftCluster = styled.div<{
   flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
-  // In non-expanded mode, position before textarea/waveform via CSS order
   order: hasExpandedHeight ? 0 : -1,
 }))
 
