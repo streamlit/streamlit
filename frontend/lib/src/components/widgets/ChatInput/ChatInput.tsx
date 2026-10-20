@@ -173,6 +173,8 @@ function ChatInput({
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
+  /** Whether the controller reported an error during the current mic attempt. */
+  const recordingErrorReportedRef = useRef(false)
   const [isStacked, setIsStacked] = useState(false)
 
   // Forces dropzone to remount when files are cleared
@@ -809,11 +811,13 @@ function ChatInput({
       onApprove: handleAudioApprove,
       onPermissionDenied: () => {
         const errorMessage = "Microphone access denied"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Permission denied:", errorMessage)
       },
       onError: (error: Error) => {
         const errorMessage = "Recording failed"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Recording error:", error)
       },
@@ -878,9 +882,10 @@ function ChatInput({
         return
       }
 
-      // Drop an error left by an earlier attempt so the tooltip only reflects
-      // this one.
-      setRecordingError(null)
+      // An earlier attempt's error stays visible until this attempt resolves:
+      // clearing it here would swap the mic button out of its error tooltip
+      // and drop keyboard focus.
+      recordingErrorReportedRef.current = false
       try {
         await controller.start()
       } catch (error) {
@@ -888,7 +893,10 @@ function ChatInput({
         // The controller reports most failures (e.g. permission denied) via
         // its events before rejecting; keep that message and fall back to a
         // generic one only for failures it didn't report.
-        setRecordingError(prevError => prevError ?? "Recording failed")
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- written by controller events during start()
+        if (!recordingErrorReportedRef.current) {
+          setRecordingError("Recording failed")
+        }
       }
     },
     [acceptAudio, disabled, isDisabledDuringRun, controller]

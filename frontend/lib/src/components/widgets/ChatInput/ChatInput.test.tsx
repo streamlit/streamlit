@@ -2015,6 +2015,37 @@ describe("ChatInput widget", () => {
     expect(attempt).toBe(2)
   })
 
+  it("keeps keyboard focus on the mic button when a retry fails again", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
+    const start = vi.fn(async () => {
+      // Fail asynchronously, like a real getUserMedia() rejection, so any
+      // state update made before start() renders on its own
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      getWaveformEvents().onPermissionDenied()
+      throw new Error("Microphone permission denied")
+    })
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start,
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+    const micButton = screen.getByTestId("stChatInputMicButton")
+    act(() => micButton.focus())
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(2))
+    expect(screen.getByTestId("stChatInputMicButton")).toBe(micButton)
+    expect(micButton).toHaveFocus()
+    expect(
+      screen.queryByTestId("stChatInputCancelButton")
+    ).not.toBeInTheDocument()
+  })
+
   it("clears a recording error when the user starts typing", async () => {
     const user = userEvent.setup()
     render(<ChatInput {...getProps({ acceptAudio: true })} />)
