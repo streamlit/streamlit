@@ -1269,6 +1269,9 @@ _create_option(
         are refused unless their origin is in `server.corsAllowedOrigins`.
         Identity comes from `server.trustedUserHeaders`; without it, agent
         sessions are anonymous.
+
+        Note: This is an experimental feature. The API and its options are
+        subject to change.
     """,
     visibility="hidden",
     default_val=False,

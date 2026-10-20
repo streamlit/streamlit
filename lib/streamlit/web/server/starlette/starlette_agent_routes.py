@@ -319,9 +319,10 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
     async def interact_endpoint(request: Request) -> Response:
         if request.method != "POST":
-            # Registered for every method so anything else is answered here.
-            # Otherwise a GET falls through to the single-page-app fallback
-            # wherever the app serves its own frontend.
+            # Registered for every method so every other one is refused here.
+            # Otherwise the static files mount would answer: a GET or HEAD
+            # with the app's HTML and a 200, anything else with a 405 that
+            # names GET as allowed.
             return Response(status_code=405, headers={"Allow": "POST"})
         if registry is None:
             return error_response("not_available", _DISABLED_MESSAGE)
