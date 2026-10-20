@@ -329,7 +329,7 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
 
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
-- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.text_area`: `required` and `max_chars`. `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
 - `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
 - `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.

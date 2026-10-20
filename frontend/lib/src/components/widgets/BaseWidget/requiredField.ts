@@ -40,3 +40,12 @@ export function requiredFieldError(
     ? REQUIRED_FIELD_MESSAGE
     : null
 }
+
+/**
+ * Returns whether `required` treats a text value as empty: `null` or
+ * whitespace-only. Stricter than `st.text_input`'s `validate`, which skips
+ * only `null` and `""`.
+ */
+export function isRequiredEmptyText(value: string | null): boolean {
+  return value === null || value.trim() === ""
+}
