@@ -123,7 +123,6 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `codeql-analysis.yml` | Push/PR to `develop`, weekly | GitHub CodeQL security scanning for JS and Python |
-| `semgrep.yml` | PR | Semgrep static analysis via Snowflake reusable workflow |
 
 ### Release & Publishing
 

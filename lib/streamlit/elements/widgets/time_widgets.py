@@ -1208,6 +1208,8 @@ class TimeWidgetsMixin:
                 "time_input",
                 key=element_id,
                 action="value",
+                # No initial time, and not required: a later value can be cleared.
+                clearable=parsed_time is None and not required,
                 # JSON Schema "time" is RFC 3339 and requires an offset. A naive
                 # time has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
@@ -1719,6 +1721,10 @@ class TimeWidgetsMixin:
                 "datetime_input",
                 key=element_id,
                 action="value",
+                # The browser clears when the default it receives is empty.
+                # Session state None empties that default even when the author
+                # set one, so the flag follows the value sent to the browser.
+                clearable=default_value_for_proto is None,
                 # JSON Schema "date-time" is RFC 3339 and requires an offset. A
                 # naive datetime has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
@@ -2318,6 +2324,8 @@ class TimeWidgetsMixin:
                 "date_input",
                 key=element_id,
                 action="value",
+                # No initial date, and not required: a later value can be cleared.
+                clearable=parsed_values.value is None and not required,
                 value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
                 if parsed_values.is_range
                 else agent_spec.DATE,

@@ -751,7 +751,7 @@ Every outcome a client has to handle:
 | A creating call while the server holds `server.agentMaxSessions` sessions | `too_many_sessions`, before anything runs. Checked only when creating a session, so a request on an existing one, including a retry that collects a timed-out run, is never refused for it. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
-| Script failed to compile                                                             | `200` with `status: "error"`, the compile error as an uncaught `exception` in `main`, and no actions.                                     |
+| Script failed to compile                                                             | `200` with `status: "error"`, the compile error copied from the page overlay into an uncaught `exception` in `main`, and no actions. `client.showErrorDetails` does not redact it. |
 | Another request on the same session is still being served, or a different request arrives while a timed-out run is still going | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident. |
 | Run exceeded `server.agentRunTimeout`                                                | `202` with `run_timed_out`, while the app keeps running; a retry collects the run, as described above.                                   |
 
@@ -837,8 +837,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
   `null` resets a widget to its default, as the browser does, except where a browser
   user can empty a widget that has one: a single-select `st.segmented_control` or
-  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. A
-  list-valued widget is cleared with `[]`.
+  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. The
+  same flag, `clearable`, is set when the browser can clear back to an empty
+  default (`st.selectbox` with `index=None`, and number, date, time, and datetime
+  inputs with no initial value). A list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks

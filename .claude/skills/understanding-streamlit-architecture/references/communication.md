@@ -111,6 +111,10 @@ message Delta {
 
 **Delta path**: Array in metadata like `[0, 2, 3]` specifying tree position.
 
+The frontend (`frontend/lib/src/render-tree/AppRoot.ts`) and the agent snapshot (`lib/streamlit/runtime/agent/tree.py`, `merge_deltas`) both apply these paths. A block of the same type keeps its children; a different block type or dialog identity replaces them. A change to those rules has to land in both places.
+
+The trees still diverge after placement. The frontend merges messages as they arrive and keeps transient nodes. The snapshot merges the settled run, then drops nodes and props that have no semantic value. Do not fold the two mergers into one implementation or require the JSON tree to match the render tree node for node.
+
 ## Element types
 
 `Element.proto` - ~50+ element types in `oneof type` union.
