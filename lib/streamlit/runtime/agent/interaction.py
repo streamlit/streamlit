@@ -12,29 +12,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Drive a real AppSession for the agent API.
+"""Drive a real AppSession from an agent API request and wait for it to settle.
 
 An agent session is an ordinary ``AppSession`` whose client accumulates
 ForwardMsgs instead of writing them to a WebSocket. Input goes through the same
 ``rerun_script`` path the browser uses, so callbacks, widget reconciliation, and
-stale-node cleanup are the runtime's own behavior.
+stale-node cleanup are the runtime's own behavior. ``interact`` serves one
+request: it creates or finds the session, reruns it, waits until the run chain
+has settled, and returns the encoded snapshot.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import functools
+import re
+import secrets
+import threading
 import time
-from typing import TYPE_CHECKING, Final
+import zoneinfo
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Final
+from urllib.parse import parse_qs, parse_qsl, urlencode
 
+from streamlit import config
+from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
+from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import RuntimeState
+from streamlit.runtime.agent import snapshot
+from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+)
 from streamlit.runtime.session_manager import SessionClient
+from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
+    from streamlit.runtime.agent.snapshot import Snapshot
+    from streamlit.runtime.app_session import AppSession
+    from streamlit.runtime.runtime import Runtime
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+        UserInfoType,
+    )
     from streamlit.runtime.session_manager import ClientContext
+    from streamlit.runtime.state.query_params import QueryParams
+    from streamlit.runtime.state.session_state import SessionState
+    from streamlit.source_util import PageHash, PageInfo
 
 _LOGGER: Final = get_logger(__name__)
+
+# The longest an idle session outlives its TTL while no request arrives.
+_SWEEP_SECONDS: Final = 60.0
+
+_STOPPED_RUNTIME_STATES: Final = frozenset(
+    {RuntimeState.STOPPING, RuntimeState.STOPPED}
+)
 
 _SETTLING_STATUSES: Final = frozenset(
     {
@@ -217,3 +258,818 @@ class AgentSessionClient(SessionClient):
             if run_id == self._run_id
             or (running and msg.delta.fragment_id not in running)
         ]
+
+
+# The request fields that say what an interaction does. Two requests with the
+# same values ask for the same thing.
+_ACTION_FIELDS: Final = ("page", "query_params", "context")
+
+# Every field an `interact` request may carry.
+_REQUEST_FIELDS: Final = frozenset({"session_id", *_ACTION_FIELDS})
+
+# Generous for a BCP 47 tag with extensions, which is what a browser reports.
+_MAX_LOCALE_LENGTH: Final = 64
+
+# The shape of a BCP 47 language tag: a language, then hyphenated subtags, as
+# in "de-DE" or "zh-Hans-CN". Not a POSIX locale such as "en_US.UTF-8", which a
+# browser never reports and a locale library would refuse.
+_LANGUAGE_TAG: Final = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
+
+
+@functools.cache
+def _known_timezones() -> frozenset[str]:
+    return frozenset(zoneinfo.available_timezones())
+
+
+@dataclass
+class _Built:
+    """A settled interaction's snapshot and its encoded response body."""
+
+    snapshot: Snapshot
+    body: bytes
+
+
+@dataclass
+class _Interaction:
+    """What a sent interaction needs once its run chain settles."""
+
+    # The request's action fields, so a retry can be recognized.
+    action: dict[str, Any]
+    # The query string the request sent, kept unless the run reports a change.
+    query_string: str
+    # A `page` handed to the runtime unresolved, which can only be checked once
+    # the run has produced the page list.
+    unverified_page: str | None
+    # When the run was sent, so a retry that times out again can say how long
+    # it has been running.
+    started: float = field(default_factory=time.monotonic)
+    # The result built for a client that left while it was being built, so
+    # the retry that collects the interaction does not build it again.
+    built: _Built | None = None
+
+
+def _released_event() -> asyncio.Event:
+    event = asyncio.Event()
+    event.set()
+    return event
+
+
+@dataclass
+class AgentSession:
+    """Server-side bookkeeping for one agent session."""
+
+    handle: str
+    session_id: str
+    client: AgentSessionClient
+    # Who created the session, from the deployment's trusted identity headers.
+    # The handle alone is a bearer credential, so a request carrying a
+    # different identity is treated as not knowing the session at all.
+    user_info: UserInfoType
+    # The query string this client holds, kept the way a browser keeps its
+    # address bar: sent with each rerun, and updated when the server says it
+    # changed. Deriving it per request instead would replay parameters a page
+    # transition has already dropped.
+    query_string: str = ""
+    # Browser facts the client chose to state, resent with every rerun the way
+    # a browser resends its own. None until a request supplies them, so the app
+    # reads `st.context.timezone` as unknown rather than as a guess.
+    context_info: ContextInfo | None = None
+    last_used: float = field(default_factory=time.monotonic)
+    # The last snapshot's `pages`, which an `unknown_page` error lists.
+    pages: list[dict[str, Any]] = field(default_factory=list)
+    # Set while an interaction is in flight; a second one is refused, not queued.
+    busy: bool = False
+    # Set whenever `busy` is not, so the retry that collects an interaction
+    # whose client left can wait for the session to free up.
+    released: asyncio.Event = field(default_factory=_released_event)
+    # An interaction that outlasted the run timeout and whose result nobody has
+    # collected yet. Its run keeps going, and a retry waits for it.
+    timed_out: _Interaction | None = None
+
+
+class AgentSessionRegistry:
+    """Tracks agent sessions and reclaims them once they go idle.
+
+    Reclaiming happens on every request and on a timer while any session
+    exists, so a server that stops getting agent requests still releases each
+    session's app session and media.
+
+    Threading: UNSAFE. Every method must be called on the runtime's event loop.
+    """
+
+    def __init__(self, runtime: Runtime) -> None:
+        self._runtime = runtime
+        self._sessions: dict[str, AgentSession] = {}
+        self._sweeper: asyncio.Task[None] | None = None
+
+    def create(self, user_info: UserInfoType) -> AgentSession:
+        """Create an agent session for ``user_info``, the caller's identity.
+
+        Raises
+        ------
+        AgentRequestError
+            ``too_many_sessions`` when the server already holds
+            ``server.agentMaxSessions`` sessions after idle ones are reclaimed.
+        """
+        self._reclaim_idle()
+        max_sessions = int(config.get_option("server.agentMaxSessions"))
+        if len(self._sessions) >= max_sessions:
+            raise AgentRequestError(
+                "too_many_sessions",
+                f"This server already holds {max_sessions} agent sessions. "
+                "Reuse an existing `session_id`, or retry once idle sessions "
+                "expire.",
+            )
+
+        client = AgentSessionClient()
+        session_id = self._runtime.connect_session(
+            client=client, user_info=dict(user_info)
+        )
+        # An opaque bearer handle, long enough to be unguessable, so a client
+        # cannot address another session, or a browser session, by trying ids.
+        handle = f"s_{secrets.token_hex(16)}"
+        session = AgentSession(
+            handle=handle,
+            session_id=session_id,
+            client=client,
+            user_info=dict(user_info),
+        )
+        self._sessions[handle] = session
+        try:
+            # Tell the element layer that this session's commands should
+            # describe themselves. Sessions not registered here -- every
+            # browser session -- build nothing.
+            agent_spec.register_agent_session(session_id)
+            # The internal id never leaves the server, but a WebSocket naming
+            # it must still not take the session over.
+            self._runtime.mark_session_nonresumable(session_id)
+            # An edit applies on the next interaction, as with `runOnSave` off,
+            # so a client is never handed the result of a run it did not ask
+            # for.
+            self.app_session(session).set_run_on_save(False)
+        except Exception:
+            self.close(handle)
+            raise
+
+        if self._sweeper is None or self._sweeper.done():
+            self._sweeper = asyncio.get_running_loop().create_task(self._sweep())
+        return session
+
+    def get(self, handle: str, user_info: UserInfoType) -> AgentSession:
+        """Find the session ``handle`` names, if ``user_info`` created it.
+
+        Raises
+        ------
+        AgentRequestError
+            ``unknown_session`` for a handle that does not exist, has expired,
+            or belongs to a different identity.
+        """
+        self._reclaim_idle()
+        session = self._sessions.get(handle)
+        if session is None or session.user_info != user_info:
+            ttl_minutes = float(config.get_option("server.agentSessionTTL")) / 60
+            raise AgentRequestError(
+                "unknown_session",
+                "This session does not exist or has expired: sessions end after "
+                f"{ttl_minutes:g} minutes without a request. Omit `session_id` to "
+                "start a new one.",
+            )
+        session.last_used = time.monotonic()
+        return session
+
+    def app_session(self, session: AgentSession) -> AppSession:
+        """The ``AppSession`` behind ``session``.
+
+        Raises
+        ------
+        AgentRequestError
+            ``unknown_session`` when the runtime no longer has it.
+        """
+        app_session = self._runtime.get_app_session(session.session_id)
+        if app_session is None:
+            raise AgentRequestError(
+                "unknown_session",
+                "This session's app session is gone. Omit `session_id` to start "
+                "a new one.",
+            )
+        return app_session
+
+    def close(self, handle: str) -> None:
+        """Close the session ``handle`` names. Closing it again does nothing."""
+        session = self._sessions.pop(handle, None)
+        if session is not None:
+            agent_spec.forget_agent_session(session.session_id)
+            self._runtime.close_session(session.session_id)
+
+    def _runtime_stopped(self) -> bool:
+        return self._runtime.state in _STOPPED_RUNTIME_STATES
+
+    async def _sweep(self) -> None:
+        """Reclaim idle sessions on a timer, until none are left."""
+        while self._sessions and not self._runtime_stopped():
+            ttl = float(config.get_option("server.agentSessionTTL"))
+            await asyncio.sleep(min(ttl, _SWEEP_SECONDS))
+            if not self._runtime_stopped():
+                self._reclaim_idle()
+
+    def _reclaim_idle(self) -> None:
+        ttl = float(config.get_option("server.agentSessionTTL"))
+        now = time.monotonic()
+        for handle, session in list(self._sessions.items()):
+            app_session = self._runtime.get_app_session(session.session_id)
+            idle_since = _idle_since(
+                session, settled=app_session is None or app_session.is_settled
+            )
+            if idle_since is not None and now - idle_since > ttl:
+                _LOGGER.debug("Reclaiming idle agent session %s", session.session_id)
+                self.close(handle)
+
+
+def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
+    """When a session last did anything, or None while it is still working.
+
+    Activity is the client's last request or the last run finishing, whichever
+    is later. A run that outlasted `run_timed_out` is still activity while it
+    goes, however long the client waits, and gets a full TTL after it finishes
+    to be collected. ``settled`` is whether the session's app has settled.
+    """
+    if session.busy or (session.timed_out is not None and not settled):
+        return None
+    return max(session.last_used, session.client.finished_at)
+
+
+async def interact(
+    runtime: Runtime,
+    registry: AgentSessionRegistry,
+    request: dict[str, Any],
+    *,
+    user_info: UserInfoType,
+    headers: Iterable[tuple[str, str]],
+    encode: Callable[[dict[str, Any]], bytes],
+) -> bytes:
+    """Run one interaction and return its encoded snapshot.
+
+    Parameters
+    ----------
+    runtime : Runtime
+        The runtime the agent sessions run in.
+    registry : AgentSessionRegistry
+        The agent sessions of ``runtime``.
+    request : dict[str, Any]
+        The parsed request body.
+    user_info : UserInfoType
+        What the deployment's trusted identity headers say about the caller,
+        mapped the way the WebSocket maps them for a browser.
+    headers : Iterable[tuple[str, str]]
+        The request's headers, which the app reads as ``st.context.headers``
+        when this request starts a run.
+    encode : Callable[[dict[str, Any]], bytes]
+        Turns the snapshot document into the response body. It runs in a worker
+        thread together with the snapshot build, and may change the document.
+
+    Returns
+    -------
+    bytes
+        The response body for the settled snapshot.
+
+    Raises
+    ------
+    AgentRequestError
+        For every refusal the error catalog lists. A creating call that fails
+        after its session exists carries that session's handle.
+    """
+    _validate_request_shape(request)
+    deadline = time.monotonic() + _run_timeout()
+
+    handle = request.get("session_id")
+    is_new_session = handle is None
+    if is_new_session:
+        session = registry.create(user_info)
+    else:
+        if not isinstance(handle, str):
+            raise AgentRequestError("invalid_request", "`session_id` must be a string.")
+        session = registry.get(handle, user_info)
+
+    if session.busy and _collects(session, request):
+        # What is in flight is an interaction whose client left, still building
+        # its snapshot, and this request collects it. Wait for that, as a retry
+        # waits for a timed-out run, rather than refusing the one request the
+        # session is waiting for.
+        with contextlib.suppress(TimeoutError):
+            async with asyncio.timeout(deadline - time.monotonic()):
+                await session.released.wait()
+    # Checked and claimed with no await in between, so a second request on the
+    # event loop always sees the claim. A lock would wait instead of refusing,
+    # and could start the second interaction after its client had given up.
+    if session.busy:
+        raise AgentRequestError(
+            "session_busy",
+            "This session already has an interaction in flight. If it is one "
+            "whose response you lost, send only `session_id` in a moment to "
+            "collect it.",
+        )
+    session.busy = True
+    session.released.clear()
+    try:
+        return await _run_interaction(
+            runtime,
+            registry.app_session(session),
+            session,
+            request,
+            is_new_session=is_new_session,
+            headers=headers,
+            deadline=deadline,
+            encode=encode,
+        )
+    except AgentRequestError as exc:
+        # A creating call that fails after the session exists has still run the
+        # app, so the session is real and usable. Hand its id back rather than
+        # stranding the caller with a session it cannot continue.
+        if is_new_session and exc.session_id is None:
+            exc.session_id = session.handle
+        raise
+    except Exception:
+        # An unexpected failure answers without a `session_id`, so nobody could
+        # reach a session a creating call made, and it would hold a slot until
+        # the TTL.
+        if is_new_session:
+            registry.close(session.handle)
+        raise
+    finally:
+        session.busy = False
+        session.released.set()
+
+
+def _run_timeout() -> float:
+    return float(config.get_option("server.agentRunTimeout"))
+
+
+def _action_of(request: dict[str, Any]) -> dict[str, Any]:
+    """What a request asks to do: its action fields that are present."""
+    return {
+        name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
+    }
+
+
+def _collects(session: AgentSession, request: dict[str, Any]) -> bool:
+    """Whether a request is a retry of the session's timed-out interaction:
+    only `session_id`, or the same request again.
+    """
+    pending = session.timed_out
+    action = _action_of(request)
+    return pending is not None and (not action or action == pending.action)
+
+
+async def _run_interaction(
+    runtime: Runtime,
+    app_session: AppSession,
+    session: AgentSession,
+    request: dict[str, Any],
+    *,
+    is_new_session: bool,
+    headers: Iterable[tuple[str, str]],
+    deadline: float,
+    encode: Callable[[dict[str, Any]], bytes],
+) -> bytes:
+    pending = session.timed_out
+    if pending is not None and _collects(session, request):
+        # A retry of an interaction that outlasted the timeout. Starting another
+        # run would interrupt the one doing the work, so a run that always took
+        # longer than the timeout could never finish. Collect the original
+        # instead: wait for its run, or return its result if it has finished.
+        # The result is collected once; the same request after that is a new
+        # interaction.
+        session.timed_out = None
+        return await _settle(
+            app_session, session, pending, deadline=deadline, encode=encode
+        )
+    if pending is not None and not app_session.is_settled:
+        # A browser would interrupt the run, but this one's result is still
+        # owed to the client that started it.
+        raise AgentRequestError(
+            "session_busy",
+            "This session is still running an interaction that timed out. "
+            "Send only `session_id` to wait for it, then send this request.",
+        )
+
+    page = request.get("page")
+    query_params = request.get("query_params")
+    context = request.get("context")
+
+    back_msg = BackMsg()
+    rerun = back_msg.rerun_script
+    rerun.page_script_hash = app_session.page_script_hash
+    rerun.query_string = session.query_string
+
+    context_info = session.context_info if context is None else _parse_context(context)
+    if context_info is not None:
+        rerun.context_info.CopyFrom(context_info)
+
+    unverified_page: str | None = None
+    if page is not None:
+        page_hash, page_name = _resolve_page(
+            app_session.get_pages(),
+            page,
+            can_defer=is_new_session,
+            listed=session.pages,
+        )
+        if not page_hash:
+            unverified_page = page_name
+        if page_hash != rerun.page_script_hash:
+            session_state = app_session.session_state
+            rerun.query_string = _query_string_for_page_change(
+                session_state.query_params, rerun.query_string
+            )
+            # A browser sends every widget's current value with a page change,
+            # and the runtime keeps the state and query-parameter binding of
+            # only the widgets it lists. Without them, a widget the new page
+            # shares, such as one in the sidebar, would lose its parameter.
+            rerun.widget_states.widgets.extend(session_state.get_widget_states())
+        rerun.page_script_hash = page_hash
+        rerun.page_name = page_name
+    if query_params is not None:
+        rerun.query_string = _encode_query_params(query_params)
+
+    session.context_info = context_info
+    # A timed-out run that has since finished is left uncollected: the client
+    # asked for something else.
+    session.timed_out = None
+    # Set only when a run starts: a refused request, or a retry collecting a run
+    # already going, must not change what that run reads.
+    session.client.request_context = _RequestContext(headers)
+    session.client.begin_interaction()
+    runtime.handle_backmsg(session.session_id, back_msg)
+
+    return await _settle(
+        app_session,
+        session,
+        _Interaction(
+            action=_action_of(request),
+            query_string=rerun.query_string,
+            unverified_page=unverified_page,
+        ),
+        deadline=deadline,
+        encode=encode,
+    )
+
+
+async def _settle(
+    app_session: AppSession,
+    session: AgentSession,
+    interaction: _Interaction,
+    *,
+    deadline: float,
+    encode: Callable[[dict[str, Any]], bytes],
+) -> bytes:
+    """Wait for a sent interaction's run chain to settle, then snapshot it.
+
+    A result already built for a client that left is used as it is: the
+    session stayed claimed while it was built, so nothing has run since.
+    """
+    if interaction.built is None:
+        interaction.built = await _wait_and_build(
+            app_session, session, interaction, deadline=deadline, encode=encode
+        )
+    built = interaction.built
+    session.pages = built.snapshot.document.get("pages", [])
+    session.last_used = time.monotonic()
+
+    if interaction.unverified_page is not None:
+        _verify_page_exists(interaction.unverified_page, session)
+    return built.body
+
+
+async def _wait_and_build(
+    app_session: AppSession,
+    session: AgentSession,
+    interaction: _Interaction,
+    *,
+    deadline: float,
+    encode: Callable[[dict[str, Any]], bytes],
+) -> _Built:
+    try:
+        async with asyncio.timeout(deadline - time.monotonic()):
+            await app_session.wait_until_settled()
+    except asyncio.CancelledError:
+        # The client went away before the run settled. The run keeps going, as
+        # after a timeout, so the client's retry collects it rather than being
+        # told the session is busy or starting the run again.
+        session.timed_out = interaction
+        raise
+    except TimeoutError as exc:
+        # The run can settle in the same loop iteration the timeout fires in.
+        if not app_session.is_settled:
+            session.timed_out = interaction
+            timeout = _run_timeout()
+            elapsed = time.monotonic() - interaction.started
+            raise AgentRequestError(
+                "run_timed_out",
+                f"The app did not finish within {timeout:g} seconds, and is still "
+                f"running, {elapsed:.0f} seconds after this interaction started. "
+                "Nothing is lost: send a request with only `session_id` to wait "
+                "for it without starting it over.",
+                # Always included, because the remedy is a request on this session.
+                session_id=session.handle,
+            ) from exc
+
+    # Keep the query string the way a browser keeps its address bar: what was
+    # sent, unless the run reported a change. Streamlit scopes widget-bound
+    # parameters by page, so a page transition drops some, and replaying the
+    # request's own string would keep reporting a filter the app has discarded.
+    if session.client.query_string_update is not None:
+        session.query_string = session.client.query_string_update
+    else:
+        session.query_string = interaction.query_string
+
+    # Built and encoded off the event loop, because it reads every table's
+    # Arrow data and runs the app's `format_func`s, which would stall every
+    # session on the server. Safe while the session is claimed and settled: no
+    # run can start, and the message list is copied here, on the loop that
+    # appends to it.
+    build = asyncio.ensure_future(
+        asyncio.to_thread(
+            _build_in_worker,
+            app_session.create_detached_script_run_ctx(
+                query_string=session.query_string, context_info=session.context_info
+            ),
+            encode,
+            session_id=session.handle,
+            messages=session.client.messages,
+            session_state=app_session.session_state,
+            query_params=parse_qs(session.query_string, keep_blank_values=True),
+        )
+    )
+    try:
+        return await asyncio.shield(build)
+    except asyncio.CancelledError:
+        # The client left while the snapshot was built. The run has settled, so
+        # its retry collects it, exactly as for a client that left earlier. The
+        # thread cannot be stopped and reads session state, so the session stays
+        # claimed until it finishes: a new interaction must not run under it.
+        # Its result is kept for that retry.
+        session.timed_out = interaction
+        await _wait_ignoring_cancellation(build)
+        if not build.cancelled() and build.exception() is None:
+            interaction.built = build.result()
+        raise
+
+
+async def _wait_ignoring_cancellation(future: asyncio.Future[Any]) -> None:
+    """Wait until ``future`` is done, even if this task is cancelled again."""
+    while not future.done():
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.wait({future})
+
+
+def _build_in_worker(
+    ctx: ScriptRunContext,
+    encode: Callable[[dict[str, Any]], bytes],
+    *,
+    session_id: str,
+    messages: list[ForwardMsg],
+    session_state: SessionState,
+    query_params: dict[str, list[str]],
+) -> _Built:
+    """Build and encode a snapshot with ``ctx`` as the thread's script context.
+
+    A widget's ``value`` goes through its serializer, which runs the app's
+    ``format_func``, and one that reads ``st.session_state`` or ``st.context``
+    needs a script context to find the session's state and the timezone and
+    locale the request stated. Without them it would format a label the run
+    never offered. The context drops every message, so an ``st.*`` command the
+    app's code calls here has no effect.
+
+    The context is cleared afterwards, because the executor reuses its threads
+    for unrelated work. ``ThreadState`` lives in the context variables
+    ``asyncio.to_thread`` copied for this call, so it never outlives it.
+    """
+    thread = threading.current_thread()
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+    try:
+        ThreadState.initialize(active_script_hash=ctx.pages_manager.main_script_hash)
+        built_snapshot = snapshot.build_snapshot(
+            session_id=session_id,
+            messages=messages,
+            session_state=session_state,
+            query_params=query_params,
+        )
+        return _Built(snapshot=built_snapshot, body=encode(built_snapshot.document))
+    finally:
+        setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+
+
+def _verify_page_exists(url_path: str, session: AgentSession) -> None:
+    """Reject a `page` that the run showed does not exist.
+
+    On a creating call the page list does not exist yet, so `_resolve_page`
+    hands an unrecognized path to the runtime rather than rejecting it -- which
+    is right for a valid path, and silently lands on the default page for a
+    typo. The page list exists by the time the run finishes, so check then. The
+    run has already happened, which is why the message says so.
+
+    Checked against the page list rather than where the run ended up: an app
+    may redirect with `st.switch_page`, which is not the client's mistake.
+    Only a creating call defers this check, so the error always carries the
+    session it created, including when a retry collects a timed-out run.
+    """
+    pages = session.pages
+    if not pages or url_path in (page.get("url_path") for page in pages):
+        return
+
+    raise AgentRequestError(
+        "unknown_page",
+        f"No page with url_path {url_path!r}; the app ran its default "
+        "page instead. `error.pages` lists the available pages.",
+        # The page list is the whole remedy, so it travels as data rather than
+        # only inside the message.
+        details={"pages": pages},
+        session_id=session.handle,
+    )
+
+
+def _refuse_invalid_text(request: Any) -> None:
+    r"""Refuse text anywhere in a request that is not valid Unicode.
+
+    JSON allows a lone UTF-16 surrogate such as "\ud800". It decodes into a
+    Python string that fails only later, when protobuf, the URL, or a response
+    encodes it. Walked without recursion, since the parser already allowed the
+    request's nesting depth.
+    """
+    pending = [request]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            pending.extend(item)
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+        elif isinstance(item, str):
+            try:
+                item.encode("utf-8")
+            except UnicodeEncodeError:
+                raise AgentRequestError(
+                    "invalid_request",
+                    "The request contains text that is not valid Unicode, such "
+                    "as a lone surrogate escape like \\ud800.",
+                ) from None
+
+
+def _validate_request_shape(request: dict[str, Any]) -> None:
+    """Refuse a malformed request before anything is allocated or run."""
+    _refuse_invalid_text(request)
+    unknown = set(request) - _REQUEST_FIELDS
+    if unknown:
+        raise AgentRequestError(
+            "invalid_request",
+            f"Unknown request fields: {', '.join(sorted(unknown))}.",
+        )
+
+    # Checked here, before a creating call allocates a session, rather than
+    # where they are applied; parsing them has no effect.
+    if request.get("page") is not None and not isinstance(request["page"], str):
+        raise AgentRequestError("invalid_request", "`page` must be a string.")
+    if request.get("query_params") is not None:
+        _encode_query_params(request["query_params"])
+    if request.get("context") is not None:
+        _parse_context(request["context"])
+
+
+def _resolve_page(
+    pages: dict[PageHash, PageInfo],
+    page: str,
+    *,
+    can_defer: bool,
+    listed: list[dict[str, Any]],
+) -> tuple[str, str]:
+    """Map a public ``url_path`` to a rerun target.
+
+    Returns the internal page script hash when it is already known, and
+    otherwise the path itself for the runtime to resolve. The second case is
+    not an edge case: an ``st.navigation`` app has no page list until it has
+    run once, so a creating call that names a page cannot look up a hash. The
+    browser has the same problem on a cold load and solves it the same way, by
+    sending ``page_name`` and letting the runtime resolve it.
+
+    Only a creating call defers. Once the app has run, its page list is known,
+    so an unknown path is refused before anything runs. The refusal lists the
+    pages as the last snapshot did, ``listed``, when there is one.
+    """
+    url_path = page.strip("/")
+    for page_hash, info in pages.items():
+        if info.get("url_pathname", "") == url_path:
+            return str(page_hash), ""
+
+    known_paths = {info.get("url_pathname", "") for info in pages.values()}
+    if can_defer and known_paths <= {""}:
+        # Only the default page is registered, so the app has not declared its
+        # pages yet. Hand the path to the runtime rather than guessing.
+        return "", url_path
+
+    raise AgentRequestError(
+        "unknown_page",
+        f"No page with url_path {page!r}. `error.pages` lists the available pages.",
+        # As data, in the shape of the snapshot's `pages`, like the check a
+        # creating call gets after its run.
+        details={
+            "pages": listed
+            or [
+                {
+                    "url_path": info.get("url_pathname", ""),
+                    **({"title": info["page_name"]} if info.get("page_name") else {}),
+                    **({"icon": info["icon"]} if info.get("icon") else {}),
+                }
+                for info in pages.values()
+            ]
+        },
+    )
+
+
+def _encode_query_params(query_params: Any) -> str:
+    if not isinstance(query_params, dict):
+        raise AgentRequestError(
+            "invalid_request",
+            "`query_params` must be an object mapping names to lists of strings.",
+        )
+
+    pairs: list[tuple[str, str]] = []
+    for name, values in query_params.items():
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) for value in values
+        ):
+            raise AgentRequestError(
+                "invalid_request",
+                f"Query parameter {name!r} must be a list of strings, such as "
+                '["2001"].',
+            )
+        pairs.extend((name, value) for value in values)
+    return urlencode(pairs)
+
+
+def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> str:
+    """Keep what a browser keeps when it switches pages.
+
+    That is the embed parameters and the ones bound to a widget; everything
+    else is cleared, so a parameter one page was opened with does not follow
+    the caller to the next. The run then drops bound parameters that belong to
+    another page, and reports the result like any other change. Blank values
+    stay: an empty parameter is a real value.
+    """
+    return urlencode(
+        [
+            (name, value)
+            for name, value in parse_qsl(query_string, keep_blank_values=True)
+            if name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name)
+        ]
+    )
+
+
+def _parse_context(context: Any) -> ContextInfo:
+    """Build the browser context a request states about its client.
+
+    Only facts a browser sends about itself without authentication, so
+    accepting them grants nothing. Identity never comes from here.
+    """
+    if not isinstance(context, dict):
+        raise AgentRequestError("invalid_request", "`context` must be an object.")
+    unknown = set(context) - {"timezone", "locale"}
+    if unknown:
+        raise AgentRequestError(
+            "invalid_request",
+            f"Unknown `context` fields: {', '.join(sorted(unknown))}. Supported: "
+            "`timezone`, `locale`.",
+        )
+
+    info = ContextInfo()
+    timezone = context.get("timezone")
+    if timezone is not None:
+        # Checked against the IANA names themselves rather than by loading the
+        # zone, which on a case-insensitive filesystem also finds
+        # "europe/berlin" and would hand the app that spelling.
+        if not isinstance(timezone, str) or timezone not in _known_timezones():
+            raise AgentRequestError(
+                "invalid_request",
+                f"`context.timezone` must be an IANA name such as "
+                f"'Europe/Berlin', not {timezone!r}.",
+            )
+        info.timezone = timezone
+        # A browser reports the offset alongside the name, as minutes behind
+        # UTC the way JavaScript's getTimezoneOffset counts them. Deriving it
+        # keeps the two from disagreeing.
+        utc_offset = datetime.now(zoneinfo.ZoneInfo(timezone)).utcoffset()
+        info.timezone_offset = (
+            -int(utc_offset.total_seconds()) // 60 if utc_offset is not None else 0
+        )
+
+    locale = context.get("locale")
+    if locale is not None:
+        if (
+            not isinstance(locale, str)
+            or len(locale) > _MAX_LOCALE_LENGTH
+            or not _LANGUAGE_TAG.fullmatch(locale)
+        ):
+            raise AgentRequestError(
+                "invalid_request",
+                "`context.locale` must be a language tag such as 'de-DE'.",
+            )
+        info.locale = locale
+    return info

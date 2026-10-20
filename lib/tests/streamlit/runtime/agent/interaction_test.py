@@ -16,12 +16,19 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import patch
 
 import pytest
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import interaction, tree
+from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.state.query_params import QueryParams
+
+if TYPE_CHECKING:
+    from streamlit.source_util import PageInfo
 
 
 def _new_session(run_id: str, fragment_ids: list[str] | None = None) -> ForwardMsg:
@@ -297,3 +304,274 @@ def test_request_context_withholds_credentials_and_cookies() -> None:
     assert list(context.headers) == [("X-Token", "t"), ("x-token", "repeated")]
     assert context.cookies == {}
     assert context.remote_ip is None
+
+
+def _refusal(request: dict[str, Any]) -> AgentRequestError:
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._validate_request_shape(request)
+    return raised.value
+
+
+@pytest.mark.parametrize(
+    "request_body",
+    [
+        {"widget_state": {"region": "Europe"}},
+        {"trigger": {"key": "submit"}},
+        {"session_id": "s_1", "pages": "home"},
+    ],
+)
+def test_validate_refuses_unknown_fields(request_body: dict[str, Any]) -> None:
+    """Fields this API does not take, setting widgets included, are refused."""
+    error = _refusal(request_body)
+
+    assert error.code == "invalid_request"
+    assert "Unknown request fields" in error.message
+
+
+@pytest.mark.parametrize(
+    ("request_body", "fragment"),
+    [
+        ({"page": 3}, "`page` must be a string"),
+        ({"query_params": ["a"]}, "`query_params` must be an object"),
+        ({"query_params": {"a": "1"}}, "must be a list of strings"),
+        ({"query_params": {"a": [1]}}, "must be a list of strings"),
+        ({"context": "Europe/Berlin"}, "`context` must be an object"),
+        ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
+    ],
+)
+def test_validate_refuses_wrong_types(
+    request_body: dict[str, Any], fragment: str
+) -> None:
+    """A field of the wrong type is refused before anything runs."""
+    error = _refusal(request_body)
+
+    assert error.code == "invalid_request"
+    assert fragment in error.message
+
+
+@pytest.mark.parametrize(
+    "request_body",
+    [
+        {"page": "\ud800"},
+        {"query_params": {"q": ["ok", "\udfff"]}},
+        {"query_params": {"\ud800": ["x"]}},
+        {"context": {"locale": "de-DE", "\ud83d": "x"}},
+    ],
+)
+def test_validate_refuses_text_that_is_not_unicode(
+    request_body: dict[str, Any],
+) -> None:
+    """A lone surrogate in any key or value is refused."""
+    error = _refusal(request_body)
+
+    assert error.code == "invalid_request"
+    assert "not valid Unicode" in error.message
+
+
+def test_validate_accepts_a_full_request() -> None:
+    """Every field this API takes passes when well formed."""
+    interaction._validate_request_shape(
+        {
+            "session_id": "s_1",
+            "page": "report",
+            "query_params": {"q": ["1", ""], "empty": []},
+            "context": {"timezone": "Europe/Berlin", "locale": "de-DE"},
+        }
+    )
+
+
+def test_encode_query_params_keeps_blank_values() -> None:
+    """Repeated and blank values are encoded as given."""
+    assert (
+        interaction._encode_query_params({"q": ["a", "b"], "blank": [""], "none": []})
+        == "q=a&q=b&blank="
+    )
+
+
+def test_parse_context_refuses_a_timezone_in_the_wrong_case() -> None:
+    """Only exact IANA names pass, even where the filesystem would find another."""
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._parse_context({"timezone": "europe/berlin"})
+
+    assert raised.value.code == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    ("timezone", "offset"),
+    [
+        # JavaScript's getTimezoneOffset: minutes behind UTC.
+        ("Asia/Kolkata", -330),
+        # Newfoundland Standard Time, in January.
+        ("America/St_Johns", 210),
+    ],
+)
+def test_parse_context_derives_the_offset_from_the_timezone(
+    timezone: str, offset: int
+) -> None:
+    """The offset is derived from the zone, the way a browser reports it."""
+    january = datetime(2026, 1, 15, 12, 0)
+    with patch.object(interaction, "datetime") as fake_datetime:
+        fake_datetime.now.side_effect = lambda tz: january.replace(tzinfo=tz)
+        info = interaction._parse_context({"timezone": timezone})
+
+    assert info.timezone == timezone
+    assert info.timezone_offset == offset
+    assert not info.HasField("locale")
+
+
+@pytest.mark.parametrize(
+    ("locale", "accepted"),
+    [
+        ("de-DE", True),
+        ("zh-Hans-CN", True),
+        ("en_US.UTF-8", False),
+        ("e", False),
+        # 64 characters, then 65.
+        ("ab" + "-abcdefg" * 7 + "-abcde", True),
+        ("ab" + "-abcdefg" * 7 + "-abcdef", False),
+    ],
+)
+def test_parse_context_accepts_only_language_tags(locale: str, accepted: bool) -> None:
+    """A locale must look like a BCP 47 tag of at most 64 characters."""
+    if accepted:
+        assert interaction._parse_context({"locale": locale}).locale == locale
+    else:
+        with pytest.raises(AgentRequestError):
+            interaction._parse_context({"locale": locale})
+
+
+def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
+    info: PageInfo = {
+        "script_path": f"{url_pathname or 'main'}.py",
+        "page_script_hash": "h",
+    }
+    if url_pathname is not None:
+        info["url_pathname"] = url_pathname
+    if name:
+        info["page_name"] = name
+    if icon:
+        info["icon"] = icon
+    return info
+
+
+_NAVIGATION_PAGES: Final[dict[str, PageInfo]] = {
+    "home_hash": _page("", "Home"),
+    "report_hash": _page("report", "Report", ":material/table:"),
+}
+
+
+@pytest.mark.parametrize("page", ["report", "/report/", "/report"])
+def test_resolve_page_finds_a_known_url_path(page: str) -> None:
+    """A listed page resolves to its hash, with surrounding slashes ignored."""
+    resolved = interaction._resolve_page(
+        _NAVIGATION_PAGES, page, can_defer=False, listed=[]
+    )
+
+    assert resolved == ("report_hash", "")
+
+
+def test_resolve_page_maps_the_empty_path_to_the_default_page() -> None:
+    """`""` names the default page."""
+    resolved = interaction._resolve_page(
+        _NAVIGATION_PAGES, "", can_defer=False, listed=[]
+    )
+
+    assert resolved == ("home_hash", "")
+
+
+def test_resolve_page_defers_only_on_a_creating_call_before_navigation() -> None:
+    """Before any page is declared, a creating call hands the path on."""
+    default_only = {"main_hash": _page(None)}
+
+    assert interaction._resolve_page(
+        default_only, "/report", can_defer=True, listed=[]
+    ) == ("", "report")
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._resolve_page(default_only, "report", can_defer=False, listed=[])
+    assert raised.value.code == "unknown_page"
+
+
+def test_resolve_page_refuses_an_unknown_page_once_pages_are_declared() -> None:
+    """With declared pages, an unknown path is refused even on a creating call,
+    listing the pages derived from the page list.
+    """
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._resolve_page(_NAVIGATION_PAGES, "nope", can_defer=True, listed=[])
+
+    assert raised.value.code == "unknown_page"
+    assert raised.value.details == {
+        "pages": [
+            {"url_path": "", "title": "Home"},
+            {"url_path": "report", "title": "Report", "icon": ":material/table:"},
+        ]
+    }
+
+
+def test_resolve_page_refusal_lists_the_last_snapshots_pages() -> None:
+    """The refusal reports pages as the last snapshot listed them."""
+    listed = [{"url_path": "report", "title": "Quarterly report"}]
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._resolve_page(
+            _NAVIGATION_PAGES, "nope", can_defer=False, listed=listed
+        )
+
+    assert raised.value.details == {"pages": listed}
+
+
+def test_page_change_keeps_embed_and_bound_parameters_only() -> None:
+    """Embed parameters (any case) and widget-bound ones survive a page change."""
+    bindings = QueryParams()
+    bindings.bind_widget(
+        param_key="region", widget_id="w1", value_type="string_value", script_hash=""
+    )
+
+    query_string = interaction._query_string_for_page_change(
+        bindings, "EMBED=true&region=Europe&utm=ad&embed_options=light&blank="
+    )
+
+    assert query_string == "EMBED=true&region=Europe&embed_options=light"
+
+
+def _session(**fields: Any) -> interaction.AgentSession:
+    return interaction.AgentSession(
+        handle="s_test",
+        session_id="internal",
+        client=interaction.AgentSessionClient(),
+        user_info={},
+        **fields,
+    )
+
+
+def _pending(action: dict[str, Any]) -> interaction._Interaction:
+    return interaction._Interaction(
+        action=action, query_string="", unverified_page=None
+    )
+
+
+def test_collects_only_a_retry_of_the_timed_out_interaction() -> None:
+    """Only `session_id`, or the same action fields, collect a timed-out run."""
+    action = {"page": "report", "query_params": {"q": ["1"]}}
+    session = _session(timed_out=_pending(action))
+
+    assert interaction._collects(session, {"session_id": "s_test"})
+    assert interaction._collects(session, {"session_id": "s_test", **action})
+    assert not interaction._collects(session, {"session_id": "s_test", "page": "x"})
+    assert not interaction._collects(_session(), {"session_id": "s_test"})
+
+
+def test_idle_since_follows_the_timeout_state_table() -> None:
+    """Busy sessions and timed-out runs still going are never idle."""
+    with patch.object(interaction.time, "monotonic", return_value=10.0):
+        session = _session(last_used=5.0)
+
+    assert interaction._idle_since(session, settled=True) == 10.0
+    session.last_used = 20.0
+    assert interaction._idle_since(session, settled=True) == 20.0
+
+    session.busy = True
+    assert interaction._idle_since(session, settled=True) is None
+
+    session.busy = False
+    session.timed_out = _pending({})
+    assert interaction._idle_since(session, settled=False) is None
+    assert interaction._idle_since(session, settled=True) == 20.0
