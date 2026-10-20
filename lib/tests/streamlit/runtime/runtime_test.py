@@ -669,9 +669,8 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         client = MockSessionClient()
         session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
-        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
-        assert session_info is not None
-        session = session_info.session
+        session = self.runtime.get_app_session(session_id)
+        assert session is not None
 
         runner = MagicMock()
         with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):
@@ -749,6 +748,21 @@ class RuntimeTest(RuntimeTestCase):
         """get_client returns None when no session matches session_id."""
         await self.runtime.start()
         assert self.runtime.get_client("not_a_session_id") is None
+
+    async def test_get_app_session_returns_active_sessions_only(self) -> None:
+        """get_app_session returns the session while it is active, else None."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_session_info(session_id)
+        assert session_info is not None
+
+        assert self.runtime.get_app_session(session_id) is session_info.session
+        assert self.runtime.get_app_session("not_a_session_id") is None
+
+        self.runtime.close_session(session_id)
+        assert self.runtime.get_app_session(session_id) is None
 
     async def test_clear_user_info_for_session_calls_session(self):
         """clear_user_info_for_session calls clear_user_info on the AppSession."""
@@ -877,6 +891,51 @@ class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
                 await asyncio.sleep(0)
                 assert self.runtime._session_mgr.get_session_info(session_id) is None
                 assert worker_ids[0] not in get_callers
+
+
+class MarkSessionNonresumableRuntimeTest(RuntimeTestCase):
+    """mark_session_nonresumable with a session manager that resumes sessions."""
+
+    async def asyncSetUp(self) -> None:
+        Runtime._instance = None
+        self.runtime = Runtime(
+            RuntimeConfig(
+                script_path="mock/script/path.py",
+                media_file_storage=MemoryMediaFileStorage("/mock/media"),
+                uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+                cache_storage_manager=MemoryCacheStorageManager(),
+                session_manager_class=WebsocketSessionManager,
+                session_storage=MemorySessionStorage(),
+            )
+        )
+
+    async def test_reconnect_naming_a_marked_session_gets_a_new_session(
+        self,
+    ) -> None:
+        """A connection naming a marked session's id cannot take it over, and
+        closing the session releases the mark.
+        """
+        await self.runtime.start()
+        session_mgr = self.runtime._session_mgr
+        assert isinstance(session_mgr, WebsocketSessionManager)
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            original_client = MockSessionClient()
+            session_id = self.runtime.connect_session(
+                client=original_client, user_info={}
+            )
+            self.runtime.mark_session_nonresumable(session_id)
+
+            new_session_id = self.runtime.connect_session(
+                client=MockSessionClient(), user_info={}, existing_session_id=session_id
+            )
+
+        assert new_session_id != session_id
+        assert self.runtime.get_client(session_id) is original_client
+
+        self.runtime.close_session(session_id)
+        assert session_id not in session_mgr._nonresumable_session_ids
 
 
 class ScriptCheckTest(RuntimeTestCase):

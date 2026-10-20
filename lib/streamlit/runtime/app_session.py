@@ -51,7 +51,12 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import (
+    RerunData,
+    ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
+)
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
@@ -68,6 +73,7 @@ if TYPE_CHECKING:
         BackendOperationRequest,
         BackMsg,
     )
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -734,6 +740,78 @@ class AppSession:
     def session_state(self) -> SessionState:
         return self._session_state
 
+    @property
+    def page_script_hash(self) -> PageHash:
+        """The script hash of the page the latest run is on, or "" before any run."""
+        return self._client_state.page_script_hash
+
+    def get_pages(self) -> dict[PageHash, PageInfo]:
+        """Return a copy of the app's pages, keyed by page script hash.
+
+        Before ``st.navigation`` has run, this holds a single default entry for
+        the main script.
+        """
+        return self._pages_manager.get_pages()
+
+    def set_run_on_save(self, enabled: bool) -> None:
+        """Set whether a change to a source file reruns the script.
+
+        Unlike the ``set_run_on_save`` BackMsg, this does not notify the
+        client. The next ``new_session`` message carries the value.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether a source file change reruns the script. When this is
+            ``False``, the client is told that the script changed on disk.
+        """
+        self._run_on_save = enabled
+
+    def create_detached_script_run_ctx(
+        self, *, query_string: str, context_info: ContextInfo | None
+    ) -> ScriptRunContext:
+        """Create a script context for reading this session's state outside a run.
+
+        App code that reads ``st.session_state`` or ``st.context``, such as a
+        widget's ``format_func``, needs a script context to find its session.
+        The returned context shares this session's state, user info, fragment
+        storage, pages, and upload manager. It drops every message enqueued
+        through it, cannot request a rerun, and is not attached to any thread.
+
+        Its session state wrapper has its own lock, which does not exclude a
+        running ScriptRunner. Only read through it while no run can start.
+
+        Parameters
+        ----------
+        query_string : str
+            The query string the context reports.
+        context_info : ContextInfo or None
+            The browser context that ``st.context`` reports, or ``None`` when
+            the client stated none.
+
+        Returns
+        -------
+        ScriptRunContext
+            A new context for this session.
+        """
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.runtime.state import SafeSessionState
+
+        return ScriptRunContext(
+            session_id=self.id,
+            _enqueue=lambda _msg: None,
+            query_string=query_string,
+            session_state=SafeSessionState(
+                self._session_state, yield_callback=lambda: None
+            ),
+            uploaded_file_mgr=self._uploaded_file_mgr,
+            main_script_path=self._script_data.main_script_path,
+            user_info=self._user_info,
+            fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
+            context_info=context_info,
+        )
+
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         pages = self._pages_manager.get_pages()
 
@@ -1275,7 +1353,7 @@ class AppSession:
             New run_on_save value
 
         """
-        self._run_on_save = new_value
+        self.set_run_on_save(new_value)
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
     def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:

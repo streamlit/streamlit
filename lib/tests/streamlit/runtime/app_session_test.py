@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import gc
 import threading
 import unittest
@@ -29,7 +30,7 @@ from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
@@ -62,6 +63,7 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.state.query_params import (
     _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
@@ -3277,6 +3279,25 @@ def test_handle_set_run_on_save_request_updates_flag(new_value: bool) -> None:
     assert msg.session_status_changed.run_on_save is new_value
 
 
+@pytest.mark.parametrize("enabled", [True, False])
+def test_set_run_on_save_decides_whether_a_file_change_reruns(enabled: bool) -> None:
+    """set_run_on_save changes what a source edit does without notifying anyone."""
+    # Without file watchers, the session does not outlive the test as a config
+    # listener that reruns on every later config parse.
+    with patch_config_options(
+        {"server.runOnSave": not enabled, "server.fileWatcherType": "none"}
+    ):
+        session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session.set_run_on_save(enabled)
+    enqueue_mock.assert_not_called()
+
+    with patch.object(session, "request_rerun") as request_rerun:
+        session._on_source_file_changed()
+    assert request_rerun.called is enabled
+
+
 @pytest.mark.parametrize(
     ("show_sidebar_navigation", "expected_hide_sidebar_nav"),
     [(False, True), (True, False)],
@@ -3726,3 +3747,73 @@ async def test_backmsg_exception_without_runner_settles_after_its_messages() -> 
 
     session.flush_browser_queue()
     assert session.is_settled
+
+
+# ---- Tests for the public session hooks ----
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_page_script_hash_follows_script_started() -> None:
+    """The page script hash is the one the latest run started on."""
+    session = _create_test_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner,
+        event=ScriptRunnerEvent.SCRIPT_STARTED,
+        page_script_hash="other_page_hash",
+    )
+
+    assert session.page_script_hash == "other_page_hash"
+
+
+def test_get_pages_returns_a_copy_of_the_registry() -> None:
+    """get_pages lists the default page before navigation and copies the registry."""
+    session = _create_test_session()
+    main_script_hash = session._pages_manager.main_script_hash
+    assert list(session.get_pages()) == [main_script_hash]
+
+    session._pages_manager.set_pages_and_resolve(
+        {
+            "page_hash": {
+                "page_script_hash": "page_hash",
+                "page_name": "report",
+                "icon": "",
+                "script_path": "/fake/report.py",
+                "url_pathname": "report",
+            }
+        }
+    )
+    pages = session.get_pages()
+    pages.clear()
+
+    assert list(session.get_pages()) == ["page_hash"]
+
+
+def test_create_detached_script_run_ctx_shares_state_and_drops_messages() -> None:
+    """The detached context reads the session's data and emits nothing."""
+    session = _create_test_session()
+    session.session_state["greeting"] = "hello"
+    context_info = ContextInfo(timezone="Europe/Berlin")
+
+    ctx = session.create_detached_script_run_ctx(
+        query_string="a=1", context_info=context_info
+    )
+
+    assert ctx.session_id == session.id
+    assert ctx.session_state["greeting"] == "hello"
+    assert ctx.user_info == {"email": "test@example.com"}
+    assert ctx.query_string == "a=1"
+    assert ctx.context_info is context_info
+    assert ctx.script_requests is None
+    assert get_script_run_ctx(suppress_warning=True) is not ctx
+
+    def enqueue_with_thread_state() -> None:
+        ThreadState.initialize()
+        msg = ForwardMsg()
+        msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+        ctx.enqueue(msg)
+
+    contextvars.copy_context().run(enqueue_with_thread_state)
+    assert session.flush_browser_queue() == []
