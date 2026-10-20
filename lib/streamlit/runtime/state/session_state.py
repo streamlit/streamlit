@@ -1528,6 +1528,15 @@ class SessionState:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
 
+    def get_widget_id_from_key(self, user_key: str) -> str | None:
+        """Return the element ID the widget with ``user_key`` last registered under.
+
+        The mapping outlives the widget, like its metadata: a widget that
+        stopped rendering keeps its entry until its key is reused or deleted.
+        Returns ``None`` when no widget ever registered ``user_key``.
+        """
+        return self._key_id_mapper.get_id_from_key(user_key)
+
     def get_widget_value(self, widget_id: str) -> Any:
         """Return the value a widget currently holds.
 

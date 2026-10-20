@@ -668,7 +668,7 @@ class AppSession:
             # example app described in
             # https://github.com/streamlit/streamlit/issues/9921, where the dialog
             # sometimes stays open.
-            if fragment_id and not self._fragment_storage.contains(fragment_id):
+            if fragment_id and not self.has_fragment(fragment_id):
                 _LOGGER.info(
                     "The fragment with id %s does not exist anymore - "
                     "it might have been removed during a preceding full-app rerun.",
@@ -808,6 +808,19 @@ class AppSession:
         the main script.
         """
         return self._pages_manager.get_pages()
+
+    def has_fragment(self, fragment_id: str) -> bool:
+        """Return whether this session still holds the fragment ``fragment_id``.
+
+        A full run drops every fragment it did not register, and
+        ``request_rerun`` ignores a rerun of a fragment this session no longer
+        holds.
+
+        Notes
+        -----
+        Threading: SAFE. The fragment storage takes its own lock.
+        """
+        return self._fragment_storage.contains(fragment_id)
 
     def set_run_on_save(self, enabled: bool) -> None:
         """Set whether a change to a source file reruns the script.

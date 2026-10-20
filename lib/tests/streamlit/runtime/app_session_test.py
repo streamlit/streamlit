@@ -3832,6 +3832,18 @@ def test_get_pages_returns_a_copy_of_the_registry() -> None:
     assert list(session.get_pages()) == ["page_hash"]
 
 
+def test_has_fragment_follows_the_fragment_storage() -> None:
+    """has_fragment is true while the storage holds the fragment, false once cleared."""
+    session = _create_test_session()
+    assert session.has_fragment("panel") is False
+
+    session._fragment_storage.register("panel", lambda: None)
+    assert session.has_fragment("panel") is True
+
+    session._fragment_storage.clear()
+    assert session.has_fragment("panel") is False
+
+
 def test_create_detached_script_run_ctx_shares_state_and_drops_messages() -> None:
     """The detached context reads the session's data and emits nothing."""
     session = _create_test_session()
