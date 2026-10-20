@@ -60,6 +60,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.format == "YYYY/MM/DD"
         assert proto.step == timedelta(minutes=15).seconds
         assert not proto.disabled
+        assert not proto.required
         assert len(proto.default) == 1
         assert proto.default[0] is not None
 
@@ -77,6 +78,66 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.date_time_input
         assert proto.label == "the label"
         assert not proto.default
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.datetime_input("the label", required=required)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.datetime_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_time_input.id
+            st.datetime_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_time_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike format and step, required cannot make a stored datetime
+        illegal, so it is not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.datetime_input("the label", key="datetime_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_time_input.id
+            st.datetime_input("the label", key="datetime_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_time_input.id
+            assert id1 == id2
+
+    def test_required_does_not_change_now_default(self) -> None:
+        """required=True does not replace the "now" default with an empty value."""
+        st.datetime_input("the label", required=True)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert len(proto.default) == 1
+        assert proto.required
+
+    def test_required_with_none_value_stays_empty(self) -> None:
+        """`value=None` with `required=True` sends an empty default."""
+        st.datetime_input("the label", value=None, required=True)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert not proto.default
+        assert proto.required
+
+    def test_required_with_disabled_does_not_raise(self) -> None:
+        """`required=True` combines with `disabled=True` without raising."""
+        st.datetime_input("the label", value=None, disabled=True, required=True)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.disabled
+        assert proto.required
 
     @parameterized.expand(
         [
@@ -236,6 +297,8 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
                 max_value=datetime(2030, 1, 1, 0, 0),
                 format="YYYY/MM/DD",
                 step=timedelta(minutes=15),
+                # Not on the format/step allowlist; must not change keyed identity.
+                required=True,
             )
             proto2 = self.get_delta_from_queue().new_element.date_time_input
             id2 = proto2.id
@@ -381,6 +444,31 @@ def test_datetime_input_interaction():
     at = widget.set_value(None).run()
     widget = at.datetime_input[0]
     assert widget.value is None
+
+
+def test_datetime_input_required_is_exposed_in_app_test() -> None:
+    """Test that AppTest exposes required and still allows an empty value.
+
+    The required check runs in the browser, so AppTest can still set None.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.datetime_input("the label", value=None, required=True)
+
+    at = AppTest.from_function(script).run()
+    widget = at.datetime_input[0]
+    assert widget.required is True
+    assert widget.value is None
+
+    new_value = datetime(2025, 11, 19, 16, 45)
+    at = widget.set_value(new_value).run()
+    widget = at.datetime_input[0]
+    assert widget.value == new_value
+
+    at = widget.set_value(None).run()
+    assert at.datetime_input[0].value is None
 
 
 def test_datetime_input_min_max_validation():
@@ -803,6 +891,14 @@ class DateTimeInputOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.date_time_input
         assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_ignore_composes_with_required(self) -> None:
+        """Test that on_change="ignore" and required=True set both proto fields."""
+        st.datetime_input("the label", on_change="ignore", required=True)
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.ignore_rerun is True
+        assert c.required is True
 
     def test_on_change_invalid_mode_raises_exception(self) -> None:
         """Test that invalid on_change mode raises StreamlitValueError."""

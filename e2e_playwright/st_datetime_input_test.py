@@ -26,6 +26,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    clear_date_segments,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
@@ -36,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 21
+NUM_DATETIME_INPUTS = 24
 
 
 def test_datetime_input_widget_rendering(
@@ -638,3 +639,83 @@ def test_datetime_input_on_change_ignore(app: Page):
     expect(spinbuttons.nth(2)).to_have_text("01")
     expect(spinbuttons.nth(3)).to_have_text("08")
     expect(spinbuttons.nth(4)).to_have_text("15")
+
+
+def test_datetime_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required datetime inputs block empty form submissions and commits
+    while preserving hidden-label accessibility.
+    """
+    form_widget = get_element_by_key(app, "required_datetime")
+    form_field = form_widget.get_by_test_id("stDateTimeInputField")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+    expect(form_field).to_have_attribute("aria-required", "true")
+    expect(form_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required datetime input form", exact=True
+    )
+    submit_button.click()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(form_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_date(form_field, "2025", "12", "24", "12", "00")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required datetime: 2025-12-24 12:00:00")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone_datetime")
+    standalone_field = standalone_widget.get_by_test_id("stDateTimeInputField")
+    type_date(standalone_field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(
+        standalone_widget.get_by_test_id("stDateTimeInputClearButton")
+    ).to_have_count(0)
+
+    clear_date_segments(standalone_field)
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_date(standalone_field, "2025", "11", "20", "08", "30")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-20 08:30:00")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden_datetime")
+    expect(hidden_widget.get_by_test_id("stDateTimeInputField")).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_datetime_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone_datetime")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_marker")
+
+    field = widget.get_by_test_id("stDateTimeInputField")
+    type_date(field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(themed_app)
+    clear_date_segments(field)
+    expect(widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_error")

@@ -16,7 +16,7 @@
 import re
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -27,6 +27,7 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    clear_date_segments,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
@@ -1185,19 +1186,6 @@ def test_date_input_on_change_ignore(app: Page):
     expect(spinbuttons.nth(2)).to_have_text("05")
 
 
-def _clear_date_segments(field: Locator, page: Page) -> None:
-    """Backspace every date segment so the field is empty, then close the popover."""
-    spinbuttons = field.get_by_role("spinbutton")
-    count = spinbuttons.count()
-    for i in range(count):
-        spinbuttons.nth(i).click()
-        # Four presses cover the year segment; extra presses are harmless
-        # after a segment is empty.
-        for _ in range(4):
-            page.keyboard.press("Backspace")
-    page.keyboard.press("Escape")
-
-
 def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
     """Verify required date inputs block empty form submissions and commits
     while preserving hidden-label accessibility.
@@ -1254,7 +1242,7 @@ def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
     expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
     expect(standalone_widget.get_by_test_id("stDateInputClearButton")).to_have_count(0)
 
-    _clear_date_segments(standalone_field, app)
+    clear_date_segments(standalone_field)
     expect(standalone_widget.get_by_test_id("stDateInputError")).to_be_visible()
     expect(standalone_widget.get_by_role("alert")).to_have_text(
         "This field is required."
@@ -1304,6 +1292,6 @@ def test_date_input_required_marker_and_error_rendering(
     field = widget.get_by_test_id("stDateInputField")
     type_date(field, "2020", "02", "06")
     wait_for_app_run(themed_app)
-    _clear_date_segments(field, themed_app)
+    clear_date_segments(field)
     expect(widget.get_by_test_id("stDateInputError")).to_be_visible()
     assert_snapshot(widget, name="st_date_input-required_error")
