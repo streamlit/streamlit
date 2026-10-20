@@ -60,7 +60,7 @@ Each Playwright run uploads `playwright_test_results_` plus the first 6 characte
 
 ## Updating screenshots
 
-CI checks the `linux` snapshots. On a pull request in this repository, add the `update-snapshots` label before the Playwright run or after it has failed. When that run fails because snapshots are missing or mismatched, [Snapshot Autofix](../.github/workflows/snapshot-autofix.yml) opens a pull request with the updated `linux` images. A pass, or a failure that produced no snapshot updates, removes the label. Review that pull request before merging it. Autofix skips fork pull requests: the workflow token cannot push to a fork, and fork authors usually cannot add the label. Those contributors can use `make update-snapshots` below.
+CI checks the `linux` snapshots. On a pull request, add the `update-snapshots` label before the Playwright run or after it has failed. When that run fails because snapshots are missing or mismatched, [Snapshot Autofix](../.github/workflows/snapshot-autofix.yml) opens a pull request with the updated `linux` images. A pass, or a failure that produced no snapshot updates, removes the label. Review that pull request before merging it.
 
 To pull the same images into your checkout, push your branch and run `make update-snapshots`. The script looks up the Playwright run for your local `HEAD`. If that run failed, it merges the artifact's `snapshot-updates` folder into `e2e_playwright/__snapshots__/`. If the run passed, or there is no run for that commit yet, it exits. It waits while the run is still in progress. `make update-snapshots-changed` does the same for the changed-files workflow.
 

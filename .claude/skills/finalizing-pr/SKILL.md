@@ -56,7 +56,7 @@ Review the recommendations from step 6. For each recommendation:
 
 ### 8. Run checks (second pass)
 
-Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored while iterating. On a pull request in this repository, add the `update-snapshots` label and merge the snapshot PR the workflow opens. Snapshot Autofix skips fork pull requests; use `make update-snapshots` there.
+Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored while iterating. On a pull request, add the `update-snapshots` label and merge the snapshot PR the workflow opens.
 
 ### 9. Create or update PR
 
