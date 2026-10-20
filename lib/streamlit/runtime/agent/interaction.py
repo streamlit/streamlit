@@ -403,10 +403,12 @@ class AgentSessionRegistry:
             # The internal id never leaves the server, but a WebSocket naming
             # it must still not take the session over.
             self._runtime.mark_session_nonresumable(app_session_id)
+            app_session = self.app_session(session)
+            app_session.track_settling()
             # An edit applies on the next interaction, as with `runOnSave` off,
             # so a client is never handed the result of a run it did not ask
             # for.
-            self.app_session(session).set_run_on_save(False)
+            app_session.set_run_on_save(False)
         except Exception:
             self.close(handle)
             raise

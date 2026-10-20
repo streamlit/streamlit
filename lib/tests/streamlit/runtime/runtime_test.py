@@ -671,6 +671,7 @@ class RuntimeTest(RuntimeTestCase):
         session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
         session = self.runtime.get_app_session(session_id)
         assert session is not None
+        session.track_settling()
 
         runner = MagicMock()
         with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):

@@ -264,11 +264,16 @@ class AppSession:
         self._run_on_save = config.get_option("server.runOnSave")
 
         self._scriptrunner: ScriptRunner | None = None
-        self._settled = asyncio.Event()
-        self._settled.set()
+        # Set while the session is settled: no run chain is going, and the
+        # client has every message the last one produced. The agent API answers
+        # a request only then, because nothing in the message stream says so:
+        # `script_finished` also arrives between the runs of one chain (a
+        # callback, `st.rerun()`), and the Runtime delivers messages after they
+        # are enqueued. None until `track_settling` is called, so a browser
+        # session, which nothing waits on, skips the bookkeeping.
+        self._settled: asyncio.Event | None = None
         # Flushes left before the client provably has every message of the
         # last run chain, or None while no run chain is waiting to settle.
-        # This and `_settled` change only on the event loop.
         self._flushes_until_settled: int | None = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
@@ -392,8 +397,10 @@ class AppSession:
 
         """
         msgs = self._browser_queue.flush()
+        # Read once: with `runOnSave`, a file watcher thread can start a new
+        # runner, which resets the countdown, at any point here.
         flushes_left = self._flushes_until_settled
-        if flushes_left is not None:
+        if flushes_left is not None and self._settled is not None:
             if flushes_left <= 1:
                 self._flushes_until_settled = None
                 self._settled.set()
@@ -402,6 +409,23 @@ class AppSession:
                 if self._message_enqueued_callback:
                     self._message_enqueued_callback()
         return msgs
+
+    def track_settling(self) -> None:
+        """Start tracking whether the session is settled.
+
+        ``is_settled`` and ``wait_until_settled`` need this. Call it before the
+        session's first run. A session that never calls it skips the
+        bookkeeping, including the extra flush cycle the Runtime runs after
+        each run chain to prove its messages were sent.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop.
+        """
+        if self._settled is None:
+            self._settled = asyncio.Event()
+            if self._scriptrunner is None:
+                self._settled.set()
 
     @property
     def is_settled(self) -> bool:
@@ -412,8 +436,13 @@ class AppSession:
         session's client. A run chain is everything one ScriptRunner runs
         before it shuts down, including reruns from callbacks, ``st.rerun``,
         ``st.switch_page``, and queued fragment runs.
+
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
         """
-        return self._settled.is_set()
+        return self._tracked_settled().is_set()
 
     async def wait_until_settled(self) -> None:
         """Wait until the session is settled or shut down.
@@ -422,22 +451,43 @@ class AppSession:
         bound of its own, because a run that never finishes never settles, so
         callers should bound it, for example with ``asyncio.timeout``.
 
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
+
         Notes
         -----
         Threading: UNSAFE. Must be called on the session's event loop.
         """
+        settled = self._tracked_settled()
         # A new run can start between the event being set and this coroutine
         # resuming, so recheck before returning.
-        while not self._settled.is_set():
-            await self._settled.wait()
+        while not settled.is_set():
+            await settled.wait()
+
+    def _tracked_settled(self) -> asyncio.Event:
+        if self._settled is None:
+            raise RuntimeError(
+                "This session does not track settling; call track_settling() first."
+            )
+        return self._settled
+
+    def _unsettle(self) -> None:
+        """Mark a tracked session as not settled until its next run chain ends."""
+        if self._settled is not None:
+            self._flushes_until_settled = None
+            self._settled.clear()
 
     def _settle_once_delivered(self) -> None:
-        """Settle the session once the client has every queued message.
+        """Settle a tracked session once the client has every queued message.
 
         The next flush hands the queued messages to the client, and the one
         after it proves they were sent. With nothing queued, the next flush
         proves the batch already handed out was sent.
         """
+        if self._settled is None:
+            return
         self._flushes_until_settled = 1 if self._browser_queue.is_empty() else 2
         # Request a flush cycle even when nothing else gets enqueued.
         if self._message_enqueued_callback:
@@ -470,8 +520,9 @@ class AppSession:
 
             # A closed session is never flushed again, so nothing may keep
             # waiting for it to settle.
-            self._flushes_until_settled = None
-            self._settled.set()
+            if self._settled is not None:
+                self._flushes_until_settled = None
+                self._settled.set()
 
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
@@ -555,8 +606,7 @@ class AppSession:
             and self._state != AppSessionState.SHUTDOWN_REQUESTED
         )
         if settle_after_messages:
-            self._flushes_until_settled = None
-            self._settled.clear()
+            self._unsettle()
 
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -724,8 +774,7 @@ class AppSession:
             )
             self._script_event_loop = asyncio.new_event_loop()
 
-        self._flushes_until_settled = None
-        self._settled.clear()
+        self._unsettle()
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
@@ -843,12 +892,7 @@ class AppSession:
             return
 
         if self._run_on_save:
-            # Like every other rerun, started on the event loop, which is the
-            # only thread that may replace the ScriptRunner or touch the
-            # settle countdown.
-            self._call_soon_on_event_loop(
-                lambda: self.request_rerun(self._client_state)
-            )
+            self.request_rerun(self._client_state)
         else:
             # File watchers run off the event loop, and ForwardMsgQueue is
             # single-threaded. This handoff prevents delta coalescing from

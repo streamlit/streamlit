@@ -644,19 +644,12 @@ class AppSessionTest(unittest.TestCase):
             assert session._state == AppSessionState.APP_NOT_RUNNING
 
     def test_passes_client_state_on_run_on_save(self):
-        """With runOnSave, the rerun starts from an event-loop callback."""
         session = _create_test_session()
         session._run_on_save = True
         session.request_rerun = MagicMock()
-        session._call_soon_on_event_loop = MagicMock()
         session._on_source_file_changed()
 
         session._script_cache.clear.assert_called_once()
-        session.request_rerun.assert_not_called()
-
-        scheduled_callback = session._call_soon_on_event_loop.call_args.args[0]
-        scheduled_callback()
-
         session.request_rerun.assert_called_once_with(session._client_state)
 
     def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
@@ -3311,13 +3304,7 @@ def test_set_run_on_save_decides_whether_a_file_change_reruns(enabled: bool) -> 
         session.set_run_on_save(enabled)
     enqueue_mock.assert_not_called()
 
-    with (
-        patch.object(session, "request_rerun") as request_rerun,
-        patch.object(
-            session, "_call_soon_on_event_loop", side_effect=lambda callback: callback()
-        ),
-        patch.object(session, "_enqueue_forward_msg"),
-    ):
+    with patch.object(session, "request_rerun") as request_rerun:
         session._on_source_file_changed()
     assert request_rerun.called is enabled
 
@@ -3587,15 +3574,22 @@ def _handle_enqueue(session: AppSession, runner: ScriptRunner) -> ForwardMsg:
     return msg
 
 
+def _create_tracked_session(*args: Any, **kwargs: Any) -> AppSession:
+    """Create a test session that tracks settling, as agent sessions do."""
+    session = _create_test_session(*args, **kwargs)
+    session.track_settling()
+    return session
+
+
 def test_new_session_is_settled() -> None:
     """A session that never ran is settled."""
-    assert _create_test_session().is_settled
+    assert _create_tracked_session().is_settled
 
 
 @pytest.mark.usefixtures("distinct_scriptrunners")
 def test_creating_a_runner_unsettles_the_session() -> None:
     """Starting a run unsettles the session."""
-    session = _create_test_session()
+    session = _create_tracked_session()
 
     _start_runner(session)
 
@@ -3607,7 +3601,7 @@ def test_creating_a_runner_unsettles_the_session() -> None:
 async def test_shutdown_with_empty_queue_settles_after_one_flush() -> None:
     """With nothing queued, the next flush proves the last batch was sent."""
     on_enqueued = MagicMock()
-    session = _create_test_session(
+    session = _create_tracked_session(
         asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
     )
     runner = _start_runner(session)
@@ -3625,7 +3619,7 @@ async def test_shutdown_with_empty_queue_settles_after_one_flush() -> None:
 async def test_shutdown_with_queued_messages_settles_after_two_flushes() -> None:
     """Trailing messages are handed out by one flush and proven sent by the next."""
     on_enqueued = MagicMock()
-    session = _create_test_session(
+    session = _create_tracked_session(
         asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
     )
     runner = _start_runner(session)
@@ -3645,7 +3639,7 @@ async def test_shutdown_with_queued_messages_settles_after_two_flushes() -> None
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_settles_without_message_enqueued_callback() -> None:
     """A session without a flush callback still settles on its flushes."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
     runner = _start_runner(session)
     _handle_enqueue(session, runner)
 
@@ -3660,7 +3654,7 @@ async def test_settles_without_message_enqueued_callback() -> None:
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_shutdown_from_replaced_runner_is_ignored() -> None:
     """Only the current runner's SHUTDOWN settles the session."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
     with patch_config_options({"runner.fastReruns": True}):
         replaced_runner = _start_runner(session)
         _start_runner(session)
@@ -3676,7 +3670,7 @@ async def test_shutdown_from_replaced_runner_is_ignored() -> None:
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_runner_created_mid_countdown_discards_it() -> None:
     """A new run cancels a pending settle, and its own SHUTDOWN arms a new one."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
     first_runner = _start_runner(session)
     _handle_shutdown(session, first_runner)
 
@@ -3692,7 +3686,7 @@ async def test_runner_created_mid_countdown_discards_it() -> None:
 @pytest.mark.anyio
 async def test_wait_until_settled_returns_at_once_when_settled() -> None:
     """Waiting on a settled session returns without a run."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
 
     await asyncio.wait_for(session.wait_until_settled(), timeout=1)
 
@@ -3701,7 +3695,7 @@ async def test_wait_until_settled_returns_at_once_when_settled() -> None:
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
     """A settle that a new run undoes before the waiter resumes does not wake it."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
     first_runner = _start_runner(session)
     waiter = asyncio.create_task(session.wait_until_settled())
     await asyncio.sleep(0)
@@ -3723,7 +3717,7 @@ async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
 async def test_session_shutdown_releases_waiter_and_arms_nothing() -> None:
     """Shutting down wakes waiters, and the runner's late SHUTDOWN arms no settle."""
     on_enqueued = MagicMock()
-    session = _create_test_session(
+    session = _create_tracked_session(
         asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
     )
     runner = _start_runner(session)
@@ -3742,7 +3736,7 @@ def test_dropped_fragment_rerun_leaves_session_settled(
     distinct_scriptrunners: MagicMock,
 ) -> None:
     """A rerun of a fragment the storage no longer holds starts nothing."""
-    session = _create_test_session()
+    session = _create_tracked_session()
 
     session.request_rerun(ClientState(fragment_id="removed_fragment"))
 
@@ -3754,7 +3748,7 @@ def test_dropped_fragment_rerun_leaves_session_settled(
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_backmsg_exception_without_runner_settles_after_its_messages() -> None:
     """The exception messages reach the client before the session settles."""
-    session = _create_test_session(asyncio.get_running_loop())
+    session = _create_tracked_session(asyncio.get_running_loop())
     runner = _start_runner(session)
     # Armed so that the next flush would settle the session.
     _handle_shutdown(session, runner)
@@ -3771,6 +3765,29 @@ async def test_backmsg_exception_without_runner_settles_after_its_messages() -> 
 
     session.flush_browser_queue()
     assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_an_untracked_session_skips_the_settle_bookkeeping() -> None:
+    """A session that does not track settling, such as a browser's, requests
+    no extra flush when its runner shuts down and cannot be asked if settled.
+    """
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+    session.flush_browser_queue()
+
+    on_enqueued.assert_not_called()
+    assert session._flushes_until_settled is None
+    with pytest.raises(RuntimeError, match="track_settling"):
+        _ = session.is_settled
+    with pytest.raises(RuntimeError, match="track_settling"):
+        await session.wait_until_settled()
 
 
 # ---- Tests for the public session hooks ----
