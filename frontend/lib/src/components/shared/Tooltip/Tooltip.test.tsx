@@ -463,6 +463,34 @@ describe("Tooltip element", () => {
       expect(screen.getByTestId("stTooltipContent")).toBeVisible()
     })
 
+    it("does not open when code moves focus to the trigger after a tap that did not focus it", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <Tooltip {...getProps()}>
+          {/* Like WebKit, which doesn't focus a tapped button. */}
+          <button type="button" onMouseDown={e => e.preventDefault()}>
+            trigger
+          </button>
+        </Tooltip>
+      )
+      const trigger = screen.getByRole("button", { name: "trigger" })
+
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      expect(trigger).not.toHaveFocus()
+
+      // Mirrors a popover or dialog returning focus to the trigger it was
+      // opened from.
+      act(() => {
+        trigger.focus()
+      })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
     it("does not reopen when code restores focus after tapping an already focused trigger", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
       const trigger = renderWithTriggerButton()

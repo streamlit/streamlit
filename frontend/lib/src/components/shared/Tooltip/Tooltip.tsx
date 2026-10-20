@@ -35,7 +35,7 @@ import {
 } from "@floating-ui/react"
 import { useFocusWithin } from "react-aria"
 // isFocusVisible has no public export. This private path is the module React
-// Aria's own FocusScope and tooltip use, so they share one modality state.
+// Aria's FocusScope and tooltip already use, so they share one modality state.
 import { isFocusVisible } from "react-aria/private/interactions/useFocusVisible"
 import { TooltipTriggerStateContext } from "react-aria-components"
 import { useTooltipTriggerState } from "react-stately"
@@ -154,11 +154,12 @@ function TriggerArea({
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
   const setTriggerRef = useContext(SetTriggerRefContext)
-  /** Whether focus within the trigger opened the tooltip and holds it open. */
+  /** True when keyboard, screen reader, or touch focus keeps the tooltip open. */
   const isHeldOpenByFocusRef = useRef(false)
   /**
-   * Pointer type of the last pointerdown on the trigger. onBlurWithin clears
-   * it, so focus that code later restores to the trigger isn't taken for a tap.
+   * Pointer type of the current press on this trigger. The press's click,
+   * pointercancel and onBlurWithin clear it, so a later focus restore isn't
+   * treated as a tap.
    */
   const pointerDownTypeRef = useRef<string | null>(null)
 
@@ -207,7 +208,14 @@ function TriggerArea({
         // pointerdown propagation.
         pointerDownTypeRef.current = e.pointerType
       }}
+      onPointerCancelCapture={() => {
+        pointerDownTypeRef.current = null
+      }}
       onClickCapture={() => {
+        // A tap focuses the trigger before its click, so the press is done.
+        // A tap that didn't focus the trigger (WebKit doesn't focus tapped
+        // buttons) must not mark a later focus as a tap.
+        pointerDownTypeRef.current = null
         if (dismissOnClick) {
           state?.close(true)
         }

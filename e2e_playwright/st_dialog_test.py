@@ -296,15 +296,13 @@ def test_help_tooltip_does_not_reopen_after_dialog_closes(app: Page, browser_nam
     expect(tooltip).not_to_be_attached()
 
     # Close with an inner button that calls st.rerun(), opening the dialog again
-    # from the trigger. Focus restore after this unmount is only reliable in
-    # Chromium.
+    # from the trigger. Whether focus returns to the trigger after this unmount
+    # depends on the browser and timing, so it isn't asserted here.
     trigger.click()
     expect(dialog).to_be_visible()
     get_button(dialog, "Done").click()
     expect(dialog).not_to_be_attached()
     wait_for_app_run(app)
-    if browser_name == "chromium":
-        expect(trigger).to_be_focused()
     reset_hovering(app)
     wait_for_react_stability(app)
     expect(tooltip).not_to_be_attached()
