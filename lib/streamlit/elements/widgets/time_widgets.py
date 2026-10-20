@@ -1428,7 +1428,7 @@ class TimeWidgetsMixin:
         required : bool
             An optional boolean that requires a non-empty value if set to
             ``True``. The default is ``False``. If this is ``True``, empty
-            values cannot be submitted.
+            values (``None``) cannot be submitted.
 
             Outside a form, clearing the field does not rerun the app, and
             the last committed value is kept. Inside a form, submission is

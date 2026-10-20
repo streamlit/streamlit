@@ -698,12 +698,16 @@ function SingleDateTimeInput({
       if (fullDateTime) {
         e.preventDefault()
         setDisplayValue(fullDateTime)
-        lastCommittedRef.current = fullDateTime
         hasEditedRef.current = false
         // Report what the field now shows before committing, so a leftover
         // required error clears even when the commit fails the range check.
         onEdit(calendarDateTimeToIso(fullDateTime))
-        onChange(fullDateTime)
+        // Only remember accepted commits, as in `commitOrRevert`: a rejected
+        // out-of-range paste must not dedupe a later blur of the same value
+        // once the range allows it.
+        if (onChange(fullDateTime)) {
+          lastCommittedRef.current = fullDateTime
+        }
         return
       }
 
@@ -763,12 +767,13 @@ function SingleDateTimeInput({
         e.preventDefault()
         // Enter commits without dismissing, so a popover time that is still on
         // screen has to survive the commit.
-        const valid = commitOrRevert({ popoverStaysOpen: true })
-        // Gate on the commit result, not the `error` prop: that prop is from
-        // before this commit, so a required error the commit just cleared
-        // would otherwise swallow the submit. Range errors already make the
-        // commit fail, and the form's submit validators enforce `required`.
-        if (valid) formSubmit?.()
+        const kept = commitOrRevert({ popoverStaysOpen: true })
+        // Gate on whether the field kept its entry (not reverted), not on the
+        // `error` prop: that prop is from before this commit, so a required
+        // error the commit just cleared would otherwise swallow the submit.
+        // Range errors make the field revert, and the form's submit
+        // validators enforce `required`.
+        if (kept) formSubmit?.()
         return
       }
 

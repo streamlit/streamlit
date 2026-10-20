@@ -184,8 +184,9 @@ function DateTimeInput({
       skipRequired?: boolean
     }): boolean => {
       if (element.required && iso === null && !skipRequired) {
-        // The attempt is what the field shows, even if the field never
-        // reported the clear through onEdit.
+        // Record the blocked empty attempt as pending so the required error
+        // paints, even when the field never reported the clear through
+        // `onEdit`.
         pendingIsoRef.current = null
         setHasRequiredError(true)
         setError(null)
@@ -329,8 +330,9 @@ function DateTimeInput({
         ? lastWritten
         : pendingIsoRef.current
     if (pending !== lastWritten) {
-      // An edit that never went through blur or Enter (e.g. a programmatic
-      // submit while the field is focused).
+      // Edited but not committed yet: no blur or Enter ran, e.g. a programmatic
+      // submit while the field has focus. Commit it now so the submit sees
+      // this value.
       return commitIsoValue({ iso: pending, fromUser: true })
     }
     if (pending === null) {

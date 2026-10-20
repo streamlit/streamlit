@@ -629,6 +629,44 @@ describe("DateTimeInput widget", () => {
 
       expect(spy).not.toHaveBeenCalled()
     })
+
+    it("commits a rejected out-of-range paste on blur once the range allows it", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      const { rerender } = render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await user.paste("2025-12-20T08:30")
+
+      expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      expect(spy).not.toHaveBeenCalled()
+
+      // The app widens the range while the pasted value is still on screen.
+      rerender(
+        <DateTimeInput
+          {...props}
+          element={DateTimeInputProto.create({
+            ...props.element,
+            max: "2025-12-31T23:59",
+          })}
+        />
+      )
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-12-20T08:30"],
+          expect.anything()
+        )
+      })
+    })
   })
 
   describe("Step-aware arrow key behavior", () => {
