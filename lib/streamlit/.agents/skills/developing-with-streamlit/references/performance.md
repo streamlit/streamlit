@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cache at most the 20 most recently used paths
-@st.cache_data(max_entries=20)
+# GOOD: Cache at most the 100 most recently used paths
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
