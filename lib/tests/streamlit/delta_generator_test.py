@@ -1616,7 +1616,9 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
 
         with pytest.raises(
             StreamlitInvalidLayoutContextError,
-            match="could not reserve a stable position",
+            match=(
+                "not written to from inside the fragment body during the full app run"
+            ),
         ):
             outside.markdown("hi")
 

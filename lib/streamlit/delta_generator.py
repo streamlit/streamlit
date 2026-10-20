@@ -871,11 +871,12 @@ def _get_or_create_outside_wrapper(
     ):
         raise StreamlitInvalidLayoutContextError(
             "A fragment tried to write to a container created outside the "
-            "fragment, but that container was not written to during the initial "
-            "run, so Streamlit could not reserve a stable position for it.\n\n"
-            "Write to the container at least once during the full app run (e.g. "
-            "claim the slot with `outside.empty()`), then fill it during fragment "
-            "reruns."
+            "fragment, but that container was not written to from inside the "
+            "fragment body during the full app run, so Streamlit could not "
+            "reserve a stable position for it.\n\n"
+            "Inside the fragment function, write to the container at least once "
+            "during the full app run (e.g. `with outside_container: st.empty()` "
+            "or `outside_container.empty()`), then fill it during fragment reruns."
         )
 
     parent_cursor = cast("Cursor", dg._cursor)
