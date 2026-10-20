@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import functools
 import importlib
 import os
 import sys
@@ -52,6 +53,57 @@ class SomeError(Exception):
     def __init__(self, message, **kwargs):
         self.__dict__.update(kwargs)
         super().__init__(self, message)
+
+
+class _FakeCursor:
+    """Stands in for ``SnowflakeCursor``; records the SQL it runs."""
+
+    def __init__(self) -> None:
+        self.executed: list[str] = []
+
+    def execute(self, sql: str, **kwargs: object) -> _FakeCursor:
+        self.executed.append(sql)
+        return self
+
+    # Connector 5.x runs async queries without going through ``execute``.
+    def execute_async(self, sql: str, **kwargs: object) -> _FakeCursor:
+        self.executed.append(sql)
+        return self
+
+    def fetch_pandas_all(self) -> str:
+        return "df"
+
+
+class _FakeDictCursor(_FakeCursor):
+    """Stands in for a custom ``cursor_class`` such as ``DictCursor``."""
+
+
+class _FakeRawConnection:
+    """Stands in for the connector's ``SnowflakeConnection``.
+
+    Like the real connector, ``commit`` runs SQL through ``self.cursor()``.
+    """
+
+    def __init__(self) -> None:
+        self.closed = False
+
+    def cursor(self, cursor_class: type[_FakeCursor] = _FakeCursor) -> _FakeCursor:
+        return cursor_class()
+
+    def commit(self) -> None:
+        self.cursor().execute("COMMIT")
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _SlottedRawConnection:
+    """A connection whose class can't be swapped for a guarded subclass."""
+
+    __slots__ = ()
+
+    def cursor(self) -> _FakeCursor:
+        return _FakeCursor()
 
 
 def _snowflake_connector_modules() -> dict[str, types.ModuleType]:
@@ -726,7 +778,8 @@ class TestSnowflakeCallersRightsConnectionUnit:
         """``_connect`` sets qmark paramstyle and lets kwargs override generated params."""
         modules = _snowflake_connector_modules()
         connector_mod = modules["snowflake.connector"]
-        connector_mod.connect = MagicMock(return_value="callers-conn")
+        raw_connection = _FakeRawConnection()
+        connector_mod.connect = MagicMock(return_value=raw_connection)
         fake_params = {"account": "from_env", "token": "its_a_token"}
 
         with (
@@ -747,7 +800,7 @@ class TestSnowflakeCallersRightsConnectionUnit:
         connector_mod.connect.assert_called_once_with(
             account="account_override", token="its_a_token", some_kwarg="some_value"
         )
-        assert conn._instance == "callers-conn"
+        assert conn._instance is raw_connection
 
 
 def _set_current_session_id(session_id: str) -> None:
@@ -897,3 +950,138 @@ class TestSnowflakeCallersRightsConnectionSessionBinding:
         finally:
             sys.modules.pop("rcr_helpers", None)
             st.cache_resource.clear()
+
+
+class TestSnowflakeCallersRightsRawObjectBinding:
+    """Raw objects taken from a caller's-rights connection stay bound to its session."""
+
+    @pytest.fixture(autouse=True)
+    def connector(self) -> Iterator[types.ModuleType]:
+        """Attach a script-run context and fake the connector and connection params."""
+        modules = _snowflake_connector_modules()
+        connector_mod = modules["snowflake.connector"]
+        connector_mod.connect = MagicMock(side_effect=_FakeRawConnection)
+        with (
+            script_run_ctx_and_cleared_cache(),
+            patch.dict(sys.modules, modules),
+            patch.object(
+                SnowflakeCallersRightsConnection,
+                "_get_connection_params",
+                return_value={},
+            ),
+        ):
+            yield connector_mod
+
+    def test_raw_connection_keeps_its_type_for_the_owner(self) -> None:
+        """The owner session gets an object that still looks and works like the original."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        raw = conn.raw_connection
+
+        assert isinstance(raw, _FakeRawConnection)
+        assert type(raw).__name__ == "_FakeRawConnection"
+        assert raw.cursor().execute("SELECT 1").executed == ["SELECT 1"]
+        raw.commit()
+
+    @pytest.mark.parametrize(
+        "prepare",
+        [
+            pytest.param(lambda raw: raw.cursor, id="raw_cursor"),
+            pytest.param(lambda raw: raw.commit, id="connector_internal_cursor"),
+            pytest.param(
+                lambda raw: functools.partial(raw.cursor().execute, "SELECT 1"),
+                id="stored_cursor_execute",
+            ),
+            pytest.param(
+                lambda raw: functools.partial(raw.cursor().execute_async, "SELECT 1"),
+                id="stored_cursor_execute_async",
+            ),
+            pytest.param(
+                lambda raw: functools.partial(
+                    raw.cursor(cursor_class=_FakeDictCursor).execute, "SELECT 1"
+                ),
+                id="custom_cursor_class",
+            ),
+        ],
+    )
+    def test_other_session_cannot_use_raw_objects(
+        self, prepare: Callable[[_FakeRawConnection], Callable[[], object]]
+    ) -> None:
+        """Raw objects created by the owner session can't run SQL in another session."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        use_raw_object = prepare(conn.raw_connection)
+
+        _set_current_session_id("other_session_id")
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            use_raw_object()
+
+        assert (
+            exc_info.value.error_id == "snowflake-callers-rights-shared-across-sessions"
+        )
+
+    def test_stored_cursor_cannot_run_in_thread_without_context(self) -> None:
+        """A stored cursor can't run SQL from a thread with no session context."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        cursor = conn.raw_connection.cursor()
+        errors: list[StreamlitAPIException] = []
+
+        def run_query() -> None:
+            try:
+                cursor.execute("SELECT 1")
+            except StreamlitAPIException as e:
+                errors.append(e)
+
+        thread = threading.Thread(target=run_query)
+        thread.start()
+        thread.join()
+
+        assert [e.error_id for e in errors] == [
+            "snowflake-callers-rights-outside-session"
+        ]
+        assert cursor.executed == []
+
+    def test_unbindable_connection_logs_warning(
+        self, connector: types.ModuleType
+    ) -> None:
+        """A connection whose class can't be swapped still works and logs a warning."""
+        connector.connect = MagicMock(return_value=_SlottedRawConnection())
+
+        with patch.object(snowflake_connection, "_LOGGER") as mock_logger:
+            conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+
+        assert type(conn.raw_connection) is _SlottedRawConnection
+        mock_logger.warning.assert_called_once()
+        assert mock_logger.warning.call_args.args[1] == "_SlottedRawConnection"
+
+    def test_session_never_uses_owner_rights_active_session(self) -> None:
+        """``session()`` builds from the caller's connection, even in SiS."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        with _patched_snowpark(in_sis=True) as (context_mod, session_mod):
+            conn.session()
+
+        session_mod.Session.builder.configs.assert_called_once_with(
+            {"connection": conn._instance}
+        )
+        context_mod.get_active_session.assert_not_called()
+
+    def test_close_closes_connection_then_snowpark_sessions(self) -> None:
+        """Releasing the connection outside a session closes Snowpark sessions after it."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        raw = conn.raw_connection
+        snowpark_session = MagicMock(name="snowpark-session")
+        raw_closed_when_session_closed: list[bool] = []
+        snowpark_session.close.side_effect = lambda: (
+            raw_closed_when_session_closed.append(raw.closed)
+        )
+        with _patched_snowpark(in_sis=False) as (_, session_mod):
+            session_mod.Session.builder.configs.return_value.create.return_value = (
+                snowpark_session
+            )
+            conn.session()
+
+        # Sessions are released from a thread without a script-run context.
+        thread = threading.Thread(target=conn.close)
+        thread.start()
+        thread.join()
+
+        assert raw_closed_when_session_closed == [True]
+        assert conn._raw_instance is None

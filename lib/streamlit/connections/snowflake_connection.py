@@ -20,7 +20,9 @@
 
 from __future__ import annotations
 
+import functools
 import os
+import weakref
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
@@ -32,6 +34,7 @@ from streamlit.runtime.caching import cache_data
 _LOGGER: Final = logger.get_logger(__name__)
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from datetime import timedelta
     from uuid import UUID
 
@@ -424,7 +427,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
           process, so every user would otherwise run queries as the first user,
           and ``QUERY_HISTORY`` would attribute those queries to that user.
           Streamlit raises an error when a session uses a caller's rights
-          connection that another session created.
+          connection that another session created, including its raw connection,
+          cursors, and Snowpark sessions. Query results that your app stores
+          globally are not protected.
 
         - To develop locally with a caller's rights connection, use an
           environment variable to logically switch between a ``"snowflake"``
@@ -704,6 +709,97 @@ class SnowflakeConnection(BaseSnowflakeConnection):
             raise
 
 
+# Connector methods that run SQL or read query results. Caller's rights connections
+# verify the owning session in each of them, so the check also covers raw
+# connections, cursors, and Snowpark sessions that an app stores globally. Every
+# connector call that runs SQL goes through ``cursor()``, including Snowpark's
+# per-thread cursors and the connector's own ``commit()`` and ``execute_string()``.
+_GUARDED_CONNECTION_METHODS: Final = ("cursor",)
+_GUARDED_CURSOR_METHODS: Final = (
+    "execute",
+    "execute_async",
+    "executemany",
+    "get_results_from_sfqid",
+)
+# Methods whose return values must be guarded too, mapped to the methods to guard.
+_GUARDED_RESULT_METHODS: Final = {"cursor": _GUARDED_CURSOR_METHODS}
+_VERIFY_OWNER_SESSION_ATTR: Final = "_streamlit_verify_owner_session"
+_SESSION_GUARDED_CLASS_ATTR: Final = "_streamlit_session_guarded"
+_session_guarded_classes: Final[dict[tuple[type, tuple[str, ...]], type]] = {}
+
+
+def _session_guarded_class(base: type, method_names: tuple[str, ...]) -> type:
+    """Returns a subclass of ``base`` whose ``method_names`` verify the owning session.
+
+    The subclass keeps the name and module of ``base`` so that guarded objects look
+    and behave like the originals, including for ``isinstance`` checks and for the
+    connector's internal calls to its own methods. Subclasses are cached so that
+    every guarded object of a class shares one subclass.
+    """
+    cache_key = (base, method_names)
+    guarded_class = _session_guarded_classes.get(cache_key)
+    if guarded_class is None:
+        guarded_class = _session_guarded_classes.setdefault(
+            cache_key, _create_session_guarded_class(base, method_names)
+        )
+    return guarded_class
+
+
+def _create_session_guarded_class(base: type, method_names: tuple[str, ...]) -> type:
+    def guard(name: str) -> Callable[..., Any]:
+        base_method = getattr(base, name)
+        result_method_names = _GUARDED_RESULT_METHODS.get(name)
+
+        @functools.wraps(base_method)
+        def guarded(self: Any, *args: Any, **kwargs: Any) -> Any:
+            verify_owner_session = getattr(self, _VERIFY_OWNER_SESSION_ATTR)
+            verify_owner_session()
+            result = base_method(self, *args, **kwargs)
+            if result_method_names is not None:
+                _bind_to_owner_session(
+                    result, result_method_names, verify_owner_session
+                )
+            return result
+
+        return guarded
+
+    namespace: dict[str, Any] = {
+        name: guard(name)
+        for name in method_names
+        if callable(getattr(base, name, None))
+    }
+    namespace[_SESSION_GUARDED_CLASS_ATTR] = True
+    namespace["__module__"] = base.__module__
+    namespace["__qualname__"] = base.__qualname__
+    return type(base.__name__, (base,), namespace)
+
+
+def _bind_to_owner_session(
+    obj: object, method_names: tuple[str, ...], verify_owner_session: Callable[[], None]
+) -> None:
+    """Make ``obj`` call ``verify_owner_session`` before each of ``method_names``.
+
+    The object's class is swapped for a guarded subclass rather than wrapping the
+    object in a proxy, so callers keep the same object and the connector's internal
+    calls to its own methods are guarded too.
+    """
+    if getattr(type(obj), _SESSION_GUARDED_CLASS_ATTR, False):
+        return
+    try:
+        setattr(obj, _VERIFY_OWNER_SESSION_ATTR, verify_owner_session)
+        obj.__class__ = _session_guarded_class(type(obj), method_names)
+    except (AttributeError, TypeError):
+        # The connection wrapper still verifies the owning session, so this only
+        # loses protection for raw objects that an app stores globally.
+        _LOGGER.warning(
+            "Could not bind %s to its session. Objects taken from this caller's "
+            "rights connection, such as `.raw_connection`, are not protected "
+            "against use from other sessions.",
+            type(obj).__name__,
+            exc_info=True,
+        )
+
+
 class SnowflakeCallersRightsConnection(SnowflakeConnection):
     """A caller's rights connection to Snowflake using the Snowflake Connector for Python.
 
@@ -717,6 +813,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         # The owning session must be recorded before the base class opens the first
         # connection with that session's user token.
         self._owner_session_id = self._get_current_session_id()
+        self._snowpark_sessions: weakref.WeakSet[Session] = weakref.WeakSet()
         super().__init__(connection_name, **kwargs)
 
     @staticmethod
@@ -778,6 +875,31 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         return super().query(
             sql, ttl=ttl, show_spinner=show_spinner, params=params, **kwargs
         )
+
+    def session(self) -> Session:
+        from snowflake.snowpark.session import Session  # type:ignore[import]
+
+        # Unlike ``"snowflake"`` connections, this never returns the active Streamlit
+        # in Snowflake session, which runs with the app owner's rights.
+        session = cast(
+            "Session", Session.builder.configs({"connection": self._instance}).create()
+        )
+        self._snowpark_sessions.add(session)
+        return session
+
+    def close(self) -> None:
+        # Snowpark registers every session it creates in a process-wide registry
+        # that `get_active_session()` reads, so close the sessions created from this
+        # connection when the owning session ends. The raw connection is closed
+        # first because Snowpark skips cancelling queries on a closed connection,
+        # and cancelling them would fail outside the owning session.
+        super().close()
+        for session in list(self._snowpark_sessions):
+            try:
+                session.close()
+            except Exception:
+                _LOGGER.debug("Failed to close a Snowpark session.", exc_info=True)
+        self._snowpark_sessions.clear()
 
     @classmethod
     def scope(cls) -> Literal["session"]:
@@ -867,4 +989,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         params = self._get_connection_params()
 
         # Connect with the params we generated, overriding with user-specified params.
-        return snowflake.connector.connect(**{**params, **kwargs})
+        connection = snowflake.connector.connect(**{**params, **kwargs})
+        _bind_to_owner_session(
+            connection, _GUARDED_CONNECTION_METHODS, self._verify_owner_session
+        )
+        return connection
