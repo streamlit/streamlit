@@ -310,10 +310,14 @@ def test_a_client_that_disconnects_cancels_the_wait(
             raise
         return b"{}"  # pragma: no cover - never reached
 
+    async def disconnect() -> dict[str, Any]:
+        return {"type": "http.disconnect"}
+
     interact.side_effect = wait_forever
     with (
-        patch.object(starlette_agent_routes, "_DISCONNECT_POLL_SECONDS", 0.01),
-        patch.object(Request, "is_disconnected", new=AsyncMock(return_value=True)),
+        # The body is read from the request's own stream, so this only replaces
+        # what arrives after it.
+        patch.object(Request, "receive", new=property(lambda _self: disconnect)),
         _client(runtime) as client,
     ):
         response = client.post(_PATH, json={})

@@ -575,3 +575,22 @@ def test_idle_since_follows_the_timeout_state_table() -> None:
     session.timed_out = _pending({})
     assert interaction._idle_since(session, settled=False) is None
     assert interaction._idle_since(session, settled=True) == 20.0
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [
+        (0, "0 seconds"),
+        (1, "1 second"),
+        (2, "2 seconds"),
+        (45, "45 seconds"),
+        (60, "1 minute"),
+        (90, "90 seconds"),
+        (900, "15 minutes"),
+    ],
+)
+def test_duration_phrases_whole_minutes_and_singulars(
+    seconds: float, expected: str
+) -> None:
+    """Error messages name a limit in whole minutes where it is one."""
+    assert interaction._duration(seconds) == expected

@@ -427,12 +427,11 @@ class AgentSessionRegistry:
         self._reclaim_idle()
         session = self._sessions.get(handle)
         if session is None or session.user_info != user_info:
-            ttl_minutes = float(config.get_option("server.agentSessionTTL")) / 60
+            ttl = _duration(float(config.get_option("server.agentSessionTTL")))
             raise AgentRequestError(
                 "unknown_session",
                 "This session does not exist or has expired: sessions end after "
-                f"{ttl_minutes:g} minutes without a request. Omit `session_id` to "
-                "start a new one.",
+                f"{ttl} without a request. Omit `session_id` to start a new one.",
             )
         session.last_used = time.monotonic()
         return session
@@ -604,6 +603,15 @@ def _run_timeout() -> float:
     return float(config.get_option("server.agentRunTimeout"))
 
 
+def _duration(seconds: float) -> str:
+    """Phrase a number of seconds for an error message, such as "15 minutes"."""
+    if seconds and seconds % 60 == 0:
+        amount, unit = seconds / 60, "minute"
+    else:
+        amount, unit = seconds, "second"
+    return f"{amount:g} {unit}{'' if amount == 1 else 's'}"
+
+
 def _action_of(request: dict[str, Any]) -> dict[str, Any]:
     """What a request asks to do: its action fields that are present."""
     return {
@@ -760,12 +768,12 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _run_timeout()
-            elapsed = time.monotonic() - interaction.started
+            timeout = _duration(_run_timeout())
+            elapsed = _duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
                 "run_timed_out",
-                f"The app did not finish within {timeout:g} seconds, and is still "
-                f"running, {elapsed:.0f} seconds after this interaction started. "
+                f"The app did not finish within {timeout}, and is still "
+                f"running, {elapsed} after this interaction started. "
                 "Nothing is lost: send a request with only `session_id` to wait "
                 "for it without starting it over.",
                 # Always included, because the remedy is a request on this session.

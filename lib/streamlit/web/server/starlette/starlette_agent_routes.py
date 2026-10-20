@@ -55,9 +55,6 @@ _T = TypeVar("_T")
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
 
-# How often a waiting interaction checks whether its client is still there.
-_DISCONNECT_POLL_SECONDS: Final = 1.0
-
 # Where media storage's URLs start, relative to the app's root.
 _MEDIA_PATH: Final = f"/{BASE_ROUTE_MEDIA}"
 
@@ -187,8 +184,18 @@ def _parse_body(body: bytes) -> Any:
         raise ValueError("it holds an integer too long to read") from exc
 
 
+async def _until_disconnected(request: Request) -> None:
+    """Return once the client has closed the connection.
+
+    Only awaited after the body has been read, so the next message the server
+    delivers for this request is the disconnect.
+    """
+    while (await request.receive())["type"] != "http.disconnect":
+        pass
+
+
 async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
-    """Await ``work``, cancelling it once the client has gone away.
+    """Await ``work``, cancelling it as soon as the client has gone away.
 
     A client whose own timeout is shorter than `server.agentRunTimeout` would
     otherwise leave its interaction in flight until the server's timeout, so its
@@ -196,16 +203,18 @@ async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
     timed-out run, which the retry collects.
     """
     task = asyncio.ensure_future(work)
+    disconnected = asyncio.ensure_future(_until_disconnected(request))
     try:
-        while True:
-            done, _ = await asyncio.wait({task}, timeout=_DISCONNECT_POLL_SECONDS)
-            if done:
-                return task.result()
-            if await request.is_disconnected():
-                break
+        await asyncio.wait({task, disconnected}, return_when=asyncio.FIRST_COMPLETED)
     except asyncio.CancelledError:
         task.cancel()
         raise
+    finally:
+        disconnected.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await disconnected
+    if task.done():
+        return task.result()
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
