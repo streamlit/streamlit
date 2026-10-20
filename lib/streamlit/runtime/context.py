@@ -88,9 +88,7 @@ def _context_info_field(
     and an unset proto field would otherwise read as "" or 0.
     """
     ctx = get_script_run_ctx()
-    if ctx is None or ctx.context_info is None:
-        return None
-    if not ctx.context_info.HasField(name):
+    if ctx is None or ctx.context_info is None or not ctx.context_info.HasField(name):
         return None
     value: str | int | bool = getattr(ctx.context_info, name)
     return value

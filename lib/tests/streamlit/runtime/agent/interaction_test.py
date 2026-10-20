@@ -331,6 +331,7 @@ def test_validate_refuses_unknown_fields(request_body: dict[str, Any]) -> None:
 @pytest.mark.parametrize(
     ("request_body", "fragment"),
     [
+        ({"session_id": 1}, "`session_id` must be a string"),
         ({"page": 3}, "`page` must be a string"),
         ({"query_params": ["a"]}, "`query_params` must be an object"),
         ({"query_params": {"a": "1"}}, "must be a list of strings"),
@@ -460,23 +461,24 @@ _NAVIGATION_PAGES: Final[dict[str, PageInfo]] = {
 }
 
 
-@pytest.mark.parametrize("page", ["report", "/report/", "/report"])
-def test_resolve_page_finds_a_known_url_path(page: str) -> None:
-    """A listed page resolves to its hash, with surrounding slashes ignored."""
+@pytest.mark.parametrize(
+    ("page", "page_hash"),
+    [
+        ("report", "report_hash"),
+        ("/report/", "report_hash"),
+        ("/report", "report_hash"),
+        ("", "home_hash"),
+    ],
+)
+def test_resolve_page_finds_a_known_url_path(page: str, page_hash: str) -> None:
+    """A listed page resolves to its hash, with surrounding slashes ignored, and
+    `""` names the default page.
+    """
     resolved = interaction._resolve_page(
         _NAVIGATION_PAGES, page, can_defer=False, listed=[]
     )
 
-    assert resolved == ("report_hash", "")
-
-
-def test_resolve_page_maps_the_empty_path_to_the_default_page() -> None:
-    """`""` names the default page."""
-    resolved = interaction._resolve_page(
-        _NAVIGATION_PAGES, "", can_defer=False, listed=[]
-    )
-
-    assert resolved == ("home_hash", "")
+    assert resolved == (page_hash, "")
 
 
 def test_resolve_page_defers_only_on_a_creating_call_before_navigation() -> None:

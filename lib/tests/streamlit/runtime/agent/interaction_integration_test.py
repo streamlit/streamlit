@@ -33,7 +33,6 @@ from unittest.mock import patch
 
 import pytest
 
-from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.agent import interaction, snapshot
@@ -47,6 +46,7 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from tests.streamlit.runtime.agent import run_gate
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Iterator
@@ -127,14 +127,7 @@ def options() -> Iterator[dict[str, Any]]:
         "server.agentSessionTTL": 900,
         "server.agentMaxSessions": 100,
     }
-    original_get_option = config.get_option
-
-    def get_option(name: str) -> Any:
-        if name in overrides:
-            return overrides[name]
-        return original_get_option(name)
-
-    with patch.object(config, "get_option", new=get_option):
+    with patch_config_options(overrides):
         yield overrides
 
 
@@ -188,6 +181,15 @@ class _App:
         with pytest.raises(AgentRequestError) as raised:
             await self.call(request, **kwargs)
         return raised.value
+
+    async def call_opening_gate(
+        self, request: dict[str, Any], **kwargs: Any
+    ) -> dict[str, Any]:
+        """Send ``request``, and open the run gate once the call has started."""
+        call = asyncio.create_task(self.call(request, **kwargs))
+        await asyncio.sleep(0)
+        run_gate.opened.set()
+        return await call
 
     def app_session(self, handle: str) -> AppSession:
         return self.registry.app_session(self.registry._sessions[handle])
@@ -348,10 +350,8 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
         # A run longer than two timeouts finishes on the third call, as one run.
         again = await app.refused({"session_id": handle}, run_timeout=_SHORT_TIMEOUT)
         assert again.code == "run_timed_out"
-        retry = asyncio.create_task(app.call({"session_id": handle}))
-        await asyncio.sleep(0)
-        run_gate.opened.set()
-        assert _counts(await retry) == {"starts": 1, "done": 1, "runs": 1}
+        first = await app.call_opening_gate({"session_id": handle})
+        assert _counts(first) == {"starts": 1, "done": 1, "runs": 1}
 
         # The same request again collects as well.
         run_gate.close()
@@ -359,10 +359,7 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
         assert (await app.refused(same, run_timeout=_SHORT_TIMEOUT)).code == (
             "run_timed_out"
         )
-        retry = asyncio.create_task(app.call(same))
-        await asyncio.sleep(0)
-        run_gate.opened.set()
-        collected = await retry
+        collected = await app.call_opening_gate(same)
         assert _counts(collected) == {"starts": 2, "done": 2, "runs": 2}
         assert collected["query_params"] == {"q": ["2"]}
 
@@ -398,10 +395,7 @@ async def test_a_client_leaving_during_the_wait_is_collected_by_its_retry(
         with pytest.raises(asyncio.CancelledError):
             await left
 
-        retry = asyncio.create_task(app.call({"session_id": handle}))
-        await asyncio.sleep(0)
-        run_gate.opened.set()
-        collected = await retry
+        collected = await app.call_opening_gate({"session_id": handle})
 
     assert _counts(collected) == {"starts": 2, "done": 2, "runs": 2}
 
@@ -617,12 +611,9 @@ async def test_context_and_headers_follow_the_request(
             {"session_id": handle, "query_params": {"q": ["1"]}},
             headers=[("X-Token", "intruder")],
         )
-        retry = asyncio.create_task(
-            app.call({"session_id": handle}, headers=[("X-Token", "collector")])
+        collected = await app.call_opening_gate(
+            {"session_id": handle}, headers=[("X-Token", "collector")]
         )
-        await asyncio.sleep(0)
-        run_gate.opened.set()
-        collected = await retry
 
     assert _context_lines(first) == {
         "timezone": "None",

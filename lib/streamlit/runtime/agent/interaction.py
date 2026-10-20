@@ -250,7 +250,7 @@ class AgentSessionClient(SessionClient):
         replaces only its own region and leaves the rest of the app standing.
         """
         running = self._fragments_this_run
-        # Indexes into the list being rebuilt.
+        # Its indexes point into the list being replaced.
         self._element_at = {}
         self._deltas = [
             (run_id, msg)
@@ -542,11 +542,9 @@ async def interact(
 
     handle = request.get("session_id")
     is_new_session = handle is None
-    if is_new_session:
+    if handle is None:
         session = registry.create(user_info)
     else:
-        if not isinstance(handle, str):
-            raise AgentRequestError("invalid_request", "`session_id` must be a string.")
         session = registry.get(handle, user_info)
 
     if session.busy and _collects(session, request):
@@ -840,12 +838,10 @@ def _build_in_worker(
 ) -> _Built:
     """Build and encode a snapshot with ``ctx`` as the thread's script context.
 
-    A widget's ``value`` goes through its serializer, which runs the app's
-    ``format_func``, and one that reads ``st.session_state`` or ``st.context``
-    needs a script context to find the session's state and the timezone and
-    locale the request stated. Without them it would format a label the run
-    never offered. The context drops every message, so an ``st.*`` command the
-    app's code calls here has no effect.
+    A widget's ``value`` runs the app's ``format_func``, which may read
+    ``st.session_state`` or ``st.context`` and would otherwise format a label
+    the run never offered. The context drops every message, so an ``st.*``
+    command called here has no effect.
 
     The context is cleared afterwards, because the executor reuses its threads
     for unrelated work. ``ThreadState`` lives in the context variables
@@ -869,11 +865,10 @@ def _build_in_worker(
 def _verify_page_exists(url_path: str, session: AgentSession) -> None:
     """Reject a `page` that the run showed does not exist.
 
-    On a creating call the page list does not exist yet, so `_resolve_page`
-    hands an unrecognized path to the runtime rather than rejecting it -- which
-    is right for a valid path, and silently lands on the default page for a
-    typo. The page list exists by the time the run finishes, so check then. The
-    run has already happened, which is why the message says so.
+    On a creating call `_resolve_page` hands an unrecognized path to the
+    runtime, because the page list does not exist yet, and a typo then lands
+    on the default page. The page list exists once the run finishes, so the
+    check happens then, and the message says the run already happened.
 
     Checked against the page list rather than where the run ended up: an app
     may redirect with `st.switch_page`, which is not the client's mistake.
@@ -940,6 +935,9 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
         _encode_query_params(request["query_params"])
     if request.get("context") is not None:
         _parse_context(request["context"])
+    session_id = request.get("session_id")
+    if session_id is not None and not isinstance(session_id, str):
+        raise AgentRequestError("invalid_request", "`session_id` must be a string.")
 
 
 def _resolve_page(

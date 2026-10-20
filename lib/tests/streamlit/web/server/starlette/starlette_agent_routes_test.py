@@ -29,7 +29,6 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.runtime import Runtime, RuntimeConfig, runtime_util
 from streamlit.runtime.agent.errors import (
@@ -50,6 +49,7 @@ from streamlit.web.server.starlette import (
 )
 from streamlit.web.server.starlette.starlette_routes import create_media_routes
 from tests.streamlit.runtime.agent import run_gate
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Iterator
@@ -57,20 +57,6 @@ if TYPE_CHECKING:
 
 _PATH: Final = "/_stcore/agent/interact"
 _OTHER_METHODS: Final = ["GET", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS"]
-
-
-@contextmanager
-def _options(overrides: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
-    """Override config options, read at every lookup, so a test can change them."""
-    original_get_option = config.get_option
-
-    def get_option(name: str) -> Any:
-        if name in overrides:
-            return overrides[name]
-        return original_get_option(name)
-
-    with patch.object(config, "get_option", new=get_option):
-        yield overrides
 
 
 @pytest.fixture
@@ -93,7 +79,7 @@ def interact() -> Iterator[AsyncMock]:
 def _client(
     runtime: Any, *, enabled: bool = True, **overrides: Any
 ) -> Generator[TestClient, None, None]:
-    with _options({"server.enableAgentApi": enabled, **overrides}):
+    with patch_config_options({"server.enableAgentApi": enabled, **overrides}):
         app = Starlette(routes=starlette_agent_routes.create_agent_routes(runtime, ""))
         with TestClient(app) as client:
             yield client
@@ -342,23 +328,27 @@ async def _lifespan_with(runtime: Runtime) -> AsyncGenerator[None, None]:
 def _served_app(
     tmp_path: Path, script: str, overrides: dict[str, Any], *, base_url: str = ""
 ) -> Generator[TestClient, None, None]:
-    """A real Runtime on ``script``, behind the agent and media routes."""
+    """A real Runtime on ``script``, behind the agent and media routes.
+
+    ``overrides`` is read at every lookup, so a test can change an option while
+    the app runs.
+    """
     main_script = tmp_path / "app.py"
     main_script.write_text(textwrap.dedent(script))
     media_storage = MemoryMediaFileStorage("/media")
     registered = agent_spec._agent_session_ids
     run_gate.reset()
     Runtime._instance = None
+    defaults = {
+        "server.enableAgentApi": True,
+        "server.fileWatcherType": "none",
+        "server.baseUrlPath": base_url,
+        "server.agentRunTimeout": 10,
+    }
+    for name, value in defaults.items():
+        overrides.setdefault(name, value)
     try:
-        with _options(
-            {
-                "server.enableAgentApi": True,
-                "server.fileWatcherType": "none",
-                "server.baseUrlPath": base_url,
-                "server.agentRunTimeout": 10,
-                **overrides,
-            }
-        ):
+        with patch_config_options(overrides):
             runtime = Runtime(
                 RuntimeConfig(
                     script_path=str(main_script),
