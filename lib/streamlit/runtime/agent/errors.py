@@ -21,8 +21,18 @@ from typing import Any, Final, Literal, TypeAlias
 AgentErrorCode: TypeAlias = Literal[
     "invalid_request",
     "request_too_large",
+    "invalid_value",
+    "not_a_value",
+    "not_a_trigger",
+    "missing_form_submit",
+    "cross_dialog_batch",
+    "cross_form_batch",
+    "unsupported_element",
+    "unknown_key",
     "unknown_session",
     "unknown_page",
+    "not_on_page",
+    "disabled_widget",
     "session_busy",
     "run_timed_out",
     "internal_error",
@@ -43,12 +53,66 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         400,
         (
             "The request is malformed: an unknown field, a field of the wrong "
-            "type or format, or text that is not valid Unicode."
+            "type or format, text that is not valid Unicode, `widget_state` or "
+            "`trigger` on a creating call, or navigation combined with widget "
+            "changes."
         ),
     ),
     "request_too_large": (
         413,
         "The body is larger than `server.maxWidgetStateSize`.",
+    ),
+    "invalid_value": (
+        400,
+        (
+            "A value the element cannot take: of the wrong JSON type, outside "
+            "its options or over its selection limit, or one the widget cannot "
+            "read. The message lists the legal options where there are some."
+        ),
+    ),
+    "not_a_value": (
+        400,
+        "The element is a trigger: fire it with `trigger`.",
+    ),
+    "not_a_trigger": (
+        400,
+        "The element holds a value: set it through `widget_state`.",
+    ),
+    "missing_form_submit": (
+        400,
+        (
+            "Fields of an `st.form` were sent without one of its submit "
+            "triggers, so they would change nothing."
+        ),
+    ),
+    "cross_dialog_batch": (
+        400,
+        (
+            "Widgets in an open `st.dialog` were combined with widgets outside "
+            "it. Send the dialog's widgets on their own first."
+        ),
+    ),
+    "cross_form_batch": (
+        400,
+        (
+            "One request cannot span two forms, or mix a form's fields with "
+            "other controls."
+        ),
+    ),
+    "unsupported_element": (
+        400,
+        (
+            "The element is on the page but cannot be driven here: it is "
+            "display-only, takes input JSON cannot express (uploads), or its "
+            "`support` field says why."
+        ),
+    ),
+    "unknown_key": (
+        404,
+        (
+            "No element with that key exists in this session. Keys come from "
+            "the latest snapshot and are never constructed."
+        ),
     ),
     "unknown_session": (
         404,
@@ -60,6 +124,18 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     "unknown_page": (
         404,
         "No page has that `url_path`. The response's `pages` lists the available ones.",
+    ),
+    "not_on_page": (
+        409,
+        (
+            "The element exists in this session but cannot be used now: it may "
+            "be on a page you left, appear only after another control changes, "
+            "or be in a closed dialog."
+        ),
+    ),
+    "disabled_widget": (
+        409,
+        "The element is on the page but disabled; something else on the page enables it.",
     ),
     "session_busy": (
         409,
