@@ -36,7 +36,7 @@ _ROOT_CONTAINER_NAMES: Final = {
 
 
 @dataclass
-class _Node:
+class Node:
     """A merged tree node: either a container or a single element."""
 
     block: BlockProto | None = None
@@ -49,14 +49,14 @@ class _Node:
     fragment_id: str | None = None
     # Root containers have a fixed name rather than a proto.
     root_name: str | None = None
-    children: dict[int, _Node] = field(default_factory=dict)
+    children: dict[int, Node] = field(default_factory=dict)
 
     @property
     def is_container(self) -> bool:
         return self.element is None
 
 
-def merge_deltas(messages: list[ForwardMsg]) -> _Node:
+def merge_deltas(messages: list[ForwardMsg]) -> Node:
     """Merge one run's deltas into a tree of the four root containers.
 
     ``messages`` are the forward messages for the page as the frontend would
@@ -72,11 +72,10 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
     dropped: the frontend refuses to mount a child through an element, so a
     stale container handle cannot replace what the browser shows.
     """
-    root = _Node(
+    root = Node(
         root_name="root",
         children={
-            index: _Node(root_name=name)
-            for index, name in _ROOT_CONTAINER_NAMES.items()
+            index: Node(root_name=name) for index, name in _ROOT_CONTAINER_NAMES.items()
         },
     )
 
@@ -95,13 +94,13 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
         # a partial rerun says what it owns.
         fragment_id = msg.delta.fragment_id or None
         if delta_type == "new_element":
-            node = _Node(
+            node = Node(
                 element=msg.delta.new_element,
                 description=description,
                 fragment_id=fragment_id,
             )
         elif delta_type == "add_block":
-            node = _Node(
+            node = Node(
                 block=msg.delta.add_block,
                 description=description,
                 fragment_id=fragment_id,
@@ -123,7 +122,7 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
                 # A descendant arrived before its container. The placeholder
                 # is a container, so the block that later claims this position
                 # can adopt the children.
-                child = _Node()
+                child = Node()
                 parent.children[index] = child
             elif not child.is_container:
                 # An element already occupies this ancestor. The frontend
@@ -144,7 +143,7 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
     return root
 
 
-def _keep_existing_children(existing: _Node, incoming: _Node) -> bool:
+def _keep_existing_children(existing: Node, incoming: Node) -> bool:
     """Whether a newly arrived container keeps the children already there.
 
     A placeholder has no block of its own: a descendant arrived first, and the

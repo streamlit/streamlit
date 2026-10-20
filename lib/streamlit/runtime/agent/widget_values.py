@@ -81,9 +81,9 @@ def reported_value(
         )
     ):
         try:
-            # The serializer calls the author's ``format_func``. Registration
-            # copies before it serializes, so a formatter that edits its
-            # argument cannot change the value a snapshot just read.
+            # The serializer calls the author's ``format_func``. Copy the value
+            # first so a formatter that edits its argument cannot change the
+            # stored value.
             serialized = _string_payload(metadata.serializer(deepcopy(value)))
             if (
                 isinstance(serialized, list)
@@ -234,6 +234,15 @@ def _keep_typed_text(
             return label in options
         return label in allowed
 
+    def _captured_label(item: Any) -> Any:
+        """The label captured with ``options`` for an authored option."""
+        if authored is None:
+            return None
+        for index, option in enumerate(authored):
+            if index < len(options) and _option_equals(item, option):
+                return options[index]
+        return None
+
     def _report(item: Any, label: Any) -> Any:
         # Typed text can format to a label without being that option. A closed
         # set has no typed text, so a value that formats to a label is it.
@@ -244,9 +253,11 @@ def _keep_typed_text(
             and not _is_authored(item, authored_index)
         ):
             return item
-        if _is_option(label) or not isinstance(item, str):
+        if _is_option(label) or label is None:
             return label
-        return item
+        # A formatter that changed since the options were captured can return a
+        # label a request cannot send. Use the captured label, or null.
+        return _captured_label(item)
 
     # A multi-select stored through session state may be a set, array, or
     # Series. The serde lists those the same way, and each item lines up with

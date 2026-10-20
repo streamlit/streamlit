@@ -55,7 +55,8 @@ an input the command accepts, and expensive preparation belongs behind
 ``is_recording()``.
 
 ``clearable`` and ``choices`` are the same kind of fact as ``value_schema``.
-``clearable`` says that choosing the current value again empties the widget.
+``clearable`` says a later value can be emptied, by choosing it again or by
+clearing back to an empty default.
 ``choices`` is the list a request may send when that list is not the ``options``
 parameter. Only the command knows either one, so the snapshot copies them.
 
@@ -251,8 +252,10 @@ def element(
     support
         Why the element is not fully usable, when it is not.
     clearable
-        Whether choosing the current value again empties it. Omit when it
-        does not. The snapshot copies this and does not infer it.
+        Whether a later value can be emptied, so a request may send ``null``
+        to clear it: choosing the current value again, or clearing back to an
+        empty default. Omit when neither applies. The snapshot copies this
+        and does not infer it.
     choices
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.

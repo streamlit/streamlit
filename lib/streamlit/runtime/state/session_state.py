@@ -1529,17 +1529,15 @@ class SessionState:
         return self._get_widget_metadata(widget_id)
 
     def get_widget_value(self, widget_id: str) -> Any:
-        """Return the value stored for a widget.
+        """Return the value a widget currently holds.
 
-        ``st.session_state`` may return a different value for the same widget
-        when a custom component builds the displayed value from what was
-        stored. This returns the stored value. A value set through
-        ``st.session_state`` is checked first, then widget state, then the
-        previous run's state. Raises KeyError when none holds a value.
+        Check a value set through ``st.session_state`` first, then this run's
+        widget state, then the previous run. Raises KeyError when none holds a
+        value. A custom component can make ``st.session_state`` differ, because
+        it builds a display value from what was stored.
 
-        A still-serialized ``st.chat_input`` proto is read as its text, without
-        running the deserializer that removes uploaded files. An unset chat
-        field is ``None``.
+        A still-serialized ``st.chat_input`` proto is read as its text (``None``
+        when unset) without running the deserializer that removes uploaded files.
         """
         user_key = self._key_id_mapper.id_key_mapping.get(widget_id)
         if user_key is not None:

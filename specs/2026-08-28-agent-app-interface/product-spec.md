@@ -837,8 +837,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
   `null` resets a widget to its default, as the browser does, except where a browser
   user can empty a widget that has one: a single-select `st.segmented_control` or
-  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. A
-  list-valued widget is cleared with `[]`.
+  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. The
+  same flag, `clearable`, is set when the browser can clear back to an empty
+  default (`st.selectbox` with `index=None`, and number, date, time, and datetime
+  inputs with no initial value). A list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks

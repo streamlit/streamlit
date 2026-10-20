@@ -64,6 +64,21 @@ def _matches_schema(value: Any, schema: dict[str, Any]) -> bool:
 class WidgetValueTest(SnapshotCase):
     """A reported value is the wire form of the widget's stored value."""
 
+    def test_a_changed_formatter_reports_the_captured_label(self) -> None:
+        """A formatter that changes after registration cannot invent a new label."""
+        labels = {"a": "Alpha"}
+
+        def label(option: str) -> str:
+            return labels.get(option, option)
+
+        st.selectbox("Item", ["a"], format_func=label, key="item")
+        labels["a"] = "Changed"
+
+        document = self._build().document
+        node = _one_keyed(document, "selectbox", "item")
+        assert node["props"]["options"] == ["Alpha"]
+        assert node["value"] == "Alpha"
+
     def test_reported_values_are_what_a_request_can_send(self) -> None:
         """A closed option set reports labels, including a null option."""
         st.selectbox(

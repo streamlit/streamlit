@@ -360,7 +360,7 @@ class FeedbackMixin:
                 clearable=True,
                 # The index of the chosen option. `options` names the set.
                 value_schema=agent_spec.INTEGER,
-                choices=list(range(_get_num_options(options))),
+                choices=list(range(num_options)),
                 options=options,
                 disabled=disabled,
                 on_change="ignore" if on_change == "ignore" else "rerun",

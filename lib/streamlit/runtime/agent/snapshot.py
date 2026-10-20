@@ -38,7 +38,7 @@ from streamlit.runtime.state.common import is_element_id, user_key_from_element_
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
-    from streamlit.runtime.agent.tree import _Node
+    from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
 SCHEMA_VERSION: Final = 1
@@ -86,8 +86,8 @@ class ElementState(NamedTuple):
     # The JSON type its `value_schema` names, so a number is not accepted as
     # text where the wire form happens to be a string, as for `st.feedback`.
     schema_type: str | None = None
-    # Whether a browser user can empty it although it has a default, which
-    # decides whether `null` clears it or resets it.
+    # Whether a browser user can empty it, so a later request's null clears it
+    # rather than resetting it to a non-empty default.
     clearable: bool = False
 
 
@@ -118,7 +118,7 @@ class _SnapshotBuilder:
         self._closed_dialog = False
 
     def serialize_children(
-        self, node: _Node, inherited_support: str | None = None
+        self, node: Node, inherited_support: str | None = None
     ) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
         for _, child in sorted(node.children.items()):
@@ -126,7 +126,7 @@ class _SnapshotBuilder:
         return result
 
     def _serialize(
-        self, node: _Node, inherited_support: str | None
+        self, node: Node, inherited_support: str | None
     ) -> list[dict[str, Any]]:
         """Serialize one node.
 
@@ -143,7 +143,7 @@ class _SnapshotBuilder:
         return [self._serialize_element(node, inherited_support)]
 
     @staticmethod
-    def _is_contentless(node: _Node) -> bool:
+    def _is_contentless(node: Node) -> bool:
         """True for an element that would serialize to nothing but its name.
 
         `st.empty()` reserves a slot and `st.space()` adds blank space, so an
@@ -158,7 +158,7 @@ class _SnapshotBuilder:
         )
 
     def _serialize_container(
-        self, node: _Node, inherited_support: str | None = None
+        self, node: Node, inherited_support: str | None = None
     ) -> list[dict[str, Any]]:
         # A container's support reason binds its contents, so actions never
         # lists a child the container itself denies.
@@ -244,7 +244,7 @@ class _SnapshotBuilder:
         result["children"] = children
         return [result]
 
-    def _note_fragment(self, node: _Node, result: dict[str, Any]) -> None:
+    def _note_fragment(self, node: Node, result: dict[str, Any]) -> None:
         """Report the fragment a node belongs to, if it belongs to one."""
         if node.fragment_id is None:
             return
@@ -264,7 +264,7 @@ class _SnapshotBuilder:
             result.setdefault("props", {})["bind"] = metadata.bind
 
     def _serialize_element(
-        self, node: _Node, inherited_support: str | None = None
+        self, node: Node, inherited_support: str | None = None
     ) -> dict[str, Any]:
         element = node.element
         assert element is not None  # noqa: S101 - guarded by the caller
@@ -371,8 +371,8 @@ class _SnapshotBuilder:
             command=command,
             max_items=_max_items(description, props),
             schema_type=(description.get("value_schema") or {}).get("type"),
-            # The command says whether choosing the current value again
-            # empties it. The snapshot does not infer that from the command.
+            # Whether a browser user can empty it, so null clears it rather
+            # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
         )
         if actionable:
@@ -547,7 +547,9 @@ def build_snapshot(
         .replace("+00:00", "Z"),
         "page": current_page,
         "pages": pages,
-        "query_params": query_params,
+        # A copy, so a caller can edit the dict or its lists without changing
+        # a snapshot retained for the next request.
+        "query_params": {key: list(values) for key, values in query_params.items()},
         "tree": {"type": "root", "children": children},
         "actions": builder.actions,
     }
