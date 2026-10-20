@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactElement, useContext } from "react"
+import { type ReactElement, useContext, useMemo } from "react"
 
 import {
   createSidebarTheme,
@@ -29,7 +29,13 @@ const ThemedSidebar = ({
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
-  const sidebarTheme = createSidebarTheme(activeTheme)
+  // Keep the sidebar theme referentially stable across renders: descendants
+  // use the theme as a hook dependency, and a new object on every render
+  // re-runs their effects (e.g. tearing down st.audio_input's waveform).
+  const sidebarTheme = useMemo(
+    () => createSidebarTheme(activeTheme),
+    [activeTheme]
+  )
 
   return (
     <ThemeProvider theme={sidebarTheme.emotion}>

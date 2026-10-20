@@ -308,6 +308,22 @@ def test_recording_lifecycle(app: Page):
     expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
 
 
+def test_recording_in_sidebar(app: Page):
+    """Test that a sidebar recording shows its waveform instead of the error state."""
+    grant_microphone_permissions(app)
+    click_toggle(app, "Show sidebar audio input")
+
+    record_and_stop(app, "Sidebar Audio Input")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Sidebar audio received")).to_be_visible()
+
+    audio_input = get_audio_input_by_label(app, "Sidebar Audio Input")
+    expect(
+        audio_input.get_by_text("An error has occurred, please try again.")
+    ).not_to_be_attached()
+    verify_recording_exists(app, "Sidebar Audio Input")
+
+
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_form_clears_on_submit(app: Page):
     """Test audio input in form clears after submit."""

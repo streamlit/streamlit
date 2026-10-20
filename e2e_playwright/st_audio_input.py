@@ -219,3 +219,11 @@ st.write("Ignore audio value:", ignore_audio is not None)
 
 if st.button("Apply ignore audio", key="apply_ignore_audio"):
     st.write("Applied ignore audio value:", ignore_audio is not None)
+
+# Gated so the sidebar does not change the main-area layout used by snapshots.
+if st.toggle("Show sidebar audio input"):
+    with st.sidebar:
+        sidebar_audio = st.audio_input("Sidebar Audio Input", key="sidebar_audio")
+        if sidebar_audio is not None:
+            st.success("Sidebar audio received")
+            st.audio(sidebar_audio)
