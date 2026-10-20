@@ -672,6 +672,10 @@ async def _run_interaction(
             "This session is still running an interaction that timed out. "
             "Send only `session_id` to wait for it, then send this request.",
         )
+    if pending is not None:
+        # Its result goes uncollected, but its run happened, so this request
+        # starts from the query string that run left, not the one before it.
+        _keep_query_string(session, pending)
 
     page = request.get("page")
     query_params = request.get("query_params")
@@ -793,14 +797,7 @@ async def _wait_and_build(
                 session_id=session.handle,
             ) from exc
 
-    # Keep the query string the way a browser keeps its address bar: what was
-    # sent, unless the run reported a change. Streamlit scopes widget-bound
-    # parameters by page, so a page transition drops some, and replaying the
-    # request's own string would keep reporting a filter the app has discarded.
-    if session.client.query_string_update is not None:
-        session.query_string = session.client.query_string_update
-    else:
-        session.query_string = interaction.query_string
+    _keep_query_string(session, interaction)
 
     # Built and encoded off the event loop, because it reads every table's
     # Arrow data and runs the app's `format_func`s, which would stall every
@@ -833,6 +830,20 @@ async def _wait_and_build(
         if not build.cancelled() and build.exception() is None:
             interaction.built = build.result()
         raise
+
+
+def _keep_query_string(session: AgentSession, interaction: _Interaction) -> None:
+    """Record the query string a settled interaction's run left.
+
+    Kept the way a browser keeps its address bar: what was sent, unless the
+    run reported a change. Streamlit scopes widget-bound parameters by page, so
+    a page transition drops some, and replaying the request's own string would
+    keep reporting a filter the app has discarded.
+    """
+    if session.client.query_string_update is not None:
+        session.query_string = session.client.query_string_update
+    else:
+        session.query_string = interaction.query_string
 
 
 async def _wait_ignoring_cancellation(future: asyncio.Future[Any]) -> None:

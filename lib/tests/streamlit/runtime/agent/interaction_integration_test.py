@@ -333,7 +333,8 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
 ) -> None:
     """The timeout state table: collect by `session_id` or the same request,
     refuse a different one while the run goes, hand a finished result over
-    once, and discard it for a different request.
+    once, and discard it for a different request, which starts from the query
+    string the discarded run left.
     """
     async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
         run_gate.close()
@@ -379,6 +380,18 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
         await app.settled(handle)
         other = await app.call({"session_id": handle, "query_params": {"q": ["3"]}})
         assert _counts(other) == {"starts": 6, "done": 6, "runs": 6}
+
+        # A request that leaves `query_params` out keeps the discarded run's.
+        run_gate.close()
+        await app.refused(
+            {"session_id": handle, "query_params": {"q": ["4"]}},
+            run_timeout=_SHORT_TIMEOUT,
+        )
+        run_gate.opened.set()
+        await app.settled(handle)
+        kept = await app.call({"session_id": handle, "context": {"locale": "de-DE"}})
+        assert _counts(kept) == {"starts": 8, "done": 8, "runs": 8}
+        assert kept["query_params"] == {"q": ["4"]}
 
 
 @pytest.mark.anyio
