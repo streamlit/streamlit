@@ -1363,6 +1363,25 @@ def test_static_files_fall_back_to_index(tmp_path: Path) -> None:
     monkeypatch.undo()
 
 
+def test_agent_api_route_answers_instead_of_the_app_html(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """With defaults, the agent route refuses a POST and any other method,
+    rather than falling through to the app's HTML.
+    """
+    client, runtime = starlette_client
+
+    posted = client.post("/_stcore/agent/interact", json={})
+    fetched = client.get("/_stcore/agent/interact")
+
+    assert posted.status_code == HTTPStatus.FORBIDDEN
+    assert posted.json()["error"]["code"] == "not_available"
+    assert fetched.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert fetched.headers["Allow"] == "POST"
+    assert "<html>" not in fetched.text
+    assert runtime.last_user_info is None
+
+
 @patch_config_options({"global.developmentMode": False})
 def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
     """Ensure hashed static assets receive long-lived cache headers."""
