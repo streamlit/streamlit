@@ -282,7 +282,7 @@ def _known_timezones() -> frozenset[str]:
 
 
 @dataclass
-class _Built:
+class _EncodedSnapshot:
     """A settled interaction's snapshot and its encoded response body."""
 
     snapshot: Snapshot
@@ -305,7 +305,7 @@ class _Interaction:
     started: float = field(default_factory=time.monotonic)
     # The result built for a client that left while it was being built, so
     # the retry that collects the interaction does not build it again.
-    built: _Built | None = None
+    built: _EncodedSnapshot | None = None
 
 
 def _released_event() -> asyncio.Event:
@@ -319,7 +319,7 @@ class AgentSession:
     """Server-side bookkeeping for one agent session."""
 
     handle: str
-    session_id: str
+    app_session_id: str
     client: AgentSessionClient
     # Who created the session, from the deployment's trusted identity headers.
     # The handle alone is a bearer credential, so a request carrying a
@@ -382,7 +382,7 @@ class AgentSessionRegistry:
             )
 
         client = AgentSessionClient()
-        session_id = self._runtime.connect_session(
+        app_session_id = self._runtime.connect_session(
             client=client, user_info=dict(user_info)
         )
         # An opaque bearer handle, long enough to be unguessable, so a client
@@ -390,7 +390,7 @@ class AgentSessionRegistry:
         handle = f"s_{secrets.token_hex(16)}"
         session = AgentSession(
             handle=handle,
-            session_id=session_id,
+            app_session_id=app_session_id,
             client=client,
             user_info=dict(user_info),
         )
@@ -399,10 +399,10 @@ class AgentSessionRegistry:
             # Tell the element layer that this session's commands should
             # describe themselves. Sessions not registered here -- every
             # browser session -- build nothing.
-            agent_spec.register_agent_session(session_id)
+            agent_spec.register_agent_session(app_session_id)
             # The internal id never leaves the server, but a WebSocket naming
             # it must still not take the session over.
-            self._runtime.mark_session_nonresumable(session_id)
+            self._runtime.mark_session_nonresumable(app_session_id)
             # An edit applies on the next interaction, as with `runOnSave` off,
             # so a client is never handed the result of a run it did not ask
             # for.
@@ -444,7 +444,7 @@ class AgentSessionRegistry:
         AgentRequestError
             ``unknown_session`` when the runtime no longer has it.
         """
-        app_session = self._runtime.get_app_session(session.session_id)
+        app_session = self._runtime.get_app_session(session.app_session_id)
         if app_session is None:
             raise AgentRequestError(
                 "unknown_session",
@@ -457,8 +457,8 @@ class AgentSessionRegistry:
         """Close the session ``handle`` names. Closing it again does nothing."""
         session = self._sessions.pop(handle, None)
         if session is not None:
-            agent_spec.forget_agent_session(session.session_id)
-            self._runtime.close_session(session.session_id)
+            agent_spec.forget_agent_session(session.app_session_id)
+            self._runtime.close_session(session.app_session_id)
 
     def _runtime_stopped(self) -> bool:
         return self._runtime.state in _STOPPED_RUNTIME_STATES
@@ -481,24 +481,26 @@ class AgentSessionRegistry:
         ttl = float(config.get_option("server.agentSessionTTL"))
         now = time.monotonic()
         for handle, session in list(self._sessions.items()):
-            app_session = self._runtime.get_app_session(session.session_id)
+            app_session = self._runtime.get_app_session(session.app_session_id)
             idle_since = _idle_since(
                 session, settled=app_session is None or app_session.is_settled
             )
             if idle_since is not None and now - idle_since > ttl:
-                _LOGGER.debug("Reclaiming idle agent session %s", session.session_id)
+                _LOGGER.debug(
+                    "Reclaiming idle agent session %s", session.app_session_id
+                )
                 self.close(handle)
 
 
 def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
     """When a session last did anything, or None while a request is served.
 
-    Activity is the client's last request or the last run finishing, whichever
-    is later, so a run that finishes after `run_timed_out` gets a full TTL to
-    be collected. While that run is still going only requests count: a run
-    that never finishes, such as a loop that calls `st.rerun()`, is reclaimed
-    once its client stops asking for it, and closing the session stops it.
-    ``settled`` is whether the session's app has settled.
+    ``settled`` is whether the session's app has settled. Activity is the
+    client's last request or the last run finishing, whichever is later, so a
+    run that finishes after `run_timed_out` gets a full TTL to be collected.
+    While that run is still going only requests count: a run that never
+    finishes, such as a loop that calls `st.rerun()`, is reclaimed once its
+    client stops asking for it, and closing the session stops it.
     """
     if session.busy:
         return None
@@ -549,7 +551,7 @@ async def interact(
     """
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.
-    await asyncio.to_thread(_validate_request_shape, request)
+    requested_context = await asyncio.to_thread(_validate_request_shape, request)
     deadline = time.monotonic() + _run_timeout()
 
     handle = request.get("session_id")
@@ -559,14 +561,25 @@ async def interact(
     else:
         session = registry.get(handle, user_info)
 
-    if session.busy and _collects(session, request):
+    if session.busy and _is_collecting_retry(session, request):
         # What is in flight is an interaction whose client left, still building
         # its snapshot, and this request collects it. Wait for that, as a retry
         # waits for a timed-out run, rather than refusing the one request the
         # session is waiting for.
-        with contextlib.suppress(TimeoutError):
+        try:
             async with asyncio.timeout(deadline - time.monotonic()):
                 await session.released.wait()
+        except TimeoutError:
+            # The build can finish in the same loop iteration the timeout
+            # fires in.
+            if session.busy:
+                raise AgentRequestError(
+                    "run_timed_out",
+                    "The app has finished, but its snapshot was still being "
+                    f"built after {_duration(_run_timeout())}. Nothing is lost: "
+                    "send a request with only `session_id` to collect it.",
+                    session_id=session.handle,
+                ) from None
     # Checked and claimed with no await in between, so a second request on the
     # event loop always sees the claim. A lock would wait instead of refusing,
     # and could start the second interaction after its client had given up.
@@ -585,6 +598,7 @@ async def interact(
             registry.app_session(session),
             session,
             request,
+            requested_context=requested_context,
             is_new_session=is_new_session,
             headers=headers,
             deadline=deadline,
@@ -597,10 +611,11 @@ async def interact(
         if is_new_session and exc.session_id is None:
             exc.session_id = session.handle
         raise
-    except Exception:
-        # An unexpected failure answers without a `session_id`, so nobody could
-        # reach a session a creating call made, and it would hold a slot until
-        # the TTL.
+    except (Exception, asyncio.CancelledError):
+        # An unexpected failure, or a client that left, gets no `session_id`,
+        # so nobody could reach a session a creating call made, and it would
+        # hold a slot until the TTL. `_wait_and_build` lets an abandoned build
+        # finish before it re-raises, so closing never runs under one.
         if is_new_session:
             registry.close(session.handle)
         raise
@@ -632,7 +647,7 @@ def _action_of(request: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _collects(session: AgentSession, request: dict[str, Any]) -> bool:
+def _is_collecting_retry(session: AgentSession, request: dict[str, Any]) -> bool:
     """Whether a request is a retry of the session's timed-out interaction:
     only `session_id`, or the same request again.
     """
@@ -647,13 +662,14 @@ async def _run_interaction(
     session: AgentSession,
     request: dict[str, Any],
     *,
+    requested_context: ContextInfo | None,
     is_new_session: bool,
     headers: Iterable[tuple[str, str]],
     deadline: float,
     encode: Callable[[dict[str, Any]], bytes],
 ) -> bytes:
     pending = session.timed_out
-    if pending is not None and _collects(session, request):
+    if pending is not None and _is_collecting_retry(session, request):
         # A retry of an interaction that outlasted the timeout. Starting another
         # run would interrupt the one doing the work, so a run that always took
         # longer than the timeout could never finish. Collect the original
@@ -679,14 +695,15 @@ async def _run_interaction(
 
     page = request.get("page")
     query_params = request.get("query_params")
-    context = request.get("context")
 
     back_msg = BackMsg()
     rerun = back_msg.rerun_script
     rerun.page_script_hash = app_session.page_script_hash
     rerun.query_string = session.query_string
 
-    context_info = session.context_info if context is None else _parse_context(context)
+    context_info = (
+        session.context_info if requested_context is None else requested_context
+    )
     if context_info is not None:
         rerun.context_info.CopyFrom(context_info)
 
@@ -723,7 +740,7 @@ async def _run_interaction(
     # already going, must not change what that run reads.
     session.client.request_context = _RequestContext(headers)
     session.client.begin_interaction()
-    runtime.handle_backmsg(session.session_id, back_msg)
+    runtime.handle_backmsg(session.app_session_id, back_msg)
 
     return await _settle(
         app_session,
@@ -771,7 +788,7 @@ async def _wait_and_build(
     *,
     deadline: float,
     encode: Callable[[dict[str, Any]], bytes],
-) -> _Built:
+) -> _EncodedSnapshot:
     try:
         async with asyncio.timeout(deadline - time.monotonic()):
             await app_session.wait_until_settled()
@@ -861,7 +878,7 @@ def _build_in_worker(
     messages: list[ForwardMsg],
     session_state: SessionState,
     query_params: dict[str, list[str]],
-) -> _Built:
+) -> _EncodedSnapshot:
     """Build and encode a snapshot with ``ctx`` as the thread's script context.
 
     A widget's ``value`` runs the app's ``format_func``, which may read
@@ -883,7 +900,9 @@ def _build_in_worker(
             session_state=session_state,
             query_params=query_params,
         )
-        return _Built(snapshot=built_snapshot, body=encode(built_snapshot.document))
+        return _EncodedSnapshot(
+            snapshot=built_snapshot, body=encode(built_snapshot.document)
+        )
     finally:
         setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
 
@@ -943,8 +962,12 @@ def _refuse_invalid_text(request: Any) -> None:
                 ) from None
 
 
-def _validate_request_shape(request: dict[str, Any]) -> None:
-    """Refuse a malformed request before anything is allocated or run."""
+def _validate_request_shape(request: dict[str, Any]) -> ContextInfo | None:
+    """Refuse a malformed request before anything is allocated or run.
+
+    Returns the request's parsed ``context``, or None when it has none, so the
+    run does not parse it again on the event loop.
+    """
     _refuse_invalid_text(request)
     unknown = set(request) - _REQUEST_FIELDS
     if unknown:
@@ -959,11 +982,11 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
         raise AgentRequestError("invalid_request", "`page` must be a string.")
     if request.get("query_params") is not None:
         _encode_query_params(request["query_params"])
-    if request.get("context") is not None:
-        _parse_context(request["context"])
     session_id = request.get("session_id")
     if session_id is not None and not isinstance(session_id, str):
         raise AgentRequestError("invalid_request", "`session_id` must be a string.")
+    context = request.get("context")
+    return None if context is None else _parse_context(context)
 
 
 def _resolve_page(

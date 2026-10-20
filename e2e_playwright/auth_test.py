@@ -213,7 +213,7 @@ def test_logout_with_end_session_endpoint(app: Page, app_base_url: str):
 @pytest.mark.parametrize("fake_oidc_server", ["success"], indirect=True)
 @pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
 def test_login_cookie_does_not_authenticate_agent_api(app: Page, app_base_url: str):
-    """Test that the agent API never reads the browser's login cookie.
+    """The agent API ignores the browser login cookie even when it is sent.
 
     The browser context's request client shares the login cookie, as a
     cross-site request riding a visitor's session would.

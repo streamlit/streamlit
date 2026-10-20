@@ -160,6 +160,7 @@ async def _read_body(request: Request, limit: int) -> bytes | None:
 
 
 def _reject_constant(constant: str) -> None:
+    """Refuse NaN and Infinity, which Python's json module accepts but JSON does not."""
     raise json.JSONDecodeError(f"{constant} is not valid JSON", constant, 0)
 
 

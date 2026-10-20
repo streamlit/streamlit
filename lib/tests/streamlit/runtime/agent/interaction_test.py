@@ -370,8 +370,10 @@ def test_validate_refuses_text_that_is_not_unicode(
 
 
 def test_validate_accepts_a_full_request() -> None:
-    """Every field this API takes passes when well formed."""
-    interaction._validate_request_shape(
+    """Every field this API takes passes when well formed, and the parsed
+    `context` is returned for the run to use.
+    """
+    context = interaction._validate_request_shape(
         {
             "session_id": "s_1",
             "page": "report",
@@ -379,6 +381,11 @@ def test_validate_accepts_a_full_request() -> None:
             "context": {"timezone": "Europe/Berlin", "locale": "de-DE"},
         }
     )
+
+    assert context is not None
+    assert context.timezone == "Europe/Berlin"
+    assert context.locale == "de-DE"
+    assert interaction._validate_request_shape({"session_id": "s_1"}) is None
 
 
 def test_encode_query_params_keeps_blank_values() -> None:
@@ -537,7 +544,7 @@ def test_page_change_keeps_embed_and_bound_parameters_only() -> None:
 def _session(**fields: Any) -> interaction.AgentSession:
     return interaction.AgentSession(
         handle="s_test",
-        session_id="internal",
+        app_session_id="internal",
         client=interaction.AgentSessionClient(),
         user_info={},
         **fields,
@@ -550,15 +557,16 @@ def _pending(action: dict[str, Any]) -> interaction._Interaction:
     )
 
 
-def test_collects_only_a_retry_of_the_timed_out_interaction() -> None:
+def test_only_a_retry_of_the_timed_out_interaction_collects() -> None:
     """Only `session_id`, or the same action fields, collect a timed-out run."""
     action = {"page": "report", "query_params": {"q": ["1"]}}
     session = _session(timed_out=_pending(action))
+    is_retry = interaction._is_collecting_retry
 
-    assert interaction._collects(session, {"session_id": "s_test"})
-    assert interaction._collects(session, {"session_id": "s_test", **action})
-    assert not interaction._collects(session, {"session_id": "s_test", "page": "x"})
-    assert not interaction._collects(_session(), {"session_id": "s_test"})
+    assert is_retry(session, {"session_id": "s_test"})
+    assert is_retry(session, {"session_id": "s_test", **action})
+    assert not is_retry(session, {"session_id": "s_test", "page": "x"})
+    assert not is_retry(_session(), {"session_id": "s_test"})
 
 
 def test_idle_since_follows_the_timeout_state_table() -> None:

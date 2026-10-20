@@ -45,18 +45,24 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
 Represents a single browser tab or agent API session.
 
-**Lifecycle**:
+**Lifecycle (browser)**:
 1. WebSocket connects -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
 3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` sends a `rerun_script` BackMsg and waits for the settle signal below.
+
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
 
-**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain (callback reruns, `st.rerun()`, `st.switch_page`, queued fragment runs) has reached the client. Creating a runner clears it; the runner's `SHUTDOWN` arms a countdown that the next one or two `flush_browser_queue()` calls complete. That proof holds only because the Runtime loop is the sole flusher. `await wait_until_settled()` waits for it and has no bound of its own, so callers wrap it in `asyncio.timeout`.
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has reached the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs.
+
+- Creating a runner clears the signal.
+- The runner's `SHUTDOWN` arms a countdown that the next one or two `flush_browser_queue()` calls complete. That proof holds only because the Runtime loop is the sole flusher.
+- `await wait_until_settled()` has no timeout of its own, so callers wrap it in `asyncio.timeout`.
 
 ## Session bootstrap ordering
 

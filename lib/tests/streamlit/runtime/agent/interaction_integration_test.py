@@ -414,12 +414,33 @@ async def test_a_client_leaving_during_the_wait_is_collected_by_its_retry(
 
 
 @pytest.mark.anyio
+async def test_a_creating_call_whose_client_leaves_closes_its_session(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Nobody received the handle, so the session and its run end at once
+    rather than holding a slot until the TTL.
+    """
+    async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
+        run_gate.close()
+        left = asyncio.create_task(app.call())
+        assert await asyncio.to_thread(run_gate.reached.wait, 5)
+        [session] = app.registry._sessions.values()
+        left.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await left
+
+        assert app.registry._sessions == {}
+        assert app.runtime.get_app_session(session.app_session_id) is None
+
+
+@pytest.mark.anyio
 async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
-    """The session stays claimed while an abandoned build finishes; the retry
-    waits for it and returns its bytes without building again, and a different
-    request meanwhile is refused.
+    """The session stays claimed while an abandoned build finishes. A retry
+    whose own timeout passes first is told the run timed out; the next waits
+    for the build and returns its bytes without building again, and a
+    different request meanwhile is refused.
     """
     async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
         handle = (await app.call())["session_id"]
@@ -440,6 +461,11 @@ async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
             )
             assert await asyncio.to_thread(build_started.wait, 5)
             left.cancel()
+            early = await app.refused(
+                {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
+            )
+            assert early.code == "run_timed_out"
+            assert early.session_id == handle
             retry = asyncio.create_task(app.call({"session_id": handle}))
             await asyncio.sleep(0.05)
 
@@ -779,7 +805,7 @@ async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
             timed_out = await app.refused(run_timeout=_SHORT_TIMEOUT)
             handle = timed_out.session_id
             assert handle is not None
-            session_id = app.registry._sessions[handle].session_id
+            session_id = app.registry._sessions[handle].app_session_id
             for _ in range(3):
                 await asyncio.sleep(0.1)
                 retry = await app.refused(
