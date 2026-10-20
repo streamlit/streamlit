@@ -166,7 +166,7 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
-Render a fragment's output in its own body (a chat message list or metric card included) unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container. Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot. If that run has nothing to show yet, `container.empty()` reserves the slot.
+See `layouts.md` for writing a fragment's output into a container created outside it.
 
 ### Keyed reruns — target a fragment from a callback
 
