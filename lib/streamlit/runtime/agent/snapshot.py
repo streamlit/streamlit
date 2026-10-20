@@ -66,9 +66,10 @@ class ElementState(NamedTuple):
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # The closed list a later request must belong to. ``None`` when the widget
-    # accepts values outside its options, or when it has no fixed list. The
-    # description still carries those options for the client.
+    # The options a later request names, as published: `choices` when the
+    # command sets it, else `props.options`. ``None`` for a widget without a
+    # list. Kept when the widget accepts new options too, because a label
+    # several options share is refused there as well.
     options: list[Any] | None
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
@@ -89,6 +90,9 @@ class ElementState(NamedTuple):
     # Whether a browser user can empty it, so a later request's null clears it
     # rather than resetting it to a non-empty default.
     clearable: bool = False
+    # Whether text outside ``options`` is legal too, as `accept_new_options`
+    # makes it.
+    accepts_new_options: bool = False
 
 
 @dataclass
@@ -336,19 +340,15 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # Membership list for the next request. A widget that accepts new
-        # text has no such list: any value of the right schema is legal, and
-        # its options stay on the description. Otherwise a command publishes
-        # `choices` when the list is not its `options` parameter.
-        if props.get("accept_new_options") is True:
-            options = None
+        # A command publishes `choices` when the values a request sends are
+        # not its `options` parameter.
+        published = description.get("choices")
+        options: list[Any] | None
+        if isinstance(published, list):
+            options = published
         else:
-            published = description.get("choices")
-            if isinstance(published, list):
-                options = published
-            else:
-                candidate = props.get("options")
-                options = candidate if isinstance(candidate, list) else None
+            candidate = props.get("options")
+            options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
         actionable = (
             bool(action)
@@ -374,6 +374,7 @@ class _SnapshotBuilder:
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
+            accepts_new_options=props.get("accept_new_options") is True,
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
