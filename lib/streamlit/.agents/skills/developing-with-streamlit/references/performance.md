@@ -166,7 +166,6 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
-See `layouts.md` for writing a fragment's output into a container created outside it.
 
 ### Keyed reruns — target a fragment from a callback
 
