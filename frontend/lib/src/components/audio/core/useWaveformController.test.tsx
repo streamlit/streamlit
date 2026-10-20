@@ -29,6 +29,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import { encodeToWav } from "./encodeToWav"
+import { RecordingCancelledError } from "./RecordingCancelledError"
 import type { StopResult } from "./types"
 import { useWaveformController } from "./useWaveformController"
 
@@ -1046,11 +1047,11 @@ describe("useWaveformController", () => {
       })
       unmount()
 
-      const stopResult = await stopPromise
-      expect(stopResult.meta.size).toBe(0)
-      expect(mockEvents.onError).toHaveBeenCalledWith(
-        expect.objectContaining({ message: "Waveform controller destroyed" })
+      await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+      await expect(stopPromise).rejects.toThrow(
+        "Waveform controller destroyed"
       )
+      expect(mockEvents.onError).not.toHaveBeenCalled()
     })
 
     it("settles a pending stop() when unmounted before the recording ends", async () => {
@@ -1060,11 +1061,8 @@ describe("useWaveformController", () => {
       const stopPromise = result.current.stop()
       unmount()
 
-      const stopResult = await stopPromise
-      expect(stopResult.meta.size).toBe(0)
-      expect(mockEvents.onError).toHaveBeenCalledWith(
-        expect.objectContaining({ message: "Recording cancelled" })
-      )
+      await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+      expect(mockEvents.onError).not.toHaveBeenCalled()
     })
 
     it("settles a pending stop() when cancelled while waiting for playback", async () => {
@@ -1081,16 +1079,13 @@ describe("useWaveformController", () => {
         })
       })
 
-      let stopResult: StopResult | undefined
       await act(async () => {
         result.current.cancel()
-        stopResult = await stopPromise
+        await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
       })
 
-      expect(stopResult?.meta.size).toBe(0)
-      expect(mockEvents.onError).toHaveBeenCalledWith(
-        expect.objectContaining({ message: "Waveform player reset" })
-      )
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+      expect(result.current.state).toBe("idle")
     })
 
     it("skips initialization and rejects playback when container is missing", async () => {

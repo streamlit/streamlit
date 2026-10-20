@@ -32,6 +32,7 @@ import {
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
 import { loadWaveSurferModules } from "~lib/components/audio/core/loadWaveSurferModules"
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import type {
   AudioMeta,
   RecordingState,
@@ -139,7 +140,7 @@ export function useWaveformController({
     const readyResolvers = Array.from(readyResolversRef.current)
     readyResolversRef.current.clear()
     readyResolvers.forEach(resolver => {
-      resolver.reject(new Error(reason))
+      resolver.reject(new RecordingCancelledError(reason))
     })
   }, [])
 
@@ -482,6 +483,10 @@ export function useWaveformController({
       const err = error instanceof Error ? error : new Error(String(error))
       setIsPlaybackPlaying(false)
       setCurrentState("idle")
+      // A deliberate cancel is not a failure; reject so callers skip approval.
+      if (err instanceof RecordingCancelledError) {
+        throw err
+      }
       eventsRef.current.onError(err)
       // Return a dummy result to avoid breaking the flow
       return {
