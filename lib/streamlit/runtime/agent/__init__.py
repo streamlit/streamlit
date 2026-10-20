@@ -16,4 +16,7 @@
 
 ``json_encoding`` is the JSON form of values in those descriptions. Which
 sessions record a description is decided in ``elements.lib.agent_spec``.
+``snapshot`` turns a run's messages into the document an agent reads.
+``tree`` merges that run's deltas, and ``widget_values`` reports each widget
+value in the form a request can send back.
 """
