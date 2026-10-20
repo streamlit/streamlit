@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 from dataclasses import replace
 from typing import Any
@@ -37,6 +36,7 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
     _describe,
     _one_keyed,
     _walk,
+    render_value_widgets,
 )
 
 
@@ -253,40 +253,7 @@ class WidgetValueTest(SnapshotCase):
 
     def test_widget_values_match_their_value_schema(self) -> None:
         """Every reported value is null or the JSON type its schema names."""
-        st.checkbox("Check", key="check")
-        st.toggle("Toggle", key="toggle")
-        st.radio("Choose", ["a", "b"], key="radio")
-        st.selectbox("Select", ["a", "b"], key="select")
-        st.multiselect("Many", ["a", "b"], default=["a"], key="many")
-        st.select_slider("Step", options=["a", "b", "c"], key="step")
-        st.select_slider("Span", options=["a", "b", "c"], value=("a", "c"), key="span")
-        st.slider("Amount", key="amount")
-        st.slider("Range", 0, 100, (20, 80), key="range")
-        st.number_input("Whole", value=3, key="whole")
-        st.number_input("Fraction", value=1.5, key="fraction")
-        st.text_input("Text", value="hello", key="text")
-        st.text_area("Area", value="lines", key="area")
-        st.date_input("Day", dt.date(2026, 1, 2), key="day")
-        st.date_input(
-            "Days",
-            (dt.date(2026, 1, 1), dt.date(2026, 1, 31)),
-            key="days",
-        )
-        st.time_input("Time", dt.time(9, 30), key="time")
-        st.datetime_input("When", dt.datetime(2026, 1, 2, 9, 30), key="when")
-        st.color_picker("Color", key="color")
-        st.pills("Pills", ["a", "b"], default="a", key="pills")
-        st.segmented_control(
-            "Segments",
-            ["a", "b"],
-            selection_mode="multi",
-            default=["a"],
-            key="segments",
-        )
-        st.feedback("stars", key="stars")
-        st.pagination(10, key="page")
-        st.tabs(["A", "B"], on_change="rerun", key="tabs")
-        st.expander("Open?", on_change="rerun", key="open")
+        render_value_widgets()
 
         document = self._build().document
         mismatches = [
