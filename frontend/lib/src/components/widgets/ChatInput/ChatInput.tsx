@@ -893,7 +893,7 @@ function ChatInput({
         // The controller reports most failures (e.g. permission denied) via
         // its events before rejecting; keep that message and fall back to a
         // generic one only for failures it didn't report.
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- written by controller events during start()
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- onPermissionDenied/onError set this ref while start() is awaited; TypeScript only sees the reset above
         if (!recordingErrorReportedRef.current) {
           setRecordingError("Recording failed")
         }

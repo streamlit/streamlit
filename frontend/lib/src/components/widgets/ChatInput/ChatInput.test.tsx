@@ -1871,7 +1871,7 @@ describe("ChatInput widget", () => {
     expect(mockController.approve).not.toHaveBeenCalled()
   })
 
-  it("keeps the same waveform node across compact, expanded, and recording layouts", async () => {
+  it("keeps the same waveform node across compact, toolbar, and recording layouts", async () => {
     const user = userEvent.setup()
     useWaveformControllerMock.mockImplementation(
       useStatefulWaveformControllerMock
@@ -2017,7 +2017,11 @@ describe("ChatInput widget", () => {
 
   it("keeps keyboard focus on the mic button when a retry fails again", async () => {
     const user = userEvent.setup()
-    vi.spyOn(LOG, "error").mockImplementation(() => {})
+    const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+    const getHandledStartFailures = (): number =>
+      logErrorSpy.mock.calls.filter(
+        ([message]) => message === "Failed to start recording:"
+      ).length
     const start = vi.fn(async () => {
       // Fail asynchronously, like a real getUserMedia() rejection, so any
       // state update made before start() renders on its own
@@ -2034,11 +2038,18 @@ describe("ChatInput widget", () => {
     render(<ChatInput {...getProps({ acceptAudio: true })} />)
 
     await user.click(screen.getByTestId("stChatInputMicButton"))
+    // Retry only once the first failure has moved the button into its error
+    // tooltip, so the identity check below covers the retry alone.
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+    await waitFor(() => expect(getHandledStartFailures()).toBe(1))
+
     const micButton = screen.getByTestId("stChatInputMicButton")
     act(() => micButton.focus())
     await user.keyboard("{Enter}")
 
-    await waitFor(() => expect(start).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(getHandledStartFailures()).toBe(2))
+    expect(start).toHaveBeenCalledTimes(2)
     expect(screen.getByTestId("stChatInputMicButton")).toBe(micButton)
     expect(micButton).toHaveFocus()
     expect(
