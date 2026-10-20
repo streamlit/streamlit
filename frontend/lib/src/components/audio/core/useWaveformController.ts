@@ -90,9 +90,36 @@ export function useWaveformController({
   const effectiveSampleRate =
     sampleRate === undefined ? DEFAULT_SAMPLE_RATE : sampleRate
 
+  const waveformHeight: number | "auto" =
+    waveformPadding > 0
+      ? convertRemToPx(theme.sizes.largestElementHeight) - 2 * waveformPadding
+      : "auto"
+
+  // WaveSurfer creation reads theme-derived options from this ref instead of
+  // depending on the theme, so a theme change restyles the existing instance
+  // (see the setOptions effects below) rather than destroying it together with
+  // any loaded recording.
+  const createOptionsRef = useRef({
+    waveColor: theme.colors.primary,
+    progressColor: theme.colors.bodyText,
+    height: waveformHeight,
+  })
+  useEffect(() => {
+    createOptionsRef.current = {
+      waveColor: theme.colors.primary,
+      progressColor: theme.colors.bodyText,
+      height: waveformHeight,
+    }
+  }, [theme.colors.primary, theme.colors.bodyText, waveformHeight])
+
   const destroy = useCallback((): void => {
-    const readyResolvers = readyResolversRef.current
-    readyResolvers.clear()
+    // Reject pending ready waits so a stop() in flight settles instead of
+    // hanging on a player that no longer exists.
+    const readyResolvers = Array.from(readyResolversRef.current)
+    readyResolversRef.current.clear()
+    readyResolvers.forEach(resolver => {
+      resolver.reject(new Error("Waveform controller destroyed"))
+    })
     setIsPlaybackPlaying(false)
 
     if (recordBackendRef.current) {
@@ -191,10 +218,10 @@ export function useWaveformController({
 
     const generation = initGenerationRef.current
     const initPromise = (async (): Promise<void> => {
-      // destroy() drops this promise and starts a replacement when theme or
-      // sampleRate changes. start() and playback.load may still be awaiting
-      // this attempt, so follow the replacement instead of resolving with no
-      // backend (that throw is swallowed by AudioInput).
+      // destroy() drops this promise and starts a replacement when sampleRate
+      // changes. start() and playback.load may still be awaiting this attempt,
+      // so follow the replacement instead of resolving with no backend (that
+      // throw is swallowed by AudioInput).
       const waitForReplacementInit = async (): Promise<void> => {
         const replacement = initPromiseRef.current
         if (replacement && replacement !== initPromise) {
@@ -211,13 +238,7 @@ export function useWaveformController({
 
         const ws = WaveSurfer.create({
           container,
-          waveColor: theme.colors.primary,
-          progressColor: theme.colors.bodyText,
-          height:
-            waveformPadding > 0
-              ? convertRemToPx(theme.sizes.largestElementHeight) -
-                2 * waveformPadding
-              : "auto",
+          ...createOptionsRef.current,
           barWidth: BAR_WIDTH,
           barGap: BAR_GAP,
           barRadius: BAR_RADIUS,
@@ -267,13 +288,7 @@ export function useWaveformController({
 
     initPromiseRef.current = initPromise
     return initPromise
-  }, [
-    containerRef,
-    theme,
-    effectiveSampleRate,
-    configurePlayerEvents,
-    waveformPadding,
-  ])
+  }, [containerRef, effectiveSampleRate, configurePlayerEvents])
 
   useEffect(() => {
     void initializeWaveSurfer()
@@ -282,6 +297,10 @@ export function useWaveformController({
       destroy()
     }
   }, [destroy, initializeWaveSurfer])
+
+  useEffect(() => {
+    wavesurferRef.current?.setOptions({ height: waveformHeight })
+  }, [waveformHeight])
 
   useEffect(() => {
     const ws = wavesurferRef.current

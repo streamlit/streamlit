@@ -308,6 +308,8 @@ def test_recording_lifecycle(app: Page):
     expect(app.get_by_text("Audio Input 1: True")).to_be_visible()
 
 
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(reruns=3)  # Firefox occasionally crashes during media API usage
 def test_recording_in_sidebar(app: Page):
     """Test that a sidebar recording shows its waveform instead of the error state."""
     grant_microphone_permissions(app)

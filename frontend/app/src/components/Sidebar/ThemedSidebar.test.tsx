@@ -95,7 +95,7 @@ describe("ThemedSidebar Component", () => {
       expect(new Set(seenThemes).size).toBe(1)
     })
 
-    it("provides a new theme object when the active theme changes", () => {
+    it("provides the new sidebar theme when the active theme changes", () => {
       const { rerenderWithContexts } = renderWithContexts(
         <ThemedSidebar {...getProps()}>
           <ThemeProbe />
@@ -103,14 +103,20 @@ describe("ThemedSidebar Component", () => {
       )
       const initialTheme = seenThemes.at(-1)
 
+      const newActiveTheme = createTheme("Custom", {
+        secondaryBackgroundColor: "#112233",
+      })
       rerenderWithContexts(
         <ThemedSidebar {...getProps()}>
           <ThemeProbe />
         </ThemedSidebar>,
-        { themeContext: { activeTheme: createTheme("Custom", {}) } }
+        { themeContext: { activeTheme: newActiveTheme } }
       )
 
-      expect(seenThemes.at(-1)).not.toBe(initialTheme)
+      const expectedBgColor =
+        createSidebarTheme(newActiveTheme).emotion.colors.bgColor
+      expect(expectedBgColor).not.toBe(initialTheme?.colors.bgColor)
+      expect(seenThemes.at(-1)?.colors.bgColor).toBe(expectedBgColor)
     })
   })
 

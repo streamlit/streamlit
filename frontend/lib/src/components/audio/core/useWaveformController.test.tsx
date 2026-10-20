@@ -917,6 +917,74 @@ describe("useWaveformController", () => {
       expect(options.height).toBe(expectedHeight)
     })
 
+    it("restyles the existing WaveSurfer instead of re-creating it on theme changes", async () => {
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = vi.mocked(WaveSurferModule.default.create)
+      createMock.mockClear()
+
+      let theme = mockTheme.emotion
+      const themedWrapper = ({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactNode => <ThemeProvider theme={theme}>{children}</ThemeProvider>
+
+      const { result, rerender } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper: themedWrapper }
+      )
+      await waitFor(() => {
+        expect(createMock).toHaveBeenCalledTimes(1)
+      })
+      await act(async () => {
+        await result.current.playback.load(new Blob(["audio"]))
+      })
+
+      // A new theme object with the same values, then one with a new color.
+      theme = { ...mockTheme.emotion }
+      rerender()
+      theme = {
+        ...mockTheme.emotion,
+        colors: { ...mockTheme.emotion.colors, bodyText: "#123456" },
+      }
+      rerender()
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+      expect(mockWaveSurfer.destroy).not.toHaveBeenCalled()
+      expect(mockWaveSurfer.setOptions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ progressColor: "#123456" })
+      )
+    })
+
+    it("settles a pending stop() when the controller is destroyed", async () => {
+      const { result, unmount } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+
+      // Deliver the recording so stop() waits for the player to be ready,
+      // then unmount before "ready" fires.
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+      unmount()
+
+      const stopResult = await stopPromise
+      expect(stopResult.meta.size).toBe(0)
+      expect(mockEvents.onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Waveform controller destroyed" })
+      )
+    })
+
     it("skips initialization and rejects playback when container is missing", async () => {
       const emptyContainerRef = { current: null }
       const { result } = renderHook(
