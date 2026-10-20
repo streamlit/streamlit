@@ -234,7 +234,6 @@ class HashTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            "US/Pacific",
             "America/Los_Angeles",
             "Europe/Berlin",
             "UTC",

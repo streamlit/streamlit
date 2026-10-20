@@ -85,8 +85,8 @@ SHARED_DATA_KIND_TEST_CASES = [
     (
         pd.Series(
             [
-                pd.Timestamp("2000-01-01", tz="US/Central"),
-                pd.Timestamp("2000-01-02", tz="US/Central"),
+                pd.Timestamp("2000-01-01", tz="America/Chicago"),
+                pd.Timestamp("2000-01-02", tz="America/Chicago"),
             ]
         ),
         ColumnDataKind.DATETIME,
