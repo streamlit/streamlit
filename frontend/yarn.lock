@@ -7934,6 +7934,7 @@ __metadata:
     typescript: "npm:^6.0.3"
     typescript-v7: "npm:typescript@7.0.2"
     typesync: "npm:^0.14.3"
+    vite: "npm:^8.3.4"
     vitest: "npm:^5.0.4"
   peerDependencies:
     "@typescript-eslint/utils": ^8.71.2
@@ -14098,6 +14099,7 @@ __metadata:
     react-dom: "npm:^18.2.0"
     typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.71.2"
+    vite: "npm:^8.3.4"
     vitest: "npm:^5.0.4"
     vitest-canvas-mock: "npm:^1.2.0"
   languageName: unknown
