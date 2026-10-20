@@ -75,7 +75,7 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 
@@ -89,6 +89,7 @@ def _create_test_session(
     event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
     is_hello: bool = False,
+    message_enqueued_callback: Callable[[], None] | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -108,7 +109,7 @@ def _create_test_session(
             script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
-            message_enqueued_callback=None,
+            message_enqueued_callback=message_enqueued_callback,
             user_info={"email": "test@example.com"},
             session_id_override=session_id_override,
         )
@@ -3490,3 +3491,238 @@ def test_close_script_event_loop_cancels_pending_tasks() -> None:
     assert script_loop.is_closed()
     assert task.done()
     assert task.cancelled() or isinstance(task.exception(), asyncio.CancelledError)
+
+
+# ---- Tests for the settle signal ----
+
+
+@pytest.fixture
+def distinct_scriptrunners() -> Iterator[MagicMock]:
+    """Patch ScriptRunner so each runner a session creates is a distinct mock."""
+    with patch(
+        "streamlit.runtime.app_session.ScriptRunner",
+        side_effect=lambda **_: MagicMock(),
+    ) as scriptrunner_class:
+        yield scriptrunner_class
+
+
+@pytest.fixture
+def mock_runtime_instance() -> Iterator[MagicMock]:
+    """Install a mocked Runtime singleton, which session teardown reads."""
+    mock_runtime = MagicMock(spec=Runtime)
+    mock_runtime.media_file_mgr = MediaFileManager(
+        MemoryMediaFileStorage("/mock/media")
+    )
+    Runtime._instance = mock_runtime
+    yield mock_runtime
+    Runtime._instance = None
+
+
+def _start_runner(session: AppSession) -> ScriptRunner:
+    """Start a run on ``session`` and return the runner it created."""
+    session.request_rerun(None)
+    assert session._scriptrunner is not None
+    return session._scriptrunner
+
+
+def _handle_shutdown(session: AppSession, runner: ScriptRunner) -> None:
+    """Handle ``runner``'s SHUTDOWN event as the session's event loop would."""
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.SHUTDOWN
+    )
+
+
+def _handle_enqueue(session: AppSession, runner: ScriptRunner) -> ForwardMsg:
+    """Handle a message ``runner`` enqueues and return that message."""
+    msg = ForwardMsg()
+    msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+    )
+    return msg
+
+
+def test_new_session_is_settled() -> None:
+    """A session that never ran is settled."""
+    assert _create_test_session().is_settled
+
+
+@pytest.mark.usefixtures("distinct_scriptrunners")
+def test_creating_a_runner_unsettles_the_session() -> None:
+    """Starting a run unsettles the session."""
+    session = _create_test_session()
+
+    _start_runner(session)
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_with_empty_queue_settles_after_one_flush() -> None:
+    """With nothing queued, the next flush proves the last batch was sent."""
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+
+    assert not session.is_settled
+    on_enqueued.assert_called_once()
+    session.flush_browser_queue()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_with_queued_messages_settles_after_two_flushes() -> None:
+    """Trailing messages are handed out by one flush and proven sent by the next."""
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+    trailing_msg = _handle_enqueue(session, runner)
+    _handle_shutdown(session, runner)
+    on_enqueued.reset_mock()
+
+    assert session.flush_browser_queue() == [trailing_msg]
+    assert not session.is_settled
+    on_enqueued.assert_called_once()
+
+    session.flush_browser_queue()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_settles_without_message_enqueued_callback() -> None:
+    """A session without a flush callback still settles on its flushes."""
+    session = _create_test_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+    _handle_enqueue(session, runner)
+
+    _handle_shutdown(session, runner)
+    session.flush_browser_queue()
+    session.flush_browser_queue()
+
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_from_replaced_runner_is_ignored() -> None:
+    """Only the current runner's SHUTDOWN settles the session."""
+    session = _create_test_session(asyncio.get_running_loop())
+    with patch_config_options({"runner.fastReruns": True}):
+        replaced_runner = _start_runner(session)
+        _start_runner(session)
+
+    _handle_shutdown(session, replaced_runner)
+    session.flush_browser_queue()
+    session.flush_browser_queue()
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_runner_created_mid_countdown_discards_it() -> None:
+    """A new run cancels a pending settle, and its own SHUTDOWN arms a new one."""
+    session = _create_test_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    _handle_shutdown(session, first_runner)
+
+    second_runner = _start_runner(session)
+    session.flush_browser_queue()
+    assert not session.is_settled
+
+    _handle_shutdown(session, second_runner)
+    session.flush_browser_queue()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+async def test_wait_until_settled_returns_at_once_when_settled() -> None:
+    """Waiting on a settled session returns without a run."""
+    session = _create_test_session(asyncio.get_running_loop())
+
+    await asyncio.wait_for(session.wait_until_settled(), timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
+    """A settle that a new run undoes before the waiter resumes does not wake it."""
+    session = _create_test_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    _handle_shutdown(session, first_runner)
+    session.flush_browser_queue()
+    second_runner = _start_runner(session)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert not waiter.done()
+
+    _handle_shutdown(session, second_runner)
+    session.flush_browser_queue()
+    await asyncio.wait_for(waiter, timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners", "mock_runtime_instance")
+async def test_session_shutdown_releases_waiter_and_arms_nothing() -> None:
+    """Shutting down wakes waiters, and the runner's late SHUTDOWN arms no settle."""
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    session.shutdown()
+    await asyncio.wait_for(waiter, timeout=1)
+
+    _handle_shutdown(session, runner)
+    on_enqueued.assert_not_called()
+    assert session.is_settled
+
+
+def test_dropped_fragment_rerun_leaves_session_settled(
+    distinct_scriptrunners: MagicMock,
+) -> None:
+    """A rerun of a fragment the storage no longer holds starts nothing."""
+    session = _create_test_session()
+
+    session.request_rerun(ClientState(fragment_id="removed_fragment"))
+
+    distinct_scriptrunners.assert_not_called()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_backmsg_exception_without_runner_settles_after_its_messages() -> None:
+    """The exception messages reach the client before the session settles."""
+    session = _create_test_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+    # Armed so that the next flush would settle the session.
+    _handle_shutdown(session, runner)
+
+    session.handle_backmsg_exception(RuntimeError("boom"))
+    session.flush_browser_queue()
+    assert not session.is_settled
+
+    # Run the deferred callbacks that enqueue the error messages.
+    await asyncio.sleep(0)
+    flushed = session.flush_browser_queue()
+    assert flushed[-1].delta.new_element.WhichOneof("type") == "exception"
+    assert not session.is_settled
+
+    session.flush_browser_queue()
+    assert session.is_settled

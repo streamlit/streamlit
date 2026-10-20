@@ -48,6 +48,7 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.session_manager import ActiveSessionInfo
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
@@ -658,6 +659,39 @@ class RuntimeTest(RuntimeTestCase):
         received = client.forward_msgs.pop()
         populate_hash_if_needed(msg)
         assert msg.hash == received.hash
+
+    async def test_wait_until_settled_returns_after_client_received_trailing_messages(
+        self,
+    ) -> None:
+        """The settle signal fires only once the Runtime loop has sent every
+        message enqueued before the runner's SHUTDOWN.
+        """
+        await self.runtime.start()
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+
+        runner = MagicMock()
+        with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):
+            session.request_rerun(None)
+
+        async def received_when_settled() -> list[ForwardMsg]:
+            await session.wait_until_settled()
+            return list(client.forward_msgs)
+
+        waiter = asyncio.create_task(received_when_settled())
+        # More than one message, so a settle on the flush that hands them out
+        # would wake the waiter while the loop is still sending them.
+        trailing_msgs = [create_dataframe_msg([1, 2, 3], id=i) for i in range(3)]
+        for msg in trailing_msgs:
+            session._on_scriptrunner_event(
+                runner, ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+            )
+        session._on_scriptrunner_event(runner, ScriptRunnerEvent.SHUTDOWN)
+
+        assert await asyncio.wait_for(waiter, timeout=5) == trailing_msgs
 
     async def test_get_async_objs(self):
         """Runtime._get_async_objs() will raise an error if called before the
