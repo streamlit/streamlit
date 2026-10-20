@@ -73,8 +73,8 @@ _HOST_MESSAGE: Final = (
 )
 _ORIGIN_MESSAGE: Final = (
     "This request came from a web page (it has an `Origin` header) whose origin "
-    "is not in `server.corsAllowedOrigins`. Call the API from a program rather "
-    "than from a page, or have the operator allow the origin."
+    "is not in `server.corsAllowedOrigins`. Call the API from a program, which "
+    "sends no `Origin` header."
 )
 
 
