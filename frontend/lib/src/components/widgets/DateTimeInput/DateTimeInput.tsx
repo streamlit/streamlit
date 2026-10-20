@@ -81,7 +81,8 @@ function DateTimeInput({
   /** Last value accepted by a commit, a programmatic update, or a form clear. */
   const lastWrittenIsoRef = useRef<string | null | undefined>(undefined)
   /** The last complete (or empty) value the field reported: edits, commits,
-   * and blocked attempts. Partial drafts are not tracked. */
+   * and blocked attempts. Partial drafts are not tracked, because the field
+   * does not report them (see `onEdit`). */
   const pendingIsoRef = useRef<string | null>(null)
 
   const resetError = useCallback(() => {

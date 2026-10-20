@@ -1022,6 +1022,48 @@ describe("DateTimeInput widget", () => {
       expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
     })
 
+    it("calls submitForm on Enter once an out-of-range value is back in range", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-19T00:00",
+        max: "2025-11-19T18:00",
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const hourSegment = screen
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "hour") as HTMLElement
+      await user.click(hourSegment)
+      // 19:45 is past the 18:00 max.
+      await user.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}")
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      })
+
+      // 17:45 is in range again, so the range error clears and Enter both
+      // commits and submits.
+      await user.keyboard("{ArrowDown}{ArrowDown}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputError")
+        ).not.toBeInTheDocument()
+      })
+      await user.keyboard("{Enter}")
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        { formId: "form", fragmentId: undefined, fromUser: true }
+      )
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+    })
+
     it("synchronous form write fires on outside-click from active calendar (race guard)", async () => {
       const user = userEvent.setup()
       const props = getProps({

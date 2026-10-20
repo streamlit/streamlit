@@ -122,7 +122,9 @@ interface SingleDateTimeInputProps {
    * empty attempt. */
   required: boolean
   /** Reports each complete (or fully cleared) value the field shows before it
-   * is committed. Partial entry is not reported. */
+   * is committed. Partial entry is not reported, including clearing one
+   * segment of a complete value: React Aria keeps that as display state and
+   * calls `onChange(null)` only once every segment is empty. */
   onEdit: (iso: string | null) => void
   label: string
   error: string | null
@@ -338,10 +340,14 @@ function SingleDateTimeInput({
 
   /** Validate and commit the pending value, or revert to the last committed value.
    * When the field itself has no value, first try to complete one from the visible
-   * date and time halves. Returns true if the field holds a valid (committed or
-   * unchanged) value, false if it was reverted. Commits through `onChange`, which
-   * also writes form widgets synchronously to prevent the form-submit race. The
-   * parent can still reject the value (e.g. a required field committed empty).
+   * date and time halves. Commits through `onChange`, which also writes form
+   * widgets synchronously to prevent the form-submit race.
+   *
+   * Returns false when the field reverts (partial entry, out of range, or a full
+   * clear of a non-empty default). Returns true when the value is unchanged or was
+   * handed to `onChange`, including when the parent rejects it (a required field
+   * committed empty). Enter-to-submit treats true as "run the form validators",
+   * which enforce `required`.
    *
    * @param popoverStaysOpen - When true, keeps a popover time that is still on
    * screen (Enter commits without dismissing). */
