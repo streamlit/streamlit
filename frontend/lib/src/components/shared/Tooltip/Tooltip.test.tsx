@@ -22,7 +22,7 @@ import {
   screen,
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { useFocusVisible } from "react-aria"
+import { setInteractionModality, useFocusVisible } from "react-aria"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { render } from "~lib/test_util"
@@ -330,5 +330,190 @@ describe("Tooltip element", () => {
     expect(outerKeyDown).toHaveBeenCalledWith(
       expect.objectContaining({ key: "Escape" })
     )
+  })
+
+  describe("focus", () => {
+    /** Renders a tooltip around a "trigger" button and returns that button. */
+    const renderWithTriggerButton = (): HTMLElement => {
+      render(
+        <>
+          <Tooltip {...getProps()}>
+            <button type="button">trigger</button>
+          </Tooltip>
+          <button type="button">other</button>
+        </>
+      )
+      return screen.getByRole("button", { name: "trigger" })
+    }
+
+    it("opens on keyboard focus and stays open when the pointer leaves", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const trigger = renderWithTriggerButton()
+
+      await user.tab()
+      expect(trigger).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+      await user.unhover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+    })
+
+    it("opens on hover and closes on pointer leave while a mouse click keeps focus on the trigger", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const trigger = renderWithTriggerButton()
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+
+      await user.click(trigger)
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+      expect(trigger).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      await user.unhover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+      await user.hover(tooltipTarget)
+      // Advance asynchronously so the reopened tooltip's Floating UI position
+      // update, which resolves on a microtask, runs inside act().
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(trigger).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      await user.unhover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ["mouse", "[MouseLeft]"],
+      ["touch", "[TouchA]"],
+    ])(
+      "does not open when code moves focus to the trigger after a %s press elsewhere",
+      async (_pointerType, keys) => {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        const trigger = renderWithTriggerButton()
+        const other = screen.getByRole("button", { name: "other" })
+
+        // Mirrors a dialog restoring focus to its trigger after a press on the
+        // dialog's close button.
+        await user.pointer({ keys, target: other })
+        act(() => {
+          trigger.focus()
+        })
+        act(() => {
+          vi.advanceTimersByTime(500)
+        })
+
+        expect(trigger).toHaveFocus()
+        expect(
+          screen.queryByTestId("stTooltipContent")
+        ).not.toBeInTheDocument()
+      }
+    )
+
+    it("opens when code moves focus to the trigger after a keyboard interaction", () => {
+      const trigger = renderWithTriggerButton()
+
+      // Mirrors a dialog restoring focus to its trigger after Escape.
+      act(() => {
+        setInteractionModality("keyboard")
+        trigger.focus()
+      })
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+    })
+
+    it("opens on a touch tap and stays open after the touch ends", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const trigger = renderWithTriggerButton()
+
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      // The pointer of the first tap leaves before it focuses the trigger, so
+      // a second tap checks that pointer leave keeps a tapped tooltip open.
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+    })
+
+    it("does not open when code moves focus to the trigger after a tap that did not focus it", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <Tooltip {...getProps()}>
+          {/* Like WebKit, which doesn't focus a tapped button. */}
+          <button type="button" onMouseDown={e => e.preventDefault()}>
+            trigger
+          </button>
+        </Tooltip>
+      )
+      const trigger = screen.getByRole("button", { name: "trigger" })
+
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      expect(trigger).not.toHaveFocus()
+
+      // Mirrors a popover or dialog returning focus to the trigger it was
+      // opened from.
+      act(() => {
+        trigger.focus()
+      })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("does not reopen when code restores focus after tapping an already focused trigger", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const trigger = renderWithTriggerButton()
+      const other = screen.getByRole("button", { name: "other" })
+
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      // The second tap records a touch without a focus event, as when
+      // reopening a dialog from a trigger that the previous dialog refocused.
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      act(() => {
+        other.focus()
+      })
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+      act(() => {
+        trigger.focus()
+      })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
   })
 })

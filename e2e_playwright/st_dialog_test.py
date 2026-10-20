@@ -29,15 +29,20 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_button,
     get_color_picker,
+    get_element_by_key,
     get_markdown,
     get_selectbox,
     is_child_bounding_box_inside_parent,
     open_json_path_tooltip,
+    reset_focus,
+    reset_hovering,
     select_selectbox_option,
+    tab_until_focused,
 )
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 modal_test_id = "stDialog"
@@ -262,6 +267,51 @@ def test_dialog_reopens_properly_after_close(app: Page):
         wait_for_app_run(app, wait_delay=250)
         main_dialog = app.get_by_test_id(modal_test_id)
         expect(main_dialog).to_have_count(0)
+
+
+def test_help_tooltip_does_not_reopen_after_dialog_closes(app: Page, browser_name: str):
+    """Test that a trigger's help tooltip stays hidden after a mouse close (#17562).
+
+    Closing a dialog returns focus to the button that opened it. That focus must not
+    show the button's help tooltip, while keyboard focus still does.
+    """
+    # Buttons with help render a hidden copy for narrow screens; get_by_role only
+    # matches the visible one.
+    trigger = get_element_by_key(app, "help-button-dialog-btn").get_by_role(
+        "button", name="Open dialog from help button"
+    )
+    dialog = app.get_by_test_id(modal_test_id)
+    tooltip = app.get_by_test_id("stTooltipContent")
+
+    # Close with the dialog's close button.
+    trigger.click()
+    expect(dialog).to_be_visible()
+    dialog.get_by_label("Close").click()
+    expect(dialog).not_to_be_attached()
+    # WebKit may not focus buttons on click, so there may be no focus to restore.
+    if browser_name != "webkit":
+        expect(trigger).to_be_focused()
+    reset_hovering(app)
+    wait_for_react_stability(app)
+    expect(tooltip).not_to_be_attached()
+
+    # Close with an inner button that calls st.rerun(), opening the dialog again
+    # from the trigger. Whether focus returns to the trigger after this unmount
+    # depends on the browser and timing, so it isn't asserted here.
+    trigger.click()
+    expect(dialog).to_be_visible()
+    get_button(dialog, "Done").click()
+    expect(dialog).not_to_be_attached()
+    wait_for_app_run(app)
+    reset_hovering(app)
+    wait_for_react_stability(app)
+    expect(tooltip).not_to_be_attached()
+
+    # Keyboard focus on the same trigger still shows its tooltip.
+    reset_focus(app)
+    tab_until_focused(app, trigger, max_tabs=100)
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_have_text("Help for the dialog trigger")
 
 
 def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
