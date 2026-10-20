@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
+import { type ReactElement, StrictMode } from "react"
 
 import { act, type RenderResult, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -62,6 +62,20 @@ const renderComponent = (props: ToastProps): RenderResult =>
       <Toast {...props} />
     </>
   )
+
+/**
+ * Builds a toast region plus a Toast keyed by `runId`, mirroring how
+ * `ElementNodeRenderer` keys it by scriptRunId:
+ * - Rerendering with the same `runId` models a `msg.toast()` update within a
+ *   run (same instance).
+ * - A new `runId` models a rerun (remount).
+ */
+const toastTree = (props: ToastProps, runId = "run-1"): ReactElement => (
+  <>
+    {createContainer()}
+    <Toast key={runId} {...props} />
+  </>
+)
 
 const LONG_MESSAGE =
   "Random toast message that is a really really really really really really really really really long message, going way past the 3 line limit"
@@ -293,5 +307,200 @@ describe("Toast Component", () => {
     )
 
     expect(screen.getAllByRole("alertdialog")).toHaveLength(2)
+  })
+
+  describe("updates and reruns at the same toastId", () => {
+    it("updates the visible toast in place with a new body and icon", () => {
+      const { rerender } = render(
+        toastTree(getProps({ body: "Gathering ingredients..." }))
+      )
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(
+        "Gathering ingredients..."
+      )
+
+      rerender(toastTree(getProps({ body: "Cooking..." })))
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      expect(screen.getByRole("alertdialog")).toHaveTextContent("Cooking...")
+      expect(
+        screen.queryByText("Gathering ingredients...")
+      ).not.toBeInTheDocument()
+
+      rerender(toastTree(getProps({ body: "Ready!", icon: "🥞" })))
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      const toast = screen.getByRole("alertdialog")
+      expect(toast).toHaveTextContent("🥞Ready!")
+      expect(toast).not.toHaveTextContent("🐶")
+      expect(screen.queryByText("Cooking...")).not.toBeInTheDocument()
+    })
+
+    it("updates the visible toast when only the icon changes", () => {
+      const { rerender } = render(toastTree(getProps({ body: "Ready!" })))
+      expect(screen.getByRole("alertdialog")).toHaveTextContent("🐶Ready!")
+
+      rerender(toastTree(getProps({ body: "Ready!", icon: "🥞" })))
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      const toast = screen.getByRole("alertdialog")
+      expect(toast).toHaveTextContent("🥞Ready!")
+      expect(toast).not.toHaveTextContent("🐶")
+    })
+
+    it.each([
+      ["a same-run update", "run-1"],
+      ["a rerun", "run-2"],
+    ])(
+      "keeps the running timer when %s has identical content",
+      (_description, runId) => {
+        const { rerender } = render(toastTree(getProps({ duration: 1 })))
+        act(() => {
+          vi.advanceTimersByTime(600)
+        })
+
+        // getProps creates a new proto object with identical values.
+        rerender(toastTree(getProps({ duration: 1 }), runId))
+        expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+
+        // Still expires 1s after the first render: the timer was not restarted.
+        act(() => {
+          vi.advanceTimersByTime(500)
+        })
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      }
+    )
+
+    it("restarts the timer when the content changes", () => {
+      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(600)
+      })
+
+      rerender(toastTree(getProps({ body: "Updated", duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(600)
+      })
+      expect(screen.getByRole("alertdialog")).toHaveTextContent("Updated")
+
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    })
+
+    it("applies a changed duration", () => {
+      const { rerender } = render(toastTree(getProps({ duration: 0 })))
+
+      rerender(toastTree(getProps({ duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(900)
+      })
+      expect(screen.getByRole("alertdialog")).toBeVisible()
+
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    })
+
+    it("does not revive a dismissed toast on a later update", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const { rerender } = render(toastTree(getProps()))
+
+      await user.click(screen.getByRole("button", { name: "Close" }))
+      act(() => {
+        vi.runOnlyPendingTimers()
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+
+      rerender(toastTree(getProps({ body: "Updated" })))
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      expect(screen.queryByText("Updated")).not.toBeInTheDocument()
+    })
+
+    it("does not revive an expired toast on a same-run update", () => {
+      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(1100)
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+
+      rerender(toastTree(getProps({ body: "Updated", duration: 1 })))
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      expect(screen.queryByText("Updated")).not.toBeInTheDocument()
+    })
+
+    it("shows an expired toast again when a rerun re-emits it", () => {
+      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(1100)
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+
+      rerender(toastTree(getProps({ duration: 1 }), "run-2"))
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(
+        "This is a toast message"
+      )
+    })
+
+    it("does not revive a toast kept by a rerun on a later update after it expires", () => {
+      const { rerender } = render(toastTree(getProps({ duration: 1 })))
+      act(() => {
+        vi.advanceTimersByTime(600)
+      })
+
+      // The rerun re-emits identical content, so it keeps the visible toast.
+      rerender(toastTree(getProps({ duration: 1 }), "run-2"))
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+
+      // A msg.toast() update within that rerun must not bring it back.
+      rerender(toastTree(getProps({ body: "Updated", duration: 1 }), "run-2"))
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      expect(screen.queryByText("Updated")).not.toBeInTheDocument()
+    })
+
+    it("replaces a visible toast when a rerun emits different content", () => {
+      const { rerender } = render(toastTree(getProps({ body: "Ready!" })))
+
+      rerender(
+        toastTree(getProps({ body: "Gathering ingredients..." }), "run-2")
+      )
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(
+        "Gathering ingredients..."
+      )
+      expect(screen.queryByText("Ready!")).not.toBeInTheDocument()
+    })
+
+    it("only updates the toast with the matching toastId", () => {
+      const twoToasts = (firstBody: string): ReactElement => (
+        <>
+          {createContainer()}
+          <Toast {...getProps({ body: firstBody }, "event-0")} />
+          <Toast {...getProps({ body: "Second toast" }, "event-1")} />
+        </>
+      )
+      const { rerender } = render(twoToasts("First toast"))
+
+      rerender(twoToasts("First toast updated"))
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(2)
+      expect(screen.getByText("First toast updated")).toBeVisible()
+      expect(screen.getByText("Second toast")).toBeVisible()
+      expect(screen.queryByText("First toast")).not.toBeInTheDocument()
+    })
+
+    it("shows a single toast and applies updates under StrictMode", () => {
+      const { rerender } = render(
+        <StrictMode>{toastTree(getProps())}</StrictMode>
+      )
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+
+      rerender(
+        <StrictMode>{toastTree(getProps({ body: "Updated" }))}</StrictMode>
+      )
+      expect(screen.getAllByRole("alertdialog")).toHaveLength(1)
+      expect(screen.getByRole("alertdialog")).toHaveTextContent("Updated")
+    })
   })
 })
