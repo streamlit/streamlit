@@ -735,6 +735,7 @@ class TimeWidgetsMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -756,6 +757,7 @@ class TimeWidgetsMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -777,6 +779,7 @@ class TimeWidgetsMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -890,6 +893,26 @@ class TimeWidgetsMixin:
         disabled : bool
             An optional boolean that disables the time input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            time input still starts at the current time unless you pass
+            ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1027,6 +1050,7 @@ class TimeWidgetsMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             step=step,
             format=format,
@@ -1047,6 +1071,7 @@ class TimeWidgetsMixin:
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         format: Literal["12h", "24h", "localized"] = "24h",
@@ -1089,8 +1114,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            # Ensure stable ID when key is provided; only whitelist step since it
-            # affects the selection granularity and available options.
+            # `required` is hashed only for unkeyed widgets: toggling it cannot
+            # make a stored time illegal. `step` stays in the keyed identity
+            # because it changes which fields the widget edits.
             key_as_main_identity={"step"},
             dg=self.dg,
             label=label,
@@ -1098,6 +1124,7 @@ class TimeWidgetsMixin:
             help=help,
             step=step,
             width=width,
+            required=required,
         )
         del value
 
@@ -1132,6 +1159,7 @@ class TimeWidgetsMixin:
         time_input_proto.form_id = current_form_id(self.dg)
         time_input_proto.step = step
         time_input_proto.disabled = disabled
+        time_input_proto.required = required
         time_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1190,6 +1218,7 @@ class TimeWidgetsMixin:
                 format=time_input_proto.format,
                 help=time_input_proto.help or None,
                 disabled=disabled,
+                required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),
