@@ -29,7 +29,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config, config_util, env_util
-from streamlit.byte_util import config_max_cached_data_size_to_bytes
+from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
@@ -68,41 +68,41 @@ class ConfigTest(unittest.TestCase):
 
         config._delete_option("_test.tomlTest")
 
-    def test_max_cached_data_size_default(self) -> None:
+    def test_max_cache_data_size_default(self) -> None:
         """The global cache budget is disabled by default."""
-        value = config.get_option("server.maxCachedDataSize")
-        assert value == "0"
-        assert config_max_cached_data_size_to_bytes(value) is None
+        value = config.get_option("server.maxCacheDataSize")
+        assert value is None
+        assert config_max_cache_data_size_to_bytes(value) is None
 
-    def test_max_cached_data_size_accepts_toml_disable_sentinel(self) -> None:
+    def test_max_cache_data_size_accepts_toml_disable_sentinel(self) -> None:
         """TOML accepts numeric or string zero to disable the global budget."""
         for value in ("0", '"0"'):
             config._update_config_with_toml(
-                f"[server]\nmaxCachedDataSize = {value}", "<test definition>"
+                f"[server]\nmaxCacheDataSize = {value}", "<test definition>"
             )
 
             assert (
-                config_max_cached_data_size_to_bytes(
-                    config.get_option("server.maxCachedDataSize")
+                config_max_cache_data_size_to_bytes(
+                    config.get_option("server.maxCacheDataSize")
                 )
                 is None
             )
 
-    def test_max_cached_data_size_rejects_unitless_nonzero_toml_integer(
+    def test_max_cache_data_size_rejects_unitless_nonzero_toml_integer(
         self,
     ) -> None:
         """A nonzero global budget requires an explicit binary unit."""
         config._update_config_with_toml(
-            "[server]\nmaxCachedDataSize = 500", "<test definition>"
+            "[server]\nmaxCacheDataSize = 500", "<test definition>"
         )
 
         with pytest.raises(StreamlitAPIException, match="binary-unit"):
-            config_max_cached_data_size_to_bytes(
-                config.get_option("server.maxCachedDataSize")
+            config_max_cache_data_size_to_bytes(
+                config.get_option("server.maxCacheDataSize")
             )
         with pytest.raises(
             RuntimeError,
-            match=r"Invalid value for config option server\.maxCachedDataSize",
+            match=r"`server\.maxCacheDataSize` requires",
         ):
             config._check_conflicts()
 
@@ -856,7 +856,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
-                "server.maxCachedDataSize",
+                "server.maxCacheDataSize",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
                 "server.maxWidgetStateSize",

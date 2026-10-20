@@ -1730,7 +1730,7 @@ class TestAppRun:
                 patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
                 patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
             ):
-                app.run(config={"server.maxCachedDataSize": "1KiB"})
+                app.run(config={"server.maxCacheDataSize": "1KiB"})
 
             assert budget._max_bytes == 1024
             assert budget.total_bytes > 0

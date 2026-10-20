@@ -99,7 +99,7 @@ def _create_storage(
 
 
 def test_budget_from_config_uses_configured_limit() -> None:
-    """The runtime budget is constructed from server.maxCachedDataSize."""
+    """The runtime budget is constructed from server.maxCacheDataSize."""
     with patch(
         "streamlit.runtime.caching.global_cache_budget.config.get_option",
         return_value="1KiB",
@@ -543,14 +543,18 @@ def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
     storage = _create_storage(budget, "oversized")
 
     with patch(
-        "streamlit.runtime.caching.global_cache_budget._LOGGER.warning"
+        "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+        "_LOGGER.warning"
     ) as warning:
         storage.set("key", b"large")
 
     assert storage.get("key") == b"large"
     assert budget.total_bytes == 5
-    warning.assert_called_once()
-    assert warning.call_args.kwargs["stack_info"] is True
+    warning.assert_called_once_with(
+        "A cached result is larger than the st.cache_data size limit and "
+        "was stored anyway.",
+        stack_info=True,
+    )
     stats = budget.get_stats()[CACHE_DATA_EVICTIONS_FAMILY]
     assert isinstance(stats[0], CounterStat)
     assert stats[0].value == 0
@@ -587,8 +591,8 @@ def test_disabled_budget_skips_storage_version_bookkeeping() -> None:
     assert storage._generations == {}
 
 
-def test_global_budget_warning_is_emitted_once() -> None:
-    """Only uncontainable writes warn, and they warn once."""
+def test_global_eviction_warning_is_emitted_once_after_eviction() -> None:
+    """The first successful ordinary global eviction warns once per process."""
     budget = GlobalCacheBudget(max_bytes=2)
     storage = _create_storage(budget, "warning")
 
@@ -596,12 +600,20 @@ def test_global_budget_warning_is_emitted_once() -> None:
         "streamlit.runtime.caching.global_cache_budget._LOGGER.warning"
     ) as warning:
         storage.set("a", b"aa")
-        storage.set("b", b"bb")
         warning.assert_not_called()
-        storage.set("large", b"large")
-        storage.set("larger", b"larger")
+        storage.set("b", b"bb")
+        storage.set("c", b"cc")
 
-    warning.assert_called_once()
+    warning.assert_called_once_with(
+        "st.cache_data reached its %s serialized-size budget "
+        "(server.maxCacheDataSize) and is evicting least-recently-used "
+        "entries, which are recomputed on their next use, or reloaded from "
+        "disk if they were persisted. Set server.maxCacheDataSize to change "
+        "the budget, or to '0' to disable it. Per-function sizes are on the "
+        "cache_memory_bytes metric.",
+        "2 bytes",
+        stack_info=True,
+    )
 
 
 def test_global_eviction_preserves_persistent_storage() -> None:

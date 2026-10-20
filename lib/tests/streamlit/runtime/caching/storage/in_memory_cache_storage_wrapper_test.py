@@ -209,18 +209,21 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         write_started = threading.Event()
         continue_write = threading.Event()
         read_finished = threading.Event()
-        original_set = persist_storage.set
+        original_prepare_set = persist_storage.prepare_set
 
-        def delayed_set(key: str, value: bytes) -> None:
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
             write_started.set()
             assert continue_write.wait(timeout=5)
-            original_set(key, value)
+            return prepared_write
 
         def read_target() -> None:
             wrapped_storage.get("target")
             read_finished.set()
 
-        with patch.object(persist_storage, "set", side_effect=delayed_set):
+        with patch.object(
+            persist_storage, "prepare_set", side_effect=delayed_prepare_set
+        ):
             writer = threading.Thread(
                 target=wrapped_storage.set, args=("other", b"other-value")
             )
@@ -247,14 +250,17 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         )
         writes_started = threading.Barrier(3)
         continue_writes = threading.Event()
-        original_set = persist_storage.set
+        original_prepare_set = persist_storage.prepare_set
 
-        def delayed_set(key: str, value: bytes) -> None:
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
             writes_started.wait(timeout=5)
             assert continue_writes.wait(timeout=5)
-            original_set(key, value)
+            return prepared_write
 
-        with patch.object(persist_storage, "set", side_effect=delayed_set):
+        with patch.object(
+            persist_storage, "prepare_set", side_effect=delayed_prepare_set
+        ):
             first = threading.Thread(
                 target=wrapped_storage.set, args=("first", b"first-value")
             )
@@ -282,15 +288,18 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         )
         first_write_started = threading.Event()
         continue_first_write = threading.Event()
-        original_set = persist_storage.set
+        original_prepare_set = persist_storage.prepare_set
 
-        def delayed_set(key: str, value: bytes) -> None:
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
             if value == b"first":
                 first_write_started.set()
                 assert continue_first_write.wait(timeout=5)
-            original_set(key, value)
+            return prepared_write
 
-        with patch.object(persist_storage, "set", side_effect=delayed_set):
+        with patch.object(
+            persist_storage, "prepare_set", side_effect=delayed_prepare_set
+        ):
             first = threading.Thread(target=wrapped_storage.set, args=("key", b"first"))
             first.start()
             assert first_write_started.wait(timeout=5)
@@ -316,14 +325,17 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         )
         write_started = threading.Event()
         continue_write = threading.Event()
-        original_set = persist_storage.set
+        original_prepare_set = persist_storage.prepare_set
 
-        def delayed_set(key: str, value: bytes) -> None:
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
             write_started.set()
             assert continue_write.wait(timeout=5)
-            original_set(key, value)
+            return prepared_write
 
-        with patch.object(persist_storage, "set", side_effect=delayed_set):
+        with patch.object(
+            persist_storage, "prepare_set", side_effect=delayed_prepare_set
+        ):
             writer = threading.Thread(
                 target=wrapped_storage.set, args=("key", b"value")
             )
@@ -422,10 +434,10 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
 
         persist_storage.set("some-key", b"some-value")
         with patch.object(
-            persist_storage, "set", wraps=persist_storage.set
-        ) as mock_persist_set:
+            persist_storage, "prepare_set", wraps=persist_storage.prepare_set
+        ) as mock_prepare_set:
             wrapped_storage.set("some-key", b"some-value")
-            mock_persist_set.assert_called_once_with("some-key", b"some-value")
+            mock_prepare_set.assert_called_once_with("some-key", b"some-value")
 
         assert wrapped_storage.get("some-key") == b"some-value"
 
@@ -475,15 +487,18 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         )
         write_started = threading.Event()
         continue_write = threading.Event()
-        original_set = persist_storage.set
+        original_prepare_set = persist_storage.prepare_set
 
-        def delayed_set(key: str, value: bytes) -> None:
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
             write_started.set()
             assert continue_write.wait(timeout=5)
-            original_set(key, value)
+            return prepared_write
 
         with (
-            patch.object(persist_storage, "set", side_effect=delayed_set),
+            patch.object(
+                persist_storage, "prepare_set", side_effect=delayed_prepare_set
+            ),
             patch.object(
                 persist_storage, "close", wraps=persist_storage.close
             ) as persist_close,
@@ -527,6 +542,45 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
                 replacement._remove_from_mem_cache("key")
                 assert replacement.get("key") == b"replacement"
                 replacement.close()
+
+    def test_replacement_write_wins_after_old_prepared_write_finishes(self) -> None:
+        """A detached wrapper cannot publish over a replacement's shared disk path."""
+        context = self.get_storage_context()
+        old_persist = LocalDiskCacheStorage(context)
+        old_wrapper = InMemoryCacheStorageWrapper(old_persist, context)
+        old_write_prepared = threading.Event()
+        finish_old_write = threading.Event()
+        original_prepare_set = old_persist.prepare_set
+
+        def delayed_prepare_set(key: str, value: bytes) -> object:
+            prepared_write = original_prepare_set(key, value)
+            old_write_prepared.set()
+            assert finish_old_write.wait(timeout=5)
+            return prepared_write
+
+        with patch.object(old_persist, "prepare_set", side_effect=delayed_prepare_set):
+            old_writer = threading.Thread(
+                target=old_wrapper.set, args=("key", b"stale")
+            )
+            old_writer.start()
+            assert old_write_prepared.wait(timeout=5)
+
+            old_wrapper.mark_detached()
+            old_wrapper.clear()
+            old_wrapper.close()
+
+            replacement_persist = LocalDiskCacheStorage(context)
+            replacement = InMemoryCacheStorageWrapper(replacement_persist, context)
+            replacement.set("key", b"replacement")
+
+            finish_old_write.set()
+            old_writer.join(timeout=5)
+
+        assert not old_writer.is_alive()
+        replacement._remove_from_mem_cache("key")
+        assert replacement.get("key") == b"replacement"
+        assert old_wrapper._persistent_key_states == {}
+        replacement.close()
 
     def test_max_size_and_max_entries_are_both_enforced(self) -> None:
         """Byte and entry-count limits are enforced together."""
@@ -578,12 +632,8 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage._read_from_mem_cache("first")
         assert wrapped_storage._read_from_mem_cache("second") == b"larger"
         warning.assert_called_once_with(
-            "A cached value from %s is %d bytes, which exceeds its max_size of "
-            "%d bytes. Streamlit keeps it in memory until the next new value "
-            "replaces it. Increase max_size to cache more than one value.",
-            "func-display-name",
-            5,
-            2,
+            "A cached result is larger than the st.cache_data size limit and "
+            "was stored anyway.",
             stack_info=True,
         )
 

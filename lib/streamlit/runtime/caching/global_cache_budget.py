@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from streamlit import config
-from streamlit.byte_util import config_max_cached_data_size_to_bytes
+from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.logger import get_logger
 from streamlit.runtime.stats import CounterStat, StatsProvider
 
@@ -88,14 +88,14 @@ class GlobalCacheBudget(StatsProvider):
         self._storage_entries: dict[int, set[str]] = {}
         self._total_bytes = 0
         self._global_evictions = 0
-        self._warned = False
+        self._eviction_warning_emitted = False
 
     @classmethod
     def from_config(cls) -> GlobalCacheBudget:
-        """Create a budget from ``server.maxCachedDataSize``."""
+        """Create a budget from ``server.maxCacheDataSize``."""
         return cls(
-            config_max_cached_data_size_to_bytes(
-                config.get_option("server.maxCachedDataSize")
+            config_max_cache_data_size_to_bytes(
+                config.get_option("server.maxCacheDataSize")
             )
         )
 
@@ -107,6 +107,11 @@ class GlobalCacheBudget(StatsProvider):
     def is_enabled(self) -> bool:
         """Whether the process-wide byte budget is enabled."""
         return self._max_bytes is not None
+
+    @property
+    def max_bytes(self) -> int | None:
+        """The configured byte budget, or ``None`` when disabled."""
+        return self._max_bytes
 
     @property
     def read_enforcement_required(self) -> bool:
@@ -283,29 +288,23 @@ class GlobalCacheBudget(StatsProvider):
                 if storage_entries is not None:
                     storage_entries.discard(key)
 
-    def _warn_once(self, function_display_name: str) -> None:
+    def _warn_eviction_once(self) -> None:
         with self._lock:
-            if self._warned:
+            if self._eviction_warning_emitted:
                 return
-            self._warned = True
+            self._eviction_warning_emitted = True
+            max_bytes = self._max_bytes
+        if max_bytes is None:  # pragma: no cover - defensive
+            return
         _LOGGER.warning(
-            "A value from %s is larger than server.maxCachedDataSize. Streamlit "
-            "kept that value even though it exceeds the process-wide budget. "
-            "Raise server.maxCachedDataSize, or set it to "
-            '"0" to disable the process-wide budget. This warning is logged once '
-            "per process.",
-            function_display_name,
+            "st.cache_data reached its %s serialized-size budget "
+            "(server.maxCacheDataSize) and is evicting least-recently-used "
+            "entries, which are recomputed on their next use, or reloaded from "
+            "disk if they were persisted. Set server.maxCacheDataSize to change "
+            "the budget, or to '0' to disable it. Per-function sizes are on the "
+            "cache_memory_bytes metric.",
+            _format_byte_size(max_bytes),
             stack_info=True,
-        )
-
-    def _storage_display_name(self, storage_id: int) -> str:
-        with self._lock:
-            storage_ref = self._storages.get(storage_id)
-            storage = storage_ref() if storage_ref is not None else None
-        return (
-            storage.function_display_name
-            if storage is not None
-            else "an unknown cached function"
         )
 
     def _reap_expired_entries(self) -> None:
@@ -394,9 +393,7 @@ class GlobalCacheBudget(StatsProvider):
             self._reap_expired_entries()
             attempted: set[tuple[int, str]] = set()
             while True:
-                oversized_entry = self._retained_entry_alone_exceeds_budget(protected)
-                if oversized_entry is not None:
-                    self._warn_once(self._storage_display_name(oversized_entry[0]))
+                if self._retained_entry_alone_exceeds_budget(protected) is not None:
                     return
                 victim = self._select_victim_snapshot(protected, attempted)
                 if victim is None:
@@ -410,6 +407,7 @@ class GlobalCacheBudget(StatsProvider):
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
+                    self._warn_eviction_once()
                 else:
                     # A concurrent delete, clear, expiry, or teardown changed or
                     # removed this entry. Continue with a fresh candidate.
@@ -463,7 +461,20 @@ def reconfigure_global_cache_budget_from_config() -> None:
         budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
         if budget is not None:
             budget.reconfigure(
-                config_max_cached_data_size_to_bytes(
-                    config.get_option("server.maxCachedDataSize")
+                config_max_cache_data_size_to_bytes(
+                    config.get_option("server.maxCacheDataSize")
                 )
             )
+
+
+def _format_byte_size(size: int) -> str:
+    """Format a configured budget for its console warning."""
+    for unit, divisor in (
+        ("TB", 1024**4),
+        ("GB", 1024**3),
+        ("MB", 1024**2),
+        ("KB", 1024),
+    ):
+        if size >= divisor:
+            return f"{size / divisor:.1f} {unit}"
+    return f"{size} {'byte' if size == 1 else 'bytes'}"

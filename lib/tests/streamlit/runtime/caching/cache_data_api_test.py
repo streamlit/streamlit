@@ -71,6 +71,7 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
+    LocalDiskCacheStorage,
     LocalDiskCacheStorageManager,
     get_cache_folder_path,
 )
@@ -697,6 +698,73 @@ If you think this is actually a Streamlit bug, please
         assert not clearer.is_alive()
         assert cache.is_active is False
 
+    def test_reconnect_write_survives_old_session_disk_write_completion(self) -> None:
+        """A disconnected session cannot clobber its replacement's persisted value."""
+        with (
+            tempfile.TemporaryDirectory() as cache_dir,
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage."
+                "get_cache_folder_path",
+                return_value=cache_dir,
+            ),
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ),
+        ):
+            Runtime._instance.cache_storage_manager = LocalDiskCacheStorageManager()
+            _data_caches.activate_session("session")
+            old_cache = _data_caches.get_cache(
+                key="session_cache",
+                persist="disk",
+                max_entries=None,
+                ttl=None,
+                display_name="session_cache",
+                scope="session",
+            )
+            assert isinstance(old_cache.storage, InMemoryCacheStorageWrapper)
+            old_persist = old_cache.storage._persist_storage
+            assert isinstance(old_persist, LocalDiskCacheStorage)
+            original_prepare_set = old_persist.prepare_set
+            old_write_prepared = threading.Event()
+            finish_old_write = threading.Event()
+
+            def delayed_prepare_set(key: str, value: bytes) -> object:
+                prepared_write = original_prepare_set(key, value)
+                old_write_prepared.set()
+                assert finish_old_write.wait(timeout=5)
+                return prepared_write
+
+            with patch.object(
+                old_persist, "prepare_set", side_effect=delayed_prepare_set
+            ):
+                old_writer = threading.Thread(
+                    target=old_cache.write_result, args=("value", "old", [])
+                )
+                old_writer.start()
+                assert old_write_prepared.wait(timeout=5)
+
+                clear_session_cache("session")
+                assert old_writer.is_alive()
+
+                _data_caches.activate_session("session")
+                replacement = _data_caches.get_cache(
+                    key="session_cache",
+                    persist="disk",
+                    max_entries=None,
+                    ttl=None,
+                    display_name="session_cache",
+                    scope="session",
+                )
+                replacement.write_result("value", "new", [])
+
+                finish_old_write.set()
+                old_writer.join(timeout=5)
+
+            assert not old_writer.is_alive()
+            replacement.storage._remove_from_mem_cache("value")
+            assert replacement.read_result("value").value == "new"
+
     def test_different_key_data_writes_run_concurrently(self) -> None:
         """DataCache does not serialize storage writes for unrelated keys."""
         cache = _data_caches.get_cache(
@@ -962,7 +1030,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
     def test_persist_path(self, mock_write):
-        """Ensure we're writing to ~/.streamlit/cache/*.memo"""
+        """Persisted writes are staged beside their final cache file."""
 
         @st.cache_data(persist="disk")
         def foo():
@@ -973,7 +1041,8 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
         write_path = mock_write.call_args[0][0]
         match = re.fullmatch(
-            r"/mock/home/folder/.streamlit/cache/.*?\.memo", write_path
+            r"/mock/home/folder/.streamlit/cache/.*?\.memo\.[0-9a-f]+\.tmp",
+            write_path,
         )
         assert match is not None
 
@@ -1080,15 +1149,18 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
             )
             storage = cache.storage
             assert isinstance(storage, InMemoryCacheStorageWrapper)
-            original_set = storage._persist_storage.set
+            persist_storage = storage._persist_storage
+            assert isinstance(persist_storage, LocalDiskCacheStorage)
+            original_prepare_set = persist_storage.prepare_set
             storage_write_started = threading.Event()
             continue_storage_write = threading.Event()
             detach_started = threading.Event()
 
-            def delayed_set(key: str, value: bytes) -> None:
+            def delayed_prepare_set(key: str, value: bytes) -> object:
+                prepared_write = original_prepare_set(key, value)
                 storage_write_started.set()
                 assert continue_storage_write.wait(timeout=5)
-                original_set(key, value)
+                return prepared_write
 
             original_mark_detached = cache.mark_detached
 
@@ -1097,7 +1169,11 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
                 original_mark_detached()
 
             with (
-                patch.object(storage._persist_storage, "set", side_effect=delayed_set),
+                patch.object(
+                    persist_storage,
+                    "prepare_set",
+                    side_effect=delayed_prepare_set,
+                ),
                 patch.object(
                     cache, "mark_detached", side_effect=observed_mark_detached
                 ),
@@ -1967,6 +2043,58 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert clear_completed.is_set()
         with pytest.raises(CacheKeyNotFoundError):
             cache.read_result("vk")
+
+    def test_overlapping_clears_keep_writes_blocked_until_both_finish(self) -> None:
+        """One completed clear cannot reopen the write gate during another clear."""
+        cache = self._cache("overlapping_clears")
+        first_clear_started = threading.Event()
+        second_clear_started = threading.Event()
+        finish_first_clear = threading.Event()
+        finish_second_clear = threading.Event()
+        write_finished = threading.Event()
+        original_set = cache.storage.set
+
+        def delayed_clear() -> None:
+            if threading.current_thread().name == "first-clear":
+                first_clear_started.set()
+                assert finish_first_clear.wait(timeout=5)
+            else:
+                second_clear_started.set()
+                assert finish_second_clear.wait(timeout=5)
+
+        def write_result() -> None:
+            cache.write_result("vk", 1, [])
+            write_finished.set()
+
+        with (
+            patch.object(cache.storage, "clear", side_effect=delayed_clear),
+            patch.object(cache.storage, "set", wraps=original_set) as storage_set,
+        ):
+            first = threading.Thread(target=cache.clear, name="first-clear")
+            second = threading.Thread(target=cache.clear, name="second-clear")
+            first.start()
+            assert first_clear_started.wait(timeout=5)
+            second.start()
+            assert second_clear_started.wait(timeout=5)
+
+            writer = threading.Thread(target=write_result)
+            writer.start()
+            assert not write_finished.wait(timeout=0.1)
+
+            finish_first_clear.set()
+            first.join(timeout=5)
+            assert not first.is_alive()
+            assert not write_finished.wait(timeout=0.1)
+            storage_set.assert_not_called()
+
+            finish_second_clear.set()
+            second.join(timeout=5)
+            writer.join(timeout=5)
+
+        assert not second.is_alive()
+        assert not writer.is_alive()
+        assert write_finished.is_set()
+        storage_set.assert_called_once()
 
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""

@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import math
 import threading
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
@@ -39,9 +40,131 @@ class _PersistentKeyState:
     """Coordination state retained only while a key has active persistent I/O."""
 
     def __init__(self) -> None:
+        self.users = 0
+
+
+class _SharedPersistentKeyState:
+    """Cross-wrapper state for one shared persistent function/value path."""
+
+    def __init__(self) -> None:
         self.lock = threading.Lock()
         self.users = 0
         self.version = 0
+
+
+class _SharedPersistentFunctionState:
+    """Cross-wrapper state for persistent paths belonging to one function."""
+
+    def __init__(self) -> None:
+        self.commit_lock = threading.Lock()
+        self.generation = 0
+        self.clears_in_progress = 0
+        self.keys: dict[str, _SharedPersistentKeyState] = {}
+
+    def has_no_clears_in_progress(self) -> bool:
+        return self.clears_in_progress == 0
+
+
+@dataclass(frozen=True)
+class _PersistentOperationToken:
+    """Generation token for one persistent operation."""
+
+    function_state: _SharedPersistentFunctionState
+    key_state: _SharedPersistentKeyState
+    function_generation: int
+    key_version: int
+
+
+class _PersistentPathCoordinator:
+    """Coordinate wrappers that address the same persistent file paths."""
+
+    def __init__(self) -> None:
+        self._condition = threading.Condition()
+        self._functions: dict[str, _SharedPersistentFunctionState] = {}
+
+    def begin(
+        self, function_key: str, key: str, *, mutate: bool
+    ) -> _PersistentOperationToken:
+        while True:
+            with self._condition:
+                function_state = self._functions.setdefault(
+                    function_key, _SharedPersistentFunctionState()
+                )
+                self._condition.wait_for(function_state.has_no_clears_in_progress)
+                if self._functions.get(function_key) is not function_state:
+                    continue
+                key_state = function_state.keys.setdefault(
+                    key, _SharedPersistentKeyState()
+                )
+                key_state.users += 1
+
+            with key_state.lock, self._condition:
+                if function_state.clears_in_progress == 0:
+                    if mutate:
+                        key_state.version += 1
+                    return _PersistentOperationToken(
+                        function_state,
+                        key_state,
+                        function_state.generation,
+                        key_state.version,
+                    )
+                self._release_locked(function_key, key, function_state, key_state)
+
+    def finish(
+        self, function_key: str, key: str, token: _PersistentOperationToken
+    ) -> None:
+        with self._condition:
+            self._release_locked(
+                function_key, key, token.function_state, token.key_state
+            )
+
+    def _release_locked(
+        self,
+        function_key: str,
+        key: str,
+        function_state: _SharedPersistentFunctionState,
+        key_state: _SharedPersistentKeyState,
+    ) -> None:
+        key_state.users -= 1
+        if key_state.users == 0:
+            function_state.keys.pop(key, None)
+        if (
+            self._functions.get(function_key) is function_state
+            and not function_state.keys
+            and function_state.clears_in_progress == 0
+        ):
+            self._functions.pop(function_key, None)
+
+    def is_current(self, token: _PersistentOperationToken) -> bool:
+        return (
+            token.function_state.generation == token.function_generation
+            and token.key_state.version == token.key_version
+        )
+
+    @contextlib.contextmanager
+    def clear(self, function_key: str) -> Generator[None, None, None]:
+        with self._condition:
+            function_state = self._functions.setdefault(
+                function_key, _SharedPersistentFunctionState()
+            )
+            function_state.generation += 1
+            function_state.clears_in_progress += 1
+        try:
+            with function_state.commit_lock:
+                yield
+        finally:
+            with self._condition:
+                function_state.clears_in_progress -= 1
+                if (
+                    self._functions.get(function_key) is function_state
+                    and not function_state.keys
+                    and function_state.clears_in_progress == 0
+                ):
+                    self._functions.pop(function_key, None)
+                self._condition.notify_all()
+
+
+_PERSISTENT_PATH_COORDINATOR = _PersistentPathCoordinator()
 
 
 class InMemoryCacheStorageWrapper(CacheStorage):
@@ -55,7 +178,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     automatically removed if a given time to live (TTL) has passed.
 
     The in-memory cache uses LRU eviction for a configured entry-count or
-    serialized-byte limit. The ``server.maxCachedDataSize`` configuration
+    serialized-byte limit. The ``server.maxCacheDataSize`` configuration
     option can also enable a process-wide data-cache budget across wrappers.
 
     If ``persist_storage`` implements its own maxsize strategy, it is recommended
@@ -70,7 +193,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     Persistent I/O runs outside it, and ``_persistent_key_states`` serialize only
     operations for the same key. This keeps different-key disk reads and writes
     concurrent while version checks prevent stale promotion or write-back.
-    When ``server.maxCachedDataSize`` enables the process-wide budget, memory reads
+    When ``server.maxCacheDataSize`` enables the process-wide budget, memory reads
     and writes take its enforcement lock before ``_mem_cache_lock``.
     """
 
@@ -106,6 +229,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         # Track key mutations only while a persistent read is active. This avoids
         # retaining one version per key while letting unrelated writes proceed.
         self._active_persistent_reads: dict[str, tuple[int, int]] = {}
+        self._detached = False
         self._closed = False
         self._persist_close_pending = False
         self._persist_storage = persist_storage
@@ -187,60 +311,44 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
-        with self._persistent_operation(key, mutate=True) as (
-            key_state,
-            key_version,
-        ):
+        with self._persistent_operation(key, mutate=True) as operation:
             with self._mutation_lock:
-                if self._closed:
+                if self._detached or self._closed:
                     return
                 self._invalidate_persistent_reads(key)
                 invalidation_generation = self._invalidation_generation
                 self._write_to_mem_cache(key, value)
-            self._persist_storage.set(key, value)
-            with self._mutation_lock:
-                write_is_current = (
-                    not self._closed
-                    and invalidation_generation == self._invalidation_generation
-                    and key_state.version == key_version
-                )
-            if not write_is_current:
-                self._persist_storage.delete(key)
+            self._write_to_persistent_storage(
+                key, value, operation, invalidation_generation
+            )
 
     def set_if_present(self, key: str, value: bytes) -> bool:
         """Replace an in-memory value only if it has not been evicted."""
-        with self._persistent_operation(key, mutate=True) as (
-            key_state,
-            key_version,
-        ):
+        with self._persistent_operation(key, mutate=True) as operation:
             with self._mutation_lock:
-                if self._closed:
+                if self._detached or self._closed:
                     return False
                 written = self._write_to_mem_cache(key, value, require_present=True)
                 if not written:
                     return False
                 self._invalidate_persistent_reads(key)
                 invalidation_generation = self._invalidation_generation
-            self._persist_storage.set(key, value)
-            with self._mutation_lock:
-                write_is_current = (
-                    not self._closed
-                    and invalidation_generation == self._invalidation_generation
-                    and key_state.version == key_version
-                )
-            if not write_is_current:
-                self._persist_storage.delete(key)
+            self._write_to_persistent_storage(
+                key, value, operation, invalidation_generation
+            )
         return True
 
     def delete(self, key: str) -> None:
         """Delete a given key."""
-        with self._persistent_operation(key, mutate=True):
+        with self._persistent_operation(key, mutate=True) as operation:
             with self._mutation_lock:
-                if self._closed:
+                if self._detached or self._closed:
                     return
                 self._invalidate_persistent_reads(key)
                 self._remove_from_mem_cache(key)
-            self._persist_storage.delete(key)
+            with operation.key_state.lock:
+                if _PERSISTENT_PATH_COORDINATOR.is_current(operation):
+                    self._persist_storage.delete(key)
 
     def clear(self) -> None:
         """Delete all keys for the in memory cache, and also the persistent storage."""
@@ -252,7 +360,15 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 self._mem_cache.clear()
                 removals = self._take_pending_removals()
                 self._report_removals(removals)
-        self._persist_storage.clear()
+        with _PERSISTENT_PATH_COORDINATOR.clear(self.function_key):
+            self._persist_storage.clear()
+
+    def mark_detached(self) -> None:
+        """Reject persistent writes after this wrapper leaves its lifecycle."""
+        with self._mutation_lock:
+            if not self._detached:
+                self._detached = True
+                self._invalidation_generation += 1
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -306,21 +422,21 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     @contextlib.contextmanager
     def _persistent_operation(
         self, key: str, *, mutate: bool = False
-    ) -> Generator[tuple[_PersistentKeyState, int], None, None]:
-        """Serialize same-key I/O without retaining locks for inactive keys."""
+    ) -> Generator[_PersistentOperationToken, None, None]:
+        """Track persistent I/O without retaining state for inactive keys."""
         with self._mutation_lock:
             key_state = self._persistent_key_states.get(key)
             if key_state is None:
                 key_state = _PersistentKeyState()
                 self._persistent_key_states[key] = key_state
             key_state.users += 1
-            if mutate:
-                key_state.version += 1
-            key_version = key_state.version
+        operation = _PERSISTENT_PATH_COORDINATOR.begin(
+            self.function_key, key, mutate=mutate
+        )
         try:
-            with key_state.lock:
-                yield key_state, key_version
+            yield operation
         finally:
+            _PERSISTENT_PATH_COORDINATOR.finish(self.function_key, key, operation)
             close_persist_storage = False
             with self._mutation_lock:
                 key_state.users -= 1
@@ -331,6 +447,55 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     close_persist_storage = True
             if close_persist_storage:
                 self._persist_storage.close()
+
+    def _write_to_persistent_storage(
+        self,
+        key: str,
+        value: bytes,
+        operation: _PersistentOperationToken,
+        invalidation_generation: int,
+    ) -> None:
+        prepare_set = getattr(self._persist_storage, "prepare_set", None)
+        if callable(prepare_set):
+            prepared_write = prepare_set(key, value)
+            try:
+                with operation.function_state.commit_lock, operation.key_state.lock:
+                    if not _PERSISTENT_PATH_COORDINATOR.is_current(operation):
+                        return
+                    with self._mutation_lock:
+                        if not self._persistent_write_is_current(
+                            invalidation_generation
+                        ):
+                            return
+                        prepared_write.commit()
+            finally:
+                prepared_write.discard()
+            return
+
+        # Custom storage has no two-phase write API. Serialize the shared path so
+        # stale cleanup finishes before a replacement wrapper can publish.
+        with operation.key_state.lock:
+            with self._mutation_lock:
+                if not _PERSISTENT_PATH_COORDINATOR.is_current(
+                    operation
+                ) or not self._persistent_write_is_current(invalidation_generation):
+                    return
+            self._persist_storage.set(key, value)
+            with self._mutation_lock:
+                write_is_current = self._persistent_write_is_current(
+                    invalidation_generation
+                )
+            if not write_is_current or not _PERSISTENT_PATH_COORDINATOR.is_current(
+                operation
+            ):
+                self._persist_storage.delete(key)
+
+    def _persistent_write_is_current(self, invalidation_generation: int) -> bool:
+        return (
+            not self._detached
+            and not self._closed
+            and invalidation_generation == self._invalidation_generation
+        )
 
     def _finish_persistent_read(self, key: str, expected_version: int) -> bool:
         """Unregister an active read and report whether its key stayed current."""
@@ -405,10 +570,15 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 if require_present and key not in self._mem_cache:
                     return False
                 if (
-                    self._max_size_bytes is not None
-                    and len(entry_bytes) > self._max_size_bytes
-                    and not self._oversized_warning_emitted
-                ):
+                    (
+                        self._max_size_bytes is not None
+                        and len(entry_bytes) > self._max_size_bytes
+                    )
+                    or (
+                        self._global_budget.max_bytes is not None
+                        and len(entry_bytes) > self._global_budget.max_bytes
+                    )
+                ) and not self._oversized_warning_emitted:
                     self._oversized_warning_emitted = True
                     should_warn = True
                 self._mem_cache[key] = entry_bytes
@@ -427,12 +597,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._global_budget.enforce_budget((self._global_storage_id, key))
         if should_warn:
             _LOGGER.warning(
-                "A cached value from %s is %d bytes, which exceeds its max_size of "
-                "%d bytes. Streamlit keeps it in memory until the next new value "
-                "replaces it. Increase max_size to cache more than one value.",
-                self.function_display_name,
-                len(entry_bytes),
-                self._max_size_bytes,
+                "A cached result is larger than the st.cache_data size limit and "
+                "was stored anyway.",
                 stack_info=True,
             )
         return True

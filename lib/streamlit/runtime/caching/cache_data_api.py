@@ -705,7 +705,7 @@ class CacheDataAPI:
         without caching it. This applies to synchronous and awaited coroutine calls.
 
         To limit the combined pickled size of all in-memory ``st.cache_data``
-        entries, configure ``server.maxCachedDataSize`` with a binary-unit
+        entries, configure ``server.maxCacheDataSize`` with a binary-unit
         string such as ``"10mb"``. The process-wide budget is disabled by default.
 
         A function's arguments must be hashable to cache it. Streamlit makes a
@@ -783,7 +783,7 @@ class CacheDataAPI:
             - With ``scope="session"``, the limit applies to each session separately.
             - The limit counts pickled bytes, not total process memory.
 
-            If configured, ``server.maxCachedDataSize`` additionally caps the
+            If configured, ``server.maxCacheDataSize`` additionally caps the
             combined in-memory size across all functions and sessions.
 
         show_spinner : bool or str
@@ -1066,7 +1066,7 @@ class DataCache(Cache[R]):
         # invalidates immediately and lets storage versions reject late writes.
         self._write_condition = threading.Condition()
         self._active_writes = 0
-        self._clear_in_progress = False
+        self._clears_in_progress = 0
 
     @property
     def discard_sync_write_after_clear(self) -> bool:
@@ -1076,6 +1076,8 @@ class DataCache(Cache[R]):
     def mark_detached(self) -> None:
         """Detach immediately so lifecycle teardown never waits on storage I/O."""
         super().mark_detached()
+        if isinstance(self.storage, InMemoryCacheStorageWrapper):
+            self.storage.mark_detached()
 
     def wait_for_writes(self) -> None:
         """Wait for writes that already passed their invalidation checks."""
@@ -1089,7 +1091,7 @@ class DataCache(Cache[R]):
     ) -> bool:
         """Reserve a write if this cache generation is still current."""
         with self._write_condition:
-            self._write_condition.wait_for(lambda: not self._clear_in_progress)
+            self._write_condition.wait_for(lambda: self._clears_in_progress == 0)
             if invalidation_token is None:
                 if not self.is_active:
                     return False
@@ -1281,7 +1283,7 @@ class DataCache(Cache[R]):
         wait_for_writes = self.is_active
         with self._write_condition:
             if wait_for_writes:
-                self._clear_in_progress = True
+                self._clears_in_progress += 1
                 self._write_condition.wait_for(lambda: self._active_writes == 0)
         try:
             if not key:
@@ -1291,5 +1293,5 @@ class DataCache(Cache[R]):
         finally:
             if wait_for_writes:
                 with self._write_condition:
-                    self._clear_in_progress = False
+                    self._clears_in_progress -= 1
                     self._write_condition.notify_all()

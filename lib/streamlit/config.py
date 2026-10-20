@@ -955,11 +955,12 @@ _create_option(
 )
 
 _create_option(
-    "server.maxCachedDataSize",
+    "server.maxCacheDataSize",
     description="""
         Maximum combined serialized size of all in-memory @st.cache_data entries
         across functions and sessions. Use a binary-unit string such as "2gb" or
-        "500mb" (units are powers of 1024). "0" (default) disables the limit.
+        "500mb" (units are powers of 1024). Leave unset (the default), or set to
+        "0", to disable the limit.
         When the total exceeds the limit, Streamlit evicts the least-recently-used
         in-memory entries; persisted disk entries are not deleted. A single value
         larger than the limit is still cached. When enabled, Streamlit processes
@@ -967,7 +968,7 @@ _create_option(
         reduce throughput when many sessions use the cache concurrently. Streamlit
         reads this value when the server starts.
     """,
-    default_val="0",
+    default_val=None,
     type_=str,
 )
 
@@ -3245,13 +3246,11 @@ def _check_conflicts() -> None:
     # Validate this option at config-load time so an invalid value is reported as a
     # config error instead of failing later during Runtime construction.
     try:
-        byte_util.config_max_cached_data_size_to_bytes(
-            get_option("server.maxCachedDataSize")
+        byte_util.config_max_cache_data_size_to_bytes(
+            get_option("server.maxCacheDataSize")
         )
     except StreamlitAPIException as exc:
-        raise RuntimeError(
-            f"Invalid value for config option server.maxCachedDataSize: {exc}"
-        ) from exc
+        raise RuntimeError(str(exc)) from exc
 
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):
