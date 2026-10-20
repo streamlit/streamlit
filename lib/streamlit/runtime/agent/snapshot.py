@@ -36,6 +36,8 @@ from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from google.protobuf.message import Message
 
     from streamlit.runtime.agent.tree import Node
@@ -503,7 +505,9 @@ def build_snapshot(
     """Build the snapshot document for the run that just settled.
 
     Session state is read without the lock ``SafeSessionState`` takes, so call
-    this on the script thread or hold that lock. Trigger payloads are cleared
+    this on the script thread or while no run can start. The agent API builds
+    after the session has settled and while its interaction holds the session,
+    with ``runOnSave`` off and no other client. Trigger payloads are cleared
     in ``on_script_finished``, and this read has to happen before that reset
     to keep a fired ``st.chat_input`` or ``st.menu_button`` value. ``page`` and
     ``pages`` come from the run's ``new_session`` message; a later
@@ -561,6 +565,64 @@ def build_snapshot(
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
     return Snapshot(document=document, element_states=builder.element_states)
+
+
+def rebase_media_urls(
+    document: dict[str, Any], *, media_path: str, prefix: str
+) -> None:
+    """Prefix a snapshot's media URLs with the way back to the app's root, in place.
+
+    Media storage hands out URLs relative to the app's root (``/media/<id>``),
+    which a browser resolves against its own base path. A client of this API
+    has no base path to resolve against, so the URL has to say how to reach the
+    root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
+    is a 404 or a login redirect.
+
+    Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
+    under ``media_path``, so an external link an app displays is never
+    rewritten.
+
+    Parameters
+    ----------
+    document : dict[str, Any]
+        A snapshot document from ``build_snapshot``.
+    media_path : str
+        The path media storage serves files under, such as ``"/media"``.
+    prefix : str
+        The relative path from the request's URL to the app's root, such as
+        ``"../.."``. It is prepended to each media URL.
+    """
+    media_prefix = media_path.rstrip("/") + "/"
+
+    def rebase(value: Any) -> Any:
+        if isinstance(value, str) and value.startswith(media_prefix):
+            return prefix + value
+        if isinstance(value, list):
+            return [rebase(item) for item in value]
+        return value
+
+    _map_media_urls(document, rebase)
+
+
+def _map_media_urls(document: dict[str, Any], transform: Callable[[Any], Any]) -> None:
+    """Replace every prop that can hold a media URL with ``transform(value)``.
+
+    These are the ``url``, ``src``, and ``avatar`` props. A value may be a list,
+    as for several images.
+    """
+
+    def walk(node: dict[str, Any]) -> None:
+        props = node.get("props")
+        if isinstance(props, dict):
+            for name in ("url", "src", "avatar"):
+                if name in props:
+                    props[name] = transform(props[name])
+        for child in node.get("children") or []:
+            walk(child)
+
+    root = document.get("tree")
+    if isinstance(root, dict):
+        walk(root)
 
 
 def _run_failed(session_state: SessionState | None) -> bool:
