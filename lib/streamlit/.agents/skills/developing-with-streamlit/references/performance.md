@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached, bounded to the app's 100 supported paths
-@st.cache_data(max_entries=100)
+# GOOD: Cache at most the 20 most recently used paths
+@st.cache_data(max_entries=20)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -112,7 +112,7 @@ def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bound by age and the workload's practical argument limit
+# GOOD: Bound by age and the app's 1,000-entry cache budget
 @st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
