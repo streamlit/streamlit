@@ -1452,8 +1452,9 @@ class LayoutsMixin:
                 action="value" if is_stateful else None,
                 value_schema=agent_spec.STRING if is_stateful else None,
                 # A request selects a tab by its label. That list is `tabs`,
-                # not an `options` parameter.
-                choices=list(tabs),
+                # not an `options` parameter. A stateless container has no
+                # action, so it publishes no membership list.
+                choices=list(tabs) if is_stateful else None,
                 tabs=list(tabs),
                 on_change=_reported_on_change(on_change, stateful=is_stateful),
             ),

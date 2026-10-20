@@ -1528,7 +1528,7 @@ class SessionState:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
 
-    def get_widget_value(self, widget_id: str, *, deserialize: bool = True) -> Any:
+    def get_widget_value(self, widget_id: str) -> Any:
         """Return the value stored for a widget.
 
         ``st.session_state`` may return a different value for the same widget
@@ -1537,29 +1537,26 @@ class SessionState:
         ``st.session_state`` is checked first, then widget state, then the
         previous run's state. Raises KeyError when none holds a value.
 
-        Reading a still-serialized value deserializes and caches it, which
-        runs the widget's deserializer. For ``st.chat_input`` that removes
-        uploaded files. Pass ``deserialize=False`` to read that proto's text
-        instead. An unset chat field is ``None``. Every other value is still
-        deserialized.
+        A still-serialized ``st.chat_input`` proto is read as its text, without
+        running the deserializer that removes uploaded files. An unset chat
+        field is ``None``.
         """
         user_key = self._key_id_mapper.id_key_mapping.get(widget_id)
-        if not deserialize:
-            if user_key is not None:
-                try:
-                    return self._new_session_state[user_key]
-                except KeyError:
-                    pass
-            wstate = self._new_widget_state.states.get(widget_id)
-            if (
-                isinstance(wstate, Serialized)
-                and wstate.value.WhichOneof("value") == "chat_input_value"
-            ):
-                chat_value = wstate.value.chat_input_value
-                # An unset field reads back as ``""``, which is an unfired trigger.
-                if not chat_value.HasField("data"):
-                    return None
-                return chat_value.data
+        if user_key is not None:
+            try:
+                return self._new_session_state[user_key]
+            except KeyError:
+                pass
+        wstate = self._new_widget_state.states.get(widget_id)
+        if (
+            isinstance(wstate, Serialized)
+            and wstate.value.WhichOneof("value") == "chat_input_value"
+        ):
+            chat_value = wstate.value.chat_input_value
+            # An unset field reads back as ``""``, which is an unfired trigger.
+            if not chat_value.HasField("data"):
+                return None
+            return chat_value.data
         return self._getitem(widget_id, user_key)
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:

@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Merge one run's deltas into the tree a snapshot walks.
-
-Block replacement follows the frontend: a block of the same type keeps its
-children, and a different type or dialog identity drops them. A descendant
-that arrives before its container is kept until that container claims it.
-"""
+"""Merge one run's deltas into the tree a snapshot walks."""
 
 from __future__ import annotations
 
@@ -73,7 +68,9 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
     children, and a different type or dialog identity drops them. Unlike the
     frontend, which rejects a delta whose parent container is missing, this
     creates a placeholder and lets the block that later claims the position
-    adopt its children.
+    adopt its children. A delta whose ancestor is already an element is
+    dropped: the frontend refuses to mount a child through an element, so a
+    stale container handle cannot replace what the browser shows.
     """
     root = _Node(
         root_name="root",
@@ -119,12 +116,23 @@ def merge_deltas(messages: list[ForwardMsg]) -> _Node:
             continue
 
         parent = root
+        dropped = False
         for index in delta_path[:-1]:
             child = parent.children.get(index)
-            if child is None or not child.is_container:
+            if child is None:
+                # A descendant arrived before its container. The placeholder
+                # is a container, so the block that later claims this position
+                # can adopt the children.
                 child = _Node()
                 parent.children[index] = child
+            elif not child.is_container:
+                # An element already occupies this ancestor. The frontend
+                # throws rather than mounting a child through it.
+                dropped = True
+                break
             parent = child
+        if dropped:
+            continue
 
         position = delta_path[-1]
         if node.is_container:

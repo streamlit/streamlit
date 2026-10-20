@@ -1689,9 +1689,9 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
 def test_session_state_value_precedes_serialized_chat_proto() -> None:
     """A session-state value wins over a still-serialized chat proto.
 
-    ``deserialize=False`` reads the proto's text without running its
-    deserializer. A value written through session state is returned instead,
-    and the proto stays serialized.
+    The read returns the proto's text without running its deserializer. A
+    value written through session state is returned instead, and the proto
+    stays serialized.
     """
     ss = SessionState()
     ss._key_id_mapper["prompt"] = "chat"
@@ -1699,11 +1699,11 @@ def test_session_state_value_precedes_serialized_chat_proto() -> None:
     proto.chat_input_value.data = "from-proto"
     ss._new_widget_state.states["chat"] = Serialized(proto)
 
-    assert ss.get_widget_value("chat", deserialize=False) == "from-proto"
+    assert ss.get_widget_value("chat") == "from-proto"
 
     ss._new_session_state["prompt"] = "from-session"
 
-    assert ss.get_widget_value("chat", deserialize=False) == "from-session"
+    assert ss.get_widget_value("chat") == "from-session"
     assert isinstance(ss._new_widget_state.states["chat"], Serialized)
 
 
@@ -1713,10 +1713,10 @@ def test_get_widget_value_falls_back_to_previous_run() -> None:
     ss._key_id_mapper["prompt"] = "chat"
     ss._old_state["chat"] = "previous"
 
-    assert ss.get_widget_value("chat", deserialize=False) == "previous"
+    assert ss.get_widget_value("chat") == "previous"
 
     with pytest.raises(KeyError):
-        ss.get_widget_value("missing", deserialize=False)
+        ss.get_widget_value("missing")
 
 
 def test_callback_mutation_survives_replay_overlay() -> None:

@@ -150,6 +150,15 @@ class SnapshotBuilderTest(SnapshotCase):
         assert expander["children"][0]["props"]["body"] == "hidden"
         tabs = _by_type(document, "tab")
         assert [tab["props"]["label"] for tab in tabs] == ["One", "Two"]
+        described = [
+            json.loads(msg.metadata.agent_props)
+            for msg in self.forward_msg_queue._queue
+            if msg.metadata.HasField("agent_props")
+        ]
+        tabs_description = next(
+            item for item in described if item.get("type") == "tabs"
+        )
+        assert "choices" not in tabs_description
         assert [tab["props"]["open"] for tab in tabs] == [True, False]
         assert [tab["children"][0]["props"]["body"] for tab in tabs] == [
             "first",
@@ -314,6 +323,8 @@ class SnapshotBuilderTest(SnapshotCase):
         st.segmented_control("Mode", ["a", "b"], key="mode")
         st.selectbox("City", ["Paris"], accept_new_options=True, key="open_city")
         st.selectbox("Closed", ["Paris"], key="closed_city")
+        st.multiselect("Pick", ["a", "b", "c"], max_selections=2, key="limited")
+        st.multiselect("Any", ["a", "b", "c"], key="any")
         with st.form("edit"):
             st.text_input("Name", key="name")
 
@@ -321,6 +332,8 @@ class SnapshotBuilderTest(SnapshotCase):
         days = _state(snapshot, "date_input", "days")
         assert days.max_items == 2
         assert days.schema_type == "array"
+        assert _state(snapshot, "multiselect", "limited").max_items == 2
+        assert _state(snapshot, "multiselect", "any").max_items is None
         assert _state(snapshot, "pills", "mood").clearable is True
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False

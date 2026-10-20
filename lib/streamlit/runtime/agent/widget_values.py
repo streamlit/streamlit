@@ -21,6 +21,7 @@ and a selected ``None`` option come back as a request would send them.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final
 
@@ -48,27 +49,12 @@ def reported_value(
     value_schema: dict[str, Any] | None = None,
     accept_new_options: bool = False,
 ) -> Any:
-    """Read a widget's live value, in the form a request may send back.
+    """Return the value a request can send back, or ``None`` when unavailable.
 
-    For a widget with a fixed option set, ``st.session_state`` holds the
-    author's Python option while the accepted wire value is the
-    ``format_func``-formatted string. Reporting the raw option would make
-    `value` unusable as input.
-
-    The widget's own serializer is the mapping the runtime will apply in
-    reverse, so it is what keeps read and write in the same space. It is
-    used for every widget whose description lists `options`, including
-    `st.select_slider`. It is also used for a widget whose wire value is
-    text when what it holds is not plain JSON already -- a date becomes its
-    ISO string. Others -- numbers, booleans, temporal sliders,
-    `st.feedback`'s integer -- are reported as their Python value in JSON,
-    which a request may also send.
-
-    A value typed into a widget that accepts new options is already its own
-    wire form. The serializer runs `format_func` on it anyway, so echoing
-    that back would format it again on every round trip. A closed option
-    set has no such text: a stored value that formats to a label is that
-    option, and the label is what a request sends.
+    - Options are reported as their ``format_func`` label.
+    - Text typed into an ``accept_new_options`` widget is kept as typed.
+    - A non-JSON text-wire value is the serializer's output, such as an ISO date.
+    - Everything else is the JSON-encoded Python value.
     """
     if session_state is None:
         return None
@@ -76,7 +62,7 @@ def reported_value(
         # The stored value, which can differ from what st.session_state
         # returns. A serialized chat proto is read without its
         # deserializer, which drops uploads.
-        value = session_state.get_widget_value(element_id, deserialize=False)
+        value = session_state.get_widget_value(element_id)
     except KeyError:
         return None
 
@@ -95,7 +81,10 @@ def reported_value(
         )
     ):
         try:
-            serialized = _string_payload(metadata.serializer(value))
+            # The serializer calls the author's ``format_func``. Registration
+            # copies before it serializes, so a formatter that edits its
+            # argument cannot change the value a snapshot just read.
+            serialized = _string_payload(metadata.serializer(deepcopy(value)))
             if (
                 isinstance(serialized, list)
                 and (value_schema or {}).get("type") != "array"

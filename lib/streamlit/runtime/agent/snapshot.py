@@ -80,8 +80,8 @@ class ElementState(NamedTuple):
     # The command that emitted it, for checks that only apply to some, such as
     # reading ISO text for a date-time input.
     command: str = ""
-    # The most items its `value_schema` allows, such as 2 for a range. A longer
-    # list would reach the app, where `start, end = st.date_input(...)` raises.
+    # The most items a request may send: `value_schema.maxItems` for a range,
+    # or `props.max_selections` for a multiselect. A longer list is refused.
     max_items: int | None = None
     # The JSON type its `value_schema` names, so a number is not accepted as
     # text where the wire form happens to be a string, as for `st.feedback`.
@@ -160,10 +160,9 @@ class _SnapshotBuilder:
     def _serialize_container(
         self, node: _Node, inherited_support: str | None = None
     ) -> list[dict[str, Any]]:
+        # A container's support reason binds its contents, so actions never
+        # lists a child the container itself denies.
         support = node.description.get("support") or inherited_support
-        # A container that cannot be driven cannot have drivable contents.
-        # Without this, `actions` would advertise children that the container's
-        # own `support` denies, and the document would contradict itself.
         is_dialog = node.description.get("type") == "dialog"
         dialog_props = (node.description.get("props") or {}) if is_dialog else {}
         actions_before_children = len(self.actions)
@@ -227,10 +226,7 @@ class _SnapshotBuilder:
                 element_id,
                 value_schema=description.get("value_schema"),
             )
-            # As for elements, a trigger's value only means anything while set.
-            # An empty string is a fired payload. False is an unclicked button.
-            if action == "value" or (value is not None and value is not False):
-                result["value"] = value
+            _attach_value(result, action, value, description.get("value_schema"))
         # The container is recorded after its body so a dialog's own state
         # stays outside the in-dialog window. Its action is then moved in
         # front of the children's, so `actions` follows tree order.
@@ -305,11 +301,7 @@ class _SnapshotBuilder:
                 value_schema=description.get("value_schema"),
                 accept_new_options=props.get("accept_new_options") is True,
             )
-            # An empty string is a fired payload. False is an unclicked button.
-            if action == "value" or (value is not None and value is not False):
-                # A trigger's value only means anything while it is set, and it
-                # resets right after the run that observed it.
-                result["value"] = value
+            _attach_value(result, action, value, description.get("value_schema"))
 
         form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
@@ -377,7 +369,7 @@ class _SnapshotBuilder:
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
             command=command,
-            max_items=(description.get("value_schema") or {}).get("maxItems"),
+            max_items=_max_items(description, props),
             schema_type=(description.get("value_schema") or {}).get("type"),
             # The command says whether choosing the current value again
             # empties it. The snapshot does not infer that from the command.
@@ -419,6 +411,36 @@ class _SnapshotBuilder:
         if description.get("clearable") is True:
             result["clearable"] = True
         return result
+
+
+def _attach_value(
+    result: dict[str, Any], action: Any, value: Any, value_schema: Any
+) -> None:
+    """Set ``value`` when the element holds one a request can send.
+
+    A value widget always reports its value, including null. A trigger reports
+    one only when it has a ``value_schema`` (a payload such as chat text) and
+    only while that payload is set. An empty string is a fired payload. A
+    button stores ``True`` and has no schema, so it reports none.
+    """
+    if action == "value" or (
+        value_schema is not None and value is not None and value is not False
+    ):
+        result["value"] = value
+
+
+def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None:
+    """The longest list a later request may send for this element.
+
+    ``value_schema.maxItems`` covers a range. ``st.multiselect`` publishes its
+    limit as ``props.max_selections`` instead, and a longer selection is refused.
+    """
+    limit = (description.get("value_schema") or {}).get("maxItems")
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        limit = props.get("max_selections")
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        return None
+    return limit
 
 
 def _public_key(element_id: str) -> str:

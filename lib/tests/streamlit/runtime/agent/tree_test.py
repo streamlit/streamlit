@@ -171,3 +171,29 @@ class DeltaTreeTest(SnapshotCase):
             "done"
         ]
         assert _one(document, "caption")["props"]["body"] == "unwrapped"
+
+    def test_a_child_through_a_replaced_element_is_dropped(self) -> None:
+        """A stale container handle cannot mount a child on an element.
+
+        ``st.empty()`` can replace a container after that container's handle
+        has already queued a child. The frontend refuses the child, so the
+        element stays and the child is not an action.
+        """
+        replaced = _describe(
+            [0, 0],
+            {"type": "markdown", "props": {"body": "shown"}},
+        )
+        late = _describe(
+            [0, 0, 0],
+            {
+                "type": "button",
+                "key": "$$ID-late-go",
+                "action": "trigger",
+                "props": {"label": "Go"},
+            },
+        )
+
+        document = self._build(replaced, late).document
+        assert _one(document, "markdown")["props"]["body"] == "shown"
+        assert _by_type(document, "button") == []
+        assert document["actions"] == []

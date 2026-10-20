@@ -356,7 +356,7 @@ class FeedbackMixin:
                 "feedback",
                 key=element_id,
                 action="value",
-                # Choosing the current star or face again clears it.
+                # Choosing the current option again clears it, for every feedback type.
                 clearable=True,
                 # The index of the chosen option. `options` names the set.
                 value_schema=agent_spec.INTEGER,

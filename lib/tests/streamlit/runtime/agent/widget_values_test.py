@@ -394,6 +394,31 @@ class WidgetValueTest(SnapshotCase):
         assert chat["value"] == "hello there"
         assert "UploadedFile" not in json.dumps(chat)
 
+    def test_a_fired_button_reports_no_value(self) -> None:
+        """A trigger without a payload does not report the True it stores."""
+        st.button("Go", key="go")
+        self._set_stored("go", True)
+
+        button = _one_keyed(self._build().document, "button", "go")
+        assert "value" not in button
+        assert button["props"]["label"] == "Go"
+
+    def test_reading_a_value_does_not_mutate_what_is_stored(self) -> None:
+        """A formatter that edits its argument leaves the stored value unchanged."""
+
+        def label(option: Any) -> str:
+            if isinstance(option, dict):
+                option["touched"] = True
+            return "January"
+
+        st.selectbox("Month", ["January"], format_func=label, key="month")
+        stored = {"name": "January"}
+        self._set_stored("month", stored)
+
+        document = self._build().document
+        assert _one_keyed(document, "selectbox", "month")["value"] == "January"
+        assert stored == {"name": "January"}
+
     def test_serialized_chat_read_keeps_uploaded_files(self) -> None:
         """A still-serialized chat proto is read without removing its upload."""
         st.chat_input("Say", accept_file=True, key="chat")
