@@ -268,6 +268,7 @@ class AppSession:
         self._settled.set()
         # Flushes left before the client provably has every message of the
         # last run chain, or None while no run chain is waiting to settle.
+        # This and `_settled` change only on the event loop.
         self._flushes_until_settled: int | None = None
 
         # This needs to be lazily imported to avoid a dependency cycle.
@@ -391,8 +392,6 @@ class AppSession:
 
         """
         msgs = self._browser_queue.flush()
-        # Read once: with `runOnSave`, a file watcher thread can start a new
-        # runner, which resets the countdown, at any point here.
         flushes_left = self._flushes_until_settled
         if flushes_left is not None:
             if flushes_left <= 1:
@@ -844,7 +843,12 @@ class AppSession:
             return
 
         if self._run_on_save:
-            self.request_rerun(self._client_state)
+            # Like every other rerun, started on the event loop, which is the
+            # only thread that may replace the ScriptRunner or touch the
+            # settle countdown.
+            self._call_soon_on_event_loop(
+                lambda: self.request_rerun(self._client_state)
+            )
         else:
             # File watchers run off the event loop, and ForwardMsgQueue is
             # single-threaded. This handoff prevents delta coalescing from

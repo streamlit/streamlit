@@ -644,12 +644,19 @@ class AppSessionTest(unittest.TestCase):
             assert session._state == AppSessionState.APP_NOT_RUNNING
 
     def test_passes_client_state_on_run_on_save(self):
+        """With runOnSave, the rerun starts from an event-loop callback."""
         session = _create_test_session()
         session._run_on_save = True
         session.request_rerun = MagicMock()
+        session._call_soon_on_event_loop = MagicMock()
         session._on_source_file_changed()
 
         session._script_cache.clear.assert_called_once()
+        session.request_rerun.assert_not_called()
+
+        scheduled_callback = session._call_soon_on_event_loop.call_args.args[0]
+        scheduled_callback()
+
         session.request_rerun.assert_called_once_with(session._client_state)
 
     def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
@@ -3304,7 +3311,13 @@ def test_set_run_on_save_decides_whether_a_file_change_reruns(enabled: bool) -> 
         session.set_run_on_save(enabled)
     enqueue_mock.assert_not_called()
 
-    with patch.object(session, "request_rerun") as request_rerun:
+    with (
+        patch.object(session, "request_rerun") as request_rerun,
+        patch.object(
+            session, "_call_soon_on_event_loop", side_effect=lambda callback: callback()
+        ),
+        patch.object(session, "_enqueue_forward_msg"),
+    ):
         session._on_source_file_changed()
     assert request_rerun.called is enabled
 

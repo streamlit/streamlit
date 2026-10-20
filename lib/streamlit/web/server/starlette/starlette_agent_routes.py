@@ -166,6 +166,8 @@ def _reject_constant(constant: str) -> None:
 def _parse_body(body: bytes) -> Any:
     """Parse a request body as strict JSON, which has no NaN or Infinity.
 
+    An empty or whitespace-only body is an empty request, ``{}``.
+
     Raises
     ------
     ValueError
@@ -174,6 +176,8 @@ def _parse_body(body: bytes) -> Any:
         than Python converts from text, and nesting deeper than the
         interpreter allows.
     """
+    if not body.strip():
+        return {}
     try:
         # Decoded first: `json.loads` would also accept bytes in UTF-16 or
         # UTF-32, and surrogates encoded as UTF-8.
@@ -341,7 +345,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         try:
             # Off the event loop, since a body can be as large as a message
             # from the browser and parsing it would stall every session.
-            payload = await asyncio.to_thread(_parse_body, body) if body.strip() else {}
+            payload = await asyncio.to_thread(_parse_body, body)
         except ValueError as exc:
             return error_response(
                 "invalid_request", f"The body is not valid JSON: {exc}."
