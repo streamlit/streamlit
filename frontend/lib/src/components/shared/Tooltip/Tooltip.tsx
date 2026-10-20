@@ -34,6 +34,9 @@ import {
   hide,
 } from "@floating-ui/react"
 import { useFocusWithin } from "react-aria"
+// isFocusVisible has no public export. This private path is the module React
+// Aria's own FocusScope and tooltip use, so they share one modality state.
+import { isFocusVisible } from "react-aria/private/interactions/useFocusVisible"
 import { TooltipTriggerStateContext } from "react-aria-components"
 import { useTooltipTriggerState } from "react-stately"
 
@@ -125,13 +128,17 @@ interface TriggerAreaProps {
  * Hover: onPointerEnter/Leave call state.open(false)/close(false) which use the
  * delay configured on useTooltipTriggerState.
  *
- * Focus: useFocusWithin opens/closes the tooltip immediately when any descendant
- * receives or loses focus (bubbling focusin/focusout under the hood).
+ * Focus: useFocusWithin closes the tooltip when focus leaves the trigger. When
+ * focus enters, it opens the tooltip immediately only if:
+ * - React Aria reports visible focus (keyboard or screen reader, including a
+ *   dialog restoring focus after Escape), or
+ * - a touch tap on the trigger moved focus there.
+ * Like React Aria's useTooltipTrigger, focus from a mouse click, or restored
+ * after a mouse close, leaves the tooltip to hover.
  *
- * onPointerLeave only closes the tooltip if focus is not currently held within
- * the trigger. This prevents a keyboard user's tooltip from dismissing when a
- * mouse passes over and leaves the trigger area while focus is still held,
- * regardless of whether focus or hover came first.
+ * onPointerLeave does not close a tooltip that focus opened. This keeps a
+ * keyboard user's tooltip open when a mouse passes over the trigger, and keeps
+ * a tapped tooltip open when the touch pointer leaves on release.
  */
 function TriggerArea({
   tag: Tag,
@@ -147,7 +154,13 @@ function TriggerArea({
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
   const setTriggerRef = useContext(SetTriggerRefContext)
-  const hasFocusWithinRef = useRef(false)
+  /** Whether focus within the trigger opened the tooltip and holds it open. */
+  const isHeldOpenByFocusRef = useRef(false)
+  /**
+   * Pointer type of the last pointerdown on the trigger. onBlurWithin clears
+   * it, so focus that code later restores to the trigger isn't taken for a tap.
+   */
+  const pointerDownTypeRef = useRef<string | null>(null)
 
   const mergedRef = useCallback(
     (node: HTMLDivElement | null): void => {
@@ -159,11 +172,17 @@ function TriggerArea({
 
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
-      hasFocusWithinRef.current = true
-      if (!disabled) state?.open(true)
+      // isFocusVisible() is false after a touch tap, so check this trigger's
+      // own pointerdown. React Aria's global pointer type won't do: a tap on a
+      // dialog's close button also sets it.
+      isHeldOpenByFocusRef.current =
+        !disabled &&
+        (isFocusVisible() || pointerDownTypeRef.current === "touch")
+      if (isHeldOpenByFocusRef.current) state?.open(true)
     },
     onBlurWithin() {
-      hasFocusWithinRef.current = false
+      isHeldOpenByFocusRef.current = false
+      pointerDownTypeRef.current = null
       state?.close(true)
     },
   })
@@ -179,9 +198,14 @@ function TriggerArea({
         if (!disabled) state?.open(false)
       }}
       onPointerLeave={() => {
-        if (!hasFocusWithinRef.current) {
+        if (!isHeldOpenByFocusRef.current) {
           state?.close(closeImmediatelyOnPointerLeave)
         }
+      }}
+      onPointerDownCapture={e => {
+        // Capture phase, because React Aria press handlers in children stop
+        // pointerdown propagation.
+        pointerDownTypeRef.current = e.pointerType
       }}
       onClickCapture={() => {
         if (dismissOnClick) {
