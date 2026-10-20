@@ -414,6 +414,10 @@ class _SnapshotBuilder:
             result["support"] = support
         if value_schema := description.get("value_schema"):
             result["value_schema"] = value_schema
+        # Whether `null` empties the widget. The current `value` cannot say so
+        # once a selection has replaced an empty default.
+        if description.get("clearable") is True:
+            result["clearable"] = True
         return result
 
 

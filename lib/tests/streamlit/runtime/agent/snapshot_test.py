@@ -332,9 +332,55 @@ class SnapshotBuilderTest(SnapshotCase):
         assert open_city["props"]["options"] == ["Paris"]
         assert open_city["props"]["accept_new_options"] is True
         assert _state(snapshot, "selectbox", "closed_city").options == ["Paris"]
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "selectbox", "closed_city"
+        )
         name = _state(snapshot, "text_input", "name")
         assert name.form_id == "edit"
         assert name.schema_type == "string"
+
+    def test_clearable_records_an_empty_default_the_value_hides(self) -> None:
+        """A chosen value hides an empty default, so `clearable` says null empties it."""
+        st.selectbox("City", ["Paris"], index=None, key="optional_city")
+        st.selectbox("Home", ["Paris"], key="home_city")
+        st.radio("Choice", ["a"], index=None, key="choice")
+        st.number_input("Count", value=None, key="count")
+        st.number_input("Needed", value=None, required=True, key="needed")
+        st.number_input("Set", value=1, key="set_count")
+        st.date_input("Day", value=None, key="day")
+        st.date_input("Due", value=None, required=True, key="due")
+        st.time_input("When", value=None, key="when")
+        st.time_input("Due time", value=None, required=True, key="due_time")
+        st.datetime_input("Moment", value=None, key="moment")
+
+        snapshot = self._build()
+        optional = _one_keyed(snapshot.document, "selectbox", "optional_city")
+        assert optional["clearable"] is True
+        assert _state(snapshot, "selectbox", "optional_city").clearable is True
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "selectbox", "home_city"
+        )
+        # A radio cannot be deselected, even when it starts with no selection.
+        assert "clearable" not in _one_keyed(snapshot.document, "radio", "choice")
+        assert (
+            _one_keyed(snapshot.document, "number_input", "count")["clearable"] is True
+        )
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "number_input", "needed"
+        )
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "number_input", "set_count"
+        )
+        assert _one_keyed(snapshot.document, "date_input", "day")["clearable"] is True
+        assert "clearable" not in _one_keyed(snapshot.document, "date_input", "due")
+        assert _one_keyed(snapshot.document, "time_input", "when")["clearable"] is True
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "time_input", "due_time"
+        )
+        assert (
+            _one_keyed(snapshot.document, "datetime_input", "moment")["clearable"]
+            is True
+        )
 
     def test_dialog_body_uses_the_dialogs_fragment(self) -> None:
         """The dialog block keeps the opener's fragment; its body keeps its own."""

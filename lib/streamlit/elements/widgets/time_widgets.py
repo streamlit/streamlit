@@ -1210,6 +1210,8 @@ class TimeWidgetsMixin:
                 action="value",
                 # JSON Schema "time" is RFC 3339 and requires an offset. A naive
                 # time has none, so the value stays a plain string.
+                # No initial time, and not required: a later value can be cleared.
+                clearable=parsed_time is None and not required,
                 value_schema=agent_spec.STRING,
                 label=label,
                 # Times serialize as ISO 8601, which is also what the public
@@ -1721,6 +1723,8 @@ class TimeWidgetsMixin:
                 action="value",
                 # JSON Schema "date-time" is RFC 3339 and requires an offset. A
                 # naive datetime has none, so the value stays a plain string.
+                # No initial datetime: a later value can be cleared.
+                clearable=default_value is None,
                 value_schema=agent_spec.STRING,
                 label=label,
                 # The resolved bounds, which are always present: st.date_input
@@ -2318,6 +2322,8 @@ class TimeWidgetsMixin:
                 "date_input",
                 key=element_id,
                 action="value",
+                # No initial date, and not required: a later value can be cleared.
+                clearable=parsed_values.value is None and not required,
                 value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
                 if parsed_values.is_range
                 else agent_spec.DATE,
