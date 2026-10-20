@@ -509,12 +509,12 @@ update-frontend-typesync:
 	cd frontend/ ; yarn
 
 .PHONY: update-snapshots
-# Update e2e playwright snapshots based on the latest completed CI run.
+# Update e2e snapshots from the failed Playwright run for the current commit.
 update-snapshots:
 	uv run python ./scripts/update_e2e_snapshots.py
 
 .PHONY: update-snapshots-changed
-# Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
+# Update changed-file e2e snapshots from the failed Playwright run for this commit.
 update-snapshots-changed:
 	uv run python ./scripts/update_e2e_snapshots.py --changed
 
