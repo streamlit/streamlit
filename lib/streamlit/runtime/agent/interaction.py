@@ -56,6 +56,7 @@ from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
+    from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.agent.snapshot import Snapshot
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.runtime import Runtime
@@ -726,11 +727,9 @@ async def _run_interaction(
             rerun.query_string = _query_string_for_page_change(
                 session_state.query_params, rerun.query_string
             )
-            # A browser sends every widget's current value with a page change,
-            # and the runtime keeps the state and query-parameter binding of
-            # only the widgets it lists. Without them, a widget the new page
-            # shares, such as one in the sidebar, would lose its parameter.
-            rerun.widget_states.widgets.extend(session_state.get_widget_states())
+            rerun.widget_states.widgets.extend(
+                _widget_states_for_page_change(session_state, query_params)
+            )
         rerun.page_script_hash = page_hash
         rerun.page_name = page_name
     if query_params is not None:
@@ -1080,6 +1079,28 @@ def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> s
             if name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name)
         ]
     )
+
+
+def _widget_states_for_page_change(
+    session_state: SessionState, query_params: dict[str, list[str]] | None
+) -> list[WidgetStateProto]:
+    """Every widget's current value, as a browser sends it with a page change.
+
+    The runtime keeps the state and query-parameter binding of only the widgets
+    a page change lists, so without them a widget the new page shares, such as
+    one in the sidebar, would lose its parameter. A bound widget whose parameter
+    the request sets is left out: the runtime prefers a sent value over the
+    URL's, so the request's value would be ignored, where without a page change
+    it sets the widget.
+    """
+    requested = set(query_params or ())
+    bindings = session_state.query_params
+    return [
+        state
+        for state in session_state.get_widget_states()
+        if (binding := bindings.get_binding_for_widget(state.id)) is None
+        or binding.param_key not in requested
+    ]
 
 
 def _parse_context(context: Any) -> ContextInfo:

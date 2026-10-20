@@ -627,6 +627,9 @@ Rules:
   - Setting the widget drops its parameter rather than rewriting it, until the app
     writes it back. This is the difference: the runtime reads the address back on every
     rerun, and a stale copy would put the old value back over the edit.
+  - A `page` change with `query_params` sets a shared bound widget, such as one in the
+    sidebar, to the parameter the request names, as it does without a page change. The
+    widget then drops its parameter as a set widget does.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
   duration — so a client keying by label silently drops one. Position in the tree, or an

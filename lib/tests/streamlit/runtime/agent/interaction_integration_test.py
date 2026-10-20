@@ -584,7 +584,8 @@ async def test_a_page_change_keeps_bound_and_embed_parameters(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
     """Leaving a page keeps a shared widget's value and parameter and the embed
-    parameters, and drops the rest, as a browser does.
+    parameters, and drops the rest, as a browser does. A parameter the request
+    names still sets the shared widget, as it does without a page change.
     """
     async with _running_app(tmp_path, options, _NAVIGATION_SCRIPT) as app:
         report = await app.call(
@@ -598,15 +599,27 @@ async def test_a_page_change_keeps_bound_and_embed_parameters(
                 },
             }
         )
+        handle = report["session_id"]
         home_path = next(
             page["url_path"] for page in report["pages"] if page["title"] == "Home"
         )
-        home = await app.call({"session_id": report["session_id"], "page": home_path})
+        home = await app.call({"session_id": handle, "page": home_path})
+        report_again = await app.call(
+            {
+                "session_id": handle,
+                "page": "report",
+                "query_params": {"region": ["AMER"]},
+            }
+        )
 
     assert "page=home" in _texts(home)
     assert _keyed(home, "region")["value"] == "APAC"
     # `quarter` is bound to the other page's widget, which the run drops.
     assert home["query_params"] == {"region": ["APAC"], "embed": ["true"]}
+    assert "page=report" in _texts(report_again)
+    assert _keyed(report_again, "region")["value"] == "AMER"
+    # Dropped, as for any bound widget a request sets, until the app writes it.
+    assert "region" not in report_again["query_params"]
 
 
 @pytest.mark.anyio
