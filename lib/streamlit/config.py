@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -1254,6 +1255,67 @@ _create_option(
         more information, see https://docs.streamlit.io/replication.
     """,
     default_val=120,
+    type_=int,
+)
+
+_create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/interact`.
+
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentRunTimeout",
+    description="""
+        Maximum number of seconds an agent API request waits for the app's run
+        chain to settle before returning `run_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running, and a retry
+        of the same request waits for it instead of starting it over. Keep it
+        below the request timeout of the clients you expect.
+    """,
+    visibility="hidden",
+    default_val=30,
+    type_=int,
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        An agent session is reclaimed after this much time without an
+        interaction, so clients do not have to close sessions explicitly.
+    """,
+    visibility="hidden",
+    default_val=900,
+    type_=int,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        An agent session outlives the request that created it, so this bounds
+        what a loop of creating calls can hold in memory. When the limit is
+        reached, sessions idle past `server.agentSessionTTL` are reclaimed
+        first, and new sessions are then refused.
+    """,
+    visibility="hidden",
+    default_val=100,
     type_=int,
 )
 
@@ -3402,6 +3464,37 @@ def _check_metrics_user_attributes() -> None:
         )
 
 
+_AGENT_API_LIMIT_OPTIONS: Final = (
+    "server.agentRunTimeout",
+    "server.agentSessionTTL",
+    "server.agentMaxSessions",
+)
+
+
+def _check_agent_api_limits() -> None:
+    """Validate the agent API limits at config-load time.
+
+    Each limit only bounds something as a whole number greater than zero: a run
+    timeout of zero times out every request, a TTL of zero reclaims every
+    session at once, and a session cap of zero refuses every session.
+    ``config.toml`` can also set a bool, a fraction, NaN, or infinity, which
+    the CLI's integer parsing rejects on its own.
+    """
+    for name in _AGENT_API_LIMIT_OPTIONS:
+        value = get_option(name)
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value != int(value)
+            or value <= 0
+        ):
+            raise RuntimeError(
+                f"Invalid value for config option {name}: {value!r}. It must be "
+                "a whole number greater than 0."
+            )
+
+
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -3467,3 +3560,6 @@ on_config_parsed(_parse_trusted_user_headers, lock=True)
 # Reject reserved label names in server.unsafeMetricsUserAttributes. No lock needed
 # since this only reads the config, it does not mutate it.
 on_config_parsed(_check_metrics_user_attributes)
+# Reject agent API limits that are not whole numbers greater than zero. No lock
+# needed since this only reads the config.
+on_config_parsed(_check_agent_api_limits)
