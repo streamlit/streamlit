@@ -99,7 +99,8 @@ export const StyledTextareaWrapper = styled.div<{
 }))
 
 // Left cluster - flex-shrink so it collapses when empty
-// In non-expanded row mode, use order: -1 to position before textarea (which is first in DOM)
+// In non-expanded row mode, use order: -1 to position before the textarea or
+// recording waveform (both earlier in the DOM)
 export const StyledLeftCluster = styled.div<{
   hasExpandedHeight?: boolean
 }>(({ theme, hasExpandedHeight }) => ({
@@ -108,7 +109,7 @@ export const StyledLeftCluster = styled.div<{
   flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
-  // In non-expanded mode, position before textarea via CSS order
+  // In non-expanded mode, position before textarea/waveform via CSS order
   order: hasExpandedHeight ? 0 : -1,
 }))
 
@@ -251,6 +252,11 @@ interface StyledWaveformContainerProps {
   isRecording: boolean
 }
 
+/**
+ * Recording waveform slot in the input row. Always mounted because WaveSurfer
+ * binds to its child once; `display: none` while idle so it takes no space or
+ * flex gap in any layout.
+ */
 export const StyledWaveformContainer =
   styled.div<StyledWaveformContainerProps>(({ isRecording }) => ({
     display: isRecording ? "flex" : "none",

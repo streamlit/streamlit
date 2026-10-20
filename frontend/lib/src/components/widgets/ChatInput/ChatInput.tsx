@@ -864,6 +864,7 @@ function ChatInput({
   }
 
   const handleMicClick = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setRecordingError is a stable setter
     async (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
@@ -877,7 +878,15 @@ function ChatInput({
         return
       }
 
-      await controller.start()
+      try {
+        await controller.start()
+      } catch (error) {
+        LOG.error("Failed to start recording:", error)
+        // The controller reports most failures (e.g. permission denied) via
+        // its events before rejecting; keep that message and fall back to a
+        // generic one only for failures it didn't report.
+        setRecordingError(prevError => prevError ?? "Recording failed")
+      }
     },
     [acceptAudio, disabled, isDisabledDuringRun, controller]
   )
@@ -1113,6 +1122,18 @@ function ChatInput({
             </StyledTextareaWrapper>
           )}
 
+          {/* Waveform - visible only while recording. It sits outside the
+              layout branches below because WaveSurfer binds to this node
+              once; a remount would leave it drawing into a detached node.
+              While recording, the left cluster's `order: -1` places it
+              between the button clusters. */}
+          <StyledWaveformContainer isRecording={isRecording}>
+            <StyledChatAudioWave
+              ref={waveformContainerRef}
+              data-testid="stChatInputWaveform"
+            />
+          </StyledWaveformContainer>
+
           {/* Toolbar/buttons section - wrapped in StyledToolbarRow when expanded */}
           {hasExpandedHeight && !isRecording ? (
             <StyledToolbarRow>
@@ -1207,11 +1228,6 @@ function ChatInput({
                   />
                 )}
               </StyledLeftCluster>
-
-              {/* Waveform - shown inline when recording */}
-              <StyledWaveformContainer isRecording={isRecording}>
-                <StyledChatAudioWave ref={waveformContainerRef} />
-              </StyledWaveformContainer>
 
               <StyledRightCluster>
                 {isRecording ? (
