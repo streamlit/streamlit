@@ -56,6 +56,8 @@ Represents a single browser tab.
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
 
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain (callback reruns, `st.rerun()`, `st.switch_page`, queued fragment runs) has reached the client. Creating a runner clears it; the runner's `SHUTDOWN` arms a countdown that the next one or two `flush_browser_queue()` calls complete. That proof holds only because the Runtime loop is the sole flusher. `await wait_until_settled()` waits for it and has no bound of its own, so callers wrap it in `asyncio.timeout`.
+
 ## Session bootstrap ordering
 
 Initial session creation and first script run are intentionally decoupled:
@@ -181,6 +183,7 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
+- `/_stcore/agent/interact`: Agent API (POST only; off unless the hidden `server.enableAgentApi` is set)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -191,6 +194,8 @@ Browser connects -> Runtime.connect_session()
                  -> Messages flow bidirectionally
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
+
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `rerun_script` BackMsg; the route then waits for `wait_until_settled()` up to `server.agentRunTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies.
 
 ## Key abstractions
 
