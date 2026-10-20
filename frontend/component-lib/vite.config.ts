@@ -58,12 +58,5 @@ export default defineConfig({
     css: true,
     reporters: ["verbose"],
     setupFiles: ["../vitest.setup.ts", "./src/setupTests.ts"],
-    deps: {
-      optimizer: {
-        client: {
-          include: ["vitest-canvas-mock"],
-        },
-      },
-    },
   },
 })
