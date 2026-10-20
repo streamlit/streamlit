@@ -166,6 +166,7 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
+Render a fragment's output in its own body (a chat message list or metric card included) unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container. Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot. If that run has nothing to show yet, `container.empty()` reserves the slot.
 
 ### Keyed reruns — target a fragment from a callback
 
@@ -477,7 +478,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Most fragments should render into their own body — use an outside container only when the output must sit at a position the fragment cannot own, such as between main-script elements or as one slot in a shared layout. If the fragment owns all the content it renders (a chat message list, a metric card), put a container inside the fragment instead. When an outside container is required, claim it by writing to it from *inside the fragment body* during the initial full-app run (not from the main script — the wrapper is keyed per-fragment). Write something on every run, including the first — `st.empty()` is enough if the container should stay empty. A `parallel=True` fragment cannot write outside itself during that initial run because it executes on a separate thread.
+For independent slow sections, prefer `@st.fragment(parallel=True)` and render inside the fragment. It runs on another thread during every full-app run, so it cannot write to an outside container or reserve that slot for a later rerun.
 
 ## Perceived performance (loading states)
 
