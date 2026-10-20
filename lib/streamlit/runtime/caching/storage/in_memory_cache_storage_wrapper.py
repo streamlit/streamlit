@@ -43,8 +43,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     The in-memory cache is a TTL cache, which means that the entries are
     automatically removed if a given time to live (TTL) has passed.
 
-    The in-memory cache is also an LRU cache, which means that the entries
-    are automatically removed if the cache size exceeds a given maxsize.
+    The in-memory cache uses LRU eviction for a configured entry-count or
+    serialized-byte limit.
 
     If the storage implements its strategy for maxsize, it is recommended
     (but not necessary) that the storage implement the same LRU strategy,
@@ -67,10 +67,14 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
+        self._max_size_bytes = context.max_size_bytes
+        self._oversized_warning_emitted = False
+        self._mem_cache: TTLCache[str, bytes] = TTLCache[str, bytes](
             maxsize=self.max_entries,
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
+            max_total_size=self._max_size_bytes,
+            getsizeof=None if self._max_size_bytes is None else len,
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
@@ -82,6 +86,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     @property
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
+
+    @property
+    def max_size_bytes(self) -> int | None:
+        return self._max_size_bytes
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -157,8 +165,26 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
+        should_warn = False
         with self._mem_cache_lock:
+            if (
+                self._max_size_bytes is not None
+                and len(entry_bytes) > self._max_size_bytes
+                and not self._oversized_warning_emitted
+            ):
+                self._oversized_warning_emitted = True
+                should_warn = True
             self._mem_cache[key] = entry_bytes
+        if should_warn:
+            _LOGGER.warning(
+                "A cached value from %s is %d bytes, which exceeds its max_size of "
+                "%d bytes. Streamlit keeps it in memory until the next new value "
+                "replaces it. Increase max_size to cache more than one value.",
+                self.function_display_name,
+                len(entry_bytes),
+                self._max_size_bytes,
+                stack_info=True,
+            )
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:

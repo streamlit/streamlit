@@ -25,12 +25,14 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -284,6 +286,98 @@ If you think this is actually a Streamlit bug, please
         # calling foo.clear() should clear all cached values:
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
+
+    def test_max_size_evicts_by_serialized_bytes(self) -> None:
+        """A per-function byte limit evicts entries by serialized size."""
+        executions: dict[str, int] = {}
+
+        @st.cache_data(max_size="1MiB")
+        def foo(key: str) -> bytes:
+            executions[key] = executions.get(key, 0) + 1
+            return bytes(400_000)
+
+        foo("a")
+        foo("b")
+        foo("a")
+        foo("c")
+        foo("a")
+        foo("b")
+
+        assert executions == {"a": 1, "b": 2, "c": 1}
+
+    def test_oversized_value_remains_cached(self) -> None:
+        """A single value larger than max_size remains cached."""
+        executions = 0
+
+        @st.cache_data(max_size=1)
+        def foo() -> bytes:
+            nonlocal executions
+            executions += 1
+            return bytes(100)
+
+        assert foo() == bytes(100)
+        assert foo() == bytes(100)
+        assert executions == 1
+
+    def test_numpy_integer_max_size(self) -> None:
+        """A NumPy integer is accepted as a max_size byte count."""
+
+        @st.cache_data(max_size=np.int64(1024))  # type: ignore[arg-type]
+        def foo() -> int:
+            return 1
+
+        assert foo() == 1
+
+    def test_cache_recreated_when_max_size_changes(self) -> None:
+        """A changed max_size replaces the previous function cache."""
+        common_kwargs = {
+            "key": "max_size_change",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "max_size_change",
+        }
+        with self.assertLogs(
+            "streamlit.runtime.caching.cache_data_api", level=logging.DEBUG
+        ) as logs:
+            first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
+            second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
+
+        assert second is not first
+        assert first.is_active is False
+        output = "\n".join(logs.output)
+        assert "max_size_bytes=100" in output
+        assert "max_size_bytes=200" in output
+
+    def test_max_size_is_propagated_to_custom_storage_manager(self) -> None:
+        """Custom storage managers receive the parsed limit during validation and use."""
+        manager = RecordingMaxSizeStorageManager()
+        Runtime._instance.cache_storage_manager = manager
+        executions = 0
+
+        @st.cache_data(max_entries=7, max_size="2KiB")
+        def foo() -> int:
+            nonlocal executions
+            executions += 1
+            return executions
+
+        assert foo() == 1
+        assert foo() == 1
+
+        assert len(manager.checked_contexts) == 1
+        checked_context = manager.checked_contexts[0]
+        assert checked_context.function_key == "DUMMY_KEY"
+        assert checked_context.function_display_name == "foo"
+        assert checked_context.max_entries == 7
+        assert checked_context.max_size_bytes == 2048
+
+        assert len(manager.created_contexts) == 1
+        created_context = manager.created_contexts[0]
+        assert created_context.function_key != "DUMMY_KEY"
+        assert created_context.function_display_name.endswith(".foo")
+        assert created_context.max_entries == 7
+        assert created_context.max_size_bytes == 2048
+        assert executions == 1
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
@@ -670,6 +764,26 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         output = "".join(logs.output)
         assert "This CacheStorageManager always fails" in output
 
+    @parameterized.expand(
+        [
+            ("boolean", True),
+            ("zero", 0),
+            ("negative", -1),
+            ("unitless_string", "10"),
+            ("unknown_unit", "10XB"),
+            ("float", 1.5),
+        ]
+    )
+    def test_invalid_max_size_fails_at_decoration(
+        self, _name: str, max_size: object
+    ) -> None:
+        """Invalid max_size values fail when the decorator is created."""
+        with pytest.raises(StreamlitAPIException):
+
+            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
+            def foo() -> int:
+                return 1
+
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
     def setUp(self):
@@ -898,6 +1012,24 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
 
     def check_context(self, context: CacheStorageContext) -> None:
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
+
+
+class RecordingMaxSizeStorageManager(CacheStorageManager):
+    """Storage manager that records contexts before using the built-in wrapper."""
+
+    def __init__(self) -> None:
+        self.checked_contexts: list[CacheStorageContext] = []
+        self.created_contexts: list[CacheStorageContext] = []
+
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        self.created_contexts.append(context)
+        return MemoryCacheStorageManager().create(context)
+
+    def clear_all(self) -> None:
+        pass
+
+    def check_context(self, context: CacheStorageContext) -> None:
+        self.checked_contexts.append(context)
 
 
 class CacheDataBackgroundRefreshTest(unittest.TestCase):
