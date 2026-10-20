@@ -1,6 +1,6 @@
 ---
 name: fixing-pr
-description: Automatically fix CI failures, resolve merge conflicts with the base branch, and address PR review comments for the current branch. Use when a PR needs CI fixes, a conflict update, review feedback handling, and validation before merge.
+description: Automatically fix CI failures, resolve merge conflicts with the base branch, and address PR review comments for the current branch. Use when a PR needs CI fixes, conflict resolution against its base branch, review feedback handling, and validation before merge.
 model: inherit
 memory: user
 skills:
@@ -42,13 +42,19 @@ Use `gh pr view` to get PR details for the current branch, including `baseRefNam
 
 ### 2. Update the branch when conflicts block the merge
 
+Refetch `mergeable` and `mergeStateStatus` while either is `UNKNOWN`. GitHub has not finished computing mergeability, so do not treat `UNKNOWN` as clear.
+
 When `mergeable` is `CONFLICTING`, or `mergeStateStatus` is `DIRTY`, the pull request cannot merge into its base branch. Update the head branch with that base and resolve every conflict before doing anything else:
 
 - Fetch the base branch and merge it into the PR head
 - Resolve each conflict so the result keeps this PR's intended change and the incoming changes from the base
-- Commit the resolution, push, and return to step 3
+- Validate the resolution with the /checking-changes skill (`make check`), then commit, push, and return to step 3
 
-Do this even when checks are also failing. A conflict in a snapshot PR that targets this branch is separate: skip that snapshot PR and continue.
+`make check` before that push wins over pushing the resolution immediately.
+
+Do this even when checks are also failing. A base-branch conflict wins over an in-flight `update-snapshots` run: this push cancels that run. If snapshots still mismatch after the next CI wait, step 5 adds the label again.
+
+A conflicting snapshot PR that targets this branch is not this conflict. Leave it for step 4, which skips that snapshot PR and continues.
 
 Stop only when a conflict has no clear resolution. Name the files and what is unclear.
 
@@ -116,9 +122,11 @@ Then return to step 3 so that review runs on the new commits.
 
 Return to step 3 and wait for CI to complete again. After each push, if the merge is blocked by conflicts again, return to step 2 before waiting.
 
+Before a successful exit, refetch mergeability even when this iteration pushed nothing. The base branch can move during the CI wait, and a conflicted PR can stay green because GitHub keeps a stale merge ref. Refetch while `mergeable` or `mergeStateStatus` is `UNKNOWN`. If `mergeable` is `CONFLICTING` or `mergeStateStatus` is `DIRTY`, return to step 2.
+
 **Exit conditions:**
-- All CI checks pass
-- No fixable failures remain (only policy/label checks failing)
+- All CI checks pass, and the PR is not `CONFLICTING` or `DIRTY`
+- No fixable failures remain (only policy/label checks failing), and the PR is not `CONFLICTING` or `DIRTY`
 - Maximum 5 iterations reached
 
 ## Rules
@@ -128,7 +136,7 @@ Return to step 3 and wait for CI to complete again. After each push, if the merg
 - **Don't skip tests**: Never disable tests to "fix" CI
 - **Verify locally**: Always run `make check` before pushing
 - **Snapshot mismatches**: Always use the `update-snapshots` label, never fix snapshot files manually. Merge the snapshot PR the workflow opens against this branch. Skip a conflicting snapshot PR and continue.
-- **Conflicts with the base branch**: Merge the base into this branch and resolve every conflict. Keep this PR's intended change together with the incoming base changes. Stop only when a conflict has no clear resolution.
+- **Conflicts with the base branch**: Merge the base into this branch and resolve every conflict. Keep this PR's intended change together with the incoming base changes. Run `make check` before pushing the resolution. Recheck mergeability before a green-CI exit, including when this iteration pushed nothing. Stop only when a conflict has no clear resolution.
 - **Blocked PRs**: After pushing review fixes, add `ai-final-review` when `do-not-merge` is present and `ai-final-review` is not
 - **Limit iterations**: Stop after 5 fix-push-wait cycles to avoid infinite loops
 
@@ -140,6 +148,6 @@ Return to step 3 and wait for CI to complete again. After each push, if the merg
 | Auth failed | Stop and report to user — interactive auth not available in autonomous mode |
 | CI stuck | If CI hasn't completed after 30 minutes, stop and report to user |
 | Unfixable failure | Report to user and stop |
-| Merge conflicts with the base branch | Merge the base into this branch and resolve every conflict, then push. Stop only when a conflict has no clear resolution |
+| Merge conflicts with the base branch | Merge the base into this branch, resolve every conflict, run `make check`, then push. Recheck mergeability before a green-CI exit. Stop only when a conflict has no clear resolution |
 | Conflicting snapshot PR | Skip that snapshot PR and continue |
 | Rate limited | Check `gh api rate_limit` for reset time, wait until resolved, then retry |
