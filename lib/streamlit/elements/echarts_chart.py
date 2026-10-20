@@ -30,6 +30,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1332,10 +1333,23 @@ class EChartsMixin:
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
+        # A callback reaches the server, so it is the same mode as "rerun".
+        # A display-only chart has an element ID only when the author set a key.
+        # An active selection is reported, not settable through this API.
+        agent_props = agent_spec.element(
+            "echarts_chart",
+            key=echarts_chart_proto.id or None,
+            support="action_unsupported" if is_selection_activated else None,
+            on_select="ignore" if on_select == "ignore" else "rerun",
+            alt=echarts_chart_proto.alt or None,
+        )
 
         if not is_selection_activated:
             return self.dg._enqueue(
-                "echarts_chart", echarts_chart_proto, layout_config=layout_config
+                "echarts_chart",
+                echarts_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_props,
             )
 
         serde = EChartsChartSelectionSerde()
@@ -1348,7 +1362,10 @@ class EChartsMixin:
             value_type="string_value",
         )
         self.dg._enqueue(
-            "echarts_chart", echarts_chart_proto, layout_config=layout_config
+            "echarts_chart",
+            echarts_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_props,
         )
         return widget_state.value
 

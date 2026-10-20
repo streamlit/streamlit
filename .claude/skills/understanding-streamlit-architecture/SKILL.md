@@ -150,6 +150,8 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/communication.md#delta-ui-changes`
 - **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.
   - Deep dive: `references/communication.md#forwardmsg-metadata-active_script_hash`
+- **Agent element descriptions**: A command can attach JSON on `ForwardMsg.metadata.agent_props`.
+  - Deep dive: `references/communication.md#agent-command-descriptions`
 - **Element tree structure**: Frontend `AppRoot` maintains `main`, `sidebar`, `event`, and `bottom` containers with `BlockNode`/`ElementNode`.
   - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
 - **Element identity semantics**: Delta paths decide where a node lives; element IDs decide whether stateful elements can reconnect to prior state after remounts.

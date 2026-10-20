@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, Literal, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     TextAlignment,
     Width,
@@ -63,12 +64,18 @@ class MarkdownMixin:
         unterminated_parsing: bool = False,
         anchors: bool = True,
         wrap: bool = True,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
-        """Internal markdown method with extended options."""
+        """Internal markdown method with extended options.
+
+        ``agent_props`` lets a command that renders itself as markdown describe
+        itself under its own name, instead of appearing as `st.markdown`.
+        """
         _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        markdown_proto.body = body_text
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
@@ -86,7 +93,19 @@ class MarkdownMixin:
         else:
             layout_config = create_layout_config(text_alignment=text_alignment)
 
-        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            markdown_proto,
+            layout_config=layout_config,
+            agent_props=agent_props
+            or agent_spec.element(
+                "markdown",
+                body=body_text,
+                help=markdown_proto.help or None,
+                # Omitted when false, which is the documented default.
+                unsafe_allow_html=unsafe_allow_html or None,
+            ),
+        )
 
     @gather_metrics("markdown")
     def markdown(
@@ -388,7 +407,8 @@ class MarkdownMixin:
         """
         _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         caption_proto = MarkdownProto()
-        caption_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        caption_proto.body = body_text
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         caption_proto.wrap = wrap
@@ -399,7 +419,18 @@ class MarkdownMixin:
             width=width, text_alignment=text_alignment, allow_content_width=True
         )
 
-        return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            caption_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "caption",
+                body=body_text,
+                help=caption_proto.help or None,
+                # Omitted when false, which is the documented default.
+                unsafe_allow_html=unsafe_allow_html or None,
+            ),
+        )
 
     @gather_metrics("latex")
     def latex(
@@ -460,15 +491,25 @@ class MarkdownMixin:
 
             body = sympy.latex(body)
 
+        body_text = clean_text(body)
         latex_proto = MarkdownProto()
-        latex_proto.body = f"$$\n{clean_text(body)}\n$$"
+        latex_proto.body = f"$$\n{body_text}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
             latex_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            latex_proto,
+            layout_config=layout_config,
+            # `body` is the dedented LaTeX source, not the `$$`-delimited form
+            # the frontend needs.
+            agent_props=agent_spec.element(
+                "latex", body=body_text, help=latex_proto.help or None
+            ),
+        )
 
     @gather_metrics("divider")
     def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
@@ -504,7 +545,13 @@ class MarkdownMixin:
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            divider_proto,
+            layout_config=layout_config,
+            # st.divider takes no arguments; its body is a rendering detail.
+            agent_props=agent_spec.element("divider"),
+        )
 
     @gather_metrics("badge")
     def badge(
@@ -635,7 +682,21 @@ class MarkdownMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            badge_proto,
+            layout_config=layout_config,
+            # st.badge would be indistinguishable from st.markdown by its
+            # payload: it emits NATIVE markdown with the color and icon
+            # directives already expanded into `body`.
+            agent_props=agent_spec.element(
+                "badge",
+                label=label,
+                icon=icon,
+                color=color,
+                help=badge_proto.help or None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

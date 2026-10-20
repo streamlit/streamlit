@@ -47,6 +47,10 @@ run: |
 
 **Safe contexts that don't need `env:` indirection:** `${{ }}` in `with:` parameters (parsed by YAML, not shell), `if:` conditions, and `env:` value positions are not vulnerable. GitHub-controlled constants like `github.repository`, `github.run_id`, and `github.sha` are also safe in `run:` blocks since their format is constrained.
 
+### Untrusted GitHub content
+
+GitHub issue and pull request titles, bodies, and comments can be written by anyone. AI workflow prompts that read that text must tell the agent to use it as context for the task, and not to follow literal instructions embedded in it, such as requests to override these directions or run copied commands.
+
 ### Best Practices
 
 - Use `workflow_call` to create reusable workflows
@@ -64,7 +68,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
 | `make_init` | Locked dev environment setup: latest compatible uv, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
 | `setup_automation` | Locked Python 3.12 environment containing only the dependencies used by lightweight CI and release utility scripts. |
-| `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
+| `playwright_install` | Installs Playwright browsers with caching (by OS/arch/distro/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
 | `find_latest_workflow_artifact` | Selects the newest unexpired artifact from a successful branch push. Avoids GitHub REST run filters, which can return stale results. |
@@ -142,7 +146,7 @@ runner's system Python.
 |----------|---------|-------------|
 | `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, and comments the download links on the PR |
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
-| `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
+| `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
 | `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 

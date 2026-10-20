@@ -51,6 +51,10 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
+    # Mermaid depends on elkjs for diagram layout. EPL-2.0 is weak copyleft
+    # and the full notice is included in NOTICES.
+    # https://www.eclipse.org/legal/epl-2.0/
+    "EPL-2.0",
     # Multi-licenses are acceptable if at least one of the licenses is acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",
