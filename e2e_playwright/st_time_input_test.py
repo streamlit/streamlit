@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -37,7 +37,21 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 22
+NUM_TIME_INPUTS = 26
+
+
+def _clear_time_segments(time_display: Locator) -> None:
+    """Clear every segment of a time input.
+
+    React Aria emits an empty time only after every segment is cleared.
+    One Backspace deletes a digit; a second Backspace clears the segment.
+    """
+    spinbuttons = time_display.get_by_role("spinbutton")
+    for index in range(spinbuttons.count()):
+        segment = spinbuttons.nth(index)
+        segment.click()
+        segment.press("Backspace")
+        segment.press("Backspace")
 
 
 def test_time_input_widget_rendering(
@@ -686,3 +700,100 @@ def test_time_input_on_change_ignore(app: Page):
     spinbuttons = time_display.get_by_role("spinbutton")
     expect(spinbuttons.first).to_have_text("14")
     expect(spinbuttons.nth(1)).to_have_text("30")
+
+
+def test_time_input_required_blocks_empty_commits_and_form_submits(app: Page) -> None:
+    """Required time inputs block empty form submits and later empty commits."""
+    start_widget = get_element_by_key(app, "required_start")
+    end_widget = get_element_by_key(app, "required_end")
+    start_segments = start_widget.get_by_role("spinbutton")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(start_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+    expect(start_segments.first).to_have_attribute("aria-required", "true")
+    expect(start_widget.get_by_role("group")).not_to_have_attribute("aria-required")
+    expect(start_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required time input form", exact=True
+    )
+    expect(submit_button).to_be_enabled()
+    submit_button.click()
+    expect(start_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(end_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(submit_button).to_be_enabled()
+
+    type_time(start_widget.get_by_test_id("stTimeInputTimeDisplay"), "09", "30")
+    submit_button.click()
+    expect(start_widget.get_by_role("alert")).to_have_count(0)
+    expect(end_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_time(end_widget.get_by_test_id("stTimeInputTimeDisplay"), "10", "15")
+    submit_button.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required start: 09:30:00")
+    expect_markdown(app, "required end: 10:15:00")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(start_widget.get_by_role("alert")).to_have_count(0)
+    expect(end_widget.get_by_role("alert")).to_have_count(0)
+
+    standalone_widget = get_element_by_key(app, "required_standalone")
+    standalone_display = standalone_widget.get_by_test_id("stTimeInputTimeDisplay")
+    type_time(standalone_display, "07", "00")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 07:00:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stTimeInputClearButton")).to_have_count(0)
+
+    # The last Backspace can move focus to an earlier segment, so blur the
+    # field by clicking outside instead of blurring the last spinbutton.
+    _clear_time_segments(standalone_display)
+    app.get_by_text("Required time inputs:", exact=True).click()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone: 07:00:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_time(standalone_display, "00", "00")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 00:00:00")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_count(0)
+
+    hidden_widget = get_element_by_key(app, "required_hidden")
+    hidden_hour = hidden_widget.get_by_role("spinbutton").first
+    hidden_hour.click()
+    hidden_hour.blur()
+    expect(hidden_widget.get_by_role("alert")).to_have_count(0)
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(hidden_hour).to_have_attribute("aria-required", "true")
+    expect(hidden_widget.get_by_role("group")).not_to_have_attribute("aria-required")
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_time_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_time_input-required_marker")
+
+    time_display = widget.get_by_test_id("stTimeInputTimeDisplay")
+    type_time(time_display, "09", "30")
+    wait_for_app_run(themed_app)
+
+    _clear_time_segments(time_display)
+    themed_app.get_by_text("Required time inputs:", exact=True).click()
+    expect(widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    assert_snapshot(widget, name="st_time_input-required_error")
