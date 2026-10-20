@@ -1524,6 +1524,39 @@ class SessionState:
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
 
+    def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
+        """Return the latest metadata retained for a widget id, if any."""
+        return self._get_widget_metadata(widget_id)
+
+    def get_widget_value(self, widget_id: str) -> Any:
+        """Return the value a widget currently holds.
+
+        Check a value set through ``st.session_state`` first, then this run's
+        widget state, then the previous run. Raises KeyError when none holds a
+        value. A custom component can make ``st.session_state`` differ, because
+        it builds a display value from what was stored.
+
+        A still-serialized ``st.chat_input`` proto is read as its text (``None``
+        when unset) without running the deserializer that removes uploaded files.
+        """
+        user_key = self._key_id_mapper.id_key_mapping.get(widget_id)
+        if user_key is not None:
+            try:
+                return self._new_session_state[user_key]
+            except KeyError:
+                pass
+        wstate = self._new_widget_state.states.get(widget_id)
+        if (
+            isinstance(wstate, Serialized)
+            and wstate.value.WhichOneof("value") == "chat_input_value"
+        ):
+            chat_value = wstate.value.chat_input_value
+            # An unset field reads back as ``""``, which is an unfired trigger.
+            if not chat_value.HasField("data"):
+                return None
+            return chat_value.data
+        return self._getitem(widget_id, user_key)
+
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
         return self._new_widget_state.widget_metadata.get(widget_id)
