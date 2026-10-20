@@ -157,9 +157,8 @@ function TriggerArea({
   /** True when keyboard, screen reader, or touch focus keeps the tooltip open. */
   const isHeldOpenByFocusRef = useRef(false)
   /**
-   * Pointer type of the current press on this trigger. The press's click,
-   * pointercancel and onBlurWithin clear it, so a later focus restore isn't
-   * treated as a tap.
+   * Pointer type of the current press on this trigger. Tells a touch tap's focus
+   * apart from a later focus restore. Cleared on click, pointercancel, and blur.
    */
   const pointerDownTypeRef = useRef<string | null>(null)
 
@@ -212,9 +211,9 @@ function TriggerArea({
         pointerDownTypeRef.current = null
       }}
       onClickCapture={() => {
-        // A tap focuses the trigger before its click, so the press is done.
-        // A tap that didn't focus the trigger (WebKit doesn't focus tapped
-        // buttons) must not mark a later focus as a tap.
+        // A tap focuses the trigger before its click, so onFocusWithin has
+        // already read the pointer type. A WebKit tap doesn't focus the button,
+        // and this clear stops a later focus restore from counting as that tap.
         pointerDownTypeRef.current = null
         if (dismissOnClick) {
           state?.close(true)
