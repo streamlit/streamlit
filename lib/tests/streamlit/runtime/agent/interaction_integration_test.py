@@ -662,10 +662,14 @@ async def test_an_edit_applies_on_the_next_interaction_only(
 
         main_script.write_text(textwrap.dedent(script).replace("v1", "v2"))
         app_session._on_source_file_changed(str(main_script))
-        await asyncio.sleep(0.05)
+        # A rerun would have created a runner, which unsettles at once.
         assert app_session.is_settled
         client = app.registry._sessions[handle].client
-        assert any(msg.session_event.script_changed_on_disk for msg in client.messages)
+        async with asyncio.timeout(5):
+            while not any(  # noqa: ASYNC110
+                msg.session_event.script_changed_on_disk for msg in client.messages
+            ):
+                await asyncio.sleep(0.01)
         edited = await app.call({"session_id": handle})
 
         main_script.write_text("import streamlit as st\nst.text('broken'\n")
@@ -749,8 +753,9 @@ async def test_invalid_unicode_is_refused_before_a_session_exists(
 async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
-    """A timed-out run still going holds its slot past the TTL; once it
-    finishes, the timer reclaims it with no request, which frees the slot.
+    """A timed-out run still going holds its slot past the TTL while its client
+    keeps collecting it. Once the client stops, the timer reclaims the session
+    with no request, even though its run never finished, which frees the slot.
     A session only answers its own identity.
     """
     options["server.agentMaxSessions"] = 1
@@ -761,16 +766,22 @@ async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
             timed_out = await app.refused(run_timeout=_SHORT_TIMEOUT)
             handle = timed_out.session_id
             assert handle is not None
-            await asyncio.sleep(0.5)
-            assert handle in app.registry._sessions
+            session_id = app.registry._sessions[handle].session_id
+            for _ in range(3):
+                await asyncio.sleep(0.1)
+                retry = await app.refused(
+                    {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
+                )
+                assert retry.code == "run_timed_out"
             full = await app.refused()
             assert full.code == "too_many_sessions"
 
-            run_gate.opened.set()
             async with asyncio.timeout(5):
                 # Reclaimed by the timer alone, so there is nothing to await.
                 while app.registry._sessions:  # noqa: ASYNC110
                     await asyncio.sleep(0.05)
+            assert app.runtime.get_app_session(session_id) is None
+            run_gate.opened.set()
             options["server.agentSessionTTL"] = 900
             owner: UserInfoType = {"email": "a@example.com"}
             replacement = (await app.call(user_info=owner))["session_id"]

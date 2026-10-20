@@ -468,8 +468,14 @@ class AgentSessionRegistry:
         while self._sessions and not self._runtime_stopped():
             ttl = float(config.get_option("server.agentSessionTTL"))
             await asyncio.sleep(min(ttl, _SWEEP_SECONDS))
-            if not self._runtime_stopped():
+            if self._runtime_stopped():
+                break
+            try:
                 self._reclaim_idle()
+            except Exception:
+                # The timer is what frees idle sessions while no request
+                # arrives, so one failure must not end it.
+                _LOGGER.exception("Failed to reclaim idle agent sessions.")
 
     def _reclaim_idle(self) -> None:
         ttl = float(config.get_option("server.agentSessionTTL"))
@@ -485,15 +491,19 @@ class AgentSessionRegistry:
 
 
 def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
-    """When a session last did anything, or None while it is still working.
+    """When a session last did anything, or None while a request is served.
 
     Activity is the client's last request or the last run finishing, whichever
-    is later. A run that outlasted `run_timed_out` is still activity while it
-    goes, however long the client waits, and gets a full TTL after it finishes
-    to be collected. ``settled`` is whether the session's app has settled.
+    is later, so a run that finishes after `run_timed_out` gets a full TTL to
+    be collected. While that run is still going only requests count: a run
+    that never finishes, such as a loop that calls `st.rerun()`, is reclaimed
+    once its client stops asking for it, and closing the session stops it.
+    ``settled`` is whether the session's app has settled.
     """
-    if session.busy or (session.timed_out is not None and not settled):
+    if session.busy:
         return None
+    if session.timed_out is not None and not settled:
+        return session.last_used
     return max(session.last_used, session.client.finished_at)
 
 
@@ -537,7 +547,9 @@ async def interact(
         For every refusal the error catalog lists. A creating call that fails
         after its session exists carries that session's handle.
     """
-    _validate_request_shape(request)
+    # Off the event loop, since it walks every string in a body that can be as
+    # large as a message from the browser.
+    await asyncio.to_thread(_validate_request_shape, request)
     deadline = time.monotonic() + _run_timeout()
 
     handle = request.get("session_id")
@@ -593,6 +605,9 @@ async def interact(
             registry.close(session.handle)
         raise
     finally:
+        # The idle TTL counts from the end of the last request, so a client
+        # collecting a long run with retries is never reclaimed between them.
+        session.last_used = time.monotonic()
         session.busy = False
         session.released.set()
 

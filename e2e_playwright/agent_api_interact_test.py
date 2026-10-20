@@ -42,14 +42,14 @@ _TOKEN_VALUE: Final = "e2e-callers-rights-token"
 # A value no deployment's real identity could have.
 _SPOOFED_IDENTITY: Final = "spoofed-agent@e2e.invalid"
 # Each retry waits up to `server.agentRunTimeout` on the server, so this bounds
-# collecting the slow page's run at about 20 seconds without client-side sleeps.
-_MAX_COLLECT_ATTEMPTS: Final = 10
+# collecting the slow page's run without client-side sleeps.
+_MAX_COLLECT_ATTEMPTS: Final = 6
 
 
 @pytest.fixture(scope="module")
 def app_server_extra_args() -> list[str]:
     """Turn the agent API on, with a run timeout the slow page outlasts."""
-    return ["--server.enableAgentApi=true", "--server.agentRunTimeout=2"]
+    return ["--server.enableAgentApi=true", "--server.agentRunTimeout=5"]
 
 
 def _interact_url(app_base_url: str) -> str:
@@ -168,7 +168,7 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     assert _url_paths(unknown_page["error"]["pages"]) == _url_paths(report["pages"])
     # Only a creating call's errors carry a session to continue with.
     assert "session_id" not in unknown_page
-    # Setting values is not part of the API yet, so the field is unknown.
+    # `widget_state` is not a request field, so it is refused as unknown.
     _refusal(
         _interact(
             page,

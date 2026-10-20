@@ -61,7 +61,7 @@ _MEDIA_PATH: Final = f"/{BASE_ROUTE_MEDIA}"
 # Every URL a response carries is relative to the request that returned it,
 # because a proxy that strips a path prefix before forwarding leaves the app no
 # way to see where it is. This climbs from the route back to the app's root.
-_MEDIA_PREFIX: Final = "/".join([".."] * _ROUTE_AGENT_INTERACT.count("/"))
+_APP_ROOT_FROM_ROUTE: Final = "/".join([".."] * _ROUTE_AGENT_INTERACT.count("/"))
 
 _DISABLED_MESSAGE: Final = (
     "This app does not serve the agent API. Its operator can turn it on with "
@@ -95,7 +95,9 @@ def _render_json(content: Any) -> bytes:
 
 def _encode_snapshot(document: dict[str, Any]) -> bytes:
     """The response body for a snapshot, with media URLs relative to the request."""
-    snapshot.rebase_media_urls(document, media_path=_MEDIA_PATH, prefix=_MEDIA_PREFIX)
+    snapshot.rebase_media_urls(
+        document, media_path=_MEDIA_PATH, prefix=_APP_ROOT_FROM_ROUTE
+    )
     return _render_json(document)
 
 
@@ -173,11 +175,13 @@ def _parse_body(body: bytes) -> Any:
         interpreter allows.
     """
     try:
-        return json.loads(body, parse_constant=_reject_constant)
-    except json.JSONDecodeError as exc:
-        raise ValueError(exc.msg) from exc
+        # Decoded first: `json.loads` would also accept bytes in UTF-16 or
+        # UTF-32, and surrogates encoded as UTF-8.
+        return json.loads(body.decode("utf-8"), parse_constant=_reject_constant)
     except UnicodeDecodeError as exc:
         raise ValueError("it is not UTF-8") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(exc.msg) from exc
     except RecursionError as exc:
         raise ValueError("it is nested too deeply") from exc
     except ValueError as exc:
@@ -240,6 +244,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     list[BaseRoute]
         The route for ``_stcore/agent/interact``.
     """
+    from starlette.requests import ClientDisconnect
     from starlette.responses import JSONResponse, Response
     from starlette.routing import Route
 
@@ -323,14 +328,20 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         # The bound the WebSocket handler applies to an inbound frame, so the
         # agent path is no more permissive than the browser path.
         max_request_bytes = runtime_util.get_max_widget_state_size_bytes()
-        body = await _read_body(request, max_request_bytes)
+        try:
+            body = await _read_body(request, max_request_bytes)
+        except ClientDisconnect:
+            # Nobody reads this: the client left while sending the body.
+            return Response(status_code=400)
         if body is None:
             return error_response(
                 "request_too_large",
                 f"The request body exceeds {max_request_bytes} bytes.",
             )
         try:
-            payload = _parse_body(body) if body.strip() else {}
+            # Off the event loop, since a body can be as large as a message
+            # from the browser and parsing it would stall every session.
+            payload = await asyncio.to_thread(_parse_body, body) if body.strip() else {}
         except ValueError as exc:
             return error_response(
                 "invalid_request", f"The body is not valid JSON: {exc}."

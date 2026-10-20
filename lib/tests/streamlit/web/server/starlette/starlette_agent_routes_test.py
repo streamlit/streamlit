@@ -26,7 +26,7 @@ from urllib.parse import urljoin
 
 import pytest
 from starlette.applications import Starlette
-from starlette.requests import Request
+from starlette.requests import ClientDisconnect, Request
 from starlette.testclient import TestClient
 
 from streamlit.elements.lib import agent_spec
@@ -177,6 +177,9 @@ async def test_read_body_refuses_a_length_too_long_to_parse() -> None:
         b'{"page": Infinity}',
         b'{"page": -Infinity}',
         b"\xff\xfe{}",
+        "{}".encode("utf-16"),
+        b"\xef\xbb\xbf{}",
+        b'{"page": "\xed\xa0\x80"}',
         # Deep enough to exhaust a worker thread's larger stack as well.
         b"[" * 1_000_000 + b"]" * 1_000_000,
         b'{"page": ' + b"1" * 5000 + b"}",
@@ -187,6 +190,9 @@ async def test_read_body_refuses_a_length_too_long_to_parse() -> None:
         "infinity",
         "negative_infinity",
         "not_utf8",
+        "utf16",
+        "utf8_bom",
+        "encoded_surrogate",
         "deep_nesting",
         "huge_integer",
     ],
@@ -231,6 +237,26 @@ def test_an_empty_body_is_an_empty_request(
     assert response.content == b'{"ok":true}'
     assert interact.await_args is not None
     assert interact.await_args.args[2] == {}
+
+
+def test_a_client_that_leaves_while_sending_the_body_runs_nothing(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """An aborted upload is answered without an error being raised or logged."""
+    with (
+        patch.object(
+            starlette_agent_routes,
+            "_read_body",
+            new=AsyncMock(side_effect=ClientDisconnect()),
+        ),
+        patch.object(starlette_agent_routes._LOGGER, "exception") as log_exception,
+        _client(runtime) as client,
+    ):
+        response = client.post(_PATH, json={})
+
+    assert response.status_code == 400
+    interact.assert_not_awaited()
+    log_exception.assert_not_called()
 
 
 def test_interact_gets_the_request_headers_and_trusted_identity(

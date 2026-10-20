@@ -391,13 +391,17 @@ class AppSession:
 
         """
         msgs = self._browser_queue.flush()
-        if self._flushes_until_settled is not None:
-            self._flushes_until_settled -= 1
-            if self._flushes_until_settled == 0:
+        # Read once: with `runOnSave`, a file watcher thread can start a new
+        # runner, which resets the countdown, at any point here.
+        flushes_left = self._flushes_until_settled
+        if flushes_left is not None:
+            if flushes_left <= 1:
                 self._flushes_until_settled = None
                 self._settled.set()
-            elif self._message_enqueued_callback:
-                self._message_enqueued_callback()
+            else:
+                self._flushes_until_settled = flushes_left - 1
+                if self._message_enqueued_callback:
+                    self._message_enqueued_callback()
         return msgs
 
     @property

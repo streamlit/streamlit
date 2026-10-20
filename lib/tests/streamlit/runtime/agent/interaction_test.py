@@ -562,7 +562,9 @@ def test_collects_only_a_retry_of_the_timed_out_interaction() -> None:
 
 
 def test_idle_since_follows_the_timeout_state_table() -> None:
-    """Busy sessions and timed-out runs still going are never idle."""
+    """A busy session is never idle, and a timed-out run still going counts
+    only the client's requests as activity.
+    """
     with patch.object(interaction.time, "monotonic", return_value=10.0):
         session = _session(last_used=5.0)
 
@@ -575,8 +577,9 @@ def test_idle_since_follows_the_timeout_state_table() -> None:
 
     session.busy = False
     session.timed_out = _pending({})
-    assert interaction._idle_since(session, settled=False) is None
-    assert interaction._idle_since(session, settled=True) == 20.0
+    session.client.finished_at = 30.0
+    assert interaction._idle_since(session, settled=False) == 20.0
+    assert interaction._idle_since(session, settled=True) == 30.0
 
 
 @pytest.mark.parametrize(
