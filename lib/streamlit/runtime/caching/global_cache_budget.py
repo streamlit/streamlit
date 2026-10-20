@@ -16,12 +16,10 @@
 
 from __future__ import annotations
 
-import math
 import queue
 import threading
 import weakref
 from collections import OrderedDict, deque
-from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -54,6 +52,16 @@ class _EntryRecord:
     generation: int
 
 
+@dataclass
+class _EvictionCandidate:
+    """An entry reserved for physical removal after releasing the budget lock."""
+
+    storage: InMemoryCacheStorageWrapper
+    storage_id: int
+    key: str
+    generation: int
+
+
 class GlobalCacheBudget(StatsProvider):
     """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
 
@@ -63,9 +71,10 @@ class GlobalCacheBudget(StatsProvider):
     carries the entry's write generation. The storage validates that generation
     before deletion.
 
-    Lock order for ordinary mutations is budget enforcement, storage memory, then
-    budget bookkeeping. Reconfiguration first takes the configuration lock.
-    Persistent I/O does not run while the budget lock is held.
+    Lock order for ordinary mutations is storage memory, then budget bookkeeping.
+    Victims are reserved under the budget lock and physically removed after it is
+    released. Reconfiguration first takes the configuration lock. Persistent I/O
+    does not run while a storage-memory or budget lock is held.
     """
 
     def __init__(self, max_bytes: int | None) -> None:
@@ -74,9 +83,6 @@ class GlobalCacheBudget(StatsProvider):
         # published storage before taking their mutation locks.
         self._configuration_lock = threading.Lock()
         self._lock = threading.Lock()
-        # Serialize insertion accounting and enforcement so an entry cannot become
-        # eligible for another writer's eviction before its own write is enforced.
-        self._enforcement_lock = threading.RLock()
         self._next_storage_id = 0
         self._storages: dict[
             int, weakref.ReferenceType[InMemoryCacheStorageWrapper]
@@ -120,16 +126,17 @@ class GlobalCacheBudget(StatsProvider):
             return self._total_bytes
 
     def register(self, storage: InMemoryCacheStorageWrapper) -> int:
-        with self._configuration_lock, self._enforcement_lock, self._lock:
-            self._drain_pending_unregisters_locked()
-            storage_id = self._next_storage_id
-            self._next_storage_id += 1
+        with self._configuration_lock:
+            with self._lock:
+                self._drain_pending_unregisters_locked()
+                storage_id = self._next_storage_id
+                self._next_storage_id += 1
 
-            def unregister_storage(_ref: object) -> None:
-                self._pending_unregisters.put(storage_id)
+                def unregister_storage(_ref: object) -> None:
+                    self._pending_unregisters.put(storage_id)
 
-            self._storages[storage_id] = weakref.ref(storage, unregister_storage)
-            self._storage_entries[storage_id] = set()
+                self._storages[storage_id] = weakref.ref(storage, unregister_storage)
+                self._storage_entries[storage_id] = set()
         return storage_id
 
     def unregister(self, storage_id: int) -> None:
@@ -149,39 +156,27 @@ class GlobalCacheBudget(StatsProvider):
                     for storage_ref in self._storages.values()
                     if (storage := storage_ref()) is not None
                 ]
+                self._max_bytes = max_bytes
+                if current_max_bytes is None or max_bytes is None:
+                    self._entries.clear()
+                    self._recency_hints.clear()
+                    self._total_bytes = 0
+                    for storage_entries in self._storage_entries.values():
+                        storage_entries.clear()
 
-            if current_max_bytes is None:
-                with self._enforcement_lock:
-                    with self._lock:
-                        self._max_bytes = max_bytes
-                        self._entries.clear()
-                        self._recency_hints.clear()
-                        self._total_bytes = 0
-                        for storage_entries in self._storage_entries.values():
-                            storage_entries.clear()
-
-                    for storage in storages:
-                        storage._activate_global_budget_entries()
-
-                    # Pre-activation entries are ordered first by storage
-                    # registration and then by each storage's local LRU. Exact
-                    # cross-storage recency begins when the budget is enabled.
-                    self.enforce_budget(None)
+            if max_bytes is None:
                 return
 
-            with self._enforcement_lock:
-                with self._lock:
-                    self._max_bytes = max_bytes
-                    if max_bytes is None:
-                        self._entries.clear()
-                        self._recency_hints.clear()
-                        self._total_bytes = 0
-                        for storage_entries in self._storage_entries.values():
-                            storage_entries.clear()
-                if max_bytes is not None:
-                    # Existing accounting already contains exact cross-storage
-                    # recency, so resizing only needs to enforce the new limit.
-                    self.enforce_budget(None)
+            if current_max_bytes is None:
+                for storage in storages:
+                    storage._activate_global_budget_entries()
+
+            # Pre-activation entries are ordered first by storage registration and
+            # then by each storage's local LRU. Exact cross-storage recency begins
+            # when the budget is enabled.
+            with self._lock:
+                candidates = self._reserve_victims_locked(protected=None)
+            self._evict_candidates(candidates)
 
     def _drain_pending_unregisters_locked(self) -> None:
         while not self._pending_unregisters.empty():
@@ -208,25 +203,25 @@ class GlobalCacheBudget(StatsProvider):
             if record is not None:
                 self._total_bytes -= record.size
 
-    def write_enforcement(self) -> AbstractContextManager[object]:
-        """Keep an insertion protected until it has enforced the budget."""
-        if self._max_bytes is None:
-            return nullcontext()
-        return self._enforcement_lock
-
-    def record_write(
+    def record_write_and_reserve_victims(
         self,
         storage_id: int,
         key: str,
         size: int,
         generation: int,
-    ) -> None:
+        removals: Sequence[tuple[str, int]],
+    ) -> list[_EvictionCandidate]:
+        """Publish a write and atomically reserve victims, protecting that write."""
         if self._max_bytes is None:
-            return
+            return []
         entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
             self._drain_recency_hints_locked()
+            storage_entries = self._storage_entries.get(storage_id)
+            if self._max_bytes is None or storage_entries is None:
+                return []
+            self._record_removals_locked(storage_id, removals)
             current = self._entries.get(entry_key)
             if current is not None:
                 self._total_bytes -= current.size
@@ -234,13 +229,34 @@ class GlobalCacheBudget(StatsProvider):
                 size=size,
                 generation=generation,
             )
-            storage_entries = self._storage_entries.get(storage_id)
-            if storage_entries is None:
-                self._entries.pop(entry_key)
-                return
             storage_entries.add(key)
             self._entries.move_to_end(entry_key)
             self._total_bytes += size
+            return self._reserve_victims_locked(protected=entry_key)
+
+    def activate_storage_entries(
+        self,
+        storage_id: int,
+        entries: Sequence[tuple[str, int, int]],
+    ) -> None:
+        """Publish one storage's pre-activation entries as a single snapshot."""
+        if self._max_bytes is None:
+            return
+        with self._lock:
+            self._drain_pending_unregisters_locked()
+            self._drain_recency_hints_locked()
+            storage_entries = self._storage_entries.get(storage_id)
+            if self._max_bytes is None or storage_entries is None:
+                return
+            for old_key in storage_entries:
+                record = self._entries.pop((storage_id, old_key), None)
+                if record is not None:
+                    self._total_bytes -= record.size
+            storage_entries.clear()
+            for key, size, generation in entries:
+                self._entries[storage_id, key] = _EntryRecord(size, generation)
+                storage_entries.add(key)
+                self._total_bytes += size
 
     def record_read(
         self,
@@ -260,15 +276,20 @@ class GlobalCacheBudget(StatsProvider):
         with self._lock:
             self._drain_pending_unregisters_locked()
             self._drain_recency_hints_locked()
-            storage_entries = self._storage_entries.get(storage_id)
-            for key, generation in removals:
-                entry_key = (storage_id, key)
-                current = self._entries.get(entry_key)
-                if current is None or current.generation != generation:
-                    continue
-                self._total_bytes -= self._entries.pop(entry_key).size
-                if storage_entries is not None:
-                    storage_entries.discard(key)
+            self._record_removals_locked(storage_id, removals)
+
+    def _record_removals_locked(
+        self, storage_id: int, removals: Sequence[tuple[str, int]]
+    ) -> None:
+        storage_entries = self._storage_entries.get(storage_id)
+        for key, generation in removals:
+            entry_key = (storage_id, key)
+            current = self._entries.get(entry_key)
+            if current is None or current.generation != generation:
+                continue
+            self._total_bytes -= self._entries.pop(entry_key).size
+            if storage_entries is not None:
+                storage_entries.discard(key)
 
     def _warn_eviction_once(self) -> None:
         with self._lock:
@@ -289,112 +310,80 @@ class GlobalCacheBudget(StatsProvider):
             stack_info=True,
         )
 
-    def _reap_expired_entries(self) -> None:
-        # Snapshot weak references without taking a storage lock while the budget
-        # lock is held. Each storage reports removals back under its own lock.
-        with self._lock:
-            self._drain_pending_unregisters_locked()
-            storages = [
-                storage
-                for storage_ref in self._storages.values()
-                if (storage := storage_ref()) is not None
-                and storage.ttl_seconds != math.inf
-            ]
-        for storage in storages:
-            storage._reap_expired_entries()
-
-    def _select_victim_snapshot(
+    def _reserve_victims_locked(
         self,
         protected: tuple[int, str] | None,
-        excluded: set[tuple[int, str]],
-    ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
-        """Select the global LRU, excluding the protected write and tried victims."""
-        with self._lock:
-            self._drain_pending_unregisters_locked()
-            self._drain_recency_hints_locked()
-            if self._max_bytes is None or self._total_bytes <= self._max_bytes:
-                return None
-
-            while self._entries:
-                stale_storage_id = None
-                for entry_key, record in self._entries.items():
-                    if entry_key == protected or entry_key in excluded:
-                        continue
-                    storage_ref = self._storages.get(entry_key[0])
-                    storage = storage_ref() if storage_ref is not None else None
-                    if storage is None:
-                        stale_storage_id = entry_key[0]
-                        break
-                    # Snapshot the generation while holding the budget lock. The
-                    # storage validates it under its own lock before deletion.
-                    return (
-                        storage,
-                        entry_key[1],
-                        _EntryRecord(
-                            record.size,
-                            record.generation,
-                        ),
-                    )
-                if stale_storage_id is None:
-                    return None
-                # Restart after dropping a garbage-collected storage because its
-                # entries may account for all bytes above the budget.
-                self._unregister_locked(stale_storage_id)
-                if self._total_bytes <= self._max_bytes:
-                    return None
-            return None
-
-    def _retained_entry_alone_exceeds_budget(
-        self, protected: tuple[int, str] | None
-    ) -> tuple[int, str] | None:
-        with self._lock:
-            self._drain_pending_unregisters_locked()
-            if (
-                self._max_bytes is not None
-                and self._total_bytes > self._max_bytes
-                and len(self._entries) == 1
-            ):
-                entry_key = next(iter(self._entries))
-                if protected is None or protected == entry_key:
-                    return entry_key
-            return None
-
-    def enforce_budget(self, protected: tuple[int, str] | None) -> None:
-        """Evict LRU entries without evicting the write currently being enforced.
-
-        ``protected`` identifies the storage and key for that write. The entry stays
-        cached even when it alone exceeds the process-wide budget.
-        """
-        if self._max_bytes is None:
-            return
-        with self._enforcement_lock:
-            if self.total_bytes <= self._max_bytes:
-                return
-            # TTL expiry is local to each memory cache. Reconcile all expired entries
-            # before selecting from the remaining live global LRU. This exact sweep
-            # makes over-budget enforcement proportional to finite-TTL storages.
-            self._reap_expired_entries()
-            attempted: set[tuple[int, str]] = set()
-            while True:
-                if self._retained_entry_alone_exceeds_budget(protected) is not None:
-                    return
-                victim = self._select_victim_snapshot(protected, attempted)
-                if victim is None:
-                    return
-                storage, key, record = victim
-                attempted.add((storage._global_storage_id, key))
-                evicted = storage._evict_from_mem_cache(
-                    key,
-                    expected_generation=record.generation,
-                )
-                if evicted:
-                    with self._lock:
-                        self._global_evictions += 1
-                    self._warn_eviction_once()
-                else:
-                    # A concurrent delete, clear, expiry, or teardown changed or
-                    # removed this entry. Continue with a fresh candidate.
+    ) -> list[_EvictionCandidate]:
+        """Reserve LRU victims and subtract them while holding the budget lock."""
+        self._drain_pending_unregisters_locked()
+        self._drain_recency_hints_locked()
+        candidates: list[_EvictionCandidate] = []
+        while (
+            self._max_bytes is not None
+            and self._total_bytes > self._max_bytes
+            and self._entries
+        ):
+            stale_storage_id = None
+            selected: (
+                tuple[
+                    tuple[int, str],
+                    _EntryRecord,
+                    InMemoryCacheStorageWrapper,
+                ]
+                | None
+            ) = None
+            for entry_key, record in self._entries.items():
+                if entry_key == protected:
                     continue
+                storage_ref = self._storages.get(entry_key[0])
+                storage = storage_ref() if storage_ref is not None else None
+                if storage is None:
+                    stale_storage_id = entry_key[0]
+                    break
+                selected = (entry_key, record, storage)
+                break
+            if stale_storage_id is not None:
+                self._unregister_locked(stale_storage_id)
+                continue
+            if selected is None:
+                break
+            entry_key, record, storage = selected
+            self._entries.pop(entry_key)
+            self._storage_entries[entry_key[0]].discard(entry_key[1])
+            self._total_bytes -= record.size
+            candidates.append(
+                _EvictionCandidate(
+                    storage=storage,
+                    storage_id=entry_key[0],
+                    key=entry_key[1],
+                    generation=record.generation,
+                )
+            )
+        return candidates
+
+    def can_evict_reserved(self, storage_id: int, key: str) -> bool:
+        """Validate a reserved victim while its storage memory lock is held."""
+        with self._lock:
+            self._drain_pending_unregisters_locked()
+            if storage_id not in self._storage_entries:
+                return False
+            return (storage_id, key) not in self._entries
+
+    def _evict_candidates(self, candidates: Sequence[_EvictionCandidate]) -> None:
+        """Physically remove reserved victims without holding the budget lock."""
+        for candidate in candidates:
+            evicted = candidate.storage._evict_from_mem_cache(
+                candidate.key,
+                expected_generation=candidate.generation,
+            )
+            if evicted:
+                with self._lock:
+                    self._global_evictions += 1
+                self._warn_eviction_once()
+
+    def evict_candidates(self, candidates: Sequence[_EvictionCandidate]) -> None:
+        """Remove victims returned by ``record_write_and_reserve_victims``."""
+        self._evict_candidates(candidates)
 
     def get_stats(
         self, family_names: Sequence[str] | None = None

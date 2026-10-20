@@ -161,6 +161,129 @@ class CacheDataTest(unittest.TestCase):
             _data_caches.clear_all()
             assert budget.total_bytes == 0
 
+    def test_session_clear_continues_cleanup_after_cache_clear_error(self) -> None:
+        """A failed cache clear does not leak any session storage registrations."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+            "scope": "session",
+        }
+
+        with (
+            patch(
+                "streamlit.runtime.caching.storage."
+                "in_memory_cache_storage_wrapper.get_global_cache_budget",
+                return_value=budget,
+            ),
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ),
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+
+            with (
+                patch.object(first, "clear", side_effect=RuntimeError("clear failed")),
+                patch.object(
+                    first.storage, "close", wraps=first.storage.close
+                ) as first_close,
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="clear failed"),
+            ):
+                clear_session_cache("session")
+
+        first_close.assert_called_once()
+        second_close.assert_called_once()
+        assert budget.total_bytes == 0
+
+    def test_clear_all_continues_cleanup_after_manager_error(self) -> None:
+        """A failed manager clear still closes caches and detaches the registry."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+
+            with (
+                patch.object(
+                    Runtime.instance().cache_storage_manager,
+                    "clear_all",
+                    side_effect=RuntimeError("manager failed"),
+                ),
+                patch.object(
+                    first.storage, "close", wraps=first.storage.close
+                ) as first_close,
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="manager failed"),
+            ):
+                _data_caches.clear_all()
+
+            replacement = _data_caches.get_cache(key="first", **common)
+
+        first_close.assert_called_once()
+        second_close.assert_called_once()
+        assert replacement is not first
+        assert budget.total_bytes == 0
+
+    def test_clear_all_continues_cleanup_after_storage_close_error(self) -> None:
+        """A failed storage close does not skip later storage cleanup."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+            original_first_close = first.storage.close
+
+            def fail_after_first_close() -> None:
+                original_first_close()
+                raise RuntimeError("close failed")
+
+            with (
+                patch.object(first.storage, "close", fail_after_first_close),
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="close failed"),
+            ):
+                _data_caches.clear_all()
+
+        second_close.assert_called_once()
+        assert budget.total_bytes == 0
+
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
         """Mutating a memoized return value is legal, and *won't* affect

@@ -63,6 +63,21 @@ class _DictStorage:
         pass
 
 
+class _BarrierLock:
+    """A lock that proves two independent storage critical sections can overlap."""
+
+    def __init__(self, barrier: threading.Barrier) -> None:
+        self._lock = threading.Lock()
+        self._barrier = barrier
+
+    def __enter__(self) -> None:
+        self._lock.acquire()
+        self._barrier.wait(timeout=5)
+
+    def __exit__(self, *_args: object) -> None:
+        self._lock.release()
+
+
 def _create_storage(
     budget: GlobalCacheBudget,
     name: str,
@@ -129,6 +144,60 @@ def test_reconfigure_accounts_for_existing_entries() -> None:
     with pytest.raises(CacheStorageKeyNotFoundError):
         storage.get("recent")
     assert budget.total_bytes == 3
+
+
+def test_reconfigure_allows_reads_and_writes_before_storage_activation() -> None:
+    """Concurrent access remains safe while disabled entries are activated."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    first = _create_storage(budget, "first")
+    second = _create_storage(budget, "second")
+    first.set("first", b"a")
+    second.set("old", b"bb")
+    activation_started = threading.Event()
+    continue_activation = threading.Event()
+    original_activate = first._activate_global_budget_entries
+
+    def delayed_activate() -> None:
+        activation_started.set()
+        assert continue_activation.wait(timeout=5)
+        original_activate()
+
+    with (
+        patch.object(first, "_activate_global_budget_entries", delayed_activate),
+        ThreadPoolExecutor(max_workers=1) as executor,
+    ):
+        reconfigure = executor.submit(budget.reconfigure, 100)
+        assert activation_started.wait(timeout=5)
+        assert second.get("old") == b"bb"
+        second.set("new", b"ccc")
+        continue_activation.set()
+        reconfigure.result(timeout=5)
+
+    assert budget.total_bytes == 6
+    assert second.get("old") == b"bb"
+    assert second.get("new") == b"ccc"
+
+
+def test_enabled_writes_to_different_storages_overlap() -> None:
+    """The global budget does not wrap writes in one process-wide lock."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    first = _create_storage(budget, "first")
+    second = _create_storage(budget, "second")
+    barrier = threading.Barrier(2)
+
+    with (
+        patch.object(first, "_mem_cache_lock", _BarrierLock(barrier)),
+        patch.object(second, "_mem_cache_lock", _BarrierLock(barrier)),
+        ThreadPoolExecutor(max_workers=2) as executor,
+    ):
+        futures = [
+            executor.submit(first.set, "first", b"a"),
+            executor.submit(second.set, "second", b"b"),
+        ]
+        for future in futures:
+            future.result(timeout=5)
+
+    assert budget.total_bytes == 2
 
 
 def test_budget_evicts_global_lru_and_counts_success() -> None:
@@ -306,21 +375,7 @@ def test_rewritten_selected_victim_keeps_new_generation() -> None:
         write_thread = threading.Thread(target=writer.set, args=("new", b"x"))
         write_thread.start()
         assert selected.wait(timeout=5)
-        # Reproduce the atomic in-memory/accounting part of a rewrite while the
-        # selected victim is paused. Public writes serialize their enforcement.
-        with victim._mem_cache_lock:
-            victim._mem_cache["key"] = b"new"
-            victim._next_generation += 1
-            generation = victim._next_generation
-            victim._generations["key"] = generation
-            removals = victim._take_pending_removals()
-            victim._report_removals(removals)
-            budget.record_write(
-                victim._global_storage_id,
-                "key",
-                len(b"new"),
-                generation,
-            )
+        victim.set("key", b"new")
         continue_eviction.set()
         write_thread.join(timeout=5)
 

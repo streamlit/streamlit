@@ -296,12 +296,23 @@ class DataCaches(StatsProvider):
                 del self._function_caches[session_id]
 
         if session_caches is not None:
+            first_error: Exception | None = None
             for cache in session_caches.values():
                 # Detach so a background refresh that completes after the session
                 # ended is discarded rather than repopulating the cache.
                 cache.mark_detached()
-                cache.clear()
-                cache.storage.close()
+                try:
+                    cache.clear()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+                try:
+                    cache.storage.close()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+            if first_error is not None:
+                raise first_error
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -313,7 +324,12 @@ class DataCaches(StatsProvider):
             ]
             for cache in all_caches:
                 cache.mark_detached()
+            # Detach the registry before storage operations so an error cannot leave
+            # inactive caches available for reuse.
+            self._function_caches = {}
 
+            first_error: Exception | None = None
+            clear_individually = False
             try:
                 # try to remove in optimal way if such ability provided by
                 # storage manager clear_all method;
@@ -321,11 +337,25 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
+                clear_individually = True
+            except Exception as ex:
+                first_error = ex
+
+            if clear_individually:
                 for cache in all_caches:
-                    cache.clear()
+                    try:
+                        cache.clear()
+                    except Exception as ex:
+                        if first_error is None:
+                            first_error = ex
             for cache in all_caches:
-                cache.storage.close()
-            self._function_caches = {}
+                try:
+                    cache.storage.close()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+            if first_error is not None:
+                raise first_error
 
     def get_stats(
         self,

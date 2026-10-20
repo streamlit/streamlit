@@ -164,55 +164,62 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def close(self) -> None:
         """Closes the cache storage."""
-        self._global_budget.unregister(self._global_storage_id)
+        # Keep unregister ordered after the storage lock so a reserved global
+        # victim cannot pass validation while this storage is being dropped.
+        with self._mem_cache_lock:
+            self._global_budget.unregister(self._global_storage_id)
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
-            if key not in self._mem_cache:
+            try:
+                entry = bytes(self._mem_cache[key])
+            except KeyError:
                 _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+                raise CacheStorageKeyNotFoundError(
+                    "Key not found in mem cache"
+                ) from None
 
-            entry = bytes(self._mem_cache[key])
-            if self._global_budget.is_enabled:
+            generation = self._generations.get(key)
+            if generation is not None and self._global_budget.is_enabled:
                 self._global_budget.record_read(
                     self._global_storage_id,
                     key,
-                    self._generations[key],
+                    generation,
                 )
             _LOGGER.debug("Memory cache HIT: %s", key)
             return entry
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         should_warn = False
-        with self._global_budget.write_enforcement():
-            with self._mem_cache_lock:
-                if (
-                    (
-                        self._max_size_bytes is not None
-                        and len(entry_bytes) > self._max_size_bytes
-                    )
-                    or (
-                        self._global_budget.max_bytes is not None
-                        and len(entry_bytes) > self._global_budget.max_bytes
-                    )
-                ) and not self._oversized_warning_emitted:
-                    self._oversized_warning_emitted = True
-                    should_warn = True
-                self._mem_cache[key] = entry_bytes
-                if self._global_budget.is_enabled:
-                    self._next_generation += 1
-                    generation = self._next_generation
-                    self._generations[key] = generation
-                    removals = self._take_pending_removals()
-                    self._report_removals(removals)
-                    self._global_budget.record_write(
-                        self._global_storage_id,
-                        key,
-                        len(entry_bytes),
-                        generation,
-                    )
-            self._global_budget.enforce_budget((self._global_storage_id, key))
+        candidates = []
+        with self._mem_cache_lock:
+            if (
+                (
+                    self._max_size_bytes is not None
+                    and len(entry_bytes) > self._max_size_bytes
+                )
+                or (
+                    self._global_budget.max_bytes is not None
+                    and len(entry_bytes) > self._global_budget.max_bytes
+                )
+            ) and not self._oversized_warning_emitted:
+                self._oversized_warning_emitted = True
+                should_warn = True
+            self._mem_cache[key] = entry_bytes
+            removals = self._take_pending_removals()
+            if self._global_budget.is_enabled:
+                self._next_generation += 1
+                generation = self._next_generation
+                self._generations[key] = generation
+                candidates = self._global_budget.record_write_and_reserve_victims(
+                    self._global_storage_id,
+                    key,
+                    len(entry_bytes),
+                    generation,
+                    removals,
+                )
+        self._global_budget.evict_candidates(candidates)
         if should_warn:
             _LOGGER.warning(
                 "A cached result is larger than the st.cache_data size limit and "
@@ -240,28 +247,20 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         if removals:
             self._global_budget.record_removals(self._global_storage_id, removals)
 
-    def _reap_expired_entries(self) -> None:
-        """Remove expired memory entries and publish their released bytes."""
-        with self._mem_cache_lock:
-            self._mem_cache.expire()
-            removals = self._take_pending_removals()
-            self._report_removals(removals)
-
     def _activate_global_budget_entries(self) -> None:
         """Publish live pre-activation entries while holding their memory lock."""
         with self._mem_cache_lock:
             self._mem_cache.expire()
             self._take_pending_removals()
+            entries: list[tuple[str, int, int]] = []
             for key, value in self._mem_cache.lru_items():
                 self._next_generation += 1
                 generation = self._next_generation
                 self._generations[key] = generation
-                self._global_budget.record_write(
-                    self._global_storage_id,
-                    key,
-                    len(value),
-                    generation,
-                )
+                entries.append((key, len(value), generation))
+            self._global_budget.activate_storage_entries(
+                self._global_storage_id, entries
+            )
 
     def _evict_from_mem_cache(
         self,
@@ -271,6 +270,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         """Remove a matching in-memory generation without touching disk."""
         with self._mem_cache_lock:
             if self._generations.get(key) != expected_generation:
+                return False
+            if not self._global_budget.can_evict_reserved(self._global_storage_id, key):
                 return False
             is_live = key in self._mem_cache
             with contextlib.suppress(KeyError):
