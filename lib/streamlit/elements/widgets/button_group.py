@@ -1559,6 +1559,9 @@ class ButtonGroupMixin:
                 "pills" if style == "pills" else "segmented_control",
                 key=element_id,
                 action="value",
+                # A second click on the selected option clears a single
+                # selection, unless the widget requires one.
+                clearable=selection_mode == "single" and not required,
                 value_schema=agent_spec.STRING
                 if selection_mode == "single"
                 else agent_spec.list_of(agent_spec.STRING),

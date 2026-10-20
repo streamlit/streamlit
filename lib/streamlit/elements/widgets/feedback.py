@@ -356,8 +356,11 @@ class FeedbackMixin:
                 "feedback",
                 key=element_id,
                 action="value",
-                # The index of the chosen option.
+                # Choosing the current star or face again clears it.
+                clearable=True,
+                # The index of the chosen option. `options` names the set.
                 value_schema=agent_spec.INTEGER,
+                choices=list(range(_get_num_options(options))),
                 options=options,
                 disabled=disabled,
                 on_change="ignore" if on_change == "ignore" else "rerun",

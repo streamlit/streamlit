@@ -54,6 +54,11 @@ Its arguments are still evaluated in every session, so they must never raise for
 an input the command accepts, and expensive preparation belongs behind
 ``is_recording()``.
 
+``clearable`` and ``choices`` are the same kind of fact as ``value_schema``.
+``clearable`` says that choosing the current value again empties the widget.
+``choices`` is the list a request may send when that list is not the ``options``
+parameter. Only the command knows either one, so the snapshot copies them.
+
 Two things deliberately stay out of a command's description, because the command
 cannot know them yet:
 
@@ -98,6 +103,8 @@ _SUPPORT_KEY: Final = "support"
 _PROPS_KEY: Final = "props"
 _TRANSPARENT_KEY: Final = "transparent"
 _VALUE_SCHEMA_KEY: Final = "value_schema"
+_CLEARABLE_KEY: Final = "clearable"
+_CHOICES_KEY: Final = "choices"
 
 # Building blocks for ``value_schema``: the JSON Schema of the value a request
 # sends an element, in the form the snapshot reports it. They describe shape
@@ -182,6 +189,8 @@ def _json_description(
     support: SupportReason | None,
     value_schema: dict[str, Any] | None = None,
     transparent: bool = False,
+    clearable: bool = False,
+    choices: list[Any] | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -198,6 +207,10 @@ def _json_description(
         description[_TRANSPARENT_KEY] = True
     if value_schema is not None:
         description[_VALUE_SCHEMA_KEY] = value_schema
+    if clearable:
+        description[_CLEARABLE_KEY] = True
+    if choices is not None:
+        description[_CHOICES_KEY] = choices
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
@@ -210,6 +223,8 @@ def element(
     action: ActionKind | None = None,
     value_schema: dict[str, Any] | None = None,
     support: SupportReason | None = None,
+    clearable: bool = False,
+    choices: list[Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -235,6 +250,12 @@ def element(
         the constants above.
     support
         Why the element is not fully usable, when it is not.
+    clearable
+        Whether choosing the current value again empties it. Omit when it
+        does not. The snapshot copies this and does not infer it.
+    choices
+        The values a request may send, when they are not the ``options``
+        parameter. Omit to use ``options`` when that parameter is a list.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -249,6 +270,8 @@ def element(
         action=action,
         support=support,
         value_schema=value_schema,
+        clearable=clearable,
+        choices=choices,
     )
 
 
@@ -335,6 +358,7 @@ def block(
     value_schema: dict[str, Any] | None = None,
     support: SupportReason | None = None,
     transparent: bool = False,
+    choices: list[Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe a container for the agent API, or return ``None`` when this session is not recording.
@@ -344,7 +368,8 @@ def block(
 
     ``action`` and ``value_schema`` are for a container that is a widget in its
     own right, such as ``st.tabs(on_change="rerun")``, whose value is the open
-    tab.
+    tab. ``choices`` is the list a request may send when that list is not an
+    ``options`` parameter, such as the tab labels.
     """
     return _json_description(
         command,
@@ -354,6 +379,7 @@ def block(
         support=support,
         value_schema=value_schema,
         transparent=transparent,
+        choices=choices,
     )
 
 

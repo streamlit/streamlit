@@ -46,7 +46,7 @@ def reported_value(
     *,
     options: list[Any] | None = None,
     value_schema: dict[str, Any] | None = None,
-    options_open: bool = False,
+    accept_new_options: bool = False,
 ) -> Any:
     """Read a widget's live value, in the form a request may send back.
 
@@ -57,8 +57,7 @@ def reported_value(
 
     The widget's own serializer is the mapping the runtime will apply in
     reverse, so it is what keeps read and write in the same space. It is
-    used for every widget with an option list, whether the registry holds
-    the list or only the snapshot lists it (`options`), as for
+    used for every widget whose description lists `options`, including
     `st.select_slider`. It is also used for a widget whose wire value is
     text when what it holds is not plain JSON already -- a date becomes its
     ISO string. Others -- numbers, booleans, temporal sliders,
@@ -88,8 +87,6 @@ def reported_value(
 
         if isinstance(value, ChatInputValue):
             value = value.text
-    if options is None and metadata is not None:
-        options = metadata.formatted_options
     if metadata is not None and (
         options is not None
         or (
@@ -112,7 +109,7 @@ def reported_value(
                 serialized,
                 options,
                 _authored_options(metadata.serializer),
-                options_open=options_open,
+                accept_new_options=accept_new_options,
             )
         except Exception:
             # The stored object is not a value a request can send back.
@@ -225,7 +222,7 @@ def _keep_typed_text(
     options: list[Any] | None,
     authored: list[Any] | tuple[Any, ...] | None = None,
     *,
-    options_open: bool = False,
+    accept_new_options: bool = False,
 ) -> Any:
     """Return the serialized value, but keep text a user typed.
 
@@ -241,7 +238,7 @@ def _keep_typed_text(
         allowed: set[Any] | None = set(options)
     except TypeError:
         allowed = None
-    authored_index = _index_authored(authored) if options_open else None
+    authored_index = _index_authored(authored) if accept_new_options else None
 
     def _is_option(label: Any) -> bool:
         if allowed is None:
@@ -252,7 +249,7 @@ def _keep_typed_text(
         # Typed text can format to a label without being that option. A closed
         # set has no typed text, so a value that formats to a label is it.
         if (
-            options_open
+            accept_new_options
             and isinstance(item, str)
             and authored_index is not None
             and not _is_authored(item, authored_index)

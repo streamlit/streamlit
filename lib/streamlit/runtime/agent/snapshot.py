@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
@@ -66,14 +66,10 @@ class ElementState(NamedTuple):
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # The options this element advertised, so the next request can be checked
-    # against what the client was offered. The widget registry carries options
-    # for most selection widgets, but not for `st.select_slider` and not for a
-    # trigger such as `st.menu_button`.
+    # The closed list a later request must belong to. ``None`` when the widget
+    # accepts values outside its options, or when it has no fixed list. The
+    # description still carries those options for the client.
     options: list[Any] | None
-    # Whether a value may also be something not in `options`, as with
-    # `accept_new_options`. The options still say which numbers name one.
-    options_open: bool
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
     fragment_id: str | None
@@ -230,7 +226,6 @@ class _SnapshotBuilder:
                 self._session_state,
                 element_id,
                 value_schema=description.get("value_schema"),
-                options_open=props.get("accept_new_options") is True,
             )
             # As for elements, a trigger's value only means anything while set.
             # An empty string is a fired payload. False is an unclicked button.
@@ -308,7 +303,7 @@ class _SnapshotBuilder:
                 element_id,
                 options=options if isinstance(options, list) else None,
                 value_schema=description.get("value_schema"),
-                options_open=props.get("accept_new_options") is True,
+                accept_new_options=props.get("accept_new_options") is True,
             )
             # An empty string is a fired payload. False is an unclicked button.
             if action == "value" or (value is not None and value is not False):
@@ -349,27 +344,19 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # What a request may choose from: a trigger's choices, such as
-        # `st.menu_button`'s, and the options of a widget that registers none
-        # of its own. Not a limit for a widget that accepts new options.
-        options = props.get("options")
-        if (
-            options is None
-            and command == "tabs"
-            and isinstance(props.get("tabs"), list)
-        ):
-            # Stateful tabs advertise the legal values as `tabs`, not `options`.
-            options = props["tabs"]
-        if command == "feedback" and isinstance(options, str):
-            # `st.feedback` names its option set, and its value is an index
-            # into it. The description does not list those indexes; that stays
-            # with the command's declaration.
-            from streamlit.elements.widgets.feedback import _get_num_options
-
-            count = _get_num_options(cast("Any", options))
-            # The value is the index, and `value_schema` is an integer, so the
-            # options a request is checked against are those indexes.
-            options = list(range(count))
+        # Membership list for the next request. A widget that accepts new
+        # text has no such list: any value of the right schema is legal, and
+        # its options stay on the description. Otherwise a command publishes
+        # `choices` when the list is not its `options` parameter.
+        if props.get("accept_new_options") is True:
+            options = None
+        else:
+            published = description.get("choices")
+            if isinstance(published, list):
+                options = published
+            else:
+                candidate = props.get("options")
+                options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
         actionable = (
             bool(action)
@@ -387,20 +374,14 @@ class _SnapshotBuilder:
             # A copy, so a later check can filter this list without rewriting
             # the options already published on the element.
             options=list(options) if isinstance(options, list) else None,
-            options_open=bool(props.get("accept_new_options")),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
             command=command,
             max_items=(description.get("value_schema") or {}).get("maxItems"),
             schema_type=(description.get("value_schema") or {}).get("type"),
-            # Clicking the selected option empties a single-select group
-            # unless it is required, and `st.feedback` always.
-            clearable=command == "feedback"
-            or (
-                command in {"segmented_control", "pills"}
-                and props.get("selection_mode") == "single"
-                and not props.get("required")
-            ),
+            # The command says whether choosing the current value again
+            # empties it. The snapshot does not infer that from the command.
+            clearable=description.get("clearable") is True,
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
@@ -478,8 +459,9 @@ def _fallback_description(proto_field: str, payload: Message | None) -> dict[str
 def _is_write_only(description: dict[str, Any]) -> bool:
     """Whether an element's value may be set but must never be reported.
 
-    Responses are logged and kept in a model's context, so a password the app
-    defaulted or the client typed must not come back out.
+    A password is the only such widget. Responses are logged and kept in a
+    model's context, so a password the app defaulted or the client typed must
+    not come back out.
     """
     props = description.get("props") or {}
     return description.get("type") == "text_input" and props.get("type") == "password"
@@ -571,6 +553,10 @@ def _add_compile_error(
     A browser shows it as an overlay from a session event rather than as an
     element, so it never reaches the tree. Without it, a client that edited a
     script into a syntax error would see an empty app and no reason why.
+
+    That session event is marshalled without ``client.showErrorDetails``. The
+    snapshot copies it. A compile failure is the developer looking at their
+    own script, and the page is already showing the full exception.
     """
     exception = _compilation_exception(messages)
     if exception is None:
@@ -578,9 +564,14 @@ def _add_compile_error(
     main = next((child for child in children if child.get("type") == "main"), None)
     if main is None:  # pragma: no cover - merge_deltas always emits main
         return
-    main.setdefault("children", []).append(
-        {"type": "exception", "props": _redacted_compile_props(exception)}
-    )
+    props: dict[str, Any] = {"uncaught": True}
+    if exception.type:
+        props["type"] = exception.type
+    if exception.message:
+        props["message"] = exception.message
+    if exception.stack_trace:
+        props["stack_trace"] = list(exception.stack_trace)
+    main.setdefault("children", []).append({"type": "exception", "props": props})
 
 
 def _compilation_exception(messages: list[ForwardMsg]) -> Any:
@@ -595,33 +586,6 @@ def _compilation_exception(messages: list[ForwardMsg]) -> Any:
         if msg.session_event.HasField("script_compilation_exception"):
             return msg.session_event.script_compilation_exception
     return None
-
-
-def _redacted_compile_props(exception: Any) -> dict[str, Any]:
-    """Compile-error fields after ``client.showErrorDetails`` redaction.
-
-    The session event is marshalled without ``apply_show_error_details``, so
-    the snapshot applies those rules here and can be stricter than the page.
-    ``stack_trace`` is copied as already formatted. Chained messages baked
-    into those rows are not parsed back out.
-    """
-    from streamlit.elements.exception import (
-        _GENERIC_UNCAUGHT_EXCEPTION_TEXT,
-        _error_detail_visibility,
-    )
-
-    visibility = _error_detail_visibility(True)
-    props: dict[str, Any] = {"uncaught": True}
-    if visibility.show_type and exception.type:
-        props["type"] = exception.type
-    if visibility.show_message:
-        if exception.message:
-            props["message"] = exception.message
-    else:
-        props["message"] = _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-    if visibility.show_trace and exception.stack_trace:
-        props["stack_trace"] = list(exception.stack_trace)
-    return props
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:

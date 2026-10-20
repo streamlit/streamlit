@@ -23,7 +23,6 @@ import re
 import pandas as pd
 
 import streamlit as st
-from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.error_util import show_uncaught_app_exception
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -311,6 +310,7 @@ class SnapshotBuilderTest(SnapshotCase):
         )
         st.pills("Mood", ["a", "b"], key="mood")
         st.pills("Required", ["a", "b"], required=True, key="required")
+        st.pills("Several", ["a", "b"], selection_mode="multi", key="several")
         st.segmented_control("Mode", ["a", "b"], key="mode")
         st.selectbox("City", ["Paris"], accept_new_options=True, key="open_city")
         st.selectbox("Closed", ["Paris"], key="closed_city")
@@ -323,9 +323,15 @@ class SnapshotBuilderTest(SnapshotCase):
         assert days.schema_type == "array"
         assert _state(snapshot, "pills", "mood").clearable is True
         assert _state(snapshot, "pills", "required").clearable is False
+        assert _state(snapshot, "pills", "several").clearable is False
         assert _state(snapshot, "segmented_control", "mode").clearable is True
-        assert _state(snapshot, "selectbox", "open_city").options_open is True
-        assert _state(snapshot, "selectbox", "closed_city").options_open is False
+        # New text is legal, so the membership list is empty. The options stay
+        # on the description for the client.
+        open_city = _one_keyed(snapshot.document, "selectbox", "open_city")
+        assert _state(snapshot, "selectbox", "open_city").options is None
+        assert open_city["props"]["options"] == ["Paris"]
+        assert open_city["props"]["accept_new_options"] is True
+        assert _state(snapshot, "selectbox", "closed_city").options == ["Paris"]
         name = _state(snapshot, "text_input", "name")
         assert name.form_id == "edit"
         assert name.schema_type == "string"
@@ -449,12 +455,12 @@ class SnapshotBuilderTest(SnapshotCase):
         still = self._build(finished, event, changed).document
         assert _one(still, "exception")["props"]["message"] == "invalid syntax"
 
-        with patch_config_options({"client.showErrorDetails": "stacktrace"}):
-            redacted = self._build(finished, event).document
-        redacted_props = _one(redacted, "exception")["props"]
-        assert redacted_props["message"] == _GENERIC_UNCAUGHT_EXCEPTION_TEXT
-        assert redacted_props["type"] == "SyntaxError"
-        assert redacted_props["stack_trace"] == ['File "app.py", line 1']
+        with patch_config_options({"client.showErrorDetails": "none"}):
+            shown = self._build(finished, event).document
+        shown_props = _one(shown, "exception")["props"]
+        assert shown_props["message"] == "invalid syntax"
+        assert shown_props["type"] == "SyntaxError"
+        assert shown_props["stack_trace"] == ['File "app.py", line 1']
 
         recovered = ForwardMsg()
         recovered.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
