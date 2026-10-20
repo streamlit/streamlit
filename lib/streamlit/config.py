@@ -19,7 +19,6 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import math
 import os
 import re
 import secrets
@@ -3464,37 +3463,6 @@ def _check_metrics_user_attributes() -> None:
         )
 
 
-_AGENT_API_LIMIT_OPTIONS: Final = (
-    "server.agentRunTimeout",
-    "server.agentSessionTTL",
-    "server.agentMaxSessions",
-)
-
-
-def _check_agent_api_limits() -> None:
-    """Validate the agent API limits at config-load time.
-
-    Each limit only bounds something as a whole number greater than zero: a run
-    timeout of zero times out every request, a TTL of zero reclaims every
-    session at once, and a session cap of zero refuses every session.
-    ``config.toml`` can also set a bool, a fraction, NaN, or infinity, which
-    the CLI's integer parsing rejects on its own.
-    """
-    for name in _AGENT_API_LIMIT_OPTIONS:
-        value = get_option(name)
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(value)
-            or value != int(value)
-            or value <= 0
-        ):
-            raise RuntimeError(
-                f"Invalid value for config option {name}: {value!r}. It must be "
-                "a whole number greater than 0."
-            )
-
-
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -3560,6 +3528,3 @@ on_config_parsed(_parse_trusted_user_headers, lock=True)
 # Reject reserved label names in server.unsafeMetricsUserAttributes. No lock needed
 # since this only reads the config, it does not mutate it.
 on_config_parsed(_check_metrics_user_attributes)
-# Reject agent API limits that are not whole numbers greater than zero. No lock
-# needed since this only reads the config.
-on_config_parsed(_check_agent_api_limits)

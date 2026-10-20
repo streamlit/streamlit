@@ -17,10 +17,7 @@
 from __future__ import annotations
 
 import copy
-import itertools
-import math
 import os
-import re
 import sys
 import tempfile
 import textwrap
@@ -42,12 +39,6 @@ from streamlit.errors import (
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
-
-_AGENT_API_LIMIT_OPTIONS = (
-    "server.agentRunTimeout",
-    "server.agentSessionTTL",
-    "server.agentMaxSessions",
-)
 
 
 def _warning_text(mock_logger: MagicMock) -> str:
@@ -1166,32 +1157,6 @@ class ConfigTest(unittest.TestCase):
             assert option.visibility == "hidden"
             assert option.default_val == default_val
             assert config.get_option(key) == default_val
-        # The defaults themselves pass validation.
-        config._check_agent_api_limits()
-
-    @parameterized.expand(
-        itertools.product(
-            _AGENT_API_LIMIT_OPTIONS, [True, 1.5, math.nan, math.inf, 0, -1, "30"]
-        )
-    )
-    def test_check_agent_api_limits_refuses_invalid_values(
-        self, name: str, value: object
-    ) -> None:
-        """A limit that is not a whole number greater than zero is refused."""
-        config._set_option(name, value, "test")
-        with pytest.raises(
-            RuntimeError,
-            match=rf"{re.escape(name)}: .*It must be a whole number greater than 0",
-        ):
-            config._check_agent_api_limits()
-
-    @parameterized.expand(itertools.product(_AGENT_API_LIMIT_OPTIONS, [1, 30.0]))
-    def test_check_agent_api_limits_accepts_whole_numbers(
-        self, name: str, value: float
-    ) -> None:
-        """A whole number greater than zero passes, even when TOML parsed a float."""
-        config._set_option(name, value, "test")
-        config._check_agent_api_limits()
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234

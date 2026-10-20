@@ -469,7 +469,9 @@ class AgentSessionRegistry:
         """Reclaim idle sessions on a timer, until none are left."""
         while self._sessions and not self._runtime_stopped():
             ttl = float(config.get_option("server.agentSessionTTL"))
-            await asyncio.sleep(min(ttl, _SWEEP_SECONDS))
+            # At least a second apart, so a TTL of zero or less cannot spin the
+            # event loop while a busy session is never reclaimed.
+            await asyncio.sleep(min(max(ttl, 1.0), _SWEEP_SECONDS))
             if self._runtime_stopped():
                 break
             try:
