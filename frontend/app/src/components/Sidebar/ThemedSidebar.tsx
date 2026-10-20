@@ -29,8 +29,9 @@ const ThemedSidebar = ({
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
-  // Memoize so sidebar descendants that use the theme as a hook dependency
-  // don't re-run effects on every render (e.g. st.audio_input's waveform).
+  // Memoize so the sidebar ThemeProvider value stays stable. Otherwise every
+  // descendant that depends on the theme object (custom components, Markdown)
+  // re-runs its effects on each sidebar render.
   const sidebarTheme = useMemo(
     () => createSidebarTheme(activeTheme),
     [activeTheme]

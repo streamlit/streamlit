@@ -276,6 +276,24 @@ describe("WaveSurferRecordBackend", () => {
     expect(onError.mock.calls[0][0].message).toBe("Invalid or empty recording")
   })
 
+  it("rejects a pending stopRecording when the recording is cancelled", async () => {
+    await startAndActivateRecording()
+
+    const stopPromise = backend.stopRecording()
+    backend.cancelRecording()
+
+    await expect(stopPromise).rejects.toThrow("Recording cancelled")
+  })
+
+  it("rejects a pending stopRecording when destroyed", async () => {
+    await startAndActivateRecording()
+
+    const stopPromise = backend.stopRecording()
+    backend.destroy()
+
+    await expect(stopPromise).rejects.toThrow("Recording cancelled")
+  })
+
   it("throws when stopping while not recording", async () => {
     backend.initialize(
       mockWaveSurfer as unknown as WaveSurfer,

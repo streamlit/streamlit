@@ -53,6 +53,13 @@ interface ReadyResolver {
   reject: (error: Error) => void
 }
 
+interface WaveformStyles {
+  activeColor: string
+  progressColor: string
+  playbackWaveColor: string
+  height: number | "auto"
+}
+
 interface UseWaveformControllerParams {
   containerRef: RefObject<HTMLDivElement>
   sampleRate?: number | null
@@ -90,36 +97,54 @@ export function useWaveformController({
   const effectiveSampleRate =
     sampleRate === undefined ? DEFAULT_SAMPLE_RATE : sampleRate
 
-  const waveformHeight: number | "auto" =
-    waveformPadding > 0
-      ? convertRemToPx(theme.sizes.largestElementHeight) - 2 * waveformPadding
-      : "auto"
-
-  // WaveSurfer creation reads theme-derived options from this ref instead of
-  // depending on the theme, so a theme change restyles the existing instance
-  // (see the setOptions effects below) rather than destroying it together with
-  // any loaded recording.
-  const createOptionsRef = useRef({
-    waveColor: theme.colors.primary,
-    progressColor: theme.colors.bodyText,
-    height: waveformHeight,
-  })
-  useEffect(() => {
-    createOptionsRef.current = {
-      waveColor: theme.colors.primary,
+  // convertRemToPx can read computed styles, so only recompute when the
+  // theme values or padding change.
+  const waveformStyles = useMemo<WaveformStyles>(
+    () => ({
+      activeColor: theme.colors.primary,
       progressColor: theme.colors.bodyText,
-      height: waveformHeight,
-    }
-  }, [theme.colors.primary, theme.colors.bodyText, waveformHeight])
+      playbackWaveColor: blend(
+        theme.colors.fadedText40,
+        theme.colors.secondaryBg
+      ),
+      height:
+        waveformPadding > 0
+          ? convertRemToPx(theme.sizes.largestElementHeight) -
+            2 * waveformPadding
+          : "auto",
+    }),
+    [
+      theme.colors.primary,
+      theme.colors.bodyText,
+      theme.colors.fadedText40,
+      theme.colors.secondaryBg,
+      theme.sizes.largestElementHeight,
+      waveformPadding,
+    ]
+  )
 
-  const destroy = useCallback((): void => {
-    // Reject pending ready waits so a stop() in flight settles instead of
-    // hanging on a player that no longer exists.
+  /**
+   * Keep the loaded recording across theme changes. `WaveSurfer.create` and the
+   * recording/playback callbacks read styles from this ref, so they keep stable
+   * identities; the `setOptions` effects restyle the live instance.
+   */
+  const waveformStylesRef = useRef(waveformStyles)
+  useEffect(() => {
+    waveformStylesRef.current = waveformStyles
+  }, [waveformStyles])
+
+  // Reject pending ready waits so a stop() in flight settles instead of
+  // hanging on a player that is being replaced or torn down.
+  const rejectReadyWaits = useCallback((reason: string): void => {
     const readyResolvers = Array.from(readyResolversRef.current)
     readyResolversRef.current.clear()
     readyResolvers.forEach(resolver => {
-      resolver.reject(new Error("Waveform controller destroyed"))
+      resolver.reject(new Error(reason))
     })
+  }, [])
+
+  const destroy = useCallback((): void => {
+    rejectReadyWaits("Waveform controller destroyed")
     setIsPlaybackPlaying(false)
 
     if (recordBackendRef.current) {
@@ -143,7 +168,7 @@ export function useWaveformController({
     isPlaybackModeRef.current = false
     setCurrentState("idle")
     setCurrentBlob(null)
-  }, [])
+  }, [rejectReadyWaits])
 
   const notifyReady = useCallback((): void => {
     const resolvers = Array.from(readyResolversRef.current)
@@ -218,10 +243,10 @@ export function useWaveformController({
 
     const generation = initGenerationRef.current
     const initPromise = (async (): Promise<void> => {
-      // destroy() drops this promise and starts a replacement when sampleRate
-      // changes. start() and playback.load may still be awaiting this attempt,
-      // so follow the replacement instead of resolving with no backend (that
-      // throw is swallowed by AudioInput).
+      // destroy() drops this attempt when sampleRate changes and starts
+      // another. Wait for that replacement so start() and playback.load don't
+      // continue without a backend: AudioInput silently drops a failed start()
+      // and shows its error state for a failed load.
       const waitForReplacementInit = async (): Promise<void> => {
         const replacement = initPromiseRef.current
         if (replacement && replacement !== initPromise) {
@@ -238,7 +263,9 @@ export function useWaveformController({
 
         const ws = WaveSurfer.create({
           container,
-          ...createOptionsRef.current,
+          waveColor: waveformStylesRef.current.activeColor,
+          progressColor: waveformStylesRef.current.progressColor,
+          height: waveformStylesRef.current.height,
           barWidth: BAR_WIDTH,
           barGap: BAR_GAP,
           barRadius: BAR_RADIUS,
@@ -299,8 +326,8 @@ export function useWaveformController({
   }, [destroy, initializeWaveSurfer])
 
   useEffect(() => {
-    wavesurferRef.current?.setOptions({ height: waveformHeight })
-  }, [waveformHeight])
+    wavesurferRef.current?.setOptions({ height: waveformStyles.height })
+  }, [waveformStyles.height])
 
   useEffect(() => {
     const ws = wavesurferRef.current
@@ -310,8 +337,8 @@ export function useWaveformController({
 
     if (currentState === "recording") {
       ws.setOptions({
-        waveColor: theme.colors.primary,
-        progressColor: theme.colors.primary,
+        waveColor: waveformStyles.activeColor,
+        progressColor: waveformStyles.activeColor,
       })
       return
     }
@@ -319,22 +346,21 @@ export function useWaveformController({
     if (isPlaybackModeRef.current) {
       ws.setOptions({
         interact: true,
-        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
-        progressColor: theme.colors.bodyText,
+        waveColor: waveformStyles.playbackWaveColor,
+        progressColor: waveformStyles.progressColor,
       })
       return
     }
 
     ws.setOptions({
-      waveColor: theme.colors.primary,
-      progressColor: theme.colors.bodyText,
+      waveColor: waveformStyles.activeColor,
+      progressColor: waveformStyles.progressColor,
     })
   }, [
     currentState,
-    theme.colors.bodyText,
-    theme.colors.fadedText40,
-    theme.colors.primary,
-    theme.colors.secondaryBg,
+    waveformStyles.activeColor,
+    waveformStyles.progressColor,
+    waveformStyles.playbackWaveColor,
   ])
 
   const start = useCallback(async (): Promise<void> => {
@@ -352,9 +378,10 @@ export function useWaveformController({
 
     // Reset waveform color for recording mode
     if (wavesurferRef.current) {
+      const { activeColor } = waveformStylesRef.current
       wavesurferRef.current.setOptions({
-        waveColor: theme.colors.primary,
-        progressColor: theme.colors.primary,
+        waveColor: activeColor,
+        progressColor: activeColor,
       })
     }
 
@@ -365,36 +392,33 @@ export function useWaveformController({
     setCurrentBlob(null)
     setIsPlaybackPlaying(false)
     void eventsRef.current.onRecordStart?.()
-  }, [currentState, initializeWaveSurfer, theme.colors.primary])
+  }, [currentState, initializeWaveSurfer])
 
   const resetPlayer = useCallback((): void => {
     if (playerRef.current && wavesurferRef.current) {
       playerRef.current.destroy()
       playerRef.current = new WaveSurferPlayer()
       playerRef.current.initialize(wavesurferRef.current)
-      readyResolversRef.current.clear()
+      rejectReadyWaits("Waveform player reset")
       setIsPlaybackPlaying(false)
       configurePlayerEvents(playerRef.current)
     }
     isPlaybackModeRef.current = false
-  }, [configurePlayerEvents])
+  }, [configurePlayerEvents, rejectReadyWaits])
 
   const enterPlaybackMode = useCallback((): void => {
     playerRef.current?.seekToStart()
     setIsPlaybackPlaying(false)
     isPlaybackModeRef.current = true
     if (wavesurferRef.current) {
+      const { playbackWaveColor, progressColor } = waveformStylesRef.current
       wavesurferRef.current.setOptions({
         interact: true,
-        waveColor: blend(theme.colors.fadedText40, theme.colors.secondaryBg),
-        progressColor: theme.colors.bodyText,
+        waveColor: playbackWaveColor,
+        progressColor,
       })
     }
-  }, [
-    theme.colors.bodyText,
-    theme.colors.fadedText40,
-    theme.colors.secondaryBg,
-  ])
+  }, [])
 
   const stop = useCallback(async (): Promise<StopResult> => {
     if (currentState !== "recording") {

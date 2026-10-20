@@ -943,13 +943,19 @@ describe("useWaveformController", () => {
       await act(async () => {
         await result.current.playback.load(new Blob(["audio"]))
       })
+      const playbackBefore = result.current.playback
+      const startBefore = result.current.start
 
-      // A new theme object with the same values, then one with a new color.
+      // A new theme object with the same values, then one with new colors.
       theme = { ...mockTheme.emotion }
       rerender()
       theme = {
         ...mockTheme.emotion,
-        colors: { ...mockTheme.emotion.colors, bodyText: "#123456" },
+        colors: {
+          ...mockTheme.emotion.colors,
+          bodyText: "#123456",
+          secondaryBg: "#654321",
+        },
       }
       rerender()
 
@@ -957,6 +963,68 @@ describe("useWaveformController", () => {
       expect(mockWaveSurfer.destroy).not.toHaveBeenCalled()
       expect(mockWaveSurfer.setOptions).toHaveBeenLastCalledWith(
         expect.objectContaining({ progressColor: "#123456" })
+      )
+      // Consumers (e.g. AudioInput's load effect) must not see a new playback
+      // API and reload the recording because of a color change.
+      expect(result.current.playback).toBe(playbackBefore)
+      expect(result.current.start).toBe(startBefore)
+      expect(mockWaveSurfer.load).toHaveBeenCalledTimes(1)
+    })
+
+    it("creates WaveSurfer with the latest theme when it changes during import", async () => {
+      const releaseImport: Array<() => void> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          releaseImport.push(resolve)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = vi.mocked(WaveSurferModule.default.create)
+      createMock.mockClear()
+
+      let theme = mockTheme.emotion
+      const themedWrapper = ({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactNode => <ThemeProvider theme={theme}>{children}</ThemeProvider>
+
+      const { rerender } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper: themedWrapper }
+      )
+      expect(releaseImport).toHaveLength(1)
+
+      theme = {
+        ...mockTheme.emotion,
+        colors: {
+          ...mockTheme.emotion.colors,
+          primary: "#abcdef",
+          bodyText: "#123456",
+        },
+      }
+      rerender()
+
+      await act(async () => {
+        releaseImport[0]()
+        await Promise.resolve()
+      })
+
+      // The theme change must not start a second import or create.
+      expect(releaseImport).toHaveLength(1)
+      await waitFor(() => {
+        expect(createMock).toHaveBeenCalledTimes(1)
+      })
+      expect(createMock.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          waveColor: "#abcdef",
+          progressColor: "#123456",
+        })
       )
     })
 
@@ -982,6 +1050,46 @@ describe("useWaveformController", () => {
       expect(stopResult.meta.size).toBe(0)
       expect(mockEvents.onError).toHaveBeenCalledWith(
         expect.objectContaining({ message: "Waveform controller destroyed" })
+      )
+    })
+
+    it("settles a pending stop() when unmounted before the recording ends", async () => {
+      const { result, unmount } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+      unmount()
+
+      const stopResult = await stopPromise
+      expect(stopResult.meta.size).toBe(0)
+      expect(mockEvents.onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Recording cancelled" })
+      )
+    })
+
+    it("settles a pending stop() when cancelled while waiting for playback", async () => {
+      const { result } = await renderInitialized()
+
+      await startRecording(result)
+      const stopPromise = result.current.stop()
+      await act(async () => {
+        recordHandlers.get("record-end")?.(
+          new Blob(["audio"], { type: "audio/webm" })
+        )
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+
+      let stopResult: StopResult | undefined
+      await act(async () => {
+        result.current.cancel()
+        stopResult = await stopPromise
+      })
+
+      expect(stopResult?.meta.size).toBe(0)
+      expect(mockEvents.onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Waveform player reset" })
       )
     })
 

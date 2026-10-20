@@ -205,10 +205,14 @@ export class WaveSurferRecordBackend {
 
   cancelRecording(): void {
     if (this.recordPlugin && this.isRecording) {
-      this.recordPlugin.stopRecording()
-      this.isRecording = false
+      // Settle a stopRecording() in flight before dropping its callbacks,
+      // otherwise its caller waits forever.
+      const pendingReject = this.recordEndReject
       this.recordEndResolve = null
       this.recordEndReject = null
+      this.isRecording = false
+      this.recordPlugin.stopRecording()
+      pendingReject?.(new Error("Recording cancelled"))
     }
   }
 
