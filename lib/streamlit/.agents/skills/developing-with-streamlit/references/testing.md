@@ -105,6 +105,8 @@ at.button[0].click().run()
 
 Convenience aliases exist where they read naturally: `at.checkbox[0].check()` / `.uncheck()`, `at.multiselect[0].select(value)`, `at.slider[0].set_range(lo, hi)`.
 
+`at.file_uploader`, `at.camera_input`, and `at.audio_input` stage bytes instead of opening a file picker. On a file uploader, call `.upload(filename, content)` once per file. On camera and audio inputs, `.upload()` replaces the staged photo or recording; camera filenames must end in `.jpg` and audio filenames in `.wav`. `at.chat_input.set_value()` sets the message text; `.upload()` attaches a file only when that widget accepts files, and `.clear()` removes staged files without clearing the text. Inside a form, staged uploads commit when the submit button is clicked.
+
 Widgets, keyed display elements, and keyed containers are addressable by index (order on the page) or by `key`. Use `get_by_key()` when the type does not matter. A missing key raises `KeyError`; a key reused across nodes raises `AppTestError`:
 
 ```python
