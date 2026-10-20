@@ -37,6 +37,7 @@ from streamlit.dataframe_util import (
     convert_anything_to_arrow_bytes,
     determine_data_format,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -73,6 +74,22 @@ if TYPE_CHECKING:
     # Define DeltaGenerator for type checking the dg property
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state.common import WidgetCallback
+
+
+def _described_bidi_data(proto: BidiComponentProto) -> Any:
+    """The agent-facing payload, or None when it is none of json, bytes, or mixed.
+
+    JSON and the JSON half of mixed data are reported. Bytes are their length.
+    Arrow is one of those omitted kinds and stays out until table payloads land.
+    """
+    kind = proto.WhichOneof("data")
+    if kind == "json" and proto.json:
+        return agent_spec.Content(json.loads(proto.json))
+    if kind == "bytes":
+        return {"bytes": len(proto.bytes)}
+    if kind == "mixed" and proto.mixed.json:
+        return agent_spec.Content(json.loads(proto.mixed.json))
+    return None
 
 
 def _make_trigger_id(base: str, event: str) -> str:
@@ -528,6 +545,19 @@ class BidiComponentMixin:
             INTERNAL_COMPONENT_NAME,
             bidi_component_proto,
             layout_config=layout_config,
+            # Component JavaScript is never executed server-side, so what the
+            # component was given is reported and what it renders is not.
+            # Guarded before the call, so a browser session never parses the
+            # payload.
+            agent_props=agent_spec.element(
+                "components.v2.component",
+                key=bidi_component_proto.id or None,
+                support="browser_required",
+                component_name=bidi_component_proto.component_name or None,
+                data=_described_bidi_data(bidi_component_proto),
+            )
+            if agent_spec.is_recording()
+            else None,
         )
 
         state_vals = unwrap_component_state(component_state.value)

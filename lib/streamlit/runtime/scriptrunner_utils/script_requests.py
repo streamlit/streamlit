@@ -23,6 +23,7 @@ from google.protobuf.message import Message
 
 from streamlit import util
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
+from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
@@ -128,11 +129,12 @@ def _coalesce_widget_states(
     old_states: WidgetStates | None,
     new_states: WidgetStates | None,
 ) -> WidgetStates | None:
-    """Merge an older WidgetStates into a newer one, returning the result.
+    """Merge an older WidgetStates into a newer one.
 
-    For most widgets the newer value wins.  Button and chat-input triggers are
-    special: an active trigger in ``old_states`` carries forward so rapid clicks
-    aren't lost.
+    The client clears a trigger as soon as it sends the rerun, so a later request
+    often omits it. The merge keeps that active trigger. The newer value still
+    wins for ordinary widgets, for a different value type, and for a newer active
+    trigger of the same type.
     """
     if not old_states and not new_states:
         return None
@@ -147,7 +149,9 @@ def _coalesce_widget_states(
 
     trigger_value_types = [
         ("trigger_value", False),
+        ("string_trigger_value", StringTriggerValueProto(data=None)),
         ("chat_input_value", ChatInputValueProto(data=None)),
+        ("json_trigger_value", ""),
     ]
     for old_state in old_states.widgets:
         for trigger_value_type, unset_value in trigger_value_types:
@@ -165,9 +169,8 @@ def _coalesce_widget_states(
                 # e2e_playwright/test_fragment_queue_test.py
                 if not new_trigger_val or (
                     # Ensure the corresponding new_state is also a trigger;
-                    # otherwise, a widget that was previously a
-                    # button/chat_input but no longer is could get a bad
-                    # value.
+                    # otherwise, a widget that previously used a trigger but
+                    # no longer does could get a bad value.
                     new_trigger_val.WhichOneof("value") == trigger_value_type
                     # We only want to take the value of old_state if
                     # new_trigger_val is unset as the old value may be
