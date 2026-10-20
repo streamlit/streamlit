@@ -917,8 +917,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Simulate one session.
         curr_session_id = "aaa"
-        if cache_module is cache_data_api:
-            cache_data_api._data_caches.activate_session(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:
@@ -936,8 +934,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Simulate a second session.
         curr_session_id = "bbbb"
-        if cache_module is cache_data_api:
-            cache_data_api._data_caches.activate_session(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:
@@ -990,8 +986,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Simulate one session.
         curr_session_id = "aaa"
-        if cache_module is cache_data_api:
-            cache_data_api._data_caches.activate_session(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:
@@ -1002,8 +996,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
         # Simulate a second session.
         curr_session_id = "bbbb"
-        if cache_module is cache_data_api:
-            cache_data_api._data_caches.activate_session(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:
@@ -1017,8 +1009,6 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         # Clear the first session, and assert we get new values.
         curr_session_id = "aaa"
         clear_session_cache(curr_session_id)
-        if cache_module is cache_data_api:
-            cache_data_api._data_caches.activate_session(curr_session_id)
         with patch.object(
             cache_module, "get_session_id_or_throw"
         ) as mock_get_session_id:

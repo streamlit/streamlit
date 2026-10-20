@@ -295,7 +295,6 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
                 return None
 
             existing_session = session_info.session
-            existing_session.activate_session_caches()
             existing_session.register_file_watchers()
 
             self._active_session_info_by_id[existing_session.id] = ActiveSessionInfo(

@@ -20,8 +20,8 @@ import math
 import queue
 import threading
 import weakref
-from collections import OrderedDict
-from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
+from collections import OrderedDict, deque
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -31,7 +31,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.stats import CounterStat, StatsProvider
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Sequence
 
     from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
         InMemoryCacheStorageWrapper,
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 CACHE_DATA_EVICTIONS_FAMILY: Final = "cache_data_evictions"
-_NO_ENFORCEMENT: Final = nullcontext()
 
 
 @dataclass
@@ -58,20 +57,19 @@ class _EntryRecord:
 class GlobalCacheBudget(StatsProvider):
     """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
 
-    Storages report every write, read, and removal. Enabled-budget reads and writes
-    are serialized with eviction. Because a victim is chosen without holding its
-    storage's lock, each record carries the entry's write generation. The storage
-    validates that generation before deletion.
+    Storages report every write, read, and removal. Reads append to a bounded,
+    lock-free hint buffer; writers drain those hints before selecting a victim.
+    Because a victim is chosen without holding its storage's lock, each record
+    carries the entry's write generation. The storage validates that generation
+    before deletion.
 
-    Lock order for ordinary mutations is storage mutation, budget enforcement,
-    storage memory, then budget bookkeeping. Reconfiguration first takes the
-    configuration lock. Persistent I/O and eviction never take a storage mutation
-    lock.
+    Lock order for ordinary mutations is budget enforcement, storage memory, then
+    budget bookkeeping. Reconfiguration first takes the configuration lock.
+    Persistent I/O does not run while the budget lock is held.
     """
 
     def __init__(self, max_bytes: int | None) -> None:
         self._max_bytes = max_bytes
-        self._reconfiguring = False
         # Serialize registration and configuration so activation sees every
         # published storage before taking their mutation locks.
         self._configuration_lock = threading.Lock()
@@ -86,6 +84,7 @@ class GlobalCacheBudget(StatsProvider):
         self._pending_unregisters: queue.SimpleQueue[int] = queue.SimpleQueue()
         self._entries: OrderedDict[tuple[int, str], _EntryRecord] = OrderedDict()
         self._storage_entries: dict[int, set[str]] = {}
+        self._recency_hints: deque[tuple[int, str, int]] = deque(maxlen=4096)
         self._total_bytes = 0
         self._global_evictions = 0
         self._eviction_warning_emitted = False
@@ -114,14 +113,10 @@ class GlobalCacheBudget(StatsProvider):
         return self._max_bytes
 
     @property
-    def read_enforcement_required(self) -> bool:
-        """Whether a read must synchronize with budget enforcement."""
-        return self._max_bytes is not None or self._reconfiguring
-
-    @property
     def total_bytes(self) -> int:
         with self._lock:
             self._drain_pending_unregisters_locked()
+            self._drain_recency_hints_locked()
             return self._total_bytes
 
     def register(self, storage: InMemoryCacheStorageWrapper) -> int:
@@ -142,16 +137,6 @@ class GlobalCacheBudget(StatsProvider):
             self._drain_pending_unregisters_locked()
             self._unregister_locked(storage_id)
 
-    @contextmanager
-    def _reconfiguration(self) -> Generator[None, None, None]:
-        """Make lock-free readers retry while budget configuration changes."""
-        with self._enforcement_lock:
-            self._reconfiguring = True
-            try:
-                yield
-            finally:
-                self._reconfiguring = False
-
     def reconfigure(self, max_bytes: int | None) -> None:
         """Apply a server-start budget to this process and existing storages."""
         with self._configuration_lock:
@@ -166,34 +151,30 @@ class GlobalCacheBudget(StatsProvider):
                 ]
 
             if current_max_bytes is None:
-                # Writers already take mutation before enforcement. Keep that order
-                # during activation so a cache miss cannot deadlock startup.
-                with ExitStack() as stack:
+                with self._enforcement_lock:
+                    with self._lock:
+                        self._max_bytes = max_bytes
+                        self._entries.clear()
+                        self._recency_hints.clear()
+                        self._total_bytes = 0
+                        for storage_entries in self._storage_entries.values():
+                            storage_entries.clear()
+
                     for storage in storages:
-                        stack.enter_context(storage._mutation_lock)
+                        storage._activate_global_budget_entries()
 
-                    with self._reconfiguration():
-                        with self._lock:
-                            self._max_bytes = max_bytes
-                            self._entries.clear()
-                            self._total_bytes = 0
-                            for storage_entries in self._storage_entries.values():
-                                storage_entries.clear()
-
-                        for storage in storages:
-                            storage._activate_global_budget_entries()
-
-                        # Pre-activation entries are ordered first by storage
-                        # registration and then by each storage's local LRU. Exact
-                        # cross-storage recency begins when the budget is enabled.
-                        self.enforce_budget(None)
+                    # Pre-activation entries are ordered first by storage
+                    # registration and then by each storage's local LRU. Exact
+                    # cross-storage recency begins when the budget is enabled.
+                    self.enforce_budget(None)
                 return
 
-            with self._reconfiguration():
+            with self._enforcement_lock:
                 with self._lock:
                     self._max_bytes = max_bytes
                     if max_bytes is None:
                         self._entries.clear()
+                        self._recency_hints.clear()
                         self._total_bytes = 0
                         for storage_entries in self._storage_entries.values():
                             storage_entries.clear()
@@ -212,6 +193,14 @@ class GlobalCacheBudget(StatsProvider):
                 return
             self._unregister_locked(storage_id)
 
+    def _drain_recency_hints_locked(self) -> None:
+        while self._recency_hints:
+            storage_id, key, generation = self._recency_hints.popleft()
+            entry_key = (storage_id, key)
+            current = self._entries.get(entry_key)
+            if current is not None and current.generation == generation:
+                self._entries.move_to_end(entry_key)
+
     def _unregister_locked(self, storage_id: int) -> None:
         self._storages.pop(storage_id, None)
         for key in self._storage_entries.pop(storage_id, set()):
@@ -219,14 +208,10 @@ class GlobalCacheBudget(StatsProvider):
             if record is not None:
                 self._total_bytes -= record.size
 
-    def enforcement_lock(
-        self, *, enabled: bool | None = None
-    ) -> AbstractContextManager[object]:
-        """Serialize enabled-budget LRU reads, writes, and eviction."""
-        if enabled is None:
-            enabled = self._max_bytes is not None
-        if not enabled:
-            return _NO_ENFORCEMENT
+    def write_enforcement(self) -> AbstractContextManager[object]:
+        """Keep an insertion protected until it has enforced the budget."""
+        if self._max_bytes is None:
+            return nullcontext()
         return self._enforcement_lock
 
     def record_write(
@@ -241,6 +226,7 @@ class GlobalCacheBudget(StatsProvider):
         entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
+            self._drain_recency_hints_locked()
             current = self._entries.get(entry_key)
             if current is not None:
                 self._total_bytes -= current.size
@@ -264,12 +250,7 @@ class GlobalCacheBudget(StatsProvider):
     ) -> None:
         if self._max_bytes is None:
             return
-        entry_key = (storage_id, key)
-        with self._lock:
-            self._drain_pending_unregisters_locked()
-            current = self._entries.get(entry_key)
-            if current is not None and current.generation == generation:
-                self._entries.move_to_end(entry_key)
+        self._recency_hints.append((storage_id, key, generation))
 
     def record_removals(
         self, storage_id: int, removals: Sequence[tuple[str, int]]
@@ -278,6 +259,7 @@ class GlobalCacheBudget(StatsProvider):
             return
         with self._lock:
             self._drain_pending_unregisters_locked()
+            self._drain_recency_hints_locked()
             storage_entries = self._storage_entries.get(storage_id)
             for key, generation in removals:
                 entry_key = (storage_id, key)
@@ -329,6 +311,7 @@ class GlobalCacheBudget(StatsProvider):
         """Select the global LRU, excluding the protected write and tried victims."""
         with self._lock:
             self._drain_pending_unregisters_locked()
+            self._drain_recency_hints_locked()
             if self._max_bytes is None or self._total_bytes <= self._max_bytes:
                 return None
 

@@ -963,10 +963,9 @@ _create_option(
         "0", to disable the limit.
         When the total exceeds the limit, Streamlit evicts the least-recently-used
         in-memory entries; persisted disk entries are not deleted. A single value
-        larger than the limit is still cached. When enabled, Streamlit processes
-        in-memory cache reads and writes one at a time across the server, which can
-        reduce throughput when many sessions use the cache concurrently. Streamlit
-        reads this value when the server starts.
+        larger than the limit is still cached. Budget enforcement runs when entries
+        are inserted and can reduce throughput when many sessions populate caches
+        concurrently. Streamlit reads this value when the server starts.
     """,
     default_val=None,
     type_=str,

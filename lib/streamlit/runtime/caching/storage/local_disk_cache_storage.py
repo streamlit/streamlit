@@ -62,7 +62,6 @@ import math
 import os
 import shutil
 from typing import Final
-from uuid import uuid4
 
 from streamlit import errors
 from streamlit.file_util import get_streamlit_file_path, streamlit_read, streamlit_write
@@ -86,31 +85,6 @@ _CACHE_DIR_NAME: Final = "cache"
 # The extension for our persisted @st.cache_data objects.
 # (`@st.cache_data` was originally called `@st.memo`)
 _CACHED_FILE_EXTENSION: Final = "memo"
-
-
-class _PreparedLocalDiskWrite:
-    """A completed temporary write that can be atomically published or discarded."""
-
-    def __init__(self, temporary_path: str | None, final_path: str | None) -> None:
-        self._temporary_path = temporary_path
-        self._final_path = final_path
-
-    def commit(self) -> None:
-        if self._temporary_path is not None and self._final_path is not None:
-            try:
-                os.replace(self._temporary_path, self._final_path)
-            except FileNotFoundError:
-                # A concurrent all-cache cleanup may remove the staged file.
-                pass
-            self._temporary_path = None
-
-    def discard(self) -> None:
-        if self._temporary_path is not None:
-            try:
-                os.remove(self._temporary_path)
-            except FileNotFoundError:
-                pass
-            self._temporary_path = None
 
 
 class LocalDiskCacheStorageManager(CacheStorageManager):
@@ -187,30 +161,20 @@ class LocalDiskCacheStorage(CacheStorage):
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
-        prepared_write = self.prepare_set(key, value)
-        try:
-            prepared_write.commit()
-        finally:
-            prepared_write.discard()
-
-    def prepare_set(self, key: str, value: bytes) -> _PreparedLocalDiskWrite:
-        """Write to a temporary file for a later atomic commit."""
-        if self.persist != "disk":
-            return _PreparedLocalDiskWrite(None, None)
-
-        path = self._get_cache_file_path(key)
-        temporary_path = f"{path}.{uuid4().hex}.tmp"
-        try:
-            with streamlit_write(temporary_path, binary=True) as output:
-                output.write(value)
-        except errors.Error as ex:
-            _LOGGER.debug("Unable to prepare cache write", exc_info=ex)
+        if self.persist == "disk":
+            path = self._get_cache_file_path(key)
             try:
-                os.remove(temporary_path)
-            except (FileNotFoundError, OSError):
-                pass
-            raise CacheStorageError("Unable to write to cache") from ex
-        return _PreparedLocalDiskWrite(temporary_path, path)
+                with streamlit_write(path, binary=True) as output:
+                    output.write(value)
+            except errors.Error as ex:
+                _LOGGER.debug("Unable to write to cache", exc_info=ex)
+                # Clean up file so we don't leave zero byte files.
+                try:
+                    os.remove(path)
+                except (FileNotFoundError, OSError):
+                    # If we can't remove the file, it's not a big deal.
+                    pass
+                raise CacheStorageError("Unable to write to cache") from ex
 
     def delete(self, key: str) -> None:
         """Delete a cache file from disk. If the file does not exist on disk,

@@ -18,14 +18,12 @@ from __future__ import annotations
 
 import pickle  # noqa: S403
 import threading
-from contextlib import nullcontext
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Literal,
     TypeAlias,
-    TypeGuard,
     TypeVar,
     cast,
     overload,
@@ -67,9 +65,6 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
-)
-from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
-    InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import (
@@ -172,81 +167,17 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
-class _SessionCacheLifecycle:
-    """One connection's right to create session-scoped data caches.
-
-    Disconnect marks this object invalid so an in-flight lookup cannot register a
-    cache after a new connection reuses the session ID.
-    """
-
-    def __init__(self) -> None:
-        self.lock = threading.Lock()
-        self.invalidated = False
-
-
 class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
-        # Serialize cache creation, replacement, and process-wide clearing without
-        # holding the registry lock across storage I/O.
-        self._lifecycle_lock = threading.Lock()
-        # Session cleanup leaves an invalidated lifecycle entry until the session
-        # reconnects or shuts down, so work that outlives a disconnect cannot
-        # recreate a session cache.
-        self._session_lifecycles: dict[str, _SessionCacheLifecycle] = {}
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
 
     @property
     def stats_families(self) -> Sequence[str]:
         return (CACHE_MEMORY_FAMILY,)
-
-    @staticmethod
-    def _cache_matches(
-        cache: DataCache[Any] | None,
-        *,
-        fresh_ttl_seconds: float | None,
-        max_entries: int | None,
-        max_size_bytes: int | None,
-        persist: CachePersistType,
-        refresh_mode: RefreshMode,
-    ) -> TypeGuard[DataCache[Any]]:
-        return (
-            cache is not None
-            and cache.fresh_ttl_seconds == fresh_ttl_seconds
-            and cache.max_entries == max_entries
-            and cache.max_size_bytes == max_size_bytes
-            and cache.persist == persist
-            and cache.refresh_mode == refresh_mode
-        )
-
-    def _get_session_lifecycle(self, session_id: str) -> _SessionCacheLifecycle:
-        with self._caches_lock:
-            return self._get_session_lifecycle_locked(session_id)
-
-    def _get_session_lifecycle_locked(self, session_id: str) -> _SessionCacheLifecycle:
-        """Return lifecycle state while the caller holds ``_caches_lock``."""
-        lifecycle = self._session_lifecycles.get(session_id)
-        if lifecycle is None:
-            lifecycle = _SessionCacheLifecycle()
-            self._session_lifecycles[session_id] = lifecycle
-        return lifecycle
-
-    @staticmethod
-    def _get_bound_session_lifecycle(
-        session_id: str,
-    ) -> _SessionCacheLifecycle | None:
-        """Return lifecycle state captured by the current ScriptRunner."""
-        from streamlit.runtime.scriptrunner_utils.script_run_context import (
-            get_script_run_ctx,
-        )
-
-        ctx = get_script_run_ctx(suppress_warning=True)
-        if ctx is None or ctx.session_id != session_id:
-            return None
-        return ctx.session_cache_lifecycle
 
     def get_cache(
         self,
@@ -277,73 +208,32 @@ class DataCaches(StatsProvider):
         session_id: str | None
         if scope == "global":
             session_id = None
-            bound_session_lifecycle = None
         else:
             session_id = get_session_id_or_throw()
-            bound_session_lifecycle = self._get_bound_session_lifecycle(session_id)
 
-        # Keep the existing-cache hot path off the lifecycle lock, which can be held
-        # while another cache is detached or its storage is closed.
+        # Get the existing cache, if it exists, and validate that its params
+        # haven't changed.
         with self._caches_lock:
-            session_lifecycle = (
-                None
-                if session_id is None
-                else bound_session_lifecycle or self._session_lifecycles.get(session_id)
-            )
-            lifecycle_is_current = session_lifecycle is None or (
-                not session_lifecycle.invalidated
-                and session_id is not None
-                and self._session_lifecycles.get(session_id) is session_lifecycle
-            )
             session_caches = self._function_caches.get(session_id)
-            cache = None if session_caches is None else session_caches.get(key)
-            if lifecycle_is_current and self._cache_matches(
-                cache,
-                fresh_ttl_seconds=fresh_ttl_seconds,
-                max_entries=max_entries,
-                max_size_bytes=max_size_bytes,
-                persist=persist,
-                refresh_mode=refresh_mode,
+            if session_caches is None:
+                session_caches = self._function_caches[session_id] = {}
+
+            cache = session_caches.get(key)
+            if (
+                cache is not None
+                and cache.fresh_ttl_seconds == fresh_ttl_seconds
+                and cache.max_entries == max_entries
+                and cache.max_size_bytes == max_size_bytes
+                and cache.persist == persist
+                and cache.refresh_mode == refresh_mode
             ):
                 return cache
 
-        # Cache creation and replacement are serialized. Re-check after taking the
-        # lifecycle lock because another thread may have installed the cache.
-        with (
-            self._lifecycle_lock,
-            nullcontext() if session_lifecycle is None else session_lifecycle.lock,
-        ):
-            with self._caches_lock:
-                session_invalidated = session_lifecycle is not None and (
-                    session_lifecycle.invalidated
-                    or (
-                        session_id is not None
-                        and self._session_lifecycles.get(session_id)
-                        is not session_lifecycle
-                    )
-                )
-                if session_invalidated:
-                    # This lookup belongs to an old connection. Do not inspect or
-                    # remove a cache installed by the reconnected session.
-                    cache = None
-                else:
-                    session_caches = self._function_caches.get(session_id)
-                    cache = None if session_caches is None else session_caches.get(key)
-                    if self._cache_matches(
-                        cache,
-                        fresh_ttl_seconds=fresh_ttl_seconds,
-                        max_entries=max_entries,
-                        max_size_bytes=max_size_bytes,
-                        persist=persist,
-                        refresh_mode=refresh_mode,
-                    ):
-                        return cache
-                    if cache is not None and session_caches is not None:
-                        del session_caches[key]
-
+            # Close the existing cache's storage, if it exists.
             if cache is not None:
+                # Detach the old cache so any in-flight background refresh is discarded
+                # rather than written back to a replaced cache.
                 cache.mark_detached()
-                cache.wait_for_writes()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
                     "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s) "
@@ -356,6 +246,7 @@ class DataCaches(StatsProvider):
                 )
                 cache.storage.close()
 
+            # Create a new cache object and put it in our dict
             _LOGGER.debug(
                 "Creating new DataCache "
                 "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s)",
@@ -370,6 +261,7 @@ class DataCaches(StatsProvider):
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
+
             cache_context = self.create_cache_storage_context(
                 function_key=key,
                 function_name=display_name,
@@ -378,7 +270,9 @@ class DataCaches(StatsProvider):
                 max_size_bytes=max_size_bytes,
                 persist=persist,
             )
-            storage = self.get_storage_manager().create(cache_context)
+            cache_storage_manager = self.get_storage_manager()
+            storage = cache_storage_manager.create(cache_context)
+
             cache = DataCache(
                 key=key,
                 storage=storage,
@@ -390,86 +284,36 @@ class DataCaches(StatsProvider):
                 display_name=display_name,
                 refresh_mode=refresh_mode,
             )
-            if session_invalidated:
-                cache.mark_detached()
-                cache.storage.close()
-                return cache
-            with self._caches_lock:
-                self._function_caches.setdefault(session_id, {})[key] = cache
+            self._function_caches[session_id][key] = cache
             return cache
 
     def clear_session(self, session_id: str) -> None:
         """Clears all caches for the given session ID."""
-        # Do not take the process-wide lifecycle lock on the event-loop disconnect
-        # path. Only same-session creation or replacement must finish first.
+        # Hold the lock while removing the cache, but release it while clearing.
         with self._caches_lock:
-            session_lifecycle = self._session_lifecycles.get(session_id)
-        with nullcontext() if session_lifecycle is None else session_lifecycle.lock:
-            if session_lifecycle is not None:
-                session_lifecycle.invalidated = True
-            # Hold the registry lock while removing the cache, but release it before
-            # waiting for writes or touching storage.
-            with self._caches_lock:
-                session_caches = self._function_caches.pop(session_id, None)
-
+            session_caches = self._function_caches.get(session_id)
             if session_caches is not None:
-                caches = list(session_caches.values())
-                for cache in caches:
-                    cache.mark_detached()
-                clear_error = self._apply_to_caches(caches, lambda cache: cache.clear())
-                close_error = self._apply_to_caches(
-                    caches, lambda cache: cache.storage.close()
-                )
-                if clear_error is not None:
-                    raise clear_error
-                if close_error is not None:
-                    raise close_error
+                del self._function_caches[session_id]
 
-    def activate_session(self, session_id: str) -> _SessionCacheLifecycle:
-        """Install fresh lifecycle state when a session starts or reconnects."""
-        with self._caches_lock:
-            lifecycle = _SessionCacheLifecycle()
-            self._session_lifecycles[session_id] = lifecycle
-            return lifecycle
-
-    def release_session(self, session_id: str) -> None:
-        """Drop final lifecycle state after the session's script runner stops."""
-        with self._caches_lock:
-            self._session_lifecycles.pop(session_id, None)
-
-    @staticmethod
-    def _apply_to_caches(
-        caches: list[DataCache[Any]],
-        operation: Callable[[DataCache[Any]], None],
-    ) -> BaseException | None:
-        """Apply a cleanup operation to every cache and retain its first failure."""
-        first_error: BaseException | None = None
-        for cache in caches:
-            try:
-                operation(cache)
-            except BaseException as ex:
-                if first_error is None:
-                    first_error = ex
-        return first_error
+        if session_caches is not None:
+            for cache in session_caches.values():
+                # Detach so a background refresh that completes after the session
+                # ended is discarded rather than repopulating the cache.
+                cache.mark_detached()
+                cache.clear()
+                cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
-        with self._lifecycle_lock:
-            with self._caches_lock:
-                all_caches = [
-                    data_cache
-                    for data_caches in self._function_caches.values()
-                    for data_cache in data_caches.values()
-                ]
-                self._function_caches = {}
+        with self._caches_lock:
+            all_caches = [
+                cache
+                for data_caches in self._function_caches.values()
+                for cache in data_caches.values()
+            ]
+            for cache in all_caches:
+                cache.mark_detached()
 
-            # Wait for committed writes before clearing storage. Since detached caches
-            # reject later writes, neither memory nor disk can be restored afterward.
-            for data_cache in all_caches:
-                data_cache.mark_detached()
-            for data_cache in all_caches:
-                data_cache.wait_for_writes()
-            clear_error: BaseException | None = None
             try:
                 # try to remove in optimal way if such ability provided by
                 # storage manager clear_all method;
@@ -477,19 +321,11 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                clear_error = self._apply_to_caches(
-                    all_caches, lambda cache: cache.clear()
-                )
-            except BaseException as ex:
-                clear_error = ex
-
-            close_error = self._apply_to_caches(
-                all_caches, lambda cache: cache.storage.close()
-            )
-            if clear_error is not None:
-                raise clear_error
-            if close_error is not None:
-                raise close_error
+                for cache in all_caches:
+                    cache.clear()
+            for cache in all_caches:
+                cache.storage.close()
+            self._function_caches = {}
 
     def get_stats(
         self,
@@ -567,8 +403,8 @@ class DataCaches(StatsProvider):
             function_display_name=function_name,
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
-            persist=persist,
             max_size_bytes=max_size_bytes,
+            persist=persist,
         )
 
     def get_storage_manager(self) -> CacheStorageManager:
@@ -587,16 +423,6 @@ _data_caches = DataCaches()
 def clear_session_cache(session_id: str) -> None:
     """Clears all caches for the given session ID."""
     _data_caches.clear_session(session_id)
-
-
-def activate_session_cache(session_id: str) -> _SessionCacheLifecycle:
-    """Prepare session cache lifecycle state for a new connection."""
-    return _data_caches.activate_session(session_id)
-
-
-def release_session_cache(session_id: str) -> None:
-    """Release session cache lifecycle state after final shutdown."""
-    _data_caches.release_session(session_id)
 
 
 def get_data_cache_stats_provider() -> StatsProvider:
@@ -701,12 +527,6 @@ class CacheDataAPI:
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
-        If either runs while a call is computing, Streamlit returns that result
-        without caching it. This applies to synchronous and awaited coroutine calls.
-
-        To limit the combined pickled size of all in-memory ``st.cache_data``
-        entries, configure ``server.maxCacheDataSize`` with a binary-unit
-        string such as ``"10mb"``. The process-wide budget is disabled by default.
 
         A function's arguments must be hashable to cache it. Streamlit makes a
         best effort to hash a variety of objects, but the fallback hashing method
@@ -759,9 +579,9 @@ class CacheDataAPI:
             Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
 
         max_entries : int or None
-            The maximum number of entries to keep in this function's cache, or
-            ``None`` (default) for no entry-count limit. When a new entry is added
-            to a full cache, Streamlit removes the least-recently-used entry.
+            The maximum number of entries to keep in the cache, or None
+            for an unbounded cache. When a new entry is added to a full cache,
+            the oldest cached entry will be removed. Defaults to None.
 
         max_size : int, str, or None
             The maximum serialized (pickled) size of this function's in-memory cache.
@@ -782,9 +602,6 @@ class CacheDataAPI:
             - With ``persist="disk"``, only the in-memory copy is dropped.
             - With ``scope="session"``, the limit applies to each session separately.
             - The limit counts pickled bytes, not total process memory.
-
-            If configured, ``server.maxCacheDataSize`` additionally caps the
-            combined in-memory size across all functions and sessions.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -1061,50 +878,10 @@ class DataCache(Cache[R]):
         self.fresh_ttl_seconds = (
             fresh_ttl_seconds if fresh_ttl_seconds is not None else ttl_seconds
         )
-        # Different keys may persist concurrently. Explicit user clears wait for
-        # writes that already passed their invalidation check; lifecycle teardown
-        # invalidates immediately and lets storage versions reject late writes.
-        self._write_condition = threading.Condition()
-        self._active_writes = 0
-        self._clears_in_progress = 0
-
-    @property
-    def discard_sync_write_after_clear(self) -> bool:
-        """Discard synchronous results whose cache was cleared while computing."""
-        return True
-
-    def mark_detached(self) -> None:
-        """Detach immediately so lifecycle teardown never waits on storage I/O."""
-        super().mark_detached()
-        if isinstance(self.storage, InMemoryCacheStorageWrapper):
-            self.storage.mark_detached()
-
-    def wait_for_writes(self) -> None:
-        """Wait for writes that already passed their invalidation checks."""
-        with self._write_condition:
-            self._write_condition.wait_for(lambda: self._active_writes == 0)
-
-    def _begin_write(
-        self,
-        value_key: str,
-        invalidation_token: cache_utils.CacheInvalidationToken | None = None,
-    ) -> bool:
-        """Reserve a write if this cache generation is still current."""
-        with self._write_condition:
-            self._write_condition.wait_for(lambda: self._clears_in_progress == 0)
-            if invalidation_token is None:
-                if not self.is_active:
-                    return False
-            elif not self._invalidation_token_is_current(value_key, invalidation_token):
-                return False
-            self._active_writes += 1
-            return True
-
-    def _finish_write(self) -> None:
-        with self._write_condition:
-            self._active_writes -= 1
-            if self._active_writes == 0:
-                self._write_condition.notify_all()
+        # Serializes a background refresh write-back against a concurrent clear so the
+        # orphan check (generation/presence) and the write stay atomic relative to a
+        # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
+        self._write_lock = threading.Lock()
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
@@ -1161,12 +938,7 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
-        if not self._begin_write(value_key):
-            return
-        try:
-            self.storage.set(value_key, pickled_entry)
-        finally:
-            self._finish_write()
+        self.storage.set(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
@@ -1200,7 +972,7 @@ class DataCache(Cache[R]):
         *,
         invalidation_token: cache_utils.CacheInvalidationToken,
     ) -> bool:
-        """Write a result if no relevant clear invalidated it."""
+        """Write an async foreground result if no relevant clear invalidated it."""
         if not self._invalidation_token_is_current(value_key, invalidation_token):
             return False
 
@@ -1214,13 +986,11 @@ class DataCache(Cache[R]):
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
             raise
-        if not self._begin_write(value_key, invalidation_token):
-            return False
-        try:
+        with self._write_lock:
+            if not self._invalidation_token_is_current(value_key, invalidation_token):
+                return False
             self.storage.set(value_key, pickled_entry)
             return True
-        finally:
-            self._finish_write()
 
     def write_background_refresh_result(
         self,
@@ -1257,41 +1027,30 @@ class DataCache(Cache[R]):
         except (pickle.PicklingError, TypeError) as exc:
             raise CacheError(f"Failed to pickle {value_key}") from exc
 
-        invalidation_token = cache_utils.CacheInvalidationToken(
-            expected_generation, expected_key_generation
-        )
-        if not self._begin_write(value_key, invalidation_token):
-            return
-        try:
+        # Hold the write lock across the orphan check and the write so a concurrent
+        # clear can't slip in between (which would otherwise repopulate a just-cleared
+        # entry). _clear takes the same lock.
+        with self._write_lock:
+            # Re-check the orphan conditions under the lock (a clear may have landed
+            # after the early-out check above).
+            if self._refresh_is_orphaned(
+                value_key,
+                expected_generation=expected_generation,
+                expected_key_generation=expected_key_generation,
+            ):
+                return
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
-            if isinstance(self.storage, InMemoryCacheStorageWrapper):
-                self.storage.set_if_present(value_key, pickled_entry)
-                return
             try:
                 if not self.storage.has(value_key):
                     return
             except CacheStorageError:
                 return
-            # Keep the write outside the presence-check exception handler so storage
-            # write failures still propagate.
             self.storage.set(value_key, pickled_entry)
-        finally:
-            self._finish_write()
 
     def _clear(self, key: str | None = None) -> None:
-        wait_for_writes = self.is_active
-        with self._write_condition:
-            if wait_for_writes:
-                self._clears_in_progress += 1
-                self._write_condition.wait_for(lambda: self._active_writes == 0)
-        try:
+        with self._write_lock:
             if not key:
                 self.storage.clear()
             else:
                 self.storage.delete(key)
-        finally:
-            if wait_for_writes:
-                with self._write_condition:
-                    self._clears_in_progress -= 1
-                    self._write_condition.notify_all()

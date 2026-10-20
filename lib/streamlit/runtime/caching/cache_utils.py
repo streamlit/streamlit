@@ -355,9 +355,9 @@ class Cache(Generic[R]):
         # cache is replaced (param change), or when the owning session / all caches
         # are cleared. In-flight writes to a detached cache are discarded.
         self._active = True
-        # Bumped whenever the *whole* cache is cleared. An in-flight computation or
-        # background refresh captures the generation before running user code and
-        # discards its write if the generation changes.
+        # Bumped whenever the *whole* cache is cleared. An async foreground computation
+        # or background refresh captures the generation before running user code and
+        # discards its write if the generation changed.
         self._generation = 0
         # Maps value_key -> a counter bumped each time that key is individually cleared
         # (func.clear(*args)). In-flight writes capture the counter before running user
@@ -373,11 +373,6 @@ class Cache(Generic[R]):
         """Whether this cache is still attached to its manager."""
         with self._invalidation_lock:
             return self._active
-
-    @property
-    def discard_sync_write_after_clear(self) -> bool:
-        """Whether a synchronous computation should be discarded after a clear."""
-        return False
 
     @property
     def generation(self) -> int:
@@ -467,7 +462,7 @@ class Cache(Generic[R]):
         *,
         invalidation_token: CacheInvalidationToken,
     ) -> bool:
-        """Write a computed result only if its invalidation token is still current.
+        """Write a foreground result only if its invalidation token is still current.
 
         The token check and write must be atomic with respect to cache clearing.
         Returns whether the result was written.
@@ -873,12 +868,6 @@ class CachedFunc(Generic[P, R]):
                 # below.
                 pass
 
-            invalidation_token = (
-                cache.capture_invalidation_token(value_key)
-                if cache.discard_sync_write_after_clear
-                else None
-            )
-
             # We acquired the lock before any other thread. Compute the value!
             with self._info.cached_message_replay_ctx.calling_cached_function(
                 self._info.func
@@ -888,12 +877,7 @@ class CachedFunc(Generic[P, R]):
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, computed_value
             )
-            return self._store_computed_value(
-                cache,
-                value_key,
-                computed_value,
-                invalidation_token=invalidation_token,
-            )
+            return self._store_computed_value(cache, value_key, computed_value)
 
     def _store_computed_value(
         self,
@@ -907,9 +891,9 @@ class CachedFunc(Generic[P, R]):
 
         Shared by the sync and async cache-miss paths. The value has already been
         computed (or awaited); this captures any replay messages, applies the
-        background-mode display rules, conditionally writes results from the current
-        cache generation, and translates serialization failures into the user-facing
-        cache errors.
+        background-mode display rules, conditionally writes async results from the
+        current cache generation, and translates serialization failures into the
+        user-facing cache errors.
         """
         # We've computed our value, and now we need to write it back to the cache
         # along with any "replay messages" that were generated during value computation.

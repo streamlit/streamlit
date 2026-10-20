@@ -52,7 +52,6 @@ if TYPE_CHECKING:
     from streamlit.cursor import RunningCursor
     from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-    from streamlit.runtime.caching.cache_data_api import _SessionCacheLifecycle
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
@@ -247,10 +246,6 @@ class ScriptRunContext:
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
     on_script_error: OnScriptErrorHandler | None = None
-    # Identifies the connection lifecycle this ScriptRunner belongs to. Session
-    # cache lookups use it so work from a disconnected runner stays invalidated
-    # after another connection reuses the same session.
-    session_cache_lifecycle: _SessionCacheLifecycle | None = None
 
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
