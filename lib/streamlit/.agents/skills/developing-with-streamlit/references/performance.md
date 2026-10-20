@@ -478,7 +478,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` and render inside the fragment. It runs on another thread during every full-app run, so it cannot write to an outside container or reserve that slot for a later rerun.
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes.
 
 ## Perceived performance (loading states)
 
