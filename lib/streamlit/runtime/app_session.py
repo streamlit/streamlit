@@ -636,7 +636,11 @@ class AppSession:
                 is_auto_rerun=client_state.is_auto_rerun,
                 is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
-                context_info=client_state.context_info,
+                # None, not an empty proto, when the client sent no browser
+                # context, so the run and its saved client state keep saying so.
+                context_info=client_state.context_info
+                if client_state.HasField("context_info")
+                else None,
             )
         else:
             rerun_data = RerunData()

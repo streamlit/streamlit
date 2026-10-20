@@ -865,6 +865,17 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
 
+    def test_rerun_without_context_info_passes_none(self) -> None:
+        """A client state with no context info reruns without one, not an empty one."""
+        session = _create_test_session()
+        client_state = ClientState(query_string="a=1")
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.context_info is None
+
     @parameterized.expand(
         [
             ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
