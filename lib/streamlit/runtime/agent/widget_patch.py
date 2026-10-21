@@ -144,22 +144,25 @@ def resolve_element_id(
     # An element with an element ID that registers no widget, such as a link
     # button without `on_click`, is in no key map. The snapshot reported the
     # key embedded in that ID.
-    shown = next(
-        (
-            shown_id
-            for shown_id in element_states
-            if is_element_id(shown_id) and user_key_from_element_id(shown_id) == key
-        ),
-        None,
-    )
-    if shown is not None:
-        return shown
+    for shown_id in element_states:
+        if is_element_id(shown_id) and user_key_from_element_id(shown_id) == key:
+            return shown_id
     if element_id is not None:
         return element_id
-    raise AgentRequestError(
+    raise _unknown_key(key)
+
+
+def _unknown_key(key: str) -> AgentRequestError:
+    return AgentRequestError(
         "unknown_key",
         f"No element with key {key!r} is registered in this session. Read the "
         "keys from the latest snapshot.",
+    )
+
+
+def _not_accepted(key: str) -> AgentRequestError:
+    return AgentRequestError(
+        "invalid_value", f"The value sent for {key!r} is not one it accepts."
     )
 
 
@@ -187,11 +190,7 @@ def _addressable(
     state = element_states.get(element_id)
     if state is None:
         if metadata is None:
-            raise AgentRequestError(
-                "unknown_key",
-                f"No element with key {key!r} is registered in this session. "
-                "Read the keys from the latest snapshot.",
-            )
+            raise _unknown_key(key)
         # A generated key encodes the widget's parameters, so the same widget
         # gets a new key when one of them changes, such as a slider's bound.
         regenerated = (
@@ -607,9 +606,7 @@ def _check_readable(
     try:
         metadata.deserializer(wire)
     except Exception as exc:
-        raise AgentRequestError(
-            "invalid_value", f"The value sent for {key!r} is not one it accepts."
-        ) from exc
+        raise _not_accepted(key) from exc
 
 
 def _parse_iso(value: Any) -> dt.date | dt.time | None:
@@ -638,11 +635,11 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
     It takes only ISO text: the microseconds are the wire's encoding, not a
     value a client was shown. Anything else passes through unchanged.
     """
-    if (
-        metadata.value_type != "double_array_value"
-        or value is None
-        or not _is_temporal(metadata)
-    ):
+    if metadata.value_type != "double_array_value" or value is None:
+        return value
+    # A temporal slider is told apart by its default value.
+    default = _slider_default(metadata)
+    if not isinstance(default, (dt.date, dt.time)):
         return value
     items = value if isinstance(value, list) else [value]
     parsed = [_parse_iso(item) for item in items]
@@ -652,7 +649,6 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
             f"The value for {key!r} must be ISO dates or times, like the "
             "snapshot reports.",
         )
-    default = _slider_default(metadata)
     if isinstance(default, dt.datetime):
         # A date alone means its midnight, as `st.datetime_input` reads it, in
         # the slider's own time zone.
@@ -662,13 +658,11 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
             else item
             for item in parsed
         ]
-    _check_slider_offsets(key, metadata, parsed)
+    _check_slider_offsets(key, parsed, own_tz=getattr(default, "tzinfo", None))
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
     except Exception as exc:
-        raise AgentRequestError(
-            "invalid_value", f"The value sent for {key!r} is not one it accepts."
-        ) from exc
+        raise _not_accepted(key) from exc
 
 
 def _iso_text_to_wire(
@@ -704,9 +698,7 @@ def _iso_text_to_wire(
     try:
         return metadata.serializer(parsed)
     except Exception as exc:  # pragma: no cover - defensive
-        raise AgentRequestError(
-            "invalid_value", f"The value sent for {key!r} is not one it accepts."
-        ) from exc
+        raise _not_accepted(key) from exc
 
 
 def _slider_default(metadata: WidgetMetadata[Any]) -> Any:
@@ -720,20 +712,14 @@ def _slider_default(metadata: WidgetMetadata[Any]) -> Any:
     return default
 
 
-def _is_temporal(metadata: WidgetMetadata[Any]) -> bool:
-    """Whether a slider holds dates or times, judged by its default value."""
-    return isinstance(_slider_default(metadata), (dt.date, dt.time))
-
-
 def _check_slider_offsets(
-    key: str, metadata: WidgetMetadata[Any], items: list[Any]
+    key: str, items: list[Any], *, own_tz: dt.tzinfo | None
 ) -> None:
     """Refuse an offset a temporal slider would drop.
 
     The slider keeps a value's wall time and puts its own time zone on it, so an
     offset it does not have would silently move the value.
     """
-    own_tz = getattr(_slider_default(metadata), "tzinfo", None)
     for item in items:
         sent = item.utcoffset() if getattr(item, "tzinfo", None) else None
         if sent is None:
@@ -915,9 +901,7 @@ def _as_number(value: Any) -> float:
     ``true`` would become 1 and a numeric string would parse, and ``NaN``,
     which Python's JSON parser accepts, would reach the app.
     """
-    # bool is an int subclass.
-    is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
-    if not is_number or not math.isfinite(value):
+    if not _is_json_number(value) or not math.isfinite(value):
         raise TypeError("not a finite number")
     return float(value)
 
@@ -935,7 +919,11 @@ def _as_string(value: Any, option_labels: frozenset[str]) -> str:
     """
     if isinstance(value, str):
         return value
-    is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
-    if is_number and str(value) in option_labels:
+    if _is_json_number(value) and str(value) in option_labels:
         return str(value)
     raise TypeError("not a string")
+
+
+def _is_json_number(value: Any) -> bool:
+    # bool is an int subclass, but `true` is not a JSON number.
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
