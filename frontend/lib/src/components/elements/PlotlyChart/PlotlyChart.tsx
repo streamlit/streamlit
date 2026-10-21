@@ -161,7 +161,7 @@ export function PlotlyChart({
     shouldWidthStretch(widthConfig) &&
     shouldHeightStretch(heightConfig)
   const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
-  const fallbackHeight = plotlyLayoutHeight(initialFigureSpec.layout?.height)
+  const fallbackHeight = plotlyLayoutHeight(initialFigureSpec.layout.height)
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
@@ -206,9 +206,9 @@ export function PlotlyChart({
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,
           click: () => {
-            if (isFullScreen && collapse) {
+            if (isFullScreen) {
               collapse()
-            } else if (expand) {
+            } else {
               expand()
             }
           },
@@ -362,7 +362,7 @@ export function PlotlyChart({
       ? // In some situations - e.g. initial loading of tabs - the width is set to -1
         // before its able to determine the real width. We want to keep the previous
         // width in this case.
-        plotlyFigure.layout?.width
+        plotlyFigure.layout.width
       : Math.max(
           width,
           // Apply a min width to prevent the chart running into issues with negative
@@ -381,7 +381,7 @@ export function PlotlyChart({
   let calculatedHeight =
     chartContainerHeight >= PLOTLY_MIN_LAYOUT_HEIGHT
       ? chartContainerHeight
-      : plotlyLayoutHeight(plotlyFigure.layout?.height)
+      : plotlyLayoutHeight(plotlyFigure.layout.height)
 
   if (isFullScreen) {
     calculatedWidth = width
@@ -515,8 +515,8 @@ export function PlotlyChart({
     // if the dragmode is set to select or lasso.
     let clickmode: "event+select" | "event" | "none"
     if (
-      plotlyFigure.layout?.dragmode === "select" ||
-      plotlyFigure.layout?.dragmode === "lasso"
+      plotlyFigure.layout.dragmode === "select" ||
+      plotlyFigure.layout.dragmode === "lasso"
     ) {
       clickmode = "event"
     } else {
@@ -525,7 +525,7 @@ export function PlotlyChart({
       clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
-    if (plotlyFigure.layout?.clickmode !== clickmode) {
+    if (plotlyFigure.layout.clickmode !== clickmode) {
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
         return {
           ...prevFigure,
@@ -538,7 +538,7 @@ export function PlotlyChart({
     }
     // We only want to trigger this effect if the dragmode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [plotlyFigure.layout?.dragmode])
+  }, [plotlyFigure.layout.dragmode])
 
   // Only name the container when the author provided a non-blank alt.
   // Blank input is treated as absent: aria-label=" " computes to an empty
@@ -567,7 +567,7 @@ export function PlotlyChart({
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.
           visibility:
-            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+            plotlyFigure.layout.width === undefined ? "hidden" : undefined,
           display: isShrunkPlotHidden ? "none" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.

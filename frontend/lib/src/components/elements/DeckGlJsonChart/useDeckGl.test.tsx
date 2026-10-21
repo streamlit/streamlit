@@ -900,9 +900,9 @@ describe("useDeckGl", () => {
       const updatedProps = getPropsWithArrayData(updatedData, "object-layer")
       rerender(updatedProps)
 
-      expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
-        updatedData[1]
-      )
+      expect(
+        result.current.data.selection.objects["object-layer"]?.[0]
+      ).toEqual(updatedData[1])
     })
   })
 

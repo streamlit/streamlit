@@ -85,7 +85,7 @@ function ExceptionMessage({
   // messages, and so we wrap those messages inside our Markdown renderer.
 
   if (messageIsMarkdown) {
-    let markdown = message ?? ""
+    let markdown = message
     if (type.length !== 0) {
       markdown = `**${type}**: ${markdown}`
     }
@@ -173,7 +173,7 @@ function ExceptionElement({
   const showSkillsCallout = ownsSkillsCalloutSlot && !skillsCalloutDismissed
 
   const formattedExceptionShort = `${element.type}: ${element.message}`
-  const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
+  const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace.join(
     "\n"
   )}`
 
@@ -202,7 +202,7 @@ function ExceptionElement({
                 messageIsMarkdown={element.messageIsMarkdown}
               />
             </StyledExceptionMessage>
-            {element.stackTrace && element.stackTrace.length > 0 ? (
+            {element.stackTrace.length > 0 ? (
               <StackTrace stackTrace={element.stackTrace} />
             ) : null}
             {shouldShowLinks && (

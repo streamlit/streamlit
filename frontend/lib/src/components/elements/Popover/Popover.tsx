@@ -147,7 +147,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // on subsequent reruns. Without this, a programmatic close (e.g.
     // st.session_state.key = False) would leave a stale "true" in the widget
     // state, causing the popover to reopen when another widget triggers a rerun.
-    widgetMgr?.setBoolValue(widgetId, element.open, {
+    widgetMgr.setBoolValue(widgetId, element.open, {
       formId: undefined,
       fragmentId,
       fromUser: false,
@@ -181,7 +181,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, newOpen, {
+      widgetMgr.setBoolValue(widgetId, newOpen, {
         formId: undefined,
         fragmentId,
         fromUser: true,
@@ -195,7 +195,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(false)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, false, {
+      widgetMgr.setBoolValue(widgetId, false, {
         formId: undefined,
         fragmentId,
         fromUser: true,

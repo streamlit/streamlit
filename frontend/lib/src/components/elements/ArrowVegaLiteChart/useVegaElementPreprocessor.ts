@@ -33,7 +33,9 @@ type VegaLiteSpec = Record<string, unknown>
 
 /** A single VegaLite selection/binding parameter within spec.params. */
 interface VegaLiteParam {
+  /** Parsed from the user's spec JSON, so it can be `null`. */
   select?:
+    | null
     | string
     | {
         type?: string

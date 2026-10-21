@@ -60,7 +60,9 @@ export function resolveMapPrimaryFillColor(
  * Note that this mapping is not exhaustive and only includes the layers that we
  * can actually change the color of.
  */
-export const LAYER_TYPE_TO_FILL_FUNCTION: Record<string, readonly string[]> = {
+export const LAYER_TYPE_TO_FILL_FUNCTION: Partial<
+  Record<string, readonly string[]>
+> = {
   [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
   [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
   [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],

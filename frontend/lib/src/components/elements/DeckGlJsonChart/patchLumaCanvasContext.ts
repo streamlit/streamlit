@@ -41,7 +41,7 @@
  */
 import { CanvasContext } from "@luma.gl/core"
 
-type MaybePatchedCanvasContext = CanvasContext & {
+type MaybePatchedCanvasContext = Omit<CanvasContext, "canvas" | "device"> & {
   __streamlitMaxTexturePatchApplied?: boolean
   canvas?: { width?: number; height?: number }
   device?: {
@@ -57,7 +57,6 @@ if (!canvasContextProto.__streamlitMaxTexturePatchApplied) {
   const originalGetMaxDrawingBufferSize =
     // Prototype patch must capture the original to `.call(this)`. Binding the
     // method to the prototype would lock `this` to CanvasContext.prototype.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- see above
     canvasContextProto.getMaxDrawingBufferSize
 
   canvasContextProto.getMaxDrawingBufferSize =

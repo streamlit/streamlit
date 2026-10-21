@@ -106,8 +106,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
-    deck.mapProvider === "mapbox" ||
-    (deck?.mapStyle && deck.mapStyle?.includes("mapbox") === true)
+    deck.mapProvider === "mapbox" || deck.mapStyle?.includes("mapbox") === true
   const showBasemap = useMemo(
     () =>
       shouldShowBasemap({
@@ -160,11 +159,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           case DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT: {
             const selectionMap: Map<number, unknown> = new Map(
               ((): [number, unknown][] => {
-                const indices = currState?.selection?.indices?.[layerId] || []
+                const indices = currState.selection.indices[layerId] ?? []
 
                 return indices.map((currIndex, i) => [
                   currIndex,
-                  currState.selection?.objects?.[layerId]?.[i],
+                  currState.selection.objects[layerId]?.[i],
                 ])
               })()
             )

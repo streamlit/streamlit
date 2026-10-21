@@ -52,8 +52,15 @@ interface PlotlySelectionShape extends Record<string, unknown> {
   path?: string
 }
 
-interface PlotlySelectionEventWithSelections
-  extends Plotly.PlotSelectionEvent {
+/**
+ * Plotly selection event as emitted at runtime. The upstream type omits
+ * `selections` and marks `points` as always present.
+ */
+interface PlotlySelectionEventWithSelections extends Omit<
+  Plotly.PlotSelectionEvent,
+  "points"
+> {
+  points?: Plotly.PlotSelectionEvent["points"]
   selections?: PlotlySelectionShape[]
 }
 
@@ -218,13 +225,14 @@ export function applyTheming(
  * Handles the selection event from Plotly and sends the selection state to the backend.
  * The selection state is sent as a stringified JSON object.
  *
- * @param event The Plotly selection event
+ * @param event The Plotly selection event. Plotly can emit `plotly_selected`
+ *   without event data.
  * @param widgetMgr The widget manager
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
  */
 export function handleSelection(
-  event: Readonly<Plotly.PlotSelectionEvent>,
+  event: Readonly<Plotly.PlotSelectionEvent> | undefined,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
@@ -380,12 +388,12 @@ export function sendEmptySelection(
  * @param fragmentId The fragment id
  */
 export function handleClickEvent(
-  event: Readonly<Plotly.PlotMouseEvent>,
+  event: Readonly<Plotly.PlotMouseEvent> | undefined,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
 ): void {
-  if (!event?.points?.length) {
+  if (!event?.points.length) {
     return
   }
 
