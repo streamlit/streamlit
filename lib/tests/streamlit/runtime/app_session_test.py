@@ -3739,21 +3739,30 @@ def test_dropped_fragment_rerun_leaves_session_settled(
 @pytest.mark.anyio
 async def test_a_runner_that_fails_to_start_leaves_the_session_settled() -> None:
     """A failure to start the run reaches the caller, and the session stays
-    settled, so the next rerun is not left waiting for a run that never came.
+    settled without that runner, so the next rerun starts a new one even with
+    fastReruns off instead of queueing into a runner that never ran.
     """
     session = _create_tracked_session(asyncio.get_running_loop())
     failing_runner = MagicMock()
     failing_runner.start.side_effect = RuntimeError("no thread")
+    next_runner = MagicMock()
 
     with (
+        patch_config_options({"runner.fastReruns": False}),
         patch(
-            "streamlit.runtime.app_session.ScriptRunner", return_value=failing_runner
+            "streamlit.runtime.app_session.ScriptRunner",
+            side_effect=[failing_runner, next_runner],
         ),
-        pytest.raises(RuntimeError, match="no thread"),
     ):
+        with pytest.raises(RuntimeError, match="no thread"):
+            session.request_rerun(None)
+        assert session.is_settled
+
         session.request_rerun(None)
 
-    assert session.is_settled
+    failing_runner.request_rerun.assert_not_called()
+    next_runner.start.assert_called_once()
+    assert not session.is_settled
 
 
 @pytest.mark.anyio

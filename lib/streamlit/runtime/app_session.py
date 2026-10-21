@@ -782,7 +782,13 @@ class AppSession:
             event_loop=self._script_event_loop,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
-        self._scriptrunner.start()
+        try:
+            self._scriptrunner.start()
+        except Exception:
+            # A runner that never started would still accept rerun requests
+            # when fastReruns is off, and they would never run.
+            self._scriptrunner = None
+            raise
         # Only once the runner has started, so a runner that fails to start
         # leaves the session settled. Its events reach this loop later, so none
         # can settle the session before this line runs.
