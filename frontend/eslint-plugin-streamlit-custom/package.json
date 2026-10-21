@@ -26,7 +26,7 @@
     "typescript-v7": "npm:typescript@7.0.2",
     "typesync": "^0.14.3",
     "vite": "^8.3.4",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   },
   "peerDependencies": {
     "@typescript-eslint/utils": "^8.71.2",
