@@ -98,7 +98,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
   const href = buildHref(element)
   // Material/emoji icons are aria-hidden; name icon-only links explicitly.
   const iconOnlyAccessibleName =
-    element.icon && !element.label?.trim()
+    element.icon && !element.label.trim()
       ? getIconAccessibleName(element.icon)
       : undefined
 

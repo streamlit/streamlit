@@ -102,12 +102,12 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
-  const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
-  const tabContainer = node.deltaBlock?.tabContainer
+  const defaultTabIndex = node.deltaBlock.tabContainer?.defaultTabIndex ?? 0
+  const tabContainer = node.deltaBlock.tabContainer
   // widgetId is only set when the backend registers tabs as a stateful widget
   // (on_change="rerun" or bind="query-params"). blockId is set whenever key= is provided.
   const widgetId = tabContainer?.id
-  const blockId = node.deltaBlock?.id ?? ""
+  const blockId = node.deltaBlock.id ?? ""
   const isDynamic = Boolean(widgetId)
   // Passive keyed tabs: have a stable blockId (key= provided) but are NOT
   // dynamic widgets (no on_change="rerun" or bind="query-params"). These persist
@@ -120,10 +120,10 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   // Memoize tab labels to prevent unnecessary effect reruns
   const allTabLabels = useMemo(
     () =>
-      node.children.map((child, index) => {
-        const tabNode = child as BlockNode
-        return tabNode?.deltaBlock?.tab?.label ?? index.toString()
-      }),
+      node.children.map(
+        (child, index) =>
+          (child as BlockNode).deltaBlock.tab?.label ?? index.toString()
+      ),
     [node.children]
   )
 
@@ -171,8 +171,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     if (activeTabNameRef.current === undefined) {
-      const tab = node.children[defaultTabIndex] as BlockNode
-      activeTabNameRef.current = tab?.deltaBlock?.tab?.label ?? "0"
+      // The tab container can render before all of its tab blocks arrive.
+      const tab = node.children[defaultTabIndex] as BlockNode | undefined
+      activeTabNameRef.current = tab?.deltaBlock.tab?.label ?? "0"
     }
   }
 
@@ -214,7 +215,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           // Without this, subsequent reruns would send a stale widget value that
           // overrides session_state, making tab.open return False for the new tab.
           // fromUser: false avoids scheduling a spurious rerun.
-          if (widgetId && widgetMgr) {
+          if (widgetId) {
             widgetMgr.setStringValue(widgetId, newLabel, {
               formId: "",
               fragmentId,
@@ -320,7 +321,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
       }
 
-      if (isDynamic && widgetId && widgetMgr) {
+      if (isDynamic && widgetId) {
         widgetMgr.setStringValue(widgetId, newLabel, {
           formId: "",
           fragmentId,

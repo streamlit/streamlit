@@ -599,7 +599,6 @@ function withTitleStyleDefaults(
     fontWeight: titleTextStyle.fontWeight,
   }
 
-  let changed = false
   const next = titles.map(title => {
     if (title.show === false) {
       return title
@@ -607,7 +606,6 @@ function withTitleStyleDefaults(
     const userTextStyle = isPlainObject(title.textStyle)
       ? (title.textStyle as Record<string, unknown>)
       : {}
-    changed = true
     const extra: Record<string, unknown> = {
       textStyle: { ...sizeAndWeight, ...userTextStyle },
     }
@@ -616,7 +614,8 @@ function withTitleStyleDefaults(
     }
     return { ...title, ...extra }
   })
-  if (!changed) {
+  // Return the original option when no title was replaced.
+  if (next.every((title, i) => title === titles[i])) {
     return option
   }
   return {
@@ -981,15 +980,11 @@ function withLegendLiftedToTop(
     return option
   }
 
-  let changed = false
-  const next = legends.map(legend => {
-    if (!isDefaultBottomLegend(legend)) {
-      return legend
-    }
-    changed = true
-    return { ...legend, top: legendTop }
-  })
-  if (!changed) {
+  const next = legends.map(legend =>
+    isDefaultBottomLegend(legend) ? { ...legend, top: legendTop } : legend
+  )
+  // Return the original option when no legend was replaced.
+  if (next.every((legend, i) => legend === legends[i])) {
     return option
   }
   return {
