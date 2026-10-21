@@ -252,7 +252,7 @@ def test_secrets():
 
 
 def test_user_and_context_defaults() -> None:
-    """Without seeding, st.user has the legacy test email and st.context is unset."""
+    """Without seeding, st.user has the default test email and st.context is unset."""
 
     def script() -> None:
         import streamlit as st
@@ -274,7 +274,7 @@ def test_user_and_context_defaults() -> None:
 
 
 def test_seeded_user() -> None:
-    """``AppTest.user`` is what the script reads as st.user."""
+    """The script reads ``AppTest.user`` as st.user, including in-place edits."""
 
     def script() -> None:
         import streamlit as st
@@ -320,7 +320,7 @@ def test_logout_clears_seeded_user() -> None:
 
 
 def test_seeded_context() -> None:
-    """``AppTest.context`` is what the script reads as browser st.context fields."""
+    """The script reads ``AppTest.context`` from st.context, even after st.rerun()."""
 
     def script() -> None:
         import streamlit as st
@@ -388,7 +388,7 @@ def test_seeded_context_none_leaves_field_unset() -> None:
     ],
 )
 def test_invalid_context_raises(context: dict[str, object], match: str) -> None:
-    """Unsupported ``AppTest.context`` entries fail loud before the script runs."""
+    """Invalid ``AppTest.context`` entries raise AppTestError before the script runs."""
     at = AppTest.from_string("import streamlit as st\nst.text('ran')")
     at.context = context
     with pytest.raises(AppTestError, match=match):

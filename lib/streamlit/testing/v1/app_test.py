@@ -328,9 +328,9 @@ class AppTest:
         ``st.user``. The default is ``{"email": "test@example.com"}``. To
         test a logged-in user, set ``"is_logged_in"`` to ``True`` and add the
         identity claims the app reads, such as ``"name"`` and ``"email"``.
-        Exposed tokens go in a ``"tokens"`` dictionary. After a run that
-        calls ``st.logout()``, ``user`` is empty, so the next run is logged
-        out.
+        Put the tokens the app reads from ``st.user.tokens`` in a
+        ``"tokens"`` dictionary. After a run that calls ``st.logout()``,
+        ``user`` is empty, so the next run is logged out.
 
     context: dict[str, Any]
         Dictionary of browser information that the simulated app reads from
@@ -338,8 +338,8 @@ class AppTest:
         ``"timezone_offset"`` (minutes behind UTC, so ``-60`` for UTC+1),
         ``"locale"``, ``"url"``, ``"is_embedded"``, and ``"theme"``
         (``"light"`` or ``"dark"``, read as ``st.context.theme.type``). A
-        missing key or a ``None`` value reads as ``None``. Any other key
-        raises ``AppTestError`` when the app runs.
+        missing key or a ``None`` value reads as ``None``. Any other key, or
+        a value of the wrong type, raises ``AppTestError`` when the app runs.
     """
 
     def __init__(
@@ -560,8 +560,8 @@ class AppTest:
 
         # Validate before any global state below is swapped in.
         context_info = _context_info_from_dict(self.context)
-        # A copy, so st.logout() clears this run's user and not the dict the
-        # test passed in. It becomes self.user once the run finishes.
+        # Copy so st.logout() clears this run's user, not the dict the test
+        # assigned. The copy becomes self.user after the run.
         user_info: UserInfoType = dict(self.user)
 
         # setup
