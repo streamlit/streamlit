@@ -132,8 +132,8 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     page: Page, app_base_url: str
 ) -> None:
     """A creating call runs the app, a rerun keeps the session's state,
-    `page` navigates, and an unknown page or field is refused before anything
-    runs.
+    `page` navigates, and an unknown page, or navigation with widget changes,
+    is refused before anything runs.
     """
     created = _snapshot(_interact(page, app_base_url, {}))
     session_id = created["session_id"]
@@ -168,12 +168,16 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     assert _url_paths(unknown_page["error"]["pages"]) == _url_paths(report["pages"])
     # Only a creating call's errors carry a session to continue with.
     assert "session_id" not in unknown_page
-    # `widget_state` is not a request field, so it is refused as unknown.
+    # Navigation is its own transition, so it cannot carry widget changes.
     _refusal(
         _interact(
             page,
             app_base_url,
-            {"session_id": session_id, "widget_state": {"region": "APAC"}},
+            {
+                "session_id": session_id,
+                "page": "report",
+                "widget_state": {"region": "APAC"},
+            },
         ),
         400,
         "invalid_request",
