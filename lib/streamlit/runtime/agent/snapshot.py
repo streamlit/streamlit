@@ -457,8 +457,10 @@ def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None
 
 
 def _whole_number(value: Any) -> int | None:
-    """``value`` if it is an int, which a bool is not, else None."""
-    return None if isinstance(value, bool) or not isinstance(value, int) else value
+    """Return ``value`` when it is an ``int`` and not a ``bool``, else ``None``."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
 
 
 def _public_key(element_id: str) -> str:

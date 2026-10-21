@@ -131,7 +131,8 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         (
             "The element exists in this session but cannot be used now: it may "
             "be on a page you left, appear only after another control changes, "
-            "or be in a closed dialog."
+            "be in a closed dialog, or be left from a script that failed to "
+            "compile."
         ),
     ),
     "disabled_widget": (

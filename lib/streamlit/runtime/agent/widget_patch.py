@@ -25,11 +25,11 @@ against. The widget registry supplies only the codec: each widget's wire type,
 serializer, and deserializer.
 
 Constraints a widget owns are left to the widget, which resets, truncates, or
-trims the value: bounds, fractions sent to an `st.number_input` or `st.slider`
-that holds whole numbers, and a text input's `max_chars`. #16203 moves those
-checks into the widgets for every client. `st.chat_input` is the exception:
-only the browser enforces its `max_chars`, and its payload never shows in a
-snapshot, so it is checked here.
+trims the value for browsers and agents alike: bounds, fractions sent to an
+`st.number_input` or `st.slider` that holds whole numbers, and a text input's
+`max_chars`. #16203 tracks the constraints still enforced only in the browser.
+`st.chat_input` is the exception: only the browser enforces its `max_chars`,
+and its payload never shows in a snapshot, so this module checks it.
 """
 
 from __future__ import annotations
@@ -159,7 +159,7 @@ def _not_accepted(key: str) -> AgentRequestError:
     )
 
 
-def _addressable(
+def _require_actionable(
     session_state: SessionState,
     element_id: str,
     key: str,
@@ -308,7 +308,9 @@ def build_widget_states(
                 f"`widget_state` sets the element with key {key!r} twice, "
                 "under its key and its element ID. Send one value.",
             )
-        state, metadata = _addressable(session_state, element_id, key, element_states)
+        state, metadata = _require_actionable(
+            session_state, element_id, key, element_states
+        )
 
         if state.action != "value":
             raise AgentRequestError(
@@ -366,7 +368,7 @@ def build_widget_states(
             )
 
         element_id = resolve_element_id(session_state, trigger_key, element_states)
-        state, metadata = _addressable(
+        state, metadata = _require_actionable(
             session_state, element_id, trigger_key, element_states
         )
         if state.action != "trigger":
@@ -457,8 +459,9 @@ def resolve_fragment(
     Returns
     -------
     str
-        The fragment ID every addressed element shares, or "" when they span
-        regions, share none, or share one the session no longer holds.
+        The fragment ID every addressed element shares, or "" for a full
+        rerun: several regions, no fragment, or a fragment the session no
+        longer holds outside an open dialog.
 
     Raises
     ------
@@ -669,7 +672,8 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
     """
     if metadata.value_type != "double_array_value" or value is None:
         return value
-    # A temporal slider is told apart by its default value.
+    # Only a temporal slider has a date, time, or datetime default, so the
+    # default tells it apart from a numeric one.
     default = _slider_default(metadata)
     if not isinstance(default, (dt.date, dt.time)):
         return value
