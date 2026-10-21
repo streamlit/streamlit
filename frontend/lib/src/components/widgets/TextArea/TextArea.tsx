@@ -183,12 +183,9 @@ const TextArea: FC<Props> = ({
   })
 
   // A session_state write replaces an empty edit that `required` blocked.
-  // The blocked edit keeps `dirty`, so ordinary reruns (no `setValue`) don't
-  // snap the field back, and useUpdateUiValue skips the repaint. The backend
-  // sets `setValue` on every session_state write, even one equal to the
-  // committed value. Apply it during render: useBasicWidgetState consumes
-  // `setValue` in an effect, so waiting would paint the previous value for
-  // one frame.
+  // - The blocked edit keeps `dirty`, so useUpdateUiValue won't repaint it.
+  // - Applied during render because useBasicWidgetState consumes `setValue`
+  //   in an effect, which would paint the old value for one frame.
   if (element.setValue && dirty && hasRequiredError) {
     const incomingValue = getCurrStateFromProto(element)
     setUiValue(incomingValue)

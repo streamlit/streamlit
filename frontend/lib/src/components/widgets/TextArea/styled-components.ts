@@ -109,5 +109,4 @@ export const StyledErrorIcon = styled.div(({ theme }) => ({
   color: theme.colors.redTextColor,
 }))
 
-/** Visually hidden but available to screen readers. */
 export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
