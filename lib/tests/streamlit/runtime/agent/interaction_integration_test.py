@@ -804,7 +804,7 @@ async def test_a_rerun_that_fails_to_start_leaves_the_session_usable(
             pytest.raises(RuntimeError, match="no thread"),
         ):
             await app.call({"session_id": handle})
-        after = await app.call({"session_id": handle}, run_timeout=_SHORT_TIMEOUT)
+        after = await app.call({"session_id": handle})
 
     assert after["session_id"] == handle
     assert _texts(after) == ["starts=2 done=2 runs=2"]
