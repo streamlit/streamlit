@@ -38,7 +38,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.agent.errors import AgentRequestError
-from streamlit.runtime.state.common import is_array_value_field_name, is_element_id
+from streamlit.runtime.state.common import (
+    is_array_value_field_name,
+    is_element_id,
+    user_key_from_element_id,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -131,14 +135,27 @@ def resolve_element_id(
         return key
 
     element_id = session_state.get_widget_id_from_key(key)
+    if element_id is not None and element_id in element_states:
+        return element_id
     # The key map outlives the widget, so a stale widget's entry must not hide
     # a form, container, or display element that uses the same key now.
-    if element_id is not None and (
-        element_id in element_states or key not in element_states
-    ):
-        return element_id
     if key in element_states:
         return key
+    # An element with an element ID that registers no widget, such as a link
+    # button without `on_click`, is in no key map. The snapshot reported the
+    # key embedded in that ID.
+    shown = next(
+        (
+            shown_id
+            for shown_id in element_states
+            if is_element_id(shown_id) and user_key_from_element_id(shown_id) == key
+        ),
+        None,
+    )
+    if shown is not None:
+        return shown
+    if element_id is not None:
+        return element_id
     raise AgentRequestError(
         "unknown_key",
         f"No element with key {key!r} is registered in this session. Read the "
@@ -206,21 +223,23 @@ def _addressable(
             f"The element with key {key!r} is on the page but disabled. "
             "Something else on the page controls that.",
         )
-    if not state.actionable and metadata is not None:
-        # A registered widget the snapshot shows but does not list: its dialog
-        # is closed, or the page failed to compile and shows the last run.
-        raise AgentRequestError(
-            "not_on_page",
-            f"The element with key {key!r} is in the latest snapshot but "
-            "cannot be used now: it is in a closed dialog, or the script "
-            "failed to compile. Read `actions` from the latest snapshot.",
-        )
-    if not state.actionable or metadata is None:
+    # Some elements with no action still register a widget, such as
+    # `st.download_button(on_click="ignore")`, so the description decides.
+    if not state.has_action or metadata is None:
         raise AgentRequestError(
             "unsupported_element",
             f"The element with key {key!r} is on the page but display-only: it "
             "has no value to set and nothing to fire. Read `actions` from the "
             "latest snapshot.",
+        )
+    if not state.actionable:
+        # The snapshot shows it but does not list it: its dialog is closed, or
+        # the page failed to compile and shows the last run.
+        raise AgentRequestError(
+            "not_on_page",
+            f"The element with key {key!r} is in the latest snapshot but "
+            "cannot be used now: it is in a closed dialog, or the script "
+            "failed to compile. Read `actions` from the latest snapshot.",
         )
     return state, metadata
 
@@ -256,8 +275,8 @@ def build_widget_states(
     Returns
     -------
     WidgetStates
-        One ``WidgetState`` per addressed widget, in request order with the
-        trigger last.
+        One ``WidgetState`` per addressed widget, in the order of
+        ``element_states``, with the trigger last.
 
     Raises
     ------
@@ -266,10 +285,19 @@ def build_widget_states(
         naming why.
     """
     states = WidgetStates()
+    values: dict[str, WidgetState] = {}
     touched_forms: set[str] = set()
 
     for key, sent in (widget_state or {}).items():
         element_id = resolve_element_id(session_state, key, element_states)
+        if element_id in values:
+            # An authored key and its element ID name the same widget, and
+            # which of the two values would win is not something to guess.
+            raise AgentRequestError(
+                "invalid_request",
+                f"`widget_state` sets the element with key {key!r} twice, "
+                "under its key and its element ID. Send one value.",
+            )
         state, metadata = _addressable(session_state, element_id, key, element_states)
 
         if metadata.value_type in _TRIGGER_VALUE_TYPES:
@@ -308,8 +336,15 @@ def build_widget_states(
             as_list=state.schema_type == "array",
         )
         _check_readable(key, metadata, encoded)
-        states.widgets.append(encoded)
+        values[element_id] = encoded
         touched_forms.add(state.form_id or "")
+
+    # Callbacks run in the order the states arrive, so they follow the order
+    # the snapshot recorded the elements in, not the client's JSON key order.
+    position = {element_id: index for index, element_id in enumerate(element_states)}
+    states.widgets.extend(
+        sorted(values.values(), key=lambda encoded: position[encoded.id])
+    )
 
     submitted_form: str | None = None
     if trigger is not None:

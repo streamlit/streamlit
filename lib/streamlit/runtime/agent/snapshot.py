@@ -93,6 +93,10 @@ class ElementState(NamedTuple):
     # Whether text outside ``options`` is legal too, as `accept_new_options`
     # makes it.
     accepts_new_options: bool = False
+    # Whether the element declares an action at all, so a refusal can tell a
+    # display-only element from one that cannot be used right now, such as a
+    # widget in a closed dialog.
+    has_action: bool = False
 
 
 @dataclass
@@ -375,6 +379,7 @@ class _SnapshotBuilder:
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
             accepts_new_options=props.get("accept_new_options") is True,
+            has_action=bool(action),
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated

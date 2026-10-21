@@ -224,6 +224,28 @@ class WidgetPatchTest(SnapshotCase):
             resolve("agre")
         assert raised.value.code == "unknown_key"
 
+    def test_one_element_set_twice_is_refused(self) -> None:
+        """An authored key and its element ID in one request are ambiguous."""
+        st.checkbox("Agree", key="agree")
+        element_id = self._element_id("agree")
+
+        error = self._refusal({"agree": True, element_id: False})
+
+        assert error.code == "invalid_request"
+        assert "twice" in error.message
+
+    def test_values_are_encoded_in_snapshot_order(self) -> None:
+        """Callbacks follow the snapshot, whatever order the request lists keys in."""
+        st.checkbox("First", key="first")
+        st.checkbox("Second", key="second")
+
+        encoded = self._write({"second": True, "first": True}).widgets
+
+        assert [state.id for state in encoded] == [
+            self._element_id("first"),
+            self._element_id("second"),
+        ]
+
     def test_a_stale_widget_key_does_not_hide_a_form_that_uses_it(self) -> None:
         """A key a removed widget once had resolves to the form that has it now."""
         st.text_input("Draft", key="draft")
@@ -271,6 +293,10 @@ class WidgetPatchTest(SnapshotCase):
         st.checkbox("Off", disabled=True, key="off")
         st.button("Wait", disabled=True, key="wait")
         st.container(key="box").markdown("inside")
+        # Keyed with an element ID: one registers no widget, and the other
+        # registers one although it has no action.
+        st.link_button("Docs", "https://example.com", key="docs")
+        st.download_button("Get", b"data", key="get", on_click="ignore")
         snapshot = self._build()
 
         unsupported = self._refusal({"upload": None}, snapshot=snapshot)
@@ -279,9 +305,10 @@ class WidgetPatchTest(SnapshotCase):
         assert self._refusal({"off": True}, snapshot=snapshot).code == "disabled_widget"
         disabled_trigger = self._refusal(trigger={"key": "wait"}, snapshot=snapshot)
         assert disabled_trigger.code == "disabled_widget"
-        display = self._refusal({"box": "x"}, snapshot=snapshot)
-        assert display.code == "unsupported_element"
-        assert "display-only" in display.message
+        for key in ["box", "docs", "get"]:
+            display = self._refusal(trigger={"key": key}, snapshot=snapshot)
+            assert display.code == "unsupported_element", key
+            assert "display-only" in display.message
 
     def test_a_closed_dialog_or_a_compile_error_leaves_widgets_unusable(self) -> None:
         """A widget the snapshot shows but cannot offer is not on the page now."""
