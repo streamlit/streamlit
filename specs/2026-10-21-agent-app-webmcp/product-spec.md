@@ -210,18 +210,24 @@ The agent API's operation, with one difference: a creating call starts from the 
 
 - **`{}` copies the tab's session into a new agent session** on the server and runs it
   once without firing callbacks. The copy takes session state, widget values, the page,
-  query parameters, `st.context` as the tab reports it, uploads, and an open dialog.
-  Nothing passes through the browser or the agent. From then on it is an ordinary agent
-  session, with the request, snapshot, validation, `run_timed_out` collection, and errors
-  of HTTP and MCP.
+  query parameters, uploads, and `st.context` as the tab reports it, with headers and
+  cookies cut to what an agent session reads: no `Cookie`, `Authorization`, or
+  `Proxy-Authorization` header, and no cookies. A dialog the script reopens from session
+  state reopens in the copy. A dialog the user opened with a button stays closed, because
+  the copy's first run does not replay the click, so that copy starts on the page behind
+  the dialog. Nothing passes through the browser or the agent. From then on it is an
+  ordinary agent session, with the request, snapshot, validation, `run_timed_out`
+  collection, and errors of HTTP and MCP.
 - **The tab's view does not change.** The copy belongs to the agent.
-- **It is bound to the tab.** It carries the tab user's identity, `st.user` included, so an
-  `st.login` app is signed in, which HTTP and MCP cannot offer until agent sign-in. Only
-  this tab's tools can address it: the server answers its id with `unknown_session` over
-  HTTP, over MCP, and from any other tab. It ends when the tab's session ends or after
-  `server.agentSessionTTL`. A tab holds at most three copies, and a fourth is
-  `too_many_sessions`. Copies count toward `server.agentMaxSessions`, which applies whether
-  or not `server.enableAgentApi` is on.
+- **It is bound to the tab.** It carries the tab's resolved `st.user`, not the cookie
+  behind it, so an `st.login` app is signed in, which HTTP and MCP cannot offer until agent
+  sign-in. Only this tab's tools can address it: the server answers its id with
+  `unknown_session` over HTTP, over MCP, and from any other tab. It ends when the tab's
+  session ends or after `server.agentSessionTTL`. A tab holds at most three copies. A
+  fourth is refused with `too_many_copies`, whose message tells the model to keep using one
+  of the copies it holds, and the copies already running are unaffected. Copies count
+  toward `server.agentMaxSessions`, which applies whether or not `server.enableAgentApi`
+  is on.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`. A copy isolates the
   view, not the side effects: later `interact` calls on the copy fire callbacks, and
   anything they write is written as the user.
@@ -245,8 +251,11 @@ Changes the tab's session the way the user would.
 - **The user sees it happen and can stop it.** Until the call's run settles, even after
   the call returns `run_timed_out`, the tab's widgets are disabled, so a click cannot
   resend old values over the agent's, and the app shows that an assistant is changing it,
-  with a stop control that stays enabled while the widgets are not. Stopping, or the agent
-  aborting the call, stops the run as the stop button does.
+  with a stop control that stays enabled while the widgets are not. While the lock holds,
+  the tab sends no rerun of its own, so `run_every` timers and the Rerun action wait, and
+  the server ignores a rerun from the tab until the agent's run has settled and its values
+  have reached the tab's widgets. Stopping, or the agent aborting the call, stops the run
+  as the stop button does.
 - **The user's unfinished edits win over the agent's values.** A request that touches a
   field the user has edited and not committed is refused with `pending_user_edit` before
   anything runs, naming the field. The agent can ask the user to submit or discard the
@@ -260,7 +269,8 @@ Changes the tab's session the way the user would.
   once it settles. One `change_view` runs per tab at a time; another is `session_busy`.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`.
 
-`pending_user_edit` is the only new error code. Every other refusal is the agent API's. As
+`pending_user_edit` and `too_many_copies` are the only new error codes. Every other refusal
+is the agent API's. As
 in the MCP endpoint, a refusal is the tool's result, with the error JSON as its text, so
 the model reads the `code` and corrects the call. A `run_timed_out` message tells the model
 how to collect the run: call `read_view` when the timed-out call was `read_view` or
@@ -363,10 +373,14 @@ are the ones it would reuse.
   tools registered in a frame is still open in WebMCP, which is considering hiding them
   unless the frame opts in. Until that settles, an embedded app's tools may be visible
   only to extensions and same-origin page agents.
-- **SiS** needs Snowsight to grant `allow="tools"`. An `interact` copy takes the tab's
-  WebSocket handshake headers, so a short-lived caller's-rights token ages in the copy as
-  it does in the tab, which [#17401](https://github.com/streamlit/streamlit/pull/17401)
-  found for copies in general.
+- **SiS** needs Snowsight to grant `allow="tools"`. An `interact` copy is a new session, so
+  it would open its own Snowflake connection with the caller's-rights token from the tab's
+  WebSocket handshake. SPCS mints that token once per ingress session and it expires after
+  120 seconds by default, while the tab's open connection keeps working, which is what
+  [#17401](https://github.com/streamlit/streamlit/pull/17401) ran into. A copy withholds
+  that token rather than connect with a stale one, so `interact` is not supported on SiS
+  until a copy can get a fresh token. Over the WebSocket there is no new request for one
+  to arrive with; see [open questions](#open-questions).
 
 ### Security
 
@@ -388,12 +402,17 @@ where the agent API's sessions are anonymous unless a deployment maps identity.
 - **Results are untrusted, and the metadata of Streamlit's tools is never app-authored.**
 - **Exposure stays at WebMCP's default:** the page itself, same-origin frames, and agents
   the browser trusts. This spec exposes nothing to other origins through `exposedTo`.
-- **Code already in the page gains little.** Custom components, and `st.html` with scripts
-  allowed, can call these tools like the page's other code. They can already read and
-  drive the page, and `interact` adds only a copy that runs as the same user. They can also
-  register tools of their own next to Streamlit's, such as a fake `change_view`: a v1
-  component's iframe is same-origin with scripts allowed, and Components v2 and `st.html`
-  run in the page. Whether Streamlit guards against that is [open](#open-questions).
+- **At `"interact"`, code in the page is trusted with copies.** Custom components, and
+  `st.html` with scripts allowed, run in the page or in a same-origin frame, so they can
+  call these tools or send the same WebSocket operations, and the server cannot tell them
+  from the browser's agent. At `"read"` that gives them nothing they cannot already read.
+  At `"interact"` it lets them start a copy that runs as the user and returns data the tab
+  never received, and `consequentialHint` does not stop them, since only browser agents
+  honor it. A deployment that loads component code it does not trust should not choose
+  `"interact"`, and the docs say so. Such code can also register tools of its own next to
+  Streamlit's, such as a fake `change_view`: a v1 component's iframe is same-origin with
+  scripts allowed, and Components v2 and `st.html` run in the page. Whether Streamlit
+  guards against that is [open](#open-questions).
 - **The user stays in the loop for changes.** `change_view` shows what it does, disables
   input until its run settles, can be stopped, and refuses to set a field the user is
   still editing.
@@ -506,8 +525,8 @@ brings them to the widgets** ✅ PREFERRED
 
 - Pros: In [#17401](https://github.com/streamlit/streamlit/pull/17401)'s spike, a copy
   reproduced 5 of 6 state lines in one request, where replay got 3 of 6 in 13 requests. It
-  carries session state set only by code, uploads, and an open dialog, and fires no
-  callbacks.
+  carries session state set only by code, uploads, and a dialog the script reopens from
+  session state, and fires no callbacks.
 - Cons: The spike's copy of large state blocked the server's event loop (1.26 s for a
   million dicts), so the supported copy must not. It also duplicates memory and couples to
   session internals.
@@ -600,15 +619,19 @@ brings them to the widgets** ✅ PREFERRED
     with scripts can register a tool named and described like Streamlit's. Streamlit
     could withhold `tools` from component iframes, which does not reach code in the page
     itself, or detect tools that reuse its names. Either limits what components may do.
+12. **How does a copy on SiS get a fresh caller's-rights token?** A copy made over the
+    WebSocket has no HTTP request to bring fresh headers. Snowsight could hand the tab a
+    fresh token through the host messages it already sends, or copies could stay
+    unsupported on SiS.
 
 ## Checklist
 
 | Item                       | ✅ or comment |
 | -------------------------- | ------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP, and other browsers are unchanged. An app in an iframe registers tools when it is same-origin with the host page or the host grants `allow="tools"`. See [Platforms and embedding](#platforms-and-embedding) for Community Cloud, SiS, multiple replicas, and origin-trial tokens. |
+| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP, and other browsers are unchanged. An app in an iframe registers tools when it is same-origin with the host page or the host grants `allow="tools"`. `interact` is not supported on SiS until a copy can get a fresh caller's-rights token. See [Platforms and embedding](#platforms-and-embedding) for Community Cloud, SiS, multiple replicas, and origin-trial tokens. |
 | No breaking API changes    | ✅ Additive: one config option, new operation payloads on the WebSocket protocol, and a capability flag in rerun requests. No `st.*` changes. Apps with the setting off, and browsers without WebMCP, behave as today. |
 | No new dependencies        | ✅ No runtime dependencies. TypeScript types for WebMCP are hand-written or come from `webmcp-types` as a dev dependency. |
 | Metrics collected          | Yes, unlike the agent API: these calls happen in a browser, so the frontend's existing usage stats (`browser.gatherUsageStats`) can count calls and outcome classes per tool, and whether the browser supports WebMCP, without any content. |
-| Any security/legal impact? | ⚠️ See [Security](#security). An agent can act as the signed-in user after reading untrusted app content, and an `interact` copy can return data the tab never received. Opt-in levels, server enforcement, consequential hints, and tab-bound copies are the controls. |
-| Any docs changes needed?   | A guide to browser agents: the levels, testing with Chrome's flag and the Model Context Tool Inspector, and what an agent can do at each level. Author guidance that a widget's range or options are not access control applies here too. Deployment notes on origin-trial tokens and on apps in iframes. The agent API reference gains the four tools, and the usage-statistics documentation gains the per-tool counts the frontend reports. |
+| Any security/legal impact? | ⚠️ See [Security](#security). An agent can act as the signed-in user after reading untrusted app content, and an `interact` copy can return data the tab never received. At `"interact"`, code in the page, components included, can start copies too. Opt-in levels, server enforcement, consequential hints, and tab-bound copies are the controls. |
+| Any docs changes needed?   | A guide to browser agents: the levels, testing with Chrome's flag and the Model Context Tool Inspector, and what an agent can do at each level, including that `"interact"` trusts every script in the page, components included, with copies. Author guidance that a widget's range or options are not access control applies here too. Deployment notes on origin-trial tokens and on apps in iframes. The agent API reference gains the four tools, and the usage-statistics documentation gains the per-tool counts the frontend reports. |
 | Any other risks?           | WebMCP is a draft that is still changing, and only Chromium-based browsers ship it. Building on its stable core, the imperative `registerTool` with fixed tools, keeps the exposure small. A confusing app is a confusing tool here too. |
