@@ -38,7 +38,7 @@ _EXPECTED_STATUSES: Final[dict[errors.AgentErrorCode, int]] = {
     "not_on_page": 409,
     "disabled_widget": 409,
     "session_busy": 409,
-    "run_timed_out": 202,
+    "wait_timed_out": 202,
     "internal_error": 500,
     "not_available": 403,
     "host_not_allowed": 403,

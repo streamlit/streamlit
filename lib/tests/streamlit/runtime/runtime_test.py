@@ -693,6 +693,34 @@ class RuntimeTest(RuntimeTestCase):
 
         assert await asyncio.wait_for(waiter, timeout=5) == trailing_msgs
 
+    async def test_wait_until_settled_returns_when_nothing_is_left_to_send(
+        self,
+    ) -> None:
+        """A run chain whose messages were all sent before its SHUTDOWN still
+        settles, through the flush cycle the SHUTDOWN requests.
+        """
+        await self.runtime.start()
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+        session = self.runtime.get_app_session(session_id)
+        assert session is not None
+        session.track_settling()
+
+        runner = MagicMock()
+        with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):
+            session.request_rerun(None)
+        session._on_scriptrunner_event(
+            runner,
+            ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=create_dataframe_msg([1, 2, 3]),
+        )
+        await self.tick_runtime_loop()
+        assert len(client.forward_msgs) == 1
+
+        session._on_scriptrunner_event(runner, ScriptRunnerEvent.SHUTDOWN)
+
+        await asyncio.wait_for(session.wait_until_settled(), timeout=5)
+
     async def test_get_async_objs(self):
         """Runtime._get_async_objs() will raise an error if called before the
         Runtime is started, and will return the Runtime's AsyncObjects instance otherwise.

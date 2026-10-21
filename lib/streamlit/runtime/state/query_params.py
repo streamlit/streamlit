@@ -46,8 +46,8 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
 PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
     [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 )
-_CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
-_CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
+CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
+CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
 
 
 def sanitize_query_string(query_string: str) -> str:
@@ -55,22 +55,22 @@ def sanitize_query_string(query_string: str) -> str:
     if not query_string:
         return ""
 
-    if len(query_string) > _CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
+    if len(query_string) > CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
         _LOGGER.warning(
             "Ignoring query string with %d characters because it exceeds the "
             "%d character limit.",
             len(query_string),
-            _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+            CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
         )
         return ""
 
     num_fields = query_string.count("&") + 1
-    if num_fields > _CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
+    if num_fields > CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
         _LOGGER.warning(
             "Ignoring query string with %d parameters because it exceeds the "
             "%d parameter limit.",
             num_fields,
-            _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+            CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
         )
         return ""
 

@@ -812,6 +812,8 @@ class Runtime:
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
 
+                        active_session_info.session.on_flushed_messages_sent()
+
                     # Yield briefly between session message flushing cycles.
                     await asyncio.sleep(MESSAGE_FLUSH_INTERVAL_SECS)
                 else:

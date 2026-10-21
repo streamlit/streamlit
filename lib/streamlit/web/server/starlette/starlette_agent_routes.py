@@ -76,10 +76,18 @@ _ORIGIN_MESSAGE: Final = (
     "is not in `server.corsAllowedOrigins`. Call the API from a program, which "
     "sends no `Origin` header."
 )
+_PAGE_CONTENT_TYPE_MESSAGE: Final = (
+    "A request from a web page (it has an `Origin` header) must send "
+    "`Content-Type: application/json`."
+)
 
 
 class _ClientGoneError(Exception):
     """The client closed the connection before its interaction settled."""
+
+
+class _BodyTooLargeError(Exception):
+    """The request body is larger than the route accepts."""
 
 
 def _render_json(content: Any) -> bytes:
@@ -127,6 +135,9 @@ def _refused_origin(request: Request) -> bool:
     Host it sends, but it still sends its own `Origin`. Nothing legitimate is
     lost: this route sends no CORS headers, so no page on another origin could
     read a response anyway.
+
+    The WebSocket's Origin check is not reused because it admits same-origin
+    requests, and every origin when `server.enableCORS` is off.
     """
     origin = request.headers.get("Origin")
     if origin is None or server_util.is_allowed_origin(origin):
@@ -135,11 +146,32 @@ def _refused_origin(request: Request) -> bool:
     return True
 
 
-async def _read_body(request: Request, limit: int) -> bytes | None:
-    """The request body, or None once it is larger than ``limit`` bytes.
+def _page_request_without_json(request: Request) -> bool:
+    """Whether a web page sent the request without a JSON media type.
+
+    A page on a listed origin gets this far. With `application/json` its
+    browser sends a preflight first, which this route refuses, so a page on
+    another origin cannot reach it. Without it, as `text/plain`, a form
+    encoding, or an empty body, the browser sends the request as is: the page
+    could run the app even though it cannot read the answer. Programmatic
+    clients send no `Origin`, so this never applies to them.
+    """
+    if request.headers.get("Origin") is None:
+        return False
+    content_type = request.headers.get("Content-Type", "")
+    return content_type.split(";", 1)[0].strip().lower() != "application/json"
+
+
+async def _read_body(request: Request, limit: int) -> bytes:
+    """The request body, which is empty when the client sent none.
 
     Checked while reading rather than after, so an oversized body is refused
     without being held in memory first.
+
+    Raises
+    ------
+    _BodyTooLargeError
+        Once the body is larger than ``limit`` bytes.
     """
     declared = request.headers.get("Content-Length", "")
     # Compared by length first: `int` refuses to parse thousands of digits.
@@ -148,13 +180,13 @@ async def _read_body(request: Request, limit: int) -> bytes | None:
         and declared.isdigit()
         and (len(declared) > len(str(limit)) or int(declared) > limit)
     ):
-        return None
+        raise _BodyTooLargeError
     chunks: list[bytes] = []
     size = 0
     async for chunk in request.stream():
         size += len(chunk)
         if size > limit:
-            return None
+            raise _BodyTooLargeError
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -206,7 +238,7 @@ async def _until_disconnected(request: Request) -> None:
 async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
     """Await ``work``, cancelling it as soon as the client has gone away.
 
-    A client whose own timeout is shorter than `server.agentRunTimeout` would
+    A client whose own timeout is shorter than `server.agentWaitTimeout` would
     otherwise leave its interaction in flight until the server's timeout, so its
     retry is told the session is busy. Cancelling turns the wait into a
     timed-out run, which the retry collects.
@@ -289,7 +321,6 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             body = await _unless_disconnected(
                 request,
                 interaction.interact(
-                    runtime,
                     session_registry,
                     payload,
                     user_info=user_info,
@@ -298,9 +329,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 ),
             )
         except _ClientGoneError:
-            # Nobody reads this; the run is collectable by a retry.
+            # Nobody reads this. A retry collects the run of a session the
+            # client already held; a creating call's session is closed instead,
+            # since the client never received its `session_id`.
             return error_response(
-                "run_timed_out", "The client disconnected before the run settled."
+                "wait_timed_out", "The client disconnected before the run settled."
             )
         except errors.AgentRequestError as exc:
             return error_response(
@@ -330,6 +363,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             return error_response("host_not_allowed", _HOST_MESSAGE)
         if _refused_origin(request):
             return error_response("origin_not_allowed", _ORIGIN_MESSAGE)
+        if _page_request_without_json(request):
+            return error_response("invalid_request", _PAGE_CONTENT_TYPE_MESSAGE)
 
         # The bound the WebSocket handler applies to an inbound frame, so the
         # agent path is no more permissive than the browser path.
@@ -339,7 +374,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except ClientDisconnect:
             # Nobody reads this: the client left while sending the body.
             return Response(status_code=400)
-        if body is None:
+        except _BodyTooLargeError:
             return error_response(
                 "request_too_large",
                 f"The request body exceeds {max_request_bytes} bytes.",

@@ -141,6 +141,54 @@ def test_an_origin_is_refused_unless_listed(
     interact.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    ("content", "content_type"),
+    [
+        (b"{}", "text/plain"),
+        (b"page=x", "application/x-www-form-urlencoded"),
+        (b"", None),
+    ],
+    ids=["text_plain", "form", "empty_without_media_type"],
+)
+def test_a_listed_page_must_send_json(
+    runtime: MagicMock, interact: AsyncMock, content: bytes, content_type: str | None
+) -> None:
+    """A page's request that a browser would send without a preflight is
+    refused, so a page on a listed origin cannot run the app blind.
+    """
+    listed = {"server.corsAllowedOrigins": ["https://app.example"]}
+    headers = {"Origin": "https://app.example"}
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+    with _client(runtime, **listed) as client:
+        response = client.post(_PATH, content=content, headers=headers)
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_request"
+    interact.assert_not_awaited()
+
+
+def test_json_with_parameters_and_programs_without_a_media_type_are_accepted(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """A page's JSON may carry a charset, and a program needs no media type."""
+    listed = {"server.corsAllowedOrigins": ["https://app.example"]}
+    with _client(runtime, **listed) as client:
+        page = client.post(
+            _PATH,
+            content=b"{}",
+            headers={
+                "Origin": "https://app.example",
+                "Content-Type": "Application/JSON; charset=utf-8",
+            },
+        )
+        program = client.post(_PATH, content=b"{}")
+
+    assert page.status_code == 200
+    assert program.status_code == 200
+    assert interact.await_count == 2
+
+
 def test_a_body_over_the_limit_is_refused(
     runtime: MagicMock, interact: AsyncMock
 ) -> None:
@@ -166,7 +214,8 @@ async def test_read_body_refuses_a_length_too_long_to_parse() -> None:
     request = MagicMock()
     request.headers = {"Content-Length": "9" * 5000}
 
-    assert await starlette_agent_routes._read_body(request, 100) is None
+    with pytest.raises(starlette_agent_routes._BodyTooLargeError):
+        await starlette_agent_routes._read_body(request, 100)
 
 
 @pytest.mark.parametrize(
@@ -236,7 +285,7 @@ def test_an_empty_body_is_an_empty_request(
     assert response.headers["Content-Type"] == "application/json"
     assert response.content == b'{"ok":true}'
     assert interact.await_args is not None
-    assert interact.await_args.args[2] == {}
+    assert interact.await_args.args[1] == {}
 
 
 def test_a_client_that_leaves_while_sending_the_body_runs_nothing(
@@ -335,7 +384,7 @@ def test_a_client_that_disconnects_cancels_the_wait(
         response = client.post(_PATH, json={})
 
     assert response.status_code == 202
-    assert response.json()["error"]["code"] == "run_timed_out"
+    assert response.json()["error"]["code"] == "wait_timed_out"
     assert cancelled.is_set()
 
 
@@ -369,7 +418,7 @@ def _served_app(
         "server.enableAgentApi": True,
         "server.fileWatcherType": "none",
         "server.baseUrlPath": base_url,
-        "server.agentRunTimeout": 10,
+        "server.agentWaitTimeout": 10,
     }
     for name, value in defaults.items():
         overrides.setdefault(name, value)
@@ -412,7 +461,7 @@ st.text(f"runs={run_gate.count('runs')}")
 
 def test_statuses_end_to_end(tmp_path: Path) -> None:
     """A real runtime answers 200, 202, 404, 409, and 429 as the catalog says."""
-    overrides = {"server.agentMaxSessions": 1, "server.agentRunTimeout": 0.2}
+    overrides = {"server.agentMaxSessions": 1, "server.agentWaitTimeout": 0.2}
     with _served_app(tmp_path, _GATED_SCRIPT, overrides) as client:
         run_gate.close()
         timed_out = client.post(_PATH, json={})
@@ -423,12 +472,12 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
         full = client.post(_PATH, json={})
         unknown = client.post(_PATH, json={"session_id": "s_unknown"})
 
-        overrides["server.agentRunTimeout"] = 10
+        overrides["server.agentWaitTimeout"] = 10
         run_gate.opened.set()
         collected = client.post(_PATH, json={"session_id": handle})
 
     assert timed_out.status_code == 202
-    assert timed_out.json()["error"]["code"] == "run_timed_out"
+    assert timed_out.json()["error"]["code"] == "wait_timed_out"
     assert busy.status_code == 409
     assert busy.json()["error"]["code"] == "session_busy"
     assert full.status_code == 429

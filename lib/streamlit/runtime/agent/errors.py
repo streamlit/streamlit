@@ -34,7 +34,7 @@ AgentErrorCode: TypeAlias = Literal[
     "not_on_page",
     "disabled_widget",
     "session_busy",
-    "run_timed_out",
+    "wait_timed_out",
     "internal_error",
     "not_available",
     "host_not_allowed",
@@ -45,7 +45,7 @@ AgentErrorCode: TypeAlias = Literal[
 # Every failure the route can report, as code -> (HTTP status, meaning).
 #
 # Most are refusals before any app code runs. The exceptions are
-# `run_timed_out`, whose run is still going, and `unknown_page` on a creating
+# `wait_timed_out`, whose run continues, and `unknown_page` on a creating
 # call, judged after the run. A run that raised is not one of them: it is a 200
 # with `status: "error"`.
 ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
@@ -54,8 +54,9 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         (
             "The request is malformed: an unknown field, a field of the wrong "
             "type or format, text that is not valid Unicode, `widget_state` or "
-            "`trigger` on a creating call, or navigation combined with widget "
-            "changes."
+            "`trigger` on a creating call, navigation combined with widget "
+            "changes, or a web page's request without `Content-Type: "
+            "application/json`."
         ),
     ),
     "request_too_large": (
@@ -150,10 +151,10 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     # and gateways and HTTP clients retry 502-504 on their own. A retried
     # creating call would start another session and another run, and lose the
     # `session_id` this response carries.
-    "run_timed_out": (
+    "wait_timed_out": (
         202,
         (
-            "Not a failure: the run outlasted `server.agentRunTimeout` and is "
+            "Not a failure: the run outlasted `server.agentWaitTimeout` and is "
             "still going. Send only `session_id` to collect it."
         ),
     ),
@@ -204,7 +205,7 @@ def error_status(code: AgentErrorCode) -> int:
 class AgentRequestError(Exception):
     """A request the agent API refuses.
 
-    Usually nothing has executed. Two cases have: ``run_timed_out``, whose run
+    Usually nothing has executed. Two cases have: ``wait_timed_out``, whose run
     is still going, and a creating call whose ``page`` could only be judged
     after the app ran, because the page list did not exist before. A creating
     call that fails after its session exists carries ``session_id``, so the

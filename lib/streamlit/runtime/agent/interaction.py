@@ -36,14 +36,13 @@ import time
 import zoneinfo
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 from urllib.parse import parse_qs, parse_qsl, urlencode
 
 from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ClientState_pb2 import ContextInfo
+from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
 from streamlit.runtime.agent import snapshot, widget_patch
@@ -53,7 +52,11 @@ from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
 from streamlit.runtime.session_manager import SessionClient
-from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
+from streamlit.runtime.state.query_params import (
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    EMBED_QUERY_PARAMS_KEYS,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Mapping
@@ -81,7 +84,7 @@ _STOPPED_RUNTIME_STATES: Final = frozenset(
     {RuntimeState.STOPPING, RuntimeState.STOPPED}
 )
 
-_SETTLING_STATUSES: Final = frozenset(
+_COMPLETED_RUN_STATUSES: Final = frozenset(
     {
         ForwardMsg.FINISHED_SUCCESSFULLY,
         # A fragment run is a complete run of its own, and an app that calls
@@ -166,7 +169,7 @@ class AgentSessionClient(SessionClient):
         # The fragments the most recent run re-rendered, which is what that run
         # owns when it finishes and stale deltas are dropped.
         self._fragments_this_run: frozenset[str] = frozenset()
-        # When the last run settled, which is session activity even when no
+        # When the last run finished, which is session activity even when no
         # request is waiting for it.
         self.finished_at = time.monotonic()
         # Set when this interaction's run changed the query string, which is
@@ -224,7 +227,10 @@ class AgentSessionClient(SessionClient):
         elif msg_type is not None:
             self._lifecycle[msg_type] = msg
 
-        if msg_type == "script_finished" and msg.script_finished in _SETTLING_STATUSES:
+        if (
+            msg_type == "script_finished"
+            and msg.script_finished in _COMPLETED_RUN_STATUSES
+        ):
             self._drop_stale_deltas()
             self.finished_at = time.monotonic()
 
@@ -351,7 +357,7 @@ class AgentSession:
     # Set whenever `busy` is not, so the retry that collects an interaction
     # whose client left can wait for the session to free up.
     released: asyncio.Event = field(default_factory=_released_event)
-    # An interaction that outlasted the run timeout and whose result nobody has
+    # An interaction that outlasted the wait timeout and whose result nobody has
     # collected yet. Its run keeps going, and a retry waits for it.
     timed_out: _Interaction | None = None
 
@@ -457,6 +463,10 @@ class AgentSessionRegistry:
         """
         app_session = self._runtime.get_app_session(session.app_session_id)
         if app_session is None:
+            # Dropped here, so a session the runtime already closed does not
+            # hold a slot until the TTL reclaims it.
+            self._sessions.pop(session.handle, None)
+            agent_spec.forget_agent_session(session.app_session_id)
             raise AgentRequestError(
                 "unknown_session",
                 "This session's app session is gone. Omit `session_id` to start "
@@ -510,7 +520,7 @@ def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
 
     ``settled`` is whether the session's app has settled. Activity is the
     client's last request or the last run finishing, whichever is later, so a
-    run that finishes after `run_timed_out` gets a full TTL to be collected.
+    run that finishes after `wait_timed_out` gets a full TTL to be collected.
     While that run is still going only requests count: a run that never
     finishes, such as a loop that calls `st.rerun()`, is reclaimed once its
     client stops asking for it, and closing the session stops it.
@@ -523,7 +533,6 @@ def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
 
 
 async def interact(
-    runtime: Runtime,
     registry: AgentSessionRegistry,
     request: dict[str, Any],
     *,
@@ -540,10 +549,8 @@ async def interact(
 
     Parameters
     ----------
-    runtime : Runtime
-        The runtime the agent sessions run in.
     registry : AgentSessionRegistry
-        The agent sessions of ``runtime``.
+        The agent sessions to create the interaction's session in or find it.
     request : dict[str, Any]
         The parsed request body.
     user_info : UserInfoType
@@ -569,8 +576,8 @@ async def interact(
     """
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.
-    requested_context, action = await asyncio.to_thread(_read_request, request)
-    deadline = time.monotonic() + _run_timeout()
+    parsed = await asyncio.to_thread(_validate_request_shape, request)
+    deadline = time.monotonic() + _wait_timeout()
 
     handle = request.get("session_id")
     is_new_session = handle is None
@@ -579,7 +586,7 @@ async def interact(
     else:
         session = registry.get(handle, user_info)
 
-    if session.busy and _is_collecting_retry(session, action):
+    if session.busy and _is_collecting_retry(session, parsed.action):
         # What is in flight is an interaction whose client left, still building
         # its snapshot, and this request collects it. Wait for that, as a retry
         # waits for a timed-out run, rather than refusing the one request the
@@ -592,9 +599,9 @@ async def interact(
             # fires in.
             if session.busy:
                 raise AgentRequestError(
-                    "run_timed_out",
+                    "wait_timed_out",
                     "The app has finished, but its snapshot was still being "
-                    f"built after {_duration(_run_timeout())}. Nothing is lost: "
+                    f"built after {_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
                     session_id=session.handle,
                 ) from None
@@ -612,12 +619,10 @@ async def interact(
     session.released.clear()
     try:
         return await _run_interaction(
-            runtime,
             registry.app_session(session),
             session,
             request,
-            action=action,
-            requested_context=requested_context,
+            parsed=parsed,
             is_new_session=is_new_session,
             headers=headers,
             deadline=deadline,
@@ -646,8 +651,8 @@ async def interact(
         session.released.set()
 
 
-def _run_timeout() -> float:
-    return float(config.get_option("server.agentRunTimeout"))
+def _wait_timeout() -> float:
+    return float(config.get_option("server.agentWaitTimeout"))
 
 
 def _duration(seconds: float) -> str:
@@ -657,15 +662,6 @@ def _duration(seconds: float) -> str:
     else:
         amount, unit = seconds, "second"
     return f"{amount:g} {unit}{'' if amount == 1 else 's'}"
-
-
-def _read_request(request: dict[str, Any]) -> tuple[ContextInfo | None, str | None]:
-    """Check a request's shape, and encode what it asks to do.
-
-    Returns the parsed ``context``, if the request sends one, and the
-    request's ``_action_key``.
-    """
-    return _validate_request_shape(request), _action_key(request)
 
 
 def _action_key(request: dict[str, Any]) -> str | None:
@@ -692,20 +688,18 @@ def _is_collecting_retry(session: AgentSession, action: str | None) -> bool:
 
 
 async def _run_interaction(
-    runtime: Runtime,
     app_session: AppSession,
     session: AgentSession,
     request: dict[str, Any],
     *,
-    action: str | None,
-    requested_context: ContextInfo | None,
+    parsed: _ParsedRequest,
     is_new_session: bool,
     headers: Iterable[tuple[str, str]],
     deadline: float,
     encode: Callable[[dict[str, Any]], bytes],
 ) -> bytes:
     pending = session.timed_out
-    if pending is not None and _is_collecting_retry(session, action):
+    if pending is not None and _is_collecting_retry(session, parsed.action):
         # A retry of an interaction that outlasted the timeout. Starting another
         # run would interrupt the one doing the work, so a run that always took
         # longer than the timeout could never finish. Collect the original
@@ -732,14 +726,11 @@ async def _run_interaction(
     page = request.get("page")
     query_params = request.get("query_params")
 
-    back_msg = BackMsg()
-    rerun = back_msg.rerun_script
+    rerun = ClientState()
     rerun.page_script_hash = app_session.page_script_hash
     rerun.query_string = session.query_string
 
-    context_info = (
-        session.context_info if requested_context is None else requested_context
-    )
+    context_info = session.context_info if parsed.context is None else parsed.context
     if context_info is not None:
         rerun.context_info.CopyFrom(context_info)
 
@@ -763,8 +754,8 @@ async def _run_interaction(
             )
         rerun.page_script_hash = page_hash
         rerun.page_name = page_name
-    if query_params is not None:
-        rerun.query_string = _encode_query_params(query_params)
+    if parsed.query_string is not None:
+        rerun.query_string = parsed.query_string
 
     # The shape check refused widget changes together with navigation, so no
     # widget states have been set above.
@@ -803,13 +794,16 @@ async def _run_interaction(
     # page. If the build fails, a later write must not be checked against it,
     # where a widget this run removed would still take a value.
     session.element_states = {}
-    runtime.handle_backmsg(session.app_session_id, back_msg)
+    # Not through `Runtime.handle_backmsg`, which would turn a failure to start
+    # the run into an error page meant for a browser. Raised here, it answers
+    # the request as `internal_error`.
+    app_session.request_rerun(rerun)
 
     return await _settle(
         app_session,
         session,
         _Interaction(
-            action=action,
+            action=parsed.action,
             query_string=rerun.query_string,
             unverified_page=unverified_page,
         ),
@@ -908,10 +902,10 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _duration(_run_timeout())
+            timeout = _duration(_wait_timeout())
             elapsed = _duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
-                "run_timed_out",
+                "wait_timed_out",
                 f"The app did not finish within {timeout}, and is still "
                 f"running, {elapsed} after this interaction started. "
                 "Nothing is lost: send a request with only `session_id` to wait "
@@ -1112,12 +1106,19 @@ def _refuse_invalid_text(request: Any) -> None:
                 ) from None
 
 
-def _validate_request_shape(request: dict[str, Any]) -> ContextInfo | None:
-    """Refuse a malformed request before anything is allocated or run.
-
-    Returns the request's parsed ``context``, or None when it has none, so the
-    run does not parse it again on the event loop.
+class _ParsedRequest(NamedTuple):
+    """The request fields validation already parsed, which the run reuses
+    rather than parsing them again on the event loop. None when absent.
     """
+
+    context: ContextInfo | None
+    query_string: str | None
+    # What the request asks to do, as its `_action_key`.
+    action: str | None
+
+
+def _validate_request_shape(request: dict[str, Any]) -> _ParsedRequest:
+    """Refuse a malformed request before anything is allocated or run."""
     _refuse_invalid_text(request)
     unknown = set(request) - _REQUEST_FIELDS
     if unknown:
@@ -1131,13 +1132,17 @@ def _validate_request_shape(request: dict[str, Any]) -> ContextInfo | None:
     # where they are applied; parsing them has no effect.
     if request.get("page") is not None and not isinstance(request["page"], str):
         raise AgentRequestError("invalid_request", "`page` must be a string.")
-    if request.get("query_params") is not None:
-        _encode_query_params(request["query_params"])
+    query_params = request.get("query_params")
+    query_string = None if query_params is None else _encode_query_params(query_params)
     session_id = request.get("session_id")
     if session_id is not None and not isinstance(session_id, str):
         raise AgentRequestError("invalid_request", "`session_id` must be a string.")
     context = request.get("context")
-    return None if context is None else _parse_context(context)
+    return _ParsedRequest(
+        context=None if context is None else _parse_context(context),
+        query_string=query_string,
+        action=_action_key(request),
+    )
 
 
 def _refuse_malformed_writes(request: dict[str, Any]) -> None:
@@ -1243,6 +1248,11 @@ def _resolve_page(
 
 
 def _encode_query_params(query_params: Any) -> str:
+    """Encode ``query_params`` as the query string a rerun sends.
+
+    Refuses one longer than the runtime accepts, which it would otherwise
+    replace with an empty query string, so the run would not see any of it.
+    """
     if not isinstance(query_params, dict):
         raise AgentRequestError(
             "invalid_request",
@@ -1260,7 +1270,18 @@ def _encode_query_params(query_params: Any) -> str:
                 '["2001"].',
             )
         pairs.extend((name, value) for value in values)
-    return urlencode(pairs)
+    query_string = urlencode(pairs)
+    if (
+        len(query_string) > CLIENT_STATE_QUERY_STRING_MAX_LENGTH
+        or len(pairs) > CLIENT_STATE_QUERY_STRING_MAX_FIELDS
+    ):
+        raise AgentRequestError(
+            "invalid_request",
+            "`query_params` is too large: a query string may hold at most "
+            f"{CLIENT_STATE_QUERY_STRING_MAX_FIELDS} values and "
+            f"{CLIENT_STATE_QUERY_STRING_MAX_LENGTH} characters once encoded.",
+        )
+    return query_string
 
 
 def _filtered_query_string(query_string: str, keep: Callable[[str], bool]) -> str:
