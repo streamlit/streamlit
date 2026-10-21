@@ -18,8 +18,9 @@ An agent session is an ordinary ``AppSession`` whose client accumulates
 ForwardMsgs instead of writing them to a WebSocket. Input goes through the same
 ``rerun_script`` path the browser uses, so callbacks, widget reconciliation, and
 stale-node cleanup are the runtime's own behavior. ``interact`` serves one
-request: it creates or finds the session, reruns it, waits until the run chain
-has settled, and returns the encoded snapshot.
+request: it creates or finds the session, checks the widget values and trigger
+the request sends against the last snapshot, reruns the session with them,
+waits until the run chain has settled, and returns the encoded snapshot.
 """
 
 from __future__ import annotations
@@ -44,7 +45,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
-from streamlit.runtime.agent import snapshot
+from streamlit.runtime.agent import snapshot, widget_patch
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
@@ -54,10 +55,11 @@ from streamlit.runtime.session_manager import SessionClient
 from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Generator, Iterable, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
-    from streamlit.runtime.agent.snapshot import Snapshot
+    from streamlit.proto.WidgetStates_pb2 import WidgetStates
+    from streamlit.runtime.agent.snapshot import ElementState, Snapshot
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.runtime import Runtime
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -262,8 +264,9 @@ class AgentSessionClient(SessionClient):
 
 
 # The request fields that say what an interaction does. Two requests with the
-# same values ask for the same thing.
-_ACTION_FIELDS: Final = ("page", "query_params", "context")
+# same values ask for the same thing, so a retry of a timed-out click collects
+# its run rather than firing the click again.
+_ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
 
 # Every field an `interact` request may carry.
 _REQUEST_FIELDS: Final = frozenset({"session_id", *_ACTION_FIELDS})
@@ -338,6 +341,9 @@ class AgentSession:
     last_used: float = field(default_factory=time.monotonic)
     # The last snapshot's `pages`, which an `unknown_page` error lists.
     pages: list[dict[str, Any]] = field(default_factory=list)
+    # What the last snapshot recorded about each keyed element, which the next
+    # request's widget values and trigger are checked against.
+    element_states: dict[str, ElementState] = field(default_factory=dict)
     # Set while an interaction is in flight; a second one is refused, not queued.
     busy: bool = False
     # Set whenever `busy` is not, so the retry that collects an interaction
@@ -524,6 +530,11 @@ async def interact(
     encode: Callable[[dict[str, Any]], bytes],
 ) -> bytes:
     """Run one interaction and return its encoded snapshot.
+
+    A request's widget values and trigger are checked against the session's
+    last snapshot, and the whole request is refused before anything runs if
+    one of them is not legal there. The rerun carries them as a browser's
+    would, scoped to a fragment when every one of them is inside it.
 
     Parameters
     ----------
@@ -735,6 +746,24 @@ async def _run_interaction(
     if query_params is not None:
         rerun.query_string = _encode_query_params(query_params)
 
+    # The shape check refused widget changes together with navigation, so no
+    # widget states have been set above.
+    widget_state = request.get("widget_state")
+    trigger = request.get("trigger")
+    if widget_state is not None or trigger is not None:
+        widget_states, fragment_id = await _validate_writes(
+            app_session, session, widget_state=widget_state, trigger=trigger
+        )
+        rerun.widget_states.CopyFrom(widget_states)
+        rerun.query_string = _query_string_after_edits(
+            app_session.session_state.query_params, widget_states, rerun.query_string
+        )
+        # The runtime ignores a rerun of a fragment it no longer holds, which
+        # would drop the write without a word. A full rerun applies it.
+        rerun.fragment_id = (
+            fragment_id if fragment_id and app_session.has_fragment(fragment_id) else ""
+        )
+
     session.context_info = context_info
     # A timed-out run that has since finished is left uncollected: the client
     # asked for something else.
@@ -758,6 +787,45 @@ async def _run_interaction(
     )
 
 
+async def _validate_writes(
+    app_session: AppSession,
+    session: AgentSession,
+    *,
+    widget_state: dict[str, Any] | None,
+    trigger: dict[str, Any] | None,
+) -> tuple[WidgetStates, str]:
+    """Check a request's widget values and trigger against the last snapshot.
+
+    Returns them encoded as a browser would send them, with the fragment the
+    rerun is scoped to, or "" for a full rerun.
+    """
+    # Off the event loop, because it runs each addressed widget's
+    # deserializer, which is widget code that can compare the app's own option
+    # objects, and its cost grows with the length of the option lists. Safe for
+    # the same reason as the snapshot build: the session is claimed and
+    # settled, so no run can start.
+    validation = asyncio.ensure_future(
+        asyncio.to_thread(
+            _validate_in_worker,
+            app_session.create_detached_script_run_ctx(
+                query_string=session.query_string, context_info=session.context_info
+            ),
+            session_state=app_session.session_state,
+            element_states=session.element_states,
+            widget_state=widget_state,
+            trigger=trigger,
+        )
+    )
+    try:
+        return await asyncio.shield(validation)
+    except asyncio.CancelledError:
+        # The client left. Nothing has run, so there is nothing for a retry to
+        # collect, but the thread cannot be stopped and reads session state, so
+        # the session stays claimed until it finishes.
+        await _wait_ignoring_cancellation(validation)
+        raise
+
+
 async def _settle(
     app_session: AppSession,
     session: AgentSession,
@@ -777,6 +845,7 @@ async def _settle(
         )
     built = interaction.built
     session.pages = built.snapshot.document.get("pages", [])
+    session.element_states = built.snapshot.element_states
     session.last_used = time.monotonic()
 
     if interaction.unverified_page is not None:
@@ -873,6 +942,28 @@ async def _wait_ignoring_cancellation(future: asyncio.Future[Any]) -> None:
             await asyncio.wait({future})
 
 
+@contextlib.contextmanager
+def _script_ctx(ctx: ScriptRunContext) -> Generator[None, None, None]:
+    """Make ``ctx`` the calling worker thread's script context while in use.
+
+    App code run in a worker, such as a ``format_func``, may read
+    ``st.session_state`` or ``st.context``, and would otherwise find no
+    session. The context drops every message, so an ``st.*`` command called
+    there has no effect.
+
+    The context is cleared afterwards, because the executor reuses its threads
+    for unrelated work. ``ThreadState`` lives in the context variables
+    ``asyncio.to_thread`` copied for this call, so it never outlives it.
+    """
+    thread = threading.current_thread()
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+    try:
+        ThreadState.initialize(active_script_hash=ctx.pages_manager.main_script_hash)
+        yield
+    finally:
+        setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+
+
 def _build_in_worker(
     ctx: ScriptRunContext,
     encode: Callable[[dict[str, Any]], bytes],
@@ -886,17 +977,9 @@ def _build_in_worker(
 
     A widget's ``value`` runs the app's ``format_func``, which may read
     ``st.session_state`` or ``st.context`` and would otherwise format a label
-    the run never offered. The context drops every message, so an ``st.*``
-    command called here has no effect.
-
-    The context is cleared afterwards, because the executor reuses its threads
-    for unrelated work. ``ThreadState`` lives in the context variables
-    ``asyncio.to_thread`` copied for this call, so it never outlives it.
+    the run never offered.
     """
-    thread = threading.current_thread()
-    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
-    try:
-        ThreadState.initialize(active_script_hash=ctx.pages_manager.main_script_hash)
+    with _script_ctx(ctx):
         built_snapshot = snapshot.build_snapshot(
             session_id=session_id,
             messages=messages,
@@ -906,8 +989,36 @@ def _build_in_worker(
         return _EncodedSnapshot(
             snapshot=built_snapshot, body=encode(built_snapshot.document)
         )
-    finally:
-        setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+
+
+def _validate_in_worker(
+    ctx: ScriptRunContext,
+    *,
+    session_state: SessionState,
+    element_states: Mapping[str, ElementState],
+    widget_state: Mapping[str, Any] | None,
+    trigger: Mapping[str, Any] | None,
+) -> tuple[WidgetStates, str]:
+    """Encode a request's writes and find their fragment, with ``ctx`` as the
+    thread's script context.
+
+    The fragment is resolved once every key has been accepted, so a refusal
+    that names one key, such as a form error, wins over ``cross_dialog_batch``.
+    """
+    with _script_ctx(ctx):
+        widget_states = widget_patch.build_widget_states(
+            session_state,
+            widget_state=widget_state,
+            trigger=trigger,
+            element_states=element_states,
+        )
+        fragment_id = widget_patch.resolve_fragment(
+            session_state,
+            element_states,
+            widget_state=widget_state,
+            trigger=trigger,
+        )
+    return widget_states, fragment_id
 
 
 def _verify_page_exists(url_path: str, session: AgentSession) -> None:
@@ -978,6 +1089,7 @@ def _validate_request_shape(request: dict[str, Any]) -> ContextInfo | None:
             "invalid_request",
             f"Unknown request fields: {', '.join(sorted(unknown))}.",
         )
+    _refuse_malformed_writes(request)
 
     # Checked here, before a creating call allocates a session, rather than
     # where they are applied; parsing them has no effect.
@@ -990,6 +1102,58 @@ def _validate_request_shape(request: dict[str, Any]) -> ContextInfo | None:
         raise AgentRequestError("invalid_request", "`session_id` must be a string.")
     context = request.get("context")
     return None if context is None else _parse_context(context)
+
+
+def _refuse_malformed_writes(request: dict[str, Any]) -> None:
+    """Refuse ``widget_state`` and ``trigger`` of the wrong shape, or where
+    they cannot apply.
+
+    Present means not None, so an empty ``trigger`` is a malformed trigger
+    rather than a plain rerun that looks like it worked.
+    """
+    widget_state = request.get("widget_state")
+    if widget_state is not None and not isinstance(widget_state, dict):
+        raise AgentRequestError("invalid_request", "`widget_state` must be an object.")
+
+    trigger = request.get("trigger")
+    if trigger is not None:
+        if not isinstance(trigger, dict):
+            raise AgentRequestError(
+                "invalid_request",
+                "`trigger` must be an object with a `key`, and at most one may "
+                "be sent.",
+            )
+        if extra := set(trigger) - {"key", "value"}:
+            raise AgentRequestError(
+                "invalid_request",
+                f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
+                "has a `key` and, for payload-bearing triggers, a `value`.",
+            )
+        if not isinstance(trigger.get("key"), str):
+            raise AgentRequestError(
+                "invalid_request",
+                "`trigger` must be an object with a string `key`. To rerun "
+                "without changing anything, send no `trigger` at all.",
+            )
+
+    writes = [
+        name for name in ("widget_state", "trigger") if request.get(name) is not None
+    ]
+    if writes and request.get("session_id") is None:
+        raise AgentRequestError(
+            "invalid_request",
+            f"`{writes[0]}` cannot be sent on a creating call, because element "
+            "keys only exist once the app has run. Create the session first, "
+            "then act on the keys it returns.",
+        )
+    if writes and (
+        request.get("page") is not None or request.get("query_params") is not None
+    ):
+        raise AgentRequestError(
+            "invalid_request",
+            "Navigation (`page`, `query_params`) is a separate transition and "
+            "cannot be combined with widget changes.",
+        )
 
 
 def _resolve_page(
@@ -1063,21 +1227,52 @@ def _encode_query_params(query_params: Any) -> str:
     return urlencode(pairs)
 
 
+def _filtered_query_string(query_string: str, keep: Callable[[str], bool]) -> str:
+    """Rebuild ``query_string`` from the pairs whose names pass ``keep``.
+
+    Blank values stay: an empty parameter is a real value.
+    """
+    return urlencode(
+        [
+            (name, value)
+            for name, value in parse_qsl(query_string, keep_blank_values=True)
+            if keep(name)
+        ]
+    )
+
+
+def _query_string_after_edits(
+    bindings: QueryParams, widget_states: WidgetStates, query_string: str
+) -> str:
+    """Drop the parameter of every bound widget the request sets.
+
+    The browser rewrites a ``bind="query-params"`` parameter whenever its
+    widget changes, and the runtime reads the address back: as
+    ``st.query_params``, and to seed the next page's widgets. Kept as it was,
+    the old value would be put back over the edit. Dropping it is enough to
+    prevent that without reimplementing the browser's URL format: the widget
+    keeps its value, and the parameter is missing until the runtime writes it
+    back itself.
+    """
+    edited = {
+        binding.param_key
+        for state in widget_states.widgets
+        if (binding := bindings.get_binding_for_widget(state.id)) is not None
+    }
+    return _filtered_query_string(query_string, lambda name: name not in edited)
+
+
 def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> str:
     """Keep what a browser keeps when it switches pages.
 
     That is the embed parameters and the ones bound to a widget; everything
     else is cleared, so a parameter one page was opened with does not follow
     the caller to the next. The run then drops bound parameters that belong to
-    another page, and reports the result like any other change. Blank values
-    stay: an empty parameter is a real value.
+    another page, and reports the result like any other change.
     """
-    return urlencode(
-        [
-            (name, value)
-            for name, value in parse_qsl(query_string, keep_blank_values=True)
-            if name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name)
-        ]
+    return _filtered_query_string(
+        query_string,
+        lambda name: name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name),
     )
 
 

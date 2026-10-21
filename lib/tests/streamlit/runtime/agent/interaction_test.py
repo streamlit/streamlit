@@ -23,6 +23,7 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
 from streamlit.runtime.agent import interaction, tree
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.query_params import QueryParams
@@ -315,17 +316,60 @@ def _refusal(request: dict[str, Any]) -> AgentRequestError:
 @pytest.mark.parametrize(
     "request_body",
     [
-        {"widget_state": {"region": "Europe"}},
-        {"trigger": {"key": "submit"}},
-        {"session_id": "s_1", "pages": "home"},
+        {"pages": "home"},
+        {"session_id": "s_1", "click": {"key": "submit"}},
     ],
 )
 def test_validate_refuses_unknown_fields(request_body: dict[str, Any]) -> None:
-    """Fields this API does not take, setting widgets included, are refused."""
+    """Fields this API does not take are refused."""
     error = _refusal(request_body)
 
     assert error.code == "invalid_request"
     assert "Unknown request fields" in error.message
+
+
+@pytest.mark.parametrize(
+    ("request_body", "fragment"),
+    [
+        ({"widget_state": {"region": "Europe"}}, "`widget_state` cannot be sent"),
+        ({"widget_state": {}}, "`widget_state` cannot be sent"),
+        ({"trigger": {"key": "go"}}, "`trigger` cannot be sent"),
+        (
+            {"trigger": {"key": "prompt", "value": "hi"}, "context": {"locale": "de"}},
+            "`trigger` cannot be sent",
+        ),
+        # Malformed is refused first, and still before a session exists.
+        ({"trigger": {}}, "string `key`"),
+    ],
+)
+def test_validate_refuses_writes_on_a_creating_call(
+    request_body: dict[str, Any], fragment: str
+) -> None:
+    """Element keys only exist once the app has run, so a creating call
+    cannot carry widget values or a trigger, not even an empty one.
+    """
+    error = _refusal(request_body)
+
+    assert error.code == "invalid_request"
+    assert fragment in error.message
+
+
+@pytest.mark.parametrize(
+    "request_body",
+    [
+        {"session_id": "s_1", "page": "report", "widget_state": {"region": "EMEA"}},
+        {"session_id": "s_1", "query_params": {"q": ["1"]}, "trigger": {"key": "go"}},
+        {"session_id": "s_1", "query_params": {}, "widget_state": {}},
+    ],
+)
+def test_validate_refuses_navigation_with_widget_changes(
+    request_body: dict[str, Any],
+) -> None:
+    """A navigation is a transition of its own and takes no widget changes."""
+    error = _refusal(request_body)
+
+    assert error.code == "invalid_request"
+    assert "cannot be combined with widget changes" in error.message
 
 
 @pytest.mark.parametrize(
@@ -338,6 +382,14 @@ def test_validate_refuses_unknown_fields(request_body: dict[str, Any]) -> None:
         ({"query_params": {"a": [1]}}, "must be a list of strings"),
         ({"context": "Europe/Berlin"}, "`context` must be an object"),
         ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
+        ({"session_id": "s_1", "widget_state": []}, "`widget_state` must be an object"),
+        ({"session_id": "s_1", "trigger": "x"}, "`trigger` must be an object"),
+        ({"session_id": "s_1", "trigger": {}}, "string `key`"),
+        ({"session_id": "s_1", "trigger": {"key": 1}}, "string `key`"),
+        (
+            {"session_id": "s_1", "trigger": {"key": "k", "extra": 1}},
+            "Unknown `trigger` fields: extra",
+        ),
     ],
 )
 def test_validate_refuses_wrong_types(
@@ -357,6 +409,8 @@ def test_validate_refuses_wrong_types(
         {"query_params": {"q": ["ok", "\udfff"]}},
         {"query_params": {"\ud800": ["x"]}},
         {"context": {"locale": "de-DE", "\ud83d": "x"}},
+        {"session_id": "s_1", "widget_state": {"\ud800": "Europe"}},
+        {"session_id": "s_1", "trigger": {"key": "prompt", "value": "hi \udfff"}},
     ],
 )
 def test_validate_refuses_text_that_is_not_unicode(
@@ -386,6 +440,18 @@ def test_validate_accepts_a_full_request() -> None:
     assert context.timezone == "Europe/Berlin"
     assert context.locale == "de-DE"
     assert interaction._validate_request_shape({"session_id": "s_1"}) is None
+
+    # `context` is not navigation, so it may come with widget changes.
+    write_context = interaction._validate_request_shape(
+        {
+            "session_id": "s_1",
+            "widget_state": {"region": "Europe", "$$ID-abc-None": [1, 2]},
+            "trigger": {"key": "prompt", "value": "hi"},
+            "context": {"locale": "fr-FR"},
+        }
+    )
+    assert write_context is not None
+    assert write_context.locale == "fr-FR"
 
 
 def test_encode_query_params_keeps_blank_values() -> None:
@@ -541,6 +607,28 @@ def test_page_change_keeps_embed_and_bound_parameters_only() -> None:
     assert query_string == "EMBED=true&region=Europe&embed_options=light"
 
 
+def test_query_string_after_edits_drops_only_the_set_bound_parameters() -> None:
+    """A bound widget the request sets loses its parameter; a bound widget it
+    leaves alone, an unbound widget, and other parameters keep theirs.
+    """
+    bindings = QueryParams()
+    bindings.bind_widget(
+        param_key="region", widget_id="w1", value_type="string_value", script_hash=""
+    )
+    bindings.bind_widget(
+        param_key="quarter", widget_id="w2", value_type="string_value", script_hash=""
+    )
+    widget_states = WidgetStates()
+    widget_states.widgets.add(id="w1", string_value="APAC")
+    widget_states.widgets.add(id="w3", bool_value=True)
+
+    query_string = interaction._query_string_after_edits(
+        bindings, widget_states, "region=EMEA&region=AMER&quarter=Q2&utm=ad&blank="
+    )
+
+    assert query_string == "quarter=Q2&utm=ad&blank="
+
+
 def _session(**fields: Any) -> interaction.AgentSession:
     return interaction.AgentSession(
         handle="s_test",
@@ -558,7 +646,9 @@ def _pending(action: dict[str, Any]) -> interaction._Interaction:
 
 
 def test_only_a_retry_of_the_timed_out_interaction_collects() -> None:
-    """Only `session_id`, or the same action fields, collect a timed-out run."""
+    """Only `session_id`, or the same action fields, collect a timed-out run,
+    so the same click sent again never fires twice.
+    """
     action = {"page": "report", "query_params": {"q": ["1"]}}
     session = _session(timed_out=_pending(action))
     is_retry = interaction._is_collecting_retry
@@ -567,6 +657,14 @@ def test_only_a_retry_of_the_timed_out_interaction_collects() -> None:
     assert is_retry(session, {"session_id": "s_test", **action})
     assert not is_retry(session, {"session_id": "s_test", "page": "x"})
     assert not is_retry(_session(), {"session_id": "s_test"})
+
+    click = {"widget_state": {"rows": 2}, "trigger": {"key": "go"}}
+    clicked = _session(timed_out=_pending(click))
+    assert is_retry(clicked, {"session_id": "s_test", **click})
+    assert not is_retry(
+        clicked, {"session_id": "s_test", **click, "widget_state": {"rows": 3}}
+    )
+    assert not is_retry(clicked, {"session_id": "s_test", "trigger": {"key": "go"}})
 
 
 def test_idle_since_follows_the_timeout_state_table() -> None:
