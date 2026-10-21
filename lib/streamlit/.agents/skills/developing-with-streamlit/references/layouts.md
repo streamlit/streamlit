@@ -261,7 +261,11 @@ Sometimes a fragment's controls or output need to appear at positions the fragme
 
 **Triggering a fragment from outside.** Give the fragment a key (`@st.fragment(key="charts")`) and call `st.rerun("charts")` from a widget callback in the main script or another fragment. See "Keyed reruns" in `performance.md`.
 
-**Rendering into an outside container.** Keep a fragment's output in its own body unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container. Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot. If that run has nothing to show yet, `container.empty()` reserves the slot. A `@st.fragment(parallel=True)` fragment cannot write outside or reserve a slot.
+**Rendering into an outside container.** Keep a fragment's output in its own body unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container.
+
+- Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot.
+- If that run has nothing to show yet, `container.empty()` reserves the slot.
+- A `@st.fragment(parallel=True)` fragment cannot write outside or reserve a slot.
 
 ## Dialogs for focused interactions
 
