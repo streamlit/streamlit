@@ -12,9 +12,17 @@ cell-by-cell object-column scan, and explicit deep copies of pandas axes and met
 It also creates caller wrappers after releasing the cache lock so concurrent cache hits
 can proceed in parallel.
 
-The benchmark below measured the earlier safety-preserving implementation and does not
-measure this revised design. The revised prototype needs a new controlled benchmark
-before making a performance recommendation.
+The revised prototype did not produce a measurable initial-load improvement in the
+split-query Area Stability app. In ten alternating cache-cleared pairs, deep copies had
+a 6.274-second median and CoW had a 6.370-second median. The means moved in the opposite
+direction (6.779 seconds deep, 6.602 seconds CoW), and the paired 95% confidence interval
+for CoW minus deep ranged from -1.706 to +1.351 seconds. The difference is noise relative
+to the observed run-to-run variation.
+
+Recommendation: do not advance CoW as an initial-load optimization for this app. The
+split-query architecture has made the shared cached return small enough that cache-copy
+strategy is no longer a material end-to-end factor. This conclusion is about latency;
+the benchmark did not measure whether CoW reduces peak memory.
 
 ## Prototype behavior
 
@@ -33,6 +41,71 @@ The opt-in `copy="cow"` mode:
 Targeted tests cover default behavior, pandas-managed mutation isolation, explicitly
 shared nested values, nested dashboard-shaped returns, concurrent readers, clear,
 eviction, TTL, async writes, and background refresh.
+
+## Revised prototype benchmark on the split-query app
+
+The benchmark used:
+
+- Area Stability production-improvement commit `dfb52c3f10`, including SQL health-status
+  rollups, deferred filtered queries, parallel fragments, and lazy tab content;
+- Streamlit prototype commit `3d63c99bb1`;
+- the same server process for both modes, avoiding authentication and process-startup
+  differences;
+- a query parameter to alternate `deep` then `cow` for ten pairs;
+- a unique hard `st.cache_data.clear()` token before every run;
+- browser asset caching disabled; and
+- completed initial render as the end condition: data cutoff, Overall Health, Drill into
+  an Org/Area, and Metrics Lookup visible with all three loading placeholders gone.
+
+The app was warmed before measurement. Snowflake authentication and app telemetry
+persistence were excluded. Times are seconds from browser navigation.
+
+### Deep-copy runs
+
+- 8.149
+- 5.508
+- 5.391
+- 5.852
+- 5.620
+- 6.697
+- 8.032
+- 5.751
+- 9.662
+- 7.132
+- Mean: 6.779
+- Median: 6.274
+- Range: 5.391–9.662
+
+### Revised CoW runs
+
+- 5.867
+- 10.269
+- 5.887
+- 5.593
+- 6.760
+- 6.935
+- 6.737
+- 5.233
+- 6.716
+- 6.024
+- Mean: 6.602
+- Median: 6.370
+- Range: 5.233–10.269
+
+The CoW mean was 2.6% faster while its median was 1.5% slower. Mean paired difference
+was 0.177 seconds faster for CoW, with a 95% t-interval from 1.706 seconds faster to
+1.351 seconds slower. The direction changes with the summary statistic, and the
+uncertainty interval spans differences much larger than the observed mean.
+
+Separate-process exploratory runs were excluded because process startup, credential
+reuse, and warehouse/query stabilization caused 14–72 second warmups and one stalled
+run. The final alternating matrix avoided those differences but still includes external
+warehouse, network, browser, and chart-render variance.
+
+The historical 14–17 second results below are not directly comparable because they used
+the pre-rollup app and a different benchmark session. They do show why CoW had more
+theoretical opportunity before query splitting: the original app repeatedly returned
+much larger DataFrames. That opportunity is largely gone in the improved app.
 
 ## Historical benchmark method
 
