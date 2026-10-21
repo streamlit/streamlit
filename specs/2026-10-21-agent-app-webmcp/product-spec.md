@@ -140,8 +140,8 @@ header, so Streamlit needs no option for it.
 
 ### The tools
 
-The tool set is fixed. Where a tool overlaps with the MCP endpoint, it has the same name
-and contract. In this spec, _the tab_ is the browser tab the agent works in, and _the
+The tool set is fixed. Where a tool overlaps with the MCP endpoint, it keeps that tool's
+name and request shape, with the differences its section lists. In this spec, _the tab_ is the browser tab the agent works in, and _the
 tab's session_ is the Streamlit session behind it.
 
 | Tool          | Session it works on                     | Runs app code | Changes the user's view |
@@ -164,8 +164,10 @@ Returns the tab session's snapshot, the same document as `interact` (`tree`, `ac
 - **No input, and no app code runs:** `readOnlyHint: true`.
 - **It reports the last settled run.** If a run is in progress, it waits for it to settle,
   up to `server.agentRunTimeout`, and otherwise returns `run_timed_out`. Calling again
-  waits again. `run_every` fragments rerun in the tab as usual, so `read_view` sees their
-  latest output, which an agent session never does.
+  waits again. `run_every` fragments rerun in the tab as usual, so the tab's snapshot
+  holds their latest output, which an agent session's never does. Whether a fragment-only
+  run counts as settled, so that a short interval cannot keep `read_view` waiting, is
+  [open question 9](#open-questions).
 - **Values are what the app last ran with.** Edits the user has not committed, such as
   unsubmitted form fields, text still being typed, or a value held back by
   `on_change="ignore"`, are not in the snapshot, because the app has not seen them.
@@ -211,8 +213,8 @@ The agent API's operation, with one difference: a creating call starts from the 
 - **`{}` copies the tab's session into a new agent session** on the server and runs it
   once without firing callbacks. The copy takes session state, widget values, the page,
   query parameters, uploads, and `st.context` as the tab reports it, with headers and
-  cookies cut to what an agent session reads: no `Cookie`, `Authorization`, or
-  `Proxy-Authorization` header, and no cookies. A dialog the script reopens from session
+  cookies cut to what an agent session reads: no `Cookie`, `Authorization`,
+  `Proxy-Authorization`, or `Sf-Context-Current-User-Token` header, and no cookies. A dialog the script reopens from session
   state reopens in the copy. A dialog the user opened with a button stays closed, because
   the copy's first run does not replay the click, so that copy starts on the page behind
   the dialog. Nothing passes through the browser or the agent. From then on it is an
@@ -225,9 +227,10 @@ The agent API's operation, with one difference: a creating call starts from the 
   `unknown_session` over HTTP, over MCP, and from any other tab. It ends when the tab's
   session ends or after `server.agentSessionTTL`. A tab holds at most three copies. A
   fourth is refused with `too_many_copies`, whose message tells the model to keep using one
-  of the copies it holds, and the copies already running are unaffected. Copies count
-  toward `server.agentMaxSessions`, which applies whether or not `server.enableAgentApi`
-  is on.
+  of the copies it holds, and the copies already running are unaffected. A tab whose state
+  passes a size bound is refused with `copy_too_large` before anything is copied. Copies
+  count toward `server.agentMaxSessions`, which applies whether or not
+  `server.enableAgentApi` is on.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`. A copy isolates the
   view, not the side effects: later `interact` calls on the copy fire callbacks, and
   anything they write is written as the user.
@@ -253,10 +256,11 @@ Changes the tab's session the way the user would.
   resend old values over the agent's, and the app shows that an assistant is changing it,
   with a stop control that stays enabled while the widgets are not. While the lock holds,
   the tab sends no rerun of its own, so `run_every` timers and the Rerun action wait, and
-  the server ignores a rerun from the tab until the agent's run has settled and its values
-  have reached the tab's widgets. Stopping, or the agent aborting the call, stops the run
+  the server ignores a rerun the tab sends after the call is accepted, until the agent's
+  run has settled and its values have reached the tab's widgets. A run the user started
+  before the call arrived is [open question 9](#open-questions). Stopping, or the agent aborting the call, stops the run
   as the stop button does.
-- **The user's unfinished edits win over the agent's values.** A request that touches a
+- **The agent cannot set a field the user is still editing.** A request that touches a
   field the user has edited and not committed is refused with `pending_user_edit` before
   anything runs, naming the field. The agent can ask the user to submit or discard the
   edit. A request that does not touch the field can still discard the edit, by switching
@@ -269,8 +273,8 @@ Changes the tab's session the way the user would.
   once it settles. One `change_view` runs per tab at a time; another is `session_busy`.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`.
 
-`pending_user_edit` and `too_many_copies` are the only new error codes. Every other refusal
-is the agent API's. As
+`pending_user_edit`, `too_many_copies`, and `copy_too_large` are the only new error codes.
+Every other refusal is the agent API's. As
 in the MCP endpoint, a refusal is the tool's result, with the error JSON as its text, so
 the model reads the `code` and corrects the call. A `run_timed_out` message tells the model
 how to collect the run: call `read_view` when the timed-out call was `read_view` or
@@ -328,8 +332,10 @@ to screen readers as text.
 
 The first three share one contract: the same snapshot, request schema, validation, and
 error codes. A model that has learned one has learned the others. `interact` and
-`get_data` mean the same thing in MCP and WebMCP, except that a new `interact` session
-starts from the tab.
+`get_data` keep their MCP names and request shapes, with three differences: a new
+`interact` session starts from the tab, `get_data` takes `session_id` optionally and
+accepts only this tab's copies rather than any agent session of the same identity, and
+WebMCP adds the error codes `pending_user_edit`, `too_many_copies`, and `copy_too_large`.
 
 **MCP Apps is the mirror image.** [MCP Apps](https://modelcontextprotocol.io/extensions/apps/overview)
 lets an MCP tool declare an HTML UI, a `ui://` resource named in `_meta.ui.resourceUri`,
@@ -378,9 +384,12 @@ are the ones it would reuse.
   WebSocket handshake. SPCS mints that token once per ingress session and it expires after
   120 seconds by default, while the tab's open connection keeps working, which is what
   [#17401](https://github.com/streamlit/streamlit/pull/17401) ran into. A copy withholds
-  that token rather than connect with a stale one, so `interact` is not supported on SiS
-  until a copy can get a fresh token. Over the WebSocket there is no new request for one
-  to arrive with; see [open questions](#open-questions).
+  that token rather than pass a stale one, so in a copy
+  `st.connection("snowflake-callers-rights")` raises, as it does wherever the header is
+  missing; `st.connection("snowflake")` does not read it. Whether `interact` on SiS refuses
+  before creating a copy, or creates one in which caller's-rights connections raise, and
+  how a copy could get a fresh token, are [open question 12](#open-questions). Over the
+  WebSocket there is no new request for a fresh token to arrive with.
 
 ### Security
 
@@ -428,8 +437,9 @@ Three steps, each shipping on its own. A level registers only the tools that hav
    sessions whose browser supports WebMCP, and the setting with `"off"` and `"read"`.
 2. **Explore:** `interact`. Needs the session copy from
    [#17401](https://github.com/streamlit/streamlit/pull/17401) as a supported feature:
-   copying on the server without stalling the event loop other sessions share, binding to
-   the tab, and the per-tab bound.
+   copying on the server without stalling the event loop other sessions share, a size
+   bound checked before copying, binding to the tab, and the per-tab bound, with large and
+   concurrent copies in the performance tests.
 3. **Change the view:** `change_view`. Needs agent-applied values pushed to the tab's
    widgets through the existing `set_value` path, widgets without a `key` included, a check
    that stateful containers follow those values, the tab's `clear_on_submit` and
@@ -595,9 +605,12 @@ brings them to the widgets** ✅ PREFERRED
 5. **How do embedded apps get their tools seen?** That depends on WebMCP's decision about
    frames and built-in agents. Community Cloud and Snowsight may need to opt their app
    frames in.
-6. **Is the setting's name right?** `client.browserAgentAccess` names the audience and the
-   levels. An alternative is to name the standard, such as `client.webmcp`, which is easier
-   to search for but ties the option to a draft's name.
+6. **Are the setting's name and section right?** `client.browserAgentAccess` names the
+   audience and the levels. An alternative is to name the standard, such as
+   `client.webmcp`, which is easier to search for but ties the option to a draft's name.
+   The option is enforced by the server and belongs to the deployment, like
+   `server.enableAgentApi`, while several `client.*` options are scriptable UI
+   preferences, so `[server]` may fit better than `[client]`.
 7. **Should `change_view` get its own level?** `"interact"` gains `change_view` only in
    rollout step 3, so a deployment that opted into exploration would later let an agent
    drive its users' tabs. A separate level, or a promise that `"interact"` will not grow,
@@ -619,16 +632,16 @@ brings them to the widgets** ✅ PREFERRED
     with scripts can register a tool named and described like Streamlit's. Streamlit
     could withhold `tools` from component iframes, which does not reach code in the page
     itself, or detect tools that reuse its names. Either limits what components may do.
-12. **How does a copy on SiS get a fresh caller's-rights token?** A copy made over the
-    WebSocket has no HTTP request to bring fresh headers. Snowsight could hand the tab a
-    fresh token through the host messages it already sends, or copies could stay
-    unsupported on SiS.
+12. **What does `interact` do on SiS?** A copy made over the WebSocket has no HTTP
+    request to bring a fresh caller's-rights token. `interact` could refuse on SiS before
+    creating a copy, or create one in which caller's-rights connections raise. Snowsight
+    could also hand the tab a fresh token through the host messages it already sends.
 
 ## Checklist
 
 | Item                       | ✅ or comment |
 | -------------------------- | ------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP, and other browsers are unchanged. An app in an iframe registers tools when it is same-origin with the host page or the host grants `allow="tools"`. `interact` is not supported on SiS until a copy can get a fresh caller's-rights token. See [Platforms and embedding](#platforms-and-embedding) for Community Cloud, SiS, multiple replicas, and origin-trial tokens. |
+| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP, and other browsers are unchanged. An app in an iframe registers tools when it is same-origin with the host page or the host grants `allow="tools"`. On SiS, caller's-rights connections fail in `interact` copies until a copy can get a fresh token ([open question 12](#open-questions)). See [Platforms and embedding](#platforms-and-embedding) for Community Cloud, SiS, multiple replicas, and origin-trial tokens. |
 | No breaking API changes    | ✅ Additive: one config option, new operation payloads on the WebSocket protocol, and a capability flag in rerun requests. No `st.*` changes. Apps with the setting off, and browsers without WebMCP, behave as today. |
 | No new dependencies        | ✅ No runtime dependencies. TypeScript types for WebMCP are hand-written or come from `webmcp-types` as a dev dependency. |
 | Metrics collected          | Yes, unlike the agent API: these calls happen in a browser, so the frontend's existing usage stats (`browser.gatherUsageStats`) can count calls and outcome classes per tool, and whether the browser supports WebMCP, without any content. |
