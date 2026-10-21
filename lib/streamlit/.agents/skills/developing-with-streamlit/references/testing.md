@@ -257,7 +257,9 @@ def test_with_mocked_data():
     assert at.markdown[0].value == "mocked"
 ```
 
-Functions decorated with `@st.fragment` or `@st.dialog` need a running script. Called directly from test code, they do not run their body (a fragment returns `None`). Test them through `AppTest`.
+`patch` imports `helpers` in the test process, so the app's directory must be on the test's `sys.path` (for example, through pytest's `pythonpath` option when tests live in another directory).
+
+Functions decorated with `@st.fragment` or `@st.dialog` need a running script. Called directly from test code, a fragment returns `None` without running its body, and a dialog raises `StreamlitAPIException`. Test them through `AppTest`.
 
 ## Worked example: a filtered dataframe
 
