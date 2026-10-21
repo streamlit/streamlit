@@ -3737,25 +3737,22 @@ def test_dropped_fragment_rerun_leaves_session_settled(
 
 
 @pytest.mark.anyio
-@pytest.mark.usefixtures("distinct_scriptrunners")
-async def test_backmsg_exception_without_runner_settles_after_its_messages() -> None:
-    """The exception messages are sent to the client before the session settles."""
+async def test_a_runner_that_fails_to_start_leaves_the_session_settled() -> None:
+    """A failure to start the run reaches the caller, and the session stays
+    settled, so the next rerun is not left waiting for a run that never came.
+    """
     session = _create_tracked_session(asyncio.get_running_loop())
-    runner = _start_runner(session)
-    # Leaves a settle pending, which the next confirmed send would complete.
-    _handle_shutdown(session, runner)
+    failing_runner = MagicMock()
+    failing_runner.start.side_effect = RuntimeError("no thread")
 
-    session.handle_backmsg_exception(RuntimeError("boom"))
-    _flush_and_send(session)
-    assert not session.is_settled
+    with (
+        patch(
+            "streamlit.runtime.app_session.ScriptRunner", return_value=failing_runner
+        ),
+        pytest.raises(RuntimeError, match="no thread"),
+    ):
+        session.request_rerun(None)
 
-    # Run the deferred callbacks that enqueue the error messages.
-    await asyncio.sleep(0)
-    flushed = session.flush_browser_queue()
-    assert flushed[-1].delta.new_element.WhichOneof("type") == "exception"
-    assert not session.is_settled
-
-    session.on_flushed_messages_sent()
     assert session.is_settled
 
 

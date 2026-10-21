@@ -165,7 +165,6 @@ class _App:
         # here applies to this call alone, even with other calls in flight.
         self.options["server.agentWaitTimeout"] = run_timeout
         body = await interaction.interact(
-            self.runtime,
             self.registry,
             {} if request is None else request,
             user_info={} if user_info is None else user_info,
@@ -786,6 +785,29 @@ async def test_a_creating_call_that_fails_closes_its_session(
         assert app.registry._sessions == {}
         assert app.runtime._session_mgr.num_active_sessions() == 0
         assert agent_spec._agent_session_ids == frozenset()
+
+
+@pytest.mark.anyio
+async def test_a_rerun_that_fails_to_start_leaves_the_session_usable(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A failure to start the run reaches the caller, which the route answers
+    as an internal error, and the session's next request runs normally.
+    """
+    async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
+        handle = (await app.call())["session_id"]
+        with (
+            patch(
+                "streamlit.runtime.app_session.ScriptRunner",
+                side_effect=RuntimeError("no thread"),
+            ),
+            pytest.raises(RuntimeError, match="no thread"),
+        ):
+            await app.call({"session_id": handle})
+        after = await app.call({"session_id": handle}, run_timeout=_SHORT_TIMEOUT)
+
+    assert after["session_id"] == handle
+    assert _texts(after) == ["starts=2 done=2 runs=2"]
 
 
 @pytest.mark.anyio

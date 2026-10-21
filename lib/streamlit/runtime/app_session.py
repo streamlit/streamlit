@@ -604,19 +604,6 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
-        # With a ScriptRunner, its SHUTDOWN settles the session after these
-        # messages. Without one, the session may already be settled, or about
-        # to settle from its last run chain, before the exception message
-        # below is even enqueued, and a request served then would get a page
-        # without the error. So unsettle it now, and settle it again once the
-        # exception message has been enqueued and sent.
-        settle_after_messages = (
-            self._scriptrunner is None
-            and self._state != AppSessionState.SHUTDOWN_REQUESTED
-        )
-        if settle_after_messages:
-            self._unsettle()
-
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
@@ -634,12 +621,9 @@ class AppSession:
         # this exception ForwardMsg *must* also be enqueued in a callback,
         # so that it will be enqueued *after* the various ForwardMsgs that
         # _on_scriptrunner_event sends.
-        def enqueue_exception_message() -> None:
-            self._enqueue_forward_msg(self._create_exception_message(e))
-            if settle_after_messages and self._scriptrunner is None:
-                self._settle_once_delivered()
-
-        self._call_soon_on_event_loop(enqueue_exception_message)
+        self._call_soon_on_event_loop(
+            lambda: self._enqueue_forward_msg(self._create_exception_message(e))
+        )
 
     def request_rerun(self, client_state: ClientState | None) -> None:
         """Signal that we're interested in running the script.
@@ -783,7 +767,6 @@ class AppSession:
             )
             self._script_event_loop = asyncio.new_event_loop()
 
-        self._unsettle()
         self._scriptrunner = ScriptRunner(
             session_id=self.id,
             main_script_path=self._script_data.main_script_path,
@@ -800,6 +783,10 @@ class AppSession:
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
+        # Only once the runner has started, so a runner that fails to start
+        # leaves the session settled. Its events reach this loop later, so none
+        # can settle the session before this line runs.
+        self._unsettle()
 
     @property
     def session_state(self) -> SessionState:

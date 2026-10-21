@@ -52,7 +52,7 @@ Represents a single browser tab or agent API session.
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
-An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` sends a `rerun_script` BackMsg and waits for the settle signal below.
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
@@ -201,7 +201,7 @@ Browser connects -> Runtime.connect_session()
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
 
-**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `rerun_script` BackMsg; the route then waits for `wait_until_settled()` up to `server.agentRunTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies.
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies.
 
 ## Key abstractions
 

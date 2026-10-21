@@ -301,7 +301,6 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             body = await _unless_disconnected(
                 request,
                 interaction.interact(
-                    runtime,
                     session_registry,
                     payload,
                     user_info=user_info,

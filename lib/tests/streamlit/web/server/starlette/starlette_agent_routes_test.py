@@ -237,7 +237,7 @@ def test_an_empty_body_is_an_empty_request(
     assert response.headers["Content-Type"] == "application/json"
     assert response.content == b'{"ok":true}'
     assert interact.await_args is not None
-    assert interact.await_args.args[2] == {}
+    assert interact.await_args.args[1] == {}
 
 
 def test_a_client_that_leaves_while_sending_the_body_runs_nothing(

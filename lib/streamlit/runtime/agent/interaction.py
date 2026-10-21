@@ -40,8 +40,7 @@ from urllib.parse import parse_qs, parse_qsl, urlencode
 from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
-from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ClientState_pb2 import ContextInfo
+from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
 from streamlit.runtime.agent import snapshot
@@ -515,7 +514,6 @@ def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
 
 
 async def interact(
-    runtime: Runtime,
     registry: AgentSessionRegistry,
     request: dict[str, Any],
     *,
@@ -527,10 +525,8 @@ async def interact(
 
     Parameters
     ----------
-    runtime : Runtime
-        The runtime the agent sessions run in.
     registry : AgentSessionRegistry
-        The agent sessions of ``runtime``.
+        The agent sessions to create the interaction's session in or find it.
     request : dict[str, Any]
         The parsed request body.
     user_info : UserInfoType
@@ -599,7 +595,6 @@ async def interact(
     session.released.clear()
     try:
         return await _run_interaction(
-            runtime,
             registry.app_session(session),
             session,
             request,
@@ -662,7 +657,6 @@ def _is_collecting_retry(session: AgentSession, request: dict[str, Any]) -> bool
 
 
 async def _run_interaction(
-    runtime: Runtime,
     app_session: AppSession,
     session: AgentSession,
     request: dict[str, Any],
@@ -701,8 +695,7 @@ async def _run_interaction(
     page = request.get("page")
     query_params = request.get("query_params")
 
-    back_msg = BackMsg()
-    rerun = back_msg.rerun_script
+    rerun = ClientState()
     rerun.page_script_hash = app_session.page_script_hash
     rerun.query_string = session.query_string
 
@@ -743,7 +736,10 @@ async def _run_interaction(
     # already going, must not change what that run reads.
     session.client.request_context = _RequestContext(headers)
     session.client.begin_interaction()
-    runtime.handle_backmsg(session.app_session_id, back_msg)
+    # Not through `Runtime.handle_backmsg`, which would turn a failure to start
+    # the run into an error page meant for a browser. Raised here, it answers
+    # the request as `internal_error`.
+    app_session.request_rerun(rerun)
 
     return await _settle(
         app_session,
