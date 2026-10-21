@@ -935,11 +935,40 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  // Unset: use the theme's default code background from createEmotionColors.
+  // Built-in themes keep opaque stock chrome from themeColors.ts. Partial custom
+  // themes that override surfaces (or primary) but leave chrome keys unset still
+  // derive those edges from the resolved surfaces, matching pre-chrome behavior.
+  const shouldDeriveUnsetChrome =
+    notNullOrUndefined(bgColor) ||
+    notNullOrUndefined(secondaryBg) ||
+    notNullOrUndefined(bodyText) ||
+    notNullOrUndefined(primary)
+
+  if (shouldDeriveUnsetChrome) {
+    if (!notNullOrUndefined(borderColor)) {
+      conditionalOverrides.colors.borderColor =
+        conditionalOverrides.colors.fadedText10
+      conditionalOverrides.colors.borderColorLight =
+        conditionalOverrides.colors.fadedText05
+      if (!notNullOrUndefined(dataframeBorderColor)) {
+        conditionalOverrides.colors.dataframeBorderColor =
+          conditionalOverrides.colors.fadedText05
+      }
+    }
+    if (!notNullOrUndefined(codeBackgroundColor)) {
+      conditionalOverrides.colors.codeBackgroundColor =
+        conditionalOverrides.colors.bgMix
+    }
+    if (!notNullOrUndefined(dataframeHeaderBackgroundColor)) {
+      conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+        conditionalOverrides.colors.bgMix
+    }
+  }
+
+  // Configured code/header chrome wins over both stock and derived defaults.
   conditionalOverrides.colors.codeBackgroundColor =
     codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
-  // Unset: use the theme's default dataframe header background.
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
@@ -957,8 +986,11 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // An unset dataframeBorderColor follows borderColor.
-    conditionalOverrides.colors.dataframeBorderColor = borderColor
+    // Unset dataframeBorderColor follows the lighter border, matching prior
+    // custom-theme behavior (stock themes use their own opaque df border).
+    if (!notNullOrUndefined(dataframeBorderColor)) {
+      conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    }
   }
 
   if (notNullOrUndefined(dataframeBorderColor)) {
@@ -992,10 +1024,14 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.link =
     linkColor ?? conditionalOverrides.colors.blueTextColor
 
-  // Unset: keep the theme's default code text color (matches body text on the
-  // built-in themes).
-  conditionalOverrides.colors.codeTextColor =
-    codeTextColor ?? conditionalOverrides.colors.codeTextColor
+  // Built-in themes keep stock code text (body-aligned). Partial custom themes
+  // that leave codeTextColor unset still follow greenTextColor.
+  if (notNullOrUndefined(codeTextColor)) {
+    conditionalOverrides.colors.codeTextColor = codeTextColor
+  } else if (shouldDeriveUnsetChrome) {
+    conditionalOverrides.colors.codeTextColor =
+      conditionalOverrides.colors.greenTextColor
+  }
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&

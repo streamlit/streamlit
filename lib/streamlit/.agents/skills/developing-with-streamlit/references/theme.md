@@ -192,12 +192,12 @@ secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
 textColor = "#1F2328"              # Body text
 
 linkColor = "#0969da"              # Defaults to blueTextColor
-codeTextColor = "#1F2328"          # Built-in default matches body text; a custom textColor does not change it
-codeBackgroundColor = "#f6f8fa"    # Unset keeps the built-in code background
+codeTextColor = "#1F2328"          # Built-in default matches body text
+codeBackgroundColor = "#f6f8fa"    # Built-in default; custom surfaces re-derive if unset
 borderColor = "#d0d7de"
 ```
 
-When you change `backgroundColor` or `secondaryBackgroundColor`, also set `codeBackgroundColor` and `dataframeHeaderBackgroundColor` if those fills should follow your surfaces — unset values stay on the built-in fills.
+Built-in light/dark keep opaque stock chrome. A custom theme that sets surfaces (or `primaryColor`) but leaves chrome keys unset still derives borders, code fill, and dataframe header fill from those surfaces — same as before the default-theme chrome refresh.
 
 Choose a `primaryColor` dark enough for white primary-button text.
 
