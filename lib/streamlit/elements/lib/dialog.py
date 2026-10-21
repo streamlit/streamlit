@@ -277,6 +277,10 @@ class Dialog(DeltaGenerator):
             msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open
         self._current_proto = msg.delta.add_block
+        # Bare mode has no session. Skip the enqueue so open() / close()
+        # do not raise NoSessionContext.
+        if get_script_run_ctx(suppress_warning=True) is None:
+            return
 
         enqueue_message(msg)
 
