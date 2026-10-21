@@ -867,7 +867,7 @@ describe("TextArea required", () => {
 
   it("applies a session_state write over a dirty field whose form submit was blocked", async () => {
     const user = userEvent.setup()
-    const { widgetMgr } = createWidgetMgr()
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
     const props = getProps(
       { formId: "form", required: true, id: "required-dirty-form" },
       { widgetMgr }
@@ -897,6 +897,20 @@ describe("TextArea required", () => {
 
     expect(textArea).toHaveValue("Ada")
     expectNoRequiredError(textArea)
+
+    // The next submit sends the restored value, not the staged empty edit.
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    const widgets = sendRerunBackMsg.mock.calls[0][0].widgets as {
+      id: string
+      stringValue?: string
+    }[]
+    const textAreaState = widgets.find(
+      widget => widget.id === "required-dirty-form"
+    )
+    expect(textAreaState?.stringValue).toBe("Ada")
   })
 
   it("clears a leftover required error when required is turned off", async () => {

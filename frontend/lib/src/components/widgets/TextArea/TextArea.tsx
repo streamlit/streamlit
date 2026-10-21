@@ -182,14 +182,19 @@ const TextArea: FC<Props> = ({
     queryParamBinding,
   })
 
+  const { placeholder, formId } = element
+  const inForm = isInForm({ formId })
+
   // A session_state write replaces an empty edit that `required` blocked.
   // - The blocked edit keeps `dirty`, so useUpdateUiValue won't repaint it.
   // - Applied during render because useBasicWidgetState consumes `setValue`
   //   in an effect, which would paint the old value for one frame.
+  // - Inside a form, it also replaces the staged empty edit, so the next
+  //   submit sends the value the field shows.
   if (element.setValue && dirty && hasRequiredError) {
     const incomingValue = getCurrStateFromProto(element)
     setUiValue(incomingValue)
-    setValueWithSource({ value: incomingValue, fromUser: false })
+    setValueWithSource({ value: incomingValue, fromUser: inForm })
     setDirty(false)
     setHasRequiredError(false)
   }
@@ -244,9 +249,6 @@ const TextArea: FC<Props> = ({
       updateScrollHeight()
     }
   }, [isAutoHeight, width, updateScrollHeight])
-
-  const { placeholder, formId } = element
-  const inForm = isInForm({ formId })
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
