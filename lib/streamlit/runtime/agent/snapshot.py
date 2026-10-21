@@ -72,10 +72,9 @@ class ElementState(NamedTuple):
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # The options a request names: `choices` if published, else
-    # `props.options`; ``None`` when there is no list. Kept for an
-    # `accept_new_options` widget so a label several options share is still
-    # refused.
+    # The closed list a later request must belong to. ``None`` when the widget
+    # accepts values outside its options, or when it has no fixed list. The
+    # description still carries those options for the client.
     options: list[Any] | None
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
@@ -96,17 +95,11 @@ class ElementState(NamedTuple):
     # Whether a browser user can empty it, so a later request's null clears it
     # rather than resetting it to a non-empty default.
     clearable: bool = False
-    # Whether text outside ``options`` is legal too, as `accept_new_options`
-    # makes it.
-    accepts_new_options: bool = False
     # What the element is acted on with, "value" or "trigger", or None for a
     # display-only element. It decides whether `widget_state` or `trigger`
     # addresses it, and tells a display-only element from one that cannot be
     # used right now, such as a widget in a closed dialog.
     action: ActionKind | None = None
-    # The longest text a trigger payload may carry, such as `st.chat_input`'s
-    # `max_chars`, which only the browser enforces.
-    max_chars: int | None = None
     # Why an element the snapshot shows cannot be used now: "closed_dialog"
     # for one in a closed dialog, "compile_error" for one left from an
     # earlier run when the script failed to compile. Enabling it would not
@@ -365,15 +358,20 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # A command publishes `choices` when the values a request sends are
-        # not its `options` parameter.
-        published = description.get("choices")
+        # Membership list for the next request. A widget that accepts new
+        # text has no such list: any value of the right schema is legal, and
+        # its options stay on the description. Otherwise a command publishes
+        # `choices` when the list is not its `options` parameter.
         options: list[Any] | None
-        if isinstance(published, list):
-            options = published
+        if props.get("accept_new_options") is True:
+            options = None
         else:
-            candidate = props.get("options")
-            options = candidate if isinstance(candidate, list) else None
+            published = description.get("choices")
+            if isinstance(published, list):
+                options = published
+            else:
+                candidate = props.get("options")
+                options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
         in_closed_dialog = unusable or self._closed_dialog
         actionable = (
@@ -396,9 +394,7 @@ class _SnapshotBuilder:
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
-            accepts_new_options=props.get("accept_new_options") is True,
             action=action if action in {"value", "trigger"} else None,
-            max_chars=_whole_number(props.get("max_chars")),
             blocked_by="closed_dialog" if in_closed_dialog else None,
         )
         if actionable:
@@ -461,15 +457,12 @@ def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None
     ``value_schema.maxItems`` covers a range. ``st.multiselect`` publishes its
     limit as ``props.max_selections`` instead, and a longer selection is refused.
     """
-    limit = _whole_number((description.get("value_schema") or {}).get("maxItems"))
-    return limit if limit is not None else _whole_number(props.get("max_selections"))
-
-
-def _whole_number(value: Any) -> int | None:
-    """Return ``value`` when it is an ``int`` and not a ``bool``, else ``None``."""
-    if isinstance(value, int) and not isinstance(value, bool):
-        return value
-    return None
+    limit = (description.get("value_schema") or {}).get("maxItems")
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        limit = props.get("max_selections")
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        return None
+    return limit
 
 
 def _public_key(element_id: str) -> str:

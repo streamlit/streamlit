@@ -26,10 +26,9 @@ serializer, and deserializer.
 
 Constraints a widget owns are left to the widget, which resets, truncates, or
 trims the value for browsers and agents alike: bounds, fractions sent to an
-`st.number_input` or `st.slider` that holds whole numbers, and a text input's
-`max_chars`. #16203 tracks the constraints still enforced only in the browser.
-`st.chat_input` is the exception: only the browser enforces its `max_chars`,
-and its payload never shows in a snapshot, so this module checks it.
+`st.number_input` or `st.slider` that holds whole numbers, and a text or chat
+input's `max_chars`. #16203 tracks the constraints still enforced only in the
+browser.
 """
 
 from __future__ import annotations
@@ -354,7 +353,6 @@ def build_widget_states(
             key,
             value,
             options=state.options,
-            accepts_new=state.accepts_new_options,
             as_numbers=state.schema_type in {"integer", "number"},
         )
         value = _iso_text_to_wire(key, metadata, state.command, value)
@@ -406,7 +404,6 @@ def build_widget_states(
                 trigger.get("value"),
                 trigger_key,
                 options=state.options,
-                max_chars=state.max_chars,
             )
         )
         submitted_form = state.form_id or ""
@@ -606,16 +603,15 @@ def _validate_options(
     value: Any,
     *,
     options: list[Any] | None,
-    accepts_new: bool,
     as_numbers: bool,
 ) -> None:
-    """Refuse values outside a selection widget's advertised options.
+    """Refuse values outside a selection widget's closed list of options.
 
     Options are compared as text, so `st.feedback`'s integer indexes and
-    string labels are matched the same way. A widget that accepts new options
-    takes any other text too, but a label several options share is still
-    refused. A list may repeat an option: an app's `default` can, and the
-    widget keeps it, so a reported value has to be accepted back.
+    string labels are matched the same way. A widget without a closed list,
+    such as one that accepts new options, is not checked. A list may repeat an
+    option: an app's `default` can, and the widget keeps it, so a reported
+    value has to be accepted back.
     """
     if options is None or value is None:
         return
@@ -625,7 +621,7 @@ def _validate_options(
     candidates = value if isinstance(value, list) else [value]
     for candidate in candidates:
         count = counts.get(str(candidate), 0)
-        if count == 0 and not accepts_new:
+        if count == 0:
             raise AgentRequestError(
                 "invalid_value",
                 f"{candidate!r} is not one of the options for {key!r}: "
@@ -895,7 +891,6 @@ def _encode_trigger(
     key: str,
     *,
     options: list[Any] | None,
-    max_chars: int | None,
 ) -> WidgetState:
     """Encode a fired trigger, with its payload when the widget carries one.
 
@@ -928,9 +923,7 @@ def _encode_trigger(
                     else "."
                 ),
             )
-        _validate_options(
-            key, payload, options=options, accepts_new=False, as_numbers=False
-        )
+        _validate_options(key, payload, options=options, as_numbers=False)
         state.string_trigger_value.data = payload
     elif value_type == "json_trigger_value":
         try:
@@ -949,26 +942,11 @@ def _encode_trigger(
             )
         # Empty text is accepted although the browser keeps send disabled
         # without it: browser-only gates such as `required` are not enforced.
-        # Over-long text is refused rather than cut, as the browser's input
-        # would: the payload never shows in a snapshot, so a cut message would
-        # go unnoticed. The browser reads 0 as no limit and counts UTF-16 code
-        # units.
-        if max_chars and _utf16_length(payload) > max_chars:
-            raise AgentRequestError(
-                "invalid_value",
-                f"The text for {key!r} is longer than the {max_chars} "
-                "characters its `max_chars` allows.",
-            )
         state.chat_input_value.data = payload
     else:  # pragma: no cover - a trigger's description matches its wire type
         raise AgentRequestError("not_a_trigger", f"{key!r} is not a trigger.")
 
     return state
-
-
-def _utf16_length(text: str) -> int:
-    """The length of ``text`` as JavaScript counts it, in UTF-16 code units."""
-    return sum(2 if ord(char) > 0xFFFF else 1 for char in text)
 
 
 def _as_bool(value: Any) -> bool:

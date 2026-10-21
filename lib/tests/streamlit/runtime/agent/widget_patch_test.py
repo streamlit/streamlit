@@ -455,19 +455,16 @@ class WidgetPatchTest(SnapshotCase):
             ),
             ("accept_new_takes_new_text", "city", "Rome", "Rome"),
             ("accept_new_takes_a_new_item", "tags", ["a", "new"], ["a", "new"]),
-            ("accept_new_number_naming_an_option", "open_numbered", 1, "1"),
+            # Any text is legal there, so a number does not name an option.
             (
                 "accept_new_number_is_not_text",
                 "open_numbered",
-                7,
+                1,
                 _Refused("must be a string"),
             ),
-            (
-                "accept_new_shared_label",
-                "same_open",
-                "Same",
-                _Refused("Several options"),
-            ),
+            # Read as text, a shared label resolves the way the widget resolves
+            # it for a browser, which sends the same label.
+            ("accept_new_shared_label", "same_open", "Same", "y"),
             ("shared_label", "shared", "A", _Refused("Several options")),
             ("number_naming_an_option", "numbered", 2, "2"),
             ("tab_label", "tabs", "B", "B"),
@@ -729,23 +726,8 @@ class WidgetPatchTest(SnapshotCase):
             ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
-            ("chat_at_max_chars", {"key": "prompt", "value": "x" * 8}, "x" * 8),
-            (
-                "chat_past_max_chars",
-                {"key": "prompt", "value": "x" * 9},
-                _Refused("longer than the 8 characters its `max_chars` allows"),
-            ),
-            # The browser counts UTF-16 code units, two per emoji.
-            (
-                "chat_at_max_chars_in_utf16",
-                {"key": "prompt", "value": "😀" * 4},
-                "😀" * 4,
-            ),
-            (
-                "chat_past_max_chars_in_utf16",
-                {"key": "prompt", "value": "😀" * 5},
-                _Refused("longer than the 8 characters"),
-            ),
+            # The widget cuts text past `max_chars`, as a text input does.
+            ("chat_past_max_chars", {"key": "prompt", "value": "x" * 9}, "x" * 8),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),
             (
                 "menu_unknown_option",
@@ -770,12 +752,6 @@ class WidgetPatchTest(SnapshotCase):
         st.chat_input("Say", key="prompt", max_chars=8)
         st.menu_button("Month", ["January", "December"], key="menu")
         self._check(None, expected, trigger=trigger)
-
-    def test_a_chat_input_with_max_chars_0_has_no_limit(self) -> None:
-        """`max_chars=0` sets no limit, as the browser reads it."""
-        st.chat_input("Say", key="prompt", max_chars=0)
-
-        self._check(None, "hello", trigger={"key": "prompt", "value": "hello"})
 
     def test_a_dialog_without_on_dismiss_has_no_overlay_key(self) -> None:
         """With the default `on_dismiss`, the dialog is not addressable."""

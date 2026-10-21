@@ -881,8 +881,9 @@ refused with `invalid_value`:
     it would otherwise read as no value and reset.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values; a list may hold no more than
-  `max_selections`. A widget with `accept_new_options` also takes new text, as it does
-  in the browser.
+  `max_selections`. A widget with `accept_new_options` takes any text instead, as it
+  does in the browser, so a number there does not name an option, and a label several
+  options share resolves as it does for a browser.
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 
@@ -891,9 +892,7 @@ malformed `st.date_input` date or color string, or a slider range with too few v
 is reset to the default, a fraction sent to an integer `st.number_input` or slider is
 truncated, and text past `max_chars` is cut. A reversed slider range is stored as sent,
 so a client sends its two values lowest first. A per-key note saying how each value
-landed is a potential follow-up. `st.chat_input` is the exception to the cut: only the
-browser enforces its `max_chars`, and its text never shows in a snapshot, so longer
-text is refused with `invalid_value`.
+landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1050,7 +1049,7 @@ back to a browser rather than mistake it for missing content:
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
-| Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
+| Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. A widget that accepts new options reads it as typed text and resolves it as it does for a browser. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`, and a table's rows beyond the preview are `unavailable: "undescribed"`. |
@@ -1395,7 +1394,13 @@ Smaller potential follow-ups and alternatives considered:
   itself removed; refusing values that do not match `value_schema` — a fraction for a
   whole number, a malformed date, a too-short or reversed range — rather than letting
   the widget adjust them; widget constraints checked server-side
-  ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and integers beyond
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)); the limits a widget
+  enforces that cost a few bytes also stated in `value_schema` under the standard
+  keywords (`maxLength` from `max_chars`, `minimum` and `maximum` from the bounds,
+  `maxItems` from `max_selections`), but never `enum`, which would copy an option list
+  `props` already carries, so a client that generates input from the schema stays
+  within them, best together with #16203 so the server refuses what the schema rules
+  out; and integers beyond
   ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
 - **Data:** running queries over a large table on the server instead of paging it to
   the model; recommending dataframe-backed charts for apps agents read; serving each
