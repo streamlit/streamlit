@@ -52,7 +52,8 @@ little from it:
   user's tab. A user who asks "set this to Europe and Q3" has to repeat the agent's steps
   by hand.
 - **It does not carry the user's identity.** An `st.login` app is signed out for the agent
-  API, while the user's tab is signed in. Agent sign-in is the agent API's follow-up #10.
+  API, while the user's tab is signed in. Agent sign-in is the agent API's
+  [follow-up #10](../2026-08-28-agent-app-interface/product-spec.md#follow-ups).
 - **A browser agent rarely knows it exists.** The API is off by default, and a browser
   agent seldom has an app's MCP server configured.
 
@@ -74,8 +75,8 @@ execute, annotations })`, and agents the browser trusts can list and call those 
   untrusted content, and `consequentialHint`, which lets a browser require the user's
   confirmation before a call.
 - **Exposure** defaults to the page itself, same-origin frames, and the browser's
-  built-in agent. Registration is gated by the `tools` Permissions Policy, which defaults
-  to `self`.
+  built-in agent. The `tools` Permissions Policy gates registration and defaults to
+  `self`.
 - **The tool list may change at any time**, unlike MCP's, though the best practices warn
   that dozens of tools degrade an agent, and there is no in-place update of a tool's
   schema.
@@ -157,9 +158,8 @@ tool touches and whether the user sees it.
 
 #### `read_view`
 
-Returns the snapshot of the tab's session: the document `interact` returns, with `tree`,
-`actions`, `page`, `pages`, `query_params`, `status`, and `observed_at`, for what the user
-sees now.
+Returns the tab session's snapshot, the same document as `interact` (`tree`, `actions`,
+`page`, `pages`, `query_params`, `status`, `observed_at`), for what the user sees now.
 
 - **No input, and no app code runs:** `readOnlyHint: true`.
 - **It reports the last settled run.** If a run is in progress, it waits for it to settle,
@@ -197,19 +197,23 @@ get_data(url, session_id=None, offset=0, limit=500)
 ```
 
 Without `session_id` it reads files the tab's latest result references, which this browser
-already received. With one, it reads files that `interact` session's latest result
-references. The copy ran app code with the agent's values, so those files may never have
-reached the tab. `readOnlyHint: true`.
+already received. With one, it reads files the latest result of an `interact` copy
+references, and only of a copy this tab created. Any other id, including an HTTP or MCP
+agent session's and another tab's copy, is `unknown_session`, so page script cannot read a
+session the browser cannot reach. Under `"read"` no copy exists, so every `session_id` is
+`unknown_session`. A copy ran app code with the agent's values, so its files may never
+have reached the tab. `readOnlyHint: true`.
 
 #### `interact`
 
 The agent API's operation, with one difference: a creating call starts from the tab.
 
-- **`{}` copies the tab's session into a new agent session** on the server, including
-  session state, widget values, page, query parameters, `st.context` as the tab reports
-  it, and uploads, and runs it once without firing callbacks. Nothing passes through the
-  browser or the agent. From then on it is an ordinary agent session, with the request,
-  snapshot, validation, `run_timed_out` collection, and errors of HTTP and MCP.
+- **`{}` copies the tab's session into a new agent session** on the server and runs it
+  once without firing callbacks. The copy takes session state, widget values, the page,
+  query parameters, `st.context` as the tab reports it, uploads, and an open dialog.
+  Nothing passes through the browser or the agent. From then on it is an ordinary agent
+  session, with the request, snapshot, validation, `run_timed_out` collection, and errors
+  of HTTP and MCP.
 - **The tab's view does not change.** The copy belongs to the agent.
 - **It is bound to the tab.** It carries the tab user's identity, `st.user` included, so an
   `st.login` app is signed in, which HTTP and MCP cannot offer until agent sign-in. Only
@@ -234,14 +238,15 @@ Changes the tab's session the way the user would.
   so callbacks fire in page order and fragment scoping works as in the browser. They are
   then pushed to the tab's widgets the way an `st.session_state` write is, so the tab shows
   them and the user's next interaction keeps them. Widgets without a `key` are included.
-  The tab also does the browser's half that the agent API skips (its follow-up #8): a
+  The tab also does the browser's half that the agent API skips (its
+  [follow-up #8](../2026-08-28-agent-app-interface/product-spec.md#follow-ups)): a
   submit clears a `clear_on_submit` form, and a widget bound with `bind="query-params"`
   rewrites the URL.
 - **The user sees it happen and can stop it.** Until the call's run settles, even after
   the call returns `run_timed_out`, the tab's widgets are disabled, so a click cannot
   resend old values over the agent's, and the app shows that an assistant is changing it,
-  with a stop control. Stopping, or the agent aborting the call, stops the run as the stop
-  button does.
+  with a stop control that stays enabled while the widgets are not. Stopping, or the agent
+  aborting the call, stops the run as the stop button does.
 - **The user's unfinished edits win over the agent's values.** A request that touches a
   field the user has edited and not committed is refused with `pending_user_edit` before
   anything runs, naming the field. The agent can ask the user to submit or discard the
@@ -257,9 +262,9 @@ Changes the tab's session the way the user would.
 
 `pending_user_edit` is the only new error code. Every other refusal is the agent API's. As
 in the MCP endpoint, a refusal is the tool's result, with the error JSON as its text, so
-the model reads the `code` and corrects the call. A `run_timed_out` message names the call
-that collects the run: `read_view` after `read_view` or `change_view`, and `interact` with
-only `session_id` after `interact`.
+the model reads the `code` and corrects the call. A `run_timed_out` message tells the model
+how to collect the run: call `read_view` when the timed-out call was `read_view` or
+`change_view`, and `interact` with only `session_id` when it was `interact`.
 
 ```json
 { "widget_state": { "region": "Europe", "quarter": "2026-Q3" } }
@@ -330,9 +335,9 @@ and serve a `ui://` resource through `resources/read`.
 Its hard part is this spec's in reverse: the view in the chat has to show the agent's
 session. A renderer of the snapshot is the standalone semantic renderer the parent spec
 rules out. The real Streamlit frontend needs the host to allow the app's origin as a nested
-frame (`frameDomains`), which hosts may restrict and should warn about, and it needs a
-browser attached to an agent session, which is the reverse of `interact`'s copy and pushes
-server state into a browser the way `change_view` does. Three things carry over:
+frame (`frameDomains`), which hosts may restrict and should warn about. It also needs a
+browser attached to an agent session: the reverse of `interact`'s copy, pushing server
+state into a browser the way `change_view` does. Three things carry over:
 
 - The snapshot contract.
 - App-only tools (`visibility: ["app"]`), which would let the view call `interact` without
@@ -348,8 +353,9 @@ are the ones it would reuse.
 
 - **A top-level app**, local or self-hosted, works wherever the browser supports WebMCP.
 - **Multiple replicas need nothing extra.** Calls ride the tab's WebSocket, which is
-  already pinned to its replica, and `interact` copies live in the tab's process. Over
-  HTTP and MCP, the same deployment needs session affinity.
+  already pinned to its replica, and `interact` copies live in the server process that
+  holds the tab's WebSocket. Over HTTP and MCP, the same deployment needs session
+  affinity.
 - **An app in an iframe**, such as Community Cloud's `/~/+/` frame, `?embed=true` in a
   portal, or SiS in Snowsight, can register tools only when its frame is same-origin with
   the host page or the host grants `allow="tools"`. Community Cloud's frame is same-origin
@@ -379,17 +385,21 @@ where the agent API's sessions are anonymous unless a deployment maps identity.
   browser that confirms consequential tools asks before each call, and neither is
   read-only. As in the MCP endpoint, no action is labeled safe, and the extra confirmations
   are the honest cost.
-- **Results are untrusted, and tool metadata is never app-authored.**
+- **Results are untrusted, and the metadata of Streamlit's tools is never app-authored.**
 - **Exposure stays at WebMCP's default:** the page itself, same-origin frames, and agents
   the browser trusts. This spec exposes nothing to other origins through `exposedTo`.
 - **Code already in the page gains little.** Custom components, and `st.html` with scripts
   allowed, can call these tools like the page's other code. They can already read and
-  drive the page, and `interact` adds only a copy that runs as the same user.
+  drive the page, and `interact` adds only a copy that runs as the same user. They can also
+  register tools of their own next to Streamlit's, such as a fake `change_view`: a v1
+  component's iframe is same-origin with scripts allowed, and Components v2 and `st.html`
+  run in the page. Whether Streamlit guards against that is [open](#open-questions).
 - **The user stays in the loop for changes.** `change_view` shows what it does, disables
   input until its run settles, can be stopped, and refuses to set a field the user is
   still editing.
 - **Copies are bounded and bound.** At most three per tab, under the tab's identity only,
-  unknown to HTTP and MCP, and ending with the tab.
+  unknown to HTTP and MCP, and ending with the tab. The tab's tools reach no other agent
+  session: `get_data` refuses every `session_id` but this tab's copies.
 
 ### Rollout
 
@@ -534,8 +544,10 @@ brings them to the widgets** ✅ PREFERRED
   only in the browser until a submit, so it needs the frontend to set widget values itself,
   as in option 2 for applying values. A later spec.
 - **Exposing tools to other origins**, such as an embedding platform's own assistant,
-  through WebMCP's `exposedTo`. The host-message allow-list, `client.allowedOrigins`, is
-  the natural source for that list.
+  through WebMCP's `exposedTo`. Such a list lets other origins run tools as the tab's user,
+  so it needs its own deployment-controlled list of secure origins. The host-message
+  allow-list, `client.allowedOrigins`, does not fit: it accepts wildcard patterns and is
+  not tamper-proof.
 - **Tools declared by authors or components:** a tool per form, actions an author labels
   safe, and a Components v2 API for a component to register its own tools, which could make
   some `browser_required` components drivable.
@@ -583,6 +595,11 @@ brings them to the widgets** ✅ PREFERRED
 10. **Should tab copies have their own budget?** They count toward
     `server.agentMaxSessions`, so 34 tabs holding three copies each pass the default of
     100 and turn away HTTP and MCP agents with `too_many_sessions`.
+11. **Should Streamlit guard against look-alike tools?** Under the `tools` policy's
+    default, a v1 component's same-origin iframe, a Components v2 component, or `st.html`
+    with scripts can register a tool named and described like Streamlit's. Streamlit
+    could withhold `tools` from component iframes, which does not reach code in the page
+    itself, or detect tools that reuse its names. Either limits what components may do.
 
 ## Checklist
 
@@ -592,6 +609,6 @@ brings them to the widgets** ✅ PREFERRED
 | No breaking API changes    | ✅ Additive: one config option, new operation payloads on the WebSocket protocol, and a capability flag in rerun requests. No `st.*` changes. Apps with the setting off, and browsers without WebMCP, behave as today. |
 | No new dependencies        | ✅ No runtime dependencies. TypeScript types for WebMCP are hand-written or come from `webmcp-types` as a dev dependency. |
 | Metrics collected          | Yes, unlike the agent API: these calls happen in a browser, so the frontend's existing usage stats (`browser.gatherUsageStats`) can count calls and outcome classes per tool, and whether the browser supports WebMCP, without any content. |
-| Any security/legal impact? | ⚠️ Calls act only as the tab's user, over its own WebSocket, and reads of the tab return only what it received. The new risks are an agent acting with the signed-in user's identity after reading untrusted app content, and `interact` copies, which run app code as that user and can return data the tab never received. Mitigations: off by default with the level enforced by the server, a read-only level, `consequentialHint` on every tool that runs app code, `untrustedContentHint` on every result, fixed tool metadata, visible and stoppable changes, and copies bound to the tab. |
-| Any docs changes needed?   | A guide to browser agents: the levels, testing with Chrome's flag and the Model Context Tool Inspector, and what an agent can do at each level. Author guidance that a widget's range or options are not access control applies here too. Deployment notes on origin-trial tokens and on apps in iframes. The agent API reference gains the four tools. |
+| Any security/legal impact? | ⚠️ See [Security](#security). An agent can act as the signed-in user after reading untrusted app content, and an `interact` copy can return data the tab never received. Opt-in levels, server enforcement, consequential hints, and tab-bound copies are the controls. |
+| Any docs changes needed?   | A guide to browser agents: the levels, testing with Chrome's flag and the Model Context Tool Inspector, and what an agent can do at each level. Author guidance that a widget's range or options are not access control applies here too. Deployment notes on origin-trial tokens and on apps in iframes. The agent API reference gains the four tools, and the usage-statistics documentation gains the per-tool counts the frontend reports. |
 | Any other risks?           | WebMCP is a draft that is still changing, and only Chromium-based browsers ship it. Building on its stable core, the imperative `registerTool` with fixed tools, keeps the exposure small. A confusing app is a confusing tool here too. |
