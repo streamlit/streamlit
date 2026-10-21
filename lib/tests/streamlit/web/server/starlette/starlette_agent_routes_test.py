@@ -47,7 +47,10 @@ from streamlit.web.server.starlette import (
     starlette_agent_routes,
     starlette_app_utils,
 )
-from streamlit.web.server.starlette.starlette_routes import create_media_routes
+from streamlit.web.server.starlette.starlette_routes import (
+    create_app_static_serving_routes,
+    create_media_routes,
+)
 from tests.streamlit.runtime.agent import run_gate
 from tests.testutil import patch_config_options
 
@@ -403,7 +406,7 @@ async def _lifespan_with(runtime: Runtime) -> AsyncGenerator[None, None]:
 def _served_app(
     tmp_path: Path, script: str, overrides: dict[str, Any], *, base_url: str = ""
 ) -> Generator[TestClient, None, None]:
-    """A real Runtime on ``script``, behind the agent and media routes.
+    """A real Runtime on ``script``, behind the agent, media, and app static routes.
 
     ``overrides`` is read at every lookup, so a test can change an option while
     the app runs.
@@ -439,6 +442,7 @@ def _served_app(
                 routes=[
                     *starlette_agent_routes.create_agent_routes(runtime, base_url),
                     *create_media_routes(media_storage, base_url),
+                    *create_app_static_serving_routes(str(main_script), base_url),
                 ],
                 lifespan=lambda _app: _lifespan_with(runtime),
             )
@@ -546,31 +550,44 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     tmp_path: Path,
 ) -> None:
     """Under `server.baseUrlPath`, the route lives below it, and a media URL
-    joined with the request's URL reaches the media route.
+    joined with the request's URL reaches its route, whether it points at media
+    storage or at one of the app's static files.
     """
     script = """
     import numpy as np
     import streamlit as st
 
     st.image(np.zeros((2, 2, 3), dtype=np.uint8))
+    st.image("/app/static/cat.png")
+    with st.chat_message("user", avatar="/app/static/cat.png"):
+        st.write("hi")
     """
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "cat.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     with _served_app(tmp_path, script, {}, base_url="base") as client:
         unprefixed = client.post(_PATH, json={})
         response = client.post(f"/base{_PATH}", json={})
-        image = next(
-            child
-            for child in response.json()["tree"]["children"][0]["children"]
-            if child["type"] == "image"
+        children = response.json()["tree"]["children"][0]["children"]
+        stored, static = [
+            child["props"]["url"] for child in children if child["type"] == "image"
+        ]
+        chat_message = next(
+            child for child in children if child["type"] == "chat_message"
         )
-        media_url = urljoin(str(response.url), image["props"]["url"])
-        media = client.get(media_url)
+        stored_url = urljoin(str(response.url), stored)
+        static_url = urljoin(str(response.url), static)
+        fetched = [client.get(url) for url in (stored_url, static_url)]
 
     assert unprefixed.status_code == 404
     assert response.status_code == 200
-    assert image["props"]["url"].startswith("../../media/")
-    assert media_url.startswith("http://testserver/base/media/")
-    assert media.status_code == 200
-    assert media.headers["Content-Type"].startswith("image/")
+    assert stored.startswith("../../media/")
+    assert stored_url.startswith("http://testserver/base/media/")
+    assert static == "../../app/static/cat.png"
+    assert static_url == "http://testserver/base/app/static/cat.png"
+    assert [media.status_code for media in fetched] == [200, 200]
+    assert all(media.headers["Content-Type"].startswith("image/") for media in fetched)
+    assert chat_message["props"]["avatar"] == "../../app/static/cat.png"
 
 
 def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:

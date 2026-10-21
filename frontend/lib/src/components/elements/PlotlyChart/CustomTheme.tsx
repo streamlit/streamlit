@@ -508,7 +508,7 @@ function respectUserFontOnTemplateTraces(
       continue
     }
     for (const trace of traces) {
-      const textfont = (trace as Record<string, unknown>)?.textfont as
+      const textfont = (trace as Record<string, unknown> | null)?.textfont as
         | Record<string, unknown>
         | undefined
       if (textfont?.color === injectedColor) {

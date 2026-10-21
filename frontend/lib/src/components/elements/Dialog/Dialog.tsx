@@ -144,7 +144,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     setIsOpen(false)
 
     // Send widget event if on_dismiss is activated (indicated by presence of id)
-    if (id && widgetMgr) {
+    if (id) {
       // Dialogs are not compatible with forms.
       void widgetMgr.setTriggerValue(id, {
         formId: "",
@@ -166,7 +166,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
       }
 
       if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
-        const target = e.target as HTMLElement
+        const target = e.target as HTMLElement | null
 
         // Allow typing R in inputs, textareas, and contenteditable fields.
         if (

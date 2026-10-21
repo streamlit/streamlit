@@ -152,7 +152,7 @@ function Video({
     }
 
     return () => {
-      if (videoNode && endTime > 0) {
+      if (endTime > 0) {
         videoNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -177,9 +177,7 @@ function Video({
     videoNode.addEventListener("ended", handleVideoEnd)
 
     return () => {
-      if (videoNode) {
-        videoNode.removeEventListener("ended", handleVideoEnd)
-      }
+      videoNode.removeEventListener("ended", handleVideoEnd)
     }
   }, [loop, startTime])
 
@@ -270,7 +268,7 @@ function Video({
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles?.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
+      {subtitles.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
         <track
           // TODO: Update to match React best practices
           // eslint-disable-next-line @eslint-react/no-array-index-key

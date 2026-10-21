@@ -120,7 +120,7 @@ function Audio({
     }
 
     return () => {
-      if (audioNode && endTime > 0) {
+      if (endTime > 0) {
         audioNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -145,9 +145,7 @@ function Audio({
     audioNode.addEventListener("ended", handleAudioEnd)
 
     return () => {
-      if (audioNode) {
-        audioNode.removeEventListener("ended", handleAudioEnd)
-      }
+      audioNode.removeEventListener("ended", handleAudioEnd)
     }
   }, [loop, startTime])
 
