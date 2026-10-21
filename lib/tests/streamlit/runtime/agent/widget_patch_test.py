@@ -235,15 +235,20 @@ class WidgetPatchTest(SnapshotCase):
         assert "twice" in error.message
 
     def test_values_are_encoded_in_snapshot_order(self) -> None:
-        """Callbacks follow the snapshot, whatever order the request lists keys in."""
+        """Callbacks follow the tree, whatever order the request lists keys in,
+        so a stateful container's comes before those of the widgets inside it.
+        """
         st.checkbox("First", key="first")
+        with st.expander("Details", on_change="rerun", key="details"):
+            st.checkbox("Inner", key="inner")
         st.checkbox("Second", key="second")
 
-        encoded = self._write({"second": True, "first": True}).widgets
+        encoded = self._write(
+            {"second": True, "inner": True, "details": True, "first": True}
+        ).widgets
 
         assert [state.id for state in encoded] == [
-            self._element_id("first"),
-            self._element_id("second"),
+            self._element_id(key) for key in ("first", "details", "inner", "second")
         ]
 
     def test_a_stale_widget_key_does_not_hide_a_form_that_uses_it(self) -> None:

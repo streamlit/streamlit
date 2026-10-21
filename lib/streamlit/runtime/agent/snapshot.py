@@ -108,6 +108,8 @@ class Snapshot:
     """A serialized snapshot plus the bookkeeping the next request needs."""
 
     document: dict[str, Any]
+    # Keyed by element ID, in tree order, which a batched write's widget
+    # states are encoded in.
     element_states: dict[str, ElementState]
 
 
@@ -177,14 +179,28 @@ class _SnapshotBuilder:
         support = node.description.get("support") or inherited_support
         is_dialog = node.description.get("type") == "dialog"
         dialog_props = (node.description.get("props") or {}) if is_dialog else {}
-        actions_before_children = len(self.actions)
+        closed_dialog = dialog_props.get("is_open") is False
+        if (
+            node.root_name is None
+            and node.block is not None
+            and not node.description.get("transparent")
+        ):
+            # Recorded before its body, so `actions` and `element_states` both
+            # follow tree order, which a batched write's callbacks run in, and
+            # a dialog's own state stays outside the in-dialog window.
+            self._record_element_state(
+                node.description,
+                inherited_support,
+                None,
+                node.fragment_id,
+                unusable=closed_dialog,
+            )
         # A dialog closed in this run still has its body in the tree. Only an
         # open one makes those widgets cross-dialog writes. A closed one is
         # unmounted, so nothing in it can be set or fired. The flag covers the
-        # body; the dialog's own dismiss trigger is passed below.
+        # body; the dialog's own dismiss trigger is recorded above.
         if dialog_props.get("is_open") is True:
             self._in_dialog = True
-        closed_dialog = dialog_props.get("is_open") is False
         if closed_dialog:
             self._closed_dialog = True
         children = self.serialize_children(node, support)
@@ -239,19 +255,6 @@ class _SnapshotBuilder:
                 value_schema=description.get("value_schema"),
             )
             _attach_value(result, action, value, description.get("value_schema"))
-        # The container is recorded after its body so a dialog's own state
-        # stays outside the in-dialog window. Its action is then moved in
-        # front of the children's, so `actions` follows tree order.
-        before_record = len(self.actions)
-        self._record_element_state(
-            description,
-            inherited_support,
-            None,
-            node.fragment_id,
-            unusable=closed_dialog,
-        )
-        if len(self.actions) == before_record + 1:
-            self.actions.insert(actions_before_children, self.actions.pop())
 
         result["children"] = children
         return [result]
