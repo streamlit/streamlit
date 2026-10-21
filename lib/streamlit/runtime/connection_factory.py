@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import os
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit.connections import (
     BaseConnection,
@@ -69,6 +69,9 @@ _MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
 }
 _USE_ENV_PREFIX: Final = "env:"
 _CONNECTION_DEFAULT_TTL_KEY: Final = "runner.connectionDefaultTTL"
+# Distinguishes an omitted `ttl` (consult `runner.connectionDefaultTTL`) from an
+# explicit `ttl=None` (always means "no expiry," overriding the server default).
+_TTL_NOT_SPECIFIED: float = cast("float", object())
 
 # The BaseConnection bound is parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -206,7 +209,7 @@ def connection_factory(
     name: Literal["sql"],
     type: Literal["sql"] | None = None,
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -219,7 +222,7 @@ def connection_factory(
     name: str,
     type: Literal["sql"],
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -232,7 +235,7 @@ def connection_factory(
     name: Literal["snowflake"],
     type: Literal["snowflake"] | None = None,
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -245,7 +248,7 @@ def connection_factory(
     name: str,
     type: Literal["snowflake"],
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -258,7 +261,7 @@ def connection_factory(
     name: Literal["snowflake-callers-rights"],
     type: Literal["snowflake-callers-rights"] | None = None,
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -271,7 +274,7 @@ def connection_factory(
     name: str,
     type: Literal["snowflake-callers-rights"],
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     *,
     autocommit: bool = False,
     **kwargs: Any,
@@ -284,7 +287,7 @@ def connection_factory(
     name: str,
     type: type[ConnectionClass],
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     **kwargs: Any,
 ) -> ConnectionClass:
     pass  # pragma: no cover - typing overload
@@ -295,7 +298,7 @@ def connection_factory(
     name: str,
     type: str | None = None,
     max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
+    ttl: float | timedelta | None = _TTL_NOT_SPECIFIED,
     **kwargs: Any,
 ) -> BaseConnection[Any]:
     pass  # pragma: no cover - typing overload
@@ -305,7 +308,7 @@ def connection_factory(  # type: ignore
     name,
     type=None,
     max_entries=None,
-    ttl=None,
+    ttl=_TTL_NOT_SPECIFIED,
     **kwargs,
 ):
     """Create a new connection to a data store or API, or return an existing one.
@@ -374,11 +377,11 @@ def connection_factory(  # type: ignore
         removed.
     ttl : float, timedelta, or None
         The maximum number of seconds to keep the connection in the cache.
-        If this is ``None`` (default), ``runner.connectionDefaultTTL`` is used.
-        If that option is unset, the connection stays cached until it is
-        cleared. An explicit non-``None`` value overrides the server default.
-        Pass ``float("inf")`` to keep this connection cached indefinitely even
-        when ``runner.connectionDefaultTTL`` is set.
+        If this argument is omitted, ``runner.connectionDefaultTTL`` is used.
+        That option defaults to ``None``, which keeps the connection cached
+        until it is cleared. Passing ``ttl`` explicitly -- including
+        ``ttl=None`` -- always uses that value instead and ignores the
+        server default.
     **kwargs : any
         Connection-specific keyword arguments that are passed to the
         connection's ``._connect()`` method. ``**kwargs`` are typically
@@ -544,7 +547,9 @@ def connection_factory(  # type: ignore
             connection_class = _get_first_party_connection(connection_class)
 
     # At this point, connection_class should be of type Type[ConnectionClass].
-    if ttl is None:
+    # An omitted ttl consults the server default; an explicit ttl -- including
+    # ttl=None -- always wins, so it is left untouched here.
+    if ttl is _TTL_NOT_SPECIFIED:
         ttl = _configured_connection_ttl()
 
     try:

@@ -856,13 +856,12 @@ _create_option(
 _create_option(
     "runner.connectionDefaultTTL",
     description="""
-        Default time to live, in seconds, for ``st.connection`` when ``ttl``
-        is omitted or ``None``.
+        Default time to live, in seconds, for ``st.connection`` when its
+        ``ttl`` argument is omitted entirely.
 
-        ``None`` (default) keeps the connection cached until it is cleared.
-        An explicit non-``None`` ``ttl`` argument overrides this value. Pass
-        ``float("inf")`` as an explicit ``ttl`` to keep one connection cached
-        indefinitely even when this default is set.
+        ``None`` (default) leaves such connections cached until they are
+        cleared. Passing ``ttl`` explicitly to ``st.connection`` -- including
+        ``ttl=None`` -- always uses that value and ignores this default.
 
         Set this in ``.streamlit/config.toml`` under ``[runner]`` as
         ``connectionDefaultTTL``, or with the environment variable

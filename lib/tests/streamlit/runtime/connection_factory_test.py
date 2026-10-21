@@ -457,15 +457,16 @@ def test_connection_uses_configured_default_ttl(
 
 @pytest.mark.usefixtures("restore_connection_default_ttl")
 @patch("streamlit.runtime.connection_factory._create_connection")
-@pytest.mark.parametrize("explicit_ttl", [0, timedelta(minutes=5), float("inf")])
+@pytest.mark.parametrize("explicit_ttl", [0, timedelta(minutes=5), float("inf"), None])
 def test_explicit_connection_ttl_overrides_server_default(
     patched_create_connection: MagicMock,
-    explicit_ttl: float | timedelta,
+    explicit_ttl: float | timedelta | None,
 ) -> None:
-    """A caller-supplied ttl, including 0, a timedelta, and inf, wins over the server default.
+    """A caller-supplied ttl, including an explicit None, wins over the server default.
 
-    ``ttl=float("inf")`` is the documented way to opt one connection out of
-    the server default and keep it cached indefinitely.
+    ``ttl=None`` passed explicitly is the documented way to opt one
+    connection out of the server default and keep it cached indefinitely --
+    unlike omitting ``ttl``, which consults the server default.
     """
     _set_connection_default_ttl(30)
     connection_factory("snowflake", ttl=explicit_ttl)
