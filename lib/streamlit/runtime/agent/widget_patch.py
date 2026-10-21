@@ -24,11 +24,12 @@ snapshot has the final say, because it is the document the client wrote
 against. The widget registry supplies only the codec: each widget's wire type,
 serializer, and deserializer.
 
-Bounds, fractions sent to an `st.number_input` or `st.slider` that holds whole
-numbers, and a text input's `max_chars` are left to the widgets, which reset,
-truncate, or trim the value; #16203 moves those checks into the widgets for
-every client. `st.chat_input` enforces `max_chars` only in the browser, and its
-payload never shows in a snapshot, so it is checked here.
+Constraints a widget owns are left to the widget, which resets, truncates, or
+trims the value: bounds, fractions sent to an `st.number_input` or `st.slider`
+that holds whole numbers, and a text input's `max_chars`. #16203 moves those
+checks into the widgets for every client. `st.chat_input` is the exception:
+only the browser enforces its `max_chars`, and its payload never shows in a
+snapshot, so it is checked here.
 """
 
 from __future__ import annotations
@@ -70,9 +71,9 @@ _ISO_TEXT_INPUTS: Final[dict[str, type[dt.datetime | dt.time]]] = {
     "time_input": dt.time,
 }
 
-# What each wire type takes, for errors that cannot quote the value. A list
-# wire carrying a single value, such as a single-select `st.pills`, takes one
-# item.
+# What each wire type takes. Errors name this instead of quoting the value,
+# which may be a password. A list wire carrying a single value, such as a
+# single-select `st.pills`, takes one item.
 _EXPECTED_SINGLE: Final[dict[str, str]] = {
     "bool_value": "true or false",
     "double_value": "a finite number",
@@ -330,9 +331,8 @@ def build_widget_states(
             accepts_new=state.accepts_new_options,
             as_numbers=state.schema_type in {"integer", "number"},
         )
-        wire_value = _temporal_to_wire(
-            key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
-        )
+        value = _iso_text_to_wire(key, metadata, state.command, value)
+        wire_value = _temporal_to_wire(key, metadata, value)
         encoded = _encode(
             element_id,
             metadata,

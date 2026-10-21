@@ -810,11 +810,10 @@ async def _validate_writes(
     Returns them encoded as a browser would send them, with the fragment the
     rerun is scoped to, or "" for a full rerun.
     """
-    # Off the event loop, because it runs each addressed widget's
-    # deserializer, which is widget code that can compare the app's own option
-    # objects, and its cost grows with the length of the option lists. Safe for
-    # the same reason as the snapshot build: the session is claimed and
-    # settled, so no run can start.
+    # Runs off the event loop. It calls each addressed widget's deserializer,
+    # which is app code whose cost grows with the option lists. Safe for the
+    # same reason as the snapshot build: the session is claimed and settled,
+    # so no run can start.
     validation = asyncio.ensure_future(
         asyncio.to_thread(
             _validate_in_worker,

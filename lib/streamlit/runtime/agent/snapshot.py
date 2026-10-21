@@ -66,10 +66,10 @@ class ElementState(NamedTuple):
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # The options a later request names, as published: `choices` when the
-    # command sets it, else `props.options`. ``None`` for a widget without a
-    # list. Kept when the widget accepts new options too, because a label
-    # several options share is refused there as well.
+    # The options a request names: `choices` if published, else
+    # `props.options`; ``None`` when there is no list. Kept for an
+    # `accept_new_options` widget so a label several options share is still
+    # refused.
     options: list[Any] | None
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
