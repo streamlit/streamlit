@@ -89,7 +89,7 @@ def _collect(page: Page, app_base_url: str, session_id: str) -> dict[str, Any]:
         response = _interact(page, app_base_url, {"session_id": session_id})
         if response.status != 202:
             return _snapshot(response)
-        _refusal(response, 202, "still_running")
+        _refusal(response, 202, "wait_timed_out")
     pytest.fail(f"The run was not collected in {_MAX_COLLECT_ATTEMPTS} attempts.")
 
 
@@ -246,7 +246,7 @@ def test_slow_run_times_out_and_is_collected(page: Page, app_base_url: str) -> N
     run instead of starting another.
     """
     timed_out = _refusal(
-        _interact(page, app_base_url, {"page": "slow"}), 202, "still_running"
+        _interact(page, app_base_url, {"page": "slow"}), 202, "wait_timed_out"
     )
     session_id = timed_out["session_id"]
     assert _SESSION_ID.fullmatch(session_id)

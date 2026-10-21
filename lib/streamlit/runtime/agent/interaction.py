@@ -502,7 +502,7 @@ def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
 
     ``settled`` is whether the session's app has settled. Activity is the
     client's last request or the last run finishing, whichever is later, so a
-    run that finishes after `still_running` gets a full TTL to be collected.
+    run that finishes after `wait_timed_out` gets a full TTL to be collected.
     While that run is still going only requests count: a run that never
     finishes, such as a loop that calls `st.rerun()`, is reclaimed once its
     client stops asking for it, and closing the session stops it.
@@ -579,7 +579,7 @@ async def interact(
             # fires in.
             if session.busy:
                 raise AgentRequestError(
-                    "still_running",
+                    "wait_timed_out",
                     "The app has finished, but its snapshot was still being "
                     f"built after {_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
@@ -808,7 +808,7 @@ async def _wait_and_build(
             timeout = _duration(_wait_timeout())
             elapsed = _duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
-                "still_running",
+                "wait_timed_out",
                 f"The app did not finish within {timeout}, and is still "
                 f"running, {elapsed} after this interaction started. "
                 "Nothing is lost: send a request with only `session_id` to wait "

@@ -1282,7 +1282,7 @@ _create_option(
     "server.agentWaitTimeout",
     description="""
         Maximum number of seconds an agent API request waits for the app's run
-        chain to settle before returning `still_running`.
+        chain to settle before returning `wait_timed_out`.
 
         This bounds the wait, not the run: the app keeps running, and a retry
         of the same request waits for it instead of starting it over. Keep it

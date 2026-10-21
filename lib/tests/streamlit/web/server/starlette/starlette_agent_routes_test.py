@@ -336,7 +336,7 @@ def test_a_client_that_disconnects_cancels_the_wait(
         response = client.post(_PATH, json={})
 
     assert response.status_code == 202
-    assert response.json()["error"]["code"] == "still_running"
+    assert response.json()["error"]["code"] == "wait_timed_out"
     assert cancelled.is_set()
 
 
@@ -429,7 +429,7 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
         collected = client.post(_PATH, json={"session_id": handle})
 
     assert timed_out.status_code == 202
-    assert timed_out.json()["error"]["code"] == "still_running"
+    assert timed_out.json()["error"]["code"] == "wait_timed_out"
     assert busy.status_code == 409
     assert busy.json()["error"]["code"] == "session_busy"
     assert full.status_code == 429

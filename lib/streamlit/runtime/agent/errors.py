@@ -24,7 +24,7 @@ AgentErrorCode: TypeAlias = Literal[
     "unknown_session",
     "unknown_page",
     "session_busy",
-    "still_running",
+    "wait_timed_out",
     "internal_error",
     "not_available",
     "host_not_allowed",
@@ -35,7 +35,7 @@ AgentErrorCode: TypeAlias = Literal[
 # Every failure the route can report, as code -> (HTTP status, meaning).
 #
 # Most are refusals before any app code runs. The exceptions are
-# `still_running`, whose run continues, and `unknown_page` on a creating
+# `wait_timed_out`, whose run continues, and `unknown_page` on a creating
 # call, judged after the run. A run that raised is not one of them: it is a 200
 # with `status: "error"`.
 ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
@@ -72,7 +72,7 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     # and gateways and HTTP clients retry 502-504 on their own. A retried
     # creating call would start another session and another run, and lose the
     # `session_id` this response carries.
-    "still_running": (
+    "wait_timed_out": (
         202,
         (
             "Not a failure: the run outlasted `server.agentWaitTimeout` and is "
@@ -126,7 +126,7 @@ def error_status(code: AgentErrorCode) -> int:
 class AgentRequestError(Exception):
     """A request the agent API refuses.
 
-    Usually nothing has executed. Two cases have: ``still_running``, whose run
+    Usually nothing has executed. Two cases have: ``wait_timed_out``, whose run
     is still going, and a creating call whose ``page`` could only be judged
     after the app ran, because the page list did not exist before. A creating
     call that fails after its session exists carries ``session_id``, so the

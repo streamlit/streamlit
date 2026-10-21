@@ -312,7 +312,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except _ClientGoneError:
             # Nobody reads this; the run is collectable by a retry.
             return error_response(
-                "still_running", "The client disconnected before the run settled."
+                "wait_timed_out", "The client disconnected before the run settled."
             )
         except errors.AgentRequestError as exc:
             return error_response(

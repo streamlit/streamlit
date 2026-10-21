@@ -253,7 +253,7 @@ output a browser shows only mid-run, such as a spinner or `st.write_stream` arri
 chunk by chunk, never appears, while a toast the run raised does.
 
 **A slow run is collected, not restarted.** If the run outlasts `server.agentWaitTimeout`,
-the request returns `202 Accepted` with `still_running`, and the run keeps going.
+the request returns `202 Accepted` with `wait_timed_out`, and the run keeps going.
 Restarting it on retry would be a trap: a script whose uncached first load always
 outlasts the timeout could never finish, and a retried click would fire twice. What a
 request on that session gets depends on the session's state; other sessions and creating
@@ -763,7 +763,7 @@ Every outcome a client has to handle:
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `200` with `status: "error"`, the compile error copied from the page overlay into an uncaught `exception` in `main`, and no actions. `client.showErrorDetails` does not redact it. |
 | Another request on the same session is still being served, or a different request arrives while a timed-out run is still going | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident. |
-| Run outlasted `server.agentWaitTimeout`                                              | `202` with `still_running`, while the app keeps running; a retry collects the run, as described above.                                   |
+| Run outlasted `server.agentWaitTimeout`                                              | `202` with `wait_timed_out`, while the app keeps running; a retry collects the run, as described above.                                   |
 
 ### Actions in v1
 
@@ -1059,7 +1059,7 @@ and the setting is there for operators and tests rather than for tuning per app.
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Whether the API is served              | Off                                                   | `server.enableAgentApi`                                                       |
-| How long one request waits for its run | 30 s, then `still_running`; a retry keeps waiting; a client that disconnects ends the wait at once | `server.agentWaitTimeout`                         |
+| How long one request waits for its run | 30 s, then `wait_timed_out`; a retry keeps waiting; a client that disconnects ends the wait at once | `server.agentWaitTimeout`                         |
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
@@ -1305,12 +1305,12 @@ than ranked, and say where one builds on another.
    management drops or moves older tool results, and without it the only way back to
    the current state is a rerun, which can repeat side effects. Exposed through MCP
    too, it lets `get_data` serve that result's files again. v1 already makes the common
-   timeout case safe — a retry after `still_running` collects the run instead of
+   timeout case safe — a retry after `wait_timed_out` collects the run instead of
    repeating it — so what remains is general: optional `request_id` for retry
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
-   batch or parallelize, and letting a new action replace a run that answered
-   `still_running`, as a browser interaction would.
+   batch or parallelize, and letting a new action replace a run still going after
+   `wait_timed_out`, as a browser interaction would.
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
