@@ -8,15 +8,15 @@ created: 2026-10-21
 ## Summary
 
 [WebMCP](https://developer.chrome.com/docs/ai/webmcp) is a proposed web standard that lets
-a page register tools, each a name, a description, a JSON Schema, and a JavaScript
-function, for AI agents running in the user's browser. This spec has Streamlit's frontend
+a page register tools for AI agents running in the user's browser. Each tool has a name, a
+description, a JSON Schema, and a JavaScript function. This spec has Streamlit's frontend
 register four fixed tools in apps that opt in, so a browser agent can read what the user is
 looking at, read the full data behind it, explore a private copy of the user's session,
 and, at the higher level, change the user's view while they watch. The tools speak the
 [agent API](../2026-08-28-agent-app-interface/product-spec.md)'s snapshot and request
 contract, already served over HTTP and through the
 [MCP endpoint](../2026-10-15-agent-app-mcp-endpoint/product-spec.md), and they run over the
-page's own WebSocket, so they add no route and no authority the tab does not already have.
+page's own WebSocket, so they add no route and act only as the tab's user.
 
 ## Problem
 
@@ -44,15 +44,15 @@ little from it:
 - **Reproducing the user's view is lossy.**
   [#17394](https://github.com/streamlit/streamlit/pull/17394) embeds the user's widget
   values in the page so an agent can replay them into its own session, but dependent
-  filters have to be sent one at a time, dialogs cannot be reproduced, state only code set
-  is lost, and a form replay shows the branch after a submit.
+  filters have to be sent one at a time, dialogs cannot be reproduced, session state set
+  only by code is lost, and a form replay shows the branch after a submit.
   [#17401](https://github.com/streamlit/streamlit/pull/17401)'s server-side copy
   reproduces far more, but needs a grant delivered through the page.
 - **It cannot act for the user.** Nothing an agent does over HTTP or MCP appears in the
   user's tab. A user who asks "set this to Europe and Q3" has to repeat the agent's steps
   by hand.
 - **It does not carry the user's identity.** An `st.login` app is signed out for the agent
-  API until its follow-up #10, while the user's tab is signed in.
+  API, while the user's tab is signed in. Agent sign-in is the agent API's follow-up #10.
 - **A browser agent rarely knows it exists.** The API is off by default, and a browser
   agent seldom has an app's MCP server configured.
 
@@ -94,8 +94,9 @@ execute, annotations })`, and agents the browser trusts can list and call those 
    works in a private copy of the user's session, starting from their filters, and
    reports back. The user's view stays as it is.
 3. **Do it for me.** "Set the region to Europe, pick Q3, and switch to the reports page."
-   The agent changes the user's own session. The user watches the widgets change and keeps
-   working from the result.
+   The agent changes the user's own session in two calls, the values and then the page,
+   since the agent API does not take a page change together with widget changes. The user
+   watches the widgets change and keeps working from the result.
 
 ## Proposal
 
@@ -115,7 +116,13 @@ browserAgentAccess = "read"
 
 The setting is independent of `server.enableAgentApi`. That one decides whether programs
 outside a browser can reach the app. This one decides what an agent in the user's own
-browser may do in the user's tab. See [Its own setting](#its-own-setting).
+browser may do in the user's tab. See
+[A setting separate from the agent API](#a-setting-separate-from-the-agent-api).
+
+The server enforces the level, not only the frontend's registration: it refuses an
+operation the level does not allow before anything runs, so page script cannot call
+`interact` under `"read"`. Like `server.enableAgentApi`, the option belongs to the
+deployment, and `st.set_option` cannot change it.
 
 The frontend registers the tools only where `document.modelContext` exists, so other
 browsers see no change. To try it locally:
@@ -189,28 +196,31 @@ The MCP endpoint's `get_data`, with the same paging, page-size budget, size cap,
 get_data(url, session_id=None, offset=0, limit=500)
 ```
 
-Without `session_id` it reads files the tab's latest result references. With one, it reads
-files that `interact` session's latest result references. Every file it can read was
-already sent to this browser. `readOnlyHint: true`.
+Without `session_id` it reads files the tab's latest result references, which this browser
+already received. With one, it reads files that `interact` session's latest result
+references. The copy ran app code with the agent's values, so those files may never have
+reached the tab. `readOnlyHint: true`.
 
 #### `interact`
 
 The agent API's operation, with one difference: a creating call starts from the tab.
 
 - **`{}` copies the tab's session into a new agent session** on the server, including
-  session state, widget values, page, query parameters, browser context, and uploads, and
-  runs it once without firing callbacks. Nothing passes through the browser or the agent.
-  From then on it is an ordinary agent session, with the request, snapshot, validation,
-  `run_timed_out` collection, and errors of HTTP and MCP.
+  session state, widget values, page, query parameters, `st.context` as the tab reports
+  it, and uploads, and runs it once without firing callbacks. Nothing passes through the
+  browser or the agent. From then on it is an ordinary agent session, with the request,
+  snapshot, validation, `run_timed_out` collection, and errors of HTTP and MCP.
 - **The tab's view does not change.** The copy belongs to the agent.
 - **It is bound to the tab.** It carries the tab user's identity, `st.user` included, so an
   `st.login` app is signed in, which HTTP and MCP cannot offer until agent sign-in. Only
-  this tab's tools can address it. It ends when the tab's session ends or after
-  `server.agentSessionTTL`. A tab holds at most three copies, and they count toward
-  `server.agentMaxSessions`.
+  this tab's tools can address it: the server answers its id with `unknown_session` over
+  HTTP, over MCP, and from any other tab. It ends when the tab's session ends or after
+  `server.agentSessionTTL`. A tab holds at most three copies, and a fourth is
+  `too_many_sessions`. Copies count toward `server.agentMaxSessions`, which applies whether
+  or not `server.enableAgentApi` is on.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`. A copy isolates the
-  view, not the side effects: callbacks still run, and anything they write is written as
-  the user.
+  view, not the side effects: later `interact` calls on the copy fire callbacks, and
+  anything they write is written as the user.
 
 #### `change_view`
 
@@ -224,13 +234,20 @@ Changes the tab's session the way the user would.
   so callbacks fire in page order and fragment scoping works as in the browser. They are
   then pushed to the tab's widgets the way an `st.session_state` write is, so the tab shows
   them and the user's next interaction keeps them. Widgets without a `key` are included.
-- **The user sees it happen and can stop it.** While a call runs, the tab's widgets are
-  disabled, so a click cannot resend old values over the agent's, and the app shows that an
-  assistant is changing it, with a stop control. Stopping, or the agent aborting the call,
-  stops the run as the stop button does.
-- **The user's unfinished edits win.** A request that touches a field the user has edited
-  and not committed is refused with `pending_user_edit` before anything runs, naming the
-  field. The agent can ask the user to submit or discard the edit.
+  The tab also does the browser's half that the agent API skips (its follow-up #8): a
+  submit clears a `clear_on_submit` form, and a widget bound with `bind="query-params"`
+  rewrites the URL.
+- **The user sees it happen and can stop it.** Until the call's run settles, even after
+  the call returns `run_timed_out`, the tab's widgets are disabled, so a click cannot
+  resend old values over the agent's, and the app shows that an assistant is changing it,
+  with a stop control. Stopping, or the agent aborting the call, stops the run as the stop
+  button does.
+- **The user's unfinished edits win over the agent's values.** A request that touches a
+  field the user has edited and not committed is refused with `pending_user_edit` before
+  anything runs, naming the field. The agent can ask the user to submit or discard the
+  edit. A request that does not touch the field can still discard the edit, by switching
+  the page or removing the widget. Whether to refuse those too is
+  [open](#open-questions).
 - **Forms need a submit trigger**, as everywhere in the agent API. Filling a form and
   leaving the submit to the user is [out of scope](#out-of-scope).
 - **The result** is the snapshot once the run settles. A run past `server.agentRunTimeout`
@@ -238,7 +255,11 @@ Changes the tab's session the way the user would.
   once it settles. One `change_view` runs per tab at a time; another is `session_busy`.
 - **Annotations:** `readOnlyHint: false` and `consequentialHint: true`.
 
-`pending_user_edit` is the only new error code. Every other refusal is the agent API's.
+`pending_user_edit` is the only new error code. Every other refusal is the agent API's. As
+in the MCP endpoint, a refusal is the tool's result, with the error JSON as its text, so
+the model reads the `code` and corrects the call. A `run_timed_out` message names the call
+that collects the run: `read_view` after `read_view` or `change_view`, and `interact` with
+only `session_id` after `interact`.
 
 ```json
 { "widget_state": { "region": "Europe", "quarter": "2026-Q3" } }
@@ -252,29 +273,34 @@ downloads and dataframe chunks, and the server dispatches it to the session behi
 WebSocket. Calls never use the agent API's HTTP routes, which refuse a browser `Origin`
 they were not configured for, read no cookie, and cannot reach the tab's session.
 
-**Browser sessions that support WebMCP record descriptions.** A snapshot is built from the
-description each command records, and today only sessions the agent API created record
-one. A browser session also records when its browser supports WebMCP and
-the setting is not `"off"`. The frontend reports in every rerun request whether
-`document.modelContext` exists, and the server records from the first run and keeps that
-session's merged tree, as it does for an agent session. Browsers without WebMCP, and apps
-with the setting off, pay nothing. Recording starts with the session rather than at the
-first tool call: a late start would leave the current page undescribed until the next run,
-and starting a run just to describe the page would run app code the user did not ask for.
+**Only sessions that can call the tools record descriptions.** A snapshot is built from
+the description each command records, which today only agent sessions do. The frontend
+reports in every rerun request, the first included, whether `document.modelContext`
+exists. When it does and the setting is not `"off"`, the server records from the first run
+and keeps that session's merged tree, as it does for an agent session. Other browsers, and
+apps with the setting off, record nothing. Recording starts with the session rather than at
+the first tool call: a late start would leave the current page undescribed until the next
+run, and starting a run just to describe the page would run app code the user did not ask
+for.
 
-**Only what the browser received.** Descriptions publish nothing the browser does not
-receive, and `get_data` reads files this tab already received. The tools give an agent the
-tab's content in a form it can read, and nothing more.
+**Reads of the tab return only what the tab received.** Descriptions publish nothing the
+browser does not receive, and `get_data` without `session_id` reads files this tab already
+received. An `interact` copy is the exception: it runs app code with the agent's values,
+so its results can hold data the tab never received, the same data the tab would get by
+setting those values itself.
 
 ### What the user sees
 
 - **For `read_view` and `get_data`, nothing.** They read what the tab already has.
 - **For `interact`, a quiet indicator** while a call runs, saying that an assistant is
   working in a copy of the app, since that copy runs code as the user.
-- **For `change_view`, the change itself:** disabled widgets while it runs, an indicator
-  with a stop control, and then the widgets showing the new values.
+- **For `change_view`, the change itself:** disabled widgets until its run settles, an
+  indicator with a stop control, and then the widgets showing the new values.
 
 The indicator's design is for the design review and the tech spec. It adds no public API.
+Whatever the design, the stop control is a button with an accessible name on the keyboard
+path that stays reachable while an `st.dialog` is open, and both indicators are announced
+to screen readers as text.
 
 ### Relation to the agent API, the MCP endpoint, and MCP Apps
 
@@ -306,11 +332,15 @@ session. A renderer of the snapshot is the standalone semantic renderer the pare
 rules out. The real Streamlit frontend needs the host to allow the app's origin as a nested
 frame (`frameDomains`), which hosts may restrict and should warn about, and it needs a
 browser attached to an agent session, which is the reverse of `interact`'s copy and pushes
-server state into a browser the way `change_view` does. Three things carry over: the
-snapshot contract; app-only tools (`visibility: ["app"]`), which would let the view call
-`interact` without adding tools to the model's list; and `ui/update-model-context`, the MCP
-Apps counterpart to `read_view`, which would tell the model what the user changed in the
-view. It deserves its own spec after this one. The pieces this spec builds, namely browser
+server state into a browser the way `change_view` does. Three things carry over:
+
+- The snapshot contract.
+- App-only tools (`visibility: ["app"]`), which would let the view call `interact` without
+  adding tools to the model's list.
+- `ui/update-model-context`, the MCP Apps counterpart to `read_view`, which would tell the
+  model what the user changed in the view.
+
+It deserves its own spec after this one. The pieces this spec builds, namely browser
 sessions that record, copying a session, and pushing server-applied values into a browser,
 are the ones it would reuse.
 
@@ -323,10 +353,10 @@ are the ones it would reuse.
 - **An app in an iframe**, such as Community Cloud's `/~/+/` frame, `?embed=true` in a
   portal, or SiS in Snowsight, can register tools only when its frame is same-origin with
   the host page or the host grants `allow="tools"`. Community Cloud's frame is same-origin
-  with its wrapper, so registration works there. Whether a browser's built-in agent sees tools registered in a
-  frame is still open in WebMCP, which is considering hiding them unless the frame opts in.
-  Until that settles, an embedded app's tools may be visible only to extensions and
-  same-origin page agents.
+  with its wrapper, so registration works there. Whether a browser's built-in agent sees
+  tools registered in a frame is still open in WebMCP, which is considering hiding them
+  unless the frame opts in. Until that settles, an embedded app's tools may be visible
+  only to extensions and same-origin page agents.
 - **SiS** needs Snowsight to grant `allow="tools"`. An `interact` copy takes the tab's
   WebSocket handshake headers, so a short-lived caller's-rights token ages in the copy as
   it does in the tab, which [#17401](https://github.com/streamlit/streamlit/pull/17401)
@@ -334,14 +364,17 @@ are the ones it would reuse.
 
 ### Security
 
-The tools add no authority. A call has exactly the tab's authority, travels over the tab's
-WebSocket, and reaches nothing the page's own JavaScript could not. What is new is who
-drives it: an agent that reads app content, which can carry prompt injection, and acts with
-the signed-in user's identity, where the agent API's sessions are anonymous unless a
-deployment maps identity.
+The tools act only as the tab's user, over the tab's WebSocket. `read_view` and `get_data`
+on the tab return only what the tab received. `interact` and `change_view` run app code as
+that user, as the tab does whenever the user changes a widget, and `interact` goes one step
+past what page script can do today: it starts a server-side copy, whose results can hold
+data the tab never received. What is new is who drives them: an agent that reads app
+content, which can carry prompt injection, and acts with the signed-in user's identity,
+where the agent API's sessions are anonymous unless a deployment maps identity.
 
 - **Opt-in, in levels.** Off by default. `"read"` exposes only what the tab already shows.
-  Anything that runs app code needs `"interact"`.
+  Anything that runs app code needs `"interact"`. The server enforces the level, and app
+  code cannot change it.
 - **Writes are consequential.** `interact` and `change_view` set `consequentialHint`, so a
   browser that confirms consequential tools asks before each call, and neither is
   read-only. As in the MCP endpoint, no action is labeled safe, and the extra confirmations
@@ -349,13 +382,14 @@ deployment maps identity.
 - **Results are untrusted, and tool metadata is never app-authored.**
 - **Exposure stays at WebMCP's default:** the page itself, same-origin frames, and agents
   the browser trusts. This spec exposes nothing to other origins through `exposedTo`.
-- **Code already in the page gains nothing.** Custom components, and `st.html` with scripts
-  allowed, can call these tools like the page's other code, and they can already read and
-  drive the page.
+- **Code already in the page gains little.** Custom components, and `st.html` with scripts
+  allowed, can call these tools like the page's other code. They can already read and
+  drive the page, and `interact` adds only a copy that runs as the same user.
 - **The user stays in the loop for changes.** `change_view` shows what it does, disables
-  input while it runs, can be stopped, and never overwrites the user's unfinished edits.
+  input until its run settles, can be stopped, and refuses to set a field the user is
+  still editing.
 - **Copies are bounded and bound.** At most three per tab, under the tab's identity only,
-  ending with the tab.
+  unknown to HTTP and MCP, and ending with the tab.
 
 ### Rollout
 
@@ -365,10 +399,12 @@ Three steps, each shipping on its own. A level registers only the tools that hav
    sessions whose browser supports WebMCP, and the setting with `"off"` and `"read"`.
 2. **Explore:** `interact`. Needs the session copy from
    [#17401](https://github.com/streamlit/streamlit/pull/17401) as a supported feature:
-   copying on the server, binding to the tab, and the per-tab bound.
+   copying on the server without stalling the event loop other sessions share, binding to
+   the tab, and the per-tab bound.
 3. **Change the view:** `change_view`. Needs agent-applied values pushed to the tab's
    widgets through the existing `set_value` path, widgets without a `key` included, a check
-   that stateful containers follow those values, the input lock, indicator, and stop
+   that stateful containers follow those values, the tab's `clear_on_submit` and
+   bound-parameter behavior after an agent's submit, the input lock, indicator, and stop
    control, and detection of uncommitted edits in the frontend.
 
 End-to-end tests inject a stub `document.modelContext` through Playwright, since CI
@@ -460,9 +496,11 @@ brings them to the widgets** ✅ PREFERRED
 
 - Pros: In [#17401](https://github.com/streamlit/streamlit/pull/17401)'s spike, a copy
   reproduced 5 of 6 state lines in one request, where replay got 3 of 6 in 13 requests. It
-  carries state only code set, uploads, and an open dialog, and fires no callbacks.
-- Cons: Copying large state blocks the server's event loop (1.26 s for a million dicts in
-  the spike), duplicates memory, and couples to session internals.
+  carries session state set only by code, uploads, and an open dialog, and fires no
+  callbacks.
+- Cons: The spike's copy of large state blocked the server's event loop (1.26 s for a
+  million dicts), so the supported copy must not. It also duplicates memory and couples to
+  session internals.
 
 **Option 2: Replay the tab's widget values into a fresh agent session**, from
 [#17394](https://github.com/streamlit/streamlit/pull/17394)'s embedded document
@@ -471,7 +509,7 @@ brings them to the widgets** ✅ PREFERRED
 - Cons: Dependent filters one at a time, dialogs and code-only state lost, and callbacks
   fire again.
 
-### Its own setting
+### A setting separate from the agent API
 
 **Option 1: A `client.browserAgentAccess` setting with levels** ✅ PREFERRED
 
@@ -515,27 +553,45 @@ brings them to the widgets** ✅ PREFERRED
    call, at the price of an undescribed page until the next run.
 2. **Should `"read"` become the default?** It shows a browser agent only what the tab
    already received.
-3. **Should `interact` be consequential?** A browser that confirms consequential tools
-   would ask before every step of an exploration, although the user's view never changes.
-   But its callbacks write as the user.
+3. **Should `interact` be consequential, and can the user stop it?** A browser that
+   confirms consequential tools would ask before every step of an exploration, although
+   the user's view never changes. But its callbacks write as the user, and its quiet
+   indicator has no stop control, unlike `change_view`'s.
 4. **Should `client.disableDataExport` turn off `get_data`?** That option hides export
    controls and is documented as not being a security control, and the agent API ignores
-   it. An author who set it may still not expect an assistant to page through a table.
+   it. An author who set it may still not expect an assistant to page through a table, or
+   through one the tab never showed, from an `interact` copy.
 5. **How do embedded apps get their tools seen?** That depends on WebMCP's decision about
    frames and built-in agents. Community Cloud and Snowsight may need to opt their app
    frames in.
 6. **Is the setting's name right?** `client.browserAgentAccess` names the audience and the
    levels. An alternative is to name the standard, such as `client.webmcp`, which is easier
    to search for but ties the option to a draft's name.
+7. **Should `change_view` get its own level?** `"interact"` gains `change_view` only in
+   rollout step 3, so a deployment that opted into exploration would later let an agent
+   drive its users' tabs. A separate level, or a promise that `"interact"` will not grow,
+   avoids that.
+8. **Should `change_view` protect every unfinished edit?** It refuses a request that sets
+   a field the user is editing, but a page change, or a value that removes an edited
+   widget, still discards that edit. Refusing any request while an edit is pending is
+   safer and blocks the agent more often.
+9. **How do the tools treat a run the agent did not start?** A `run_every` fragment can
+   keep a tab almost always running, so `read_view` could wait until `run_timed_out`
+   unless fragment runs count as settled. `change_view` could wait for a run the user
+   started or refuse with `session_busy`, and `interact` could copy the last settled state
+   or wait for the run to finish.
+10. **Should tab copies have their own budget?** They count toward
+    `server.agentMaxSessions`, so 34 tabs holding three copies each pass the default of
+    100 and turn away HTTP and MCP agents with `too_many_sessions`.
 
 ## Checklist
 
 | Item                       | ✅ or comment |
 | -------------------------- | ------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP. Community Cloud's frame is same-origin with its wrapper, so tools register there, but whether built-in agents see tools in a frame is still open in WebMCP. SiS needs Snowsight to grant `allow="tools"`. Multi-replica deployments need nothing, since calls ride the tab's WebSocket. During the origin trial, each deployment supplies its own token, for example as an `Origin-Trial` header. Browsers without WebMCP are unaffected. |
+| Works on SiS, Cloud, etc?  | ⚠️ A top-level app works in any browser that supports WebMCP, and other browsers are unchanged. An app in an iframe registers tools when it is same-origin with the host page or the host grants `allow="tools"`. See [Platforms and embedding](#platforms-and-embedding) for Community Cloud, SiS, multiple replicas, and origin-trial tokens. |
 | No breaking API changes    | ✅ Additive: one config option, new operation payloads on the WebSocket protocol, and a capability flag in rerun requests. No `st.*` changes. Apps with the setting off, and browsers without WebMCP, behave as today. |
 | No new dependencies        | ✅ No runtime dependencies. TypeScript types for WebMCP are hand-written or come from `webmcp-types` as a dev dependency. |
 | Metrics collected          | Yes, unlike the agent API: these calls happen in a browser, so the frontend's existing usage stats (`browser.gatherUsageStats`) can count calls and outcome classes per tool, and whether the browser supports WebMCP, without any content. |
-| Any security/legal impact? | ⚠️ No new authority, since calls have exactly the tab's authority over its own WebSocket. The new risk is an agent acting with the signed-in user's identity after reading untrusted app content. Mitigations: off by default, a read-only level, `consequentialHint` on every tool that runs app code, `untrustedContentHint` on every result, fixed tool metadata, visible and stoppable changes, and copies bound to the tab. |
+| Any security/legal impact? | ⚠️ Calls act only as the tab's user, over its own WebSocket, and reads of the tab return only what it received. The new risks are an agent acting with the signed-in user's identity after reading untrusted app content, and `interact` copies, which run app code as that user and can return data the tab never received. Mitigations: off by default with the level enforced by the server, a read-only level, `consequentialHint` on every tool that runs app code, `untrustedContentHint` on every result, fixed tool metadata, visible and stoppable changes, and copies bound to the tab. |
 | Any docs changes needed?   | A guide to browser agents: the levels, testing with Chrome's flag and the Model Context Tool Inspector, and what an agent can do at each level. Author guidance that a widget's range or options are not access control applies here too. Deployment notes on origin-trial tokens and on apps in iframes. The agent API reference gains the four tools. |
 | Any other risks?           | WebMCP is a draft that is still changing, and only Chromium-based browsers ship it. Building on its stable core, the imperative `registerTool` with fixed tools, keeps the exposure small. A confusing app is a confusing tool here too. |
