@@ -42,10 +42,9 @@ from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import RuntimeState
+from streamlit.runtime import RuntimeState, forward_msg_queue
 from streamlit.runtime.agent import snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
-from streamlit.runtime.forward_msg_queue import is_toast_delta
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -150,9 +149,10 @@ class AgentSessionClient(SessionClient):
     """
 
     def __init__(self) -> None:
-        # Deltas with the id of the run that produced them, in arrival order,
-        # so a later write to the same position wins.
-        self._deltas: list[tuple[str, ForwardMsg]] = []
+        # Deltas with the id of the run that produced them and the interaction
+        # they arrived in, in arrival order, so a later write to the same
+        # position wins.
+        self._deltas: list[tuple[str, int, ForwardMsg]] = []
         # Where in `_deltas` the current run last wrote an element at each
         # position. An element rewritten in place -- `st.write_stream` chunks,
         # a progress loop, a placeholder updated in a loop -- then replaces its
@@ -167,9 +167,9 @@ class AgentSessionClient(SessionClient):
         # The fragments the most recent run re-rendered, which is what that run
         # owns when it finishes and stale deltas are dropped.
         self._fragments_this_run: frozenset[str] = frozenset()
-        # Every run the current interaction started, so a toast one of them
-        # raised before `st.rerun()` survives the run that ends the chain.
-        self._interaction_run_ids: set[str] = set()
+        # Counts interactions, so a toast raised during this one, such as right
+        # before `st.rerun()`, survives the run that ends the chain.
+        self._interaction = 0
         # When the last run finished, which is session activity even when no
         # request is waiting for it.
         self.finished_at = time.monotonic()
@@ -194,7 +194,7 @@ class AgentSessionClient(SessionClient):
     @property
     def messages(self) -> list[ForwardMsg]:
         """The messages that make up the page, as a snapshot reads them."""
-        return [*self._lifecycle.values(), *(msg for _, msg in self._deltas)]
+        return [*self._lifecycle.values(), *(msg for _, _, msg in self._deltas)]
 
     @property
     def client_context(self) -> ClientContext | None:
@@ -203,14 +203,13 @@ class AgentSessionClient(SessionClient):
     def begin_interaction(self) -> None:
         """Forget what the previous interaction's runs reported."""
         self.query_string_update = None
-        self._interaction_run_ids = set()
+        self._interaction += 1
 
     def _write(self, msg: ForwardMsg) -> None:
         msg_type = msg.WhichOneof("type")
 
         if msg_type == "new_session":
             self._run_id = msg.new_session.script_run_id
-            self._interaction_run_ids.add(self._run_id)
             self._fragments_this_run = frozenset(msg.new_session.fragment_ids_this_run)
             self._element_at = {}
 
@@ -242,7 +241,7 @@ class AgentSessionClient(SessionClient):
         if msg.delta.WhichOneof("type") == "new_element":
             index = self._element_at.get(position)
             if index is not None:
-                self._deltas[index] = (self._run_id, msg)
+                self._deltas[index] = (self._run_id, self._interaction, msg)
                 return
             self._element_at[position] = len(self._deltas)
         else:
@@ -253,7 +252,7 @@ class AgentSessionClient(SessionClient):
             depth = len(position)
             for cached in [p for p in self._element_at if p[:depth] == position]:
                 del self._element_at[cached]
-        self._deltas.append((self._run_id, msg))
+        self._deltas.append((self._run_id, self._interaction, msg))
 
     def _drop_stale_deltas(self) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
@@ -262,18 +261,21 @@ class AgentSessionClient(SessionClient):
         replaces the whole tree, so anything older is gone, while a fragment run
         replaces only its own region and leaves the rest of the app standing.
         A toast is the exception, since the frontend never clears one as stale.
-        A toast that an earlier run of this interaction raised, such as right
-        before `st.rerun()`, stays.
+        A toast raised during this interaction, such as right before
+        `st.rerun()`, stays.
         """
         running = self._fragments_this_run
         # Its indexes point into the list being replaced.
         self._element_at = {}
         self._deltas = [
-            (run_id, msg)
-            for run_id, msg in self._deltas
+            (run_id, interaction, msg)
+            for run_id, interaction, msg in self._deltas
             if run_id == self._run_id
             or (running and msg.delta.fragment_id not in running)
-            or (run_id in self._interaction_run_ids and is_toast_delta(msg))
+            or (
+                interaction == self._interaction
+                and forward_msg_queue.is_toast_delta(msg)
+            )
         ]
 
 
