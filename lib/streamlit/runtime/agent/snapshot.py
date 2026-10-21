@@ -36,6 +36,8 @@ from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from google.protobuf.message import Message
 
     from streamlit.runtime.agent.tree import Node
@@ -564,34 +566,36 @@ def build_snapshot(
 
 
 def rebase_media_urls(
-    document: dict[str, Any], *, media_path: str, prefix: str
+    document: dict[str, Any], *, paths: Iterable[str], prefix: str
 ) -> None:
     """Prefix a snapshot's media URLs with the way back to the app's root, in place.
 
     Media storage hands out URLs relative to the app's root (``/media/<id>``),
-    which a browser resolves against its own base path. A client of this API
+    and so does an app that serves its own static files (``/app/static/<file>``).
+    A browser resolves both against its own base path. A client of this API
     has no base path to resolve against, so the URL has to say how to reach the
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
     is a 404 or a login redirect.
 
     Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
-    under ``media_path``, so an external link an app displays is never
+    under one of ``paths``, so an external link an app displays is never
     rewritten.
 
     Parameters
     ----------
     document : dict[str, Any]
         A snapshot document from ``build_snapshot``.
-    media_path : str
-        The path media storage serves files under, such as ``"/media"``.
+    paths : Iterable[str]
+        The paths below the app's root that media URLs start with, such as
+        ``"/media"`` and ``"/app/static"``.
     prefix : str
         The relative path from the request's URL to the app's root, such as
         ``"../.."``. It is prepended to each media URL.
     """
-    media_prefix = media_path.rstrip("/") + "/"
+    path_prefixes = tuple(path.rstrip("/") + "/" for path in paths)
 
     def rebase(value: Any) -> Any:
-        if isinstance(value, str) and value.startswith(media_prefix):
+        if isinstance(value, str) and value.startswith(path_prefixes):
             return prefix + value
         # Several images report a list of URLs.
         if isinstance(value, list):

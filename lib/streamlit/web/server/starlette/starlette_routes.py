@@ -166,6 +166,8 @@ BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
 BASE_ROUTE_COMPONENT: Final = "component"
 # Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
 BASE_ROUTE_STATIC: Final = "static"
+# Route prefix for the app's own static files (`server.enableStaticServing`).
+BASE_ROUTE_APP_STATIC: Final = "app/static"
 
 # Health check routes
 ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
@@ -194,7 +196,7 @@ _SAME_SITE_HEADER_VALUES: Final = {
 }
 
 # App static files
-_ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+_ROUTE_APP_STATIC: Final = f"{BASE_ROUTE_APP_STATIC}/{{path:path}}"
 
 # Framing margin for the streaming upload-size cap in `_upload_put`: the raw
 # request body is rejected once it exceeds `server.maxUploadSize` plus this
