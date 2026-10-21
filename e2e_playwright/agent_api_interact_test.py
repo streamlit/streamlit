@@ -41,15 +41,15 @@ _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
 _TOKEN_VALUE: Final = "e2e-callers-rights-token"
 # A value no deployment's real identity could have.
 _SPOOFED_IDENTITY: Final = "spoofed-agent@e2e.invalid"
-# Each retry waits up to `server.agentRunTimeout` on the server, so this bounds
+# Each retry waits up to `server.agentWaitTimeout` on the server, so this bounds
 # collecting the slow page's run without client-side sleeps.
 _MAX_COLLECT_ATTEMPTS: Final = 6
 
 
 @pytest.fixture(scope="module")
 def app_server_extra_args() -> list[str]:
-    """Turn the agent API on, with a run timeout the slow page outlasts."""
-    return ["--server.enableAgentApi=true", "--server.agentRunTimeout=5"]
+    """Turn the agent API on, with a wait timeout the slow page outlasts."""
+    return ["--server.enableAgentApi=true", "--server.agentWaitTimeout=5"]
 
 
 def _interact_url(app_base_url: str) -> str:
@@ -89,7 +89,7 @@ def _collect(page: Page, app_base_url: str, session_id: str) -> dict[str, Any]:
         response = _interact(page, app_base_url, {"session_id": session_id})
         if response.status != 202:
             return _snapshot(response)
-        _refusal(response, 202, "run_timed_out")
+        _refusal(response, 202, "still_running")
     pytest.fail(f"The run was not collected in {_MAX_COLLECT_ATTEMPTS} attempts.")
 
 
@@ -241,12 +241,12 @@ def test_parameterized_report_in_one_creating_call(
 
 
 def test_slow_run_times_out_and_is_collected(page: Page, app_base_url: str) -> None:
-    """A run past `server.agentRunTimeout` keeps going; a different request is
+    """A run past `server.agentWaitTimeout` keeps going; a different request is
     refused while it runs, and retries with only `session_id` collect that one
     run instead of starting another.
     """
     timed_out = _refusal(
-        _interact(page, app_base_url, {"page": "slow"}), 202, "run_timed_out"
+        _interact(page, app_base_url, {"page": "slow"}), 202, "still_running"
     )
     session_id = timed_out["session_id"]
     assert _SESSION_ID.fullmatch(session_id)

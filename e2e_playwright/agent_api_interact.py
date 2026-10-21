@@ -54,7 +54,7 @@ def slow() -> None:
     st.session_state.setdefault("starts", 0)
     st.session_state.setdefault("done", 0)
     st.session_state.starts += 1
-    # Longer than the test module's `server.agentRunTimeout` of 5 seconds, with
+    # Longer than the test module's `server.agentWaitTimeout` of 5 seconds, with
     # room for the test to send another request while this run is still going.
     time.sleep(8)
     st.session_state.done += 1

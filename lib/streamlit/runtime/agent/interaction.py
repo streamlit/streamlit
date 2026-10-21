@@ -343,7 +343,7 @@ class AgentSession:
     # Set whenever `busy` is not, so the retry that collects an interaction
     # whose client left can wait for the session to free up.
     released: asyncio.Event = field(default_factory=_released_event)
-    # An interaction that outlasted the run timeout and whose result nobody has
+    # An interaction that outlasted the wait timeout and whose result nobody has
     # collected yet. Its run keeps going, and a retry waits for it.
     timed_out: _Interaction | None = None
 
@@ -502,7 +502,7 @@ def _idle_since(session: AgentSession, *, settled: bool) -> float | None:
 
     ``settled`` is whether the session's app has settled. Activity is the
     client's last request or the last run finishing, whichever is later, so a
-    run that finishes after `run_timed_out` gets a full TTL to be collected.
+    run that finishes after `still_running` gets a full TTL to be collected.
     While that run is still going only requests count: a run that never
     finishes, such as a loop that calls `st.rerun()`, is reclaimed once its
     client stops asking for it, and closing the session stops it.
@@ -557,7 +557,7 @@ async def interact(
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.
     requested_context = await asyncio.to_thread(_validate_request_shape, request)
-    deadline = time.monotonic() + _run_timeout()
+    deadline = time.monotonic() + _wait_timeout()
 
     handle = request.get("session_id")
     is_new_session = handle is None
@@ -579,9 +579,9 @@ async def interact(
             # fires in.
             if session.busy:
                 raise AgentRequestError(
-                    "run_timed_out",
+                    "still_running",
                     "The app has finished, but its snapshot was still being "
-                    f"built after {_duration(_run_timeout())}. Nothing is lost: "
+                    f"built after {_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
                     session_id=session.handle,
                 ) from None
@@ -632,8 +632,8 @@ async def interact(
         session.released.set()
 
 
-def _run_timeout() -> float:
-    return float(config.get_option("server.agentRunTimeout"))
+def _wait_timeout() -> float:
+    return float(config.get_option("server.agentWaitTimeout"))
 
 
 def _duration(seconds: float) -> str:
@@ -805,10 +805,10 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _duration(_run_timeout())
+            timeout = _duration(_wait_timeout())
             elapsed = _duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
-                "run_timed_out",
+                "still_running",
                 f"The app did not finish within {timeout}, and is still "
                 f"running, {elapsed} after this interaction started. "
                 "Nothing is lost: send a request with only `session_id` to wait "

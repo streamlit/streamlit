@@ -336,7 +336,7 @@ def test_a_client_that_disconnects_cancels_the_wait(
         response = client.post(_PATH, json={})
 
     assert response.status_code == 202
-    assert response.json()["error"]["code"] == "run_timed_out"
+    assert response.json()["error"]["code"] == "still_running"
     assert cancelled.is_set()
 
 
@@ -370,7 +370,7 @@ def _served_app(
         "server.enableAgentApi": True,
         "server.fileWatcherType": "none",
         "server.baseUrlPath": base_url,
-        "server.agentRunTimeout": 10,
+        "server.agentWaitTimeout": 10,
     }
     for name, value in defaults.items():
         overrides.setdefault(name, value)
@@ -413,7 +413,7 @@ st.text(f"runs={run_gate.count('runs')}")
 
 def test_statuses_end_to_end(tmp_path: Path) -> None:
     """A real runtime answers 200, 202, 404, 409, and 429 as the catalog says."""
-    overrides = {"server.agentMaxSessions": 1, "server.agentRunTimeout": 0.2}
+    overrides = {"server.agentMaxSessions": 1, "server.agentWaitTimeout": 0.2}
     with _served_app(tmp_path, _GATED_SCRIPT, overrides) as client:
         run_gate.close()
         timed_out = client.post(_PATH, json={})
@@ -424,12 +424,12 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
         full = client.post(_PATH, json={})
         unknown = client.post(_PATH, json={"session_id": "s_unknown"})
 
-        overrides["server.agentRunTimeout"] = 10
+        overrides["server.agentWaitTimeout"] = 10
         run_gate.opened.set()
         collected = client.post(_PATH, json={"session_id": handle})
 
     assert timed_out.status_code == 202
-    assert timed_out.json()["error"]["code"] == "run_timed_out"
+    assert timed_out.json()["error"]["code"] == "still_running"
     assert busy.status_code == 409
     assert busy.json()["error"]["code"] == "session_busy"
     assert full.status_code == 429

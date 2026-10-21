@@ -123,7 +123,7 @@ def options() -> Iterator[dict[str, Any]]:
     """Config overrides, read at every lookup, so a test can change them."""
     overrides: dict[str, Any] = {
         "server.fileWatcherType": "none",
-        "server.agentRunTimeout": _TIMEOUT,
+        "server.agentWaitTimeout": _TIMEOUT,
         "server.agentSessionTTL": 900,
         "server.agentMaxSessions": 100,
     }
@@ -163,7 +163,7 @@ class _App:
     ) -> dict[str, Any]:
         # `interact` reads the timeout before it first suspends, so a value set
         # here applies to this call alone, even with other calls in flight.
-        self.options["server.agentRunTimeout"] = run_timeout
+        self.options["server.agentWaitTimeout"] = run_timeout
         body = await interaction.interact(
             self.runtime,
             self.registry,
@@ -339,7 +339,7 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
     async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
         run_gate.close()
         timed_out = await app.refused(run_timeout=_SHORT_TIMEOUT)
-        assert timed_out.code == "run_timed_out"
+        assert timed_out.code == "still_running"
         assert "only `session_id`" in timed_out.message
         handle = timed_out.session_id
         assert handle is not None
@@ -350,7 +350,7 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
 
         # A run longer than two timeouts finishes on the third call, as one run.
         again = await app.refused({"session_id": handle}, run_timeout=_SHORT_TIMEOUT)
-        assert again.code == "run_timed_out"
+        assert again.code == "still_running"
         first = await app.call_opening_gate({"session_id": handle})
         assert _counts(first) == {"starts": 1, "done": 1, "runs": 1}
 
@@ -358,7 +358,7 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
         run_gate.close()
         same = {"session_id": handle, "query_params": {"q": ["2"]}}
         assert (await app.refused(same, run_timeout=_SHORT_TIMEOUT)).code == (
-            "run_timed_out"
+            "still_running"
         )
         collected = await app.call_opening_gate(same)
         assert _counts(collected) == {"starts": 2, "done": 2, "runs": 2}
@@ -464,7 +464,7 @@ async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
             early = await app.refused(
                 {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
             )
-            assert early.code == "run_timed_out"
+            assert early.code == "still_running"
             assert early.session_id == handle
             retry = asyncio.create_task(app.call({"session_id": handle}))
             await asyncio.sleep(0.05)
@@ -824,7 +824,7 @@ async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
                 retry = await app.refused(
                     {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
                 )
-                assert retry.code == "run_timed_out"
+                assert retry.code == "still_running"
             full = await app.refused()
             assert full.code == "too_many_sessions"
 

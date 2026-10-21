@@ -800,8 +800,8 @@ class ConfigTest(unittest.TestCase):
                 "secrets.files",
                 "server.address",
                 "server.agentMaxSessions",
-                "server.agentRunTimeout",
                 "server.agentSessionTTL",
+                "server.agentWaitTimeout",
                 "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
@@ -1148,7 +1148,7 @@ class ConfigTest(unittest.TestCase):
         """The agent API options stay hidden and default to the documented values."""
         expected_defaults = {
             "server.enableAgentApi": False,
-            "server.agentRunTimeout": 30,
+            "server.agentWaitTimeout": 30,
             "server.agentSessionTTL": 900,
             "server.agentMaxSessions": 100,
         }

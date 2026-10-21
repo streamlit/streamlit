@@ -218,7 +218,7 @@ async def _until_disconnected(request: Request) -> None:
 async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
     """Await ``work``, cancelling it as soon as the client has gone away.
 
-    A client whose own timeout is shorter than `server.agentRunTimeout` would
+    A client whose own timeout is shorter than `server.agentWaitTimeout` would
     otherwise leave its interaction in flight until the server's timeout, so its
     retry is told the session is busy. Cancelling turns the wait into a
     timed-out run, which the retry collects.
@@ -312,7 +312,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except _ClientGoneError:
             # Nobody reads this; the run is collectable by a retry.
             return error_response(
-                "run_timed_out", "The client disconnected before the run settled."
+                "still_running", "The client disconnected before the run settled."
             )
         except errors.AgentRequestError as exc:
             return error_response(
