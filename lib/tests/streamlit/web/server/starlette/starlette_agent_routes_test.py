@@ -505,6 +505,8 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
 
     st.image(np.zeros((2, 2, 3), dtype=np.uint8))
     st.image("/app/static/cat.png")
+    with st.chat_message("user", avatar="/app/static/cat.png"):
+        st.write("hi")
     """
     static_dir = tmp_path / "static"
     static_dir.mkdir()
@@ -512,11 +514,13 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     with _served_app(tmp_path, script, {}, base_url="base") as client:
         unprefixed = client.post(_PATH, json={})
         response = client.post(f"/base{_PATH}", json={})
+        children = response.json()["tree"]["children"][0]["children"]
         stored, static = [
-            child["props"]["url"]
-            for child in response.json()["tree"]["children"][0]["children"]
-            if child["type"] == "image"
+            child["props"]["url"] for child in children if child["type"] == "image"
         ]
+        chat_message = next(
+            child for child in children if child["type"] == "chat_message"
+        )
         stored_url = urljoin(str(response.url), stored)
         static_url = urljoin(str(response.url), static)
         fetched = [client.get(url) for url in (stored_url, static_url)]
@@ -529,6 +533,7 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     assert static_url == "http://testserver/base/app/static/cat.png"
     assert [media.status_code for media in fetched] == [200, 200]
     assert all(media.headers["Content-Type"].startswith("image/") for media in fetched)
+    assert chat_message["props"]["avatar"] == "../../app/static/cat.png"
 
 
 def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:

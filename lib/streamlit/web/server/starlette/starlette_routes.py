@@ -26,7 +26,7 @@ from contextlib import aclosing
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
-from streamlit import config, file_util
+from streamlit import config, file_util, url_util
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
@@ -167,7 +167,7 @@ BASE_ROUTE_COMPONENT: Final = "component"
 # Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
 BASE_ROUTE_STATIC: Final = "static"
 # Route prefix for the app's own static files (`server.enableStaticServing`).
-BASE_ROUTE_APP_STATIC: Final = "app/static"
+BASE_ROUTE_APP_STATIC: Final = url_util.STATIC_SERVING_ENDPOINT.strip("/")
 
 # Health check routes
 ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
