@@ -800,7 +800,8 @@ disabled, `support`, form, options, fragment, and whether it is in a dialog — 
 rejection names the actual problem: `disabled_widget` for a disabled control,
 `unsupported_element` for one this interface cannot drive, including a keyed display
 element, `not_on_page` for an element of this session that is not in the latest
-snapshot, and `unknown_key` for a key the session never had, such as a typo.
+snapshot, or is in it but cannot be used now because its dialog is closed or the page
+failed to compile, and `unknown_key` for a key the session never had, such as a typo.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
