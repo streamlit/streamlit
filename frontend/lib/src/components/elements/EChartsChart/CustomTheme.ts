@@ -614,7 +614,7 @@ function withTitleStyleDefaults(
     }
     return { ...title, ...extra }
   })
-  // Keep the original option when every title kept its identity.
+  // Return the original option when no title was replaced.
   if (next.every((title, i) => title === titles[i])) {
     return option
   }
@@ -983,7 +983,7 @@ function withLegendLiftedToTop(
   const next = legends.map(legend =>
     isDefaultBottomLegend(legend) ? { ...legend, top: legendTop } : legend
   )
-  // Keep the original option when every legend kept its identity.
+  // Return the original option when no legend was replaced.
   if (next.every((legend, i) => legend === legends[i])) {
     return option
   }
