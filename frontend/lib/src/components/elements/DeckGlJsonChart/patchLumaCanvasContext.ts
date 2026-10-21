@@ -41,6 +41,7 @@
  */
 import { CanvasContext } from "@luma.gl/core"
 
+/** Treats `canvas` and `device` as possibly missing on the fallback path. */
 type MaybePatchedCanvasContext = Omit<CanvasContext, "canvas" | "device"> & {
   __streamlitMaxTexturePatchApplied?: boolean
   canvas?: { width?: number; height?: number }

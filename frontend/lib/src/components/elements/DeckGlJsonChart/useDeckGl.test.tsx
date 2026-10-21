@@ -506,6 +506,41 @@ describe("useDeckGl", () => {
       ])
     })
 
+    it("skips null layers when selection mode makes layers pickable", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          // pydeck serializes a `None` layer as JSON `null`.
+          layers: [
+            null,
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layers = result.current.deck.layers as Array<{
+        id: string
+        props: { pickable?: boolean }
+      } | null>
+      expect(layers).toHaveLength(2)
+      expect(layers[0]).toBeNull()
+      expect(layers[1]?.id).toBe("points")
+      expect(layers[1]?.props.pickable).toBe(true)
+    })
+
     const getPropsWithArrayData = (
       data: unknown[],
       layerId: string | null = "test-layer"

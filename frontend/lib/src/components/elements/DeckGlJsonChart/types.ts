@@ -33,8 +33,8 @@ type SerializedLayer = {
 
 export type ParsedDeckGlConfig = {
   /**
-   * Missing from the empty map sent for `st.pydeck_chart(None)`. pydeck
-   * serializes `None` layers as `null`.
+   * Absent when `st.pydeck_chart(None)` sends an empty map. Entries are
+   * `null` where pydeck serializes a `None` layer.
    */
   layers?: Array<SerializedLayer | null>
   initialViewState: Record<string, unknown>

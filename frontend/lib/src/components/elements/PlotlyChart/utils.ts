@@ -232,7 +232,7 @@ export function applyTheming(
  * @param fragmentId The fragment id
  */
 export function handleSelection(
-  event: Readonly<Plotly.PlotSelectionEvent> | undefined,
+  event: Readonly<PlotlySelectionEventWithSelections> | undefined,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
@@ -255,8 +255,7 @@ export function handleSelection(
   const selectedLassos: PlotlySelection[] = []
   const selectedPoints: Array<Record<string, unknown>> = []
 
-  const { selections, points } =
-    event as Readonly<PlotlySelectionEventWithSelections>
+  const { selections, points } = event
 
   if (points) {
     points.forEach(function (point: PlotlySelectionPoint) {
@@ -382,7 +381,8 @@ export function sendEmptySelection(
  * emit plotly_selected events but do emit plotly_click events.
  * The click data is sent as selection state to maintain API consistency.
  *
- * @param event The Plotly click event
+ * @param event The Plotly click event, or undefined when Plotly invokes the
+ *   callback without event data. A present event includes points.
  * @param widgetMgr The widget manager
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
