@@ -265,6 +265,7 @@ Sometimes a fragment's controls or output need to appear at positions the fragme
 
 - Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot.
 - If that run has nothing to show yet, `container.empty()` reserves the slot.
+- Interacting with a widget that a fragment rendered into an outside container reruns that fragment, not the full app.
 - A `@st.fragment(parallel=True)` fragment cannot write outside or reserve a slot.
 
 ## Dialogs for focused interactions
