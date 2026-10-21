@@ -35,7 +35,10 @@ from streamlit.runtime import runtime_util
 from streamlit.runtime.agent import errors, interaction, snapshot
 from streamlit.web.server import server_util
 from streamlit.web.server.starlette import starlette_websocket
-from streamlit.web.server.starlette.starlette_routes import BASE_ROUTE_MEDIA
+from streamlit.web.server.starlette.starlette_routes import (
+    BASE_ROUTE_APP_STATIC,
+    BASE_ROUTE_MEDIA,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -55,8 +58,9 @@ _T = TypeVar("_T")
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
 
-# Where media storage's URLs start, relative to the app's root.
-_MEDIA_PATH: Final = f"/{BASE_ROUTE_MEDIA}"
+# Where media URLs start, relative to the app's root: media storage, and the
+# app's own static files, which a media element may name directly.
+_MEDIA_PATHS: Final = (f"/{BASE_ROUTE_MEDIA}", f"/{BASE_ROUTE_APP_STATIC}")
 
 # Every URL a response carries is relative to the request that returned it,
 # because a proxy that strips a path prefix before forwarding leaves the app no
@@ -104,7 +108,7 @@ def _render_json(content: Any) -> bytes:
 def _encode_snapshot(document: dict[str, Any]) -> bytes:
     """The response body for a snapshot, with media URLs relative to the request."""
     snapshot.rebase_media_urls(
-        document, media_path=_MEDIA_PATH, prefix=_APP_ROOT_FROM_ROUTE
+        document, paths=_MEDIA_PATHS, prefix=_APP_ROOT_FROM_ROUTE
     )
     return _render_json(document)
 
