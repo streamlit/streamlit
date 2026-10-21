@@ -45,6 +45,7 @@ from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.common import (
     is_array_value_field_name,
     is_element_id,
+    unpack_widget_state_value,
     user_key_from_element_id,
 )
 
@@ -648,18 +649,12 @@ def _check_readable(
     The deserializer runs when the app reads the widget, so a value it cannot
     read raises inside the run instead of here. It also stays in session state,
     so every later run raises again and the session is stuck. The value is
-    unpacked exactly as session state unpacks it.
+    unpacked by the same helper session state uses.
     """
-    field = state.WhichOneof("value")
-    if field is None:
+    if state.WhichOneof("value") is None:
         return
-    wire = getattr(state, field)
-    if is_array_value_field_name(field):
-        wire = wire.data
-    elif field == "json_value":
-        wire = json.loads(wire)
     try:
-        metadata.deserializer(wire)
+        metadata.deserializer(unpack_widget_state_value(state))
     except Exception as exc:
         raise _not_accepted(key) from exc
 

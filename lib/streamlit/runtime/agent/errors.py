@@ -112,8 +112,9 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     "unknown_key": (
         404,
         (
-            "No element with that key exists in this session. Keys come from "
-            "the latest snapshot and are never constructed."
+            "No element with that key exists in this session, or a form, "
+            "container, or display element with it has left the page. Keys "
+            "come from the latest snapshot and are never constructed."
         ),
     ),
     "unknown_session": (

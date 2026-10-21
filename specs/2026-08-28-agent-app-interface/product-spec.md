@@ -772,7 +772,10 @@ How elements are addressed:
 - **An element's `key` is the author's `key` when set, and otherwise Streamlit's element
   ID.** That is the addressing rule `st.session_state` already uses, so `widget_state`
   reads like session state and introduces no new identity scheme. The two forms cannot
-  collide, because keys beginning with the element-ID prefix are reserved.
+  collide, because keys beginning with the element-ID prefix are reserved. As in
+  `st.session_state`, a keyed widget also answers to its element ID, although the
+  snapshot reports only the authored key. Every check applies under either name, and
+  setting one element under both in a request is refused.
 - **A client acts only on keys from the snapshot it just received.** A generated element
   ID is an opaque, session-scoped handle whose format may change, so nothing outside
   Streamlit should construct, parse, or persist one, and since every response is a fresh
@@ -802,6 +805,9 @@ rejection names the actual problem: `disabled_widget` for a disabled control,
 element, `not_on_page` for an element of this session that is not in the latest
 snapshot, or is in it but cannot be used now because its dialog is closed or the page
 failed to compile, and `unknown_key` for a key the session never had, such as a typo.
+A keyed form, container, or display element registers nothing in the session, so once
+it leaves the page its key gets `unknown_key` too. Neither code changes what a client
+does next, and such an element cannot be set while it is on the page either.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
