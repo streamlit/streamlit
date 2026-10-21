@@ -210,8 +210,8 @@ orders = load_filtered_orders(region)
 ```
 
 ```python
-# GOOD: Cache the expensive source load with a practical bound
-@st.cache_data(ttl="15m", max_entries=20)
+# GOOD: Cache the expensive source load with a freshness bound
+@st.cache_data(ttl="15m")
 def load_orders() -> pd.DataFrame:
     return fetch_orders()
 

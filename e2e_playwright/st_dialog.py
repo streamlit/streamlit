@@ -573,3 +573,20 @@ def dialog_parent_fragment() -> None:
 
 
 dialog_parent_fragment()
+
+
+# Regression coverage for #17562: closing a dialog with the mouse returns focus
+# to the button that opened it, which must not reopen the button's help tooltip.
+@st.dialog("Dialog opened from help button")
+def help_button_dialog() -> None:
+    st.write("This dialog was opened from a button with help.")
+    if st.button("Done", key="help-button-dialog-done-btn"):
+        st.rerun()
+
+
+if st.button(
+    "Open dialog from help button",
+    key="help-button-dialog-btn",
+    help="Help for the dialog trigger",
+):
+    help_button_dialog()

@@ -186,6 +186,14 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
 
+    # Add the agent API route, which answers even when the API is off. Imported
+    # here to keep the agent API's modules out of `import streamlit`.
+    from streamlit.web.server.starlette.starlette_agent_routes import (
+        create_agent_routes,
+    )
+
+    routes.extend(create_agent_routes(runtime, base_url))
+
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
         # TODO(lukasmasuch): Expose main_script_path as property on runtime class

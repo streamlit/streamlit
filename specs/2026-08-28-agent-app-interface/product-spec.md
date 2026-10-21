@@ -252,8 +252,8 @@ is one client submission, which can cause several script runs through callbacks,
 output a browser shows only mid-run, such as a spinner or `st.write_stream` arriving
 chunk by chunk, never appears, while a toast the run raised does.
 
-**A slow run is collected, not restarted.** If the run outlasts `server.agentRunTimeout`,
-the request returns `202 Accepted` with `run_timed_out`, and the run keeps going.
+**A slow run is collected, not restarted.** If the run outlasts `server.agentWaitTimeout`,
+the request returns `202 Accepted` with `wait_timed_out`, and the run keeps going.
 Restarting it on retry would be a trap: a script whose uncached first load always
 outlasts the timeout could never finish, and a retried click would fire twice. What a
 request on that session gets depends on the session's state; other sessions and creating
@@ -270,7 +270,9 @@ A result is collected once; after that, the same request is a new interaction. O
 `session_id` is the retry that always works, and the one the timeout message names:
 after a creating call, the same request, `{}`, would create another session. A client
 that disconnects while waiting, even while its snapshot is being built, is treated as
-timed out, so its retry waits for the run and collects it too. Where a browser
+timed out, so its retry waits for the run and collects it too. A creating call is the
+exception: its client left before receiving the `session_id`, so nothing can retry on
+that session, and it is closed. Where a browser
 interaction would interrupt a running run, v1 answers `session_busy`, because the client
 may still come back for the result.
 
@@ -282,7 +284,7 @@ The limits of that guarantee:
   reruns the app and re-applies nothing, so a trigger never fires twice. General retry
   idempotency is the `request_id` of follow-up #4.
 - **A disconnect only helps if it reaches the server**, and a proxy that keeps the
-  upstream connection open hides it. So the run timeout should stay below the timeouts
+  upstream connection open hides it. So the wait timeout should stay below the timeouts
   of the clients a deployment expects, such as the 60 seconds MCP clients built on the
   official TypeScript SDK wait by default; then the `202` always arrives first.
 - **Collection belongs to the session**: whichever request asks first gets the result. A
@@ -296,8 +298,13 @@ would start another session and another full run, and drop the `session_id` the 
 response carried.
 
 **Sessions are reclaimed after `server.agentSessionTTL` of inactivity**, so there is
-nothing to close. A client should still reuse one: every creating call runs the app from
-the start and holds a session until it idles out.
+nothing to close. Inactivity counts from the client's last request or the last run
+finishing, whichever is later, so a run that outlasts the timeout gets a full TTL to be
+collected. While that run is still going, only requests count: a run that never
+finishes, such as one that loops on `st.rerun()`, is reclaimed once its client stops
+asking for it, and reclaiming the session stops the run. A client should still reuse
+one: every creating call runs the app from the start and holds a session until it idles
+out.
 
 **There is no read or delete route.** An `interact` with no changes is an explicit rerun,
 apart from collecting a timed-out run. It re-applies nothing, so a trigger never fires
@@ -620,6 +627,9 @@ Rules:
   - Setting the widget drops its parameter rather than rewriting it, until the app
     writes it back. This is the difference: the runtime reads the address back on every
     rerun, and a stale copy would put the old value back over the edit.
+  - A `page` change with `query_params` sets a shared bound widget, such as one in the
+    sidebar, to the parameter the request names, as it does without a page change. The
+    widget then drops its parameter as a set widget does.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
   duration — so a client keying by label silently drops one. Position in the tree, or an
@@ -751,9 +761,9 @@ Every outcome a client has to handle:
 | A creating call while the server holds `server.agentMaxSessions` sessions | `too_many_sessions`, before anything runs. Checked only when creating a session, so a request on an existing one, including a retry that collects a timed-out run, is never refused for it. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
-| Script failed to compile                                                             | `200` with `status: "error"`, the compile error as an uncaught `exception` in `main`, and no actions.                                     |
+| Script failed to compile                                                             | `200` with `status: "error"`, the compile error copied from the page overlay into an uncaught `exception` in `main`, and no actions. `client.showErrorDetails` does not redact it. |
 | Another request on the same session is still being served, or a different request arrives while a timed-out run is still going | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident. |
-| Run exceeded `server.agentRunTimeout`                                                | `202` with `run_timed_out`, while the app keeps running; a retry collects the run, as described above.                                   |
+| Run outlasted `server.agentWaitTimeout`                                              | `202` with `wait_timed_out`, while the app keeps running; a retry collects the run, as described above.                                   |
 
 ### Actions in v1
 
@@ -837,8 +847,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
   `null` resets a widget to its default, as the browser does, except where a browser
   user can empty a widget that has one: a single-select `st.segmented_control` or
-  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. A
-  list-valued widget is cleared with `[]`.
+  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. The
+  same flag, `clearable`, is set when the browser can clear back to an empty
+  default (`st.selectbox` with `index=None`, and number, date, time, and datetime
+  inputs with no initial value). A list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
@@ -1038,17 +1050,18 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-so an operator can tune them, and each must be a whole number greater than zero; the
-defaults are what v1 ships. The run timeout bounds how long one request waits, not how
-long the run may take, so it sits below clients' own timeouts rather than growing to fit
-the slowest app. The preview size is a hidden option: the default is meant to be right,
-and the setting is there for operators and tests rather than for tuning per app.
+Every bound v1 applies, in one place. The session, timeout, and TTL options become
+public once the API is documented, so an operator can tune them, and stay hidden with
+`server.enableAgentApi` until then; the defaults are what v1 ships. The wait timeout
+bounds how long one request waits, not how long the run may take, so it sits below
+clients' own timeouts rather than growing to fit the slowest app. The preview size is a
+hidden option: the default is meant to be right, and the setting is there for operators
+and tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Whether the API is served              | Off                                                   | `server.enableAgentApi`                                                       |
-| How long one request waits for its run | 30 s, then `run_timed_out`; a retry keeps waiting; a client that disconnects ends the wait at once | `server.agentRunTimeout`                         |
+| How long one request waits for its run | 30 s, then `wait_timed_out`; a retry keeps waiting; a client that disconnects ends the wait at once | `server.agentWaitTimeout`                         |
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
@@ -1129,7 +1142,7 @@ and handling that is what stands between opt-in and on-by-default:
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once nothing renders it.                                                                                                                        | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
-| Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
+| Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. Listing an origin therefore only admits callers that CORS does not restrict, such as a page on the app's own origin or a browser extension; a page on another listed origin is still stopped by the browser, because the route requires a page's request to be JSON, which makes the browser send a preflight the route refuses. | —                                                                                                  |
 | Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, the request's headers reach `st.context.headers` as the handshake's do, and a session only answers requests carrying the identity that created it: the `st.user` those trusted headers map, never other headers, such as a short-lived caller's-rights token, which are refreshed with each run instead. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here, in `st.user` and in the headers an app reads. | Agent sign-in for `st.login` apps (follow-up #10). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
@@ -1294,12 +1307,12 @@ than ranked, and say where one builds on another.
    management drops or moves older tool results, and without it the only way back to
    the current state is a rerun, which can repeat side effects. Exposed through MCP
    too, it lets `get_data` serve that result's files again. v1 already makes the common
-   timeout case safe — a retry after `run_timed_out` collects the run instead of
+   timeout case safe — a retry after `wait_timed_out` collects the run instead of
    repeating it — so what remains is general: optional `request_id` for retry
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
-   `run_timed_out`, as a browser interaction would.
+   `wait_timed_out`, as a browser interaction would.
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.

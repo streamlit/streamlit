@@ -1,6 +1,6 @@
 ---
 name: understanding-streamlit-architecture
-description: Explains Streamlit's internal architecture including backend runtime, frontend rendering, and WebSocket communication. Use when debugging cross-layer issues, understanding how features work end-to-end, planning architectural changes, or onboarding to the codebase. Covers ForwardMsg/BackMsg protocol, script rerun model, element tree, widget state management, and more.
+description: Explains Streamlit's internal architecture including backend runtime, frontend rendering, and WebSocket communication. Use when debugging cross-layer issues, understanding how features work end-to-end, planning architectural changes, or onboarding to the codebase. Covers ForwardMsg/BackMsg protocol, script rerun model, element tree, widget state management, and the delta-path rules shared by the frontend and the agent snapshot.
 ---
 
 # Understanding Streamlit architecture
@@ -107,7 +107,7 @@ Streamlit's execution model differs from traditional web frameworks:
 | Component | File | Purpose |
 |-----------|------|---------|
 | Runtime | `lib/streamlit/runtime/runtime.py` | Singleton managing app lifecycle and sessions |
-| AppSession | `lib/streamlit/runtime/app_session.py` | Per-browser-tab: ScriptRunner + SessionState + ForwardMsgQueue |
+| AppSession | `lib/streamlit/runtime/app_session.py` | Per browser tab or agent API session: ScriptRunner + SessionState + ForwardMsgQueue |
 | ScriptRunner | `lib/streamlit/runtime/scriptrunner/script_runner.py` | Executes user scripts in separate thread |
 | DeltaGenerator | `lib/streamlit/delta_generator.py` | API entry point using mixin pattern |
 | SessionState | `lib/streamlit/runtime/state/session_state.py` | Widget values and user variables |
@@ -146,7 +146,7 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: [references/layout.md](references/layout.md)
 - **Script rerun model**: Widget interaction -> `BackMsg` (`ClientState`) -> backend updates `SessionState` -> script rerun -> `ForwardMsg` deltas.
   - Deep dive: `references/communication.md#widget-interaction-to-script-rerun`
-- **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates.
+- **Delta path system**: Elements are addressed by delta paths (for example `[0, 2, 3]`) to support efficient tree updates. The frontend and the agent snapshot apply the same placement rules.
   - Deep dive: `references/communication.md#delta-ui-changes`
 - **`active_script_hash` semantics**: `ForwardMsg.metadata.active_script_hash` scopes node ownership across multipage and fragment reruns.
   - Deep dive: `references/communication.md#forwardmsg-metadata-active_script_hash`
@@ -158,6 +158,14 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/element-identity.md`
 - **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions. A widget callback can also target named fragments with `st.rerun("<key>")` when the fragment was declared with `@st.fragment(key=...)`.
   - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
+
+## Shared delta-path semantics
+
+The browser and the agent interaction API both place nodes by applying `ForwardMsg` deltas in order. The frontend does this in `AppRoot` (`frontend/lib/src/render-tree/`). The interaction API does it in `merge_deltas` (`lib/streamlit/runtime/agent/tree.py`) when it builds a snapshot.
+
+They follow the same placement rules. A delta path addresses a node. A block of the same type keeps its children, and a different block type or dialog identity replaces them. When those rules change, update both sides.
+
+The two trees are not the same structure. The frontend merges deltas as they arrive, and it also filters by script hash, uses the message cache, and keeps transient nodes such as spinners. The snapshot merges the messages that remain after the run and its fragments settle, then drops nodes and props with no semantic value, such as `st.empty`, `st.space`, skeletons, spinners, width, and height. Leave the implementations separate. Do not require the JSON tree to match the render tree node for node.
 
 ## Element identity
 

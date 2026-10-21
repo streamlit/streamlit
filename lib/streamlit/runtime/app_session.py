@@ -51,7 +51,12 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import (
+    RerunData,
+    ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
+)
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
@@ -68,6 +73,7 @@ if TYPE_CHECKING:
         BackendOperationRequest,
         BackMsg,
     )
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -258,6 +264,17 @@ class AppSession:
         self._run_on_save = config.get_option("server.runOnSave")
 
         self._scriptrunner: ScriptRunner | None = None
+        # Set while the session is settled: no run chain is going, and every
+        # message the last one produced has been sent to the client. The agent
+        # API answers a request only then, because nothing in the message
+        # stream says so: `script_finished` also arrives between the runs of one
+        # chain (a callback, `st.rerun()`), and the Runtime sends messages after
+        # they are enqueued. None until `track_settling` is called, so a browser
+        # session, which nothing waits on, skips the bookkeeping.
+        self._settled: asyncio.Event | None = None
+        # True once the last run chain has ended, until the Runtime confirms
+        # that every message the chain enqueued has been sent to the client.
+        self._settle_pending = False
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.runtime.state import SessionState
@@ -376,6 +393,111 @@ class AppSession:
         """
         return self._browser_queue.flush()
 
+    def on_flushed_messages_sent(self) -> None:
+        """Settle a tracked session once its last run chain's messages are sent.
+
+        The Runtime loop calls this after it has sent the session's client
+        every message that ``flush_browser_queue`` returned. A tracked session
+        whose run chain has ended settles here if nothing has been enqueued
+        since that flush. Otherwise, the enqueue has already requested another
+        flush cycle, which ends with another call.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop.
+        """
+        if (
+            self._settle_pending
+            and self._settled is not None
+            and self._browser_queue.is_empty()
+        ):
+            self._settle_pending = False
+            self._settled.set()
+
+    def track_settling(self) -> None:
+        """Start tracking whether the session is settled.
+
+        ``is_settled`` and ``wait_until_settled`` need this. Call it before the
+        session's first run. A session that never calls it skips the
+        bookkeeping, including the extra flush cycle the end of each run chain
+        requests.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop. The
+        settle state is only kept consistent on that loop, so a tracked session
+        should not rerun on source file changes, which a file watcher thread
+        starts.
+        """
+        if self._settled is None:
+            self._settled = asyncio.Event()
+            if self._scriptrunner is None:
+                self._settled.set()
+
+    @property
+    def is_settled(self) -> bool:
+        """Whether the session's last run chain is over and fully delivered.
+
+        A session is settled when no ScriptRunner exists or is queued to run,
+        and every message the last run chain enqueued has been sent to the
+        session's client. A run chain is everything one ScriptRunner runs
+        before it shuts down, including reruns from callbacks, ``st.rerun``,
+        ``st.switch_page``, and queued fragment runs.
+
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
+        """
+        return self._tracked_settled().is_set()
+
+    async def wait_until_settled(self) -> None:
+        """Wait until the session is settled or shut down.
+
+        Returns at once if the session is already settled. The wait has no
+        bound of its own, because a run that never finishes never settles, so
+        callers should bound it, for example with ``asyncio.timeout``.
+
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop.
+        """
+        settled = self._tracked_settled()
+        # A new run can start between the event being set and this coroutine
+        # resuming, so recheck before returning.
+        while not settled.is_set():
+            await settled.wait()
+
+    def _tracked_settled(self) -> asyncio.Event:
+        if self._settled is None:
+            raise RuntimeError(
+                "This session does not track settling; call track_settling() first."
+            )
+        return self._settled
+
+    def _unsettle(self) -> None:
+        """Mark a tracked session as not settled until its next run chain ends."""
+        if self._settled is not None:
+            self._settle_pending = False
+            self._settled.clear()
+
+    def _settle_once_delivered(self) -> None:
+        """Settle a tracked session once every queued message has been sent to the client."""
+        if self._settled is None:
+            return
+        self._settle_pending = True
+        # The Runtime loop only runs a flush cycle after a message is enqueued,
+        # and the session settles at the end of one. When the run chain's last
+        # messages were already flushed, nothing else may be enqueued, so ask
+        # for a cycle here.
+        if self._message_enqueued_callback:
+            self._message_enqueued_callback()
+
     def shutdown(self) -> None:
         """Shut down the AppSession.
 
@@ -400,6 +522,12 @@ class AppSession:
             self.request_script_stop()
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
+
+            # A closed session is never flushed again, so nothing may keep
+            # waiting for it to settle.
+            if self._settled is not None:
+                self._settle_pending = False
+                self._settled.set()
 
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
@@ -554,7 +682,11 @@ class AppSession:
                 is_auto_rerun=client_state.is_auto_rerun,
                 is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
-                context_info=client_state.context_info,
+                # None, not an empty proto, when the client sent no browser
+                # context, so the run and its saved client state keep saying so.
+                context_info=client_state.context_info
+                if client_state.HasField("context_info")
+                else None,
             )
         else:
             rerun_data = RerunData()
@@ -650,11 +782,93 @@ class AppSession:
             event_loop=self._script_event_loop,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
-        self._scriptrunner.start()
+        try:
+            self._scriptrunner.start()
+        except Exception:
+            # A runner that never started would still accept rerun requests
+            # when fastReruns is off, and they would never run.
+            self._scriptrunner = None
+            raise
+        # Only once the runner has started, so a runner that fails to start
+        # leaves the session settled. Its events reach this loop later, so none
+        # can settle the session before this line runs.
+        self._unsettle()
 
     @property
     def session_state(self) -> SessionState:
         return self._session_state
+
+    @property
+    def page_script_hash(self) -> PageHash:
+        """The script hash of the page the latest run is on, or "" before any run."""
+        return self._client_state.page_script_hash
+
+    def get_pages(self) -> dict[PageHash, PageInfo]:
+        """Return a copy of the app's pages, keyed by page script hash.
+
+        Before ``st.navigation`` has run, this holds a single default entry for
+        the main script.
+        """
+        return self._pages_manager.get_pages()
+
+    def set_run_on_save(self, enabled: bool) -> None:
+        """Set whether a change to a source file reruns the script.
+
+        Unlike the ``set_run_on_save`` BackMsg, this does not notify the
+        client. The next ``new_session`` message carries the value.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether a source file change reruns the script. When this is
+            ``False``, the client is told that the script changed on disk.
+        """
+        self._run_on_save = enabled
+
+    def create_detached_script_run_ctx(
+        self, *, query_string: str, context_info: ContextInfo | None
+    ) -> ScriptRunContext:
+        """Create a script context for reading this session's state outside a run.
+
+        App code that reads ``st.session_state`` or ``st.context``, such as a
+        widget's ``format_func``, needs a script context to find its session.
+        The returned context shares this session's state, user info, fragment
+        storage, pages, and upload manager. It drops every message enqueued
+        through it, cannot request a rerun, and is not attached to any thread.
+
+        Its session state wrapper has its own lock, which does not exclude a
+        running ScriptRunner. Only read through it while no run can start.
+
+        Parameters
+        ----------
+        query_string : str
+            The query string the context reports.
+        context_info : ContextInfo or None
+            The browser context that ``st.context`` reports, or ``None`` when
+            the client stated none.
+
+        Returns
+        -------
+        ScriptRunContext
+            A new context for this session.
+        """
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.runtime.state import SafeSessionState
+
+        return ScriptRunContext(
+            session_id=self.id,
+            _enqueue=lambda _msg: None,
+            query_string=query_string,
+            session_state=SafeSessionState(
+                self._session_state, yield_callback=lambda: None
+            ),
+            uploaded_file_mgr=self._uploaded_file_mgr,
+            main_script_path=self._script_data.main_script_path,
+            user_info=self._user_info,
+            fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
+            context_info=context_info,
+        )
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         pages = self._pages_manager.get_pages()
@@ -682,7 +896,12 @@ class AppSession:
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
-            self._enqueue_forward_msg(self._create_file_change_message())
+            # File watchers run off the event loop, and ForwardMsgQueue is
+            # single-threaded. This handoff prevents delta coalescing from
+            # overwriting the notification.
+            self._call_soon_on_event_loop(
+                lambda: self._enqueue_forward_msg(self._create_file_change_message())
+            )
 
     def _on_secrets_file_changed(self, _: Any) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
@@ -903,6 +1122,10 @@ class AppSession:
                 # Final runner state must be retained and the completed runner
                 # released even when best-effort teardown cannot close the loop.
                 self._scriptrunner = None
+                if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                    # The run chain's messages were all enqueued before this
+                    # event, since every runner event reaches this loop in order.
+                    self._settle_once_delivered()
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             if forward_msg is None:  # pragma: no cover - defensive
@@ -1188,7 +1411,7 @@ class AppSession:
             New run_on_save value
 
         """
-        self._run_on_save = new_value
+        self.set_run_on_save(new_value)
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
     def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:

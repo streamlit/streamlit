@@ -105,6 +105,14 @@ at.button[0].click().run()
 
 Convenience aliases exist where they read naturally: `at.checkbox[0].check()` / `.uncheck()`, `at.multiselect[0].select(value)`, `at.slider[0].set_range(lo, hi)`.
 
+Upload widgets take bytes instead of opening a file picker. These attributes are lists, so index the widget (or look it up by key) before calling a method:
+
+- `at.file_uploader[0].upload(filename, content)` adds one file. Call it once per file.
+- `at.camera_input[0].upload(...)` and `at.audio_input[0].upload(...)` replace the staged photo or recording. Names must end in `.jpg` (camera) or `.wav` (audio).
+- `at.chat_input[0].set_value(text)` sets the message. `.upload()` attaches a file only when the widget accepts files, and that submit is one-shot. `.clear()` removes staged files and leaves the text.
+
+For file, camera, and audio inputs inside a form, click the submit button and call `.run()` to commit staged uploads. `st.chat_input` cannot be used inside `st.form()`.
+
 Widgets, keyed display elements, and keyed containers are addressable by index (order on the page) or by `key`. Use `get_by_key()` when the type does not matter. A missing key raises `KeyError`; a key reused across nodes raises `AppTestError`:
 
 ```python
@@ -218,6 +226,40 @@ def test_counter_increments():
     assert at.metric[0].value == "1"
     assert not at.exception
 ```
+
+### Mocking app code
+
+To mock app code, patch a helper module that the script imports, not the script itself. `AppTest` runs the script from its source on every run; it does not import it. `unittest.mock.patch("app.fetch_data")` imports `app.py` as a regular module. That import runs the script's top-level code outside `AppTest`, and `.run()` never uses the patched module. If that code opens an `st.dialog`, the import raises `StreamlitAPIException`. Keep every `.run()` that should see the mock inside the `with` block:
+
+```python
+# data_source.py
+def fetch_data():
+    return "real"
+
+
+# app.py
+import streamlit as st
+
+import data_source
+
+st.write(data_source.fetch_data())
+
+
+# test_app.py
+from unittest.mock import patch
+
+from streamlit.testing.v1 import AppTest
+
+
+def test_with_mocked_data():
+    with patch("data_source.fetch_data", return_value="mocked"):
+        at = AppTest.from_file("app.py").run()
+    assert at.markdown[0].value == "mocked"
+```
+
+`patch` imports `data_source` when the `with` block starts, before `.run()` adds the script's directory to `sys.path`. The app's directory must already be on the test's `sys.path` (for example, through pytest's `pythonpath` option when tests live in another directory).
+
+Test `@st.fragment` and `@st.dialog` functions through `AppTest`. Called directly from test code, outside a running script, a fragment returns `None` without running its body, and a dialog raises `StreamlitAPIException`.
 
 ## Worked example: a filtered dataframe
 

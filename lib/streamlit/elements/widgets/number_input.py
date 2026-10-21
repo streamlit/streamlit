@@ -957,6 +957,9 @@ class NumberInputMixin:
                 "number_input",
                 key=element_id,
                 action="value",
+                # No initial number, and not required: a later value can be
+                # cleared. `value` itself is only the starting value.
+                clearable=value is None and not required,
                 value_schema=agent_spec.INTEGER
                 if data_type == NumberInputProto.INT
                 else agent_spec.NUMBER,

@@ -43,18 +43,26 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
 ## AppSession (`lib/streamlit/runtime/app_session.py`)
 
-Represents a single browser tab.
+Represents a single browser tab or agent API session.
 
-**Lifecycle**:
+**Lifecycle (browser)**:
 1. WebSocket connects -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
 3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below.
+
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
+
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has been sent to the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs. Only sessions that call `track_settling()` (agent sessions) keep it.
+
+- Creating a runner clears the signal.
+- The runner's `SHUTDOWN` marks a settle as pending and requests a flush cycle. After sending a session's flushed batch, the Runtime loop calls `on_flushed_messages_sent()`, which settles the session once its queue is empty.
+- `await wait_until_settled()` has no timeout of its own, so callers wrap it in `asyncio.timeout`.
 
 ## Session bootstrap ordering
 
@@ -181,6 +189,7 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
+- `/_stcore/agent/interact`: Agent API (POST only; off unless the hidden `server.enableAgentApi` is set)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -191,6 +200,8 @@ Browser connects -> Runtime.connect_session()
                  -> Messages flow bidirectionally
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
+
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies.
 
 ## Key abstractions
 

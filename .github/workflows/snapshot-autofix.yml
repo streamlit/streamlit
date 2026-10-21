@@ -566,6 +566,8 @@ jobs:
             echo "Please review the snapshot changes carefully. They can mask visual bugs if accepted blindly."
             echo
             echo "This PR targets a feature branch and can be merged without review approval."
+            echo
+            echo "This pull request is closed automatically once #${PR_NUMBER} is merged or closed, or once its branch is deleted."
           } > "$RUNNER_TEMP/snapshot-pr-body.md"
 
           snapshot_pr_url="$(gh pr create \
