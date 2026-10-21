@@ -852,6 +852,39 @@ async def test_format_funcs_run_with_the_sessions_context_during_the_build(
 
 
 @pytest.mark.anyio
+async def test_a_write_sent_with_a_new_context_keeps_the_label_it_was_shown(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A label a context-dependent `format_func` showed still picks its option
+    when the same request changes that context.
+    """
+    script = """
+    import streamlit as st
+
+    def label(option):
+        return f"{option} {st.context.timezone}"
+
+    pick = st.selectbox("Pick", ["a", "b"], key="pick", format_func=label)
+    city = st.selectbox(
+        "City", ["a", "b"], key="city", format_func=label, accept_new_options=True
+    )
+    st.text(f"picked={pick!r} {city!r}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call({"context": {"timezone": "Europe/Berlin"}})
+        written = await app.call(
+            {
+                "session_id": first["session_id"],
+                "widget_state": {"pick": "b Europe/Berlin", "city": "b Europe/Berlin"},
+                "context": {"timezone": "Asia/Kolkata"},
+            }
+        )
+
+    assert _line(written, "picked") == "'b' 'b'"
+    assert _keyed(written, "pick")["value"] == "b Asia/Kolkata"
+
+
+@pytest.mark.anyio
 async def test_a_creating_call_that_fails_closes_its_session(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
