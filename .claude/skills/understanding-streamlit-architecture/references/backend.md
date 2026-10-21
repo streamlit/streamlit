@@ -58,10 +58,10 @@ An agent API session uses the same `AppSession`. Its client buffers messages ins
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
 
-**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has reached the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs.
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has been sent to the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs. Only sessions that call `track_settling()` (agent sessions) keep it.
 
 - Creating a runner clears the signal.
-- The runner's `SHUTDOWN` arms a countdown that the next one or two `flush_browser_queue()` calls complete. That proof holds only because the Runtime loop is the sole flusher.
+- The runner's `SHUTDOWN` marks a settle as pending and requests a flush cycle. After sending a session's flushed batch, the Runtime loop calls `on_flushed_messages_sent()`, which settles the session once its queue is empty.
 - `await wait_until_settled()` has no timeout of its own, so callers wrap it in `asyncio.timeout`.
 
 ## Session bootstrap ordering

@@ -3581,6 +3581,13 @@ def _create_tracked_session(*args: Any, **kwargs: Any) -> AppSession:
     return session
 
 
+def _flush_and_send(session: AppSession) -> list[ForwardMsg]:
+    """Flush the session and confirm the batch was sent, as the Runtime loop does."""
+    msgs = session.flush_browser_queue()
+    session.on_flushed_messages_sent()
+    return msgs
+
+
 def test_new_session_is_settled() -> None:
     """A session that never ran is settled."""
     assert _create_tracked_session().is_settled
@@ -3598,8 +3605,8 @@ def test_creating_a_runner_unsettles_the_session() -> None:
 
 @pytest.mark.anyio
 @pytest.mark.usefixtures("distinct_scriptrunners")
-async def test_shutdown_with_empty_queue_settles_after_one_flush() -> None:
-    """With nothing queued, the next flush proves the last batch was sent."""
+async def test_shutdown_requests_the_flush_cycle_that_settles() -> None:
+    """With nothing queued, the flush cycle SHUTDOWN requests settles the session."""
     on_enqueued = MagicMock()
     session = _create_tracked_session(
         asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
@@ -3610,43 +3617,29 @@ async def test_shutdown_with_empty_queue_settles_after_one_flush() -> None:
 
     assert not session.is_settled
     on_enqueued.assert_called_once()
-    session.flush_browser_queue()
+    _flush_and_send(session)
     assert session.is_settled
 
 
 @pytest.mark.anyio
 @pytest.mark.usefixtures("distinct_scriptrunners")
-async def test_shutdown_with_queued_messages_settles_after_two_flushes() -> None:
-    """Trailing messages are handed out by one flush and proven sent by the next."""
-    on_enqueued = MagicMock()
-    session = _create_tracked_session(
-        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
-    )
+async def test_shutdown_settles_only_once_trailing_messages_are_sent() -> None:
+    """Neither flushing the trailing messages nor a send confirmed while they
+    are still queued settles the session; their own confirmed send does.
+    """
+    session = _create_tracked_session(asyncio.get_running_loop())
     runner = _start_runner(session)
     trailing_msg = _handle_enqueue(session, runner)
     _handle_shutdown(session, runner)
-    on_enqueued.reset_mock()
+
+    # The end of a batch flushed before the trailing message was enqueued.
+    session.on_flushed_messages_sent()
+    assert not session.is_settled
 
     assert session.flush_browser_queue() == [trailing_msg]
     assert not session.is_settled
-    on_enqueued.assert_called_once()
 
-    session.flush_browser_queue()
-    assert session.is_settled
-
-
-@pytest.mark.anyio
-@pytest.mark.usefixtures("distinct_scriptrunners")
-async def test_settles_without_message_enqueued_callback() -> None:
-    """A session without a flush callback still settles on its flushes."""
-    session = _create_tracked_session(asyncio.get_running_loop())
-    runner = _start_runner(session)
-    _handle_enqueue(session, runner)
-
-    _handle_shutdown(session, runner)
-    session.flush_browser_queue()
-    session.flush_browser_queue()
-
+    session.on_flushed_messages_sent()
     assert session.is_settled
 
 
@@ -3660,26 +3653,25 @@ async def test_shutdown_from_replaced_runner_is_ignored() -> None:
         _start_runner(session)
 
     _handle_shutdown(session, replaced_runner)
-    session.flush_browser_queue()
-    session.flush_browser_queue()
+    _flush_and_send(session)
 
     assert not session.is_settled
 
 
 @pytest.mark.anyio
 @pytest.mark.usefixtures("distinct_scriptrunners")
-async def test_runner_created_mid_countdown_discards_it() -> None:
+async def test_runner_created_before_the_send_cancels_the_pending_settle() -> None:
     """A new run cancels a pending settle, and its own SHUTDOWN arms a new one."""
     session = _create_tracked_session(asyncio.get_running_loop())
     first_runner = _start_runner(session)
     _handle_shutdown(session, first_runner)
 
     second_runner = _start_runner(session)
-    session.flush_browser_queue()
+    _flush_and_send(session)
     assert not session.is_settled
 
     _handle_shutdown(session, second_runner)
-    session.flush_browser_queue()
+    _flush_and_send(session)
     assert session.is_settled
 
 
@@ -3701,14 +3693,14 @@ async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
     await asyncio.sleep(0)
 
     _handle_shutdown(session, first_runner)
-    session.flush_browser_queue()
+    _flush_and_send(session)
     second_runner = _start_runner(session)
     await asyncio.sleep(0)
     await asyncio.sleep(0)
     assert not waiter.done()
 
     _handle_shutdown(session, second_runner)
-    session.flush_browser_queue()
+    _flush_and_send(session)
     await asyncio.wait_for(waiter, timeout=1)
 
 
@@ -3747,14 +3739,14 @@ def test_dropped_fragment_rerun_leaves_session_settled(
 @pytest.mark.anyio
 @pytest.mark.usefixtures("distinct_scriptrunners")
 async def test_backmsg_exception_without_runner_settles_after_its_messages() -> None:
-    """The exception messages reach the client before the session settles."""
+    """The exception messages are sent to the client before the session settles."""
     session = _create_tracked_session(asyncio.get_running_loop())
     runner = _start_runner(session)
-    # Armed so that the next flush would settle the session.
+    # Leaves a settle pending, which the next confirmed send would complete.
     _handle_shutdown(session, runner)
 
     session.handle_backmsg_exception(RuntimeError("boom"))
-    session.flush_browser_queue()
+    _flush_and_send(session)
     assert not session.is_settled
 
     # Run the deferred callbacks that enqueue the error messages.
@@ -3763,7 +3755,7 @@ async def test_backmsg_exception_without_runner_settles_after_its_messages() -> 
     assert flushed[-1].delta.new_element.WhichOneof("type") == "exception"
     assert not session.is_settled
 
-    session.flush_browser_queue()
+    session.on_flushed_messages_sent()
     assert session.is_settled
 
 
@@ -3780,10 +3772,10 @@ async def test_an_untracked_session_skips_the_settle_bookkeeping() -> None:
     runner = _start_runner(session)
 
     _handle_shutdown(session, runner)
-    session.flush_browser_queue()
+    _flush_and_send(session)
 
     on_enqueued.assert_not_called()
-    assert session._flushes_until_settled is None
+    assert not session._settle_pending
     with pytest.raises(RuntimeError, match="track_settling"):
         _ = session.is_settled
     with pytest.raises(RuntimeError, match="track_settling"):

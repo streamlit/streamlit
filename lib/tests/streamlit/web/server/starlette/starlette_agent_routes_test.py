@@ -166,7 +166,8 @@ async def test_read_body_refuses_a_length_too_long_to_parse() -> None:
     request = MagicMock()
     request.headers = {"Content-Length": "9" * 5000}
 
-    assert await starlette_agent_routes._read_body(request, 100) is None
+    with pytest.raises(starlette_agent_routes._BodyTooLargeError):
+        await starlette_agent_routes._read_body(request, 100)
 
 
 @pytest.mark.parametrize(

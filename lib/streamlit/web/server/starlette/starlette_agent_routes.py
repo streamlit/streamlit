@@ -82,6 +82,10 @@ class _ClientGoneError(Exception):
     """The client closed the connection before its interaction settled."""
 
 
+class _BodyTooLargeError(Exception):
+    """The request body is larger than the route accepts."""
+
+
 def _render_json(content: Any) -> bytes:
     """Render ``content`` exactly as Starlette's ``JSONResponse`` does."""
     return json.dumps(
@@ -127,6 +131,9 @@ def _refused_origin(request: Request) -> bool:
     Host it sends, but it still sends its own `Origin`. Nothing legitimate is
     lost: this route sends no CORS headers, so no page on another origin could
     read a response anyway.
+
+    The WebSocket's Origin check is not reused because it admits same-origin
+    requests, and every origin when `server.enableCORS` is off.
     """
     origin = request.headers.get("Origin")
     if origin is None or server_util.is_allowed_origin(origin):
@@ -135,11 +142,16 @@ def _refused_origin(request: Request) -> bool:
     return True
 
 
-async def _read_body(request: Request, limit: int) -> bytes | None:
-    """The request body, or None once it is larger than ``limit`` bytes.
+async def _read_body(request: Request, limit: int) -> bytes:
+    """The request body, which is empty when the client sent none.
 
     Checked while reading rather than after, so an oversized body is refused
     without being held in memory first.
+
+    Raises
+    ------
+    _BodyTooLargeError
+        Once the body is larger than ``limit`` bytes.
     """
     declared = request.headers.get("Content-Length", "")
     # Compared by length first: `int` refuses to parse thousands of digits.
@@ -148,13 +160,13 @@ async def _read_body(request: Request, limit: int) -> bytes | None:
         and declared.isdigit()
         and (len(declared) > len(str(limit)) or int(declared) > limit)
     ):
-        return None
+        raise _BodyTooLargeError
     chunks: list[bytes] = []
     size = 0
     async for chunk in request.stream():
         size += len(chunk)
         if size > limit:
-            return None
+            raise _BodyTooLargeError
         chunks.append(chunk)
     return b"".join(chunks)
 
@@ -339,7 +351,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except ClientDisconnect:
             # Nobody reads this: the client left while sending the body.
             return Response(status_code=400)
-        if body is None:
+        except _BodyTooLargeError:
             return error_response(
                 "request_too_large",
                 f"The request body exceeds {max_request_bytes} bytes.",
