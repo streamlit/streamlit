@@ -73,7 +73,7 @@ dependencies = [
   # string columns.
   "pandas>=1.5.3,<4",
   # 9.2.0 is the first release that publishes Python 3.11 wheels.
-  "pillow>=9.2.0,<13",
+  "pillow>=9.2.0,<14",
   "pydeck>=0.8.0b4,<1",
   # Release builds generate Python protobuf code with protoc 26.1, whose
   # corresponding minimum runtime version is protobuf 5.26.1.
