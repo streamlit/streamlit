@@ -258,6 +258,7 @@ def test_user_and_context_defaults() -> None:
         import streamlit as st
 
         st.text(repr(st.user.to_dict()))
+        st.text(type(st.user.to_dict()).__name__)
         st.text(repr(st.context.timezone))
         st.text(repr(st.context.url))
         st.text(repr(st.context.theme.type))
@@ -267,6 +268,7 @@ def test_user_and_context_defaults() -> None:
     assert at.context == {}
     assert [t.value for t in at.text] == [
         "{'email': 'test@example.com'}",
+        "dict",
         "None",
         "None",
         "None",
@@ -355,19 +357,20 @@ def test_logout_with_default_user_leaves_user_empty() -> None:
     assert at.user == {}
 
 
+@pytest.mark.parametrize("attribute", ["user", "context"])
 @pytest.mark.parametrize(
-    ("user", "type_name"),
+    ("value", "type_name"),
     [
         pytest.param(None, "NoneType", id="none"),
-        pytest.param([("email", "ada@example.com")], "list", id="list"),
+        pytest.param([("timezone", "UTC")], "list", id="list"),
     ],
 )
-def test_invalid_user_raises(user: object, type_name: str) -> None:
-    """A non-dict ``AppTest.user`` raises AppTestError before the script runs."""
+def test_non_dict_seed_raises(attribute: str, value: object, type_name: str) -> None:
+    """A non-dict ``AppTest.user`` or ``AppTest.context`` raises AppTestError before the script runs."""
     at = AppTest.from_string("import streamlit as st\nst.text('ran')")
-    at.user = user  # type: ignore[assignment]
+    setattr(at, attribute, value)
     with pytest.raises(
-        AppTestError, match=rf"AppTest.user must be a dict, not {type_name}"
+        AppTestError, match=rf"AppTest.{attribute} must be a dict, not {type_name}"
     ):
         at.run()
     assert len(at.text) == 0

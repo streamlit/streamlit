@@ -74,6 +74,9 @@ class LocalScriptRunner(ScriptRunner):
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 script_cache=ScriptCache(),
                 initial_rerun_data=RerunData(),
+                # Keep an empty dict. st.logout() writes {} back to
+                # AppTest.user, and a truthiness check would replace that
+                # with the default test user.
                 user_info=(
                     user_info
                     if user_info is not None

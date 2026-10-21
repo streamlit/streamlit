@@ -145,17 +145,17 @@ _CONTEXT_INFO_FIELDS: Final[dict[str, tuple[str, type]]] = {
 _CONTEXT_THEMES: Final = ("light", "dark")
 
 
-# A dict subclass rather than UserDict: ScriptRunContext.user_info must be a
-# dict, and st.user.to_dict() returns its copy().
+# A dict subclass rather than UserDict, because ScriptRunContext.user_info
+# must be a dict.
 class _SeededUserInfo(dict[str, Any]):  # noqa: FURB189
-    """The user dict that one ``AppTest`` run reads as ``st.user``.
+    """User dict for one ``AppTest`` run.
 
-    ``st.logout()`` empties this dict in place. With ``st.login`` configured,
-    ``st.user`` then reads ``is_logged_in`` as ``False``. AppTest cannot rely
-    on that default because ``at.secrets`` does not reach the ``[auth]``
-    section that ``st.user`` checks. So when the dict had ``is_logged_in``,
-    ``clear()`` keeps it as ``False``. The rest of the logout run, an internal
-    ``st.rerun()``, and later runs then take the logged-out branch.
+    ``st.logout()`` clears this dict in place. When it contained
+    ``is_logged_in``, ``clear()`` sets that key back to ``False`` so the
+    rest of the run, including an internal ``st.rerun()``, reads a
+    logged-out user. ``st.user`` supplies that default only when an
+    ``[auth]`` secrets section exists, and ``at.secrets`` does not reach the
+    section ``st.user`` checks.
     """
 
     def clear(self) -> None:
@@ -163,6 +163,11 @@ class _SeededUserInfo(dict[str, Any]):  # noqa: FURB189
         super().clear()
         if had_login_flag:
             self["is_logged_in"] = False
+
+    def copy(self) -> dict[str, Any]:
+        # st.user.to_dict() returns this copy. Return a plain dict, as a real
+        # session does.
+        return dict(self)
 
 
 def _user_info_for_run(user: object) -> _SeededUserInfo:
@@ -176,14 +181,20 @@ def _user_info_for_run(user: object) -> _SeededUserInfo:
     return _SeededUserInfo(copy.deepcopy(user))
 
 
-def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
+def _context_info_from_dict(context: object) -> ContextInfo | None:
     """Build the ``ContextInfo`` that ``AppTest.context`` seeds for a run.
 
     Returns ``None`` when ``context`` is empty. A ``None`` value leaves that
     field unset, so ``st.context`` reads it as ``None``, matching a client
-    that omitted the field. Raises ``AppTestError`` for an unknown key, a
-    value of the wrong type, or a theme other than ``"light"`` or ``"dark"``.
+    that omitted the field. Raises ``AppTestError`` when ``context`` is not a
+    dict, and for an unknown key, a value of the wrong type, a
+    ``timezone_offset`` outside the int32 range, or a theme other than
+    ``"light"`` or ``"dark"``.
     """
+    if not isinstance(context, dict):
+        raise AppTestError(
+            f"AppTest.context must be a dict, not {type(context).__name__}."
+        )
     if not context:
         return None
     info = ContextInfo()
@@ -381,12 +392,16 @@ class AppTest:
         identity claims the app reads, such as ``"name"`` and ``"email"``.
         Put the tokens the app reads from ``st.user.tokens`` in a
         ``"tokens"`` dictionary. To test a logged-out user, set
-        ``"is_logged_in"`` to ``False``. A run that calls ``st.logout()``
-        clears ``user``. If ``user`` had an ``"is_logged_in"`` key, it
-        becomes ``{"is_logged_in": False}`` for the rest of that run,
-        including an internal ``st.rerun()``, and for later ``.run()``
-        calls, so those runs take the logged-out branch. Without that key,
-        logout leaves ``user`` empty.
+        ``"is_logged_in"`` to ``False``.
+
+        ``st.logout()`` leaves the dict you assigned unchanged and replaces
+        ``user`` with a new dict. That dict applies to the rest of the run,
+        including an internal ``st.rerun()``, and to later ``.run()`` calls:
+
+        - If ``user`` contained ``"is_logged_in"``, it becomes
+          ``{"is_logged_in": False}``, so those runs take the logged-out
+          branch.
+        - Otherwise, logout leaves ``user`` empty.
 
     context: dict[str, Any]
         Dictionary of browser information that the simulated app reads from
@@ -405,7 +420,7 @@ class AppTest:
           ``st.context.theme.type``.
 
         A missing key or a ``None`` value reads as ``None``. Any other key or
-        an invalid value raises ``AppTestError`` when the app runs.
+        an invalid value raises ``AppTestError`` before the script runs.
     """
 
     def __init__(
