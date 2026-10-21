@@ -316,26 +316,39 @@ class WidgetPatchTest(SnapshotCase):
             assert "display-only" in display.message
 
     def test_a_closed_dialog_or_a_compile_error_leaves_widgets_unusable(self) -> None:
-        """A widget the snapshot shows but cannot offer is not on the page now."""
+        """A widget the snapshot shows but cannot offer is not on the page now,
+        which wins over `disabled`, and the refusal names the one reason.
+        """
         dialog = get_dg_singleton_instance().event_dg._dialog(
             title="Closed", on_dismiss="rerun"
         )
         dialog.open()
         with dialog:
             st.button("Inside", key="inside")
+            st.checkbox("Off inside", disabled=True, key="off_inside")
         dialog.close()
         st.checkbox("Agree", key="agree")
+        st.checkbox("Off", disabled=True, key="off")
 
-        closed = self._refusal(trigger={"key": "inside"})
-        assert closed.code == "not_on_page"
-        assert "closed dialog" in closed.message
+        for closed in (
+            self._refusal(trigger={"key": "inside"}),
+            self._refusal({"off_inside": True}),
+        ):
+            assert closed.code == "not_on_page"
+            assert "closed dialog" in closed.message
+            assert "compile" not in closed.message
         assert self._write({"agree": True}).widgets[0].bool_value is True
 
         finished = ForwardMsg()
         finished.script_finished = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
-        failed = self._refusal({"agree": True}, snapshot=self._build(finished))
-        assert failed.code == "not_on_page"
-        assert "failed to compile" in failed.message
+        snapshot = self._build(finished)
+        for failed in (
+            self._refusal({"agree": True}, snapshot=snapshot),
+            self._refusal({"off": True}, snapshot=snapshot),
+        ):
+            assert failed.code == "not_on_page"
+            assert "failed to compile" in failed.message
+            assert "dialog" not in failed.message
 
     def test_values_and_triggers_are_not_interchangeable(self) -> None:
         """A trigger is not set through `widget_state`, and a value is not fired."""
@@ -459,7 +472,15 @@ class WidgetPatchTest(SnapshotCase):
             ("not_a_tab", "tabs", "C", _Refused("not one of the options")),
             ("select_slider", "step", "b", "b"),
             ("select_slider_range", "span", ["a", "b"], ("a", "b")),
+            ("select_slider_empty_range", "span", ["b", "b"], ("b", "b")),
             ("not_a_select_slider_option", "span", ["a", "z"], _Refused("'z' is not")),
+            (
+                "repeated_selection",
+                "many",
+                ["a", "b", "a"],
+                _Refused("'a' is listed twice for 'many'"),
+            ),
+            ("repeated_new_item", "tags", ["new", "new"], _Refused("listed twice")),
         ]
     )
     def test_options_and_limits(
@@ -711,6 +732,17 @@ class WidgetPatchTest(SnapshotCase):
                 {"key": "prompt", "value": "x" * 9},
                 _Refused("longer than the 8 characters its `max_chars` allows"),
             ),
+            # The browser counts UTF-16 code units, two per emoji.
+            (
+                "chat_at_max_chars_in_utf16",
+                {"key": "prompt", "value": "😀" * 4},
+                "😀" * 4,
+            ),
+            (
+                "chat_past_max_chars_in_utf16",
+                {"key": "prompt", "value": "😀" * 5},
+                _Refused("longer than the 8 characters"),
+            ),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),
             (
                 "menu_unknown_option",
@@ -735,6 +767,12 @@ class WidgetPatchTest(SnapshotCase):
         st.chat_input("Say", key="prompt", max_chars=8)
         st.menu_button("Month", ["January", "December"], key="menu")
         self._check(None, expected, trigger=trigger)
+
+    def test_a_chat_input_with_max_chars_0_has_no_limit(self) -> None:
+        """`max_chars=0` sets no limit, as the browser reads it."""
+        st.chat_input("Say", key="prompt", max_chars=0)
+
+        self._check(None, "hello", trigger={"key": "prompt", "value": "hello"})
 
     def test_a_dialog_without_on_dismiss_has_no_overlay_key(self) -> None:
         """With the default `on_dismiss`, the dialog is not addressable."""
@@ -788,7 +826,9 @@ class WidgetPatchTest(SnapshotCase):
         assert len(encoded.widgets) == len(widget_state or {}) + 1
 
     def test_resolve_fragment_scopes_to_a_shared_fragment(self) -> None:
-        """Keys in one fragment rerun it; anything wider is a full rerun."""
+        """Keys in one fragment rerun it; anything wider, or a fragment the
+        session no longer holds, is a full rerun.
+        """
 
         @st.fragment
         def panel() -> None:
@@ -804,23 +844,27 @@ class WidgetPatchTest(SnapshotCase):
         st.checkbox("Outside", key="outside")
         snapshot = self._build()
 
-        def scope(widget_state: dict[str, Any]) -> str:
+        def scope(widget_state: dict[str, Any], *, held: bool = True) -> str:
             return widget_patch.resolve_fragment(
                 self._session_state(),
                 snapshot.element_states,
                 widget_state=widget_state,
                 trigger=None,
+                has_fragment=lambda _fragment_id: held,
             )
 
         panel_fragment = snapshot.element_states[self._element_id("detail")].fragment_id
         assert panel_fragment
         assert scope({"detail": "y", "pin": True}) == panel_fragment
+        assert scope({"detail": "y", "pin": True}, held=False) == ""
         assert scope({"detail": "y", "outside": True}) == ""
         assert scope({"detail": "y", "other": True}) == ""
         assert scope({"outside": True}) == ""
 
     def test_resolve_fragment_keeps_an_open_dialog_apart(self) -> None:
-        """A dialog's widgets rerun its fragment and cannot mix with anything else."""
+        """A dialog's widgets rerun its fragment and cannot mix with anything
+        else, or go to a full rerun when the session no longer holds it.
+        """
 
         @st.dialog("Rename", on_dismiss="rerun")
         def rename() -> None:
@@ -833,18 +877,28 @@ class WidgetPatchTest(SnapshotCase):
         dismiss = _one(snapshot.document, "dialog")["key"]
 
         def scope(
-            widget_state: dict[str, Any] | None, trigger: dict[str, Any] | None
+            widget_state: dict[str, Any] | None,
+            trigger: dict[str, Any] | None,
+            *,
+            held: bool = True,
         ) -> str:
             return widget_patch.resolve_fragment(
                 self._session_state(),
                 snapshot.element_states,
                 widget_state=widget_state,
                 trigger=trigger,
+                has_fragment=lambda _fragment_id: held,
             )
 
         body = snapshot.element_states[self._element_id("new_name")].fragment_id
         assert body
         assert scope({"new_name": "Ada"}, {"key": "next"}) == body
+        with pytest.raises(AgentRequestError) as dropped:
+            scope({"new_name": "Ada"}, {"key": "next"}, held=False)
+        assert dropped.value.code == "not_on_page"
+        assert "'new_name' is in a dialog the app no longer holds" in (
+            dropped.value.message
+        )
         # The overlay belongs to the opener, here the main script.
         assert scope(None, {"key": dismiss}) == ""
         (fired,) = self._write(trigger={"key": dismiss}, snapshot=snapshot).widgets

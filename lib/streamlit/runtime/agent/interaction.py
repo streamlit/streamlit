@@ -752,10 +752,10 @@ async def _run_interaction(
     trigger = request.get("trigger")
     if widget_state is not None or trigger is not None:
         if pending is not None:
-            # The client never saw the page the uncollected run left, but the
-            # writes land on it. Checked against the snapshot before it, a
-            # widget that run removed would still take a value and fire its
-            # callback. The result stays collectable if the writes are refused.
+            # The writes land on the page the uncollected run left, which the
+            # client never saw. Check them against that run's snapshot, so a
+            # widget it removed cannot take a value. If the writes are refused,
+            # the run stays collectable.
             if pending.built is None:
                 pending.built = await _wait_and_build(
                     app_session, session, pending, deadline=deadline, encode=encode
@@ -769,11 +769,7 @@ async def _run_interaction(
         rerun.query_string = _query_string_after_edits(
             app_session.session_state.query_params, widget_states, rerun.query_string
         )
-        # The runtime ignores a rerun of a fragment it no longer holds, which
-        # would drop the write without a word. A full rerun applies it.
-        rerun.fragment_id = (
-            fragment_id if fragment_id and app_session.has_fragment(fragment_id) else ""
-        )
+        rerun.fragment_id = fragment_id
 
     session.context_info = context_info
     # A timed-out run that has since finished is left uncollected: the client
@@ -829,6 +825,7 @@ async def _validate_writes(
             element_states=session.element_states,
             widget_state=widget_state,
             trigger=trigger,
+            has_fragment=app_session.has_fragment,
         )
     )
     try:
@@ -1013,12 +1010,13 @@ def _validate_in_worker(
     element_states: Mapping[str, ElementState],
     widget_state: Mapping[str, Any] | None,
     trigger: Mapping[str, Any] | None,
+    has_fragment: Callable[[str], bool],
 ) -> tuple[WidgetStates, str]:
-    """Encode a request's writes and find their fragment, with ``ctx`` as the
-    thread's script context.
+    """Validate a request's writes and find their fragment in a worker thread.
 
-    The fragment is resolved once every key has been accepted, so a refusal
-    that names one key, such as a form error, wins over ``cross_dialog_batch``.
+    ``ctx`` is the thread's script context while it runs. The fragment is
+    resolved once every key has been accepted, so a refusal that names one
+    key, such as a form error, wins over ``cross_dialog_batch``.
     """
     with _script_ctx(ctx):
         widget_states = widget_patch.build_widget_states(
@@ -1032,6 +1030,7 @@ def _validate_in_worker(
             element_states,
             widget_state=widget_state,
             trigger=trigger,
+            has_fragment=has_fragment,
         )
     return widget_states, fragment_id
 

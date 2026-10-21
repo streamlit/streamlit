@@ -875,8 +875,9 @@ refused with `invalid_value`:
     it would otherwise read as no value and reset.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values; a list may hold no more than
-  `max_selections`. A widget with `accept_new_options` also takes new text, as it does
-  in the browser.
+  `max_selections`, and names each option once, as a browser's selection does, except
+  for the two ends of an `st.select_slider` range. A widget with `accept_new_options`
+  also takes new text, as it does in the browser.
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 

@@ -101,6 +101,11 @@ class ElementState(NamedTuple):
     # The longest text a trigger payload may carry, such as `st.chat_input`'s
     # `max_chars`, which only the browser enforces.
     max_chars: int | None = None
+    # Why an element the snapshot shows cannot be used now: "closed_dialog"
+    # for one in a closed dialog, "compile_error" for one left from an
+    # earlier run when the script failed to compile. Enabling it would not
+    # help.
+    blocked_by: str | None = None
 
 
 @dataclass
@@ -361,12 +366,9 @@ class _SnapshotBuilder:
             candidate = props.get("options")
             options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
+        in_closed_dialog = unusable or self._closed_dialog
         actionable = (
-            bool(action)
-            and not support
-            and not disabled
-            and not unusable
-            and not self._closed_dialog
+            bool(action) and not support and not disabled and not in_closed_dialog
         )
 
         self.element_states[element_id] = ElementState(
@@ -388,6 +390,7 @@ class _SnapshotBuilder:
             accepts_new_options=props.get("accept_new_options") is True,
             action=action if isinstance(action, str) else None,
             max_chars=_whole_number(props.get("max_chars")),
+            blocked_by="closed_dialog" if in_closed_dialog else None,
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
@@ -541,7 +544,7 @@ def build_snapshot(
         # the caller passed, and none of them can be used.
         builder.actions.clear()
         builder.element_states = {
-            element_id: state._replace(actionable=False)
+            element_id: state._replace(actionable=False, blocked_by="compile_error")
             for element_id, state in builder.element_states.items()
         }
 

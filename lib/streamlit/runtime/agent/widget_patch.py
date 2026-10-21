@@ -48,7 +48,7 @@ from streamlit.runtime.state.common import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.state.common import ValueFieldName, WidgetMetadata
@@ -73,7 +73,7 @@ _ISO_TEXT_INPUTS: Final[dict[str, type[dt.datetime | dt.time]]] = {
 # What each wire type takes, for errors that cannot quote the value. A list
 # wire carrying a single value, such as a single-select `st.pills`, takes one
 # item.
-_EXPECTED: Final[dict[str, str]] = {
+_EXPECTED_SINGLE: Final[dict[str, str]] = {
     "bool_value": "true or false",
     "double_value": "a finite number",
     "int_value": "a whole number",
@@ -84,7 +84,7 @@ _EXPECTED: Final[dict[str, str]] = {
 }
 
 # The same for an element whose `value_schema` is an array.
-_EXPECTED_LISTS: Final[dict[str, str]] = {
+_EXPECTED_LIST: Final[dict[str, str]] = {
     "string_array_value": "a list of strings",
     "double_array_value": "a list of finite numbers",
     "int_array_value": "a list of whole numbers",
@@ -208,6 +208,10 @@ def _addressable(
             f"The element with key {key!r} is on the page but cannot be driven "
             f"through this interface ({state.support}).",
         )
+    # Checked before `disabled` for the same reason: enabling the element
+    # would not make it usable.
+    if state.blocked_by is not None and state.action is not None:
+        raise _blocked(key, state.blocked_by)
     if state.disabled:
         raise AgentRequestError(
             "disabled_widget",
@@ -223,16 +227,30 @@ def _addressable(
             "has no value to set and nothing to fire. Read `actions` from the "
             "latest snapshot.",
         )
-    if not state.actionable:
-        # The snapshot shows it but does not list it: its dialog is closed, or
-        # the page failed to compile and shows the last run.
+    if not state.actionable:  # pragma: no cover - every reason is checked above
         raise AgentRequestError(
             "not_on_page",
             f"The element with key {key!r} is in the latest snapshot but "
-            "cannot be used now: it is in a closed dialog, or the script "
-            "failed to compile. Read `actions` from the latest snapshot.",
+            "cannot be used now. Read `actions` from the latest snapshot.",
         )
     return state, metadata
+
+
+def _blocked(key: str, reason: str) -> AgentRequestError:
+    """Refuse an element the snapshot shows but does not offer, naming why."""
+    if reason == "compile_error":
+        return AgentRequestError(
+            "not_on_page",
+            f"The script failed to compile, so the element with key {key!r} is "
+            "left from an earlier run and cannot be used until it compiles. The "
+            "latest snapshot reports the error.",
+        )
+    return AgentRequestError(
+        "not_on_page",
+        f"The element with key {key!r} is in a closed dialog, so it cannot be "
+        "used until the app opens that dialog again. Read `actions` from the "
+        "latest snapshot.",
+    )
 
 
 def build_widget_states(
@@ -311,6 +329,8 @@ def build_widget_states(
             options=state.options,
             accepts_new=state.accepts_new_options,
             as_numbers=state.schema_type in {"integer", "number"},
+            # Both ends of an empty select-slider range are the same option.
+            allows_repeats=state.command == "select_slider",
         )
         wire_value = _temporal_to_wire(
             key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
@@ -402,6 +422,7 @@ def resolve_fragment(
     *,
     widget_state: Mapping[str, Any] | None,
     trigger: Mapping[str, Any] | None,
+    has_fragment: Callable[[str], bool],
 ) -> str:
     """Return the fragment a request's rerun is scoped to, or "" for a full rerun.
 
@@ -412,9 +433,11 @@ def resolve_fragment(
     fragment.
 
     The wire carries one fragment ID, so a batch spanning several regions
-    becomes a full rerun, which runs every fragment. The exception is an open
-    dialog: a full rerun closes it without running its contents, so what the
-    batch sent to the dialog would be silently discarded. That is refused.
+    becomes a full rerun, which runs every fragment. So does a request for a
+    fragment the session no longer holds, which the runtime would ignore,
+    dropping the write without a word. The exception is an open dialog: a full
+    rerun closes it without running its contents, so what the request sent to
+    the dialog would be silently discarded. That is refused.
 
     Call this after ``build_widget_states`` accepted the same request, so every
     key resolves and form errors take precedence.
@@ -429,42 +452,59 @@ def resolve_fragment(
         The request's ``widget_state``.
     trigger : Mapping[str, Any] or None
         The request's ``trigger``.
+    has_fragment : Callable[[str], bool]
+        Whether the session still holds a fragment, such as
+        ``AppSession.has_fragment``.
 
     Returns
     -------
     str
         The fragment ID every addressed element shares, or "" when they span
-        regions or share none.
+        regions, share none, or share one the session no longer holds.
 
     Raises
     ------
     AgentRequestError
         ``cross_dialog_batch`` when an open dialog's widgets are mixed with
-        anything outside them.
+        anything outside them, and ``not_on_page`` when the session no longer
+        holds the fragment of the dialog they are in.
     """
     targets = list(widget_state or {})
     if trigger is not None and isinstance(trigger.get("key"), str):
         targets.append(trigger["key"])
 
     fragments: set[str | None] = set()
-    touches_dialog = False
+    # The first key inside an open dialog, which a refusal names.
+    dialog_key: str | None = None
     for key in targets:
         state = element_states.get(
             resolve_element_id(session_state, key, element_states)
         )
         fragments.add(state.fragment_id if state is not None else None)
-        touches_dialog |= state is not None and state.in_dialog
+        if dialog_key is None and state is not None and state.in_dialog:
+            dialog_key = key
 
-    if len(fragments) <= 1:
-        return next(iter(fragments), None) or ""
+    if len(fragments) > 1:
+        if dialog_key is not None:
+            raise AgentRequestError(
+                "cross_dialog_batch",
+                "The request spans an open dialog and another region, such as a "
+                "widget outside the dialog or in a fragment inside it. Covering "
+                "both takes a full rerun, which closes the dialog and discards "
+                "what was sent to it. Send each region's widgets on their own.",
+            )
+        return ""
 
-    if touches_dialog:
+    fragment_id = next(iter(fragments), None) or ""
+    if not fragment_id or has_fragment(fragment_id):
+        return fragment_id
+    if dialog_key is not None:
         raise AgentRequestError(
-            "cross_dialog_batch",
-            "The request spans an open dialog and another region, such as a "
-            "widget outside the dialog or in a fragment inside it. Covering "
-            "both takes a full rerun, which closes the dialog and discards "
-            "what was sent to it. Send each region's widgets on their own.",
+            "not_on_page",
+            f"The element with key {dialog_key!r} is in a dialog the app no "
+            "longer holds, so only a full rerun could apply the request, and "
+            "that closes the dialog and discards what was sent to it. Send a "
+            "request with only `session_id` to read the current page.",
         )
     return ""
 
@@ -546,13 +586,15 @@ def _validate_options(
     options: list[Any] | None,
     accepts_new: bool,
     as_numbers: bool,
+    allows_repeats: bool = False,
 ) -> None:
     """Refuse values outside a selection widget's advertised options.
 
     Options are compared as text, so `st.feedback`'s integer indexes and
     string labels are matched the same way. A widget that accepts new options
     takes any other text too, but a label several options share is still
-    refused.
+    refused. A list names each option at most once, as a browser's selection
+    does, unless ``allows_repeats``.
     """
     if options is None or value is None:
         return
@@ -560,7 +602,15 @@ def _validate_options(
     # Counted once, so each candidate is one lookup however long the list is.
     counts = Counter(str(option) for option in options)
     candidates = value if isinstance(value, list) else [value]
+    chosen: set[str] = set()
     for candidate in candidates:
+        if not allows_repeats and str(candidate) in chosen:
+            raise AgentRequestError(
+                "invalid_value",
+                f"{candidate!r} is listed twice for {key!r}, which selects "
+                "each option at most once.",
+            )
+        chosen.add(str(candidate))
         count = counts.get(str(candidate), 0)
         if count == 0 and not accepts_new:
             raise AgentRequestError(
@@ -809,7 +859,9 @@ def _encode(
     except (TypeError, ValueError, OverflowError) as exc:
         # OverflowError: an integer too large to become a float. ValueError:
         # one too large for an int64 field.
-        expected = (_EXPECTED_LISTS if as_list else _EXPECTED).get(value_type, "JSON")
+        expected = (_EXPECTED_LIST if as_list else _EXPECTED_SINGLE).get(
+            value_type, "JSON"
+        )
         raise AgentRequestError(
             "invalid_value", f"The value for {key!r} must be {expected}."
         ) from exc
@@ -877,8 +929,9 @@ def _encode_trigger(
                 "the text to submit.",
             )
         # Refused rather than cut, as the browser's input would: the payload
-        # never shows in a snapshot, so a cut message would go unnoticed.
-        if max_chars is not None and len(payload) > max_chars:
+        # never shows in a snapshot, so a cut message would go unnoticed. The
+        # browser reads 0 as no limit and counts UTF-16 code units.
+        if max_chars and _utf16_length(payload) > max_chars:
             raise AgentRequestError(
                 "invalid_value",
                 f"The text for {key!r} is longer than the {max_chars} "
@@ -889,6 +942,11 @@ def _encode_trigger(
         raise AgentRequestError("not_a_trigger", f"{key!r} is not a trigger.")
 
     return state
+
+
+def _utf16_length(text: str) -> int:
+    """The length of ``text`` as JavaScript counts it, in UTF-16 code units."""
+    return sum(2 if ord(char) > 0xFFFF else 1 for char in text)
 
 
 def _as_bool(value: Any) -> bool:
