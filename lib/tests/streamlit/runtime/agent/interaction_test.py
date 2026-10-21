@@ -18,14 +18,20 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.elements.lib import agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import interaction, tree
 from streamlit.runtime.agent.errors import AgentRequestError
-from streamlit.runtime.state.query_params import QueryParams
+from streamlit.runtime.state.query_params import (
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    QueryParams,
+    sanitize_query_string,
+)
 
 if TYPE_CHECKING:
     from streamlit.source_util import PageInfo
@@ -371,9 +377,9 @@ def test_validate_refuses_text_that_is_not_unicode(
 
 def test_validate_accepts_a_full_request() -> None:
     """Every field this API takes passes when well formed, and the parsed
-    `context` is returned for the run to use.
+    `context` and encoded query string are returned for the run to use.
     """
-    context = interaction._validate_request_shape(
+    parsed = interaction._validate_request_shape(
         {
             "session_id": "s_1",
             "page": "report",
@@ -382,10 +388,13 @@ def test_validate_accepts_a_full_request() -> None:
         }
     )
 
-    assert context is not None
-    assert context.timezone == "Europe/Berlin"
-    assert context.locale == "de-DE"
-    assert interaction._validate_request_shape({"session_id": "s_1"}) is None
+    assert parsed.context is not None
+    assert parsed.context.timezone == "Europe/Berlin"
+    assert parsed.context.locale == "de-DE"
+    assert parsed.query_string == "q=1&q="
+    assert interaction._validate_request_shape(
+        {"session_id": "s_1"}
+    ) == interaction._ParsedRequest(context=None, query_string=None)
 
 
 def test_encode_query_params_keeps_blank_values() -> None:
@@ -394,6 +403,35 @@ def test_encode_query_params_keeps_blank_values() -> None:
         interaction._encode_query_params({"q": ["a", "b"], "blank": [""], "none": []})
         == "q=a&q=b&blank="
     )
+
+
+@pytest.mark.parametrize(
+    "query_params",
+    [
+        {"q": [""] * (CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)},
+        {"q": ["x" * CLIENT_STATE_QUERY_STRING_MAX_LENGTH]},
+    ],
+    ids=["too_many_values", "too_long"],
+)
+def test_encode_query_params_refuses_what_the_runtime_would_drop(
+    query_params: dict[str, list[str]],
+) -> None:
+    """A query string the runtime would replace with an empty one is refused,
+    rather than run as if no parameters had been sent.
+    """
+    with pytest.raises(AgentRequestError) as raised:
+        interaction._encode_query_params(query_params)
+
+    assert raised.value.code == "invalid_request"
+
+
+def test_encode_query_params_accepts_the_runtimes_limits() -> None:
+    """A query string at exactly the runtime's limits is kept."""
+    at_limit = {"q": [""] * (CLIENT_STATE_QUERY_STRING_MAX_FIELDS - 1), "x": ["1"]}
+
+    query_string = interaction._encode_query_params(at_limit)
+
+    assert sanitize_query_string(query_string) == query_string
 
 
 def test_parse_context_refuses_a_timezone_in_the_wrong_case() -> None:
@@ -607,3 +645,25 @@ def test_duration_phrases_whole_minutes_and_singulars(
 ) -> None:
     """Error messages name a limit in whole minutes where it is one."""
     assert interaction._duration(seconds) == expected
+
+
+def test_a_session_the_runtime_closed_frees_its_slot() -> None:
+    """A session whose app session is gone is dropped when asked for, rather
+    than holding a slot until the TTL reclaims it.
+    """
+    runtime = MagicMock()
+    runtime.get_app_session.return_value = None
+    registry = interaction.AgentSessionRegistry(runtime)
+    session = _session()
+    registry._sessions[session.handle] = session
+    agent_spec.register_agent_session(session.app_session_id)
+    try:
+        with pytest.raises(AgentRequestError) as raised:
+            registry.app_session(session)
+
+        assert raised.value.code == "unknown_session"
+        assert session.handle not in registry._sessions
+        assert session.app_session_id not in agent_spec._agent_session_ids
+        runtime.close_session.assert_not_called()
+    finally:
+        agent_spec.forget_agent_session(session.app_session_id)

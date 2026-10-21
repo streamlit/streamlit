@@ -141,6 +141,54 @@ def test_an_origin_is_refused_unless_listed(
     interact.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    ("content", "content_type"),
+    [
+        (b"{}", "text/plain"),
+        (b"page=x", "application/x-www-form-urlencoded"),
+        (b"", None),
+    ],
+    ids=["text_plain", "form", "empty_without_media_type"],
+)
+def test_a_listed_page_must_send_json(
+    runtime: MagicMock, interact: AsyncMock, content: bytes, content_type: str | None
+) -> None:
+    """A page's request that a browser would send without a preflight is
+    refused, so a page on a listed origin cannot run the app blind.
+    """
+    listed = {"server.corsAllowedOrigins": ["https://app.example"]}
+    headers = {"Origin": "https://app.example"}
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+    with _client(runtime, **listed) as client:
+        response = client.post(_PATH, content=content, headers=headers)
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_request"
+    interact.assert_not_awaited()
+
+
+def test_json_with_parameters_and_programs_without_a_media_type_are_accepted(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """A page's JSON may carry a charset, and a program needs no media type."""
+    listed = {"server.corsAllowedOrigins": ["https://app.example"]}
+    with _client(runtime, **listed) as client:
+        page = client.post(
+            _PATH,
+            content=b"{}",
+            headers={
+                "Origin": "https://app.example",
+                "Content-Type": "Application/JSON; charset=utf-8",
+            },
+        )
+        program = client.post(_PATH, content=b"{}")
+
+    assert page.status_code == 200
+    assert program.status_code == 200
+    assert interact.await_count == 2
+
+
 def test_a_body_over_the_limit_is_refused(
     runtime: MagicMock, interact: AsyncMock
 ) -> None:

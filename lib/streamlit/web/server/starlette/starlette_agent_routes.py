@@ -76,6 +76,10 @@ _ORIGIN_MESSAGE: Final = (
     "is not in `server.corsAllowedOrigins`. Call the API from a program, which "
     "sends no `Origin` header."
 )
+_PAGE_CONTENT_TYPE_MESSAGE: Final = (
+    "A request from a web page (it has an `Origin` header) must send "
+    "`Content-Type: application/json`."
+)
 
 
 class _ClientGoneError(Exception):
@@ -140,6 +144,22 @@ def _refused_origin(request: Request) -> bool:
         return False
     _LOGGER.debug("Refusing agent API request from Origin %r", origin)
     return True
+
+
+def _page_request_without_json(request: Request) -> bool:
+    """Whether a web page sent the request without a JSON media type.
+
+    A page on a listed origin gets this far. With `application/json` its
+    browser sends a preflight first, which this route refuses, so a page on
+    another origin cannot reach it. Without it, as `text/plain`, a form
+    encoding, or an empty body, the browser sends the request as is: the page
+    could run the app even though it cannot read the answer. Programmatic
+    clients send no `Origin`, so this never applies to them.
+    """
+    if request.headers.get("Origin") is None:
+        return False
+    content_type = request.headers.get("Content-Type", "")
+    return content_type.split(";", 1)[0].strip().lower() != "application/json"
 
 
 async def _read_body(request: Request, limit: int) -> bytes:
@@ -309,7 +329,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 ),
             )
         except _ClientGoneError:
-            # Nobody reads this; the run is collectable by a retry.
+            # Nobody reads this. A retry collects the run of a session the
+            # client already held; a creating call's session is closed instead,
+            # since the client never received its `session_id`.
             return error_response(
                 "wait_timed_out", "The client disconnected before the run settled."
             )
@@ -341,6 +363,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             return error_response("host_not_allowed", _HOST_MESSAGE)
         if _refused_origin(request):
             return error_response("origin_not_allowed", _ORIGIN_MESSAGE)
+        if _page_request_without_json(request):
+            return error_response("invalid_request", _PAGE_CONTENT_TYPE_MESSAGE)
 
         # The bound the WebSocket handler applies to an inbound frame, so the
         # agent path is no more permissive than the browser path.

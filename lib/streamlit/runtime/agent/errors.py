@@ -43,7 +43,8 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         400,
         (
             "The request is malformed: an unknown field, a field of the wrong "
-            "type or format, or text that is not valid Unicode."
+            "type or format, text that is not valid Unicode, or a web page's "
+            "request without `Content-Type: application/json`."
         ),
     ),
     "request_too_large": (

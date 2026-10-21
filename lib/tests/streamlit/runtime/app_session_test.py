@@ -66,8 +66,8 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.state.query_params import (
-    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
-    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
 )
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
@@ -878,12 +878,12 @@ class AppSessionTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            ("too_long", "foo=" + ("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
             (
                 "too_many_fields",
                 "&".join(
                     f"key_{idx}=value"
-                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                    for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
                 ),
             ),
         ]
