@@ -227,6 +227,40 @@ def test_counter_increments():
     assert not at.exception
 ```
 
+### Mocking app code
+
+To mock app code, patch a helper module that the script imports, not the script itself. `AppTest` runs the script from its source on every run; it does not import it. `unittest.mock.patch("app.fetch_data")` imports `app.py` as a regular module. That import runs the script's top-level code outside `AppTest`, and `.run()` never uses the patched module. If that code opens an `st.dialog`, the import raises `StreamlitAPIException`. Keep every `.run()` that should see the mock inside the `with` block:
+
+```python
+# data_source.py
+def fetch_data():
+    return "real"
+
+
+# app.py
+import streamlit as st
+
+import data_source
+
+st.write(data_source.fetch_data())
+
+
+# test_app.py
+from unittest.mock import patch
+
+from streamlit.testing.v1 import AppTest
+
+
+def test_with_mocked_data():
+    with patch("data_source.fetch_data", return_value="mocked"):
+        at = AppTest.from_file("app.py").run()
+    assert at.markdown[0].value == "mocked"
+```
+
+`patch` imports `data_source` when the `with` block starts, before `.run()` adds the script's directory to `sys.path`. The app's directory must already be on the test's `sys.path` (for example, through pytest's `pythonpath` option when tests live in another directory).
+
+Test `@st.fragment` and `@st.dialog` functions through `AppTest`. Called directly from test code, outside a running script, a fragment returns `None` without running its body, and a dialog raises `StreamlitAPIException`.
+
 ## Worked example: a filtered dataframe
 
 App (`app.py`):
