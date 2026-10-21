@@ -78,6 +78,7 @@ def _render_option_widgets() -> None:
     st.selectbox("Shared", ["a", "A"], format_func=str.upper, key="shared")
     st.selectbox("Rate", ["0.10", "0.25"], key="rate")
     st.selectbox("Count", [1, 12], key="count")
+    st.multiselect("Repeated", ["a", "b"], default=["a", "a"], key="repeated")
     st.selectbox(
         "Plan",
         [_Plan("Basic", 0), _Plan("Pro", 10)],
@@ -474,13 +475,8 @@ class WidgetPatchTest(SnapshotCase):
             ("select_slider_range", "span", ["a", "b"], ("a", "b")),
             ("select_slider_empty_range", "span", ["b", "b"], ("b", "b")),
             ("not_a_select_slider_option", "span", ["a", "z"], _Refused("'z' is not")),
-            (
-                "repeated_selection",
-                "many",
-                ["a", "b", "a"],
-                _Refused("'a' is listed twice for 'many'"),
-            ),
-            ("repeated_new_item", "tags", ["new", "new"], _Refused("listed twice")),
+            # An app's default can repeat an option, so a reported value can too.
+            ("repeated_selection", "repeated", ["a", "a"], ["a", "a"]),
         ]
     )
     def test_options_and_limits(

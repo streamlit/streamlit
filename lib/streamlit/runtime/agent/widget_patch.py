@@ -329,8 +329,6 @@ def build_widget_states(
             options=state.options,
             accepts_new=state.accepts_new_options,
             as_numbers=state.schema_type in {"integer", "number"},
-            # Both ends of an empty select-slider range are the same option.
-            allows_repeats=state.command == "select_slider",
         )
         wire_value = _temporal_to_wire(
             key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
@@ -586,15 +584,14 @@ def _validate_options(
     options: list[Any] | None,
     accepts_new: bool,
     as_numbers: bool,
-    allows_repeats: bool = False,
 ) -> None:
     """Refuse values outside a selection widget's advertised options.
 
     Options are compared as text, so `st.feedback`'s integer indexes and
     string labels are matched the same way. A widget that accepts new options
     takes any other text too, but a label several options share is still
-    refused. A list names each option at most once, as a browser's selection
-    does, unless ``allows_repeats``.
+    refused. A list may repeat an option: an app's `default` can, and the
+    widget keeps it, so a reported value has to be accepted back.
     """
     if options is None or value is None:
         return
@@ -602,15 +599,7 @@ def _validate_options(
     # Counted once, so each candidate is one lookup however long the list is.
     counts = Counter(str(option) for option in options)
     candidates = value if isinstance(value, list) else [value]
-    chosen: set[str] = set()
     for candidate in candidates:
-        if not allows_repeats and str(candidate) in chosen:
-            raise AgentRequestError(
-                "invalid_value",
-                f"{candidate!r} is listed twice for {key!r}, which selects "
-                "each option at most once.",
-            )
-        chosen.add(str(candidate))
         count = counts.get(str(candidate), 0)
         if count == 0 and not accepts_new:
             raise AgentRequestError(
