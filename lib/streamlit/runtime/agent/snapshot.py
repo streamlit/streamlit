@@ -503,7 +503,7 @@ def build_snapshot(
     """Build the snapshot document for the run that just settled.
 
     Session state is read without the lock ``SafeSessionState`` takes, so call
-    this on the script thread or hold that lock. Trigger payloads are cleared
+    this on the script thread or while no run can start. Trigger payloads are cleared
     in ``on_script_finished``, and this read has to happen before that reset
     to keep a fired ``st.chat_input`` or ``st.menu_button`` value. ``page`` and
     ``pages`` come from the run's ``new_session`` message; a later
@@ -561,6 +561,55 @@ def build_snapshot(
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
     return Snapshot(document=document, element_states=builder.element_states)
+
+
+def rebase_media_urls(
+    document: dict[str, Any], *, media_path: str, prefix: str
+) -> None:
+    """Prefix a snapshot's media URLs with the way back to the app's root, in place.
+
+    Media storage hands out URLs relative to the app's root (``/media/<id>``),
+    which a browser resolves against its own base path. A client of this API
+    has no base path to resolve against, so the URL has to say how to reach the
+    root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
+    is a 404 or a login redirect.
+
+    Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
+    under ``media_path``, so an external link an app displays is never
+    rewritten.
+
+    Parameters
+    ----------
+    document : dict[str, Any]
+        A snapshot document from ``build_snapshot``.
+    media_path : str
+        The path media storage serves files under, such as ``"/media"``.
+    prefix : str
+        The relative path from the request's URL to the app's root, such as
+        ``"../.."``. It is prepended to each media URL.
+    """
+    media_prefix = media_path.rstrip("/") + "/"
+
+    def rebase(value: Any) -> Any:
+        if isinstance(value, str) and value.startswith(media_prefix):
+            return prefix + value
+        # Several images report a list of URLs.
+        if isinstance(value, list):
+            return [rebase(item) for item in value]
+        return value
+
+    def walk(node: dict[str, Any]) -> None:
+        props = node.get("props")
+        if isinstance(props, dict):
+            for name in ("url", "src", "avatar"):
+                if name in props:
+                    props[name] = rebase(props[name])
+        for child in node.get("children") or []:
+            walk(child)
+
+    root = document.get("tree")
+    if isinstance(root, dict):
+        walk(root)
 
 
 def _run_failed(session_state: SessionState | None) -> bool:

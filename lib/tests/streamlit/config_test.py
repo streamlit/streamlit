@@ -799,6 +799,9 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayLastExprIfNoSemicolon",
                 "secrets.files",
                 "server.address",
+                "server.agentMaxSessions",
+                "server.agentSessionTTL",
+                "server.agentWaitTimeout",
                 "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
@@ -806,6 +809,7 @@ class ConfigTest(unittest.TestCase):
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
+                "server.enableAgentApi",
                 "server.enableCORS",
                 "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
@@ -1139,6 +1143,20 @@ class ConfigTest(unittest.TestCase):
         # The default empty list disables the feature and must not raise.
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
+
+    def test_agent_api_options_are_hidden_with_their_defaults(self) -> None:
+        """The agent API options stay hidden and default to the documented values."""
+        expected_defaults = {
+            "server.enableAgentApi": False,
+            "server.agentWaitTimeout": 30,
+            "server.agentSessionTTL": 900,
+            "server.agentMaxSessions": 100,
+        }
+        for key, default_val in expected_defaults.items():
+            option = config._config_options[key]
+            assert option.visibility == "hidden"
+            assert option.default_val == default_val
+            assert config.get_option(key) == default_val
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
