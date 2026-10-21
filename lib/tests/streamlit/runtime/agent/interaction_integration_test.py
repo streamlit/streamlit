@@ -980,6 +980,38 @@ async def test_a_write_runs_callbacks_once_and_reports_the_new_value(
 
 
 @pytest.mark.anyio
+async def test_a_batch_runs_its_callbacks_in_tree_order(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Callbacks run in tree order, whatever order the request lists keys in,
+    so a stateful container's runs before those of the widgets inside it.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("log", [])
+
+    def changed(key):
+        st.session_state.log.append(key)
+
+    st.checkbox("First", key="first", on_change=changed, args=("first",))
+    with st.expander("Details", key="details", on_change=changed, args=("details",)):
+        st.checkbox("Inner", key="inner", on_change=changed, args=("inner",))
+    st.text(f"log={st.session_state.log}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        written = await app.call(
+            {
+                "session_id": handle,
+                "widget_state": {"inner": True, "details": True, "first": True},
+            }
+        )
+
+    assert _line(written, "log") == "['first', 'details', 'inner']"
+
+
+@pytest.mark.anyio
 async def test_sending_every_reported_value_back_changes_nothing(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
