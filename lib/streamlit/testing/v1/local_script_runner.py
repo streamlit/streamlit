@@ -29,10 +29,14 @@ from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 if TYPE_CHECKING:
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+        UserInfoType,
+    )
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
@@ -48,6 +52,7 @@ class LocalScriptRunner(ScriptRunner):
         args: Any = None,
         kwargs: Any = None,
         fragment_storage: MemoryFragmentStorage | None = None,
+        user_info: UserInfoType | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -69,7 +74,11 @@ class LocalScriptRunner(ScriptRunner):
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 script_cache=ScriptCache(),
                 initial_rerun_data=RerunData(),
-                user_info={"email": "test@example.com"},
+                user_info=(
+                    user_info
+                    if user_info is not None
+                    else {"email": "test@example.com"}
+                ),
                 fragment_storage=(
                     fragment_storage
                     if fragment_storage is not None
@@ -160,6 +169,7 @@ class LocalScriptRunner(ScriptRunner):
         query_params: dict[str, Any] | None = None,
         timeout: float = 3,
         page_hash: str = "",
+        context_info: ContextInfo | None = None,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
@@ -175,6 +185,7 @@ class LocalScriptRunner(ScriptRunner):
             widget_states=widget_state,
             query_string=query_string,
             page_script_hash=page_hash,
+            context_info=context_info,
         )
         self.request_rerun(rerun_data)
         try:

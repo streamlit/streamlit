@@ -203,6 +203,14 @@ assert at.query_params["status"] == "open"
 assert at.query_params["tag"] == ["a", "b"]
 ```
 
+Seed `st.user` with `at.user`, which defaults to `{"email": "test@example.com"}`. Set `is_logged_in` and the claims the app reads. After a run that calls `st.logout()`, `at.user` is `{}`. Seed the browser fields of `st.context` with `at.context`: `timezone`, `timezone_offset`, `locale`, `url`, `is_embedded`, and `theme` (`"light"` or `"dark"`). Unset fields read as `None`. Other keys, such as `headers`, raise `AppTestError`.
+
+```python
+at.user = {"is_logged_in": True, "name": "Ada", "email": "ada@example.com"}
+at.context = {"timezone": "Europe/Berlin", "locale": "de-DE"}
+at.run()
+```
+
 ## Using pytest
 
 `AppTest` tests are plain functions — no fixtures or plugins required. `from_function` is convenient for testing a snippet inline without a separate file:

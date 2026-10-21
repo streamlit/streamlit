@@ -18,11 +18,12 @@ import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock
 from urllib import parse
 
 from streamlit.components.v2.component_manager import BidiComponentManager
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -108,6 +109,7 @@ from streamlit.testing.v1.element_tree import (
     _widget_form_id,
     repr_,
 )
+from streamlit.testing.v1.errors import AppTestError
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_hash
@@ -123,9 +125,49 @@ if TYPE_CHECKING:
     )
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
+
+# The st.context properties a browser sends with every rerun, mapped to the
+# ContextInfo field that carries each one.
+_CONTEXT_INFO_FIELDS: Final = {
+    "timezone": "timezone",
+    "timezone_offset": "timezone_offset",
+    "locale": "locale",
+    "url": "url",
+    "is_embedded": "is_embedded",
+    "theme": "color_scheme",
+}
+
+
+def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
+    """Build the browser context that ``AppTest.context`` seeds for a run.
+
+    A ``None`` value leaves its field unset, so ``st.context`` reads it as
+    ``None``, as it does for a client that did not send the field.
+    """
+    if not context:
+        return None
+    info = ContextInfo()
+    for key, value in context.items():
+        field = _CONTEXT_INFO_FIELDS.get(key)
+        if field is None:
+            supported = ", ".join(repr(name) for name in sorted(_CONTEXT_INFO_FIELDS))
+            raise AppTestError(
+                f"AppTest.context does not support {key!r}. Supported keys: "
+                f"{supported}."
+            )
+        if value is None:
+            continue
+        try:
+            setattr(info, field, value)
+        except (TypeError, ValueError) as ex:
+            raise AppTestError(
+                f"AppTest.context[{key!r}] has an invalid value {value!r}: {ex}"
+            ) from ex
+    return info
 
 
 def _query_params_from_query_string(query_string: str) -> dict[str, str | list[str]]:
@@ -280,6 +322,24 @@ class AppTest:
         blank values are preserved as ``""``, and repeated keys stay
         ``list[str]``. That last case differs from ``st.query_params``,
         which returns only the last value.
+
+    user: dict[str, Any]
+        Dictionary of user information that the simulated app reads as
+        ``st.user``. The default is ``{"email": "test@example.com"}``. To
+        test a logged-in user, set ``"is_logged_in"`` to ``True`` and add the
+        identity claims the app reads, such as ``"name"`` and ``"email"``.
+        Exposed tokens go in a ``"tokens"`` dictionary. After a run that
+        calls ``st.logout()``, ``user`` is empty, so the next run is logged
+        out.
+
+    context: dict[str, Any]
+        Dictionary of browser information that the simulated app reads from
+        ``st.context``. The supported keys are ``"timezone"``,
+        ``"timezone_offset"`` (minutes behind UTC, so ``-60`` for UTC+1),
+        ``"locale"``, ``"url"``, ``"is_embedded"``, and ``"theme"``
+        (``"light"`` or ``"dark"``, read as ``st.context.theme.type``). A
+        missing key or a ``None`` value reads as ``None``. Any other key
+        raises ``AppTestError`` when the app runs.
     """
 
     def __init__(
@@ -298,6 +358,8 @@ class AppTest:
         self.session_state = _AppTestSessionState(self._session_state)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
+        self.user: dict[str, Any] = {"email": "test@example.com"}
+        self.context: dict[str, Any] = {}
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
@@ -496,6 +558,12 @@ class AppTest:
         if timeout is None:
             timeout = self.default_timeout
 
+        # Validate before any global state below is swapped in.
+        context_info = _context_info_from_dict(self.context)
+        # A copy, so st.logout() clears this run's user and not the dict the
+        # test passed in. It becomes self.user once the run finishes.
+        user_info: UserInfoType = dict(self.user)
+
         # setup
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.media_file_mgr = MediaFileManager(
@@ -533,6 +601,7 @@ class AppTest:
             args=self.args,
             kwargs=self.kwargs,
             fragment_storage=self._fragment_storage,
+            user_info=user_info,
         )
 
         # Register recordings and uploads before the script reads them.
@@ -545,7 +614,11 @@ class AppTest:
             # the url-path hash a multipage app finished on.
             requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, requested_page_hash
+                widget_state,
+                self.query_params,
+                timeout,
+                requested_page_hash,
+                context_info=context_info,
             )
             self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
@@ -563,6 +636,7 @@ class AppTest:
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = _query_params_from_query_string(query_string)
+        self.user = user_info
 
         if self.secrets:
             if st.secrets._secrets is not None:

@@ -24,7 +24,7 @@ from streamlit.runtime import Runtime
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.state.common import TESTING_KEY
-from streamlit.testing.v1 import AppTest, local_script_runner
+from streamlit.testing.v1 import AppTest, AppTestError, local_script_runner
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.util import calc_hash
 
@@ -249,6 +249,151 @@ def test_secrets():
     at.run()
     assert at.markdown[0].value == "bar"
     assert at.secrets["foo"] == "bar"
+
+
+def test_user_and_context_defaults() -> None:
+    """Without seeding, st.user has the legacy test email and st.context is unset."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text(repr(st.user.to_dict()))
+        st.text(repr(st.context.timezone))
+        st.text(repr(st.context.url))
+        st.text(repr(st.context.theme.type))
+
+    at = AppTest.from_function(script).run()
+    assert at.user == {"email": "test@example.com"}
+    assert at.context == {}
+    assert [t.value for t in at.text] == [
+        "{'email': 'test@example.com'}",
+        "None",
+        "None",
+        "None",
+    ]
+
+
+def test_seeded_user() -> None:
+    """``AppTest.user`` is what the script reads as st.user."""
+
+    def script() -> None:
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.text(f"Hello, {st.user.name} <{st.user.email}>")
+            st.text(st.user.tokens["id"])
+
+    at = AppTest.from_function(script)
+    at.user = {
+        "is_logged_in": True,
+        "name": "Ada",
+        "email": "ada@example.com",
+        "tokens": {"id": "id-token"},
+    }
+    at.run()
+    assert not at.exception
+    assert [t.value for t in at.text] == ["Hello, Ada <ada@example.com>", "id-token"]
+
+    at.user["name"] = "Grace"
+    at.run()
+    assert at.text[0].value == "Hello, Grace <ada@example.com>"
+
+
+def test_logout_clears_seeded_user() -> None:
+    """st.logout() empties ``AppTest.user``, so later runs are logged out."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text(repr(st.user.to_dict()))
+        if st.button("Log out"):
+            st.logout()
+
+    at = AppTest.from_function(script)
+    at.user = {"is_logged_in": True, "email": "ada@example.com"}
+    at.run()
+    at.button[0].click().run()
+    assert at.user == {}
+
+    at.run()
+    assert at.text[0].value == "{}"
+
+
+def test_seeded_context() -> None:
+    """``AppTest.context`` is what the script reads as browser st.context fields."""
+
+    def script() -> None:
+        import streamlit as st
+
+        if "reran" not in st.session_state:
+            st.session_state.reran = True
+            st.rerun()
+        st.text(repr(st.context.timezone))
+        st.text(repr(st.context.timezone_offset))
+        st.text(repr(st.context.locale))
+        st.text(repr(st.context.url))
+        st.text(repr(st.context.is_embedded))
+        st.text(repr(st.context.theme.type))
+
+    at = AppTest.from_function(script)
+    at.context = {
+        "timezone": "Europe/Berlin",
+        "timezone_offset": -60,
+        "locale": "de-DE",
+        "url": "https://example.com/app",
+        "is_embedded": True,
+        "theme": "dark",
+    }
+    at.run()
+    assert not at.exception
+    assert [t.value for t in at.text] == [
+        "'Europe/Berlin'",
+        "-60",
+        "'de-DE'",
+        "'https://example.com/app'",
+        "True",
+        "'dark'",
+    ]
+
+
+def test_seeded_context_none_leaves_field_unset() -> None:
+    """A ``None`` value in ``AppTest.context`` reads back as ``None``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text(repr(st.context.timezone))
+        st.text(repr(st.context.locale))
+
+    at = AppTest.from_function(script)
+    at.context = {"timezone": None, "locale": "fr-FR"}
+    at.run()
+    assert [t.value for t in at.text] == ["None", "'fr-FR'"]
+
+
+@pytest.mark.parametrize(
+    ("context", "match"),
+    [
+        pytest.param(
+            {"headers": {"X-Test": "1"}},
+            r"AppTest.context does not support 'headers'.*Supported keys: "
+            r"'is_embedded', 'locale', 'theme', 'timezone', 'timezone_offset', 'url'",
+            id="unknown_key",
+        ),
+        pytest.param(
+            {"timezone_offset": "-60"},
+            r"AppTest.context\['timezone_offset'\] has an invalid value '-60'",
+            id="wrong_type",
+        ),
+    ],
+)
+def test_invalid_context_raises(context: dict[str, object], match: str) -> None:
+    """Unsupported ``AppTest.context`` entries fail loud before the script runs."""
+    at = AppTest.from_string("import streamlit as st\nst.text('ran')")
+    at.context = context
+    with pytest.raises(AppTestError, match=match):
+        at.run()
+    assert len(at.text) == 0
 
 
 def test_7636_regression():
