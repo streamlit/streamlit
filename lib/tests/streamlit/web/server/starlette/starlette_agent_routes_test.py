@@ -439,6 +439,60 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
     assert collected.json()["session_id"] == handle
 
 
+def test_write_refusals_end_to_end(tmp_path: Path) -> None:
+    """A write a real runtime refuses is answered with the catalog's status,
+    runs nothing, and, on a creating call, creates no session.
+    """
+    script = """
+    import streamlit as st
+    from tests.streamlit.runtime.agent import run_gate
+
+    st.text(f"runs={run_gate.count('runs')}")
+    st.text_input("Locked", key="locked", disabled=True)
+    if st.checkbox("More", key="more"):
+        st.slider("Depth", 1, 5, key="depth")
+    st.selectbox("Region", ["EMEA", "APAC"], key="region")
+    """
+    overrides = {"server.agentMaxSessions": 1}
+    with _served_app(tmp_path, script, overrides) as client:
+        creating = client.post(_PATH, json={"widget_state": {"region": "APAC"}})
+        created = client.post(_PATH, json={})
+        handle = created.json()["session_id"]
+        for more in (True, False):
+            client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"more": more}}
+            )
+        refusals = {
+            key: client.post(
+                _PATH, json={"session_id": handle, "widget_state": {key: value}}
+            )
+            for key, value in {
+                "region": "Mars",
+                "typo": 1,
+                "depth": 3,
+                "locked": "x",
+            }.items()
+        }
+        runs = run_gate.value("runs")
+
+    assert creating.status_code == 400
+    assert creating.json()["error"]["code"] == "invalid_request"
+    assert "session_id" not in creating.json()
+    # The one session the server allows was still free.
+    assert created.status_code == 200
+    assert {
+        key: (response.status_code, response.json()["error"]["code"])
+        for key, response in refusals.items()
+    } == {
+        "region": (400, "invalid_value"),
+        "typo": (404, "unknown_key"),
+        "depth": (409, "not_on_page"),
+        "locked": (409, "disabled_widget"),
+    }
+    # The session itself and the two writes that revealed and hid `depth`.
+    assert runs == 3
+
+
 def test_media_urls_resolve_against_the_request_under_a_base_path(
     tmp_path: Path,
 ) -> None:
