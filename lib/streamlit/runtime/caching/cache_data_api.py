@@ -16,11 +16,9 @@
 
 from __future__ import annotations
 
-import copy as copylib
 import math
 import pickle  # noqa: S403
 import threading
-from datetime import date, datetime, timedelta
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -85,6 +83,7 @@ from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from datetime import timedelta
 
     from streamlit.runtime.caching.hashing import HashFuncsDict
 
@@ -549,7 +548,8 @@ class CacheDataAPI:
         By default, cached objects are stored in "pickled" form, which means that
         the return value of a cached function must be pickleable. Each caller of
         the cached function gets its own copy of the cached data. The experimental
-        ``copy="cow"`` mode supports a narrower set of process-local values instead.
+        ``copy="cow"`` mode instead uses pandas Copy-on-Write for pandas-managed data
+        and shares nested Python objects between callers.
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
@@ -694,10 +694,12 @@ class CacheDataAPI:
             - ``"deep"`` (default): Serialize the value with pickle and deserialize it
               for every cache hit.
             - ``"cow"``: Keep a process-local pandas Copy-on-Write baseline and return
-              shallow DataFrame or Series copies. This evaluation mode supports pandas
-              objects, immutable scalar values, and nested tuples, lists, and
-              dictionaries containing those values. Unsupported values raise an error
-              instead of being shared.
+              shallow DataFrame or Series copies. Pandas-managed writes are isolated,
+              but nested Python objects, including mutable values in object-dtype
+              columns, are shared. The app developer is responsible for avoiding
+              unsafe mutations and synchronizing access to shared objects. Pandas
+              objects nested in built-in tuples, lists, and dictionaries also receive
+              shallow copies.
 
         Examples
         --------
@@ -900,121 +902,19 @@ class CacheDataAPI:
         _data_caches.clear_all()
 
 
-class _CacheDataCowUnsupportedTypeError(StreamlitAPIException):
-    """Raised when ``copy="cow"`` cannot preserve mutation isolation."""
-
-    def __init__(self, value: Any, path: str, detail: str | None = None) -> None:
-        value_type = f"{type(value).__module__}.{type(value).__qualname__}"
-        message = (
-            f'`st.cache_data(copy="cow")` cannot safely isolate {path}, which has '
-            f"type `{value_type}`. This prototype supports pandas DataFrames and "
-            "Series, immutable scalar values, and nested built-in tuples, lists, and "
-            "dictionaries containing supported values."
-        )
-        if detail is not None:
-            message = f"{message}\n\n{detail}"
-        super().__init__(message, error_id="cache-data-cow-unsupported-type")
-
-
-def _is_cow_immutable(value: Any) -> bool:
-    """Return whether a value can be safely shared by CoW cache callers."""
-    if isinstance(
-        value,
-        (type(None), bool, int, float, complex, str, bytes, date, datetime, timedelta),
-    ):
-        return True
-    if type(value) is tuple:
-        return all(_is_cow_immutable(item) for item in value)
-    if type(value) is frozenset:
-        return all(_is_cow_immutable(item) for item in value)
-
-    import numpy as np
-    import pandas as pd
-
-    return (
-        isinstance(value, (np.generic, pd.Timestamp, pd.Timedelta))
-        or value is pd.NA
-        or value is pd.NaT
-    )
-
-
-def _validate_cow_pandas_object(value: Any, path: str) -> None:
-    """Validate that pandas metadata and object arrays contain immutable values."""
-    import pandas as pd
-
-    pandas_major_version = int(pd.__version__.split(".", maxsplit=1)[0])
-    if pandas_major_version < 3 and pd.options.mode.copy_on_write is not True:
-        raise _CacheDataCowUnsupportedTypeError(
-            value,
-            path,
-            "Pandas Copy-on-Write must be enabled. Upgrade to pandas 3 or set "
-            "`pd.options.mode.copy_on_write = True` before using this mode.",
-        )
-
-    axes = [("index", value.index)]
-    if isinstance(value, pd.DataFrame):
-        axes.append(("columns", value.columns))
-    for axis_name, axis in axes:
-        for label in axis:
-            if not _is_cow_immutable(label):
-                raise _CacheDataCowUnsupportedTypeError(
-                    label, f"{path} {axis_name} label"
-                )
-
-    if isinstance(value, pd.Series):
-        object_columns = (
-            [(path, value)] if pd.api.types.is_object_dtype(value.dtype) else []
-        )
-    else:
-        object_columns = [
-            (f"{path} column {position}", value.iloc[:, position])
-            for position, dtype in enumerate(value.dtypes)
-            if pd.api.types.is_object_dtype(dtype)
-        ]
-
-    for column_path, column in object_columns:
-        for cell in column.array:
-            if not _is_cow_immutable(cell):
-                raise _CacheDataCowUnsupportedTypeError(cell, f"{column_path} cell")
-
-
-def _validate_cow_value(value: Any, path: str = "the return value") -> None:
-    """Validate that shallow copies preserve isolation for a cached value."""
+def _copy_cow_value(value: Any) -> Any:
+    """Return shallow pandas wrappers while sharing nested Python objects."""
     import pandas as pd
 
     if isinstance(value, (pd.DataFrame, pd.Series)):
-        _validate_cow_pandas_object(value, path)
-        return
-    if _is_cow_immutable(value):
-        return
-    if type(value) in {tuple, list}:
-        for index, item in enumerate(value):
-            _validate_cow_value(item, f"{path}[{index}]")
-        return
-    if type(value) is dict:
-        for key, item in value.items():
-            if not _is_cow_immutable(key):
-                raise _CacheDataCowUnsupportedTypeError(key, f"a key in {path}")
-            _validate_cow_value(item, f"{path}[{key!r}]")
-        return
-    raise _CacheDataCowUnsupportedTypeError(value, path)
-
-
-def _copy_cow_value(value: Any) -> Any:
-    """Return an isolated container that shares pandas data through CoW."""
-    import pandas as pd
-
-    if isinstance(value, pd.DataFrame):
-        frame_copy = value.copy(deep=False)
-        frame_copy.index = value.index.copy(deep=True)
-        frame_copy.columns = value.columns.copy(deep=True)
-        frame_copy.attrs = copylib.deepcopy(value.attrs)
-        return frame_copy
-    if isinstance(value, pd.Series):
-        series_copy = value.copy(deep=False)
-        series_copy.index = value.index.copy(deep=True)
-        series_copy.attrs = copylib.deepcopy(value.attrs)
-        return series_copy
+        pandas_major_version = int(pd.__version__.split(".", maxsplit=1)[0])
+        if pandas_major_version < 3 and pd.options.mode.copy_on_write is not True:
+            raise StreamlitAPIException(
+                "Pandas Copy-on-Write must be enabled before using "
+                '`st.cache_data(copy="cow")`. Upgrade to pandas 3 or set '
+                "`pd.options.mode.copy_on_write = True`."
+            )
+        return value.copy(deep=False)
     if type(value) is tuple:
         return tuple(_copy_cow_value(item) for item in value)
     if type(value) is list:
@@ -1101,13 +1001,13 @@ class DataCache(Cache[R]):
                     entry = self._cow_cache[value_key]
                 except KeyError as exc:
                     raise CacheKeyNotFoundError() from exc
-                return CachedResult(
-                    value=cast("R", _copy_cow_value(entry.value)),
-                    messages=list(entry.messages),
-                    main_id=entry.main_id,
-                    sidebar_id=entry.sidebar_id,
-                    stored_at=entry.stored_at,
-                )
+            return CachedResult(
+                value=cast("R", _copy_cow_value(entry.value)),
+                messages=list(entry.messages),
+                main_id=entry.main_id,
+                sidebar_id=entry.sidebar_id,
+                stored_at=entry.stored_at,
+            )
 
         try:
             pickled_entry = self.storage.get(value_key)
@@ -1145,11 +1045,8 @@ class DataCache(Cache[R]):
 
     @gather_metrics("_cache_data_object")
     def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
-        """Write a value and associated messages to the cache.
-        The value must be pickleable.
-        """
+        """Write a value and associated messages to the cache."""
         if self.copy == "cow":
-            _validate_cow_value(value)
             cached_value = cast("R", _copy_cow_value(value))
             stored_at = (
                 cache_utils.TTLCACHE_TIMER()
@@ -1206,7 +1103,6 @@ class DataCache(Cache[R]):
             return False
 
         if self.copy == "cow":
-            _validate_cow_value(value)
             cached_value = cast("R", _copy_cow_value(value))
             with self._write_lock:
                 if not self._invalidation_token_is_current(
@@ -1264,7 +1160,6 @@ class DataCache(Cache[R]):
         main_id = st._main._id
         sidebar_id = st.sidebar._id
         if self.copy == "cow":
-            _validate_cow_value(value)
             cached_value = cast("R", _copy_cow_value(value))
             with self._write_lock:
                 if self._refresh_is_orphaned(

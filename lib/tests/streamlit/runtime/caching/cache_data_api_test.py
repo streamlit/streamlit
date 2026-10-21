@@ -141,16 +141,14 @@ class CacheDataTest(unittest.TestCase):
         assert r2 == [0, 1]
 
     def test_cow_dataframe_hit_shares_data_and_isolates_mutation(self) -> None:
-        """CoW hits share buffers while isolating data, axes, and metadata."""
+        """CoW hits share buffers while pandas-managed writes remain isolated."""
         calls = 0
 
         @st.cache_data(copy="cow")
         def get_data() -> pd.DataFrame:
             nonlocal calls
             calls += 1
-            result = pd.DataFrame({"value": [1, 2], "label": ["a", "b"]})
-            result.attrs["metadata"] = {"source": "cache"}
-            return result
+            return pd.DataFrame({"value": [1, 2], "label": ["a", "b"]})
 
         first = get_data()
         second = get_data()
@@ -159,15 +157,9 @@ class CacheDataTest(unittest.TestCase):
         assert np.shares_memory(first["value"].to_numpy(), second["value"].to_numpy())
 
         first.loc[0, "value"] = 99
-        first.index.name = "changed"
-        first.columns.name = "changed"
-        first.attrs["metadata"]["source"] = "caller"
 
         third = get_data()
         assert third.loc[0, "value"] == 1
-        assert third.index.name is None
-        assert third.columns.name is None
-        assert third.attrs == {"metadata": {"source": "cache"}}
 
     def test_cow_nested_dashboard_return_is_isolated(self) -> None:
         """The dashboard's tuple of DataFrames and timestamp is supported."""
@@ -211,6 +203,31 @@ class CacheDataTest(unittest.TestCase):
         assert observed == list(range(10, 18))
         assert get_data().loc[0, "value"] == 0
 
+    def test_cow_concurrent_hits_copy_outside_cache_lock(self) -> None:
+        """Concurrent callers can create their shallow wrappers in parallel."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": [1]})
+
+        get_data()
+        copy_barrier = threading.Barrier(2)
+
+        def copy_after_barrier(value: pd.DataFrame) -> pd.DataFrame:
+            copy_barrier.wait(timeout=2)
+            return value.copy(deep=False)
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api._copy_cow_value",
+                side_effect=copy_after_barrier,
+            ),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            results = list(executor.map(lambda _: get_data(), range(2)))
+
+        assert all(result.loc[0, "value"] == 1 for result in results)
+
     def test_cow_clear_and_lru_eviction_recompute_values(self) -> None:
         """Function clear and max_entries eviction remove CoW baselines."""
         calls: list[int] = []
@@ -229,27 +246,49 @@ class CacheDataTest(unittest.TestCase):
         get_data(1)
         assert calls == [1, 2, 1, 1]
 
-    def test_cow_rejects_unsupported_nested_mutable_value(self) -> None:
-        """Unsupported values fail instead of being shared between callers."""
+    def test_cow_shares_nested_mutable_value(self) -> None:
+        """Non-pandas mutable values are shared under the opt-in contract."""
 
         @st.cache_data(copy="cow")
         def get_data() -> dict[str, set[int]]:
             return {"mutable": {1, 2}}
 
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot safely isolate the return value\['mutable'\]",
-        ):
-            get_data()
+        first = get_data()
+        second = get_data()
 
-    def test_cow_rejects_mutable_dataframe_object_cell(self) -> None:
-        """Mutable Python objects inside object columns are not shared silently."""
+        assert first is not second
+        assert first["mutable"] is second["mutable"]
+        first["mutable"].add(3)
+        assert get_data()["mutable"] == {1, 2, 3}
+
+    def test_cow_shares_mutable_dataframe_object_cell(self) -> None:
+        """Pandas CoW does not isolate in-place mutation within object cells."""
 
         @st.cache_data(copy="cow")
         def get_data() -> pd.DataFrame:
             return pd.DataFrame({"nested": [["mutable"]]})
 
-        with pytest.raises(StreamlitAPIException, match="column 0 cell"):
+        first = get_data()
+        second = get_data()
+
+        assert first.at[0, "nested"] is second.at[0, "nested"]
+        first.at[0, "nested"].append("shared")
+        assert get_data().at[0, "nested"] == ["mutable", "shared"]
+
+    def test_cow_requires_pandas_copy_on_write_before_pandas_3(self) -> None:
+        """Older pandas versions must explicitly enable Copy-on-Write."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": [1]})
+
+        pandas_options = MagicMock()
+        pandas_options.mode.copy_on_write = False
+        with (
+            patch.object(pd, "__version__", "2.2.0"),
+            patch.object(pd, "options", pandas_options),
+            pytest.raises(StreamlitAPIException, match="must be enabled"),
+        ):
             get_data()
 
     def test_invalid_copy_mode_raises(self) -> None:

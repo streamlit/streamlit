@@ -1,41 +1,40 @@
 # `st.cache_data(copy="cow")` Area Stability evaluation
 
-## Conclusion
+## Current status
 
-The prototype did not make the optimized Area Stability dashboard faster. Across three
-cache-cleared runs per condition, parallel fragments with normal deep copies averaged
-14.33 seconds, while the same app with `copy="cow"` averaged 17.13 seconds. CoW was
-19.5% slower than the equivalent deep-copy condition and 10.4% slower than the original
-app.
+The prototype now follows pandas' native Copy-on-Write contract. Each caller receives a
+separate shallow DataFrame or Series wrapper that shares pandas-managed data. Pandas
+writes trigger private copies, while nested Python objects—including mutable values in
+object-dtype cells—remain shared and are the app developer's responsibility.
 
-The parallel-fragment and dynamic-tab work still improved progressive rendering. Its
-data cutoff appeared in about 4–5 seconds in representative runs, compared with 11.1
-seconds in the original app. That benefit is separate from the CoW result.
+This revision removes the earlier implementation's recursive safety validation,
+cell-by-cell object-column scan, and explicit deep copies of pandas axes and metadata.
+It also creates caller wrappers after releasing the cache lock so concurrent cache hits
+can proceed in parallel.
 
-Recommendation: do not advance this prototype as the performance solution for issue
-#17084. Keep the mutation-isolation design and tests as reference material, but profile
-the validation and copy paths before considering another implementation. The dashboard
-results do support continuing the parallel-fragment and dynamic-tab optimization with
-the existing deep-copy cache behavior.
+The benchmark below measured the earlier safety-preserving implementation and does not
+measure this revised design. The revised prototype needs a new controlled benchmark
+before making a performance recommendation.
 
 ## Prototype behavior
 
 The opt-in `copy="cow"` mode:
 
 - leaves the default pickle serialize/deserialize behavior unchanged;
-- supports pandas DataFrames and Series, immutable scalar values, and nested built-in
-  tuples, lists, and dictionaries;
-- returns shallow pandas copies while copying axes and `attrs`;
-- rejects mutable object cells and unsupported values instead of sharing them;
+- returns shallow pandas DataFrame and Series copies;
+- reconstructs built-in tuples, lists, and dictionaries so nested pandas objects also
+  receive shallow wrappers;
+- shares other nested Python objects, including mutable object-dtype cells;
+- does not recursively validate cached values;
 - requires pandas Copy-on-Write on pandas versions before 3;
 - rejects `persist="disk"` because its baseline is process-local; and
 - participates in clear, TTL/LRU eviction, async writes, and background refresh.
 
-Targeted tests cover default behavior, cache hits, caller/cache mutation isolation,
-nested dashboard-shaped returns, concurrent readers, clear, eviction, TTL, async
-writes, and background refresh.
+Targeted tests cover default behavior, pandas-managed mutation isolation, explicitly
+shared nested values, nested dashboard-shaped returns, concurrent readers, clear,
+eviction, TTL, async writes, and background refresh.
 
-## Method
+## Historical benchmark method
 
 The dashboard used the saved Area Stability experiment with two local controls:
 
@@ -62,7 +61,7 @@ The app's `run_end` instrumentation is not an end-to-end measure in parallel mod
 main script finishes immediately after dispatching parallel fragments. Browser section
 readiness is therefore the authoritative timing here.
 
-## Raw results
+## Historical raw results
 
 All values are seconds from browser navigation to the completion condition.
 
@@ -128,7 +127,7 @@ not a controlled memory comparison: the processes had completed different number
 orders of runs, and Python's allocator can retain freed memory. The samples are recorded
 because RSS was requested, but they are not evidence of a specific memory saving.
 
-## Behavior verification
+## Historical behavior verification
 
 Browser testing confirmed:
 
@@ -145,7 +144,7 @@ The mutation probe mutates both DataFrames returned by `_prepare_health_data`, c
 cached function again, and verifies neither marker column is present in the second
 caller's results.
 
-## Invalid attempts and limitations
+## Historical invalid attempts and limitations
 
 - Initial attempts were discarded because generated local secrets used `laurawilby`
   while the configured Snowflake identity was `lwilby`. Authentication failures and
@@ -156,18 +155,21 @@ caller's results.
   from the original mode were discarded.
 - Warehouse load and result-cache state are external variables and were not reset.
 - The three-run ranges overlap, so the exact percentages are not stable enough for a
-  general performance claim. They are sufficient to reject the hypothesis that this CoW
-  prototype makes this dashboard consistently faster.
+  general performance claim. They were sufficient to reject the hypothesis that the
+  earlier safety-preserving CoW implementation made this dashboard consistently faster.
 - Per-cache timing could not be separated reliably from concurrent query, preparation,
   and chart work. The browser totals capture the user-visible result.
 
-## Interpretation
+## Historical interpretation
 
-The cache's pickle deserialization cost was not the dominant end-to-end bottleneck in
-this experiment. The CoW path also performs safety work that the default path does not:
-it validates nested values, axes, object cells, and metadata, then constructs isolated
-pandas containers. For the Area Stability return shapes, that work outweighed any
-avoided deep-copy cost.
+The earlier cache's pickle deserialization cost was not the dominant end-to-end
+bottleneck in this experiment. Its CoW path also performed safety work that the default
+path did not: it validated nested values, axes, object cells, and metadata, then
+constructed isolated pandas containers. For the Area Stability return shapes, that work
+outweighed any avoided deep-copy cost.
+
+The revised prototype intentionally removes that stronger isolation guarantee. These
+historical timings therefore cannot predict its performance.
 
 The stronger result is architectural: parallel fragments and dynamic tabs can expose
 useful content much earlier, but changing cache-copy semantics is not required to obtain
