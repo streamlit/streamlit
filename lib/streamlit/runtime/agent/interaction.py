@@ -783,6 +783,10 @@ async def _run_interaction(
     # already going, must not change what that run reads.
     session.client.request_context = _RequestContext(headers)
     session.client.begin_interaction()
+    # Until this run's snapshot is built, the last one no longer describes the
+    # page. If the build fails, a later write must not be checked against it,
+    # where a widget this run removed would still take a value.
+    session.element_states = {}
     runtime.handle_backmsg(session.app_session_id, back_msg)
 
     return await _settle(
@@ -1262,8 +1266,8 @@ def _query_string_after_edits(
     ``st.query_params``, and to seed the next page's widgets. Kept as it was,
     the old value would be put back over the edit. Dropping it is enough to
     prevent that without reimplementing the browser's URL format: the widget
-    keeps its value, and the parameter is missing until the runtime writes it
-    back itself.
+    keeps its new value, and unlike in a browser, the parameter then stays out
+    of ``query_params``.
     """
     edited = {
         binding.param_key

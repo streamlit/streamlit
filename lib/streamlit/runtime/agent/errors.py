@@ -89,7 +89,8 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         400,
         (
             "Widgets in an open `st.dialog` were combined with widgets outside "
-            "it. Send the dialog's widgets on their own first."
+            "it or in a fragment inside it. Send each region's widgets on "
+            "their own."
         ),
     ),
     "cross_form_batch": (
@@ -135,7 +136,7 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     ),
     "disabled_widget": (
         409,
-        "The element is on the page but disabled; something else on the page enables it.",
+        "The element is on the page but disabled; it accepts nothing until the app enables it.",
     ),
     "session_busy": (
         409,

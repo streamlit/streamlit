@@ -1493,6 +1493,44 @@ async def test_a_write_after_an_uncollected_run_is_checked_against_that_run(
 
 
 @pytest.mark.anyio
+async def test_a_write_after_a_failed_build_is_not_checked_against_the_page_before(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """When a run's snapshot cannot be built, a widget that run removed is not
+    on the page for the next write, and its callback does not run.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("log", [])
+    mode = st.radio("Mode", ["simple", "advanced"], index=1, key="mode")
+    if mode == "advanced":
+        st.selectbox(
+            "Region",
+            ["EMEA", "APAC"],
+            key="region",
+            on_change=lambda: st.session_state.log.append("region"),
+        )
+    st.text(f"log={st.session_state.log}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        with (
+            patch.object(snapshot, "build_snapshot", side_effect=RuntimeError),
+            pytest.raises(RuntimeError),
+        ):
+            await app.call({"session_id": handle, "widget_state": {"mode": "simple"}})
+        stale = await app.refused(
+            {"session_id": handle, "widget_state": {"region": "APAC"}}
+        )
+        rerun = await app.call({"session_id": handle})
+
+    assert stale.code == "not_on_page"
+    assert _keyed(rerun, "mode")["value"] == "simple"
+    assert _line(rerun, "log") == "[]"
+
+
+@pytest.mark.anyio
 async def test_chat_input_payload_reaches_the_app(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:

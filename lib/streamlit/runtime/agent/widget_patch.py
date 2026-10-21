@@ -18,14 +18,17 @@ Nothing from the request reaches a protobuf until it has been checked, and the
 whole request is refused before any callback runs.
 
 Every acceptance decision comes from the last snapshot's ``ElementState``: what
-the client was shown, including what is disabled or unsupported, form
-membership, options, and limits. The snapshot has the final say, because it is
-the document the client wrote against. The widget registry supplies only the
-codec: each widget's wire type, serializer, and deserializer.
+the client was shown, including whether an element takes a value or a trigger,
+what is disabled or unsupported, form membership, options, and limits. The
+snapshot has the final say, because it is the document the client wrote
+against. The widget registry supplies only the codec: each widget's wire type,
+serializer, and deserializer.
 
-Bounds, whole numbers, and `max_chars` are not checked here: the runtime resets
-or trims a value that breaks them, and #16203 moves those checks into the
-widgets for every client.
+Bounds, fractions sent to an `st.number_input` or `st.slider` that holds whole
+numbers, and a text input's `max_chars` are left to the widgets, which reset,
+truncate, or trim the value; #16203 moves those checks into the widgets for
+every client. `st.chat_input` enforces `max_chars` only in the browser, and its
+payload never shows in a snapshot, so it is checked here.
 """
 
 from __future__ import annotations
@@ -51,17 +54,6 @@ if TYPE_CHECKING:
     from streamlit.runtime.state.common import ValueFieldName, WidgetMetadata
     from streamlit.runtime.state.session_state import SessionState
 
-
-# Value types that reset after the run that observed them. These are the only
-# ones a `trigger` may address.
-_TRIGGER_VALUE_TYPES: Final[frozenset[str]] = frozenset(
-    {
-        "trigger_value",
-        "string_trigger_value",
-        "json_trigger_value",
-        "chat_input_value",
-    }
-)
 
 # Value types that carry bytes or uploads, which a JSON request cannot express.
 _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
@@ -219,12 +211,12 @@ def _addressable(
     if state.disabled:
         raise AgentRequestError(
             "disabled_widget",
-            f"The element with key {key!r} is on the page but disabled. "
-            "Something else on the page controls that.",
+            f"The element with key {key!r} is on the page but disabled. It "
+            "accepts nothing until the app enables it.",
         )
     # Some elements with no action still register a widget, such as
     # `st.download_button(on_click="ignore")`, so the description decides.
-    if not state.has_action or metadata is None:
+    if state.action is None or metadata is None:
         raise AgentRequestError(
             "unsupported_element",
             f"The element with key {key!r} is on the page but display-only: it "
@@ -299,7 +291,7 @@ def build_widget_states(
             )
         state, metadata = _addressable(session_state, element_id, key, element_states)
 
-        if metadata.value_type in _TRIGGER_VALUE_TYPES:
+        if state.action != "value":
             raise AgentRequestError(
                 "not_a_value",
                 f"The element with key {key!r} is fired with `trigger`, not set "
@@ -359,7 +351,7 @@ def build_widget_states(
         state, metadata = _addressable(
             session_state, element_id, trigger_key, element_states
         )
-        if metadata.value_type not in _TRIGGER_VALUE_TYPES:
+        if state.action != "trigger":
             raise AgentRequestError(
                 "not_a_trigger",
                 f"The element with key {trigger_key!r} holds a value; set it "
@@ -372,7 +364,8 @@ def build_widget_states(
                 metadata.value_type,
                 trigger.get("value"),
                 trigger_key,
-                state.options,
+                options=state.options,
+                max_chars=state.max_chars,
             )
         )
         submitted_form = state.form_id or ""
@@ -468,10 +461,10 @@ def resolve_fragment(
     if touches_dialog:
         raise AgentRequestError(
             "cross_dialog_batch",
-            "The request combined widgets in an open dialog with widgets "
-            "outside it. Covering both takes a full rerun, which closes the "
-            "dialog and discards what was sent to it. Send the dialog's "
-            "widgets on their own first.",
+            "The request spans an open dialog and another region, such as a "
+            "widget outside the dialog or in a fragment inside it. Covering "
+            "both takes a full rerun, which closes the dialog and discards "
+            "what was sent to it. Send each region's widgets on their own.",
         )
     return ""
 
@@ -808,7 +801,7 @@ def _encode(
                 array.data.extend(_as_number(item) for item in items)
             else:
                 array.data.extend(_as_integer(item) for item in items)
-        else:  # pragma: no cover - guarded by _UNSETTABLE_VALUE_TYPES
+        else:  # pragma: no cover - guarded by the action and _UNSETTABLE_VALUE_TYPES
             raise AgentRequestError(
                 "unsupported_element",
                 f"Values of type {value_type} cannot be set through this interface.",
@@ -829,7 +822,9 @@ def _encode_trigger(
     value_type: ValueFieldName,
     payload: Any,
     key: str,
+    *,
     options: list[Any] | None,
+    max_chars: int | None,
 ) -> WidgetState:
     """Encode a fired trigger, with its payload when the widget carries one.
 
@@ -881,8 +876,16 @@ def _encode_trigger(
                 f"The element with key {key!r} is fired with a string `value`, "
                 "the text to submit.",
             )
+        # Refused rather than cut, as the browser's input would: the payload
+        # never shows in a snapshot, so a cut message would go unnoticed.
+        if max_chars is not None and len(payload) > max_chars:
+            raise AgentRequestError(
+                "invalid_value",
+                f"The text for {key!r} is longer than the {max_chars} "
+                "characters its `max_chars` allows.",
+            )
         state.chat_input_value.data = payload
-    else:  # pragma: no cover - guarded by _TRIGGER_VALUE_TYPES
+    else:  # pragma: no cover - a trigger's description matches its wire type
         raise AgentRequestError("not_a_trigger", f"{key!r} is not a trigger.")
 
     return state

@@ -885,7 +885,9 @@ malformed `st.date_input` date or color string, or a slider range with too few v
 is reset to the default, a fraction sent to an integer `st.number_input` or slider is
 truncated, and text past `max_chars` is cut. A reversed slider range is stored as sent,
 so a client sends its two values lowest first. A per-key note saying how each value
-landed is a potential follow-up.
+landed is a potential follow-up. `st.chat_input` is the exception to the cut: only the
+browser enforces its `max_chars`, and its text never shows in a snapshot, so longer
+text is refused with `invalid_value`.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

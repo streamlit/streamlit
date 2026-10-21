@@ -93,10 +93,14 @@ class ElementState(NamedTuple):
     # Whether text outside ``options`` is legal too, as `accept_new_options`
     # makes it.
     accepts_new_options: bool = False
-    # Whether the element declares an action at all, so a refusal can tell a
-    # display-only element from one that cannot be used right now, such as a
-    # widget in a closed dialog.
-    has_action: bool = False
+    # What the element is acted on with, "value" or "trigger", or None for a
+    # display-only element. It decides whether `widget_state` or `trigger`
+    # addresses it, and tells a display-only element from one that cannot be
+    # used right now, such as a widget in a closed dialog.
+    action: str | None = None
+    # The longest text a trigger payload may carry, such as `st.chat_input`'s
+    # `max_chars`, which only the browser enforces.
+    max_chars: int | None = None
 
 
 @dataclass
@@ -379,7 +383,8 @@ class _SnapshotBuilder:
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
             accepts_new_options=props.get("accept_new_options") is True,
-            has_action=bool(action),
+            action=action if isinstance(action, str) else None,
+            max_chars=_whole_number(props.get("max_chars")),
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
@@ -441,12 +446,13 @@ def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None
     ``value_schema.maxItems`` covers a range. ``st.multiselect`` publishes its
     limit as ``props.max_selections`` instead, and a longer selection is refused.
     """
-    limit = (description.get("value_schema") or {}).get("maxItems")
-    if isinstance(limit, bool) or not isinstance(limit, int):
-        limit = props.get("max_selections")
-    if isinstance(limit, bool) or not isinstance(limit, int):
-        return None
-    return limit
+    limit = _whole_number((description.get("value_schema") or {}).get("maxItems"))
+    return limit if limit is not None else _whole_number(props.get("max_selections"))
+
+
+def _whole_number(value: Any) -> int | None:
+    """``value`` if it is an int, which a bool is not, else None."""
+    return None if isinstance(value, bool) or not isinstance(value, int) else value
 
 
 def _public_key(element_id: str) -> str:

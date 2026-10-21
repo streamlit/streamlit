@@ -700,6 +700,12 @@ class WidgetPatchTest(SnapshotCase):
             ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
+            ("chat_at_max_chars", {"key": "prompt", "value": "x" * 8}, "x" * 8),
+            (
+                "chat_past_max_chars",
+                {"key": "prompt", "value": "x" * 9},
+                _Refused("longer than the 8 characters its `max_chars` allows"),
+            ),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),
             (
                 "menu_unknown_option",
@@ -721,7 +727,7 @@ class WidgetPatchTest(SnapshotCase):
     ) -> None:
         """A trigger carries only the payload its widget reads."""
         st.button("Go", key="go")
-        st.chat_input("Say", key="prompt")
+        st.chat_input("Say", key="prompt", max_chars=8)
         st.menu_button("Month", ["January", "December"], key="menu")
         self._check(None, expected, trigger=trigger)
 
