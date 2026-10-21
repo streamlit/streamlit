@@ -281,7 +281,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
     def test_clear_retains_toast_deltas_during_fragment_rerun(self):
         """Toast deltas survive a fragment-scoped lifecycle-retaining clear.
 
-        ``_is_toast_delta`` is a top-level condition, so a toast is retained even
+        ``is_toast_delta`` is a top-level condition, so a toast is retained even
         during a fragment rerun - including a toast emitted by the running
         fragment itself, which would otherwise be dropped so it can be re-run.
         This locks in that ``st.toast()`` + ``st.rerun()`` inside a

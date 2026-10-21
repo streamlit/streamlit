@@ -66,6 +66,13 @@ def _empty(path: list[int]) -> ForwardMsg:
     return msg
 
 
+def _toast(path: list[int], body: str) -> ForwardMsg:
+    msg = ForwardMsg()
+    msg.metadata.delta_path[:] = path
+    msg.delta.new_element.toast.body = body
+    return msg
+
+
 def _finished(status: ForwardMsg.ScriptFinishedStatus.ValueType) -> ForwardMsg:
     msg = ForwardMsg()
     msg.script_finished = status
@@ -195,6 +202,43 @@ def test_client_keeps_the_app_when_a_callback_reruns_a_fragment() -> None:
     )
 
     assert _bodies(client) == ["app", "fragment v2"]
+
+
+def test_client_keeps_a_toast_raised_before_a_rerun_for_its_interaction() -> None:
+    """A toast an interrupted run raised survives the run that ends the chain,
+    and is gone once the next interaction's run finishes.
+    """
+    client = interaction.AgentSessionClient()
+    client.begin_interaction()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "page"),
+        _toast([2, 0], "Saved!"),
+        _finished(ForwardMsg.FINISHED_EARLY_FOR_RERUN),
+        _new_session("r2"),
+        _markdown([0, 0], "page"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+    )
+    toasts = [
+        msg.delta.new_element.toast.body
+        for msg in client.messages
+        if msg.HasField("delta") and msg.delta.new_element.HasField("toast")
+    ]
+    assert toasts == ["Saved!"]
+    assert _bodies(client) == ["page"]
+
+    client.begin_interaction()
+    _write_all(
+        client,
+        _new_session("r3"),
+        _markdown([0, 0], "page"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+    )
+    assert not any(
+        msg.HasField("delta") and msg.delta.new_element.HasField("toast")
+        for msg in client.messages
+    )
 
 
 def test_client_compile_error_prunes_the_previous_page() -> None:

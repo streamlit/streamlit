@@ -45,6 +45,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
 from streamlit.runtime.agent import snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.forward_msg_queue import is_toast_delta
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -166,6 +167,9 @@ class AgentSessionClient(SessionClient):
         # The fragments the most recent run re-rendered, which is what that run
         # owns when it finishes and stale deltas are dropped.
         self._fragments_this_run: frozenset[str] = frozenset()
+        # Every run the current interaction started, so a toast one of them
+        # raised before `st.rerun()` survives the run that ends the chain.
+        self._interaction_run_ids: set[str] = set()
         # When the last run finished, which is session activity even when no
         # request is waiting for it.
         self.finished_at = time.monotonic()
@@ -197,14 +201,16 @@ class AgentSessionClient(SessionClient):
         return self.request_context
 
     def begin_interaction(self) -> None:
-        """Forget what the previous interaction's run reported."""
+        """Forget what the previous interaction's runs reported."""
         self.query_string_update = None
+        self._interaction_run_ids = set()
 
     def _write(self, msg: ForwardMsg) -> None:
         msg_type = msg.WhichOneof("type")
 
         if msg_type == "new_session":
             self._run_id = msg.new_session.script_run_id
+            self._interaction_run_ids.add(self._run_id)
             self._fragments_this_run = frozenset(msg.new_session.fragment_ids_this_run)
             self._element_at = {}
 
@@ -255,6 +261,9 @@ class AgentSessionClient(SessionClient):
         This is the frontend's stale-node rule over a message list: a full run
         replaces the whole tree, so anything older is gone, while a fragment run
         replaces only its own region and leaves the rest of the app standing.
+        A toast is the exception, since the frontend never clears one as stale.
+        A toast that an earlier run of this interaction raised, such as right
+        before `st.rerun()`, stays.
         """
         running = self._fragments_this_run
         # Its indexes point into the list being replaced.
@@ -264,6 +273,7 @@ class AgentSessionClient(SessionClient):
             for run_id, msg in self._deltas
             if run_id == self._run_id
             or (running and msg.delta.fragment_id not in running)
+            or (run_id in self._interaction_run_ids and is_toast_delta(msg))
         ]
 
 

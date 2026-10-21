@@ -327,6 +327,38 @@ async def test_the_response_waits_for_the_last_run_of_a_chain(
 
 
 @pytest.mark.anyio
+async def test_a_toast_raised_before_st_rerun_appears_once(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A toast raised right before `st.rerun()` is in the snapshot of the
+    interaction that raised it, as a browser shows it, and not in the next one.
+    """
+    script = """
+    import streamlit as st
+
+    st.text("page")
+    if not st.session_state.get("saved"):
+        st.session_state.saved = True
+        st.toast("Saved!")
+        st.rerun()
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        created = await app.call()
+        rerun = await app.call({"session_id": created["session_id"]})
+
+    def toasts(document: dict[str, Any]) -> list[str]:
+        return [
+            node["props"]["body"]
+            for node in _nodes(document)
+            if node["type"] == "toast"
+        ]
+
+    assert toasts(created) == ["Saved!"]
+    assert _texts(created) == ["page"]
+    assert toasts(rerun) == []
+
+
+@pytest.mark.anyio
 async def test_a_timed_out_run_is_collected_and_never_restarted(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:

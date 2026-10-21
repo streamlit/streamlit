@@ -143,7 +143,7 @@ class ForwardMsgQueue:
                 # clear happening when a run is interrupted (e.g. st.toast()
                 # immediately followed by st.rerun()); otherwise the toast delta
                 # is dropped before it reaches the browser (issue #7740).
-                or _is_toast_delta(msg)
+                or is_toast_delta(msg)
                 or (
                     # preserve all messages if this is a fragment rerun and...
                     fragment_ids_this_run is not None
@@ -178,7 +178,7 @@ class ForwardMsgQueue:
         return len(self._queue)
 
 
-def _is_toast_delta(msg: ForwardMsg) -> bool:
+def is_toast_delta(msg: ForwardMsg) -> bool:
     """True if the ForwardMsg is a toast element delta.
 
     Lifecycle-retaining clears keep unflushed toast deltas so that an
