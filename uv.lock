@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version == '3.15.*' and sys_platform != 'emscripten'",
@@ -4271,7 +4271,7 @@ requires-dist = [
     { name = "orjson", marker = "extra == 'performance'", specifier = ">=3.5.0" },
     { name = "packaging", specifier = ">=20" },
     { name = "pandas", specifier = ">=1.5.3,<4" },
-    { name = "pillow", specifier = ">=9.2.0,<13" },
+    { name = "pillow", specifier = ">=9.2.0,<14" },
     { name = "plotly", marker = "extra == 'charts'", specifier = ">=4.0.0" },
     { name = "protobuf", specifier = ">=5.26.1,<8" },
     { name = "pyarrow", specifier = ">=10.0.1,!=25.0.0,<27" },
