@@ -126,7 +126,6 @@ if TYPE_CHECKING:
     )
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
@@ -146,13 +145,44 @@ _CONTEXT_INFO_FIELDS: Final[dict[str, tuple[str, type]]] = {
 _CONTEXT_THEMES: Final = ("light", "dark")
 
 
-def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
-    """Build the browser context that ``AppTest.context`` seeds for a run.
+# A dict subclass rather than UserDict: ScriptRunContext.user_info must be a
+# dict, and st.user.to_dict() returns its copy().
+class _SeededUserInfo(dict[str, Any]):  # noqa: FURB189
+    """The user dict that one ``AppTest`` run reads as ``st.user``.
 
-    Returns ``None`` for an empty dict. A ``None`` value leaves its field
-    unset, so ``st.context`` reads it as ``None``, as it does for a client
-    that did not send the field. Raises ``AppTestError`` for an unknown key
-    or a value that a browser would not send.
+    ``st.logout()`` empties this dict in place. With ``st.login`` configured,
+    ``st.user`` then reads ``is_logged_in`` as ``False``. AppTest cannot rely
+    on that default because ``at.secrets`` does not reach the ``[auth]``
+    section that ``st.user`` checks. So when the dict had ``is_logged_in``,
+    ``clear()`` keeps it as ``False``. The rest of the logout run, an internal
+    ``st.rerun()``, and later runs then take the logged-out branch.
+    """
+
+    def clear(self) -> None:
+        had_login_flag = "is_logged_in" in self
+        super().clear()
+        if had_login_flag:
+            self["is_logged_in"] = False
+
+
+def _user_info_for_run(user: object) -> _SeededUserInfo:
+    """Copy ``AppTest.user`` into the dict that a run reads as ``st.user``.
+
+    The copy keeps ``st.logout()`` from clearing the test's own dict. Raises
+    ``AppTestError`` when ``user`` is not a dict.
+    """
+    if not isinstance(user, dict):
+        raise AppTestError(f"AppTest.user must be a dict, not {type(user).__name__}.")
+    return _SeededUserInfo(copy.deepcopy(user))
+
+
+def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
+    """Build the ``ContextInfo`` that ``AppTest.context`` seeds for a run.
+
+    Returns ``None`` when ``context`` is empty. A ``None`` value leaves that
+    field unset, so ``st.context`` reads it as ``None``, matching a client
+    that omitted the field. Raises ``AppTestError`` for an unknown key, a
+    value of the wrong type, or a theme other than ``"light"`` or ``"dark"``.
     """
     if not context:
         return None
@@ -167,8 +197,8 @@ def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
         if value is None:
             continue
         field, value_type = _CONTEXT_INFO_FIELDS[key]
-        # bool is a subclass of int, but True is not a timezone offset. The
-        # proto would otherwise coerce it to 1.
+        # Reject bool explicitly: protobuf would otherwise coerce True to a
+        # one-minute offset.
         if not isinstance(value, value_type) or (
             value_type is int and isinstance(value, bool)
         ):
@@ -177,8 +207,9 @@ def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
                 f"{type(value).__name__}."
             )
         if key == "theme" and value not in _CONTEXT_THEMES:
+            themes = " or ".join(repr(theme) for theme in _CONTEXT_THEMES)
             raise AppTestError(
-                f"AppTest.context['theme'] must be 'light' or 'dark', not {value!r}."
+                f"AppTest.context['theme'] must be {themes}, not {value!r}."
             )
         try:
             setattr(info, field, value)
@@ -351,9 +382,11 @@ class AppTest:
         Put the tokens the app reads from ``st.user.tokens`` in a
         ``"tokens"`` dictionary. To test a logged-out user, set
         ``"is_logged_in"`` to ``False``. A run that calls ``st.logout()``
-        clears ``user``. If ``user`` had an ``"is_logged_in"`` key, it then
-        becomes ``{"is_logged_in": False}``, so the next run takes the
-        logged-out branch.
+        clears ``user``. If ``user`` had an ``"is_logged_in"`` key, it
+        becomes ``{"is_logged_in": False}`` for the rest of that run,
+        including an internal ``st.rerun()``, and for later ``.run()``
+        calls, so those runs take the logged-out branch. Without that key,
+        logout leaves ``user`` empty.
 
     context: dict[str, Any]
         Dictionary of browser information that the simulated app reads from
@@ -361,7 +394,10 @@ class AppTest:
 
         - ``"timezone"``: A timezone name, such as ``"Europe/Berlin"``.
         - ``"timezone_offset"``: Minutes behind UTC, such as ``-60`` for
-          UTC+1. AppTest does not derive it from ``"timezone"``.
+          UTC+1. AppTest does not derive this from ``"timezone"``: the
+          offset depends on the date, so a derived value would change a
+          test's result across daylight-saving transitions. Set both when
+          the app reads both.
         - ``"locale"``: A language tag, such as ``"de-DE"``.
         - ``"url"``: The URL of the app.
         - ``"is_embedded"``: Whether the app is embedded.
@@ -592,9 +628,7 @@ class AppTest:
         # restored after a run completes, so raising after the swap would
         # leak them into later tests.
         context_info = _context_info_from_dict(self.context)
-        # st.logout() clears the run's user dict in place. Copy it so the
-        # test's own dict survives; the copy becomes self.user after the run.
-        user_info: UserInfoType = copy.deepcopy(self.user)
+        user_info = _user_info_for_run(self.user)
 
         # setup
         mock_runtime = MagicMock(spec=Runtime)
@@ -668,13 +702,7 @@ class AppTest:
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = _query_params_from_query_string(query_string)
-        if not user_info and "is_logged_in" in self.user:
-            # st.logout() emptied a seeded login. With st.login configured,
-            # the next session reads is_logged_in as False. AppTest cannot
-            # apply that default because at.secrets does not reach the
-            # [auth] section that st.user checks.
-            user_info["is_logged_in"] = False
-        self.user = user_info
+        self.user = dict(user_info)
 
         if self.secrets:
             if st.secrets._secrets is not None:

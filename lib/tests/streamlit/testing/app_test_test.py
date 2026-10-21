@@ -325,10 +325,53 @@ def test_logout_leaves_seeded_user_logged_out() -> None:
     assert [t.value for t in at.text] == ["Logged out"]
 
 
+def test_logout_then_rerun_takes_logged_out_branch() -> None:
+    """The run that calls st.logout() reads st.user as logged out, including after st.rerun()."""
+
+    def script() -> None:
+        import streamlit as st
+
+        if st.user.is_logged_in:
+            st.text(f"Hello, {st.user.email}")
+            if st.button("Log out"):
+                st.logout()
+                st.rerun()
+        else:
+            st.text("Logged out")
+
+    at = AppTest.from_function(script)
+    at.user = {"is_logged_in": True, "email": "ada@example.com"}
+    at.run()
+    at.button[0].click().run()
+    assert not at.exception
+    assert [t.value for t in at.text] == ["Logged out"]
+    assert at.user == {"is_logged_in": False}
+    assert type(at.user) is dict
+
+
 def test_logout_with_default_user_leaves_user_empty() -> None:
     """st.logout() without a seeded ``is_logged_in`` leaves ``AppTest.user`` empty."""
     at = AppTest.from_string("import streamlit as st\nst.logout()").run()
     assert at.user == {}
+
+
+@pytest.mark.parametrize(
+    ("user", "type_name"),
+    [
+        pytest.param(None, "NoneType", id="none"),
+        pytest.param([("email", "ada@example.com")], "list", id="list"),
+    ],
+)
+def test_invalid_user_raises(user: object, type_name: str) -> None:
+    """A non-dict ``AppTest.user`` raises AppTestError before the script runs."""
+    at = AppTest.from_string("import streamlit as st\nst.text('ran')")
+    at.user = user  # type: ignore[assignment]
+    with pytest.raises(
+        AppTestError, match=rf"AppTest.user must be a dict, not {type_name}"
+    ):
+        at.run()
+    assert len(at.text) == 0
+    assert Runtime._instance is None
 
 
 def test_seeded_context_survives_internal_rerun() -> None:
@@ -402,6 +445,11 @@ def test_seeded_context_none_unsets_and_falsy_values_stay_set() -> None:
             {"timezone_offset": True},
             r"AppTest.context\['timezone_offset'\] must be int, not bool",
             id="bool_for_int",
+        ),
+        pytest.param(
+            {"timezone_offset": 2**31},
+            r"AppTest.context\['timezone_offset'\] has an invalid value 2147483648",
+            id="int32_overflow",
         ),
         pytest.param(
             {"theme": "Dark"},
