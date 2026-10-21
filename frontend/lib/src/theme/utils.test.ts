@@ -1344,6 +1344,30 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
   })
 
+  it("keeps stock chrome when only textColor is configured", () => {
+    const theme = createEmotionTheme({ textColor: "#111111" })
+
+    expect(theme.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.colors.dataframeBorderColor).toBe(
+      lightTheme.emotion.colors.dataframeBorderColor
+    )
+    expect(theme.colors.codeBackgroundColor).toBe(
+      lightTheme.emotion.colors.codeBackgroundColor
+    )
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      lightTheme.emotion.colors.dataframeHeaderBackgroundColor
+    )
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
+    // Header text still tracks the configured body text via fadedText60.
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+  })
+
   it("sets the dataframeBorderColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "red",
