@@ -1449,6 +1449,50 @@ async def test_a_timed_out_click_is_collected_not_fired_twice(
 
 
 @pytest.mark.anyio
+async def test_a_write_after_an_uncollected_run_is_checked_against_that_run(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A widget the uncollected run removed is not on the page, its callback
+    does not run, and the run's result stays collectable.
+    """
+    script = """
+    import streamlit as st
+    from tests.streamlit.runtime.agent import run_gate
+
+    st.session_state.setdefault("log", [])
+    mode = st.radio("Mode", ["simple", "advanced"], index=1, key="mode")
+    if mode == "advanced":
+        st.selectbox(
+            "Region",
+            ["EMEA", "APAC"],
+            key="region",
+            on_change=lambda: st.session_state.log.append("region"),
+        )
+    run_gate.wait()
+    st.text(f"log={st.session_state.log}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+
+        run_gate.close()
+        timed_out = await app.refused(
+            {"session_id": handle, "widget_state": {"mode": "simple"}},
+            run_timeout=_SHORT_TIMEOUT,
+        )
+        run_gate.opened.set()
+        await app.settled(handle)
+        stale = await app.refused(
+            {"session_id": handle, "widget_state": {"region": "APAC"}}
+        )
+        held = await app.call({"session_id": handle})
+
+    assert timed_out.code == "run_timed_out"
+    assert stale.code == "not_on_page"
+    assert _keyed(held, "mode")["value"] == "simple"
+    assert _line(held, "log") == "[]"
+
+
+@pytest.mark.anyio
 async def test_chat_input_payload_reaches_the_app(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:

@@ -751,6 +751,17 @@ async def _run_interaction(
     widget_state = request.get("widget_state")
     trigger = request.get("trigger")
     if widget_state is not None or trigger is not None:
+        if pending is not None:
+            # The client never saw the page the uncollected run left, but the
+            # writes land on it. Checked against the snapshot before it, a
+            # widget that run removed would still take a value and fire its
+            # callback. The result stays collectable if the writes are refused.
+            if pending.built is None:
+                pending.built = await _wait_and_build(
+                    app_session, session, pending, deadline=deadline, encode=encode
+                )
+            session.pages = pending.built.snapshot.document.get("pages", [])
+            session.element_states = pending.built.snapshot.element_states
         widget_states, fragment_id = await _validate_writes(
             app_session, session, widget_state=widget_state, trigger=trigger
         )
