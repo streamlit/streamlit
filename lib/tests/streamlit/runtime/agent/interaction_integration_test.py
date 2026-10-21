@@ -1427,7 +1427,8 @@ async def test_a_form_with_two_submit_buttons(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
     """Fields need a submit, each submit runs its own callback with the form's
-    values, and a field a later submit leaves out keeps its submitted value.
+    values, and a field a later submit leaves out keeps its submitted value,
+    because `clear_on_submit` is not applied to an agent's submit.
     """
     script = """
     import streamlit as st
@@ -1438,7 +1439,7 @@ async def test_a_form_with_two_submit_buttons(
         state = st.session_state
         state.log.append(f"{button}:{state.name}:{state.age}")
 
-    with st.form("profile"):
+    with st.form("profile", clear_on_submit=True):
         st.text_input("Name", key="name")
         st.number_input("Age", value=30, key="age")
         st.form_submit_button("Save", key="save", on_click=submitted, args=("save",))
@@ -1615,6 +1616,44 @@ async def test_a_write_after_a_failed_build_is_not_checked_against_the_page_befo
     assert stale.code == "not_on_page"
     assert _keyed(rerun, "mode")["value"] == "simple"
     assert _line(rerun, "log") == "[]"
+
+
+@pytest.mark.anyio
+async def test_a_write_after_a_compile_error_names_it(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A run that fails to compile leaves no page, so a write to a widget from
+    the page before is refused for that reason, and its callback does not run.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("log", [])
+    st.checkbox(
+        "Agree", key="agree", on_change=lambda: st.session_state.log.append("agree")
+    )
+    st.text(f"log={st.session_state.log}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        main_script = tmp_path / "app.py"
+        main_script.write_text("import streamlit as st\nst.checkbox(\n")
+        app.runtime._script_cache.clear()
+        broken = await app.call({"session_id": handle})
+        refused = await app.refused(
+            {"session_id": handle, "widget_state": {"agree": True}}
+        )
+
+        main_script.write_text(textwrap.dedent(script))
+        app.runtime._script_cache.clear()
+        fixed = await app.call({"session_id": handle})
+
+    assert broken["status"] == "error"
+    assert broken["actions"] == []
+    assert refused.code == "not_on_page"
+    assert "failed to compile" in refused.message
+    assert _keyed(fixed, "agree")["value"] is False
+    assert _line(fixed, "log") == "[]"
 
 
 @pytest.mark.anyio

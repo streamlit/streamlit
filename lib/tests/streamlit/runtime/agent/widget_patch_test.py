@@ -118,6 +118,7 @@ class WidgetPatchTest(SnapshotCase):
             widget_state=widget_state,
             trigger=trigger,
             element_states=built.element_states,
+            compile_error=built.compile_error,
         )
 
     def _refusal(
@@ -600,7 +601,13 @@ class WidgetPatchTest(SnapshotCase):
                 "time_to_a_date_slider",
                 "day_slider",
                 "10:00",
-                _Refused("not one it accepts"),
+                _Refused("ISO dates without a time"),
+            ),
+            (
+                "datetime_to_a_date_slider",
+                "day_slider",
+                "2026-01-03T10:00",
+                _Refused("ISO dates without a time"),
             ),
             ("time_slider", "time_slider", "10:15", dt.time(10, 15)),
             (

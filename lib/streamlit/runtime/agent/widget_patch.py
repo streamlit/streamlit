@@ -51,7 +51,7 @@ from streamlit.runtime.state.common import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from streamlit.runtime.agent.snapshot import ElementState
+    from streamlit.runtime.agent.snapshot import BlockedReason, ElementState
     from streamlit.runtime.state.common import ValueFieldName, WidgetMetadata
     from streamlit.runtime.state.session_state import SessionState
 
@@ -61,8 +61,7 @@ _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
     {"bytes_value", "arrow_value", "file_uploader_state_value"}
 )
 
-# How many legal options an `invalid_value` error spells out.
-_LISTED_OPTIONS: Final = 20
+_MAX_LISTED_OPTIONS: Final = 20
 
 # Inputs whose wire form is ISO text in one fixed layout, and the type their
 # value parses as.
@@ -164,6 +163,8 @@ def _require_actionable(
     element_id: str,
     key: str,
     element_states: Mapping[str, ElementState],
+    *,
+    compile_error: bool,
 ) -> tuple[ElementState, WidgetMetadata[Any]]:
     """Look up a widget, refusing anything the last snapshot did not offer.
 
@@ -184,6 +185,8 @@ def _require_actionable(
     if state is None:
         if metadata is None:
             raise _unknown_key(key)
+        if compile_error:
+            raise _blocked(key, "compile_error")
         # A generated key encodes the widget's parameters, so the same widget
         # gets a new key when one of them changes, such as a slider's bound.
         regenerated = (
@@ -237,7 +240,7 @@ def _require_actionable(
     return state, metadata
 
 
-def _blocked(key: str, reason: str) -> AgentRequestError:
+def _blocked(key: str, reason: BlockedReason) -> AgentRequestError:
     """Refuse an element the snapshot shows but does not offer, naming why."""
     if reason == "compile_error":
         return AgentRequestError(
@@ -254,12 +257,25 @@ def _blocked(key: str, reason: str) -> AgentRequestError:
     )
 
 
+def require_trigger_key(trigger: Mapping[str, Any]) -> str:
+    """Return a trigger's ``key``, refusing a trigger without a string one."""
+    key = trigger.get("key")
+    if not isinstance(key, str):
+        raise AgentRequestError(
+            "invalid_request",
+            "`trigger` must be an object with a string `key`. To rerun "
+            "without changing anything, send no `trigger` at all.",
+        )
+    return key
+
+
 def build_widget_states(
     session_state: SessionState,
     *,
     widget_state: Mapping[str, Any] | None,
     trigger: Mapping[str, Any] | None,
     element_states: Mapping[str, ElementState],
+    compile_error: bool = False,
 ) -> WidgetStates:
     """Validate a request's widget values and trigger, and encode both.
 
@@ -281,6 +297,9 @@ def build_widget_states(
         The request's ``trigger``: a ``key`` and an optional ``value``.
     element_states : Mapping[str, ElementState]
         The last snapshot's element states, keyed by element ID.
+    compile_error : bool
+        Whether the last snapshot's run failed to compile. A widget missing
+        from ``element_states`` is then refused for that reason.
 
     Returns
     -------
@@ -309,7 +328,11 @@ def build_widget_states(
                 "under its key and its element ID. Send one value.",
             )
         state, metadata = _require_actionable(
-            session_state, element_id, key, element_states
+            session_state,
+            element_id,
+            key,
+            element_states,
+            compile_error=compile_error,
         )
 
         if state.action != "value":
@@ -359,17 +382,14 @@ def build_widget_states(
 
     submitted_form: str | None = None
     if trigger is not None:
-        trigger_key = trigger.get("key")
-        if not isinstance(trigger_key, str):
-            raise AgentRequestError(
-                "invalid_request",
-                "`trigger` must be an object with a string `key`. To rerun "
-                "without changing anything, send no `trigger` at all.",
-            )
-
+        trigger_key = require_trigger_key(trigger)
         element_id = resolve_element_id(session_state, trigger_key, element_states)
         state, metadata = _require_actionable(
-            session_state, element_id, trigger_key, element_states
+            session_state,
+            element_id,
+            trigger_key,
+            element_states,
+            compile_error=compile_error,
         )
         if state.action != "trigger":
             raise AgentRequestError(
@@ -574,9 +594,9 @@ def _list_options(options: list[Any], *, as_numbers: bool) -> str:
     # a request sends rather than as text.
     listed = ", ".join(
         str(option) if as_numbers else repr(option)
-        for option in options[:_LISTED_OPTIONS]
+        for option in options[:_MAX_LISTED_OPTIONS]
     )
-    more = len(options) - _LISTED_OPTIONS
+    more = len(options) - _MAX_LISTED_OPTIONS
     return listed + (f", and {more} more." if more > 0 else ".")
 
 
@@ -663,7 +683,7 @@ def _parse_iso(value: Any) -> dt.date | dt.time | None:
 
 
 def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> Any:
-    """Turn the ISO text a temporal slider reports into what it carries.
+    """Convert the ISO text a temporal slider reports into its wire microseconds.
 
     A date, time, or datetime slider is reported in ISO text but sends
     microseconds, and the widget's own serializer is what defines that mapping.
@@ -694,6 +714,17 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
             else item
             for item in parsed
         ]
+    elif isinstance(default, dt.date) and any(
+        isinstance(item, dt.datetime) or not isinstance(item, dt.date)
+        for item in parsed
+    ):
+        # The serializer keeps only the date of a datetime, so a time of day
+        # would be dropped while the request succeeded.
+        raise AgentRequestError(
+            "invalid_value",
+            f"The value for {key!r} must be ISO dates without a time, like the "
+            "snapshot reports.",
+        )
     _check_slider_offsets(key, parsed, own_tz=getattr(default, "tzinfo", None))
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
@@ -921,9 +952,12 @@ def _encode_trigger(
                 f"The element with key {key!r} is fired with a string `value`, "
                 "the text to submit.",
             )
-        # Refused rather than cut, as the browser's input would: the payload
-        # never shows in a snapshot, so a cut message would go unnoticed. The
-        # browser reads 0 as no limit and counts UTF-16 code units.
+        # Empty text is accepted although the browser keeps send disabled
+        # without it: browser-only gates such as `required` are not enforced.
+        # Over-long text is refused rather than cut, as the browser's input
+        # would: the payload never shows in a snapshot, so a cut message would
+        # go unnoticed. The browser reads 0 as no limit and counts UTF-16 code
+        # units.
         if max_chars and _utf16_length(payload) > max_chars:
             raise AgentRequestError(
                 "invalid_value",

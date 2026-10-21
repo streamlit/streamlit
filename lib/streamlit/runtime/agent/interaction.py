@@ -39,7 +39,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final, NamedTuple
 from urllib.parse import parse_qs, parse_qsl, urlencode
 
-from streamlit import config
+from streamlit import config, util
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
@@ -304,8 +304,8 @@ class _EncodedSnapshot:
 class _Interaction:
     """What a sent interaction needs once its run chain settles."""
 
-    # The request's action fields as canonical JSON, or None for a plain
-    # rerun, so a retry can be recognized.
+    # The request's `_action_key`, or None for a plain rerun, so a retry can
+    # be recognized.
     action: str | None
     # The query string the request sent, kept unless the run reports a change.
     query_string: str
@@ -352,6 +352,8 @@ class AgentSession:
     # What the last snapshot recorded about each keyed element, which the next
     # request's widget values and trigger are checked against.
     element_states: dict[str, ElementState] = field(default_factory=dict)
+    # Whether the last snapshot's run failed to compile.
+    compile_error: bool = False
     # Set while an interaction is in flight; a second one is refused, not queued.
     busy: bool = False
     # Set whenever `busy` is not, so the retry that collects an interaction
@@ -665,16 +667,21 @@ def _duration(seconds: float) -> str:
 
 
 def _action_key(request: dict[str, Any]) -> str | None:
-    """What a request asks to do, as canonical JSON, or None for a plain rerun.
+    """What a request asks to do, as a digest of its action fields' canonical
+    JSON, or None for a plain rerun.
 
     Two requests ask for the same thing when their action fields encode the
     same. Compared as Python values instead, `true` would equal `1` and `1`
-    would equal `1.0`, so a different write could collect a timed-out one.
+    would equal `1.0`, so a different write could collect a timed-out one. A
+    digest, because an uncollected interaction keeps it and an action can be
+    as large as `server.maxWidgetStateSize`.
     """
     action = {
         name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
     }
-    return json.dumps(action, sort_keys=True, separators=(",", ":")) if action else None
+    if not action:
+        return None
+    return util.calc_hash(json.dumps(action, sort_keys=True, separators=(",", ":")))
 
 
 def _is_collecting_retry(session: AgentSession, action: str | None) -> bool:
@@ -771,8 +778,7 @@ async def _run_interaction(
                 pending.built = await _wait_and_build(
                     app_session, session, pending, deadline=deadline, encode=encode
                 )
-            session.pages = pending.built.snapshot.document.get("pages", [])
-            session.element_states = pending.built.snapshot.element_states
+            _remember_snapshot(session, pending.built.snapshot)
         widget_states, fragment_id = await _validate_writes(
             app_session, session, widget_state=widget_state, trigger=trigger
         )
@@ -794,6 +800,7 @@ async def _run_interaction(
     # page. If the build fails, a later write must not be checked against it,
     # where a widget this run removed would still take a value.
     session.element_states = {}
+    session.compile_error = False
     # Not through `Runtime.handle_backmsg`, which would turn a failure to start
     # the run into an error page meant for a browser. Raised here, it answers
     # the request as `internal_error`.
@@ -839,6 +846,7 @@ async def _validate_writes(
             ),
             session_state=app_session.session_state,
             element_states=session.element_states,
+            compile_error=session.compile_error,
             widget_state=widget_state,
             trigger=trigger,
             has_fragment=app_session.has_fragment,
@@ -872,13 +880,19 @@ async def _settle(
             app_session, session, interaction, deadline=deadline, encode=encode
         )
     built = interaction.built
-    session.pages = built.snapshot.document.get("pages", [])
-    session.element_states = built.snapshot.element_states
+    _remember_snapshot(session, built.snapshot)
     session.last_used = time.monotonic()
 
     if interaction.unverified_page is not None:
         _verify_page_exists(interaction.unverified_page, session)
     return built.body
+
+
+def _remember_snapshot(session: AgentSession, built: Snapshot) -> None:
+    """Keep what the next request is checked against from ``built``."""
+    session.pages = built.document.get("pages", [])
+    session.element_states = built.element_states
+    session.compile_error = built.compile_error
 
 
 async def _wait_and_build(
@@ -1024,6 +1038,7 @@ def _validate_in_worker(
     *,
     session_state: SessionState,
     element_states: Mapping[str, ElementState],
+    compile_error: bool,
     widget_state: Mapping[str, Any] | None,
     trigger: Mapping[str, Any] | None,
     has_fragment: Callable[[str], bool],
@@ -1040,6 +1055,7 @@ def _validate_in_worker(
             widget_state=widget_state,
             trigger=trigger,
             element_states=element_states,
+            compile_error=compile_error,
         )
         fragment_id = widget_patch.resolve_fragment(
             session_state,
@@ -1170,12 +1186,7 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
                 f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
                 "has a `key` and, for payload-bearing triggers, a `value`.",
             )
-        if not isinstance(trigger.get("key"), str):
-            raise AgentRequestError(
-                "invalid_request",
-                "`trigger` must be an object with a string `key`. To rerun "
-                "without changing anything, send no `trigger` at all.",
-            )
+        widget_patch.require_trigger_key(trigger)
 
     writes = [
         name for name in ("widget_state", "trigger") if request.get(name) is not None

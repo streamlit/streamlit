@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
@@ -38,10 +38,14 @@ from streamlit.runtime.state.common import is_element_id, user_key_from_element_
 if TYPE_CHECKING:
     from google.protobuf.message import Message
 
+    from streamlit.elements.lib.agent_spec import ActionKind
     from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
 SCHEMA_VERSION: Final = 1
+
+# Why an element the snapshot shows cannot be used now.
+BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, style-only HTML, and a loading skeleton, which by the
@@ -97,7 +101,7 @@ class ElementState(NamedTuple):
     # display-only element. It decides whether `widget_state` or `trigger`
     # addresses it, and tells a display-only element from one that cannot be
     # used right now, such as a widget in a closed dialog.
-    action: str | None = None
+    action: ActionKind | None = None
     # The longest text a trigger payload may carry, such as `st.chat_input`'s
     # `max_chars`, which only the browser enforces.
     max_chars: int | None = None
@@ -105,7 +109,7 @@ class ElementState(NamedTuple):
     # for one in a closed dialog, "compile_error" for one left from an
     # earlier run when the script failed to compile. Enabling it would not
     # help.
-    blocked_by: str | None = None
+    blocked_by: BlockedReason | None = None
 
 
 @dataclass
@@ -116,6 +120,9 @@ class Snapshot:
     # Keyed by element ID, in tree order, which a batched write's widget
     # states are encoded in.
     element_states: dict[str, ElementState]
+    # Whether the run failed to compile. The page it leaves usually has no
+    # elements, so a write to one from the page before names this cause.
+    compile_error: bool = False
 
 
 class _SnapshotBuilder:
@@ -388,7 +395,7 @@ class _SnapshotBuilder:
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
             accepts_new_options=props.get("accept_new_options") is True,
-            action=action if isinstance(action, str) else None,
+            action=action if action in {"value", "trigger"} else None,
             max_chars=_whole_number(props.get("max_chars")),
             blocked_by="closed_dialog" if in_closed_dialog else None,
         )
@@ -580,7 +587,11 @@ def build_snapshot(
         # real command name.
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
-    return Snapshot(document=document, element_states=builder.element_states)
+    return Snapshot(
+        document=document,
+        element_states=builder.element_states,
+        compile_error=compile_error,
+    )
 
 
 def rebase_media_urls(
