@@ -203,7 +203,9 @@ assert at.query_params["status"] == "open"
 assert at.query_params["tag"] == ["a", "b"]
 ```
 
-Seed `st.user` with `at.user`, which defaults to `{"email": "test@example.com"}`. Set `is_logged_in` and the claims the app reads. After a run that calls `st.logout()`, `at.user` is `{}`. Seed the browser fields of `st.context` with `at.context`: `timezone`, `timezone_offset`, `locale`, `url`, `is_embedded`, and `theme` (`"light"` or `"dark"`). Unset fields read as `None`. Other keys, such as `headers`, raise `AppTestError`.
+Seed `st.user` with `at.user`, which defaults to `{"email": "test@example.com"}`. Set `is_logged_in` to `True` or `False` and add the claims the app reads; `st.user.is_logged_in` raises if the key is missing. After a run that calls `st.logout()`, a seeded login becomes `{"is_logged_in": False}`.
+
+Seed the browser fields of `st.context` with `at.context`: `timezone`, `timezone_offset`, `locale`, `url`, `is_embedded`, and `theme` (`"light"` or `"dark"`). Unset fields read as `None`. Other keys, such as `headers`, raise `AppTestError`.
 
 ```python
 at.user = {"is_logged_in": True, "name": "Ada", "email": "ada@example.com"}

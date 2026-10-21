@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import copy
 import inspect
 import tempfile
 import textwrap
@@ -131,29 +132,33 @@ if TYPE_CHECKING:
 TMP_DIR = tempfile.TemporaryDirectory()
 
 # The st.context properties a browser sends with every rerun, mapped to the
-# ContextInfo field that carries each one.
-_CONTEXT_INFO_FIELDS: Final = {
-    "timezone": "timezone",
-    "timezone_offset": "timezone_offset",
-    "locale": "locale",
-    "url": "url",
-    "is_embedded": "is_embedded",
-    "theme": "color_scheme",
+# ContextInfo field that carries each one and the type of its value.
+# headers, cookies, and ip_address come from the session's client instead,
+# so AppTest.context cannot seed them.
+_CONTEXT_INFO_FIELDS: Final[dict[str, tuple[str, type]]] = {
+    "timezone": ("timezone", str),
+    "timezone_offset": ("timezone_offset", int),
+    "locale": ("locale", str),
+    "url": ("url", str),
+    "is_embedded": ("is_embedded", bool),
+    "theme": ("color_scheme", str),
 }
+_CONTEXT_THEMES: Final = ("light", "dark")
 
 
 def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
     """Build the browser context that ``AppTest.context`` seeds for a run.
 
-    A ``None`` value leaves its field unset, so ``st.context`` reads it as
-    ``None``, as it does for a client that did not send the field.
+    Returns ``None`` for an empty dict. A ``None`` value leaves its field
+    unset, so ``st.context`` reads it as ``None``, as it does for a client
+    that did not send the field. Raises ``AppTestError`` for an unknown key
+    or a value that a browser would not send.
     """
     if not context:
         return None
     info = ContextInfo()
     for key, value in context.items():
-        field = _CONTEXT_INFO_FIELDS.get(key)
-        if field is None:
+        if key not in _CONTEXT_INFO_FIELDS:
             supported = ", ".join(repr(name) for name in sorted(_CONTEXT_INFO_FIELDS))
             raise AppTestError(
                 f"AppTest.context does not support {key!r}. Supported keys: "
@@ -161,9 +166,24 @@ def _context_info_from_dict(context: dict[str, Any]) -> ContextInfo | None:
             )
         if value is None:
             continue
+        field, value_type = _CONTEXT_INFO_FIELDS[key]
+        # bool is a subclass of int, but True is not a timezone offset. The
+        # proto would otherwise coerce it to 1.
+        if not isinstance(value, value_type) or (
+            value_type is int and isinstance(value, bool)
+        ):
+            raise AppTestError(
+                f"AppTest.context[{key!r}] must be {value_type.__name__}, not "
+                f"{type(value).__name__}."
+            )
+        if key == "theme" and value not in _CONTEXT_THEMES:
+            raise AppTestError(
+                f"AppTest.context['theme'] must be 'light' or 'dark', not {value!r}."
+            )
         try:
             setattr(info, field, value)
-        except (TypeError, ValueError) as ex:
+        except ValueError as ex:
+            # An int outside the int32 range of timezone_offset.
             raise AppTestError(
                 f"AppTest.context[{key!r}] has an invalid value {value!r}: {ex}"
             ) from ex
@@ -329,17 +349,27 @@ class AppTest:
         test a logged-in user, set ``"is_logged_in"`` to ``True`` and add the
         identity claims the app reads, such as ``"name"`` and ``"email"``.
         Put the tokens the app reads from ``st.user.tokens`` in a
-        ``"tokens"`` dictionary. After a run that calls ``st.logout()``,
-        ``user`` is empty, so the next run is logged out.
+        ``"tokens"`` dictionary. To test a logged-out user, set
+        ``"is_logged_in"`` to ``False``. A run that calls ``st.logout()``
+        clears ``user``. If ``user`` had an ``"is_logged_in"`` key, it then
+        becomes ``{"is_logged_in": False}``, so the next run takes the
+        logged-out branch.
 
     context: dict[str, Any]
         Dictionary of browser information that the simulated app reads from
-        ``st.context``. The supported keys are ``"timezone"``,
-        ``"timezone_offset"`` (minutes behind UTC, so ``-60`` for UTC+1),
-        ``"locale"``, ``"url"``, ``"is_embedded"``, and ``"theme"``
-        (``"light"`` or ``"dark"``, read as ``st.context.theme.type``). A
-        missing key or a ``None`` value reads as ``None``. Any other key, or
-        a value of the wrong type, raises ``AppTestError`` when the app runs.
+        ``st.context``. The supported keys are:
+
+        - ``"timezone"``: A timezone name, such as ``"Europe/Berlin"``.
+        - ``"timezone_offset"``: Minutes behind UTC, such as ``-60`` for
+          UTC+1. AppTest does not derive it from ``"timezone"``.
+        - ``"locale"``: A language tag, such as ``"de-DE"``.
+        - ``"url"``: The URL of the app.
+        - ``"is_embedded"``: Whether the app is embedded.
+        - ``"theme"``: ``"light"`` or ``"dark"``, read as
+          ``st.context.theme.type``.
+
+        A missing key or a ``None`` value reads as ``None``. Any other key or
+        an invalid value raises ``AppTestError`` when the app runs.
     """
 
     def __init__(
@@ -558,11 +588,13 @@ class AppTest:
         if timeout is None:
             timeout = self.default_timeout
 
-        # Validate before any global state below is swapped in.
+        # Validate first: the mock Runtime and st.secrets below are only
+        # restored after a run completes, so raising after the swap would
+        # leak them into later tests.
         context_info = _context_info_from_dict(self.context)
-        # Copy so st.logout() clears this run's user, not the dict the test
-        # assigned. The copy becomes self.user after the run.
-        user_info: UserInfoType = dict(self.user)
+        # st.logout() clears the run's user dict in place. Copy it so the
+        # test's own dict survives; the copy becomes self.user after the run.
+        user_info: UserInfoType = copy.deepcopy(self.user)
 
         # setup
         mock_runtime = MagicMock(spec=Runtime)
@@ -636,6 +668,12 @@ class AppTest:
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
         self.query_params = _query_params_from_query_string(query_string)
+        if not user_info and "is_logged_in" in self.user:
+            # st.logout() emptied a seeded login. With st.login configured,
+            # the next session reads is_logged_in as False. AppTest cannot
+            # apply that default because at.secrets does not reach the
+            # [auth] section that st.user checks.
+            user_info["is_logged_in"] = False
         self.user = user_info
 
         if self.secrets:

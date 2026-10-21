@@ -274,7 +274,7 @@ def test_user_and_context_defaults() -> None:
 
 
 def test_seeded_user() -> None:
-    """The script reads ``AppTest.user`` as st.user, including in-place edits."""
+    """st.user reflects ``AppTest.user``, including edits made to it between runs."""
 
     def script() -> None:
         import streamlit as st
@@ -299,27 +299,39 @@ def test_seeded_user() -> None:
     assert at.text[0].value == "Hello, Grace <ada@example.com>"
 
 
-def test_logout_clears_seeded_user() -> None:
-    """st.logout() empties ``AppTest.user``, so later runs are logged out."""
+def test_logout_leaves_seeded_user_logged_out() -> None:
+    """After st.logout(), later runs read st.user as logged out."""
 
     def script() -> None:
         import streamlit as st
 
-        st.text(repr(st.user.to_dict()))
-        if st.button("Log out"):
-            st.logout()
+        if st.user.is_logged_in:
+            st.text(f"Hello, {st.user.email}")
+            if st.button("Log out"):
+                st.logout()
+        else:
+            st.text("Logged out")
 
+    seeded = {"is_logged_in": True, "email": "ada@example.com"}
     at = AppTest.from_function(script)
-    at.user = {"is_logged_in": True, "email": "ada@example.com"}
+    at.user = seeded
     at.run()
     at.button[0].click().run()
-    assert at.user == {}
+    assert at.user == {"is_logged_in": False}
+    assert seeded == {"is_logged_in": True, "email": "ada@example.com"}
 
     at.run()
-    assert at.text[0].value == "{}"
+    assert not at.exception
+    assert [t.value for t in at.text] == ["Logged out"]
 
 
-def test_seeded_context() -> None:
+def test_logout_with_default_user_leaves_user_empty() -> None:
+    """st.logout() without a seeded ``is_logged_in`` leaves ``AppTest.user`` empty."""
+    at = AppTest.from_string("import streamlit as st\nst.logout()").run()
+    assert at.user == {}
+
+
+def test_seeded_context_survives_internal_rerun() -> None:
     """The script reads ``AppTest.context`` from st.context, even after st.rerun()."""
 
     def script() -> None:
@@ -356,19 +368,20 @@ def test_seeded_context() -> None:
     ]
 
 
-def test_seeded_context_none_leaves_field_unset() -> None:
-    """A ``None`` value in ``AppTest.context`` reads back as ``None``."""
+def test_seeded_context_none_unsets_and_falsy_values_stay_set() -> None:
+    """``None`` leaves an ``AppTest.context`` field unset; ``0`` and ``False`` stay set."""
 
     def script() -> None:
         import streamlit as st
 
         st.text(repr(st.context.timezone))
-        st.text(repr(st.context.locale))
+        st.text(repr(st.context.timezone_offset))
+        st.text(repr(st.context.is_embedded))
 
     at = AppTest.from_function(script)
-    at.context = {"timezone": None, "locale": "fr-FR"}
+    at.context = {"timezone": None, "timezone_offset": 0, "is_embedded": False}
     at.run()
-    assert [t.value for t in at.text] == ["None", "'fr-FR'"]
+    assert [t.value for t in at.text] == ["None", "0", "False"]
 
 
 @pytest.mark.parametrize(
@@ -382,8 +395,18 @@ def test_seeded_context_none_leaves_field_unset() -> None:
         ),
         pytest.param(
             {"timezone_offset": "-60"},
-            r"AppTest.context\['timezone_offset'\] has an invalid value '-60'",
+            r"AppTest.context\['timezone_offset'\] must be int, not str",
             id="wrong_type",
+        ),
+        pytest.param(
+            {"timezone_offset": True},
+            r"AppTest.context\['timezone_offset'\] must be int, not bool",
+            id="bool_for_int",
+        ),
+        pytest.param(
+            {"theme": "Dark"},
+            r"AppTest.context\['theme'\] must be 'light' or 'dark', not 'Dark'",
+            id="unknown_theme",
         ),
     ],
 )
@@ -394,6 +417,7 @@ def test_invalid_context_raises(context: dict[str, object], match: str) -> None:
     with pytest.raises(AppTestError, match=match):
         at.run()
     assert len(at.text) == 0
+    assert Runtime._instance is None
 
 
 def test_7636_regression():
