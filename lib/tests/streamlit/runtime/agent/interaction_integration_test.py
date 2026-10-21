@@ -938,7 +938,8 @@ async def test_a_write_runs_callbacks_once_and_reports_the_new_value(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
     """A value and a trigger run their callbacks in one run, and a rerun with
-    no changes fires neither again.
+    no changes fires neither again. A widget with `on_change="ignore"` takes
+    its value like any other.
     """
     script = """
     import streamlit as st
@@ -954,21 +955,24 @@ async def test_a_write_runs_callbacks_once_and_reports_the_new_value(
         st.session_state.log.append("go")
 
     st.selectbox("Region", ["EMEA", "APAC"], key="region", on_change=changed)
+    note = st.text_input("Note", key="note", on_change="ignore")
     st.button("Go", key="go", on_click=clicked)
     st.text(f"log={sorted(st.session_state.log)}")
+    st.text(f"note={note}")
     """
     async with _running_app(tmp_path, options, script) as app:
         handle = (await app.call())["session_id"]
         written = await app.call(
             {
                 "session_id": handle,
-                "widget_state": {"region": "APAC"},
+                "widget_state": {"region": "APAC", "note": "urgent"},
                 "trigger": {"key": "go"},
             }
         )
         rerun = await app.call({"session_id": handle})
 
     assert _keyed(written, "region")["value"] == "APAC"
+    assert _line(written, "note") == "urgent"
     assert _line(written, "log") == "['go', 'region=APAC']"
     assert _line(rerun, "log") == "['go', 'region=APAC']"
     assert _keyed(rerun, "region")["value"] == "APAC"
