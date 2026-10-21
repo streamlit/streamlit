@@ -28,6 +28,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+import json
 import re
 import secrets
 import threading
@@ -263,9 +264,9 @@ class AgentSessionClient(SessionClient):
         ]
 
 
-# The request fields that say what an interaction does. Two requests with the
-# same values ask for the same thing, so a retry of a timed-out click collects
-# its run rather than firing the click again.
+# The request fields that say what an interaction does. Two requests whose
+# values encode to the same JSON ask for the same thing, so a retry of a
+# timed-out click collects its run rather than firing the click again.
 _ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
 
 # Every field an `interact` request may carry.
@@ -297,8 +298,9 @@ class _EncodedSnapshot:
 class _Interaction:
     """What a sent interaction needs once its run chain settles."""
 
-    # The request's action fields, so a retry can be recognized.
-    action: dict[str, Any]
+    # The request's action fields as canonical JSON, or None for a plain
+    # rerun, so a retry can be recognized.
+    action: str | None
     # The query string the request sent, kept unless the run reports a change.
     query_string: str
     # A `page` handed to the runtime unresolved, which can only be checked once
@@ -567,7 +569,7 @@ async def interact(
     """
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.
-    requested_context = await asyncio.to_thread(_validate_request_shape, request)
+    requested_context, action = await asyncio.to_thread(_read_request, request)
     deadline = time.monotonic() + _run_timeout()
 
     handle = request.get("session_id")
@@ -577,7 +579,7 @@ async def interact(
     else:
         session = registry.get(handle, user_info)
 
-    if session.busy and _is_collecting_retry(session, request):
+    if session.busy and _is_collecting_retry(session, action):
         # What is in flight is an interaction whose client left, still building
         # its snapshot, and this request collects it. Wait for that, as a retry
         # waits for a timed-out run, rather than refusing the one request the
@@ -614,6 +616,7 @@ async def interact(
             registry.app_session(session),
             session,
             request,
+            action=action,
             requested_context=requested_context,
             is_new_session=is_new_session,
             headers=headers,
@@ -656,20 +659,36 @@ def _duration(seconds: float) -> str:
     return f"{amount:g} {unit}{'' if amount == 1 else 's'}"
 
 
-def _action_of(request: dict[str, Any]) -> dict[str, Any]:
-    """What a request asks to do: its action fields that are present."""
-    return {
+def _read_request(request: dict[str, Any]) -> tuple[ContextInfo | None, str | None]:
+    """Check a request's shape, and encode what it asks to do.
+
+    Returns the parsed ``context``, if the request sends one, and the
+    request's ``_action_key``.
+    """
+    return _validate_request_shape(request), _action_key(request)
+
+
+def _action_key(request: dict[str, Any]) -> str | None:
+    """What a request asks to do, as canonical JSON, or None for a plain rerun.
+
+    Two requests ask for the same thing when their action fields encode the
+    same. Compared as Python values instead, `true` would equal `1` and `1`
+    would equal `1.0`, so a different write could collect a timed-out one.
+    """
+    action = {
         name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
     }
+    return json.dumps(action, sort_keys=True, separators=(",", ":")) if action else None
 
 
-def _is_collecting_retry(session: AgentSession, request: dict[str, Any]) -> bool:
+def _is_collecting_retry(session: AgentSession, action: str | None) -> bool:
     """Whether a request is a retry of the session's timed-out interaction:
     only `session_id`, or the same request again.
+
+    ``action`` is the request's ``_action_key``.
     """
     pending = session.timed_out
-    action = _action_of(request)
-    return pending is not None and (not action or action == pending.action)
+    return pending is not None and (action is None or action == pending.action)
 
 
 async def _run_interaction(
@@ -678,6 +697,7 @@ async def _run_interaction(
     session: AgentSession,
     request: dict[str, Any],
     *,
+    action: str | None,
     requested_context: ContextInfo | None,
     is_new_session: bool,
     headers: Iterable[tuple[str, str]],
@@ -685,7 +705,7 @@ async def _run_interaction(
     encode: Callable[[dict[str, Any]], bytes],
 ) -> bytes:
     pending = session.timed_out
-    if pending is not None and _is_collecting_retry(session, request):
+    if pending is not None and _is_collecting_retry(session, action):
         # A retry of an interaction that outlasted the timeout. Starting another
         # run would interrupt the one doing the work, so a run that always took
         # longer than the timeout could never finish. Collect the original
@@ -789,7 +809,7 @@ async def _run_interaction(
         app_session,
         session,
         _Interaction(
-            action=_action_of(request),
+            action=action,
             query_string=rerun.query_string,
             unverified_page=unverified_page,
         ),
@@ -817,6 +837,9 @@ async def _validate_writes(
     validation = asyncio.ensure_future(
         asyncio.to_thread(
             _validate_in_worker,
+            # The context already on the session, not the one this request
+            # sends: the client writes the labels it was shown, and the new
+            # context is copied onto the session only once the writes pass.
             app_session.create_detached_script_run_ctx(
                 query_string=session.query_string, context_info=session.context_info
             ),

@@ -639,10 +639,14 @@ def _session(**fields: Any) -> interaction.AgentSession:
     )
 
 
-def _pending(action: dict[str, Any]) -> interaction._Interaction:
+def _pending(request: dict[str, Any]) -> interaction._Interaction:
     return interaction._Interaction(
-        action=action, query_string="", unverified_page=None
+        action=interaction._action_key(request), query_string="", unverified_page=None
     )
+
+
+def _is_retry(session: interaction.AgentSession, request: dict[str, Any]) -> bool:
+    return interaction._is_collecting_retry(session, interaction._action_key(request))
 
 
 def test_only_a_retry_of_the_timed_out_interaction_collects() -> None:
@@ -651,20 +655,41 @@ def test_only_a_retry_of_the_timed_out_interaction_collects() -> None:
     """
     action = {"page": "report", "query_params": {"q": ["1"]}}
     session = _session(timed_out=_pending(action))
-    is_retry = interaction._is_collecting_retry
 
-    assert is_retry(session, {"session_id": "s_test"})
-    assert is_retry(session, {"session_id": "s_test", **action})
-    assert not is_retry(session, {"session_id": "s_test", "page": "x"})
-    assert not is_retry(_session(), {"session_id": "s_test"})
+    assert _is_retry(session, {"session_id": "s_test"})
+    assert _is_retry(session, {"session_id": "s_test", **action})
+    assert not _is_retry(session, {"session_id": "s_test", "page": "x"})
+    assert not _is_retry(_session(), {"session_id": "s_test"})
 
     click = {"widget_state": {"rows": 2}, "trigger": {"key": "go"}}
     clicked = _session(timed_out=_pending(click))
-    assert is_retry(clicked, {"session_id": "s_test", **click})
-    assert not is_retry(
+    assert _is_retry(clicked, {"session_id": "s_test", **click})
+    assert _is_retry(
+        clicked,
+        {"trigger": {"key": "go"}, "session_id": "s_test", "widget_state": {"rows": 2}},
+    )
+    assert not _is_retry(
         clicked, {"session_id": "s_test", **click, "widget_state": {"rows": 3}}
     )
-    assert not is_retry(clicked, {"session_id": "s_test", "trigger": {"key": "go"}})
+    assert not _is_retry(clicked, {"session_id": "s_test", "trigger": {"key": "go"}})
+
+
+@pytest.mark.parametrize(
+    ("pending", "sent"),
+    [(True, 1), (False, 0), (1, True), (1, 1.0)],
+)
+def test_a_retry_matches_values_as_json(pending: Any, sent: Any) -> None:
+    """Values Python counts as equal but JSON does not are different requests,
+    so a different write never collects a timed-out one.
+    """
+    session = _session(timed_out=_pending({"widget_state": {"flag": pending}}))
+
+    assert not _is_retry(
+        session, {"session_id": "s_test", "widget_state": {"flag": sent}}
+    )
+    assert _is_retry(
+        session, {"session_id": "s_test", "widget_state": {"flag": pending}}
+    )
 
 
 def test_idle_since_follows_the_timeout_state_table() -> None:
