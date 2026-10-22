@@ -17,6 +17,8 @@
 import type WaveSurfer from "wavesurfer.js"
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
+
 /**
  * Check if an error is a permission denied error from getUserMedia.
  * WaveSurfer may wrap the native error, so check both the error name and message.
@@ -198,17 +200,23 @@ export class WaveSurferRecordBackend {
       })
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error))
-      this.events.onError?.(err)
+      if (!(err instanceof RecordingCancelledError)) {
+        this.events.onError?.(err)
+      }
       throw err
     }
   }
 
   cancelRecording(): void {
     if (this.recordPlugin && this.isRecording) {
-      this.recordPlugin.stopRecording()
-      this.isRecording = false
+      // Settle a stopRecording() in flight before dropping its callbacks,
+      // otherwise its caller waits forever.
+      const pendingReject = this.recordEndReject
       this.recordEndResolve = null
       this.recordEndReject = null
+      this.isRecording = false
+      this.recordPlugin.stopRecording()
+      pendingReject?.(new RecordingCancelledError())
     }
   }
 

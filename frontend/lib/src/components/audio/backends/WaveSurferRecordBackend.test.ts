@@ -18,6 +18,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type WaveSurfer from "wavesurfer.js"
 import type RecordPlugin from "wavesurfer.js/dist/plugins/record.js"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
+
 import { WaveSurferRecordBackend } from "./WaveSurferRecordBackend"
 
 interface MockRecordPlugin {
@@ -274,6 +276,28 @@ describe("WaveSurferRecordBackend", () => {
     await expect(stopPromise).rejects.toThrow("Invalid or empty recording")
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError.mock.calls[0][0].message).toBe("Invalid or empty recording")
+  })
+
+  it("rejects a pending stopRecording when the recording is cancelled", async () => {
+    const onError = vi.fn()
+    backend.setEventHandlers({ onError })
+    await startAndActivateRecording()
+
+    const stopPromise = backend.stopRecording()
+    backend.cancelRecording()
+
+    await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
+    // A deliberate cancel is not reported as a recording error.
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it("rejects a pending stopRecording when destroyed", async () => {
+    await startAndActivateRecording()
+
+    const stopPromise = backend.stopRecording()
+    backend.destroy()
+
+    await expect(stopPromise).rejects.toThrow(RecordingCancelledError)
   })
 
   it("throws when stopping while not recording", async () => {
