@@ -20,16 +20,24 @@ Each command already described itself when it emitted its element (see
 ``value`` from ``widget_values``, because proto defaults stop being accurate
 after the first interaction.
 
-``data``, the derived facts about a dataframe or chart, is not attached yet.
-A command's parameters stay in ``props``.
+``data``, the derived facts about a table or chart, is read here from the
+element's payload, or taken from the command's ``data_summary`` when the payload
+does not carry its table. Its preview is bounded by ``server.agentPreviewRows``.
+``url``, where the complete data is served, comes from the command's
+description, and ``unavailable`` says why there is none when the preview is
+not everything. A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
+from streamlit import config
+from streamlit.elements.lib import agent_spec
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -44,10 +52,30 @@ if TYPE_CHECKING:
     from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
+_LOGGER: Final = get_logger(__name__)
+
 SCHEMA_VERSION: Final = 1
 
 # Why an element the snapshot shows cannot be used now.
 BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
+
+# Why an element's `data` is incomplete and has no `url` serving the rest.
+# ``too_large_to_serve``: above `server.maxMessageSize`. ``multiple_datasets``:
+# a chart over several tables. ``external_url``: a chart whose browser fetches
+# data this API does not hold. ``lazy_loading``: a lazily loaded dataframe,
+# whose first chunk is the preview. ``undescribed``: an element replayed from a
+# cache a browser filled, which registered nothing.
+UnavailableReason: TypeAlias = Literal[
+    "too_large_to_serve",
+    "multiple_datasets",
+    "external_url",
+    "lazy_loading",
+    "undescribed",
+]
+
+# What a Plotly template can add to a figure's content rather than its styling,
+# such as a "DRAFT" annotation. Kept when the rest of the template is dropped.
+_TEMPLATE_CONTENT: Final = ("annotations", "shapes", "images")
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, style-only HTML, and a loading skeleton, which by the
@@ -325,6 +353,12 @@ class _SnapshotBuilder:
             )
             _attach_value(result, action, value, description.get("value_schema"))
 
+        data = _data_block(
+            proto_field, payload, description, described=bool(node.description)
+        )
+        if data:
+            result["data"] = data
+
         form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
@@ -515,6 +549,360 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     return description.get("type") == "text_input" and props.get("type") == "password"
 
 
+def _preview_row_limit() -> int:
+    """Rows included in a `data.preview`, from `server.agentPreviewRows`.
+
+    The default is large enough that most filtered tables are reported complete
+    and need no second request, and small enough that a page of them does not
+    dominate the response. A negative setting includes no rows.
+    """
+    return max(0, int(config.get_option("server.agentPreviewRows")))
+
+
+def _data_block(
+    proto_field: str,
+    payload: Any,
+    description: dict[str, Any],
+    *,
+    described: bool,
+) -> dict[str, Any] | None:
+    """The `data` an element carries, resolved so `complete` always has an answer.
+
+    Either the preview is everything (`complete: true`), or `url` serves all of
+    it, or `unavailable` says why nothing does. A `url` never comes with an
+    `unavailable` reason. ``described`` is whether the command described itself;
+    an element without a description registered no data to serve.
+    """
+    if "data_summary" in description:
+        # A command whose payload does not carry its table supplies the summary
+        # itself: `st.map` emits a generated Deck.gl spec.
+        summary = description["data_summary"]
+        data = dict(summary) if isinstance(summary, dict) else {}
+    else:
+        data = _element_data(proto_field, payload) or {}
+    if not data:
+        return None
+
+    if data.get("complete") is not True:
+        data["complete"] = False
+    url = description.get("data_url")
+    if isinstance(url, str) and url and "unavailable" not in data:
+        # A fetch-now handle, registered while the script ran. Also reported
+        # for a complete table, so every table has the same contract. The file
+        # is collected once the element that produced it stops rendering.
+        data["url"] = url
+    elif data["complete"] is False:
+        reason: UnavailableReason = "too_large_to_serve" if described else "undescribed"
+        data.setdefault("unavailable", reason)
+    return data
+
+
+def _unavailable(reason: UnavailableReason) -> dict[str, Any]:
+    return {"complete": False, "unavailable": reason}
+
+
+def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
+    """Describe the data an element's payload carries, as derived facts.
+
+    ``payload`` is typed loosely because each branch narrows it to a different
+    proto by way of ``proto_field``.
+    """
+    if payload is None:
+        return None
+
+    if proto_field == "dataframe":
+        if payload.HasField("lazy_data"):
+            return _lazy_dataframe_data(payload.lazy_data)
+        return summarize_arrow(payload.arrow_data.data)
+
+    if proto_field == "table":
+        return summarize_arrow(payload.arrow_data.data)
+
+    if proto_field == "vega_lite_chart":
+        return _vega_data(payload)
+
+    if proto_field in {"plotly_chart", "echarts_chart"}:
+        # These take a figure or an option object rather than a dataframe, so
+        # the values are inside the specification and there is no separate
+        # table to fetch. Saying so is the point: `complete` means a client
+        # already has everything, so it does not go looking for a `url`.
+        return _figure_data(_parse_json(payload.spec))
+
+    if proto_field == "deck_gl_json_chart":
+        spec = _parse_json(payload.json)
+        if spec is None:
+            return None
+        # A chart given a specification is reported complete, as a Plotly
+        # figure is. Its rows are counted only when every layer has them inline.
+        deck_data: dict[str, Any] = {"spec": spec, "complete": True}
+        if (row_count := _deck_gl_row_count(spec)) is not None:
+            deck_data["row_count"] = row_count
+        return deck_data
+
+    return None
+
+
+def _lazy_dataframe_data(lazy_data: Any) -> dict[str, Any] | None:
+    """A lazily loaded dataframe, previewed by the chunk its browser received.
+
+    The rest is only fetched by a browser as it scrolls, so nothing serves it,
+    and the chunk alone would pass for the whole table. The row count is the
+    source's, reported only when the source knows it.
+    """
+    data = summarize_arrow(lazy_data.initial_chunk.data)
+    if data is None:
+        return None
+    data.update(_unavailable("lazy_loading"))
+    if lazy_data.HasField("row_count"):
+        data["row_count"] = lazy_data.row_count
+    else:
+        del data["row_count"]
+    return data
+
+
+def _vega_data(payload: Any) -> dict[str, Any]:
+    """A Vega-Lite chart's one table and its specification.
+
+    Only a chart over a single Arrow buffer is summarized. Several buffers are
+    not one table, and data the specification loads from a URL is fetched by
+    the browser, which this API does not do; in either case none of it is
+    served, rather than a part passed off as the whole.
+    """
+    buffers = agent_spec.vega_arrow_buffers(payload)
+    spec = _parse_json(payload.spec)
+    data: dict[str, Any]
+    if len(buffers) > 1:
+        data = _unavailable("multiple_datasets")
+    elif agent_spec.vega_loads_from_url(spec):
+        data = _unavailable("external_url")
+    elif buffers:
+        data = summarize_arrow(buffers[0]) or {}
+    else:
+        # Inline values travel as Arrow, so what is left in the specification,
+        # such as GeoJSON, is all of it.
+        data = {"complete": True}
+    if isinstance(spec, dict):
+        # The built-in charts write 0 for a size the author left unset, which
+        # means "fill the container", not a size.
+        spec = {
+            name: value
+            for name, value in spec.items()
+            if not (name in {"width", "height"} and value == 0)
+        }
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
+def _figure_data(spec: Any) -> dict[str, Any] | None:
+    """Describe a chart whose values live inside its own specification.
+
+    The theme is dropped, because it is weight without meaning for a non-visual
+    client: Plotly's `layout.template` is about nine tenths of a small figure.
+    Dropping it is named in `spec_omitted`, so a client can tell a trimmed
+    figure from one the app never configured. A template can also carry
+    content, such as a "DRAFT" annotation, and that is kept.
+
+    Nothing else is dropped, at any size. For these charts the specification
+    holds the values, so trimming further would remove the only part worth
+    reading, and a figure large enough to matter is large because it plots a lot
+    of data -- the same bytes the app already sends its own client.
+    """
+    if spec is None:
+        return None
+
+    data: dict[str, Any] = {}
+
+    if (
+        isinstance(spec, dict)
+        and isinstance(spec.get("layout"), dict)
+        and "template" in spec["layout"]
+    ):
+        template = spec["layout"]["template"]
+        template_layout = template.get("layout") if isinstance(template, dict) else None
+        if not isinstance(template_layout, dict):
+            template_layout = {}
+        content = {
+            name: template_layout[name]
+            for name in _TEMPLATE_CONTENT
+            if template_layout.get(name)
+        }
+        layout = {k: v for k, v in spec["layout"].items() if k != "template"}
+        if content:
+            layout["template"] = {"layout": content}
+            data["spec_omitted"] = [
+                f"layout.template.{name}" for name in template if name != "layout"
+            ] + [
+                f"layout.template.layout.{name}"
+                for name in template_layout
+                if name not in content
+            ]
+        else:
+            data["spec_omitted"] = ["layout.template"]
+        spec = {**spec, "layout": layout}
+
+    data["spec"] = _expand_typed_arrays(spec)
+    data["complete"] = True
+    return data
+
+
+def _expand_typed_arrays(value: Any) -> Any:
+    """Expand Plotly's base64 typed arrays into lists of numbers, at any depth.
+
+    Plotly writes a NumPy array as `{"dtype": "f8", "bdata": "<base64>"}`,
+    which a browser decodes and a language model cannot read. Those arrays are
+    the values that make a figure `complete`, so they are reported as numbers,
+    at the cost of a longer specification.
+    """
+    if isinstance(value, list):
+        return [_expand_typed_arrays(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if (
+        isinstance(value.get("bdata"), str)
+        and isinstance(value.get("dtype"), str)
+        and set(value) <= {"bdata", "dtype", "shape"}
+    ):
+        try:
+            return _decode_typed_array(value)
+        except Exception:
+            _LOGGER.debug("Could not decode a Plotly typed array.", exc_info=True)
+            return value
+    return {name: _expand_typed_arrays(item) for name, item in value.items()}
+
+
+def _decode_typed_array(value: dict[str, Any]) -> Any:
+    import base64
+
+    import numpy as np
+
+    # Plotly.js reads these buffers as little-endian.
+    dtype = np.dtype(value["dtype"]).newbyteorder("<")
+    array = np.frombuffer(base64.b64decode(value["bdata"]), dtype=dtype)
+    if shape := value.get("shape"):
+        dims = shape if isinstance(shape, list) else str(shape).split(",")
+        array = array.reshape([int(dim) for dim in dims])
+    # Through the JSON encoding, so a NaN in a float array becomes null.
+    return json_encoding.to_json_value(array.tolist())
+
+
+def _deck_gl_row_count(spec: Any) -> int | None:
+    """Count the rows a Deck.gl specification plots, across its layers.
+
+    Only when every layer carries its rows inline. A layer whose data is a URL
+    or an object such as GeoJSON has no count to read, and a partial sum would
+    pass for the whole.
+    """
+    if not isinstance(spec, dict):
+        return None
+    layers = spec.get("layers")
+    if not isinstance(layers, list):
+        return None
+
+    total = 0
+    for layer in layers:
+        rows = layer.get("data") if isinstance(layer, dict) else None
+        if not isinstance(rows, list):
+            return None
+        total += len(rows)
+    return total
+
+
+def _parse_json(value: str) -> Any:
+    """Parse a chart or map specification for the response.
+
+    `NaN` and infinities become null, as they do in table previews: the
+    specifications are written with Python's lenient encoder, so a missing
+    value in a layer's data arrives as `NaN`, which strict JSON cannot carry.
+    """
+    if not value:
+        return None
+    try:
+        return json.loads(value, parse_constant=lambda _constant: None)
+    except json.JSONDecodeError:
+        return None
+
+
+def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
+    """Describe an Arrow IPC stream: its schema, its size, and a row preview.
+
+    The preview holds the first ``server.agentPreviewRows`` rows, as values in
+    column order. ``complete`` is whether those rows are the whole table.
+
+    Parameters
+    ----------
+    arrow_bytes : bytes
+        The serialized Arrow IPC stream, as an element's payload carries it.
+
+    Returns
+    -------
+    dict[str, Any] or None
+        The element's ``data`` without a ``url``, or ``None`` for empty or
+        unreadable bytes.
+    """
+    if not arrow_bytes:
+        return None
+
+    import pyarrow as pa
+
+    limit = _preview_row_limit()
+    try:
+        table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
+        rows = _arrow_rows(table, limit)
+    except Exception:
+        # Any failure, not just a malformed stream: an element without a
+        # summary costs far less than a failed snapshot, or a failed command
+        # for `st.map`, which summarizes its table while the script runs.
+        _LOGGER.debug("Could not summarize an Arrow payload.", exc_info=True)
+        return None
+
+    columns = _arrow_columns(table)
+    return {
+        "columns": columns,
+        "row_count": table.num_rows,
+        "column_count": len(columns),
+        # `complete` sits at the top of `data` because it is the first question
+        # a client asks, and it is the only flag: a second one inside `preview`
+        # would only ever be its inverse.
+        "complete": table.num_rows <= limit,
+        "preview": {
+            # Rows are values in `columns` order rather than objects, because
+            # repeating the column names on every row is most of a preview's
+            # size once it gets long.
+            "rows": rows,
+        },
+    }
+
+
+def _arrow_columns(table: Any) -> list[dict[str, str]]:
+    """An Arrow table's columns with their types, by position.
+
+    Every column the bytes behind `data.url` carry, under the same names, so
+    the reported schema is the schema of what a client fetches. That includes
+    an unnamed, non-range index, which pandas stores as `__index_level_N__` and
+    `st.dataframe` displays.
+    """
+    return [
+        {"name": name, "type": str(dtype)}
+        for name, dtype in zip(table.schema.names, table.schema.types, strict=True)
+    ]
+
+
+def _arrow_rows(table: Any, limit: int) -> list[list[Any]]:
+    """Up to ``limit`` rows, as JSON values in column order.
+
+    By position rather than by name, so a table with two columns of the same
+    name keeps both.
+    """
+    return [
+        [json_encoding.to_json_value(cell) for cell in row]
+        for row in zip(
+            *(column.to_pylist() for column in table.slice(0, limit).columns),
+            strict=True,
+        )
+    ]
+
+
 def build_snapshot(
     *,
     session_id: str,
@@ -601,9 +989,9 @@ def rebase_media_urls(
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
     is a 404 or a login redirect.
 
-    Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
-    under one of ``paths``, so an external link an app displays is never
-    rewritten.
+    Only ``data.url`` and the ``url``, ``src``, and ``avatar`` props are
+    touched, and only values under one of ``paths``, so an external link an app
+    displays is never rewritten.
 
     Parameters
     ----------
@@ -627,6 +1015,9 @@ def rebase_media_urls(
         return value
 
     def walk(node: dict[str, Any]) -> None:
+        data = node.get("data")
+        if isinstance(data, dict) and "url" in data:
+            data["url"] = rebase(data["url"])
         props = node.get("props")
         if isinstance(props, dict):
             for name in ("url", "src", "avatar"):

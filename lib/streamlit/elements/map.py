@@ -27,7 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -41,6 +41,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -51,6 +52,8 @@ if TYPE_CHECKING:
 
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
@@ -296,7 +299,9 @@ class MapMixin:
         layout_config = create_layout_config(width=width, height=height)
 
         map_proto = DeckGlJsonChartProto()
-        deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
+        deck_gl_json, plotted = to_deckgl_json(
+            data, latitude, longitude, size, color, zoom
+        )
 
         marshall(map_proto, deck_gl_json)
 
@@ -310,9 +315,11 @@ class MapMixin:
             map_proto,
             layout_config=layout_config,
             # st.map and st.pydeck_chart share a proto. Size and color are the
-            # arguments the author passed; the plotted table shows the columns.
-            agent_props=agent_spec.element(
-                "map",
+            # arguments the author passed; the plotted table, reported as the
+            # map's data, shows the columns.
+            agent_props=_map_agent_props(
+                self.dg,
+                plotted,
                 latitude=latitude,
                 longitude=longitude,
                 size=size,
@@ -328,6 +335,48 @@ class MapMixin:
         return cast("DeltaGenerator", self)
 
 
+def _map_agent_props(
+    dg: DeltaGenerator, plotted: DataFrame | None, **props: Any
+) -> str | None:
+    """Describe a map for the agent API, with its plotted columns as its data.
+
+    A map's points are only in the Deck.gl spec generated from the author's
+    columns, which is not a data contract. So the plotted columns are
+    summarized and served the way a dataframe's are. Only those columns, and
+    without the index: the browser receives ``to_dict("records")`` of them,
+    which never includes it, and an index can hold values such as customer IDs.
+    A map with no data reports an empty table.
+    """
+    if not agent_spec.is_recording():
+        return None
+
+    import pandas as pd
+
+    from streamlit.runtime.agent import snapshot
+
+    frame = pd.DataFrame() if plotted is None else plotted
+    arrow_bytes: bytes | None = None
+    try:
+        arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+            frame.reset_index(drop=True)
+        )
+    except Exception:
+        # A map accepts shapes the Arrow conversion may reject. The snapshot
+        # then falls back to the Deck.gl spec, which carries the same points.
+        _LOGGER.debug("Could not describe map data as Arrow.", exc_info=True)
+
+    return agent_spec.element(
+        "map",
+        data_url=data_offload.serve_arrow_over_http(
+            arrow_bytes, coordinates=dg._get_delta_path_str()
+        )
+        if plotted is not None
+        else None,
+        data_summary=snapshot.summarize_arrow(arrow_bytes) if arrow_bytes else None,
+        **props,
+    )
+
+
 def to_deckgl_json(
     data: Data,
     lat: str | None,
@@ -335,16 +384,20 @@ def to_deckgl_json(
     size: str | float | None,
     color: str | Collection[float] | None,
     zoom: int | None,
-) -> str:
-    """Serialize the map to a PyDeck JSON string."""
+) -> tuple[str, DataFrame | None]:
+    """Serialize the map to a PyDeck JSON string.
+
+    Also returns the plotted columns of the author's data, with the author's
+    values, or ``None`` for a map with no data.
+    """
     if data is None:
-        return json.dumps(_DEFAULT_MAP)
+        return json.dumps(_DEFAULT_MAP), None
 
     # TODO(harahu): iterables don't have the empty attribute. This is either
     # a bug, or the documented data type is too broad. One or the other
     # should be addressed
     if hasattr(data, "empty") and data.empty:
-        return json.dumps(_DEFAULT_MAP)
+        return json.dumps(_DEFAULT_MAP), None
 
     df = dataframe_util.convert_anything_to_pandas_df(data)
 
@@ -364,7 +417,9 @@ def to_deckgl_json(
             if c is not None
         ]
     )
-    df = df[used_columns].copy()
+    plotted = df[used_columns]
+    # A copy, because the color conversion below rewrites the color column.
+    df = plotted.copy()
 
     converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 
@@ -388,7 +443,7 @@ def to_deckgl_json(
         }
     ]
 
-    return json.dumps(default)
+    return json.dumps(default), plotted
 
 
 def _get_lat_or_lon_col_name(

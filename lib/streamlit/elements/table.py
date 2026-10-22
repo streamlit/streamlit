@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.utils import normalize_alt
@@ -417,9 +417,13 @@ class TableMixin:
             proto,
             layout_config=layout_config,
             # The schema and row preview are derived facts about the payload,
-            # not command parameters.
+            # not command parameters. Guarded before the call, so a browser
+            # session registers no copy of the Arrow data.
             agent_props=agent_spec.element(
                 "table",
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data, coordinates=delta_path
+                ),
                 # `border` is surface styling; `hide_index` and `hide_header`
                 # stay because they change which data is presented.
                 hide_index=proto.hide_index,

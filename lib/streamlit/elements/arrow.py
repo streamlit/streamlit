@@ -33,7 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -1287,7 +1287,8 @@ class ArrowMixin:
             """The agent description for this dataframe.
 
             Called at each enqueue so the selection path can read ``proto.id``
-            after it is assigned. Column config is walked only while recording.
+            after it is assigned. Column config is walked and the Arrow copy
+            registered only while recording.
             """
             if not agent_spec.is_recording():
                 return None
@@ -1295,6 +1296,12 @@ class ArrowMixin:
                 "dataframe",
                 # A display dataframe has no element ID, only the author's key.
                 key=proto.id or key,
+                # A lazy table has no `arrow_data`, so nothing is served: its
+                # first chunk, served alone, would pass for the whole table.
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_delta_path_str(),
+                ),
                 # A browser user can select rows or press a button column. This
                 # API only reports that. A display-only table has nothing to
                 # withhold, so it is fully supported.

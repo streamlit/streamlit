@@ -35,7 +35,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -1552,10 +1552,15 @@ class DataEditorMixin:
             layout_config=layout_config,
             # st.dataframe and st.data_editor share this proto. The schema and
             # row preview are derived facts about the payload, not command
-            # parameters.
+            # parameters. Guarded before the call, so a browser session
+            # registers no copy of the Arrow data.
             agent_props=agent_spec.element(
                 "data_editor",
                 key=proto.id or None,
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_delta_path_str(),
+                ),
                 # A browser user can edit the table. This API only reports it.
                 # Kept even when the app locks the editor: unlike a chart
                 # without selections, it is still an editor, and a rejection

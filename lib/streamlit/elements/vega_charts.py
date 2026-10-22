@@ -37,7 +37,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
@@ -2826,12 +2826,13 @@ class VegaChartsMixin:
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
-        Built here because the element ID and normalized selection modes exist
-        only once the chart proto is filled. The public command passes its own
-        name and encoding arguments in.
+        Built here because the element ID, normalized selection modes, and
+        Arrow buffers exist only once the chart proto is filled. The public
+        command passes its own name and encoding arguments in.
         """
         if not agent_spec.is_recording():
             return None
+        buffers = agent_spec.vega_arrow_buffers(proto)
         # A built-in chart has no selection parameter, so it reports its own
         # arguments only. `theme` is surface styling and is left out.
         own_arguments: dict[str, Any] = (
@@ -2850,6 +2851,14 @@ class VegaChartsMixin:
             # chart without selections has nothing to withhold, so it is fully
             # supported.
             support="action_unsupported" if selection_mode else None,
+            # Not registered for several datasets or URL-loaded data: the
+            # snapshot then serves none of it, so the copy would only hold
+            # memory.
+            data_url=data_offload.serve_arrow_over_http(
+                buffers[0], coordinates=self.dg._get_delta_path_str()
+            )
+            if len(buffers) == 1 and not agent_spec.vega_loads_from_url(proto.spec)
+            else None,
             alt=proto.alt or None,
             **own_arguments,
         )
