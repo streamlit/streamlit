@@ -254,12 +254,11 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         width: "100%",
         maxWidth: "100%",
         minWidth: 0,
-        ...(gapWidth !== undefined &&
-          gapWidth !== theme.spacing.none && {
-            "&:not(:last-of-type)": {
-              marginBottom: gapWidth,
-            },
-          }),
+        ...(gapWidth !== theme.spacing.none && {
+          "&:not(:last-of-type)": {
+            marginBottom: gapWidth,
+          },
+        }),
       },
     }
   }
