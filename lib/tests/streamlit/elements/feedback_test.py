@@ -134,7 +134,14 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         assert val == session_state_index
 
     @parameterized.expand(
-        [(4, None), (4, 1), (-1, None), ("1", None), (True, None), (0.5, 1)]
+        [
+            (2, None),
+            (4, 1),
+            (-1, None),
+            ("1", None),
+            (True, None),
+            (0.5, 1),
+        ]
     )
     def test_invalid_session_state_value_resets_to_default(
         self, session_state_value: Any, default: int | None

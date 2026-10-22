@@ -362,13 +362,14 @@ class FeedbackMixin:
         )
 
         current_value = widget_state.value
-        # register_widget returns a value set through session state or restored
-        # by key without deserializing it. That value can be a non-integer, or
-        # an index outside the current options, such as a persisted 5-star
-        # rating restored onto a "thumbs" widget. Reset it to the default so the
-        # widget never returns an index it doesn't display. Any Integral is
-        # accepted so NumPy integers work; bool is rejected although it
-        # subclasses int.
+        # Reset any value that isn't a valid option index to the default, so the
+        # widget never returns an index it doesn't display. register_widget
+        # skips the deserializer for a value set through session state or
+        # restored by persist_state, such as a persisted 5-star rating restored
+        # onto a "thumbs" widget. Any Integral is accepted so NumPy integers
+        # work, but bool is rejected although it subclasses int. `stored_value`
+        # is typed as `object` so the type checker doesn't flag these checks as
+        # unreachable.
         stored_value: object = current_value
         value_needs_reset = stored_value is not None and (
             isinstance(stored_value, bool)
