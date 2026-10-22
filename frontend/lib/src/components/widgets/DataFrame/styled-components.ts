@@ -18,6 +18,10 @@ import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { printContainStyles } from "~lib/components/shared/printContain"
+import {
+  DATAFRAME_PRINT_TABLE_CLASS,
+  DATAFRAME_PRINT_WIDTH_VAR,
+} from "~lib/components/widgets/DataFrame/printDataFrame"
 
 interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -34,9 +38,6 @@ export const StyledResizableContainer =
       position: "relative",
       display: disableResize ? "flex" : "inline-block",
       height: "100%",
-      // The grid locks the on-screen pixel width. Cap it so printing a
-      // narrower page does not spill the table out of its column.
-      ...printContainStyles,
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
@@ -48,9 +49,47 @@ export const StyledResizableContainer =
       "& .stDataFrameResizable": {
         "@media print": {
           // re-resizable writes an inline pixel width measured on screen.
+          // Used when no print table was built. A print table replaces the
+          // canvas so every column can be scaled onto the page.
           width: "100% !important",
           maxWidth: "100% !important",
         },
+      },
+
+      // Filled in beforeprint with an HTML table of the whole dataframe.
+      // Hidden on screen so the canvas grid is what the user interacts with.
+      "& .stDataFramePrintSlot": {
+        display: "none",
+      },
+
+      "@media print": {
+        // The grid locks the on-screen pixel width. Cap the container so a
+        // narrower page does not spill it, and let the print table scale
+        // inside that width.
+        ...printContainStyles["@media print"],
+        // On screen this shrinks to the grid. The print slot has no
+        // intrinsic width, so a shrink-to-fit box would collapse to zero
+        // and the table could not be scaled to the column.
+        display: "block",
+        width: "100%",
+        "& .stDataFramePrintSlot": {
+          display: "block",
+          width: "100%",
+          // The table's natural width is wider than the page. This slot is
+          // the printed column, and the table scales down to it. The slot
+          // stays as tall as that table, including a header repeated after
+          // a page break, so the bordered container wraps every row.
+          containerType: "inline-size",
+        },
+        [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
+          zoom: `min(1, calc(100cqw / var(${DATAFRAME_PRINT_WIDTH_VAR})))`,
+        },
+        // The canvas only painted the on-screen viewport. The print table
+        // is the full frame, so the canvas would clip columns beside it.
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stDataFrameResizable, &:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stElementToolbar`]:
+          {
+            display: "none !important",
+          },
       },
 
       "& .dvn-scroller": {

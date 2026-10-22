@@ -102,6 +102,10 @@ import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import {
+  clearDataFramePrintSlot,
+  fillDataFramePrintSlot,
+} from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
@@ -197,6 +201,7 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  const printSlotRef = useRef<HTMLDivElement>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -940,6 +945,35 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // The canvas grid only paints the viewport. Before the browser snapshots
+  // the page, replace it with a table of every cell so print can scale the
+  // whole frame onto the page.
+  useEffect(() => {
+    const slot = printSlotRef.current
+    if (!slot) {
+      return
+    }
+
+    const onBeforePrint = (): void => {
+      if (isEmptyTable) {
+        clearDataFramePrintSlot(slot)
+        return
+      }
+      fillDataFramePrintSlot(slot, columns, numRows, getCellContent)
+    }
+    const onAfterPrint = (): void => {
+      clearDataFramePrintSlot(slot)
+    }
+
+    window.addEventListener("beforeprint", onBeforePrint)
+    window.addEventListener("afterprint", onAfterPrint)
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint)
+      window.removeEventListener("afterprint", onAfterPrint)
+      clearDataFramePrintSlot(slot)
+    }
+  }, [columns, getCellContent, isEmptyTable, numRows])
+
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
@@ -1417,6 +1451,7 @@ function DataFrame({
           })}
         />
       </Resizable>
+      <div className="stDataFramePrintSlot" ref={printSlotRef} />
       {tooltip?.content && (
         <Tooltip
           top={tooltip.top}
