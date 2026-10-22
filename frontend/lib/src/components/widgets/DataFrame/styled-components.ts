@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import { printContainStyles } from "~lib/components/shared/printContain"
 
 interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -33,12 +34,23 @@ export const StyledResizableContainer =
       position: "relative",
       display: disableResize ? "flex" : "inline-block",
       height: "100%",
+      // The grid locks the on-screen pixel width. Cap it so printing a
+      // narrower page does not spill the table out of its column.
+      ...printContainStyles,
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
         minWidth: "100%",
         minHeight: minHeight,
         borderRadius: theme.radii.default,
+      },
+
+      "& .stDataFrameResizable": {
+        "@media print": {
+          // re-resizable writes an inline pixel width measured on screen.
+          width: "100% !important",
+          maxWidth: "100% !important",
+        },
       },
 
       "& .dvn-scroller": {

@@ -1112,6 +1112,7 @@ function DataFrame({
         )}
       </Toolbar>
       <Resizable
+        className="stDataFrameResizable"
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}

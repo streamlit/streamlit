@@ -233,6 +233,25 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
+      // Float columns beside each other when printing. A flex or table row
+      // is one fragment, so a chart that crosses a page is painted on top of
+      // the next heading. Each column gives up its share of the gap so the
+      // row still fits the page.
+      "@media print": {
+        display: "block",
+        float: "left",
+        width:
+          gapWidth === theme.spacing.none
+            ? `${percentage}%`
+            : `calc(${percentage}% - ${gapWidth} * ${1 - weight})`,
+        maxWidth: "100%",
+        minWidth: 0,
+        ...(gapWidth !== theme.spacing.none && {
+          "&:not(:first-of-type)": {
+            marginLeft: gapWidth,
+          },
+        }),
+      },
     }
   }
 )
@@ -379,6 +398,31 @@ export const StyledFlexContainerBlock =
               [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
             },
           }),
+        // Chrome's print layout drops the height of a flex or table row, so a
+        // chart paints over the next heading. Vertical blocks use normal
+        // flow. A column row floats its columns and clears them, and a
+        // bordered card stays on one page so the chart cannot land on the
+        // heading below.
+        "@media print": {
+          ...(direction === Direction.HORIZONTAL
+            ? {
+                "&:has(> .stColumn)": {
+                  display: "block",
+                  "&::after": {
+                    content: '""',
+                    display: "block",
+                    clear: "both",
+                  },
+                },
+              }
+            : {
+                display: "block",
+              }),
+          ...(border && {
+            breakInside: "avoid",
+            pageBreakInside: "avoid",
+          }),
+        },
       }
     }
   )
@@ -420,5 +464,9 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     alignSelf,
     minHeight,
     maxHeight,
+    // See StyledFlexContainerBlock: flex height collapses when printing.
+    "@media print": {
+      display: "block",
+    },
   })
 )

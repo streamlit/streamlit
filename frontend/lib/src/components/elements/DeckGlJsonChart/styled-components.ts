@@ -16,6 +16,7 @@
 
 import styled from "@emotion/styled"
 
+import { printContainStyles } from "~lib/components/shared/printContain"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 interface StyledDeckGlChartProps {
@@ -29,6 +30,7 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
     width: "100%",
     // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
     ...(isStretchHeight && { minHeight: "6.25rem" }),
+    ...printContainStyles,
   })
 )
 

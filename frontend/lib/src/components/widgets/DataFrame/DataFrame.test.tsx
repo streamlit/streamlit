@@ -243,6 +243,21 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
+    expect(screen.getByTestId("stDataFrameResizable")).toHaveClass(
+      "stDataFrameResizable"
+    )
+  })
+
+  it("caps the grid to its container when printing", () => {
+    render(<DataFrame {...props} />)
+
+    const css = [...document.querySelectorAll("style")]
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain(".stDataFrameResizable")
+    expect(css).toContain("width:100%!important")
   })
 
   it("sets role=region and aria-label on the grid host when alt is provided", () => {
