@@ -14,6 +14,7 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key
 
 # Same A4 ratio as the hello-app print tests, wide enough that columns would
@@ -21,12 +22,16 @@ from e2e_playwright.shared.app_utils import get_element_by_key
 _PORTRAIT = {"width": 1240, "height": 1754}
 
 
-def test_print_stacks_columns_and_fits_the_dataframe(app: Page) -> None:
+def test_print_stacks_columns_and_fits_the_dataframe(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
     """Every column uses the full page width, and the print table stays in its card."""
+    app = themed_app
+
     expect(app.get_by_text("Plain column")).to_be_visible()
     expect(app.get_by_text("Bordered column")).to_be_visible()
 
-    app.emulate_media(media="print")
+    app.emulate_media(media="print", forced_colors="active")
     app.set_viewport_size(_PORTRAIT)
     app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
 
@@ -76,6 +81,8 @@ def test_print_stacks_columns_and_fits_the_dataframe(app: Page) -> None:
         }"""
     )
     assert fit
+
+    assert_snapshot(app, name="st_print_layout-stacked_columns")
 
     app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
     expect(table).to_have_count(0)

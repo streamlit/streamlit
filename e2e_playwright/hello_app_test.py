@@ -233,15 +233,19 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 
 
-def test_print_mode_fits_dataframe_sidebar_and_chart(app: Page) -> None:
+def test_print_mode_fits_dataframe_sidebar_and_chart(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
     """Print shows every dataframe cell inside the widget, beside a narrow sidebar.
 
     ``emulate_media`` applies the print stylesheet but does not fire
     ``beforeprint``, so the snapshot tests above still show the on-screen
     canvas. This test fires that event, which is what a real print does.
     """
+    app = themed_app
+
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print")
+    app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
 
     app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
@@ -288,6 +292,8 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(app: Page) -> None:
     assert fit["chartInsideMain"]
     assert fit["sidebarBesideMain"]
     assert fit["sidebarIsMinWidth"]
+
+    assert_snapshot(app, name="hello_app-print_media-portrait-beforeprint")
 
     app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
     expect(table).to_have_count(0)
