@@ -808,7 +808,7 @@ export const createEmotionTheme = (
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
-    // Only valid configured colors get a key.
+    // Unset or invalid colors get no key, so lookups can return undefined.
     (colorsArg: Partial<Record<string, string>>, [key, color]) => {
       // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)

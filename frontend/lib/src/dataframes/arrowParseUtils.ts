@@ -71,7 +71,11 @@ export type Data = Table
 function isPandasRangeIndex(
   indexName: string | PandasRangeIndex
 ): indexName is PandasRangeIndex {
-  return typeof indexName === "object"
+  return (
+    typeof indexName === "object" &&
+    // pyarrow treats `kind` as open-ended; only "range" has start/stop/step.
+    (indexName as { kind?: unknown }).kind === "range"
+  )
 }
 
 /**

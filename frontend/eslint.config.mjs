@@ -665,8 +665,7 @@ export default defineConfig([
     },
   },
   // Flags redundant optional chains and always-true checks.
-  // Tests stay off until production source is clean. The other packages stay
-  // off until those directories are cleaned.
+  // Tests and packages other than lib stay off until they are cleaned up.
   {
     files: ["lib/src/**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],

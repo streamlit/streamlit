@@ -750,7 +750,7 @@ export class WidgetStateManager {
     const widget = { id: elementId, formId: update.formId }
     // Filter out NaN values before storing.
     const validValue = value.filter(v => !Number.isNaN(v))
-    // If all values are invalid, preserve previous state and warn.
+    // If every value is NaN, preserve previous state and warn.
     // This can happen if user code passes NaN values (e.g., from empty DataFrame operations).
     if (validValue.length === 0) {
       LOG.warn(

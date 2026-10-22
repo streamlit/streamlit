@@ -89,8 +89,8 @@ let filterConfigured = false
  * listeners attached outside the shadow root see a retargeted event whose
  * `target` is the shadow host (e.g. a wrapping `div`), not the actual `<input>`
  * element. To correctly detect editable contexts, we inspect the event's
- * composed path where available and fall back to `event.target` for older
- * browsers that do not support composed paths.
+ * composed path where available and fall back to `event.target` when the
+ * composed path is missing or empty (e.g. synthetic events in tests).
  */
 function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
   // Prefer the composed path because it exposes the *actual* event target
