@@ -31,7 +31,7 @@ export async function encodeToWav(
     throw new Error("Invalid or empty blob provided")
   }
 
-  if (!window.AudioContext) {
+  if (typeof AudioContext === "undefined") {
     throw new Error("AudioContext not supported in this browser")
   }
 
@@ -67,7 +67,7 @@ async function resampleAndConvertToMono(
   const { duration, numberOfChannels, sampleRate } = audioBuffer
   const frameCount = Math.ceil(duration * targetSampleRate)
 
-  if (!window.OfflineAudioContext) {
+  if (typeof OfflineAudioContext === "undefined") {
     throw new Error("OfflineAudioContext not supported")
   }
 

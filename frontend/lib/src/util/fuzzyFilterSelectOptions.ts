@@ -78,6 +78,7 @@ export function filterSelectOptions<T extends LabeledOption>(
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a newer backend can send a mode this frontend does not know
   if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX) {
     return options.filter((opt: T) =>
       normalizeFilterValue(opt.label).startsWith(normalizedPattern)

@@ -151,10 +151,10 @@ export function getStyledCell(
     " "
   )
 
-  const displayContent = data.styler?.displayValues
-    ? (data.styler.displayValues.getCell(rowIndex, columnIndex)
-        .content as string)
-    : undefined
+  const displayContent = data.styler.displayValues.getCell(
+    rowIndex,
+    columnIndex
+  ).content as string
 
   return {
     cssId: `${data.styler.cssId}_row${rowIndex}_col${dataColumnIndex}`,

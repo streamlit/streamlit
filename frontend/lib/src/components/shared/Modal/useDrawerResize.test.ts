@@ -42,6 +42,10 @@ describe("clampDrawerWidth", () => {
 function createHandleWithPanel(width: number): HTMLDivElement {
   const panel = document.createElement("div")
   const handle = document.createElement("div")
+  // jsdom does not implement pointer capture.
+  handle.setPointerCapture = vi.fn()
+  handle.hasPointerCapture = vi.fn(() => false)
+  handle.releasePointerCapture = vi.fn()
   panel.appendChild(handle)
   vi.spyOn(panel, "getBoundingClientRect").mockReturnValue({
     width,
@@ -68,7 +72,6 @@ function pointerEvent(
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
     currentTarget: handle,
-    hasPointerCapture: () => false,
   } as unknown as PointerEvent<HTMLDivElement>
 }
 

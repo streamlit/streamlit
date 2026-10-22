@@ -246,7 +246,11 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
-    const message = event.data as VersionedMessage<IHostToGuestMessage>
+    // This listener also receives unrelated postMessages, including null data.
+    const message = event.data as
+      | VersionedMessage<IHostToGuestMessage>
+      | null
+      | undefined
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP

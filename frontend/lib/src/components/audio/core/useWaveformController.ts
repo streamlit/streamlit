@@ -156,7 +156,7 @@ export function useWaveformController({
         onError: (error: Error) => {
           setIsPlaybackPlaying(false)
           notifyReadyError(error)
-          void eventsRef.current.onError?.(error)
+          eventsRef.current.onError(error)
         },
       }
 
@@ -261,7 +261,7 @@ export function useWaveformController({
         }
         initPromiseRef.current = null
         const err = error instanceof Error ? error : new Error(String(error))
-        void eventsRef.current.onError?.(err)
+        eventsRef.current.onError(err)
       }
     })()
 
@@ -419,6 +419,7 @@ export function useWaveformController({
       setIsPlaybackPlaying(false)
       enterPlaybackMode()
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- destroy() can clear playerRef during the awaits above
       const durationMs = playerRef.current?.getDuration() ?? 0
       const meta: AudioMeta = {
         durationMs,

@@ -52,7 +52,7 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
 
     const newChildren: AppNode[] = []
     let childrenChanged = false
-    node.children.forEach(child => {
+    for (const child of node.children) {
       const filteredChild = child.accept(this)
       if (filteredChild !== child) {
         childrenChanged = true
@@ -60,7 +60,7 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
-    })
+    }
 
     // Performance optimization: If the children haven't changed, return the same node.
     if (!childrenChanged) {

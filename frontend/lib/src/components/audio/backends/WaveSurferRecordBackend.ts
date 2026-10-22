@@ -25,7 +25,7 @@ function isPermissionDeniedError(error: Error): boolean {
   return (
     error.name === "NotAllowedError" ||
     error.name === "PermissionDeniedError" ||
-    error.message?.toLowerCase().includes("permission denied")
+    error.message.toLowerCase().includes("permission denied")
   )
 }
 
@@ -98,7 +98,7 @@ export class WaveSurferRecordBackend {
       this.isRecording = false
       this.events.onRecordEnd?.(blob)
 
-      if (this.recordEndResolve && blob && blob.size > 0) {
+      if (this.recordEndResolve && blob.size > 0) {
         this.recordEndResolve(blob)
         this.recordEndResolve = null
         this.recordEndReject = null

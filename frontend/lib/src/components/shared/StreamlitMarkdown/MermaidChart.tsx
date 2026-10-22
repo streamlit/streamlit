@@ -541,6 +541,7 @@ const MermaidChart = memo(function MermaidChart({
         const diagramId = `mermaid-${uniqueId.replaceAll(":", "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets isCancelled during the await
         if (isCancelled) return
 
         const finalSvg = prepareResponsiveSvg(svg)
@@ -550,14 +551,9 @@ const MermaidChart = memo(function MermaidChart({
           type: "image/svg+xml;charset=utf-8",
         })
         blobUrl = URL.createObjectURL(blob)
-
-        if (!isCancelled) {
-          setSvgBlobUrl(blobUrl)
-          committedToState = true
-          setIsLoading(false)
-        } else {
-          URL.revokeObjectURL(blobUrl)
-        }
+        setSvgBlobUrl(blobUrl)
+        committedToState = true
+        setIsLoading(false)
       } catch (err) {
         if (blobUrl && !committedToState) {
           URL.revokeObjectURL(blobUrl)

@@ -304,7 +304,7 @@ export class AppRoot {
     node: AppNode | undefined,
     mainScriptHash: string = this.mainScriptHash
   ): BlockNode {
-    return (node as BlockNode) ?? new BlockNode(mainScriptHash)
+    return (node as BlockNode | undefined) ?? new BlockNode(mainScriptHash)
   }
 
   /**

@@ -171,6 +171,8 @@ const formatQuarter = (duration: number): string =>
     .endOf("quarter")
     .format("YYYY[Q]Q")
 
+type PeriodFormatter = (duration: number, freqParam?: string) => string
+
 /**
  * Formatters for the different pandas period frequencies.
  *
@@ -178,7 +180,7 @@ const formatQuarter = (duration: number): string =>
  */
 const PERIOD_TYPE_FORMATTERS: Record<
   SupportedPandasOffsetType,
-  (duration: number, freqParam?: string) => string
+  PeriodFormatter
 > = {
   L: formatMs,
   ms: formatMs,
@@ -451,8 +453,10 @@ export function formatPeriodFromFreq(
   freq: PandasPeriodFrequency
 ): string {
   const [freqName, freqParam] = freq.split("-", 2)
-  const momentConverter =
-    PERIOD_TYPE_FORMATTERS[freqName as SupportedPandasOffsetType]
+  // pandas can send frequencies that have no formatter here.
+  const momentConverter = PERIOD_TYPE_FORMATTERS[
+    freqName as SupportedPandasOffsetType
+  ] as PeriodFormatter | undefined
   if (!momentConverter) {
     LOG.warn(`Unsupported period frequency: ${freq}`)
     return String(duration)
@@ -570,9 +574,8 @@ function formatInterval(x: StructRow, field?: Field): string {
   // pandas.Interval Arrow extension. Metadata is JSON from
   // ArrowIntervalType.__arrow_ext_serialize__:
   // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/pandas/core/arrays/arrow/extension_types.py#L73
-  const extensionName = field?.metadata.get("ARROW:extension:name")
-  if (extensionName === "pandas.interval") {
-    const rawMetadata = field?.metadata.get("ARROW:extension:metadata")
+  if (field?.metadata.get("ARROW:extension:name") === "pandas.interval") {
+    const rawMetadata = field.metadata.get("ARROW:extension:metadata")
     if (typeof rawMetadata !== "string") {
       LOG.warn("Arrow interval extension metadata is missing")
       return String(x)
@@ -602,7 +605,7 @@ function formatInterval(x: StructRow, field?: Field): string {
         name: "",
         metadata: null,
       },
-      arrowField: (field?.type as Struct)?.children?.[0],
+      arrowField: (field.type as Struct).children[0],
     })
     const rightInterval = format(interval.right, {
       // Construct a arrow type for the right interval
@@ -614,7 +617,7 @@ function formatInterval(x: StructRow, field?: Field): string {
         name: "",
         metadata: null,
       },
-      arrowField: (field?.type as Struct)?.children?.[1],
+      arrowField: (field.type as Struct).children[1],
     })
 
     return `${leftBracket + leftInterval}, ${rightInterval + rightBracket}`

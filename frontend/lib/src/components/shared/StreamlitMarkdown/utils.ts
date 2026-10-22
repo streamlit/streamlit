@@ -186,7 +186,10 @@ export function wrapRehypePlugin<Options = unknown>(
   return (options?: Options): RehypeTransformer => {
     const transformer = plugin(options)
 
-    return (tree: HastRoot, file: VFile): HastRoot | undefined | void => {
+    return (
+      tree: HastRoot | undefined,
+      file: VFile
+    ): HastRoot | undefined | void => {
       if (!tree) {
         return tree
       }
@@ -217,7 +220,10 @@ export function wrapRemarkPlugin<Options = unknown>(
   return (options?: Options): RemarkTransformer => {
     const transformer = plugin(options)
 
-    return (tree: MdastRoot, file: VFile): MdastRoot | undefined | void => {
+    return (
+      tree: MdastRoot | undefined,
+      file: VFile
+    ): MdastRoot | undefined | void => {
       if (!tree) {
         return tree
       }

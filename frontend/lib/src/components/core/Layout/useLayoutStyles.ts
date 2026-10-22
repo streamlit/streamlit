@@ -140,10 +140,10 @@ const getWidth = (
     element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
-    element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
+    element.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 element width must fall through to the === 0 check below
-    element?.widthConfig?.pixelWidth ||
+    element.widthConfig?.pixelWidth ||
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 sub-element width must not hide the element === 0 check below
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
@@ -315,14 +315,6 @@ export const useLayoutStyles = ({
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
   const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
-    if (!element) {
-      return {
-        width: "auto",
-        height: "auto",
-        overflow: "visible",
-      }
-    }
-
     const widthConfig = getWidth(element, subElement)
     let width: React.CSSProperties["width"]
     let minWidth: React.CSSProperties["minWidth"]
@@ -358,7 +350,7 @@ export const useLayoutStyles = ({
     ) {
       minWidth = calculateMinWidthWithParentConstraint(
         minStretchBehavior,
-        flexContext?.parentWidth
+        flexContext.parentWidth
       )
     }
 

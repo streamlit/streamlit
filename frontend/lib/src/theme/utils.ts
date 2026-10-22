@@ -128,8 +128,7 @@ export const getMergedDarkTheme = once(() =>
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  const prefersDark =
-    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
 
   return prefersDark ? "dark" : "light"
 }
@@ -809,7 +808,8 @@ export const createEmotionTheme = (
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
-    (colorsArg: Record<string, string>, [key, color]) => {
+    // Only valid configured colors get a key.
+    (colorsArg: Partial<Record<string, string>>, [key, color]) => {
       // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {

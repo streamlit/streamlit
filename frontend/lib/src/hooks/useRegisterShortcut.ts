@@ -95,7 +95,7 @@ let filterConfigured = false
 function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
   // Prefer the composed path because it exposes the *actual* event target
   // inside Shadow DOM trees instead of the retargeted shadow host.
-  const composedPath = event.composedPath?.()
+  const composedPath = (event as Partial<KeyboardEvent>).composedPath?.()
   if (composedPath?.length) {
     for (const candidate of composedPath) {
       const element = candidate as HTMLElement | null
@@ -179,7 +179,7 @@ export function ensureHotkeysFilterConfigured(): void {
     }
 
     if (event.shiftKey) {
-      const key = event.key ?? ""
+      const { key } = event
       if (key.length > 1 && !/^[a-z0-9]$/i.test(key)) {
         return true
       }

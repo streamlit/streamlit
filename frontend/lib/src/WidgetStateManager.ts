@@ -748,15 +748,13 @@ export class WidgetStateManager {
     update: WidgetUpdate
   ): void {
     const widget = { id: elementId, formId: update.formId }
-    // Filter out invalid values (NaN, undefined, null) before storing.
-    const validValue = value.filter(
-      v => v !== undefined && v !== null && !Number.isNaN(v)
-    )
+    // Filter out NaN values before storing.
+    const validValue = value.filter(v => !Number.isNaN(v))
     // If all values are invalid, preserve previous state and warn.
     // This can happen if user code passes NaN values (e.g., from empty DataFrame operations).
     if (validValue.length === 0) {
       LOG.warn(
-        `setDoubleArrayValue: All values were invalid (NaN/null/undefined) ` +
+        `setDoubleArrayValue: All values were NaN ` +
           `for widget "${elementId}". Preserving previous state.`
       )
       this.maybeSyncValueToUrl(widget, update, [])
