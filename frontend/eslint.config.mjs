@@ -665,9 +665,9 @@ export default defineConfig([
     },
   },
   // Flags redundant optional chains and always-true checks.
-  // Tests and packages other than lib stay off until they are cleaned up.
+  // Tests stay off until they are cleaned up.
   {
-    files: ["lib/src/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-unnecessary-condition": "error",

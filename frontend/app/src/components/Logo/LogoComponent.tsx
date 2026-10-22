@@ -37,7 +37,7 @@ import { Logo } from "@streamlit/protobuf"
 const LOG = getLogger("LogoComponent")
 
 // Map logo size to DynamicIcon size for consistent scaling
-const LOGO_SIZE_TO_ICON_SIZE: Record<string, IconSize> = {
+const LOGO_SIZE_TO_ICON_SIZE: Partial<Record<string, IconSize>> = {
   small: "lg", // 1.25rem
   medium: "xl", // 1.5rem
   large: "twoXL", // 1.8rem
@@ -113,7 +113,7 @@ const LogoComponent = ({
     displayImageType === Logo.ImageType.ICON ||
     displayImageType === Logo.ImageType.EMOJI
 
-  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] || "xl"
+  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] ?? "xl"
 
   // Linked / home-nav wrappers name the control. Unlinked icon/emoji logos are
   // otherwise nameless once Material/emoji glyphs are aria-hidden (#12873).

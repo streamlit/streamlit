@@ -96,7 +96,9 @@ export function processNavigationStructure(
   }
 
   // If there are named sections, separate empty section pages as individuals
-  const individualPages = navSections[""] || []
+  // Index access is typed as always defined, but there may be no "" section.
+  const individualPages =
+    (navSections[""] as AppPage.$Properties[] | undefined) ?? []
   const sections: NavigationSections = {}
 
   Object.entries(navSections).forEach(([header, pages]) => {

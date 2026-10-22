@@ -282,17 +282,14 @@ export class MetricsManager {
 
   // Use the tracking data injected by the host of the app if included.
   private getHostTrackingData(): DeployedAppMetadata {
-    if (this.metadata) {
-      return pick(this.metadata, [
-        "hostedAt",
-        "owner",
-        "repo",
-        "branch",
-        "mainModule",
-        "creatorId",
-      ])
-    }
-    return {}
+    return pick(this.metadata, [
+      "hostedAt",
+      "owner",
+      "repo",
+      "branch",
+      "mainModule",
+      "creatorId",
+    ])
   }
 
   // Get context data for events
@@ -356,5 +353,5 @@ export class MetricsManager {
 }
 
 function isWebdriver(): boolean {
-  return window.navigator?.webdriver ?? false
+  return window.navigator.webdriver
 }
