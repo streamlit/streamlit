@@ -233,6 +233,67 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 
 
+def test_print_mode_fits_dataframe_sidebar_and_chart(app: Page) -> None:
+    """Print shows every dataframe cell inside the widget, beside a narrow sidebar.
+
+    ``emulate_media`` applies the print stylesheet but does not fire
+    ``beforeprint``, so the snapshot tests above still show the on-screen
+    canvas. This test fires that event, which is what a real print does.
+    """
+    _load_dataframe_demo_page(app)
+    app.emulate_media(media="print")
+    _set_portrait_dimensions(app)
+
+    app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    table = app.locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    expect(table).to_contain_text("China")
+    headers = table.locator("th")
+    expect(headers.first).to_be_visible()
+    # The on-screen canvas only paints the viewport. The print table has the
+    # index plus every year column.
+    assert headers.count() > 5
+    expect(app.locator(".stDataFrameResizable")).to_be_hidden()
+
+    fit = app.evaluate(
+        """() => {
+            const table = document.querySelector(".stDataFramePrintTable");
+            const frame = table.closest("[data-testid='stDataFrame']");
+            const chart = document.querySelector("[data-testid='stVegaLiteChart']");
+            const main = document.querySelector("[data-testid='stMainBlockContainer']");
+            const sidebar = document.querySelector("[data-testid='stSidebar']");
+            const box = (el) => el.getBoundingClientRect();
+            const tableBox = box(table);
+            const frameBox = box(frame);
+            const chartBox = box(chart);
+            const mainBox = box(main);
+            const sidebarBox = box(sidebar);
+            const rootFont = parseFloat(
+                getComputedStyle(document.documentElement).fontSize
+            );
+            const inside = (inner, outer) =>
+                inner.left >= outer.left - 1
+                && inner.right <= outer.right + 1
+                && inner.top >= outer.top - 1
+                && inner.bottom <= outer.bottom + 1;
+            return {
+                tableInsideFrame: inside(tableBox, frameBox),
+                chartInsideMain: inside(chartBox, mainBox),
+                sidebarBesideMain: sidebarBox.right <= mainBox.left + 1,
+                sidebarIsMinWidth: Math.abs(sidebarBox.width - 12.5 * rootFont) < 1,
+            };
+        }"""
+    )
+    assert fit["tableInsideFrame"]
+    assert fit["chartInsideMain"]
+    assert fit["sidebarBesideMain"]
+    assert fit["sidebarIsMinWidth"]
+
+    app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    expect(table).to_have_count(0)
+    expect(app.locator(".stDataFrameResizable")).to_be_visible()
+
+
 def test_max_content_width_uses_px(app: Page):
     """Test that the max content width uses px and not rem.
 

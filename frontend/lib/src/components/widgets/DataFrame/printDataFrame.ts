@@ -85,11 +85,22 @@ export function fillDataFramePrintSlot(
   }
   table.appendChild(tbody)
 
-  const width = measureNaturalWidth(table)
-  if (width > 0) {
-    slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
-  }
   slot.appendChild(table)
+  // The scale is the column width divided by this size. Zoom changes the
+  // table's layout width, so the first reading is a little short and the
+  // scaled table paints past the column. Measure again with that scale in
+  // place until the width settles.
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- print snapshot cannot wait for a resize observer
+  let width = table.offsetWidth
+  for (let pass = 0; pass < 4 && width > 0; pass++) {
+    slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- print snapshot cannot wait for a resize observer
+    const laidOut = table.offsetWidth
+    if (laidOut === width) {
+      break
+    }
+    width = laidOut
+  }
 }
 
 /** Drop the print table so the on-screen grid is unchanged after printing. */
@@ -104,27 +115,4 @@ function applyPrintCellStyle(cell: HTMLElement, isHeader: boolean): void {
   cell.style.border = "1px solid rgba(49, 51, 63, 0.2)"
   cell.style.textAlign = "left"
   cell.style.fontWeight = isHeader ? "600" : "400"
-}
-
-/**
- * Width of the table with every column on one line. Measuring inside the
- * page column would wrap or clip it, and that clipped width is what print
- * is trying to avoid.
- */
-function measureNaturalWidth(table: HTMLTableElement): number {
-  const probe = document.createElement("div")
-  probe.style.position = "absolute"
-  probe.style.left = "0"
-  probe.style.top = "0"
-  probe.style.visibility = "hidden"
-  probe.style.width = "max-content"
-  probe.appendChild(table)
-  document.body.appendChild(probe)
-  // The print scale is the page width divided by this size, so it has to be
-  // known before the browser snapshots the page. A resize observer would
-  // run too late.
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- print snapshot cannot wait for a resize observer
-  const width = table.offsetWidth
-  probe.remove()
-  return width
 }
