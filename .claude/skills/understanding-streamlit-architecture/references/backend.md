@@ -178,7 +178,7 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
-Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry.
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay; the Arrow copy behind a `data_url` is agent-only, so it is registered only for a recording session, under the replayed element's delta path.
 
 ## Web server (`lib/streamlit/web/server/`)
 
@@ -357,7 +357,7 @@ disrupt the newly reconnected client.
 
 ## Media file management (`lib/streamlit/runtime/media_file_manager.py`)
 
-Media files (images, audio, video) are managed separately from the protobuf element tree.
+Media files (images, audio, video, and an agent session's Arrow data copies from `elements/lib/data_offload.py`) are managed separately from the protobuf element tree.
 
 **Flow**:
 1. `st.image(data)` -> `MediaFileManager.add()` registers file with unique ID
