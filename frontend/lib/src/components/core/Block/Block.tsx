@@ -305,6 +305,8 @@ export const FlexBoxContainer = (
         className={[
           getClassnamePrefix(direction),
           convertKeyToClassName(userKey),
+          // Marks a bordered container so print layout can stack its column.
+          styles.border ? "stBordered" : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -545,7 +547,11 @@ export const BlockNodeRenderer = (
         showBorder={node.deltaBlock.column.showBorder ?? false}
         // Inherit parent row wrap; default true when FlexContext is absent.
         $wrap={flexContext?.wrap ?? true}
-        className="stColumn"
+        className={
+          node.deltaBlock.column.showBorder
+            ? "stColumn stBordered"
+            : "stColumn"
+        }
         data-testid="stColumn"
       >
         {child}
