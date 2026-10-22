@@ -119,6 +119,11 @@ def _create_connection(
             detail=f"Connection class {connection_class.__name__} has scope {scope!r}.",
         )
 
+    if issubclass(connection_class, SnowflakeCallersRightsConnection):
+        # Checked on every call, not only on creation: a cached connection returned
+        # while a module is being imported would be shared across sessions too.
+        connection_class._raise_if_module_being_imported()
+
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()
 
