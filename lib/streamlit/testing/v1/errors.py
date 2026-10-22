@@ -31,3 +31,12 @@ class AppTestError(Exception):
     ``set_value`` / ``click`` on an element that AppTest can inspect but not
     interact with.
     """
+
+
+class AppTestLookupError(AppTestError):
+    """Raised when a strict AppTest lookup does not match exactly one element.
+
+    Lookups by ``label`` or ``text``, such as ``at.button(label="Save")``,
+    must match one element. The message names the query and the candidates
+    so the test can be fixed with a more specific query.
+    """
