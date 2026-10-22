@@ -815,10 +815,10 @@ class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
         original_save_media_data = CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data
         media_data_saved = []
 
-        def tracking_save_media_data(media_data, mimetype, media_id):
+        def tracking_save_media_data(media_data, mimetype, media_id, **kwargs):
             # Call original first to check the in_cached_function logic
             list_length_before = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
-            result = original_save_media_data(media_data, mimetype, media_id)
+            result = original_save_media_data(media_data, mimetype, media_id, **kwargs)
             list_length_after = len(CACHE_DATA_MESSAGE_REPLAY_CTX._media_data)
 
             # Record whether media data was actually added
