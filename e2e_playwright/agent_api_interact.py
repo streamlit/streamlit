@@ -17,6 +17,7 @@ from __future__ import annotations
 import time
 
 import numpy as np
+import pandas as pd
 
 import streamlit as st
 
@@ -62,10 +63,20 @@ def slow() -> None:
     st.text(f"done={st.session_state.done}")
 
 
+def data() -> None:
+    rows = st.number_input("Rows", min_value=1, max_value=500, value=250, key="rows")
+    orders = pd.DataFrame(
+        {"order": range(rows), "amount": [n * 1.5 for n in range(rows)]}
+    )
+    st.dataframe(orders, key="orders")
+    st.line_chart(orders, x="order", y="amount")
+
+
 st.navigation(
     [
         st.Page(home, title="Home", default=True),
         st.Page(report, title="Report", url_path="report"),
         st.Page(slow, title="Slow", url_path="slow"),
+        st.Page(data, title="Data", url_path="data"),
     ]
 ).run()

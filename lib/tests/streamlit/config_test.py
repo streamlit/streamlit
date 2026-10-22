@@ -800,6 +800,7 @@ class ConfigTest(unittest.TestCase):
                 "secrets.files",
                 "server.address",
                 "server.agentMaxSessions",
+                "server.agentPreviewRows",
                 "server.agentSessionTTL",
                 "server.agentWaitTimeout",
                 "server.allowedHosts",
@@ -1151,6 +1152,7 @@ class ConfigTest(unittest.TestCase):
             "server.agentWaitTimeout": 30,
             "server.agentSessionTTL": 900,
             "server.agentMaxSessions": 100,
+            "server.agentPreviewRows": 100,
         }
         for key, default_val in expected_defaults.items():
             option = config._config_options[key]
