@@ -229,7 +229,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.pop(key, None)
+            with contextlib.suppress(KeyError):
+                del self._mem_cache[key]
             removals = self._take_pending_removals()
             self._report_removals(removals)
 

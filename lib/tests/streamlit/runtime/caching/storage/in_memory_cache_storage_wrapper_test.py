@@ -220,6 +220,29 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         with pytest.raises(CacheStorageKeyNotFoundError):
             wrapped_storage.get("some-key")
 
+    def test_delete_physically_removes_expired_memory_entry(self) -> None:
+        """Explicit deletion removes an expired entry that has not been reaped."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            ttl_seconds=1,
+        )
+        with patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "cache_utils.TTLCACHE_TIMER",
+            return_value=0,
+        ) as timer:
+            wrapped_storage = InMemoryCacheStorageWrapper(
+                persist_storage=DummyCacheStorage(), context=context
+            )
+            wrapped_storage.set("some-key", b"some-value")
+            timer.return_value = 2
+
+            assert "some-key" in wrapped_storage._mem_cache._data
+            wrapped_storage.delete("some-key")
+
+        assert "some-key" not in wrapped_storage._mem_cache._data
+
     def test_in_memory_cache_storage_wrapper_close(self):
         """
         Test that storage.close() closes the underlying persist storage

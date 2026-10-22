@@ -316,6 +316,33 @@ def test_local_removals_and_close_update_accounting() -> None:
     assert budget.total_bytes == 0
 
 
+def test_explicit_delete_of_expired_entry_updates_accounting_once() -> None:
+    """Deleting an unreaped expired entry removes its accounted bytes once."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    with patch(
+        "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+        "cache_utils.TTLCACHE_TIMER",
+        return_value=0,
+    ) as timer:
+        storage = _create_storage(budget, "expired", ttl_seconds=1)
+        storage.set("key", b"abc")
+        generation = storage._generations["key"]
+        assert budget.total_bytes == 3
+        timer.return_value = 2
+
+        with patch.object(
+            budget, "record_removals", wraps=budget.record_removals
+        ) as record_removals:
+            storage.delete("key")
+            storage.delete("key")
+
+    assert "key" not in storage._mem_cache._data
+    assert budget.total_bytes == 0
+    record_removals.assert_called_once_with(
+        storage._global_storage_id, [("key", generation)]
+    )
+
+
 def test_late_report_from_unregistered_storage_is_ignored() -> None:
     budget = GlobalCacheBudget(max_bytes=100)
     persistent = _DictStorage()
