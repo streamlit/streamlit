@@ -40,7 +40,7 @@ def _register_component(
     css: str | None = None,
     js: str | None = None,
 ) -> str:
-    """Register a component and return its fully qualified key.
+    """Register a component under ``name`` and return that same key.
 
     This shared function handles the component registration and constructing a
     validated definition against any pre-registered components from
@@ -64,7 +64,7 @@ def _register_component(
     Returns
     -------
     str
-        The component key, which is ``name`` unchanged.
+        The same string passed as ``name``.
 
     Raises
     ------
@@ -290,9 +290,9 @@ def component(
         exactly as you pass it and doesn't add a prefix. For a component in an
         installed package, use ``"<project_name>.<component_name>"``, where
         ``<project_name>`` is the ``name`` in the package's ``[project]``
-        table and ``<component_name>`` is the component's ``name`` in
-        ``[tool.streamlit.component]``. Streamlit uses this name to find the
-        component's ``asset_dir``.
+        table and ``<component_name>`` is the ``name`` of the component's
+        entry under ``[[tool.streamlit.component.components]]``. Streamlit
+        uses this name to find the component's ``asset_dir``.
 
         If you register multiple components with the same name, a warning is
         logged and the last-registered component is used. Because this can lead
