@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing, @typescript-eslint/no-unnecessary-condition -- ??= would read the unbound Promise.withResolvers method; the ES2024 lib types it as always present, but older browsers lack it
+// Older browsers lack Promise.withResolvers, though the ES2024 lib types it as
+// always present.
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing, @typescript-eslint/no-unnecessary-condition -- ??= would read the method unbound
 if (Promise.withResolvers === undefined) {
   Promise.withResolvers = <T>() => {
     let promiseResolve: PromiseWithResolvers<T>["resolve"]

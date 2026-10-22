@@ -353,5 +353,7 @@ export class MetricsManager {
 }
 
 function isWebdriver(): boolean {
-  return window.navigator.webdriver
+  // The DOM lib types navigator.webdriver as always present, but some embedded
+  // WebViews and older browsers leave it undefined. Report those as false.
+  return Boolean(window.navigator.webdriver)
 }

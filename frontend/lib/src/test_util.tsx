@@ -194,6 +194,7 @@ export function mockWindowLocation(hostname: string): void {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,
     origin,
+    // App reads location.search while building its initial query params.
     search: "",
   }
   // @ts-expect-error - partial Location is not assignable to string & Location
