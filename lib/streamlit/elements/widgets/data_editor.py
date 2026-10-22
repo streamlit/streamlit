@@ -1552,7 +1552,7 @@ class DataEditorMixin:
             layout_config=layout_config,
             # st.dataframe and st.data_editor share this proto. The schema and
             # row preview are derived facts about the payload, not command
-            # parameters. Guarded before the call, so a browser session
+            # parameters. Built only while recording, so a browser session
             # registers no copy of the Arrow data.
             agent_props=agent_spec.element(
                 "data_editor",

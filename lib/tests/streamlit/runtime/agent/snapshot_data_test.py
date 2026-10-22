@@ -52,7 +52,10 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
+    from streamlit.runtime.memory_media_file_storage import (
+        MemoryFile,
+        MemoryMediaFileStorage,
+    )
 
 _MEDIA_URL = re.compile(r"/media/[0-9a-f]+")
 _FRAME = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
@@ -199,9 +202,11 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
 
     Otherwise a preview of no rows would be reported as the complete table.
     """
-    summary = summarize_arrow(
-        dataframe_util.convert_pandas_df_to_arrow_bytes(pd.DataFrame(index=range(5)))
+    arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+        pd.DataFrame(index=range(5))
     )
+
+    summary = summarize_arrow(arrow_bytes)
 
     assert summary is not None
     assert summary["row_count"] == 5
@@ -209,11 +214,7 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
     assert summary["preview"]["rows"] == [[]] * 5
 
     with patch_config_options({"server.agentPreviewRows": 2}):
-        bounded = summarize_arrow(
-            dataframe_util.convert_pandas_df_to_arrow_bytes(
-                pd.DataFrame(index=range(5))
-            )
-        )
+        bounded = summarize_arrow(arrow_bytes)
     assert bounded is not None
     assert bounded["complete"] is False
     assert bounded["preview"]["rows"] == [[]] * 2
@@ -248,8 +249,8 @@ def _bar_figure_spec(**layout: Any) -> str:
 class SnapshotDataTest(SnapshotCase):
     """The data block each table, chart, and map element reports."""
 
-    def _served(self, url: str) -> bytes:
-        return self.media_file_storage.get_file(url.rsplit("/", 1)[-1]).content
+    def _served(self, url: str) -> MemoryFile:
+        return self.media_file_storage.get_file(url.rsplit("/", 1)[-1])
 
     def _data(self, element_type: str) -> dict[str, Any]:
         return _one(self._build().document, element_type)["data"]
@@ -270,7 +271,7 @@ class SnapshotDataTest(SnapshotCase):
         assert "unavailable" not in data
         # The served copy is exactly what the browser receives.
         payload = self.get_delta_from_queue().new_element.dataframe.arrow_data.data
-        served = self.media_file_storage.get_file(data["url"].rsplit("/", 1)[-1])
+        served = self._served(data["url"])
         assert served.content == payload
         assert served.mimetype == data_offload.ARROW_MIMETYPE
 
@@ -504,7 +505,7 @@ class SnapshotDataTest(SnapshotCase):
         assert data["complete"] is True
         assert "spec" not in data
         rendered = json.dumps(document)
-        served = self._served(data["url"])
+        served = self._served(data["url"]).content
         for withheld in ("ada@example.com", "cust-17", "customer"):
             assert withheld not in rendered
             assert withheld.encode() not in served

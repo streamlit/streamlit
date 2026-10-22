@@ -417,7 +417,7 @@ class TableMixin:
             proto,
             layout_config=layout_config,
             # The schema and row preview are derived facts about the payload,
-            # not command parameters. Guarded before the call, so a browser
+            # not command parameters. Built only while recording, so a browser
             # session registers no copy of the Arrow data.
             agent_props=agent_spec.element(
                 "table",

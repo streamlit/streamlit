@@ -79,7 +79,7 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         ):
             assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
 
-        self.media_file_storage._files_by_id.clear()
+        self._stored().clear()
         with patch.object(
             runtime_util, "get_max_message_size_bytes", return_value=len(_ARROW) - 1
         ):

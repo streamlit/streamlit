@@ -713,12 +713,9 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
 
     data: dict[str, Any] = {}
 
-    if (
-        isinstance(spec, dict)
-        and isinstance(spec.get("layout"), dict)
-        and "template" in spec["layout"]
-    ):
-        template = spec["layout"]["template"]
+    layout = spec.get("layout") if isinstance(spec, dict) else None
+    if isinstance(layout, dict) and "template" in layout:
+        template = layout["template"]
         template_layout = template.get("layout") if isinstance(template, dict) else None
         if not isinstance(template_layout, dict):
             template_layout = {}
@@ -727,9 +724,11 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
             for name in _TEMPLATE_CONTENT
             if template_layout.get(name)
         }
-        layout = {k: v for k, v in spec["layout"].items() if k != "template"}
+        trimmed_layout = {
+            name: value for name, value in layout.items() if name != "template"
+        }
         if content:
-            layout["template"] = {"layout": content}
+            trimmed_layout["template"] = {"layout": content}
             data["spec_omitted"] = [
                 f"layout.template.{name}" for name in template if name != "layout"
             ] + [
@@ -739,7 +738,7 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
             ]
         else:
             data["spec_omitted"] = ["layout.template"]
-        spec = {**spec, "layout": layout}
+        spec = {**spec, "layout": trimmed_layout}
 
     data["spec"] = _expand_typed_arrays(spec)
     data["complete"] = True
