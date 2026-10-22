@@ -215,6 +215,9 @@ describe("FlexBoxContainer Block Component", () => {
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
       "border: 1px solid rgba(47, 45, 43, 0.2);"
     )
+    expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveClass(
+      "stBordered"
+    )
   })
 
   describe("VerticalBlock", () => {
