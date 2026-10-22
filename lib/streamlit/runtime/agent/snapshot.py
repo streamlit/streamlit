@@ -62,8 +62,8 @@ BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 # Why an element's `data` is incomplete and has no `url` serving the rest:
 # - ``too_large_to_serve``: above `server.maxMessageSize`.
 # - ``multiple_datasets``: a chart over several tables.
-# - ``external_url``: a chart whose browser fetches data this API does not
-#   hold.
+# - ``external_url``: a Vega-Lite chart whose specification loads data from a
+#   URL, which only a browser fetches.
 # - ``lazy_loading``: a lazily loaded dataframe, whose first chunk is the
 #   preview.
 # - ``undescribed``: an element replayed from a cache a browser filled, which
@@ -586,9 +586,10 @@ def _data_block(
     url = description.get("data_url")
     if not isinstance(url, str):
         url = None
+    # Nothing summarized and nothing registered means no `data`. A registered
+    # copy alone is still reported, since it serves the whole table even when
+    # its summary failed.
     if not data and not url:
-        # A registered copy is reported even when its summary failed, since
-        # it still serves the whole table.
         return None
 
     if data.get("complete") is not True:
@@ -599,6 +600,9 @@ def _data_block(
         # is collected once the element that produced it stops rendering.
         data["url"] = url
     elif data["complete"] is False:
+        # In a recording session with a runtime, the size bound is the only
+        # reason `serve_arrow_over_http` registers nothing for a non-empty
+        # table. A new reason there needs its own `unavailable` value.
         reason: UnavailableReason = "too_large_to_serve" if described else "undescribed"
         data.setdefault("unavailable", reason)
     return data

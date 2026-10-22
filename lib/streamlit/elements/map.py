@@ -361,8 +361,9 @@ def _map_agent_props(
             frame.reset_index(drop=True)
         )
     except Exception:
-        # A map accepts shapes the Arrow conversion may reject. The snapshot
-        # then falls back to the Deck.gl spec, which carries the same points.
+        # A map draws some data Arrow cannot convert. `data_summary` is then
+        # left unset, and the snapshot reads the Deck.gl spec, which carries
+        # the same points.
         _LOGGER.debug("Could not describe map data as Arrow.", exc_info=True)
 
     return agent_spec.element(
@@ -388,7 +389,8 @@ def to_deckgl_json(
     """Serialize the map to a PyDeck JSON string.
 
     Also returns the plotted columns of the author's data, with the author's
-    values, or ``None`` for a map with no data.
+    values, while an agent session records. Otherwise, and for a map with no
+    data, that is ``None``.
     """
     if data is None:
         return json.dumps(_DEFAULT_MAP), None
@@ -417,9 +419,12 @@ def to_deckgl_json(
             if c is not None
         ]
     )
-    plotted = df[used_columns]
-    # A copy, because the color conversion below rewrites the color column.
-    df = plotted.copy()
+    df = df[used_columns]
+    # The author's values, kept before the color conversion below rewrites the
+    # color column. Only an agent description reads them, so a browser session
+    # holds just the copy.
+    plotted = df if agent_spec.is_recording() else None
+    df = df.copy()
 
     converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 

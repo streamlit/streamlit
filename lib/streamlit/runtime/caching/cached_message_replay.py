@@ -50,7 +50,8 @@ class MediaMsgData:
     # Table data behind an agent description's `data_url`. Only an agent
     # session fetches it, so a browser session replaying the entry does not
     # register it. Its `media` is empty when the element's payload carries the
-    # bytes. The defaults keep entries pickled without these fields loading.
+    # bytes. Defaults let cache entries pickled before these fields existed
+    # still load.
     agent_only: bool = False
 
 

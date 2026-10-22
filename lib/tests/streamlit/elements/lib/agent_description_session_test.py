@@ -27,6 +27,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import runtime
 from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.map import to_deckgl_json
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import build_snapshot
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
@@ -620,6 +621,20 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         block = _one(self._snapshot(list(self.forward_msg_queue._queue)), "map")["data"]
         _assert_data_resolves(block)
         assert block["row_count"] == rows
+
+    def test_map_keeps_its_plotted_columns_only_while_recording(self) -> None:
+        """A browser session holds no frame beyond the one the Deck.gl payload
+        needs; an agent session keeps the author's plotted values.
+        """
+        frame = pd.DataFrame({"lat": [1.0], "lon": [2.0], "tone": ["#ff0000"]})
+
+        _, plotted = to_deckgl_json(frame, None, None, None, "tone", None)
+        assert plotted is None
+
+        self._record()
+        _, plotted = to_deckgl_json(frame, None, None, None, "tone", None)
+        assert plotted is not None
+        assert plotted["tone"].tolist() == ["#ff0000"]
 
     def test_cache_replay_registers_table_data_only_for_agent_sessions(self) -> None:
         """A replay into the agent session registers the table again; a replay into

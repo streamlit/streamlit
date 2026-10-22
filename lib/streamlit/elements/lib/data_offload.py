@@ -28,9 +28,9 @@ complete data, so a truncated preview always has somewhere to fetch the rest
 from. Every described table is registered, however small: completeness is a
 question about row count, not bytes.
 
-Nothing here is agent-specific beyond the recording gate, so a frontend that
-fetches Arrow over HTTP (https://github.com/streamlit/streamlit/issues/16378)
-can reuse it.
+Apart from the recording gate and the agent-only cache marker, nothing here is
+agent-specific, so a frontend that fetches Arrow over HTTP
+(https://github.com/streamlit/streamlit/issues/16378) can reuse it.
 """
 
 from __future__ import annotations
@@ -59,8 +59,9 @@ def serve_arrow_over_http(
 ) -> str | None:
     """Register Arrow data for HTTP fetch and return its URL.
 
-    Returns ``None`` when nobody in this session would fetch it, or when the
-    payload is too large to hold a second copy of.
+    Returns ``None`` when this session is not recording, when ``arrow_bytes``
+    is empty, when there is no runtime to serve from, or when the payload is
+    larger than ``server.maxMessageSize``.
 
     Parameters
     ----------
@@ -72,19 +73,21 @@ def serve_arrow_over_http(
         ``DeltaGenerator._get_delta_path_str()``. The media file manager keys
         references by it so data replaced in place does not leak.
     in_payload
-        Whether ``arrow_bytes`` is the element's own payload, which
-        ``arrow_in_payload`` reads back from a replayed ``st.cache_data``
-        entry. Pass ``False`` for a table the command derived, such as
-        ``st.map``'s, so the cache entry keeps the bytes instead.
+        Whether the element's own message already carries ``arrow_bytes``, so
+        an ``st.cache_data`` entry need not store them again: a replay reads
+        them back with ``arrow_in_payload``. Pass ``False`` for a table the
+        command derived, such as ``st.map``'s, so the entry keeps the bytes.
     """
     if not arrow_bytes or not agent_spec.is_recording():
         return None
 
-    # The bound the app's own WebSocket messages have, so an agent is served no
-    # more data than the app could send its browser, and raising one raises
-    # both. Above it the element reports no URL and the snapshot says so with
-    # `data.unavailable`; a client that needs the data narrows the app's
-    # filters instead.
+    # The bound the app's own WebSocket messages have, so an agent is served
+    # about as much data as the app could send its browser, and raising one
+    # raises both. It is checked against the Arrow bytes alone: the serialized
+    # message the browser's limit applies to also holds protobuf framing and
+    # the element's description, which are not built yet. Above it the element
+    # reports no URL and the snapshot says so with `data.unavailable`; a client
+    # that needs the data narrows the app's filters instead.
     size = len(arrow_bytes)
     max_size = runtime_util.get_max_message_size_bytes()
     if size > max_size:
