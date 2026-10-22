@@ -159,10 +159,14 @@ def test_data_url_and_summary_sit_beside_props() -> None:
 
 
 def test_vega_arrow_buffers_lists_inline_and_named_datasets() -> None:
-    """Inline data comes first, then every named dataset; no data is no buffer."""
+    """Inline data comes first, then every named dataset; no data is no buffer.
+
+    An empty named dataset is skipped like empty inline data, so it does not
+    turn a single-table chart into `multiple_datasets`.
+    """
     proto = VegaLiteChartProto()
     proto.data.data = b"inline"
-    for name, data in (("first", b"one"), ("second", b"two")):
+    for name, data in (("first", b"one"), ("empty", b""), ("second", b"two")):
         dataset = proto.datasets.add()
         dataset.name = name
         dataset.data.data = data

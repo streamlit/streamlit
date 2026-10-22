@@ -388,7 +388,7 @@ def vega_arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
     so callers report several as unavailable instead.
     """
     buffers = [proto.data.data] if proto.data.data else []
-    buffers.extend(dataset.data.data for dataset in proto.datasets)
+    buffers.extend(dataset.data.data for dataset in proto.datasets if dataset.data.data)
     return buffers
 
 
