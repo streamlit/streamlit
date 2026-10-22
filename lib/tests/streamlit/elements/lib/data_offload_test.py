@@ -16,15 +16,21 @@
 
 from __future__ import annotations
 
+import pickle
 import re
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pandas as pd
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util, util
 from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
+from streamlit.proto.Table_pb2 import Table as TableProto
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime import Runtime, runtime_util
 from streamlit.runtime.caching.cache_data_api import CACHE_DATA_MESSAGE_REPLAY_CTX
 from streamlit.runtime.caching.cached_message_replay import (
@@ -98,15 +104,20 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         Runtime._instance = None
         assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
 
-    def test_inside_a_cached_function_the_bytes_are_saved_as_agent_only(
-        self,
+    @parameterized.expand([("payload", True, b""), ("derived", False, _ARROW)])
+    def test_inside_a_cached_function_the_file_is_saved_as_agent_only(
+        self, _name: str, in_payload: bool, kept: bytes
     ) -> None:
-        """The cache entry keeps the bytes with the element, marked for agents only."""
+        """The cache entry records the file for agents only, and keeps its bytes
+        only when the element's payload does not already carry them.
+        """
         self._record()
 
         @st.cache_data(show_spinner=False)
         def fill() -> None:
-            url = data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 7]")
+            url = data_offload.serve_arrow_over_http(
+                _ARROW, coordinates="[0, 7]", in_payload=in_payload
+            )
             st.markdown(str(url))
 
         fill()
@@ -115,7 +126,7 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         assert isinstance(message, ElementMsgData)
         assert message.media_data == [
             MediaMsgData(
-                _ARROW,
+                kept,
                 data_offload.ARROW_MIMETYPE,
                 "[0, 7]",
                 file_name=util.calc_hash(_ARROW),
@@ -142,3 +153,40 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         assert first_url != second_url
         served = self.media_file_storage.get_file(second_url.rsplit("/", 1)[-1])
         assert served.content == second
+
+
+def test_arrow_in_payload_reads_tables_and_single_buffer_charts() -> None:
+    """A replay reads back the bytes a table or a one-buffer chart registered.
+
+    A chart over several buffers registered no copy, so nothing is read back.
+    """
+    dataframe = DataframeProto()
+    dataframe.arrow_data.data = _ARROW
+    table = TableProto()
+    table.arrow_data.data = _ARROW
+    chart = VegaLiteChartProto()
+    chart.datasets.add().data.data = _ARROW
+    layered = VegaLiteChartProto()
+    layered.data.data = _ARROW
+    layered.datasets.add().data.data = _ARROW
+
+    assert data_offload.arrow_in_payload(dataframe) == _ARROW
+    assert data_offload.arrow_in_payload(table) == _ARROW
+    assert data_offload.arrow_in_payload(chart) == _ARROW
+    assert data_offload.arrow_in_payload(layered) == b""
+    assert data_offload.arrow_in_payload(MarkdownProto(body="no data")) == b""
+
+
+def test_media_entries_pickled_without_the_agent_fields_still_load() -> None:
+    """A persisted cache entry from before `file_name` and `agent_only` loads
+    with both defaulted, so an upgrade keeps replaying it.
+    """
+    entry = MediaMsgData(b"image", "image/png", "[0, 1]")
+    del entry.__dict__["file_name"]
+    del entry.__dict__["agent_only"]
+
+    loaded = pickle.loads(pickle.dumps(entry))
+
+    assert loaded.file_name is None
+    assert loaded.agent_only is False
+    assert loaded.media == b"image"

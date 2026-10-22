@@ -39,6 +39,8 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.runtime.media_file_manager import MediaFileManager
 
 
@@ -647,6 +649,43 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         filled_by_agent()
         assert _descriptions(list(self.forward_msg_queue._queue)) == []
         assert self._arrow_files() == []
+
+    @parameterized.expand(
+        [
+            ("table", lambda: st.table(pd.DataFrame({"n": range(3)}))),
+            ("chart", lambda: st.line_chart(pd.DataFrame({"n": range(3)}))),
+            ("map", lambda: st.map(pd.DataFrame({"lat": [1.0], "lon": [2.0]}))),
+        ]
+    )
+    def test_cache_replay_serves_each_kind_of_data_again(
+        self, _name: str, emit: Callable[[], object]
+    ) -> None:
+        """A replayed table, chart, or map serves the bytes its first run did.
+
+        A table's and a chart's bytes are read back from the replayed payload;
+        a map's derived table is kept with the cache entry.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def filled_by_agent() -> int:
+            emit()
+            return 1
+
+        self._record()
+        filled_by_agent()
+        [described] = _descriptions(list(self.forward_msg_queue._queue))
+        [original] = self._arrow_files()
+        self._start_full_run()
+
+        filled_by_agent()
+        self._media_file_mgr().remove_orphaned_files()
+
+        [replayed] = _descriptions(list(self.forward_msg_queue._queue))
+        assert replayed["data_url"] == described["data_url"]
+        served = self.media_file_storage.get_file(
+            replayed["data_url"].rsplit("/", 1)[-1]
+        )
+        assert served.content == original
 
     def test_a_browser_filled_cache_replays_as_undescribed(self) -> None:
         """An entry a browser filled has no copy, so the agent sees why there is none."""

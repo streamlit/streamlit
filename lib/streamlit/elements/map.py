@@ -368,7 +368,7 @@ def _map_agent_props(
     return agent_spec.element(
         "map",
         data_url=data_offload.serve_arrow_over_http(
-            arrow_bytes, coordinates=dg._get_delta_path_str()
+            arrow_bytes, coordinates=dg._get_delta_path_str(), in_payload=False
         )
         if plotted is not None
         else None,
