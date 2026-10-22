@@ -17,8 +17,10 @@ from __future__ import annotations
 import math
 import os
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
+from datetime import timedelta
+from typing import Any, Final, Literal, TypeVar, cast, overload
 
+from streamlit import config
 from streamlit.connections import (
     BaseConnection,
     SnowflakeCallersRightsConnection,
@@ -29,9 +31,6 @@ from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
-
-if TYPE_CHECKING:
-    from datetime import timedelta
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
@@ -69,9 +68,21 @@ _MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
 }
 _USE_ENV_PREFIX: Final = "env:"
 _CONNECTION_DEFAULT_TTL_KEY: Final = "runner.connectionDefaultTTL"
-# Distinguishes an omitted `ttl` (consult `runner.connectionDefaultTTL`) from an
-# explicit `ttl=None` (always means "no expiry," overriding the server default).
-_TTL_NOT_SPECIFIED: float = cast("float", object())
+
+
+class _TTLNotSpecified:
+    """Sentinel for an omitted ``st.connection`` ``ttl``.
+
+    It distinguishes an omitted ``ttl`` (consult ``runner.connectionDefaultTTL``)
+    from an explicit ``ttl=None`` (always means "no expiry"). The ``repr`` keeps
+    ``help(st.connection)`` readable.
+    """
+
+    def __repr__(self) -> str:
+        return "<unset>"
+
+
+_TTL_NOT_SPECIFIED: float = cast("float", _TTLNotSpecified())
 
 # The BaseConnection bound is parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -106,10 +117,12 @@ def _create_connection(
             error_id="connection-not-base-connection-subclass",
         )
 
-    if isinstance(ttl, (int, float)) and not isinstance(ttl, bool):
-        # Normalize to one numeric form so an explicit `ttl=30` and the server
-        # default (always a float) share a single cache entry instead of
-        # splitting into two live connections with identical expiry.
+    # Normalize to float seconds so an explicit `ttl=30`, `ttl=timedelta(seconds=30)`,
+    # and the server default (always a float) share a single cache entry instead
+    # of splitting into separate live connections with identical expiry.
+    if isinstance(ttl, timedelta):
+        ttl = ttl.total_seconds()
+    elif isinstance(ttl, (int, float)) and not isinstance(ttl, bool):
         ttl = float(ttl)
 
     # We modify our helper function's `__qualname__` here to work around default
@@ -148,7 +161,7 @@ def _invalid_connection_default_ttl(value: Any) -> StreamlitAPIException:
     """Build the error for a bad ``runner.connectionDefaultTTL`` value."""
     return StreamlitAPIException(
         "Invalid `runner.connectionDefaultTTL` value. "
-        "Use a non-negative number of seconds, or leave the option unset "
+        "Use a finite, non-negative number of seconds, or leave the option unset "
         "to keep connections cached until they are cleared. "
         f"Received {value!r}.",
         error_id="connection-default-ttl-invalid",
@@ -177,9 +190,6 @@ def _coerce_connection_default_ttl(value: Any) -> float:
 
 def _configured_connection_ttl() -> float | None:
     """Return the server default ``st.connection`` TTL."""
-    # Local import: config pulls in enough of the runtime to cycle back here.
-    from streamlit import config
-
     configured = config.get_option(_CONNECTION_DEFAULT_TTL_KEY)
     if configured is None:
         return None

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 import threading
@@ -417,6 +418,13 @@ def restore_connection_default_ttl() -> Iterator[None]:
     config._set_option(key, value, where_defined)
 
 
+@pytest.fixture
+def clear_resource_caches() -> Iterator[None]:
+    """Clear the global resource caches that real connections populate."""
+    yield
+    _resource_caches.clear_all()
+
+
 def _set_connection_default_ttl(ttl: object) -> None:
     """Set the server default TTL for the current test."""
     config._set_option("runner.connectionDefaultTTL", ttl, "test")
@@ -476,15 +484,24 @@ def test_explicit_connection_ttl_overrides_server_default(
     )
 
 
-@pytest.mark.usefixtures("restore_connection_default_ttl")
-def test_shares_cache_entry_for_equivalent_numeric_ttl() -> None:
-    """An explicit int ttl and the equal server default float ttl share one connection."""
+@pytest.mark.usefixtures("restore_connection_default_ttl", "clear_resource_caches")
+def test_shares_cache_entry_for_equivalent_ttl() -> None:
+    """An int, a timedelta, and the equal server default share one connection."""
     _set_connection_default_ttl(30)
     with patch.object(MockConnection, "__init__", return_value=None) as patched_init:
         connection_factory("my_connection", MockConnection, ttl=30)
+        connection_factory("my_connection", MockConnection, ttl=timedelta(seconds=30))
         connection_factory("my_connection", MockConnection)
+        # A different lifetime is still a separate connection.
+        connection_factory("my_connection", MockConnection, ttl=timedelta(seconds=31))
 
-    assert patched_init.call_count == 1
+    assert patched_init.call_count == 2
+
+
+def test_omitted_ttl_default_has_readable_signature() -> None:
+    """``help(st.connection)`` shows a readable ``ttl`` default, not an object address."""
+    ttl_param = inspect.signature(connection_factory).parameters["ttl"]
+    assert repr(ttl_param.default) == "<unset>"
 
 
 @pytest.mark.usefixtures("restore_connection_default_ttl")
