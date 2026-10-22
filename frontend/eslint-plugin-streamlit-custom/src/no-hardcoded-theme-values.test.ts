@@ -88,6 +88,10 @@ ruleTester.run("no-hardcoded-theme-values", noHardcodedThemeValues, {
       code: "var a = { fontVariant: 'small-caps' };",
     },
     {
+      name: "'tabular-nums' is allowed for equal-width digits",
+      code: "var a = { fontVariantNumeric: 'tabular-nums' };",
+    },
+    {
       name: "template strings with valid values are allowed",
       code: "var MyComponent = styled.div`color: theme.colors.primary; line-height: theme.lineHeights.body;`",
     },

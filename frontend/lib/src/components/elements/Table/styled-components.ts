@@ -25,6 +25,8 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
   fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
+  // Equal-width digits so numeric columns stay comparable (Figtree tnum).
+  fontVariantNumeric: "tabular-nums",
   lineHeight: theme.lineHeights.small,
   captionSide: "bottom",
   // Ensure height constraints from parent are inherited
