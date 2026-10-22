@@ -310,8 +310,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert wrapped_storage._read_from_mem_cache("second") == b"larger"
         warning.assert_called_once_with(
             "A cached result is larger than the st.cache_data size limit and "
-            "was stored anyway.",
-            stack_info=True,
+            "was stored anyway."
         )
 
     def test_byte_eviction_preserves_persisted_entry(self) -> None:

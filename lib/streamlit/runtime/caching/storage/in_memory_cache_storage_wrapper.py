@@ -16,6 +16,7 @@ from __future__ import annotations
 import contextlib
 import math
 import threading
+import weakref
 from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
@@ -30,9 +31,24 @@ from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 _LOGGER = get_logger(__name__)
+
+
+def _create_on_remove_callback(
+    storage: InMemoryCacheStorageWrapper,
+) -> Callable[[str, bytes], None]:
+    """Create a removal callback that does not keep its storage alive."""
+    storage_ref = weakref.ref(storage)
+
+    def on_remove(key: str, value: bytes) -> None:
+        # Keep a strong reference for the full callback after the safe dereference.
+        live_storage = storage_ref()
+        if live_storage is not None:
+            live_storage._on_mem_cache_remove(key, value)
+
+    return on_remove
 
 
 class InMemoryCacheStorageWrapper(CacheStorage):
@@ -82,7 +98,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             timer=cache_utils.TTLCACHE_TIMER,
             max_total_size=self._max_size_bytes,
             getsizeof=None if self._max_size_bytes is None else len,
-            on_remove=self._on_mem_cache_remove,
+            on_remove=_create_on_remove_callback(self),
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
@@ -223,8 +239,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         if should_warn:
             _LOGGER.warning(
                 "A cached result is larger than the st.cache_data size limit and "
-                "was stored anyway.",
-                stack_info=True,
+                "was stored anyway."
             )
 
     def _remove_from_mem_cache(self, key: str) -> None:

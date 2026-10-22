@@ -620,7 +620,8 @@ class CacheDataAPI:
             ``MB`` / ``GB`` / ``TB`` and ``KiB`` / ``MiB`` / ``GiB`` / ``TiB``
             aliases all use powers of 1024. Fractional values round down to whole
             bytes, so ``"1.1KB"`` is 1126 bytes. If this is ``None`` (default),
-            there is no per-function byte limit.
+            there is no per-function byte limit, but an explicitly configured
+            ``server.maxCacheDataSize`` budget may still evict entries.
 
             When adding a value would exceed the limit, Streamlit drops the
             least-recently-used entries until the new value fits. Reading a cached

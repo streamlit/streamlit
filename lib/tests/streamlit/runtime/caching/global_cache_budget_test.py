@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import gc
 import threading
 import weakref
 from concurrent.futures import ThreadPoolExecutor
@@ -105,6 +104,7 @@ def _create_storage(
 
 
 def test_budget_from_config_uses_configured_limit() -> None:
+    """The configured byte limit initializes the global budget."""
     with patch(
         "streamlit.runtime.caching.global_cache_budget.config.get_option",
         return_value="1KiB",
@@ -115,10 +115,12 @@ def test_budget_from_config_uses_configured_limit() -> None:
 
 
 def test_budget_from_default_config_is_disabled() -> None:
+    """The default configuration leaves the global budget disabled."""
     assert GlobalCacheBudget.from_config().max_bytes is None
 
 
 def test_disabled_budget_does_not_track_entries_or_recency() -> None:
+    """A disabled budget does not collect entry or recency bookkeeping."""
     budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "disabled")
 
@@ -132,6 +134,7 @@ def test_disabled_budget_does_not_track_entries_or_recency() -> None:
 
 
 def test_reconfigure_accounts_for_existing_entries() -> None:
+    """Enabling the budget accounts for entries written before activation."""
     budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "raw-mode")
     storage.set("old", b"aaa")
@@ -201,6 +204,7 @@ def test_enabled_writes_to_different_storages_overlap() -> None:
 
 
 def test_budget_evicts_global_lru_and_counts_success() -> None:
+    """Budget overflow evicts the global LRU entry and records the eviction."""
     budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
@@ -227,6 +231,7 @@ def test_budget_evicts_global_lru_and_counts_success() -> None:
 
 
 def test_recency_hints_are_bounded_and_drained_by_write() -> None:
+    """Read recency hints remain bounded and are applied by the next write."""
     budget = GlobalCacheBudget(max_bytes=100)
     storage = _create_storage(budget, "bounded")
     storage.set("key", b"x")
@@ -240,6 +245,7 @@ def test_recency_hints_are_bounded_and_drained_by_write() -> None:
 
 
 def test_oversized_global_entry_is_retained_and_warns_once() -> None:
+    """A globally oversized entry is retained and warns once per storage."""
     budget = GlobalCacheBudget(max_bytes=2)
     storage = _create_storage(budget, "oversized")
 
@@ -253,12 +259,12 @@ def test_oversized_global_entry_is_retained_and_warns_once() -> None:
     assert storage.get("second") == b"larger"
     warning.assert_called_once_with(
         "A cached result is larger than the st.cache_data size limit and "
-        "was stored anyway.",
-        stack_info=True,
+        "was stored anyway."
     )
 
 
 def test_global_eviction_warning_is_once_and_after_success() -> None:
+    """The global eviction warning is emitted once after a successful eviction."""
     budget = GlobalCacheBudget(max_bytes=2)
     storage = _create_storage(budget, "warning")
 
@@ -278,11 +284,11 @@ def test_global_eviction_warning_is_once_and_after_success() -> None:
         "the budget, or to '0' to disable it. Per-function sizes are on the "
         "cache_memory_bytes metric.",
         "2 bytes",
-        stack_info=True,
     )
 
 
 def test_disk_promotion_counts_and_global_eviction_preserves_disk() -> None:
+    """Disk promotion is accounted while global eviction preserves disk data."""
     budget = GlobalCacheBudget(max_bytes=2)
     persistent = _DictStorage()
     storage = _create_storage(budget, "persistent", persist_storage=persistent)
@@ -300,6 +306,7 @@ def test_disk_promotion_counts_and_global_eviction_preserves_disk() -> None:
 
 
 def test_local_removals_and_close_update_accounting() -> None:
+    """Local eviction, deletion, clearing, and close update global accounting."""
     budget = GlobalCacheBudget(max_bytes=100)
     storage = _create_storage(budget, "local", max_entries=1, max_size_bytes=10)
     storage.set("a", b"aa")
@@ -344,6 +351,7 @@ def test_explicit_delete_of_expired_entry_updates_accounting_once() -> None:
 
 
 def test_late_report_from_unregistered_storage_is_ignored() -> None:
+    """Writes after storage unregistration do not restore global accounting."""
     budget = GlobalCacheBudget(max_bytes=100)
     persistent = _DictStorage()
     storage = _create_storage(budget, "detached", persist_storage=persistent)
@@ -358,6 +366,7 @@ def test_late_report_from_unregistered_storage_is_ignored() -> None:
 
 
 def test_same_function_key_storages_have_unique_registration() -> None:
+    """Storages sharing a function key receive distinct registrations."""
     budget = GlobalCacheBudget(max_bytes=100)
     first = _create_storage(budget, "shared")
     second = _create_storage(budget, "shared")
@@ -370,20 +379,25 @@ def test_same_function_key_storages_have_unique_registration() -> None:
     assert budget.total_bytes == 3
 
 
-def test_weak_registry_does_not_pin_storage() -> None:
+def test_weak_removal_callback_does_not_pin_storage() -> None:
+    """The TTL removal callback does not delay wrapper release until cyclic GC."""
     budget = GlobalCacheBudget(max_bytes=100)
     storage = _create_storage(budget, "collected")
     storage.set("key", b"value")
+    on_remove = storage._mem_cache._on_remove
     storage_ref = weakref.ref(storage)
 
     del storage
-    gc.collect()
 
     assert storage_ref() is None
+    assert budget.total_bytes == 0
+    assert on_remove is not None
+    on_remove("key", b"value")
     assert budget.total_bytes == 0
 
 
 def test_rewritten_selected_victim_keeps_new_generation() -> None:
+    """A victim rewritten after reservation keeps its newer generation."""
     budget = GlobalCacheBudget(max_bytes=6)
     victim = _create_storage(budget, "victim")
     writer = _create_storage(budget, "writer")
@@ -412,6 +426,7 @@ def test_rewritten_selected_victim_keeps_new_generation() -> None:
 
 
 def test_concurrent_churn_keeps_exact_bounded_accounting() -> None:
+    """Concurrent cache churn preserves exact bounded byte accounting."""
     budget = GlobalCacheBudget(max_bytes=64)
     storages = [_create_storage(budget, f"storage-{index}") for index in range(4)]
 

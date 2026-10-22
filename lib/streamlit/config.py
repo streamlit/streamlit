@@ -958,9 +958,10 @@ _create_option(
     "server.maxCacheDataSize",
     description="""
         Maximum combined serialized size of all in-memory @st.cache_data entries
-        across functions and sessions. Use a binary-unit string such as "2gb" or
-        "500mb" (units are powers of 1024). Leave unset (the default), or set to
-        "0", to disable the limit.
+        across functions and sessions. This limit counts serialized bytes, not
+        process RSS, and does not apply to st.cache_resource.
+        Use a binary-unit string such as "2gb" or "500mb" (units are powers of
+        1024). Leave unset (the default), or set to "0", to disable the limit.
         When the total exceeds the limit, Streamlit evicts the least-recently-used
         in-memory entries; persisted disk entries are not deleted. A single value
         larger than the limit is still cached. Budget enforcement runs when entries

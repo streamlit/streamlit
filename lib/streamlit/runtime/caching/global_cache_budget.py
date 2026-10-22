@@ -307,7 +307,6 @@ class GlobalCacheBudget(StatsProvider):
             "the budget, or to '0' to disable it. Per-function sizes are on the "
             "cache_memory_bytes metric.",
             _format_byte_size(max_bytes),
-            stack_info=True,
         )
 
     def _reserve_victims_locked(
