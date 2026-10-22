@@ -497,7 +497,13 @@ describe("side drawer resize handle", () => {
       </Modal>
     )
 
-    await user.click(screen.getByTestId("stDialogResizeHandle"))
+    const handle = screen.getByTestId("stDialogResizeHandle")
+    // jsdom does not implement pointer capture.
+    handle.setPointerCapture = vi.fn()
+    handle.hasPointerCapture = vi.fn(() => false)
+    handle.releasePointerCapture = vi.fn()
+
+    await user.click(handle)
 
     expect(handleClose).not.toHaveBeenCalled()
     expect(screen.getByRole("dialog")).toBeVisible()

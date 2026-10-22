@@ -118,8 +118,8 @@ function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
     return null
   }
 
-  // Fallback for environments without composedPath: inspect the (possibly
-  // retargeted) event target.
+  // Composed path missing or empty: inspect the (possibly retargeted) event
+  // target.
   const target = event.target as HTMLElement | null
   if (
     target?.tagName &&
