@@ -699,7 +699,8 @@ class CacheDataAPI:
               columns, are shared. The app developer is responsible for avoiding
               unsafe mutations and synchronizing access to shared objects. Pandas
               objects nested in built-in tuples, lists, and dictionaries also receive
-              shallow copies.
+              shallow copies. This mode can't be combined with ``persist="disk"`` or
+              ``max_size``.
 
         Examples
         --------
@@ -841,6 +842,16 @@ class CacheDataAPI:
                 explanation=(
                     "Copy-on-Write cache entries are process-local and cannot be "
                     "persisted to disk."
+                ),
+            )
+
+        if copy == "cow" and max_size_bytes is not None:
+            raise StreamlitIncompatibleParametersError(
+                'copy="cow"',
+                f"max_size={max_size!r}",
+                explanation=(
+                    "Copy-on-Write entries are stored as live objects, while "
+                    "`max_size` limits serialized cache bytes."
                 ),
             )
 

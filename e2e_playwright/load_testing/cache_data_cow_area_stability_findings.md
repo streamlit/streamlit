@@ -1,4 +1,4 @@
-# `st.cache_data(copy="cow")` Area Stability evaluation
+# `st.cache_data(copy="cow")` benchmark findings
 
 ## Current status
 
@@ -12,17 +12,18 @@ cell-by-cell object-column scan, and explicit deep copies of pandas axes and met
 It also creates caller wrappers after releasing the cache lock so concurrent cache hits
 can proceed in parallel.
 
-The revised prototype did not produce a measurable initial-load improvement in the
-split-query Area Stability app. In ten alternating cache-cleared pairs, deep copies had
-a 6.274-second median and CoW had a 6.370-second median. The means moved in the opposite
-direction (6.779 seconds deep, 6.602 seconds CoW), and the paired 95% confidence interval
-for CoW minus deep ranged from -1.706 to +1.351 seconds. The difference is noise relative
-to the observed run-to-run variation.
+The expanded benchmarks do not show a compelling initial-load or single-session latency
+improvement. They do show material process-memory reductions when several sessions reuse
+large cached DataFrames:
 
-Recommendation: do not advance CoW as an initial-load optimization for this app. The
-split-query architecture has made the shared cached return small enough that cache-copy
-strategy is no longer a material end-to-end factor. This conclusion is about latency;
-the benchmark did not measure whether CoW reduces peak memory.
+- Area Stability's eight-session filtered peak fell from 902 MiB to 432 MiB (52%).
+- AI Tool Impact's eight-session peak fell from 1,509 MiB to 1,004 MiB (33%).
+- Single-session warm interaction latency was effectively neutral in Area Stability and
+  improved by 5% in AI Tool Impact with a confidence interval that crossed zero.
+
+The prototype therefore validates CoW as a possible multi-session memory optimization,
+not a general latency optimization. The API safety trade-off and memory-accounting
+design need resolution before production use.
 
 ## Prototype behavior
 
@@ -35,77 +36,76 @@ The opt-in `copy="cow"` mode:
 - shares other nested Python objects, including mutable object-dtype cells;
 - does not recursively validate cached values;
 - requires pandas Copy-on-Write on pandas versions before 3;
-- rejects `persist="disk"` because its baseline is process-local; and
+- rejects `persist="disk"` because its baseline is process-local;
+- rejects `max_size` because that limit is defined in serialized bytes; and
 - participates in clear, TTL/LRU eviction, async writes, and background refresh.
 
-Targeted tests cover default behavior, pandas-managed mutation isolation, explicitly
-shared nested values, nested dashboard-shaped returns, concurrent readers, clear,
-eviction, TTL, async writes, and background refresh.
+Focused CoW tests cover default behavior, pandas-managed mutation isolation, explicitly
+shared nested values, nested dashboard-shaped returns, concurrent readers, clear, LRU
+eviction, parameter validation, and typing.
 
-## Revised prototype benchmark on the split-query app
+## Comprehensive Area Stability benchmark
 
-The benchmark used:
+Primary measurements used fresh Streamlit processes with one fixed copy mode per
+process. Pair order alternated deep/CoW and CoW/deep. Headless Chromium used independent
+browser contexts with its HTTP cache disabled, and process-tree RSS was sampled every
+50 ms.
 
-- Area Stability production-improvement commit `dfb52c3f10`, including SQL health-status
-  rollups, deferred filtered queries, parallel fragments, and lazy tab content;
-- Streamlit prototype commit `3d63c99bb1`;
-- the same server process for both modes, avoiding authentication and process-startup
-  differences;
-- a query parameter to alternate `deep` then `cow` for ten pairs;
-- a unique hard `st.cache_data.clear()` token before every run;
-- browser asset caching disabled; and
-- completed initial render as the end condition: data cutoff, Overall Health, Drill into
-  an Org/Area, and Metrics Lookup visible with all three loading placeholders gone.
+| Workload | Deep | CoW | Result |
+|---|---:|---:|---:|
+| First load | 9.028 s | 10.118 s | No measurable difference |
+| Warm default rerun | 0.200 s | 0.202 s | Neutral |
+| Warm selected-Org rerun | 0.854 s | 0.869 s | 15 ms slower |
+| Four filtered lookback reruns | 2.366 s | 1.851 s | 22% faster |
+| Eight filtered lookback reruns | 4.572 s | 3.722 s | 19% faster |
+| Selected-Org settled RSS | 532 MiB | 347 MiB | 35% lower |
+| Eight-session selected-Org peak RSS | 902 MiB | 432 MiB | 52% lower |
+| Eight-session filtered lookback peak RSS | 828 MiB | 438 MiB | 47% lower |
 
-The app was warmed before measurement. Snowflake authentication and app telemetry
-persistence were excluded. Times are seconds from browser navigation.
+The selected-Org view's three dominant cached DataFrames total 276 MiB by pandas'
+deep-memory accounting. A warm filtered rerun spent about 58 ms materializing eight
+deep-copy cache hits versus about 0.9 ms creating CoW wrappers. That difference is too
+small to improve a single-session rerun dominated by transformation and chart work, but
+it becomes material under concurrent allocation pressure.
 
-### Deep-copy runs
+The four-session latency reduction had a paired 95% confidence interval wholly below
+zero. The eight-session interval crossed zero by 6 ms and had only three independent
+process pairs, so the RSS result is stronger than the latency result.
 
-- 8.149
-- 5.508
-- 5.391
-- 5.852
-- 5.620
-- 6.697
-- 8.032
-- 5.751
-- 9.662
-- 7.132
-- Mean: 6.779
-- Median: 6.274
-- Range: 5.391–9.662
+## AI Tool Impact corroboration
 
-### Revised CoW runs
+An offline replay benchmark used 97 captured query payloads containing 10,678 rows and
+78.8 MiB of pandas-deep data. Four matched process pairs exercised the unchanged
+SQL-optimized app with one, two, four, and eight independent browser sessions.
 
-- 5.867
-- 10.269
-- 5.887
-- 5.593
-- 6.760
-- 6.935
-- 6.737
-- 5.233
-- 6.716
-- 6.024
-- Mean: 6.602
-- Median: 6.370
-- Range: 5.233–10.269
+- Warm reruns improved from 1.695 seconds to 1.609 seconds (5%), but the paired
+  confidence interval crossed zero.
+- Eight-session interaction time improved from 10.714 seconds to 10.150 seconds (5%),
+  also with an interval that crossed zero.
+- Eight-session peak process-tree RSS fell from 1,509 MiB to 1,004 MiB (33%), with a
+  paired interval of 328–682 MiB lower.
+- Peak RSS growth per added session fell from 115.6 MiB to 48.6 MiB (58%).
 
-The CoW mean was 2.6% faster while its median was 1.5% slower. Mean paired difference
-was 0.177 seconds faster for CoW, with a 95% t-interval from 1.706 seconds faster to
-1.351 seconds slower. The direction changes with the summary statistic, and the
-uncertainty interval spans differences much larger than the observed mean.
+This second app supports the same conclusion: cache materialization itself becomes much
+cheaper and multi-session RSS falls materially, while total interaction latency is
+mostly determined by other app work.
 
-Separate-process exploratory runs were excluded because process startup, credential
-reuse, and warehouse/query stabilization caused 14–72 second warmups and one stalled
-run. The final alternating matrix avoided those differences but still includes external
-warehouse, network, browser, and chart-render variance.
+## Current limitations
 
-The historical 14–17 second results below are not directly comparable because they used
-the pre-rollup app and a different benchmark session. They do show why CoW had more
-theoretical opportunity before query splitting: the original app repeatedly returned
-much larger DataFrames. That opportunity is largely gone in the improved app.
+- The benchmarks model concurrent local sessions in one process, not network distance or
+  multiple replicas.
+- Snowflake and network variance remain in live Area Stability miss/initial-load phases.
+- Python's allocator retains freed memory, so settled RSS is a process-footprint measure,
+  not a live-object measure.
+- CoW intentionally shares nested mutable Python objects. Ordinary pandas writes detach,
+  but in-place list/dict/set or object-cell mutation can leak across sessions.
+- The prototype has no production design for measuring live-object memory or enforcing a
+  byte budget. `max_size` is rejected rather than silently ignored.
+
+The historical 14–17 second measurements below used an earlier safety-preserving CoW
+implementation, the pre-rollup app, and a different benchmark session. They are retained
+to explain why that implementation was replaced, not as evidence about the current
+prototype.
 
 ## Historical benchmark method
 

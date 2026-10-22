@@ -307,6 +307,16 @@ class CacheDataTest(unittest.TestCase):
             def get_data() -> pd.DataFrame:
                 return pd.DataFrame({"value": [1]})
 
+    def test_cow_cannot_use_serialized_size_limit(self) -> None:
+        """Live CoW objects cannot use the serialized-byte size limit."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError, match=r"max_size='1MB'"
+        ):
+
+            @st.cache_data(copy="cow", max_size="1MB")
+            def get_data() -> pd.DataFrame:
+                return pd.DataFrame({"value": [1]})
+
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
         with corresponding hash_func.
