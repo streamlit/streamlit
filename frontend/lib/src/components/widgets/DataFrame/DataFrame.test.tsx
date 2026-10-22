@@ -248,6 +248,25 @@ describe("DataFrame widget", () => {
     )
   })
 
+  it("builds a table of the whole dataframe before printing", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    const table = document.querySelector(".stDataFramePrintTable")
+    expect(table).not.toBeNull()
+    // 10 data columns plus the index, and one header row plus 10 data rows.
+    expect(table?.querySelectorAll("th")).toHaveLength(11)
+    expect(table?.querySelectorAll("tbody tr")).toHaveLength(10)
+
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"))
+    })
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
   it("caps the grid to its container when printing", () => {
     render(<DataFrame {...props} />)
 
@@ -258,6 +277,12 @@ describe("DataFrame widget", () => {
     expect(css).toContain("@media print")
     expect(css).toContain(".stDataFrameResizable")
     expect(css).toContain("width:100%!important")
+    // The print table is scaled down to the page so columns past the
+    // on-screen viewport are not clipped.
+    expect(css).toContain(".stDataFramePrintTable")
+    expect(css).toContain(
+      "zoom:min(1, calc(100cqw / var(--st-df-print-width)))"
+    )
   })
 
   it("sets role=region and aria-label on the grid host when alt is provided", () => {
