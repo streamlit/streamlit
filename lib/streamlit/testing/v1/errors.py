@@ -34,9 +34,9 @@ class AppTestError(Exception):
 
 
 class AppTestLookupError(AppTestError):
-    """Raised when a strict AppTest lookup does not match exactly one element.
+    """Raised when a ``label=`` or ``text=`` lookup does not match exactly one element.
 
-    Lookups by ``label`` or ``text``, such as ``at.button(label="Save")``,
-    must match one element. The message names the query and the candidates
-    so the test can be fixed with a more specific query.
+    For example, ``at.button(label="Save")`` raises this error when no button
+    or several buttons have that label. The message names the query and, when
+    nothing matches, lists the candidate values.
     """

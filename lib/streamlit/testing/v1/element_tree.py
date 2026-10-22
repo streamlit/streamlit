@@ -553,8 +553,8 @@ class Widget(Element, ABC):
 
 El_co = TypeVar("El_co", bound=Element, covariant=True)
 
-# Element types whose typed collections accept ``label=`` / ``text=`` lookups,
-# mapped to the attribute that holds the user-visible string to match.
+# For each ``label=`` / ``text=`` lookup, the element types that support it and
+# the attribute holding the user-visible string it matches.
 _SEMANTIC_QUERY_ATTRS: Final[dict[str, dict[str, str]]] = {
     "label": {"button": "label", "text_input": "label"},
     "text": {"markdown": "value"},
@@ -563,7 +563,10 @@ _MAX_LOOKUP_CANDIDATES: Final = 10
 
 
 def _semantic_content(element: Element, query_name: str) -> str:
-    """Return the collapsed string that a ``label=`` or ``text=`` lookup matches."""
+    """Return the whitespace-collapsed string a ``label=`` or ``text=`` lookup matches.
+
+    Raises ``AppTestError`` if the element type does not support the lookup.
+    """
     supported = _SEMANTIC_QUERY_ATTRS[query_name]
     attr = supported.get(element.type)
     if attr is None:
@@ -598,14 +601,14 @@ def _lookup_failure_message(
     query_parts += [f"{name}={query!r}" for name, query in queries.items()]
     if not exact:
         query_parts.append("exact=False")
-    query = ", ".join(query_parts)
+    query_repr = ", ".join(query_parts)
     if match_count:
         return (
-            f"{match_count} {elements[0].type} elements match {query}. "
+            f"{match_count} {elements[0].type} elements match {query_repr}. "
             "Add key= or scope the lookup to a container to select one."
         )
     if not elements:
-        return f"No element matches {query}. The collection is empty."
+        return f"No element matches {query_repr}. The collection is empty."
     # Every element supports the queried fields, or _semantic_content would
     # already have raised during matching.
     name = next(iter(queries))
@@ -617,7 +620,8 @@ def _lookup_failure_message(
     if len(elements) > _MAX_LOOKUP_CANDIDATES:
         candidates.append(f"and {len(elements) - _MAX_LOOKUP_CANDIDATES} more")
     return (
-        f"No {elements[0].type} matches {query}. Candidates: {', '.join(candidates)}."
+        f"No {elements[0].type} matches {query_repr}. "
+        f"Candidates: {', '.join(candidates)}."
     )
 
 
@@ -689,8 +693,8 @@ class ElementList(Generic[El_co]):
             Whether a string ``label`` or ``text`` must match the whole value.
             If this is ``True`` (default), the strings must be equal. If this
             is ``False``, the string must appear anywhere in the value,
-            ignoring case. Whitespace is collapsed and trimmed on both sides
-            either way. A compiled regular expression is matched with
+            ignoring case. Both modes collapse and trim whitespace in the
+            query and the value. A compiled regular expression is matched with
             ``re.search`` against the collapsed value and ignores ``exact``.
 
         Returns

@@ -123,7 +123,7 @@ at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
 
-`at.button` and `at.text_input` also accept `label=`, and `at.markdown` accepts `text=`. These lookups are strict: anything other than exactly one match raises `AppTestLookupError`. Whitespace is collapsed. Pass `exact=False` for a case-insensitive substring, or pass a compiled regex. Other collections raise `AppTestError` for these filters:
+`at.button` and `at.text_input` also accept `label=`, and `at.markdown` accepts `text=`. Other collections raise `AppTestError` for these filters. These lookups are strict: anything other than exactly one match raises `AppTestLookupError`. Matching collapses whitespace. Pass `exact=False` for a case-insensitive substring, or pass a compiled regex:
 
 ```python
 at.button(label="Save").click().run()

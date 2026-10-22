@@ -2449,7 +2449,8 @@ def test_element_list_call_by_label_is_strict() -> None:
         at.button(label="sav", exact=False)
 
     assert at.button("bottom", label="Save") is at.button[1]
-    # A key that matches no labeled widget is a strict miss, not a KeyError.
+    # key= with label= raises AppTestLookupError, not KeyError, when no widget
+    # matches both.
     with pytest.raises(AppTestLookupError, match=r"key='top', label='Cancel'"):
         at.button(key="top", label="Cancel")
 
