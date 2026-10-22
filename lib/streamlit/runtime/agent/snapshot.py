@@ -59,12 +59,15 @@ SCHEMA_VERSION: Final = 1
 # Why an element the snapshot shows cannot be used now.
 BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 
-# Why an element's `data` is incomplete and has no `url` serving the rest.
-# ``too_large_to_serve``: above `server.maxMessageSize`. ``multiple_datasets``:
-# a chart over several tables. ``external_url``: a chart whose browser fetches
-# data this API does not hold. ``lazy_loading``: a lazily loaded dataframe,
-# whose first chunk is the preview. ``undescribed``: an element replayed from a
-# cache a browser filled, which registered nothing.
+# Why an element's `data` is incomplete and has no `url` serving the rest:
+# - ``too_large_to_serve``: above `server.maxMessageSize`.
+# - ``multiple_datasets``: a chart over several tables.
+# - ``external_url``: a chart whose browser fetches data this API does not
+#   hold.
+# - ``lazy_loading``: a lazily loaded dataframe, whose first chunk is the
+#   preview.
+# - ``undescribed``: an element replayed from a cache a browser filled, which
+#   registered nothing.
 UnavailableReason: TypeAlias = Literal[
     "too_large_to_serve",
     "multiple_datasets",
@@ -580,13 +583,17 @@ def _data_block(
         data = dict(summary) if isinstance(summary, dict) else {}
     else:
         data = _element_data(proto_field, payload) or {}
-    if not data:
+    url = description.get("data_url")
+    if not isinstance(url, str):
+        url = None
+    if not data and not url:
+        # A registered copy is reported even when its summary failed, since
+        # it still serves the whole table.
         return None
 
     if data.get("complete") is not True:
         data["complete"] = False
-    url = description.get("data_url")
-    if isinstance(url, str) and url and "unavailable" not in data:
+    if url and "unavailable" not in data:
         # A fetch-now handle, registered while the script ran. Also reported
         # for a complete table, so every table has the same contract. The file
         # is collected once the element that produced it stops rendering.
@@ -847,15 +854,23 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     limit = _preview_row_limit()
     try:
         table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
-        rows = _arrow_rows(table, limit)
+        columns = _arrow_columns(table)
     except Exception:
         # Any failure, not just a malformed stream: an element without a
         # summary costs far less than a failed snapshot, or a failed command
         # for `st.map`, which summarizes its table while the script runs.
-        _LOGGER.debug("Could not summarize an Arrow payload.", exc_info=True)
+        _LOGGER.debug("Could not read an Arrow payload.", exc_info=True)
         return None
 
-    columns = _arrow_columns(table)
+    rows: list[list[Any]] | None
+    try:
+        rows = _arrow_rows(table, limit)
+    except Exception:
+        # A column pyarrow cannot convert to Python values. The schema and
+        # size still describe the table, and the empty preview is incomplete.
+        _LOGGER.debug("Could not preview an Arrow payload.", exc_info=True)
+        rows = None
+
     return {
         "columns": columns,
         "row_count": table.num_rows,
@@ -863,12 +878,12 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
         # `complete` sits at the top of `data` because it is the first question
         # a client asks, and it is the only flag: a second one inside `preview`
         # would only ever be its inverse.
-        "complete": table.num_rows <= limit,
+        "complete": rows is not None and table.num_rows <= limit,
         "preview": {
             # Rows are values in `columns` order rather than objects, because
             # repeating the column names on every row is most of a preview's
             # size once it gets long.
-            "rows": rows,
+            "rows": rows or [],
         },
     }
 

@@ -39,6 +39,7 @@ from streamlit import dataframe_util
 from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
+from streamlit.runtime.agent import snapshot
 from streamlit.runtime.agent.snapshot import UnavailableReason, summarize_arrow
 from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.runtime.agent.snapshot_test_case import (
@@ -218,6 +219,18 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
     assert bounded is not None
     assert bounded["complete"] is False
     assert bounded["preview"]["rows"] == [[]] * 2
+
+
+def test_summarize_arrow_keeps_the_schema_when_its_preview_fails() -> None:
+    """A column pyarrow cannot convert leaves the schema and size, marked incomplete."""
+    with patch.object(snapshot, "_arrow_rows", side_effect=NotImplementedError):
+        summary = summarize_arrow(_arrow(pa.table({"n": [1, 2]})))
+
+    assert summary is not None
+    assert summary["columns"] == [{"name": "n", "type": "int64"}]
+    assert summary["row_count"] == 2
+    assert summary["complete"] is False
+    assert summary["preview"]["rows"] == []
 
 
 @pytest.mark.parametrize("arrow_bytes", [b"", b"not an arrow stream"])
@@ -411,6 +424,26 @@ class SnapshotDataTest(SnapshotCase):
         assert "template" not in data["spec"]["layout"]
         assert data["spec"]["data"][0]["y"] == [1.5, None, 3.0]
         assert "url" not in data
+
+    def test_plotly_expands_a_two_dimensional_array_in_its_shape(self) -> None:
+        """A heatmap's matrix comes back as rows of numbers, not one flat list."""
+        st.plotly_chart(go.Figure(go.Heatmap(z=np.arange(6).reshape(2, 3))))
+
+        assert self._data("plotly_chart")["spec"]["data"][0]["z"] == [
+            [0, 1, 2],
+            [3, 4, 5],
+        ]
+
+    def test_a_table_whose_summary_fails_still_reports_its_url(self) -> None:
+        """The registered copy still serves the whole table, so it is not dropped."""
+        st.dataframe(_frame(5))
+
+        with patch.object(snapshot, "summarize_arrow", return_value=None):
+            data = self._data("dataframe")
+
+        assert data.keys() == {"complete", "url"}
+        assert data["complete"] is False
+        assert _MEDIA_URL.fullmatch(data["url"])
 
     def test_plotly_keeps_template_content(self) -> None:
         """Content a template adds, such as an annotation, stays; the rest is named."""
