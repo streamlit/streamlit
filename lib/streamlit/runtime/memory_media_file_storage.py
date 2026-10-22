@@ -53,6 +53,10 @@ _PARTIAL_HASH_SAMPLE_SIZE: Final = 65_536  # 64 KiB for head, middle, and tail
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
     "text/vtt": ".vtt",
+    # Only some platforms' MIME tables register `.arrows` for the Arrow stream
+    # format, so it is pinned to none for the agent API's data URLs to look
+    # the same on every server.
+    "application/vnd.apache.arrow.stream": "",
 }
 
 
