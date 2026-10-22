@@ -20,6 +20,8 @@ import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import {
   clearDataFramePrintSlot,
+  DATAFRAME_PRINT_CELL_LIMIT,
+  DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
   fillDataFramePrintSlot,
@@ -78,6 +80,66 @@ describe("fillDataFramePrintSlot", () => {
     expect(
       [...slot.querySelectorAll("td")].map(cell => cell.textContent)
     ).toEqual(["Ada", "London"])
+  })
+
+  it("prints the formatted text instead of the stored value", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Share"), column("When")],
+      1,
+      ([col]) => {
+        if (col === 0) {
+          return {
+            kind: GridCellKind.Number,
+            data: 0.42,
+            displayData: "42%",
+            allowOverlay: false,
+          }
+        }
+        return {
+          kind: GridCellKind.Custom,
+          data: { kind: "date", displayDate: "Oct 20, 2026" },
+          allowOverlay: false,
+          copyData: "",
+        }
+      }
+    )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["42%", "Oct 20, 2026"])
+  })
+
+  it("escapes cell text", () => {
+    fillDataFramePrintSlot(slot, [column("Name")], 1, () =>
+      textCell("A & B <C>")
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe("A & B <C>")
+  })
+
+  it("keeps the canvas when a row is still loading", () => {
+    fillDataFramePrintSlot(slot, [column("Name")], 2, ([, row]) =>
+      row === 0
+        ? textCell("Ada")
+        : { kind: GridCellKind.Loading, allowOverlay: false }
+    )
+
+    expect(slot.querySelector("table")).toBeNull()
+    expect(slot.querySelector("p")).toHaveClass(DATAFRAME_PRINT_NOTE_CLASS)
+    expect(slot.textContent).toContain("still loading")
+  })
+
+  it("keeps the canvas when the frame is too large to expand", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      DATAFRAME_PRINT_CELL_LIMIT + 1,
+      () => textCell("Ada")
+    )
+
+    expect(slot.querySelector("table")).toBeNull()
+    expect(slot.textContent).toContain("too large")
   })
 
   it("clears the table so the screen grid is restored after printing", () => {

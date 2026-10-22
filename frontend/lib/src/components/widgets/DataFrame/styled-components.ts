@@ -19,6 +19,7 @@ import styled from "@emotion/styled"
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { printContainStyles } from "~lib/components/shared/printContain"
 import {
+  DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
 } from "~lib/components/widgets/DataFrame/printDataFrame"
@@ -72,6 +73,12 @@ export const StyledResizableContainer =
         // and the table could not be scaled to the column.
         display: "block",
         width: "100%",
+        "&:has(.stDataFramePrintTable)": {
+          // The on-screen box is a fixed height. The print table follows its
+          // rows, including a header repeated after a page break.
+          height: "auto",
+          maxHeight: "none",
+        },
         "& .stDataFramePrintSlot": {
           display: "block",
           width: "100%",
@@ -82,7 +89,25 @@ export const StyledResizableContainer =
           containerType: "inline-size",
         },
         [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
+          borderCollapse: "collapse",
+          // The table stays at its content width so zoom scales every column
+          // together. fit-content would squeeze it into the slot first.
+          // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- max-content is the content size, not a theme length
+          width: "max-content",
           zoom: `min(1, calc(100cqw / var(${DATAFRAME_PRINT_WIDTH_VAR})))`,
+          "th, td": {
+            whiteSpace: "nowrap",
+            padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+            border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
+            textAlign: "left",
+            fontWeight: theme.fontWeights.normal,
+          },
+          th: {
+            fontWeight: theme.fontWeights.semiBold,
+          },
+        },
+        [`& .${DATAFRAME_PRINT_NOTE_CLASS}`]: {
+          margin: 0,
         },
         // The canvas only painted the on-screen viewport. The print table
         // is the full frame, so the canvas would clip columns beside it.

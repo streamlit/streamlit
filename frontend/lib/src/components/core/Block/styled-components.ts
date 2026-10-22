@@ -124,6 +124,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     "@media print": {
       overflow: "visible",
+      // A fixed-height dataframe keeps that height on its container. The
+      // print table is taller than the on-screen grid, so the container
+      // grows with the table instead of letting rows paint outside it.
+      "&:has(.stDataFramePrintTable)": {
+        height: "auto",
+        maxHeight: "none",
+        minHeight: 0,
+        contain: "none",
+      },
     },
 
     ":has(> .stCacheSpinner)": {
@@ -411,6 +420,15 @@ export const StyledFlexContainerBlock =
               }
             : {
                 display: "block",
+                // `gap` only applies to a flex box. Padding keeps the space
+                // between elements. A child that cancels this gap with a
+                // negative margin, such as a balloon, still does.
+                ...(gapWidth &&
+                  gapWidth !== theme.spacing.none && {
+                    "& > :not(:last-child)": {
+                      paddingBottom: gapWidth,
+                    },
+                  }),
               }),
           ...(border && {
             breakInside: "avoid",

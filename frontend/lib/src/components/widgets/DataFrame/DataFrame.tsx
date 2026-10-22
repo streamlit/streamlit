@@ -946,8 +946,9 @@ function DataFrame({
   const isSearchOpen = canSearch && showSearch
 
   // The canvas grid only paints the viewport. Before the browser snapshots
-  // the page, replace it with a table of every cell so print can scale the
-  // whole frame onto the page.
+  // the page, replace it with a table of the loaded cells so print can scale
+  // the frame onto the page. Frames that are still loading or too large to
+  // lay out here keep the canvas.
   useEffect(() => {
     const slot = printSlotRef.current
     if (!slot) {
