@@ -64,8 +64,8 @@ BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 # - ``multiple_datasets``: a chart over several tables.
 # - ``external_url``: a Vega-Lite chart whose specification loads data from a
 #   URL, which only a browser fetches.
-# - ``lazy_loading``: a lazily loaded dataframe, whose first chunk is the
-#   preview.
+# - ``lazy_loading``: a lazily loaded dataframe, previewed from the chunk its
+#   browser received.
 # - ``undescribed``: an element replayed from a cache a browser filled, which
 #   registered nothing.
 UnavailableReason: TypeAlias = Literal[
@@ -654,11 +654,13 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
 
 
 def _lazy_dataframe_data(lazy_data: Any) -> dict[str, Any] | None:
-    """A lazily loaded dataframe, previewed by the chunk its browser received.
+    """A lazily loaded dataframe, previewed from the chunk its browser received.
 
-    The rest is only fetched by a browser as it scrolls, so nothing serves it,
-    and the chunk alone would pass for the whole table. The row count is the
-    source's, reported only when the source knows it.
+    The preview is the first ``server.agentPreviewRows`` rows of that chunk,
+    the same cap as any table. The rest is only fetched by a browser as it
+    scrolls, so nothing serves it, and the chunk alone would pass for the whole
+    table. The row count is the source's, reported only when the source knows
+    it.
     """
     data = summarize_arrow(lazy_data.initial_chunk.data)
     if data is None:

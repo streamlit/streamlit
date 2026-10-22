@@ -373,8 +373,9 @@ class SnapshotDataTest(SnapshotCase):
         assert _arrow_files(self.media_file_storage) == []
 
     def test_a_lazy_dataframe_reports_its_first_chunk(self) -> None:
-        """The first chunk is the preview, the source's count is the row count, and
-        nothing is served. Without a known count there is no row count.
+        """The preview is the first `agentPreviewRows` rows of the loaded chunk, the
+        source's count is the row count, and nothing is served. Without a known
+        count there is no row count.
         """
         st.dataframe(pd.DataFrame({"a": np.arange(5_000)}), lazy=True)
         lazy_message = self.get_message_from_queue()

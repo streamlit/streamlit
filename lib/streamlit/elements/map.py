@@ -420,9 +420,9 @@ def to_deckgl_json(
         ]
     )
     df = df[used_columns]
-    # The author's values, kept before the color conversion below rewrites the
-    # color column. Only an agent description reads them, so a browser session
-    # holds just the copy.
+    # The author's plotted values, kept before the color conversion below
+    # rewrites the color column. Only an agent description reads them, so a
+    # browser session does not keep this frame.
     plotted = df if agent_spec.is_recording() else None
     df = df.copy()
 

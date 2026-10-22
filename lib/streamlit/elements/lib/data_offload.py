@@ -24,9 +24,9 @@ whatever is no longer referenced.
 
 The agent API is the only consumer today. Its snapshot reports the schema, row
 counts, and a bounded row preview inline, and points at this URL for the
-complete data, so a truncated preview always has somewhere to fetch the rest
-from. Every described table is registered, however small: completeness is a
-question about row count, not bytes.
+complete data. Every non-empty eager Arrow payload within
+``server.maxMessageSize`` is registered, even when its preview is already
+complete: completeness is a question about row count, not bytes.
 
 Apart from the recording gate and the agent-only cache marker, nothing here is
 agent-specific, so a frontend that fetches Arrow over HTTP
@@ -66,8 +66,9 @@ def serve_arrow_over_http(
     Parameters
     ----------
     arrow_bytes
-        The serialized Arrow IPC stream, exactly as the browser receives it,
-        so an agent is served nothing the browser does not receive.
+        The serialized Arrow IPC stream to serve. Payload-backed elements pass
+        the browser's payload; ``st.map`` passes the plotted columns it
+        serializes for its agent data block.
     coordinates
         A string identifying this data's position in the app, from
         ``DeltaGenerator._get_delta_path_str()``. The media file manager keys
@@ -81,13 +82,12 @@ def serve_arrow_over_http(
     if not arrow_bytes or not agent_spec.is_recording():
         return None
 
-    # The bound the app's own WebSocket messages have, so an agent is served
-    # about as much data as the app could send its browser, and raising one
-    # raises both. It is checked against the Arrow bytes alone: the serialized
-    # message the browser's limit applies to also holds protobuf framing and
-    # the element's description, which are not built yet. Above it the element
-    # reports no URL and the snapshot says so with `data.unavailable`; a client
-    # that needs the data narrows the app's filters instead.
+    # Capped at `server.maxMessageSize`, the app's WebSocket message limit, so
+    # raising one raises the other. The check uses the Arrow bytes alone,
+    # because the protobuf framing that limit also covers is not built yet.
+    # Above it the element reports no URL and the snapshot says so with
+    # `data.unavailable`; a client that needs the data narrows the app's
+    # filters instead.
     size = len(arrow_bytes)
     max_size = runtime_util.get_max_message_size_bytes()
     if size > max_size:

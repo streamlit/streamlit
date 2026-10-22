@@ -1327,8 +1327,8 @@ _create_option(
         Maximum number of rows the agent API includes in a table's
         `data.preview`.
 
-        A table with more rows is reported as incomplete, with a URL that
-        serves all of its data.
+        Rows past this stay out of the snapshot. When the element serves the
+        rest, the snapshot points at it with `data.url`.
     """,
     visibility="hidden",
     default_val=100,
