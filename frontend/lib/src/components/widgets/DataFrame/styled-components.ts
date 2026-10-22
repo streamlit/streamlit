@@ -73,9 +73,11 @@ export const StyledResizableContainer =
         // and the table could not be scaled to the column.
         display: "block",
         width: "100%",
-        "&:has(.stDataFramePrintTable)": {
+        "&:has(.stDataFramePrintTable), &:has(.stDataFramePrintNote)": {
           // The on-screen box is a fixed height. The print table follows its
-          // rows, including a header repeated after a page break.
+          // rows, including a header repeated after a page break. A note is
+          // shorter than that table, and the box grows so the note sits under
+          // the canvas instead of painting over the next element.
           height: "auto",
           maxHeight: "none",
         },
@@ -94,9 +96,18 @@ export const StyledResizableContainer =
           // together. fit-content would squeeze it into the slot first.
           // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- max-content is the content size, not a theme length
           width: "max-content",
-          zoom: `min(1, calc(100cqw / var(${DATAFRAME_PRINT_WIDTH_VAR})))`,
+          // Matches the font measured in buildDataFramePrintMeasure.
+          fontFamily: theme.genericFonts.bodyFont,
+          fontSize: theme.fontSizes.md,
+          // `zoom` needs a number. Dividing the column width by the table
+          // width inside `calc()` needs typed arithmetic, which older
+          // browsers drop, so the table would print unscaled. `atan2` takes
+          // the two lengths and `tan` turns that angle back into the ratio.
+          zoom: `min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}))))`,
           "th, td": {
             whiteSpace: "nowrap",
+            // Horizontal padding is spacing.sm, the same length the width
+            // measurement adds for each column.
             padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
             border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
             textAlign: "left",

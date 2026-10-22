@@ -281,7 +281,7 @@ describe("DataFrame widget", () => {
     // on-screen viewport are not clipped.
     expect(css).toContain(".stDataFramePrintTable")
     expect(css).toContain(
-      "zoom:min(1, calc(100cqw / var(--st-df-print-width)))"
+      "zoom:min(1, tan(atan2(100cqw, var(--st-df-print-width))))"
     )
   })
 

@@ -63,6 +63,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -103,6 +104,7 @@ import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import {
+  buildDataFramePrintMeasure,
   clearDataFramePrintSlot,
   fillDataFramePrintSlot,
 } from "./printDataFrame"
@@ -949,6 +951,11 @@ function DataFrame({
   // the page, replace it with a table of the loaded cells so print can scale
   // the frame onto the page. Frames that are still loading or too large to
   // lay out here keep the canvas.
+  const theme = useEmotionTheme()
+  const printMeasure = useMemo(
+    () => buildDataFramePrintMeasure(theme),
+    [theme]
+  )
   useEffect(() => {
     const slot = printSlotRef.current
     if (!slot) {
@@ -960,7 +967,13 @@ function DataFrame({
         clearDataFramePrintSlot(slot)
         return
       }
-      fillDataFramePrintSlot(slot, columns, numRows, getCellContent)
+      fillDataFramePrintSlot(
+        slot,
+        columns,
+        numRows,
+        getCellContent,
+        printMeasure
+      )
     }
     const onAfterPrint = (): void => {
       clearDataFramePrintSlot(slot)
@@ -973,7 +986,7 @@ function DataFrame({
       window.removeEventListener("afterprint", onAfterPrint)
       clearDataFramePrintSlot(slot)
     }
-  }, [columns, getCellContent, isEmptyTable, numRows])
+  }, [columns, getCellContent, isEmptyTable, numRows, printMeasure])
 
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's

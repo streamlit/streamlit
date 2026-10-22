@@ -125,9 +125,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     "@media print": {
       overflow: "visible",
       // A fixed-height dataframe keeps that height on its container. The
-      // print table is taller than the on-screen grid, so the container
-      // grows with the table instead of letting rows paint outside it.
-      "&:has(.stDataFramePrintTable)": {
+      // print table is taller than the on-screen grid, and a fallback note
+      // sits under the canvas, so the container grows with that content
+      // instead of letting it paint outside the card.
+      "&:has(.stDataFramePrintTable), &:has(.stDataFramePrintNote)": {
         height: "auto",
         maxHeight: "none",
         minHeight: 0,
