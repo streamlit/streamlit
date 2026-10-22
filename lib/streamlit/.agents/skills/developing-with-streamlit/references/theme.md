@@ -371,12 +371,6 @@ st.image(logo, alt="Company logo")
 - **Type:** Body 14–16px / 400; clear heading scale; monospace code slightly smaller than body.
 - **Layers:** Keep `secondaryBackgroundColor` distinct from `backgroundColor`—slightly darker on a light theme, slightly lighter on a dark theme. Sidebar may match or deliberately contrast.
 
-## Example: dual light/dark with sidebars
-
-For a complete dual-mode config, copy `assets/templates/themes/configs/shadcn-dual.toml`: a shared `[theme]`, then `[theme.light]` and `[theme.dark]`, each with its own `.sidebar`.
-
-For a single locked dark theme, see the **vscode** template under `assets/templates/themes/configs/`.
-
 ## Common mistakes
 
 Wrong nest order:
@@ -457,7 +451,12 @@ Also avoid:
 
 Do **not** use `st.markdown(..., unsafe_allow_html=True)` or `st.html()` with `<style>` for colors, fonts, branding, or page spacing (including `.block-container` padding) unless the user explicitly asks for CSS. Use `config.toml`.
 
-If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never private Streamlit class names for theming.
+If they ask for CSS, give the widget a `key=` and target the `.st-key-<key>` class it generates from `st.html`, never private Streamlit class names:
+
+```python
+st.button("Submit", key="submit")  # Generates: .st-key-submit
+st.html("<style>.st-key-submit button { background: #15803d; color: #fff; }</style>")
+```
 
 ## Development workflow
 
