@@ -894,6 +894,9 @@ def _arrow_rows(table: Any, limit: int) -> list[list[Any]]:
     By position rather than by name, so a table with two columns of the same
     name keeps both.
     """
+    if table.num_columns == 0:
+        # Zipping no columns yields no rows, but the table still has them.
+        return [[] for _ in range(min(table.num_rows, limit))]
     return [
         [json_encoding.to_json_value(cell) for cell in row]
         for row in zip(

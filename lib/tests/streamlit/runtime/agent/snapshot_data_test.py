@@ -194,6 +194,31 @@ def test_preview_cells_follow_the_encoding_table() -> None:
     ]
 
 
+def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
+    """A table with rows and no columns previews one empty row per row it counts.
+
+    Otherwise a preview of no rows would be reported as the complete table.
+    """
+    summary = summarize_arrow(
+        dataframe_util.convert_pandas_df_to_arrow_bytes(pd.DataFrame(index=range(5)))
+    )
+
+    assert summary is not None
+    assert summary["row_count"] == 5
+    assert summary["complete"] is True
+    assert summary["preview"]["rows"] == [[]] * 5
+
+    with patch_config_options({"server.agentPreviewRows": 2}):
+        bounded = summarize_arrow(
+            dataframe_util.convert_pandas_df_to_arrow_bytes(
+                pd.DataFrame(index=range(5))
+            )
+        )
+    assert bounded is not None
+    assert bounded["complete"] is False
+    assert bounded["preview"]["rows"] == [[]] * 2
+
+
 @pytest.mark.parametrize("arrow_bytes", [b"", b"not an arrow stream"])
 def test_summarize_arrow_returns_none_for_unreadable_bytes(arrow_bytes: bytes) -> None:
     """Empty or malformed bytes have no summary, and summarizing them does not raise."""
