@@ -23,7 +23,7 @@ from unittest.mock import patch
 import pandas as pd
 
 import streamlit as st
-from streamlit import dataframe_util
+from streamlit import dataframe_util, util
 from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.runtime import Runtime, runtime_util
 from streamlit.runtime.caching.cache_data_api import CACHE_DATA_MESSAGE_REPLAY_CTX
@@ -114,5 +114,31 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         [message] = CACHE_DATA_MESSAGE_REPLAY_CTX._most_recent_messages
         assert isinstance(message, ElementMsgData)
         assert message.media_data == [
-            MediaMsgData(_ARROW, data_offload.ARROW_MIMETYPE, "[0, 7]", agent_only=True)
+            MediaMsgData(
+                _ARROW,
+                data_offload.ARROW_MIMETYPE,
+                "[0, 7]",
+                file_name=util.calc_hash(_ARROW),
+                agent_only=True,
+            )
         ]
+
+    def test_large_tables_that_differ_anywhere_get_their_own_urls(self) -> None:
+        """Media storage samples large files for their ID; a table's URL must not.
+
+        The two payloads have the same size and differ only between the
+        sampled windows, so a sampled ID would serve the first one's bytes for
+        both.
+        """
+        self._record()
+        first = bytes(2_000_000)
+        second = first[:300_000] + b"\x01" + first[300_001:]
+
+        first_url = data_offload.serve_arrow_over_http(first, coordinates="[0, 0]")
+        second_url = data_offload.serve_arrow_over_http(second, coordinates="[0, 1]")
+
+        assert first_url is not None
+        assert second_url is not None
+        assert first_url != second_url
+        served = self.media_file_storage.get_file(second_url.rsplit("/", 1)[-1])
+        assert served.content == second

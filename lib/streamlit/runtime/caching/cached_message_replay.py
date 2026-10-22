@@ -44,9 +44,13 @@ class MediaMsgData:
     media: bytes | str
     mimetype: str
     media_id: str
+    # Part of the file's ID, so a replay must register it under the same name
+    # for the replayed element's URL to resolve.
+    file_name: str | None = None
     # Table data behind an agent description's `data_url`. Only an agent
     # session fetches it, so a browser session replaying the entry does not
-    # register it. The default keeps entries pickled without the field loading.
+    # register it. The defaults keep entries pickled without these fields
+    # loading.
     agent_only: bool = False
 
 
@@ -302,6 +306,7 @@ class CachedMessageReplayContext:
         mimetype: str,
         media_id: str,
         *,
+        file_name: str | None = None,
         agent_only: bool = False,
     ) -> None:
         if not in_cached_function.get():
@@ -310,7 +315,13 @@ class CachedMessageReplayContext:
         self._media_data_var.set(
             (
                 *self._media_data_var.get(),
-                MediaMsgData(media_data, mimetype, media_id, agent_only),
+                MediaMsgData(
+                    media_data,
+                    mimetype,
+                    media_id,
+                    file_name=file_name,
+                    agent_only=agent_only,
+                ),
             )
         )
 
@@ -351,7 +362,9 @@ def _register_replayed_media(
             if not agent_spec.is_recording():
                 continue
             coordinates = dg._get_delta_path_str()
-        media_file_mgr.add(data.media, data.mimetype, coordinates)
+        media_file_mgr.add(
+            data.media, data.mimetype, coordinates, file_name=data.file_name
+        )
 
 
 def replay_cached_messages(

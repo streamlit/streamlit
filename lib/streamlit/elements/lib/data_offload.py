@@ -42,7 +42,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from streamlit import runtime
+from streamlit import runtime, util
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.runtime import caching, runtime_util
@@ -98,13 +98,25 @@ def serve_arrow_over_http(arrow_bytes: bytes | None, *, coordinates: str) -> str
         # which is the "python myscript.py" and bare-AppTest case.
         return None
 
+    # Media storage derives a large file's ID from samples of its bytes. A
+    # table that changes a value but not its size can keep those samples, and
+    # with them the ID of bytes another run or session stored first, so the
+    # full digest goes into the ID through the file name. Only a download's
+    # response reads that name.
+    file_name = util.calc_hash(arrow_bytes)
     url = runtime.get_instance().media_file_mgr.add(
-        arrow_bytes, ARROW_MIMETYPE, coordinates
+        arrow_bytes, ARROW_MIMETYPE, coordinates, file_name=file_name
     )
     # Recorded like an image's bytes, so an element replayed from an
     # `st.cache_data` result registers its file again: the replayed
     # description carries this URL, and without that the file is collected
     # after the run that replayed it. Marked agent-only, so a browser session
     # replaying the same entry does not register a file nobody fetches.
-    caching.save_media_data(arrow_bytes, ARROW_MIMETYPE, coordinates, agent_only=True)
+    caching.save_media_data(
+        arrow_bytes,
+        ARROW_MIMETYPE,
+        coordinates,
+        file_name=file_name,
+        agent_only=True,
+    )
     return url
