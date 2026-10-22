@@ -28,6 +28,7 @@ import re
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import quote, urljoin
 
+import pyarrow as pa
 import pytest
 
 from e2e_playwright.conftest import build_app_url
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from playwright.sync_api import APIResponse, Page
 
 _INTERACT_PATH: Final = "/_stcore/agent/interact"
+_ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
 _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
 _TOKEN_VALUE: Final = "e2e-callers-rights-token"
@@ -270,6 +272,45 @@ def test_slow_run_times_out_and_is_collected(page: Page, app_base_url: str) -> N
     assert collected["page"]["url_path"] == "slow"
     lines = _lines(collected)
     assert (lines["starts"], lines["done"], lines["runs"]) == ("1", "1", "1")
+
+
+def test_data_urls_serve_every_row_the_snapshot_counts(
+    page: Page, app_base_url: str
+) -> None:
+    """A table's and a chart's `data.url`, resolved against the request's URL,
+    serve the Arrow stream their `data` describes, rows past the preview
+    included; a table that shrinks under the preview limit is complete.
+    """
+    created = _snapshot(_interact(page, app_base_url, {"page": "data"}))
+    table = _keyed(created, "orders")["data"]
+    assert table["row_count"] == 250
+    assert table["complete"] is False
+    assert len(table["preview"]["rows"]) == 100
+    assert "unavailable" not in table
+    chart = next(
+        node["data"] for node in _nodes(created) if node["type"] == "line_chart"
+    )
+    for data in (table, chart):
+        assert data["url"].startswith("../../media/")
+        served = page.request.get(urljoin(_interact_url(app_base_url), data["url"]))
+        assert served.status == 200
+        assert served.headers["content-type"] == _ARROW_MIMETYPE
+        arrow = pa.ipc.open_stream(served.body()).read_all()
+        assert arrow.num_rows == data["row_count"]
+        assert arrow.column_names == [column["name"] for column in data["columns"]]
+
+    shrunk = _snapshot(
+        _interact(
+            page,
+            app_base_url,
+            {"session_id": created["session_id"], "widget_state": {"rows": 40}},
+        )
+    )
+    small_table = _keyed(shrunk, "orders")["data"]
+    assert small_table["complete"] is True
+    assert len(small_table["preview"]["rows"]) == small_table["row_count"] == 40
+    # The URL follows the table rather than serving the one it replaced.
+    assert small_table["url"] != table["url"]
 
 
 @pytest.mark.external_test
