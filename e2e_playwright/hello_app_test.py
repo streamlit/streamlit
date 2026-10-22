@@ -125,7 +125,15 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 
 
 def _evaluate_match_media_print(app: Page):
-    app.evaluate("matchMedia('print').matches")
+    """Let the dataframe refit once print media is active.
+
+    ``emulate_media`` fires ``change`` on the ``MediaQueryList`` objects the
+    page already holds, on the next task. Calling ``matchMedia("print")``
+    again returns a different object, so a ``change`` event dispatched on
+    it never reaches those listeners. Yielding one task delivers the event
+    ``emulate_media`` already queued.
+    """
+    app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
 
 
 # DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
@@ -231,6 +239,88 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     _evaluate_match_media_print(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
+
+
+def test_print_mode_fits_dataframe_sidebar_and_chart(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """Print shows every dataframe cell inside the widget, beside a narrow sidebar.
+
+    ``emulate_media`` applies the print stylesheet but does not fire
+    ``beforeprint``, so the snapshot tests above still show the on-screen
+    canvas. A browser fires ``beforeprint`` while screen media is still
+    active, then switches to print. This test uses that order.
+    """
+    app = themed_app
+
+    _load_dataframe_demo_page(app)
+    _set_portrait_dimensions(app)
+    app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    app.emulate_media(media="print", forced_colors="active")
+    _evaluate_match_media_print(app)
+    table = app.locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    expect(table).to_contain_text("China")
+    headers = table.locator("th")
+    expect(headers.first).to_be_visible()
+    # The on-screen canvas only paints the viewport. The print table has the
+    # index plus every year column. The year count comes from the remote CSV,
+    # so this waits until at least the index and five years are present.
+    expect(headers.nth(5)).to_be_visible()
+    expect(app.locator(".stDataFrameResizable")).to_be_hidden()
+
+    fit = app.evaluate(
+        """() => {
+            const table = document.querySelector(".stDataFramePrintTable");
+            const scale = table.closest(".stDataFramePrintScale");
+            const frame = table.closest("[data-testid='stDataFrame']");
+            const chart = document.querySelector("[data-testid='stVegaLiteChart']");
+            const main = document.querySelector("[data-testid='stMainBlockContainer']");
+            const sidebar = document.querySelector("[data-testid='stSidebar']");
+            const box = (el) => el.getBoundingClientRect();
+            const tableBox = box(table);
+            const frameBox = box(frame);
+            const chartBox = box(chart);
+            const mainBox = box(main);
+            const sidebarBox = box(sidebar);
+            const rootFont = parseFloat(
+                getComputedStyle(document.documentElement).fontSize
+            );
+            const inside = (inner, outer) =>
+                inner.left >= outer.left - 1
+                && inner.right <= outer.right + 1
+                && inner.top >= outer.top - 1
+                && inner.bottom <= outer.bottom + 1;
+            const scaleStyle = getComputedStyle(scale);
+            return {
+                tableInsideFrame: inside(tableBox, frameBox),
+                chartInsideMain: inside(chartBox, mainBox),
+                sidebarBesideMain: sidebarBox.right <= mainBox.left + 1,
+                sidebarIsMinWidth: Math.abs(sidebarBox.width - 12.5 * rootFont) < 1,
+                probeWidth: scaleStyle.getPropertyValue("--st-df-print-width"),
+                slotClientWidth: scale.parentElement
+                    ? scale.parentElement.clientWidth
+                    : 0,
+                zoom: scaleStyle.zoom,
+                tableWidth: tableBox.width,
+                frameWidth: frameBox.width,
+            };
+        }"""
+    )
+    assert fit["tableInsideFrame"], (
+        f"print table is outside the dataframe: zoom={fit['zoom']} "
+        f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
+        f"probeWidth={fit['probeWidth']} slotClientWidth={fit['slotClientWidth']}"
+    )
+    assert fit["chartInsideMain"]
+    assert fit["sidebarBesideMain"]
+    assert fit["sidebarIsMinWidth"]
+
+    assert_snapshot(app, name="hello_app-print_media-portrait-beforeprint")
+
+    app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    expect(table).to_have_count(0)
+    expect(app.locator(".stDataFrameResizable")).to_be_visible()
 
 
 def test_max_content_width_uses_px(app: Page):

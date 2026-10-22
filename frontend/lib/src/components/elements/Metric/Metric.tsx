@@ -29,7 +29,7 @@ import {
   type EmotionTheme,
   useEmotionTheme,
 } from "@streamlit/lib"
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
@@ -44,6 +44,8 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_AVAILABLE_VAR,
+  METRIC_TEXT_WIDTH_VAR,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
@@ -59,6 +61,69 @@ import {
 const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Record the value's width at the card's font size.
+ *
+ * Print layout narrows the card after `beforeprint`. The print rule divides
+ * the card by this width, so the figure scales down only when the card is
+ * the narrower of the two. The probe uses the card's font, which stays at
+ * the theme size while the text inside it is scaled.
+ *
+ * The face is set as longhands. Firefox leaves the `font` shorthand empty
+ * in that case, so the probe copies family, size, weight, style, and
+ * letter spacing on their own.
+ */
+function recordMetricValueWidth(value: HTMLElement): void {
+  const source = value.querySelector("p")
+  const text = source?.textContent ?? ""
+  if (text === "") {
+    value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+    return
+  }
+
+  const font = getComputedStyle(value)
+  const probe = document.createElement("span")
+  probe.textContent = text
+  probe.style.fontFamily = font.fontFamily
+  probe.style.fontSize = font.fontSize
+  probe.style.fontWeight = font.fontWeight
+  probe.style.fontStyle = font.fontStyle
+  probe.style.letterSpacing = font.letterSpacing
+  probe.style.whiteSpace = "nowrap"
+  probe.style.position = "absolute"
+  probe.style.visibility = "hidden"
+  probe.style.width = "max-content"
+  document.body.appendChild(probe)
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const width = probe.getBoundingClientRect().width
+  probe.remove()
+
+  if (width > 0) {
+    value.style.setProperty(METRIC_TEXT_WIDTH_VAR, `${width}px`)
+  }
+}
+
+/**
+ * Record the column width a content-width metric has to fit.
+ *
+ * The value is not a container, so its own size cannot be the column.
+ * The nearest vertical block is that column once print layout has run.
+ * `beforeprint` still uses the screen column, and the print-media change
+ * records the printed one.
+ */
+function recordMetricAvailableWidth(value: HTMLElement): void {
+  const column = value.closest(".stVerticalBlock, .stColumn")
+  const box = column instanceof HTMLElement ? column : value.parentElement
+  if (!(box instanceof HTMLElement)) {
+    return
+  }
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const available = box.clientWidth
+  if (available > 0) {
+    value.style.setProperty(METRIC_AVAILABLE_VAR, `${available}px`)
+  }
+}
 
 /**
  * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
@@ -303,11 +368,45 @@ export function getMetricChartSpec(
 
 export interface MetricProps {
   element: MetricProto
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 }
 
-function Metric({ element }: Readonly<MetricProps>): ReactElement {
+function Metric({
+  element,
+  widthConfig,
+}: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
+  const valueRef = useRef<HTMLDivElement>(null)
+
+  const contentWidth = Boolean(widthConfig?.useContent)
+
+  useEffect(() => {
+    const onBeforePrint = (): void => {
+      if (!valueRef.current) {
+        return
+      }
+      recordMetricValueWidth(valueRef.current)
+      if (contentWidth) {
+        recordMetricAvailableWidth(valueRef.current)
+      }
+    }
+    // beforeprint still uses screen media. This records the printed column
+    // once print layout has replaced it.
+    const printMedia = window.matchMedia("print")
+    const onPrintMedia = (): void => {
+      if (printMedia.matches && contentWidth && valueRef.current) {
+        recordMetricAvailableWidth(valueRef.current)
+      }
+    }
+
+    window.addEventListener("beforeprint", onBeforePrint)
+    printMedia.addEventListener("change", onPrintMedia)
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint)
+      printMedia.removeEventListener("change", onPrintMedia)
+    }
+  }, [contentWidth])
 
   const { MetricDirection } = MetricProto
   const {
@@ -422,6 +521,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       className="stMetric"
       data-testid="stMetric"
       showBorder={showBorder}
+      contentWidth={contentWidth}
     >
       <StyledMetricContent showBorder={showBorder}>
         <StyledMetricLabelText
@@ -453,7 +553,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           )}
         </StyledMetricLabelText>
-        <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricValueText
+          className="stMetricValue"
+          data-testid="stMetricValue"
+          ref={valueRef}
+        >
           <StreamlitMarkdown
             source={formattedMetricValue}
             allowHTML={false}

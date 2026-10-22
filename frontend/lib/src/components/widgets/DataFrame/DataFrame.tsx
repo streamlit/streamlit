@@ -66,6 +66,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -105,6 +106,15 @@ import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { DATAFRAME_PRINT_SLOT_CLASS } from "./printClassNames"
+import {
+  buildDataFramePrintMeasure,
+  clearDataFramePrintSlot,
+  dataFramePrintBudget,
+  fillDataFramePrintSlot,
+  fitDataFramePrintTable,
+  isHiddenFromPrint,
+} from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
@@ -201,6 +211,7 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  const printSlotRef = useRef<HTMLDivElement>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -396,20 +407,27 @@ function DataFrame({
     getCellContent: getOriginalCellContent,
   })
 
-  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
-    useLazyDataLoader({
-      initialChunk: data,
-      columns: originalColumns,
-      numRows: originalNumRows,
-      sourceId: lazyData?.sourceId ?? "",
-      pageSize: lazyData?.pageSize ?? 1,
-      sortState: serverSortState,
-      backendOperationClient,
-    })
+  const {
+    getCellContent: getLazyCellContent,
+    getCachedCellContent,
+    onVisibleRegionChanged,
+  } = useLazyDataLoader({
+    initialChunk: data,
+    columns: originalColumns,
+    numRows: originalNumRows,
+    sourceId: lazyData?.sourceId ?? "",
+    pageSize: lazyData?.pageSize ?? 1,
+    sortState: serverSortState,
+    backendOperationClient,
+  })
 
   // In lazy mode, cells come from the chunked loader; otherwise from the
   // client-sorted eager getter.
   const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+  // Printing must not schedule a chunk request. A request changes
+  // getCellContent when the chunk arrives and would rebuild the print table
+  // while the dialog is open.
+  const getPrintCellContent = isLazy ? getCachedCellContent : getCellContent
 
   // Whether a specific column can be sorted in the current mode. Eager sorting
   // is client-side and works for any column (incl. the index). Lazy sorting is
@@ -945,6 +963,75 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // The canvas grid only paints the viewport. Before the browser snapshots
+  // the page, replace it with a table of the loaded cells so print can scale
+  // the frame onto the page. Frames that are still loading or too large to
+  // lay out here keep the canvas.
+  const theme = useEmotionTheme()
+  const printMeasure = useMemo(
+    () => buildDataFramePrintMeasure(theme),
+    [theme]
+  )
+  useEffect(() => {
+    const slot = printSlotRef.current
+    if (!slot) {
+      return
+    }
+
+    const onBeforePrint = (event: Event): void => {
+      // The slot is display:none on screen, so visibility is read from the
+      // dataframe. A closed tab, a collapsed expander, or any other hidden
+      // ancestor stays mounted. A print table there would still match
+      // :has(.stDataFramePrintTable) and let the surrounding card split.
+      const frame = slot.closest(".stDataFrame")
+      if (
+        isEmptyTable ||
+        (frame instanceof HTMLElement && isHiddenFromPrint(frame))
+      ) {
+        clearDataFramePrintSlot(slot)
+        return
+      }
+      fillDataFramePrintSlot(
+        slot,
+        columns,
+        numRows,
+        getPrintCellContent,
+        printMeasure,
+        // One budget for every dataframe listening to this same event.
+        dataFramePrintBudget(event)
+      )
+    }
+    const onAfterPrint = (): void => {
+      clearDataFramePrintSlot(slot)
+    }
+    // beforeprint still uses screen media, so the first zoom is the on-screen
+    // column. This fires once the page is actually laid out for print.
+    const printMedia = window.matchMedia("print")
+    const onPrintMedia = (): void => {
+      if (printMedia.matches) {
+        fitDataFramePrintTable(slot)
+      }
+    }
+
+    window.addEventListener("beforeprint", onBeforePrint)
+    window.addEventListener("afterprint", onAfterPrint)
+    printMedia.addEventListener("change", onPrintMedia)
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint)
+      window.removeEventListener("afterprint", onAfterPrint)
+      printMedia.removeEventListener("change", onPrintMedia)
+    }
+  }, [columns, getPrintCellContent, isEmptyTable, numRows, printMeasure])
+
+  useEffect(() => {
+    const slot = printSlotRef.current
+    return () => {
+      if (slot) {
+        clearDataFramePrintSlot(slot)
+      }
+    }
+  }, [])
+
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
@@ -1117,6 +1204,7 @@ function DataFrame({
         )}
       </Toolbar>
       <Resizable
+        className="stDataFrameResizable"
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}
@@ -1421,6 +1509,7 @@ function DataFrame({
           })}
         />
       </Resizable>
+      <div className={DATAFRAME_PRINT_SLOT_CLASS} ref={printSlotRef} />
       {tooltip?.content && (
         <Tooltip
           top={tooltip.top}

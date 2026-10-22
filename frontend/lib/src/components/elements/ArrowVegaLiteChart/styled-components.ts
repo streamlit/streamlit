@@ -18,6 +18,10 @@ import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+import {
+  printContainStyles,
+  printMediaFitStyles,
+} from "~lib/components/shared/printContain"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -413,6 +417,12 @@ export const StyledVegaLiteChartContainer =
           },
         },
         "& form.vega-bindings": getVegaBindingStyles(theme),
+        // Vega locks the SVG to the on-screen pixel width. Cap that width
+        // when the printed page is narrower, without shrinking the height.
+        ...printContainStyles,
+        // Canvas and hybrid renderers paint a canvas.marks node. It keeps
+        // the on-screen pixel width unless the same fit rule covers it.
+        "& svg.marks, & canvas.marks": printMediaFitStyles,
       }
     }
   )

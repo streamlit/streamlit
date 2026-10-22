@@ -243,6 +243,80 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
+    expect(screen.getByTestId("stDataFrameResizable")).toHaveClass(
+      "stDataFrameResizable"
+    )
+  })
+
+  it("builds a table of the whole dataframe before printing", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    const table = document.querySelector(".stDataFramePrintTable")
+    expect(table).not.toBeNull()
+    // 10 data columns plus the index, and one header row plus 10 data rows.
+    expect(table?.querySelectorAll("th")).toHaveLength(11)
+    expect(table?.querySelectorAll("tbody tr")).toHaveLength(10)
+
+    act(() => {
+      window.dispatchEvent(new Event("afterprint"))
+    })
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
+  it("does not expand a dataframe hidden in a closed tab", () => {
+    render(<DataFrame {...props} />)
+    // The closed panel stays mounted. A print table there would let the
+    // surrounding card split, because print CSS treats that table as content
+    // that has to paginate.
+    screen.getByTestId("stDataFrame").setAttribute("data-st-inactive", "")
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
+  it("does not expand a dataframe inside a collapsed expander", () => {
+    render(<DataFrame {...props} />)
+    const details = document.createElement("details")
+    const frame = screen.getByTestId("stDataFrame")
+    frame.replaceWith(details)
+    details.append(frame)
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
+  it("caps the grid to its container when printing", () => {
+    render(<DataFrame {...props} />)
+
+    const css = [...document.querySelectorAll("style")]
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain(".stDataFrameResizable")
+    // The canvas keeps its on-screen width. Only a built print table
+    // stretches the frame to the column.
+    expect(css).toContain(".stDataFrameResizable{max-width:100%!important")
+    expect(css).toContain(
+      ":has(.stDataFramePrintTable){display:block;width:100%"
+    )
+    // The print table is scaled down to the page so columns past the
+    // on-screen viewport are not clipped.
+    expect(css).toContain(".stDataFramePrintTable")
+    expect(css).toContain(".stDataFramePrintScale")
+    expect(css).toContain(
+      "zoom:min(1, tan(atan2(100cqw, var(--st-df-print-width))))"
+    )
   })
 
   it("sets role=region and aria-label on the grid host when alt is provided", () => {

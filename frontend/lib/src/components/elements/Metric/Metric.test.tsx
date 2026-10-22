@@ -17,10 +17,12 @@
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import type { TopLevelSpec } from "vega-lite"
+import { vi } from "vitest"
 
 import {
   LabelVisibility as LabelVisibilityProto,
   Metric as MetricProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
@@ -196,6 +198,130 @@ describe("Metric element", () => {
     const props = getProps()
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetric")).toHaveStyle("border: none;")
+  })
+
+  it("shrinks a metric value to the card instead of ellipsizing it when printing", () => {
+    render(<Metric {...getProps({ body: "$48.6M", showBorder: true })} />)
+
+    const css = [...document.querySelectorAll("style")]
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain(".stMarkdownEllipsis")
+    expect(css).toContain("text-overflow:clip")
+    expect(css).toContain("container-type:inline-size")
+    expect(css).toContain("--st-metric-text-width")
+    expect(css).toContain("atan2(100cqi, var(--st-metric-text-width, 100cqi))")
+    const fontRule = css
+      .split("}")
+      .find(rule => rule.includes("atan2(100cqi, var(--st-metric-text-width"))
+    expect(fontRule).toBeDefined()
+    expect(fontRule).not.toContain(".stMarkdownEllipsis p")
+    expect(screen.getByTestId("stMetricValue")).toHaveClass("stMetricValue")
+
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 112,
+        height: 36,
+        top: 0,
+        left: 0,
+        bottom: 36,
+        right: 112,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      })
+    window.dispatchEvent(new Event("beforeprint"))
+    rect.mockRestore()
+
+    expect(
+      screen
+        .getByTestId("stMetricValue")
+        .style.getPropertyValue("--st-metric-text-width")
+    ).toBe("112px")
+  })
+
+  it("measures a printed metric from font longhands when the shorthand is empty", () => {
+    render(<Metric {...getProps({ body: "$48.6M" })} />)
+    const font = {
+      font: "",
+      fontFamily: "Custom Face, sans-serif",
+      fontSize: "36px",
+      fontWeight: "600",
+      fontStyle: "italic",
+      letterSpacing: "0.5px",
+    } as CSSStyleDeclaration
+    const computed = vi.spyOn(window, "getComputedStyle").mockReturnValue(font)
+    const append = vi
+      .spyOn(document.body, "appendChild")
+      .mockImplementation(node => node)
+    try {
+      window.dispatchEvent(new Event("beforeprint"))
+      const probe = append.mock.calls
+        .map(([node]) => node)
+        .find(
+          (node): node is HTMLSpanElement => node instanceof HTMLSpanElement
+        )
+
+      expect(probe?.style.fontFamily).toBe("Custom Face, sans-serif")
+      expect(probe?.style.fontSize).toBe("36px")
+      expect(probe?.style.fontWeight).toBe("600")
+      expect(probe?.style.fontStyle).toBe("italic")
+      expect(probe?.style.letterSpacing).toBe("0.5px")
+    } finally {
+      computed.mockRestore()
+      append.mockRestore()
+    }
+  })
+
+  it("keeps a content-width metric at its own width when printing", () => {
+    const before = document.querySelectorAll("style").length
+    render(
+      <Metric
+        {...getProps({ body: "$48.6M" })}
+        widthConfig={new streamlit.WidthConfig({ useContent: true })}
+      />
+    )
+    const css = [...document.querySelectorAll("style")]
+      .slice(before)
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    // Containing the value would zero its intrinsic width, so the card
+    // would shrink to the label. The figure still scales to the column.
+    expect(css).not.toContain("container-type:inline-size")
+    expect(css).toContain("--st-metric-available")
+    expect(css).not.toContain("100cqi")
+
+    const column = document.createElement("div")
+    Object.defineProperty(column, "clientWidth", { value: 80 })
+    const closest = vi
+      .spyOn(Element.prototype, "closest")
+      .mockReturnValue(column)
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 112,
+        height: 36,
+        top: 0,
+        left: 0,
+        bottom: 36,
+        right: 112,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      })
+    window.dispatchEvent(new Event("beforeprint"))
+    closest.mockRestore()
+    rect.mockRestore()
+
+    expect(
+      screen
+        .getByTestId("stMetricValue")
+        .style.getPropertyValue("--st-metric-available")
+    ).toBe("80px")
   })
 
   it("renders with border if passed", () => {

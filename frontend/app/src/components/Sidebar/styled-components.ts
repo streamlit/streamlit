@@ -90,10 +90,20 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
 
       [`@media print`]: {
         display: isCollapsed ? "none" : "initial",
-        // set to auto, otherwise the sidebar does not take up the whole page
+        // Stay a side column, only as tall as its contents. A stretched
+        // column or a max-height of one page either leaves a blank sidebar
+        // or clips the bottom of it.
+        alignSelf: "flex-start",
         height: "auto !important",
-        // set maxHeight to little bit less than 100%, otherwise the sidebar might start a mostly blank page
-        maxHeight: "99%",
+        maxHeight: "none !important",
+        // Print uses the narrowest sidebar width. re-resizable writes the
+        // on-screen width inline, and initial_sidebar_width or a drag can
+        // make that a large share of the page. Both are replaced so the
+        // main column keeps the page.
+        width: `${theme.sizes.minSidebarWidth} !important`,
+        minWidth: `${theme.sizes.minSidebarWidth} !important`,
+        maxWidth: `${theme.sizes.minSidebarWidth} !important`,
+        flex: `0 0 ${theme.sizes.minSidebarWidth}`,
         // on Chrome, sth. adds a box-shadow in printing mode which looks weird
         boxShadow: "none",
       },
@@ -146,6 +156,14 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
     scrollbarGutter: "stable both-edges",
     paddingLeft: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
     paddingRight: getSidebarHorizontalSpacing(theme, scrollbarGutterSize),
+
+    "@media print": {
+      // The on-screen scroller clips anything past one page. Let the column
+      // print through to the next page instead.
+      height: "auto",
+      maxHeight: "none",
+      overflow: "visible",
+    },
   })
 )
 

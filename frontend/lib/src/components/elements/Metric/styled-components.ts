@@ -26,18 +26,73 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
+/** Rendered width of the metric value at its unscaled font size, recorded on beforeprint for the print scale. */
+export const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
+
+/**
+ * Printed column width for a content-width metric. The value is not a
+ * container, so the font rule reads this instead of `cqi`.
+ */
+export const METRIC_AVAILABLE_VAR = "--st-metric-available"
+
 interface StyledMetricContainerProps {
   showBorder: boolean
+  /** A content-width card is sized by its figure, so print must not contain it. */
+  contentWidth?: boolean
 }
 
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
-  ({ theme, showBorder }) => ({
+  ({ theme, showBorder, contentWidth }) => ({
     height: "100%",
     ...(showBorder && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
       overflow: "hidden",
     }),
+    // A printed column is often narrower than the on-screen card. The label
+    // and delta wrap onto extra lines. A stretch card scales the value down
+    // to the card. A content-width card stays as wide as the figure.
+    "@media print": {
+      overflow: "visible",
+      "& .stMarkdownEllipsis, & .stMarkdownEllipsis p": {
+        overflow: "visible",
+        textOverflow: "clip",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+        maxWidth: "100%",
+        width: "auto",
+        minWidth: 0,
+      },
+      "& .stMetricValue .stMarkdownEllipsis, & .stMetricValue .stMarkdownEllipsis p":
+        {
+          whiteSpace: "nowrap",
+          overflowWrap: "normal",
+        },
+      // `container-type` on the value makes its intrinsic width 0. A
+      // content-width card is sized by that value, so containing it would
+      // shrink the card to the label. The figure still scales when the
+      // printed column, recorded in `--st-metric-available`, is narrower.
+      ...(contentWidth
+        ? {
+            "& .stMetricValue .stMarkdownEllipsis": {
+              fontSize: `min(1em, calc(1em * tan(atan2(var(${METRIC_AVAILABLE_VAR}, var(${METRIC_TEXT_WIDTH_VAR}, 100vw)), var(${METRIC_TEXT_WIDTH_VAR}, 100vw)))))`,
+            },
+          }
+        : {
+            "& .stMetricValue": {
+              containerType: "inline-size" as const,
+            },
+            // Size the wrapper only. `em` on the paragraph would use that
+            // already scaled size and shrink the figure a second time. The
+            // paragraph inherits this size.
+            "& .stMetricValue .stMarkdownEllipsis": {
+              // The variable is the figure's width at 1em, recorded in
+              // beforeprint. `atan2` divides the print column by that width
+              // without typed arithmetic. A wide card stays at 1em.
+              fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
+            },
+          }),
+    },
   })
 )
 
@@ -117,6 +172,9 @@ export const StyledDeltaContainer = styled.div(({ theme }) => ({
   maxWidth: "100%",
   overflow: "hidden",
   paddingBottom: theme.spacing.twoXS,
+  "@media print": {
+    overflow: "visible",
+  },
 }))
 
 export const StyledDeltaDescription = styled.div({
@@ -124,6 +182,9 @@ export const StyledDeltaDescription = styled.div({
   overflow: "hidden",
   flexShrink: 1,
   minWidth: 0,
+  "@media print": {
+    overflow: "visible",
+  },
 })
 
 export const StyledMetricLabelRow = styled.div(({ theme }) => ({

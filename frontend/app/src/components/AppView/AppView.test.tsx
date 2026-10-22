@@ -950,6 +950,26 @@ describe("AppView element", () => {
       expect(style.paddingTop).toEqual("6rem")
     })
 
+    it("keeps the unset 10rem bottom inset when printing", () => {
+      render(<AppView {...getProps({ embedded: false, showPadding: true })} />)
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+      expect(css).toMatch(/@media print\{[^}]*padding-bottom:10rem/)
+    })
+
+    it("keeps configured paddingBottom when printing", () => {
+      renderWithPaddingTheme(
+        { paddingBottom: "4rem" },
+        { embedded: false, showPadding: true }
+      )
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("@media print")
+      expect(css).toMatch(/@media print\{[^}]*padding-bottom:4rem/)
+    })
+
     it("uses configured paddingBottom regardless of showPadding", () => {
       renderWithPaddingTheme(
         { paddingBottom: "4rem" },
