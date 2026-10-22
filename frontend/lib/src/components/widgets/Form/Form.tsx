@@ -54,7 +54,7 @@ function Form(props: Props): ReactElement {
 
   return (
     <StyledForm
-      className={border ? "stForm stBordered" : "stForm"}
+      className="stForm"
       data-testid="stForm"
       border={border}
       overflow={overflow}

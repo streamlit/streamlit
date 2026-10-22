@@ -36,27 +36,6 @@ import { assertNever } from "~lib/util/assertNever"
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
-/**
- * Content that is too wide to share a printed row. A column row that
- * contains one of these stacks so each column uses the full page width.
- * Compact widgets are not listed and stay beside each other.
- *
- * Each target is its own selector. A comma inside :has() or :is() is split
- * by the style engine and the rest of the list is dropped.
- */
-const PRINT_STACK_COLUMNS_SELECTOR = [
-  "&:has(> .stColumn.stBordered) > .stColumn",
-  ...[
-    ".stBordered",
-    ".stVegaLiteChart",
-    ".stPlotlyChart",
-    ".stEChartsChart",
-    ".stDeckGlJsonChart",
-    ".stGraphVizChart",
-    ".stDataFrame",
-  ].map(target => `&:has(> .stColumn ${target}) > .stColumn`),
-].join(", ")
-
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
   theme: EmotionTheme
@@ -254,25 +233,23 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
-      // Float compact columns beside each other when printing. A flex or
-      // table row is one fragment, so a chart that crosses a page is painted
-      // on top of the next heading. Each column gives up its share of the gap
-      // so the row still fits the page. A row that holds a bordered container
-      // or a wide element is stacked by StyledFlexContainerBlock instead.
+      // Each column uses the full page width when printing. A flex or table
+      // row is one fragment, so a chart that crosses a page is painted on
+      // top of the next heading, and a half-width column squeezes a
+      // container whether or not that container has a border.
       "@media print": {
         display: "block",
-        float: "left",
-        width:
-          gapWidth === theme.spacing.none
-            ? `${percentage}%`
-            : `calc(${percentage}% - ${gapWidth} * ${1 - weight})`,
+        float: "none",
+        clear: "both",
+        width: "100%",
         maxWidth: "100%",
         minWidth: 0,
-        ...(gapWidth !== theme.spacing.none && {
-          "&:not(:first-of-type)": {
-            marginLeft: gapWidth,
-          },
-        }),
+        ...(gapWidth !== undefined &&
+          gapWidth !== theme.spacing.none && {
+            "&:not(:last-of-type)": {
+              marginBottom: gapWidth,
+            },
+          }),
       },
     }
   }
@@ -421,36 +398,15 @@ export const StyledFlexContainerBlock =
             },
           }),
         // Chrome's print layout drops the height of a flex or table row, so a
-        // chart paints over the next heading. Vertical blocks use normal
-        // flow. A column row floats its columns and clears them, and a
-        // bordered card stays on one page so the chart cannot land on the
+        // chart paints over the next heading. Vertical blocks and column
+        // rows use normal flow. Columns themselves take the full page width.
+        // A bordered card stays on one page so the chart cannot land on the
         // heading below.
         "@media print": {
           ...(direction === Direction.HORIZONTAL
             ? {
                 "&:has(> .stColumn)": {
                   display: "block",
-                  "&::after": {
-                    content: '""',
-                    display: "block",
-                    clear: "both",
-                  },
-                },
-                // Stack the whole row when any column holds a card, chart, or
-                // dataframe. Half a page makes those look squeezed, and
-                // stacking only that column would leave its siblings floating
-                // beside it.
-                [PRINT_STACK_COLUMNS_SELECTOR]: {
-                  float: "none",
-                  clear: "both",
-                  width: "100%",
-                  marginLeft: theme.spacing.none,
-                  ...(gapWidth !== undefined &&
-                    gapWidth !== theme.spacing.none && {
-                      "&:not(:last-of-type)": {
-                        marginBottom: gapWidth,
-                      },
-                    }),
                 },
               }
             : {
