@@ -64,7 +64,7 @@ message ForwardMsgMetadata {
 
 Agent sessions store a command description on `ForwardMsg.metadata.agent_props` for the snapshot described in `specs/2026-08-28-agent-app-interface/product-spec.md`.
 
-`ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`.
+`ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`. A table, chart, or map also sets `data_url`, the media-storage URL of an Arrow copy of its data that `elements/lib/data_offload.py` registers for agent sessions only, and that cache replay registers again only when an agent session replays it.
 
 `element` and `block` return `None` unless `agent_spec.register_agent_session` has marked the current session. `agent_spec.is_recording()` is that check: a marked session is recording, meaning each command attaches its description. A browser session on the same server is not recording, so its messages carry none.
 

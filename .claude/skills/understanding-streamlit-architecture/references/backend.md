@@ -52,7 +52,7 @@ Represents a single browser tab or agent API session.
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
-An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_patch.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would.
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_patch.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
