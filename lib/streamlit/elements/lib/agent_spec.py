@@ -65,19 +65,23 @@ cannot know them yet:
 
 - ``value``, the widget's current value, which is only settled after the next
   run's callbacks and widget reconciliation.
-- ``data``, the derived facts about a dataframe or chart (schema, row counts,
-  bounded previews). Those are budget decisions, and only the serializer knows
-  the response budget.
+- ``data``, the derived facts about a table or chart (schema, row counts, a
+  bounded preview), which the serializer reads from the payload.
 
 Both are filled in at snapshot time. That split is the same one the agent
 protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived).
+holds now), and ``data`` (what Streamlit derived). A data command adds only what
+its payload cannot say: ``data_url``, where its complete data is served, and,
+when the payload does not carry its table, ``data_summary``.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Final, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple
+
+if TYPE_CHECKING:
+    from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
@@ -106,6 +110,8 @@ _TRANSPARENT_KEY: Final = "transparent"
 _VALUE_SCHEMA_KEY: Final = "value_schema"
 _CLEARABLE_KEY: Final = "clearable"
 _CHOICES_KEY: Final = "choices"
+_DATA_URL_KEY: Final = "data_url"
+_DATA_SUMMARY_KEY: Final = "data_summary"
 
 # Building blocks for ``value_schema``: the JSON Schema of the value a request
 # sends an element, in the form the snapshot reports it. They describe shape
@@ -192,6 +198,8 @@ def _json_description(
     transparent: bool = False,
     clearable: bool = False,
     choices: list[Any] | None = None,
+    data_url: str | None = None,
+    data_summary: dict[str, Any] | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -212,6 +220,10 @@ def _json_description(
         description[_CLEARABLE_KEY] = True
     if choices is not None:
         description[_CHOICES_KEY] = choices
+    if data_url is not None:
+        description[_DATA_URL_KEY] = data_url
+    if data_summary is not None:
+        description[_DATA_SUMMARY_KEY] = data_summary
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
@@ -226,6 +238,8 @@ def element(
     support: SupportReason | None = None,
     clearable: bool = False,
     choices: list[Any] | None = None,
+    data_url: str | None = None,
+    data_summary: dict[str, Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -259,6 +273,15 @@ def element(
     choices
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
+    data_url
+        Where the element's complete data can be fetched, from
+        ``data_offload.serve_arrow_over_http``. Reported as ``data.url``
+        rather than under ``props``, because it is not an argument the author
+        passed.
+    data_summary
+        The element's ``data``, for a command whose payload does not carry its
+        table, so the snapshot cannot derive it: ``st.map`` emits a generated
+        Deck.gl specification. Built with ``snapshot.summarize_arrow``.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -275,6 +298,8 @@ def element(
         value_schema=value_schema,
         clearable=clearable,
         choices=choices,
+        data_url=data_url,
+        data_summary=data_summary,
     )
 
 
@@ -350,6 +375,48 @@ class Content(NamedTuple):
     """
 
     value: Any
+
+
+def vega_arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
+    """Every Arrow buffer a Vega-Lite chart's data is split across.
+
+    Inline data and named datasets are both Arrow. The built-in charts and a
+    single-dataframe Altair chart have one; Altair gives each dataframe in a
+    layered or concatenated chart its own named dataset. Only a single buffer
+    is served or previewed: several cannot be described as one table, and
+    serving just the first would claim ``complete`` while leaving the rest out,
+    so callers report several as unavailable instead.
+    """
+    buffers = [proto.data.data] if proto.data.data else []
+    buffers.extend(dataset.data.data for dataset in proto.datasets)
+    return buffers
+
+
+def vega_loads_from_url(spec: Any) -> bool:
+    """Whether a Vega-Lite specification loads any of its data from a URL.
+
+    Checked at any depth: the top level, a layer, or a ``lookup``'s
+    ``from.data``. The browser fetches that data itself, so no Arrow buffer
+    holds all of the chart's data. ``spec`` is the parsed specification or its
+    JSON text; malformed text loads nothing.
+    """
+    if isinstance(spec, str):
+        try:
+            spec = json.loads(spec)
+        except ValueError:
+            return False
+    return _loads_from_url(spec)
+
+
+def _loads_from_url(value: Any) -> bool:
+    if isinstance(value, dict):
+        data = value.get("data")
+        if isinstance(data, dict) and "url" in data:
+            return True
+        return any(_loads_from_url(item) for item in value.values())
+    if isinstance(value, list):
+        return any(_loads_from_url(item) for item in value)
+    return False
 
 
 def block(
