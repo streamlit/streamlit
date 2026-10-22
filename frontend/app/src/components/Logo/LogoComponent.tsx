@@ -36,7 +36,8 @@ import { Logo } from "@streamlit/protobuf"
 
 const LOG = getLogger("LogoComponent")
 
-// Map logo size to DynamicIcon size for consistent scaling
+// Map logo size to DynamicIcon size for consistent scaling. The map is
+// `Partial` because unknown sizes have no entry and fall back to "xl".
 const LOGO_SIZE_TO_ICON_SIZE: Partial<Record<string, IconSize>> = {
   small: "lg", // 1.25rem
   medium: "xl", // 1.5rem
