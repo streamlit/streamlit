@@ -109,7 +109,7 @@ By default, a keyed widget's value is lost when the widget stops being rendered 
 st.text_input("Name", key="name", persist_state="session")
 ```
 
-`persist_state` requires a `key` and is available on most widgets that support `bind="query-params"` (not yet on `st.tabs`). When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+`persist_state` requires a `key`. It's available on `st.feedback` and on every widget that supports `bind="query-params"` except `st.tabs` and `st.expander`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
 
 ## Callbacks
 

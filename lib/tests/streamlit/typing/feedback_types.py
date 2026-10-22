@@ -39,7 +39,16 @@ if TYPE_CHECKING:
             args=(4,),
             kwargs={"label": "excellent"},
             width="stretch",
+            persist_state="session",
         ),
+        Literal[0, 1, 2, 3, 4] | None,
+    )
+    assert_type(
+        feedback("thumbs", key="persisted_thumbs", persist_state="page"),
+        Literal[0, 1] | None,
+    )
+    assert_type(
+        feedback("faces", key="unpersisted_faces", persist_state=None),
         Literal[0, 1, 2, 3, 4] | None,
     )
     assert_type(feedback("thumbs", on_change=None), Literal[0, 1] | None)

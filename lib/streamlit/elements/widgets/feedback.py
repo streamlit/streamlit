@@ -39,12 +39,17 @@ from streamlit.errors import StreamlitValueError, StreamlitValueOutOfRangeError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget, validate_on_change_mode
+from streamlit.runtime.state import (
+    get_session_state,
+    register_widget,
+    validate_on_change_mode,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         OnChangeMode,
+        PersistStateOption,
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
@@ -118,6 +123,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        persist_state: PersistStateOption = None,
     ) -> Literal[0, 1] | None: ...
 
     @overload
@@ -132,6 +138,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        persist_state: PersistStateOption = None,
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
 
     @gather_metrics("feedback")
@@ -146,6 +153,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        persist_state: PersistStateOption = None,
     ) -> int | None:
         """Display a feedback widget.
 
@@ -240,6 +248,18 @@ class FeedbackMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set.
 
         Returns
         -------
@@ -337,11 +357,25 @@ class FeedbackMixin:
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
+            persist_state=persist_state,
         )
 
-        if widget_state.value_changed:
-            if widget_state.value is not None:
-                proto.value = widget_state.value
+        current_value = widget_state.value
+        # A value restored by key can be out of range for the current options,
+        # for example a persisted 5-star rating restored onto a "thumbs" widget.
+        # Reset it to the default so the widget never returns an index it
+        # doesn't display.
+        value_needs_reset = current_value is not None and not (
+            0 <= current_value < num_options
+        )
+        if value_needs_reset:
+            current_value = default
+            if key is not None:
+                get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            if current_value is not None:
+                proto.value = current_value
             proto.set_value = True
 
         if ctx:
@@ -351,7 +385,7 @@ class FeedbackMixin:
             "feedback",
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
             agent_props=agent_spec.element(
                 "feedback",
                 key=element_id,
@@ -367,7 +401,7 @@ class FeedbackMixin:
             ),
         )
 
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

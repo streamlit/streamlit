@@ -14,13 +14,14 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
     get_element_by_key,
+    get_feedback,
     get_text_input,
 )
 
@@ -43,6 +44,14 @@ def _expect_input_value(app: Page, label: str, expected: str) -> None:
     # st.session_state readout — a remounted widget must adopt the preserved
     # value rather than fall back to its default.
     expect(get_text_input(app, label).locator("input").first).to_have_value(expected)
+
+
+def _session_feedback_star(app: Page, index: int) -> Locator:
+    return (
+        get_feedback(app, "session_feedback")
+        .get_by_test_id(re.compile(r"stFeedbackButton(Active)?"))
+        .nth(index)
+    )
 
 
 def _navigate(app: Page, page_name: str) -> None:
@@ -93,6 +102,9 @@ def test_session_scoped_value_restored_after_page_switch(app: Page) -> None:
     """
     click_checkbox(app, "Show widgets")
     _fill_text_input(app, "Session-scoped", "session_value")
+    _session_feedback_star(app, 3).click()
+    wait_for_app_run(app)
+    _expect_value(app, "session_feedback", "3")
 
     _navigate(app, "Page 2")
     expect(app.get_by_role("heading", name="Page 2")).to_be_visible()
@@ -100,6 +112,8 @@ def test_session_scoped_value_restored_after_page_switch(app: Page) -> None:
     expect(app.get_by_role("heading", name="Page 1")).to_be_visible()
 
     _expect_input_value(app, "Session-scoped", "session_value")
+    _expect_value(app, "session_feedback", "3")
+    expect(_session_feedback_star(app, 3)).to_have_attribute("aria-checked", "true")
 
 
 def test_page_scoped_value_does_not_leak_across_pages(app: Page) -> None:
