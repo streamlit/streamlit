@@ -304,6 +304,8 @@ export class AppRoot {
     node: AppNode | undefined,
     mainScriptHash: string = this.mainScriptHash
   ): BlockNode {
+    // Present children are blocks. Keep undefined on the cast so a missing
+    // child still allocates a block.
     return (node as BlockNode | undefined) ?? new BlockNode(mainScriptHash)
   }
 

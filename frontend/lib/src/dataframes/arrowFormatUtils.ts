@@ -453,7 +453,8 @@ export function formatPeriodFromFreq(
   freq: PandasPeriodFrequency
 ): string {
   const [freqName, freqParam] = freq.split("-", 2)
-  // pandas has period frequencies that PERIOD_TYPE_FORMATTERS does not cover.
+  // freqName is an open pandas string. Indexing the Record types the result
+  // as always defined, so this cast keeps the missing-formatter check.
   const momentConverter = PERIOD_TYPE_FORMATTERS[
     freqName as SupportedPandasOffsetType
   ] as PeriodFormatter | undefined
