@@ -1322,6 +1322,20 @@ _create_option(
 )
 
 _create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows the agent API includes in a table's
+        `data.preview`.
+
+        A table with more rows is reported as incomplete, with a URL that
+        serves all of its data.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
     "server.trustedUserHeaders",
     description="""
         HTTP headers to embed in st.user.
