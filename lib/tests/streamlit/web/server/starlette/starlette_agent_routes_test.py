@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urljoin
 
+import pyarrow as pa
 import pytest
 from starlette.applications import Starlette
 from starlette.requests import ClientDisconnect, Request
@@ -588,6 +589,39 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     assert [media.status_code for media in fetched] == [200, 200]
     assert all(media.headers["Content-Type"].startswith("image/") for media in fetched)
     assert chat_message["props"]["avatar"] == "../../app/static/cat.png"
+
+
+def test_a_tables_data_url_resolves_against_the_request(tmp_path: Path) -> None:
+    """Under `server.baseUrlPath`, a table's `data.url` joined with the
+    request's URL serves the Arrow stream its `data` describes, every row of
+    it and its index column, not only the preview.
+    """
+    script = """
+    import pandas as pd
+    import streamlit as st
+
+    orders = pd.DataFrame(
+        {"order": [f"A-{n:03}" for n in range(150)], "amount": range(150)}
+    )
+    st.dataframe(orders.set_index("order"))
+    """
+    with _served_app(tmp_path, script, {}, base_url="base") as client:
+        response = client.post(f"/base{_PATH}", json={})
+        [data] = [
+            child["data"]
+            for child in response.json()["tree"]["children"][0]["children"]
+            if child["type"] == "dataframe"
+        ]
+        served = client.get(urljoin(str(response.url), data["url"]))
+
+    assert data["complete"] is False
+    assert data["url"].startswith("../../media/")
+    assert served.status_code == 200
+    assert served.headers["Content-Type"] == "application/vnd.apache.arrow.stream"
+    table = pa.ipc.open_stream(served.content).read_all()
+    assert table.num_rows == data["row_count"] == 150
+    assert table.column_names == [column["name"] for column in data["columns"]]
+    assert table.column_names == ["amount", "order"]
 
 
 def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:
