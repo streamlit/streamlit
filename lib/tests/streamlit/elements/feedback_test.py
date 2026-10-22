@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -132,11 +133,13 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs", key="feedback_key")
         assert val == session_state_index
 
-    @parameterized.expand([(4, None), (4, 1), (-1, None)])
-    def test_out_of_range_session_state_value_resets_to_default(
-        self, session_state_value: int, default: int | None
+    @parameterized.expand(
+        [(4, None), (4, 1), (-1, None), ("1", None), (True, None), (0.5, 1)]
+    )
+    def test_invalid_session_state_value_resets_to_default(
+        self, session_state_value: Any, default: int | None
     ) -> None:
-        """Test that a session state value outside the options resets to the default."""
+        """Test that a session state value that isn't a valid index resets to the default."""
         st.session_state.feedback_key = session_state_value
         val = st.feedback("thumbs", key="feedback_key", default=default)
 
@@ -145,6 +148,14 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.feedback
         assert proto.set_value is True
         assert proto.HasField("value") is (default is not None)
+
+    def test_numpy_integer_session_state_value_is_kept(self) -> None:
+        """Test that an in-range NumPy integer in session state is not reset."""
+        st.session_state.feedback_key = np.int64(1)
+        val = st.feedback("thumbs", key="feedback_key", default=0)
+
+        assert val == 1
+        assert self.get_delta_from_queue().new_element.feedback.value == 1
 
     def test_persist_state_passed_to_metadata(self) -> None:
         """Test that persist_state is threaded onto the widget's WidgetMetadata."""

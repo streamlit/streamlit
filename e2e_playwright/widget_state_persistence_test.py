@@ -47,10 +47,8 @@ def _expect_input_value(app: Page, label: str, expected: str) -> None:
 
 
 def _session_feedback_star(app: Page, index: int) -> Locator:
-    return (
-        get_feedback(app, "session_feedback")
-        .get_by_test_id(re.compile(r"stFeedbackButton(Active)?"))
-        .nth(index)
+    return get_feedback(app, "session_feedback").get_by_role(
+        "radio", name=f"{index + 1} out of 5 stars"
     )
 
 

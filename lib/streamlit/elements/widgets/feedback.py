@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import numbers
 from typing import (
     TYPE_CHECKING,
     Final,
@@ -361,12 +362,18 @@ class FeedbackMixin:
         )
 
         current_value = widget_state.value
-        # A value restored by key can be out of range for the current options,
-        # for example a persisted 5-star rating restored onto a "thumbs" widget.
-        # Reset it to the default so the widget never returns an index it
-        # doesn't display.
-        value_needs_reset = current_value is not None and not (
-            0 <= current_value < num_options
+        # register_widget returns a value set through session state or restored
+        # by key without deserializing it. That value can be a non-integer, or
+        # an index outside the current options, such as a persisted 5-star
+        # rating restored onto a "thumbs" widget. Reset it to the default so the
+        # widget never returns an index it doesn't display. Any Integral is
+        # accepted so NumPy integers work; bool is rejected although it
+        # subclasses int.
+        stored_value: object = current_value
+        value_needs_reset = stored_value is not None and (
+            isinstance(stored_value, bool)
+            or not isinstance(stored_value, numbers.Integral)
+            or not 0 <= int(stored_value) < num_options
         )
         if value_needs_reset:
             current_value = default
