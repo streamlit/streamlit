@@ -864,36 +864,126 @@ class TestSnowflakeCallersRightsConnectionSessionBinding:
         finally:
             st.cache_resource.clear()
 
-    def test_module_level_connection_in_imported_module_raises(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        "module_source",
+        [
+            pytest.param(
+                '_caller_conn = st.connection("snowflake-callers-rights")\n',
+                id="module_level_connection",
+            ),
+            pytest.param(
+                '_cursor = st.connection("snowflake-callers-rights").cursor()\n',
+                id="module_level_cursor",
+            ),
+        ],
+    )
+    def test_creation_during_module_import_raises(
+        self,
+        module_source: str,
+        mock_connect: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A connection created at import time can't be queried by later sessions."""
+        """Creating a connection at the top level of an imported module raises."""
         (tmp_path / "rcr_helpers.py").write_text(
-            "import streamlit as st\n"
-            '_caller_conn = st.connection("snowflake-callers-rights")\n'
-            "def caller_roles():\n"
-            '    return _caller_conn.query("SELECT CURRENT_AVAILABLE_ROLES()", ttl=0)\n',
-            encoding="utf-8",
+            "import streamlit as st\n" + module_source, encoding="utf-8"
         )
         monkeypatch.syspath_prepend(str(tmp_path))
         monkeypatch.delitem(sys.modules, "rcr_helpers", raising=False)
 
         try:
-            first_session_helpers = importlib.import_module("rcr_helpers")
-            mock_cursor = first_session_helpers._caller_conn._instance.cursor()
-            mock_cursor.fetch_pandas_all.return_value = "first user's roles"
-            assert first_session_helpers.caller_roles() == "first user's roles"
-
-            _set_current_session_id("other_session_id")
-            second_session_helpers = importlib.import_module("rcr_helpers")
             with pytest.raises(StreamlitAPIException) as exc_info:
-                second_session_helpers.caller_roles()
-
-            assert (
-                exc_info.value.error_id
-                == "snowflake-callers-rights-shared-across-sessions"
-            )
-            mock_cursor.execute.assert_called_once()
+                importlib.import_module("rcr_helpers")
         finally:
             sys.modules.pop("rcr_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+        mock_connect.assert_not_called()
+
+    def test_cached_connection_during_module_import_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cached connection isn't handed out while a module is being imported.
+
+        Apps create the connection at the top of the script, so a helper module that
+        calls ``st.connection`` at import time usually hits the session's cache.
+        """
+        st.connection("snowflake-callers-rights")
+        (tmp_path / "rcr_cached_helpers.py").write_text(
+            "import streamlit as st\n"
+            '_cursor = st.connection("snowflake-callers-rights").cursor()\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_cached_helpers", raising=False)
+
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                importlib.import_module("rcr_cached_helpers")
+        finally:
+            sys.modules.pop("rcr_cached_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+
+    def test_creation_during_lazy_import_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A module imported inside a function still runs its top level only once."""
+        (tmp_path / "rcr_lazy_helpers.py").write_text(
+            "import streamlit as st\n"
+            '_caller_conn = st.connection("snowflake-callers-rights")\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_lazy_helpers", raising=False)
+
+        def load_helpers() -> None:
+            import rcr_lazy_helpers  # noqa: F401
+
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                load_helpers()
+        finally:
+            sys.modules.pop("rcr_lazy_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+
+    def test_function_in_imported_module_can_create_connection(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A function defined in an imported module creates connections when called."""
+        (tmp_path / "rcr_function_helpers.py").write_text(
+            "import streamlit as st\n"
+            "def get_caller_conn():\n"
+            '    return st.connection("snowflake-callers-rights")\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_function_helpers", raising=False)
+
+        try:
+            helpers = importlib.import_module("rcr_function_helpers")
+            conn = helpers.get_caller_conn()
+            assert isinstance(conn, SnowflakeCallersRightsConnection)
+        finally:
+            sys.modules.pop("rcr_function_helpers", None)
+            st.cache_resource.clear()
+
+    def test_creation_in_exec_script_is_allowed(self) -> None:
+        """Code run with ``exec``, as Streamlit runs app scripts, isn't an import."""
+        namespace: dict[str, object] = {"st": st}
+        exec(
+            compile(
+                'conn = st.connection("snowflake-callers-rights")',
+                "streamlit_app.py",
+                "exec",
+            ),
+            namespace,
+        )
+        try:
+            assert isinstance(namespace["conn"], SnowflakeCallersRightsConnection)
+        finally:
             st.cache_resource.clear()
