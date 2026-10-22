@@ -64,7 +64,7 @@ def _register_component(
     Returns
     -------
     str
-        The fully qualified component key in the form ``<module_name>.<n>``.
+        The component key, which is ``name`` unchanged.
 
     Raises
     ------
@@ -286,8 +286,13 @@ def component(
         A short, descriptive identifier for the component. This is used
         internally by Streamlit to manage instances of the component.
 
-        Component names must be unique across an app. The names of imported
-        components are prefixed by their module name to avoid collisions.
+        Component names must be unique across an app. Streamlit uses the name
+        exactly as you pass it and doesn't add a prefix. For a component in an
+        installed package, use ``"<project_name>.<component_name>"``, where
+        ``<project_name>`` is the ``name`` in the package's ``[project]``
+        table and ``<component_name>`` is the component's ``name`` in
+        ``[tool.streamlit.component]``. Streamlit uses this name to find the
+        component's ``asset_dir``.
 
         If you register multiple components with the same name, a warning is
         logged and the last-registered component is used. Because this can lead
