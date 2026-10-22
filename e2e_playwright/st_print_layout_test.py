@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, ViewportSize, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import get_element_by_key
 
 # Same A4 ratio as the hello-app print tests, wide enough that columns would
 # sit side by side on screen. Print CSS is what stacks them.
-_PORTRAIT = {"width": 1240, "height": 1754}
+_PORTRAIT: ViewportSize = {"width": 1240, "height": 1754}
 
 
 def test_print_stacks_columns_and_fits_the_dataframe(

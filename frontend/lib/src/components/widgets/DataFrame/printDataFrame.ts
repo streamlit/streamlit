@@ -24,7 +24,6 @@ import {
   type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
-import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 /** Class of the HTML table that replaces the canvas grid when printing. */
@@ -41,28 +40,27 @@ export const DATAFRAME_PRINT_NOTE_CLASS = "stDataFramePrintNote"
 export const DATAFRAME_PRINT_WIDTH_VAR = "--st-df-print-width"
 
 /**
- * Font and spacing the print table renders with. Width is measured from
- * these, because `beforeprint` still uses screen media and the slot has no
- * layout to read.
+ * Font and spacing the print table renders with. Width is measured from a
+ * copy laid out with these, because `beforeprint` still uses screen media
+ * and the print rules are not active yet.
  */
 export interface DataFramePrintMeasure {
-  /** Canvas font for body cells, such as `400 16px "Source Sans", sans-serif`. */
-  cellFont: string
-  /** Canvas font for headers. Headers are heavier than body cells. */
-  headerFont: string
-  /** Horizontal padding and the shared border of one column, in px. */
-  columnChromePx: number
-  /** The table's outer border, which collapsed borders do not share. */
-  trailingBorderPx: number
+  /** App body font, such as `"Source Sans", sans-serif`. */
+  fontFamily: string
+  /** Body font size, such as `1rem`. */
+  fontSize: string
+  /** Horizontal and vertical padding, such as `0.125rem 0.5rem`. */
+  padding: string
+  cellWeight: number
+  headerWeight: number
 }
 
 /** Theme fields that decide the print table's font and column spacing. */
 interface DataFramePrintMeasureTheme {
-  fontSizes: { md: string; baseFontSize: number }
+  fontSizes: { md: string }
   fontWeights: { normal: number; semiBold: number }
   genericFonts: { bodyFont: string }
-  spacing: { sm: string }
-  sizes: { borderWidth: string }
+  spacing: { threeXS: string; sm: string }
 }
 
 /**
@@ -77,25 +75,19 @@ export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
 /**
  * Font and spacing of the printed table for the active theme.
  *
- * The table uses the app body font at `md`, semi-bold headers, horizontal
- * padding of `spacing.sm`, and a `borderWidth` border. A larger base font
- * size or a custom family changes those lengths, so the measurement uses the
- * same values the stylesheet applies.
+ * The table uses the app body font at `md`, semi-bold headers, and padding of
+ * `threeXS` and `sm`. The off-screen measurement uses these same values.
+ * Cell borders are omitted because `zoom` does not scale their layout width.
  */
 export function buildDataFramePrintMeasure(
   theme: DataFramePrintMeasureTheme
 ): DataFramePrintMeasure {
-  const rootPx = theme.fontSizes.baseFontSize
-  const fontSizePx = convertRemToPx(theme.fontSizes.md, rootPx)
-  const paddingPx = convertRemToPx(theme.spacing.sm, rootPx)
-  const borderPx = Number.parseFloat(theme.sizes.borderWidth)
-  const border = Number.isFinite(borderPx) ? borderPx : 0
-
   return {
-    cellFont: `${theme.fontWeights.normal} ${fontSizePx}px ${theme.genericFonts.bodyFont}`,
-    headerFont: `${theme.fontWeights.semiBold} ${fontSizePx}px ${theme.genericFonts.bodyFont}`,
-    columnChromePx: paddingPx * 2 + border,
-    trailingBorderPx: border,
+    fontFamily: theme.genericFonts.bodyFont,
+    fontSize: theme.fontSizes.md,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+    cellWeight: theme.fontWeights.normal,
+    headerWeight: theme.fontWeights.semiBold,
   }
 }
 
@@ -108,10 +100,9 @@ export function buildDataFramePrintMeasure(
  * frame is small enough to lay out during `beforeprint`. Print CSS scales it
  * down to the page, and a PDF viewer can zoom back in.
  *
- * The width comes from the cell text measured in the table's font. `beforeprint`
- * still uses screen media, where this slot is `display: none` and has no
- * layout, and the printed column is a different width from the screen, so
- * reading `offsetWidth` cannot size it.
+ * The width comes from an off-screen copy of the table. `beforeprint` still
+ * uses screen media, so the print font and padding are not applied to the
+ * slot, and canvas text metrics are narrower than the laid-out cells.
  */
 export function fillDataFramePrintSlot(
   slot: HTMLElement,
@@ -159,11 +150,12 @@ export function fillDataFramePrintSlot(
     rows.push(texts)
   }
 
-  const width = measurePrintWidth(headers, rows, measure)
+  const tableHtml = renderPrintTable(headers, rows)
+  const width = measurePrintWidth(tableHtml, measure)
   if (width > 0) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
   }
-  slot.innerHTML = renderPrintTable(headers, rows)
+  slot.innerHTML = tableHtml
 }
 
 /** Drop the print table so the on-screen grid is unchanged after printing. */
@@ -229,30 +221,47 @@ function printCellText(cell: GridCell): string | null {
 }
 
 function measurePrintWidth(
-  headers: readonly string[],
-  rows: readonly string[][],
+  tableHtml: string,
   measure: DataFramePrintMeasure
 ): number {
-  const context = document.createElement("canvas").getContext("2d")
-  if (!context) {
-    return 0
-  }
-
-  let total = measure.trailingBorderPx
-  headers.forEach((header, column) => {
-    context.font = measure.headerFont
-    let widest = textWidth(context, header)
-    context.font = measure.cellFont
-    for (const row of rows) {
-      widest = Math.max(widest, textWidth(context, row[column] ?? ""))
-    }
-    total += widest + measure.columnChromePx
-  })
-  return Math.ceil(total)
+  const probe = document.createElement("div")
+  // Kept out of the print snapshot. Visibility hidden still has a layout.
+  probe.style.position = "absolute"
+  probe.style.visibility = "hidden"
+  probe.style.left = "0"
+  probe.style.top = "0"
+  const style = document.createElement("style")
+  style.textContent = printMeasureCss(measure)
+  probe.append(style)
+  probe.insertAdjacentHTML("beforeend", tableHtml)
+  document.body.append(probe)
+  const table = probe.querySelector("table")
+  // beforeprint still uses screen media, so this copy is the only laid-out
+  // table. The print slot itself is display:none and has no width.
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const width = table instanceof HTMLElement ? table.offsetWidth : 0
+  probe.remove()
+  return width
 }
 
-function textWidth(context: CanvasRenderingContext2D, text: string): number {
-  return Math.ceil(context.measureText(text).width)
+function printMeasureCss(measure: DataFramePrintMeasure): string {
+  const table = `.${DATAFRAME_PRINT_TABLE_CLASS}`
+  return `
+    ${table} {
+      border-collapse: collapse;
+      width: max-content;
+      font-family: ${measure.fontFamily};
+      font-size: ${measure.fontSize};
+    }
+    ${table} th, ${table} td {
+      white-space: nowrap;
+      padding: ${measure.padding};
+      border: 0;
+      font-weight: ${measure.cellWeight};
+      text-align: left;
+    }
+    ${table} th { font-weight: ${measure.headerWeight}; }
+  `
 }
 
 function renderPrintTable(

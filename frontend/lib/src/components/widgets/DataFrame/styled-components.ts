@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { printContainStyles } from "~lib/components/shared/printContain"
+import { printContainRules } from "~lib/components/shared/printContain"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
@@ -67,7 +67,7 @@ export const StyledResizableContainer =
         // The grid locks the on-screen pixel width. Cap the container so a
         // narrower page does not spill it, and let the print table scale
         // inside that width.
-        ...printContainStyles["@media print"],
+        ...printContainRules,
         // On screen this shrinks to the grid. The print slot has no
         // intrinsic width, so a shrink-to-fit box would collapse to zero
         // and the table could not be scaled to the column.
@@ -106,10 +106,12 @@ export const StyledResizableContainer =
           zoom: `min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}))))`,
           "th, td": {
             whiteSpace: "nowrap",
-            // Horizontal padding is spacing.sm, the same length the width
-            // measurement adds for each column.
             padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
+            // A border adds layout width that `zoom` does not scale, so a wide
+            // table stays past the column. An outline draws the grid without
+            // adding to that width.
+            border: "none",
+            outline: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
             textAlign: "left",
             fontWeight: theme.fontWeights.normal,
           },

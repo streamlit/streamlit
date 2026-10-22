@@ -53,10 +53,11 @@ const textCell = (displayData: string): GridCell => ({
 })
 
 const measure: DataFramePrintMeasure = {
-  cellFont: "400 16px sans-serif",
-  headerFont: "500 16px sans-serif",
-  columnChromePx: 18,
-  trailingBorderPx: 1,
+  fontFamily: "sans-serif",
+  fontSize: "1rem",
+  padding: "0.125rem 0.5rem",
+  cellWeight: 400,
+  headerWeight: 500,
 }
 
 describe("fillDataFramePrintSlot", () => {
@@ -207,54 +208,51 @@ describe("fillDataFramePrintSlot", () => {
     ).toEqual(["Ada", ""])
   })
 
-  it("measures columns with the provided font and spacing", () => {
-    const seen: string[] = []
-    let font = ""
-    const context = {
-      set font(value: string) {
-        font = value
-      },
-      get font() {
-        return font
-      },
-      measureText(text: string) {
-        seen.push(`${font}:${text}`)
-        return { width: text.length * 10 }
-      },
-    }
+  it("measures the laid-out table, including its font", () => {
+    let css = ""
     const spy = vi
-      .spyOn(HTMLCanvasElement.prototype, "getContext")
-      .mockReturnValue(context as unknown as CanvasRenderingContext2D)
+      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .mockImplementation(function width(this: HTMLElement) {
+        if (this.tagName === "TABLE") {
+          css = this.parentElement?.querySelector("style")?.textContent ?? ""
+          return 320
+        }
+        return 0
+      })
 
     fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), {
-      cellFont: "400 24px Custom",
-      headerFont: "500 24px Custom",
-      columnChromePx: 25,
-      trailingBorderPx: 1,
+      fontFamily: "Custom, sans-serif",
+      fontSize: "1.5rem",
+      padding: "0.25rem 1rem",
+      cellWeight: 400,
+      headerWeight: 500,
     })
 
-    expect(seen).toEqual(["500 24px Custom:Name", "400 24px Custom:Ada"])
-    // "Name" is 40px, plus 25px of padding and border, plus the outer border.
-    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe("66px")
+    expect(css).toContain("Custom, sans-serif")
+    expect(css).toContain("1.5rem")
+    expect(css).toContain("0.25rem 1rem")
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
+      "320px"
+    )
     spy.mockRestore()
   })
 })
 
 describe("buildDataFramePrintMeasure", () => {
-  it("uses the theme font size and cell spacing", () => {
+  it("uses the theme font and cell spacing", () => {
     expect(
       buildDataFramePrintMeasure({
-        fontSizes: { md: "1rem", baseFontSize: 24 },
+        fontSizes: { md: "1rem" },
         fontWeights: { normal: 400, semiBold: 500 },
         genericFonts: { bodyFont: "Custom, sans-serif" },
-        spacing: { sm: "0.5rem" },
-        sizes: { borderWidth: "1px" },
+        spacing: { threeXS: "0.125rem", sm: "0.5rem" },
       })
     ).toEqual({
-      cellFont: "400 24px Custom, sans-serif",
-      headerFont: "500 24px Custom, sans-serif",
-      columnChromePx: 25,
-      trailingBorderPx: 1,
+      fontFamily: "Custom, sans-serif",
+      fontSize: "1rem",
+      padding: "0.125rem 0.5rem",
+      cellWeight: 400,
+      headerWeight: 500,
     })
   })
 })
