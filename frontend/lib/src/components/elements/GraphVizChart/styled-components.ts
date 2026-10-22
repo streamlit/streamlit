@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { printContainStyles } from "~lib/components/shared/printContain"
+
 interface StyledGraphVizChartProps {
   shouldUseFullWidth: boolean
   shouldUseFullHeight: boolean
@@ -40,5 +42,6 @@ export const StyledGraphVizChart = styled.div<StyledGraphVizChartProps>(
     },
     width: shouldUseFullWidth ? "100%" : "auto",
     height: shouldUseFullHeight ? "100%" : "auto",
+    ...printContainStyles,
   })
 )
