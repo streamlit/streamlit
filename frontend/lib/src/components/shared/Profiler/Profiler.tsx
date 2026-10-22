@@ -46,11 +46,11 @@ const handleRender: ProfilerOnRenderCallback = (
 ) => {
   window.__streamlit_profiles__ ??= {}
 
-  window.__streamlit_profiles__[id] =
-    window.__streamlit_profiles__[id] ||
+  if (!Object.hasOwn(window.__streamlit_profiles__, id)) {
     // Bound the history so a long session cannot retain every commit.
     // 1000 entries is enough for performance debugging.
-    new CircularBuffer<(typeof window.__streamlit_profiles__)[string]>(1000)
+    window.__streamlit_profiles__[id] = new CircularBuffer(1000)
+  }
 
   window.__streamlit_profiles__[id].push({
     phase,

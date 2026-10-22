@@ -506,8 +506,7 @@ const RawElementNodeRenderer = (
 
     case "metric": {
       const metricProto = node.element.metric as MetricProto
-      const hasChart =
-        metricProto.chartData && metricProto.chartData.length > 0
+      const hasChart = metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}

@@ -48,7 +48,7 @@ describe("useSubmitFormViaEnterKey", () => {
       metaKey: false,
       ctrlKey: false,
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
       preventDefault: vi.fn(),
     })
     await waitFor(() => {
@@ -85,7 +85,7 @@ describe("useSubmitFormViaEnterKey", () => {
       metaKey: false,
       ctrlKey: false,
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
       preventDefault: vi.fn(),
     })
     await waitFor(() => {
@@ -122,7 +122,7 @@ describe("useSubmitFormViaEnterKey", () => {
       metaKey: false,
       ctrlKey: false,
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
       preventDefault: vi.fn(),
     })
     await waitFor(() => {
@@ -165,7 +165,7 @@ describe("useSubmitFormViaEnterKey", () => {
         metaKey: metaKey,
         ctrlKey: ctrlKey,
         keyCode: 0,
-        nativeEvent: undefined as never,
+        nativeEvent: new KeyboardEvent("keydown"),
         preventDefault: vi.fn(),
       })
       await waitFor(() => {
@@ -203,7 +203,7 @@ describe("useSubmitFormViaEnterKey", () => {
       metaKey: false,
       ctrlKey: false,
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
       preventDefault: vi.fn(),
     })
     await waitFor(() => {
@@ -240,7 +240,7 @@ describe("useSubmitFormViaEnterKey", () => {
       metaKey: false,
       ctrlKey: false,
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
       preventDefault: vi.fn(),
     })
     await waitFor(() => {

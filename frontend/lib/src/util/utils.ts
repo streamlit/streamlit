@@ -577,9 +577,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
-  }
+  qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
   foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -595,9 +593,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    htmlCollection = window.parent.document.getElementsByTagName("iframe")
-  }
+  htmlCollection = window.parent.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null

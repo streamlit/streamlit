@@ -102,7 +102,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     // Recursively clear our children.
     const newChildren: AppNode[] = []
     let childrenChanged = false
-    node.children.forEach(child => {
+    for (const child of node.children) {
       const filteredChild = child.accept(clearStaleNodeVisitor ?? this)
       if (filteredChild !== child) {
         childrenChanged = true
@@ -110,7 +110,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
-    })
+    }
 
     // Performance optimization: If the children haven't changed, return the same node.
     if (!childrenChanged) {

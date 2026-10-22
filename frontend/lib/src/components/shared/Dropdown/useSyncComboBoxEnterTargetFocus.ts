@@ -62,10 +62,9 @@ export function useSyncComboBoxEnterTargetFocus(
       String(focusedKey) !== String(enterTargetKey))
       ? `${String(enterTargetKey)}:${isNullOrUndefined(focusedKey) ? "" : String(focusedKey)}`
       : null
-  const collectionVersion =
-    state?.isOpen && state.collection
-      ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
-      : ""
+  const collectionVersion = state?.isOpen
+    ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
+    : ""
 
   // Arrow moved focus off the Enter target: drop lastSynced so returning to
   // that key is user-owned (focusMismatchToken must not snap to the first row).

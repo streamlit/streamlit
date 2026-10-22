@@ -84,9 +84,7 @@ export function ToolbarAction({
       >
         <Button
           onClick={event => {
-            if (onClick) {
-              onClick()
-            }
+            onClick()
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}

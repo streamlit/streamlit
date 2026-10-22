@@ -29,5 +29,5 @@ export function plainTextWithBlockGaps(root: HTMLElement): string {
       paragraph.prepend(document.createTextNode(" "))
     }
   })
-  return (clone.textContent ?? "").replaceAll(/\s+/g, " ").trim()
+  return clone.textContent.replaceAll(/\s+/g, " ").trim()
 }
