@@ -330,6 +330,11 @@ describe("fillDataFramePrintSlot", () => {
     frameWidth = 160
     fitDataFramePrintTable(slot)
     expect(slot.querySelector("table")?.style.zoom).toBe("0.5")
+    // A stacked print column is wider than the table. The on-screen zoom
+    // has to come off, or the table stays shrunk inside that column.
+    frameWidth = 400
+    fitDataFramePrintTable(slot)
+    expect(slot.querySelector("table")?.style.zoom).toBe("")
     spy.mockRestore()
     frame.remove()
   })

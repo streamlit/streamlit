@@ -486,7 +486,16 @@ function applyPrintZoom(
   available: number,
   width: number
 ): void {
-  if (available <= 0 || width <= available) {
+  // No column width yet. Leave whatever scale is already set.
+  if (available <= 0) {
+    return
+  }
+  // beforeprint records a zoom for the on-screen column. Print layout then
+  // stacks that column to the page width, which is often wider than the
+  // table. The old inline zoom overrides the CSS scale, so clear it and let
+  // the table use its own width.
+  if (width <= available) {
+    table.style.zoom = ""
     return
   }
   // The CSS ratio is the print-layout scale. This inline value covers the
