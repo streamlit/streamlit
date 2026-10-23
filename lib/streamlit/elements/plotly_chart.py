@@ -120,7 +120,9 @@ class PlotlySelectionState(ReadOnlyAttributeDictionary):
 
     point_indices : list[int]
         The numerical indices of all selected data points in the chart. The
-        details of each identified point are included in ``points``.
+        details of each identified point are included in ``points``. Heatmap
+        and image clicks store a 2D ``[row, col]`` index on each point as
+        ``point_number`` instead of here.
 
     box : list[dict[str, Any]]
         The metadata related to the box selection. This includes the
