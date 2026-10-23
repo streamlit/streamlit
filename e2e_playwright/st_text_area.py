@@ -229,3 +229,16 @@ st.write("Ignore text area value:", ignore_area)
 
 if st.button("Apply ignore text area", key="apply_ignore_text_area"):
     st.write("Applied ignore text area value:", ignore_area)
+
+# --- required text areas ---
+st.markdown("Required text areas:")
+
+with st.form("required_text_area_form", clear_on_submit=True):
+    st.text_area("Required message", key="required_message", required=True)
+    st.text_area("Required details", key="required_details", required=True)
+    required_form_submitted = st.form_submit_button("Submit required text area form")
+st.write("required form submitted:", required_form_submitted)
+st.write("required message:", st.session_state.get("required_message", ""))
+
+required_notes = st.text_area("Required notes", key="required_notes", required=True)
+st.write("required notes:", required_notes)

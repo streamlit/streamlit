@@ -44,7 +44,10 @@ import {
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
-import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
+import {
+  isRequiredEmptyText,
+  requiredFieldError,
+} from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -81,7 +84,6 @@ import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
   INVALID_TEXT_INPUT_MESSAGE,
-  isRequiredEmptyText,
   passesTextInputValidation,
 } from "./validation"
 
