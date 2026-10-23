@@ -16,7 +16,7 @@
 
 import type { CSSProperties } from "react"
 
-import styled from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -25,6 +25,10 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
+import {
+  DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+} from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -35,6 +39,33 @@ import { assertNever } from "~lib/util/assertNever"
  * stay covered if their inner React Aria composition changes.
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
+
+/**
+ * Marks a bordered card (`st.container(border=True)` or a bordered column)
+ * so a printed column row can tell a card from a plain container. A border
+ * is drawn with an emotion style, which has no stable selector of its own.
+ */
+export const PRINT_CARD_CLASS = "stPrintCard"
+
+/**
+ * Compound match for content that makes a printed column row stack into one
+ * column: a card, a dataframe, or a chart. These are the elements' own
+ * classes. Test IDs are not used as selectors.
+ */
+const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, .stDataFrame, .stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)`
+
+/**
+ * A chart or dataframe inside a closed tab or a collapsed expander is still
+ * mounted. It is not on the printed page, so it does not make the row stack.
+ */
+const VISIBLE_PRINT_STACK_TRIGGER = `${PRINT_STACK_TRIGGER}:not([data-st-inactive] *):not(details:not([open]) *)`
+
+/**
+ * Matches a column that is itself a card, or holds one. A row of compact
+ * widgets (metrics, buttons) matches neither and stays side by side instead
+ * of lengthening the printed page.
+ */
+const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${VISIBLE_PRINT_STACK_TRIGGER}`
 
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
@@ -124,6 +155,17 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     "@media print": {
       overflow: "visible",
+      // A fixed-height dataframe keeps that height on its container. The
+      // print table is taller than the on-screen grid, and a fallback note
+      // sits under the canvas, so the container grows with that content
+      // instead of letting it paint outside the card.
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+        {
+          height: "auto",
+          maxHeight: "none",
+          minHeight: 0,
+          contain: "none",
+        },
     },
 
     ":has(> .stCacheSpinner)": {
@@ -233,6 +275,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
+      // Print stacking for columns is set by the parent row.
     }
   }
 )
@@ -301,6 +344,13 @@ export interface StyledFlexContainerBlockProps {
   overflowX?: React.CSSProperties["overflowX"]
 }
 
+/** A pixel, rem, or percentage height. Content height is `auto` or unset. */
+function hasDefinitePrintHeight(
+  height: React.CSSProperties["height"] | undefined
+): boolean {
+  return height !== undefined && height !== "auto"
+}
+
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
     ({
@@ -319,6 +369,91 @@ export const StyledFlexContainerBlock =
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
+      }
+      const crossAxis = getAlignItems(align)
+      const mainAxis = getJustifyContent(justify)
+      // display:block drops align-items and justify-content. A container
+      // that centers or ends its content keeps flex so print matches the
+      // screen. A fixed or percentage height does too: stretch children are
+      // `height: 100%` plus a flex value, and without a flex parent each one
+      // takes the full container instead of sharing it. The default
+      // content-height block is the one whose flex height collapses and
+      // paints a chart over the next heading.
+      const keepsPrintFlex =
+        direction === Direction.VERTICAL &&
+        (hasDefinitePrintHeight(height) ||
+          crossAxis === "center" ||
+          crossAxis === "end" ||
+          mainAxis === "center" ||
+          mainAxis === "end" ||
+          mainAxis === "space-between")
+      // Chrome's print layout drops the height of a flex or table row, so a
+      // chart paints over the next heading. Vertical blocks use normal
+      // flow. A column row stacks, and each column takes the full page
+      // width, only when it holds a card, chart, or dataframe; a row of
+      // compact widgets stays side by side. A bordered card stays on one
+      // page so the chart cannot land on the heading below.
+      const printRules: CSSObject = {
+        ...(direction === Direction.HORIZONTAL
+          ? {
+              [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
+                display: "block",
+                "> .stColumn": {
+                  display: "block",
+                  float: "none",
+                  clear: "both",
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  ...(gapWidth &&
+                    gapWidth !== theme.spacing.none && {
+                      "&:not(:last-of-type)": {
+                        marginBottom: gapWidth,
+                      },
+                    }),
+                },
+              },
+            }
+          : keepsPrintFlex
+            ? {}
+            : {
+                display: "block",
+                // `gap` only applies to a flex box, so print uses a bottom
+                // margin instead. Margin stays outside the child, so
+                // border-box padding does not eat into a fixed height.
+                // Balloons, snow, and the cache spinner are gone before a
+                // print, so they are not excluded here.
+                ...(gapWidth &&
+                  gapWidth !== theme.spacing.none && {
+                    "& > :not(:last-child):not(:has(> .stPageLink))": {
+                      marginBottom: gapWidth,
+                    },
+                    // A page link only trims the flex gap, by xs above and
+                    // below. Print replaces the gap with margin, so the trim
+                    // stays in that margin. The next link's own negative
+                    // margin-top then collapses with it.
+                    "& > :not(:last-child):has(> .stPageLink)": {
+                      marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
+                    },
+                  }),
+              }),
+        ...(border && {
+          // A landscape page is too short for a chart card to finish in
+          // the space left below the previous one, so the card was cut
+          // through the middle and the rest of the page stayed empty.
+          // Keeping the card whole moves it to the next page instead.
+          // Portrait is tall enough for the next card to start on the
+          // same page. A dataframe print table can be taller than the
+          // page, so that card may still break and repeat its header.
+          // A table inside a closed tab is not built, so it does not
+          // opt the card out.
+          "@media (orientation: landscape)": {
+            [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+            },
+          },
+        }),
       }
 
       return {
@@ -379,6 +514,10 @@ export const StyledFlexContainerBlock =
               [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
             },
           }),
+        // An empty print block still emits `@media print {}`.
+        ...(Object.keys(printRules).length > 0
+          ? { "@media print": printRules }
+          : {}),
       }
     }
   )
@@ -420,5 +559,13 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     alignSelf,
     minHeight,
     maxHeight,
+    // See StyledFlexContainerBlock: flex height collapses when printing.
+    // Fixed and stretch-height wrappers keep flex so their child retains its
+    // allocated height.
+    ...((height === undefined || height === "auto") && {
+      "@media print": {
+        display: "block",
+      },
+    }),
   })
 )

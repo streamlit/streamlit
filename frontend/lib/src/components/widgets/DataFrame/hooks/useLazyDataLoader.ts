@@ -71,6 +71,13 @@ interface UseLazyDataLoaderParams {
 interface UseLazyDataLoaderReturn {
   /** Synchronous cell getter for glide-data-grid. */
   getCellContent: (cell: Item) => GridCell
+  /**
+   * Same lookup without scheduling a missing chunk.
+   *
+   * Printing uses this so a pass over unloaded rows does not start requests
+   * or change `getCellContent` while the print dialog is open.
+   */
+  getCachedCellContent: (cell: Item) => GridCell
   /** Handler to wire to glide's onVisibleRegionChanged for chunk loading. */
   onVisibleRegionChanged: (range: Rectangle) => void
 }
@@ -243,8 +250,8 @@ function useLazyDataLoader({
     pendingRef.current.clear()
   }, [sourceId, effectivePageSize, sortKey])
 
-  const getCellContent = useCallback(
-    ([col, row]: Item): GridCell => {
+  const readCell = useCallback(
+    ([col, row]: Item, schedule: boolean): GridCell => {
       if (col > columns.length - 1) {
         return getErrorCell(
           "Column index out of bounds",
@@ -282,22 +289,28 @@ function useLazyDataLoader({
         return getErrorCell("Failed to load data", failure)
       }
 
-      // The chunk isn't loaded yet: schedule a request and show a loading cell.
-      scheduleRequest(chunkIndex)
+      // The grid schedules the missing chunk. Printing only reads what is
+      // already loaded, so a print pass does not start a request.
+      if (schedule) {
+        scheduleRequest(chunkIndex)
+      }
       return LOADING_CELL
     },
+    [columns, numRows, controller, effectivePageSize, scheduleRequest]
+  )
+
+  const getCellContent = useCallback(
+    (cell: Item): GridCell => readCell(cell, true),
     // `cacheVersion` is not read in the body; it is intentionally included so
     // this getter changes identity whenever a chunk arrives, prompting
     // glide-data-grid to repaint.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cacheVersion is an intentional repaint signal
-    [
-      columns,
-      numRows,
-      controller,
-      effectivePageSize,
-      scheduleRequest,
-      cacheVersion,
-    ]
+    [readCell, cacheVersion]
+  )
+
+  const getCachedCellContent = useCallback(
+    (cell: Item): GridCell => readCell(cell, false),
+    [readCell]
   )
 
   const onVisibleRegionChanged = useCallback(
@@ -340,8 +353,8 @@ function useLazyDataLoader({
   )
 
   return useMemo(
-    () => ({ getCellContent, onVisibleRegionChanged }),
-    [getCellContent, onVisibleRegionChanged]
+    () => ({ getCellContent, getCachedCellContent, onVisibleRegionChanged }),
+    [getCellContent, getCachedCellContent, onVisibleRegionChanged]
   )
 }
 

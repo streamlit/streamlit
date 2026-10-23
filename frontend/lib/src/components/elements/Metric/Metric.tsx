@@ -44,6 +44,7 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_TEXT_WIDTH_VAR,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
@@ -59,6 +60,39 @@ import {
 const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Record the value's width at the card's font size.
+ *
+ * Print layout narrows the card after `beforeprint`. The print rule divides
+ * the card by this width, so the figure scales down only when the card is
+ * the narrower of the two. The probe uses the card's font, which stays at
+ * the theme size while the text inside it is scaled.
+ */
+function recordMetricValueWidth(value: HTMLElement): void {
+  const source = value.querySelector("p")
+  const text = source?.textContent ?? ""
+  if (text === "") {
+    value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+    return
+  }
+
+  const probe = document.createElement("span")
+  probe.textContent = text
+  probe.style.font = getComputedStyle(value).font
+  probe.style.whiteSpace = "nowrap"
+  probe.style.position = "absolute"
+  probe.style.visibility = "hidden"
+  probe.style.width = "max-content"
+  document.body.appendChild(probe)
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const width = probe.getBoundingClientRect().width
+  probe.remove()
+
+  if (width > 0) {
+    value.style.setProperty(METRIC_TEXT_WIDTH_VAR, `${width}px`)
+  }
+}
 
 /**
  * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
@@ -308,6 +342,18 @@ export interface MetricProps {
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
+  const valueRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onBeforePrint = (): void => {
+      if (valueRef.current) {
+        recordMetricValueWidth(valueRef.current)
+      }
+    }
+
+    window.addEventListener("beforeprint", onBeforePrint)
+    return () => window.removeEventListener("beforeprint", onBeforePrint)
+  }, [])
 
   const { MetricDirection } = MetricProto
   const {
@@ -453,7 +499,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           )}
         </StyledMetricLabelText>
-        <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricValueText
+          className="stMetricValue"
+          data-testid="stMetricValue"
+          ref={valueRef}
+        >
           <StreamlitMarkdown
             source={formattedMetricValue}
             allowHTML={false}

@@ -17,6 +17,7 @@
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import type { TopLevelSpec } from "vega-lite"
+import { vi } from "vitest"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -196,6 +197,48 @@ describe("Metric element", () => {
     const props = getProps()
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetric")).toHaveStyle("border: none;")
+  })
+
+  it("shrinks a metric value to the card instead of ellipsizing it when printing", () => {
+    render(<Metric {...getProps({ body: "$48.6M", showBorder: true })} />)
+
+    const css = [...document.querySelectorAll("style")]
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain(".stMarkdownEllipsis")
+    expect(css).toContain("text-overflow:clip")
+    expect(css).toContain("--st-metric-text-width")
+    expect(css).toContain("atan2(100cqi, var(--st-metric-text-width, 100cqi))")
+    const fontRule = css
+      .split("}")
+      .find(rule => rule.includes("atan2(100cqi, var(--st-metric-text-width"))
+    expect(fontRule).toBeDefined()
+    expect(fontRule).not.toContain(".stMarkdownEllipsis p")
+    expect(screen.getByTestId("stMetricValue")).toHaveClass("stMetricValue")
+
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 112,
+        height: 36,
+        top: 0,
+        left: 0,
+        bottom: 36,
+        right: 112,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      })
+    window.dispatchEvent(new Event("beforeprint"))
+    rect.mockRestore()
+
+    expect(
+      screen
+        .getByTestId("stMetricValue")
+        .style.getPropertyValue("--st-metric-text-width")
+    ).toBe("112px")
   })
 
   it("renders with border if passed", () => {
