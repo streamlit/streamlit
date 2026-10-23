@@ -29,6 +29,8 @@ from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 from starlette.testclient import TestClient
 
+from streamlit.components.v2.component_manager import BidiComponentManager
+from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -1264,6 +1266,69 @@ def test_bidi_component_serves_html_as_no_cache(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "no-cache"
+
+
+def test_bidi_component_serves_inline_js_by_hash_as_immutable() -> None:
+    """Inline JS is served from the manager's store without an asset root."""
+    manager = BidiComponentManager()
+    manager.register(BidiComponentDefinition(name="comp", js="export default 1"))
+    url = manager.get_inline_js_url("export default 1")
+    routes = create_bidi_component_routes(manager, "")
+
+    response = _client_for(routes).get(f"/_stcore/bidi-components/{url}")
+
+    assert response.status_code == 200
+    assert response.text == "export default 1"
+    assert "javascript" in response.headers["Content-Type"]
+    assert response.headers["Cache-Control"] == "public, max-age=31536000, immutable"
+
+
+def test_bidi_component_unknown_inline_hash_returns_404() -> None:
+    """An inline path whose content isn't stored yields 404, not a file read."""
+    manager = _bidi_manager(None)
+    manager.get_inline_asset.return_value = None
+    routes = create_bidi_component_routes(manager, "")
+
+    response = _client_for(routes).get(
+        "/_stcore/bidi-components/__inline__/" + "0" * 64 + ".js"
+    )
+
+    assert response.status_code == 404
+    assert response.text == "not found"
+    manager.get_component_path.assert_not_called()
+
+
+def test_bidi_component_malformed_inline_path_returns_404() -> None:
+    """An inline path that is not a SHA-256 filename is rejected."""
+    manager = BidiComponentManager()
+    routes = create_bidi_component_routes(manager, "")
+
+    response = _client_for(routes).get(
+        "/_stcore/bidi-components/__inline__/not-a-hash.js"
+    )
+
+    assert response.status_code == 404
+
+
+def test_bidi_component_identical_inline_js_is_shared_across_components() -> None:
+    """The inline URL does not include a component name, so copies share one module."""
+    js = "export default function() { return 1 }"
+    manager = BidiComponentManager()
+    manager.register(BidiComponentDefinition(name="alpha", js=js))
+    manager.register(BidiComponentDefinition(name="beta", js=js))
+    url = manager.get_inline_js_url(js)
+    routes = create_bidi_component_routes(manager, "")
+
+    first = _client_for(routes).get(f"/_stcore/bidi-components/{url}")
+    second = _client_for(routes).get(f"/_stcore/bidi-components/{url}")
+
+    assert url.startswith("__inline__/")
+    assert "/alpha/" not in url
+    assert "/beta/" not in url
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.text == js
+    assert second.text == js
 
 
 def test_bidi_component_options_returns_no_content() -> None:

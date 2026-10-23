@@ -278,3 +278,23 @@ def test_arrow_serialization_works(app: Page) -> None:
     expect(arrow.get_by_text("Cols2: b")).to_be_visible()
     expect(arrow.get_by_text('Rows2: {"b": 4},{"b": 5},{"b": 6}')).to_be_visible()
     expect(arrow.get_by_text("Label: Hello World")).to_be_visible()
+
+
+def test_identical_inline_js_shares_module_state(app: Page) -> None:
+    """Two components with the same inline JS share one ES module instance."""
+    shared = section(app, "Shared module")
+    first = shared.get_by_text("bidi_shared_a module id:")
+    second = shared.get_by_text("bidi_shared_b module id:")
+    expect(first).to_be_visible()
+    expect(second).to_be_visible()
+
+    first_id = first.inner_text().split("module id: ", 1)[1]
+    second_id = second.inner_text().split("module id: ", 1)[1]
+    assert first_id == second_id
+    assert first_id != ""
+
+    shared.get_by_role("button", name="shared module rerun").click()
+    expect(first).to_be_visible()
+    expect(second).to_be_visible()
+    expect(first).to_contain_text(first_id)
+    expect(second).to_contain_text(first_id)
