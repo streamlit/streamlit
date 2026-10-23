@@ -54,6 +54,13 @@ df = conn.query("SELECT * FROM metrics", ttl=timedelta(minutes=10))
 df = conn.query("SELECT * FROM reference_data", ttl=3600)
 ```
 
+`st.connection` itself also takes `ttl`, which caches the connection object.
+Omitting `ttl` picks up the server's `runner.connectionDefaultTTL` (itself
+`None`/no-expiry by default). Passing `ttl` explicitly -- including
+`ttl=None` -- always keeps that call's own value and ignores the server
+default. Set the server default via `.streamlit/config.toml` or
+`STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL`.
+
 ## Configure with st.secrets
 
 Store credentials in `.streamlit/secrets.toml` (never commit this file).
