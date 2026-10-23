@@ -267,6 +267,20 @@ describe("DataFrame widget", () => {
     expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
   })
 
+  it("does not expand a dataframe hidden in a closed tab", () => {
+    render(<DataFrame {...props} />)
+    // The closed panel stays mounted. A print table there would let the
+    // surrounding card split, because print CSS treats that table as content
+    // that has to paginate.
+    screen.getByTestId("stDataFrame").setAttribute("data-st-inactive", "")
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
   it("caps the grid to its container when printing", () => {
     render(<DataFrame {...props} />)
 

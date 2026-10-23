@@ -69,10 +69,12 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
 
-    // A card normally stays on one page so a chart cannot land on the
-    // heading below it, but a dataframe print table can be taller than the
-    // page. Forcing that card to stay whole would push it onto the next
-    // page and clip rows that already fit on this one.
+    // Landscape is too short for a chart card to finish below the
+    // previous one, so the card moves to the next page instead of
+    // splitting. A dataframe print table can be taller than the page,
+    // and forcing that card to stay whole would clip rows that already
+    // fit. Portrait keeps the card in normal flow.
+    expect(css).toContain("@media (orientation: landscape)")
     expect(css).toContain(":not(:has(.stDataFramePrintTable))")
     expect(css).toContain("break-inside:avoid")
   })

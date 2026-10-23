@@ -453,13 +453,20 @@ export const StyledFlexContainerBlock =
                   }),
               }),
           ...(border && {
-            // A dataframe print table can be taller than one page, and its
-            // card grows so the repeated header wraps every row. Keeping
-            // that card from breaking would instead push it whole onto the
-            // next page and clip rows that already fit on this one.
-            "&:not(:has(.stDataFramePrintTable))": {
-              breakInside: "avoid",
-              pageBreakInside: "avoid",
+            // A landscape page is too short for a chart card to finish in
+            // the space left below the previous one, so the card was cut
+            // through the middle and the rest of the page stayed empty.
+            // Keeping the card whole moves it to the next page instead.
+            // Portrait is tall enough for the next card to start on the
+            // same page. A dataframe print table can be taller than the
+            // page, so that card may still break and repeat its header.
+            // A table inside a closed tab is not built, so it does not
+            // opt the card out.
+            "@media (orientation: landscape)": {
+              "&:not(:has(.stDataFramePrintTable))": {
+                breakInside: "avoid",
+                pageBreakInside: "avoid",
+              },
             },
           }),
         },

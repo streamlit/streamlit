@@ -963,7 +963,10 @@ function DataFrame({
     }
 
     const onBeforePrint = (): void => {
-      if (isEmptyTable) {
+      // A closed tab stays mounted with display:none. Building a print table
+      // there would still match :has(.stDataFramePrintTable), and the
+      // surrounding card would be allowed to split across a page.
+      if (isEmptyTable || slot.closest("[data-st-inactive]")) {
         clearDataFramePrintSlot(slot)
         return
       }

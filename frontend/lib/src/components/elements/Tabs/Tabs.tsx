@@ -402,6 +402,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
               <StyledTabPanel
                 data-testid="stTabPanel"
                 id={String(index)}
+                // A closed panel stays mounted but is not printed. Print
+                // layout uses this to ignore a dataframe that lives there.
+                data-st-inactive={activeTabKey === index ? undefined : ""}
                 $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
                 // eslint-disable-next-line @eslint-react/no-array-index-key
