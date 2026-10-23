@@ -240,15 +240,16 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
 
     ``emulate_media`` applies the print stylesheet but does not fire
     ``beforeprint``, so the snapshot tests above still show the on-screen
-    canvas. This test fires that event, which is what a real print does.
+    canvas. A browser fires ``beforeprint`` while screen media is still
+    active, then switches to print. This test uses that order.
     """
     app = themed_app
 
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-
     app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    app.emulate_media(media="print", forced_colors="active")
+    _evaluate_match_media_print(app)
     table = app.locator(".stDataFramePrintTable")
     expect(table).to_be_visible()
     expect(table).to_contain_text("China")

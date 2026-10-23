@@ -23,12 +23,14 @@ import {
   buildDataFramePrintMeasure,
   clearDataFramePrintSlot,
   DATAFRAME_PRINT_CELL_LIMIT,
+  DATAFRAME_PRINT_IMAGE_LIMIT,
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
   dataFramePrintBudget,
   type DataFramePrintMeasure,
   fillDataFramePrintSlot,
+  fitDataFramePrintTable,
   isHiddenFromPrint,
 } from "./printDataFrame"
 
@@ -267,30 +269,37 @@ describe("fillDataFramePrintSlot", () => {
         }
       })
 
-    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      1,
+      () => textCell("Ada"),
+      measure
+    )
 
     expect(slot.querySelector("table")?.style.zoom).toBe("0.25")
     spy.mockRestore()
   })
 
-  it("copies a script nonce onto the probe style and skips an empty one", () => {
-    const script = document.createElement("script")
-    script.setAttribute("nonce", "print-nonce")
-    document.head.append(script)
-    let nonce: string | null = "missing"
+  it("scales from the visible dataframe when the print slot has no width", () => {
+    const frame = document.createElement("div")
+    frame.className = "stDataFrame"
+    let frameWidth = 80
+    Object.defineProperty(frame, "clientWidth", { get: () => frameWidth })
+    Object.defineProperty(slot, "clientWidth", { value: 0 })
+    frame.append(slot)
+    document.body.append(frame)
     const spy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function width(this: HTMLElement) {
         if (this.tagName === "TABLE") {
-          const style = this.parentElement?.querySelector("style")
-          nonce = style?.getAttribute("nonce") ?? null
           return {
             x: 0,
             y: 0,
-            width: 10,
+            width: 320,
             height: 0,
             top: 0,
-            right: 10,
+            right: 320,
             bottom: 0,
             left: 0,
             toJSON: () => ({}),
@@ -309,13 +318,20 @@ describe("fillDataFramePrintSlot", () => {
         }
       })
 
-    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
-    expect(nonce).toBe("print-nonce")
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      1,
+      () => textCell("Ada"),
+      measure
+    )
 
-    script.remove()
-    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
-    expect(nonce).toBeNull()
+    expect(slot.querySelector("table")?.style.zoom).toBe("0.25")
+    frameWidth = 160
+    fitDataFramePrintTable(slot)
+    expect(slot.querySelector("table")?.style.zoom).toBe("0.5")
     spy.mockRestore()
+    frame.remove()
   })
 
   it("clears the table so the screen grid is restored after printing", () => {
@@ -355,11 +371,17 @@ describe("fillDataFramePrintSlot", () => {
   it("measures the laid-out table, including its font", () => {
     let css = ""
     let probeWidth = ""
+    let sawStyleElement = false
     const spy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function width(this: HTMLElement) {
         if (this.tagName === "TABLE") {
-          css = this.parentElement?.querySelector("style")?.textContent ?? ""
+          css = [
+            this.style.cssText,
+            this.querySelector("th")?.style.cssText ?? "",
+            this.querySelector("img")?.style.cssText ?? "",
+          ].join(" ")
+          sawStyleElement = this.parentElement?.querySelector("style") !== null
           probeWidth = this.parentElement?.style.width ?? ""
           return {
             x: 0,
@@ -396,16 +418,51 @@ describe("fillDataFramePrintSlot", () => {
       imageHeight: "2rem",
     })
 
+    expect(sawStyleElement).toBe(false)
     expect(css).toContain("Custom, sans-serif")
     expect(css).toContain("1.5rem")
     expect(css).toContain("0.25rem 1rem")
-    expect(css).toContain("width: 4rem")
-    expect(css).toContain("height: 2rem")
     expect(probeWidth).toBe("100000px")
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
       "320px"
     )
     spy.mockRestore()
+  })
+
+  it("prints a multi-level header with its group", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Revenue", { group: "East / Sales" })],
+      1,
+      () => textCell("1"),
+      measure
+    )
+
+    expect(slot.querySelector("th")?.textContent).toBe(
+      "East / Sales / Revenue"
+    )
+  })
+
+  it("keeps the canvas when a frame has too many images", () => {
+    const budget = dataFramePrintBudget(new Event("beforeprint"))
+    fillDataFramePrintSlot(
+      slot,
+      [column("Photo", { kind: "image" })],
+      DATAFRAME_PRINT_IMAGE_LIMIT + 1,
+      () => ({
+        kind: GridCellKind.Image,
+        data: ["data:image/png;base64,aaaa"],
+        displayData: ["data:image/png;base64,aaaa"],
+        allowOverlay: true,
+      }),
+      measure,
+      budget
+    )
+
+    expect(slot.querySelector("table")).toBeNull()
+    expect(slot.querySelector("img")).toBeNull()
+    expect(slot.textContent).toContain("too many images")
+    expect(budget.remaining).toBe(DATAFRAME_PRINT_CELL_LIMIT)
   })
 
   it("prints column values as they appear in the grid", () => {

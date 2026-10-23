@@ -211,6 +211,11 @@ describe("Metric element", () => {
     expect(css).toContain("text-overflow:clip")
     expect(css).toContain("--st-metric-text-width")
     expect(css).toContain("atan2(100cqi, var(--st-metric-text-width, 100cqi))")
+    const fontRule = css
+      .split("}")
+      .find(rule => rule.includes("atan2(100cqi, var(--st-metric-text-width"))
+    expect(fontRule).toBeDefined()
+    expect(fontRule).not.toContain(".stMarkdownEllipsis p")
     expect(screen.getByTestId("stMetricValue")).toHaveClass("stMetricValue")
 
     const rect = vi

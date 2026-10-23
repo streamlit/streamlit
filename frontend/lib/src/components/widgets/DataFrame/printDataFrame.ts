@@ -76,6 +76,16 @@ interface DataFramePrintMeasureTheme {
  */
 export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
 
+/**
+ * Most images one print table will request.
+ *
+ * The on-screen grid only fetches images in visible rows. Expanding every
+ * loaded image cell starts a request per URL, and most of them are still
+ * loading when the browser snapshots the page. Past this many images the
+ * canvas stays in place.
+ */
+export const DATAFRAME_PRINT_IMAGE_LIMIT = 32
+
 const PRINT_MEASURE_WIDTH = "100000px"
 
 /**
@@ -99,27 +109,6 @@ export function dataFramePrintBudget(event: Event): DataFramePrintBudget {
   const created = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
   printBudgets.set(event, created)
   return created
-}
-
-/**
- * Nonce for the off-screen probe stylesheet.
- *
- * The app bundle is a module, so `document.currentScript` is null while it
- * evaluates. A script that still exposes a nonce is the same value Emotion
- * forwards, and only when it is non-empty.
- */
-function readStyleNonce(): string {
-  const current = document.currentScript
-  if (current instanceof HTMLScriptElement && current.nonce) {
-    return current.nonce
-  }
-  for (const script of document.querySelectorAll("script")) {
-    const nonce = script.nonce || script.getAttribute("nonce")
-    if (nonce) {
-      return nonce
-    }
-  }
-  return ""
 }
 
 /**
@@ -211,10 +200,9 @@ export function fillDataFramePrintSlot(
     budget.remaining -= cellCount
   }
 
-  const headers = printable.map(
-    ({ column }) => column.title || column.name || ""
-  )
+  const headers = printable.map(({ column }) => printColumnHeader(column))
   const rows: PrintCellContent[][] = []
+  let imageCount = 0
   for (let row = 0; row < numRows; row++) {
     const cells: PrintCellContent[] = []
     for (const { index } of printable) {
@@ -231,22 +219,77 @@ export function fillDataFramePrintSlot(
         )
         return
       }
+      if (content.kind === "images") {
+        imageCount += content.urls.length
+        if (imageCount > DATAFRAME_PRINT_IMAGE_LIMIT) {
+          if (budget) {
+            budget.remaining += cellCount
+          }
+          setPrintNote(
+            slot,
+            "Only the visible part of this table is printed because it has too many images."
+          )
+          return
+        }
+      }
       cells.push(content)
     }
     rows.push(cells)
   }
 
   const table = renderPrintTable(headers, rows)
-  // Read this before the table is inserted. A wide table can stretch the
-  // slot, and the scale would then stay at 1.
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const available = slot.clientWidth
+  // The slot is display:none until print media, so its width is 0 while
+  // beforeprint still uses screen media. The dataframe itself is on screen.
+  // Read it before the table is inserted: a wide table can stretch the frame
+  // and the scale would then stay at 1.
+  const available = availablePrintWidth(slot)
   const width = measurePrintWidth(table, measure)
   if (width > 0) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
-    applyPrintZoom(table, available, width)
   }
   slot.replaceChildren(table)
+  if (width > 0) {
+    applyPrintZoom(table, available, width)
+  }
+}
+
+/** Parent levels plus the leaf title, matching the grid's group row. */
+function printColumnHeader(column: BaseColumn): string {
+  const title = column.title || column.name || ""
+  const group = column.group?.trim()
+  if (!group) {
+    return title
+  }
+  return title ? `${group} / ${title}` : group
+}
+
+/**
+ * Scale an already built print table to the dataframe's current width.
+ *
+ * `beforeprint` often still uses screen media, so the first scale is the
+ * on-screen column. When print media starts, the column is the page width
+ * and this runs again.
+ */
+export function fitDataFramePrintTable(slot: HTMLElement): void {
+  const table = slot.querySelector("table")
+  if (!(table instanceof HTMLTableElement)) {
+    return
+  }
+  const width = Number.parseFloat(
+    slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)
+  )
+  if (!Number.isFinite(width) || width <= 0) {
+    return
+  }
+  applyPrintZoom(table, availablePrintWidth(slot), width)
+}
+
+/** Width of the visible dataframe, or the slot when it is measured alone. */
+function availablePrintWidth(slot: HTMLElement): number {
+  const frame = slot.closest(".stDataFrame")
+  const box = frame instanceof HTMLElement ? frame : slot
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  return box.clientWidth
 }
 
 /** Drop the print table so the on-screen grid is unchanged after printing. */
@@ -422,15 +465,13 @@ function measurePrintWidth(
   probe.style.top = "0"
   probe.style.width = PRINT_MEASURE_WIDTH
   probe.style.maxWidth = "none"
-  const style = document.createElement("style")
-  const nonce = readStyleNonce()
-  // An empty nonce does not match a host `style-src` nonce, and the probe
-  // stylesheet is dropped. Leave it unset in that case.
-  if (nonce) {
-    style.nonce = nonce
+  // Inline styles, not a <style> element. A nonce-only style-src drops an
+  // injected stylesheet, and CSSOM writes are still allowed.
+  const copy = table.cloneNode(true)
+  if (copy instanceof HTMLTableElement) {
+    applyMeasureStyles(copy, measure)
   }
-  style.textContent = printMeasureCss(measure)
-  probe.append(style, table.cloneNode(true))
+  probe.append(copy)
   document.body.append(probe)
   const laidOut = probe.querySelector("table")
   // beforeprint still uses screen media, so this copy is the only laid-out
@@ -448,42 +489,42 @@ function applyPrintZoom(
   if (available <= 0 || width <= available) {
     return
   }
-  // The fit test already has print media applied, and Linux Chromium still
-  // leaves a wide table outside the frame when the only scale is the CSS
-  // ratio. A unitless zoom is taken from the empty slot. While `beforeprint`
-  // still uses screen media the slot has no width, and the CSS ratio remains
-  // the scale for the print layout that follows.
+  // The CSS ratio is the print-layout scale. This inline value covers the
+  // case where that ratio is dropped. It is taken from the visible dataframe,
+  // which has a width while the slot is still display:none.
   table.style.zoom = String(available / width)
+}
+
+function applyMeasureStyles(
+  table: HTMLTableElement,
+  measure: DataFramePrintMeasure
+): void {
+  table.style.borderCollapse = "collapse"
+  table.style.width = "max-content"
+  table.style.fontFamily = measure.fontFamily
+  table.style.fontSize = measure.fontSize
+  for (const cell of table.querySelectorAll("th, td")) {
+    if (!(cell instanceof HTMLElement)) {
+      continue
+    }
+    cell.style.whiteSpace = "nowrap"
+    cell.style.padding = measure.padding
+    cell.style.border = "0"
+    cell.style.fontWeight = String(
+      cell.tagName === "TH" ? measure.headerWeight : measure.cellWeight
+    )
+    cell.style.textAlign = "left"
+  }
+  for (const image of table.querySelectorAll("img")) {
+    image.style.width = measure.imageWidth
+    image.style.height = measure.imageHeight
+    image.style.objectFit = "contain"
+  }
 }
 
 function getLaidOutWidth(element: HTMLElement): number {
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
   return element.getBoundingClientRect().width
-}
-
-function printMeasureCss(measure: DataFramePrintMeasure): string {
-  const table = `.${DATAFRAME_PRINT_TABLE_CLASS}`
-  return `
-    ${table} {
-      border-collapse: collapse;
-      width: max-content;
-      font-family: ${measure.fontFamily};
-      font-size: ${measure.fontSize};
-    }
-    ${table} th, ${table} td {
-      white-space: nowrap;
-      padding: ${measure.padding};
-      border: 0;
-      font-weight: ${measure.cellWeight};
-      text-align: left;
-    }
-    ${table} th { font-weight: ${measure.headerWeight}; }
-    ${table} img {
-      width: ${measure.imageWidth};
-      height: ${measure.imageHeight};
-      object-fit: contain;
-    }
-  `
 }
 
 function renderPrintTable(

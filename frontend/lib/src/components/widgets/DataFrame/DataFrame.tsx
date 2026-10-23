@@ -108,6 +108,7 @@ import {
   clearDataFramePrintSlot,
   dataFramePrintBudget,
   fillDataFramePrintSlot,
+  fitDataFramePrintTable,
   isHiddenFromPrint,
 } from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
@@ -401,20 +402,27 @@ function DataFrame({
     getCellContent: getOriginalCellContent,
   })
 
-  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
-    useLazyDataLoader({
-      initialChunk: data,
-      columns: originalColumns,
-      numRows: originalNumRows,
-      sourceId: lazyData?.sourceId ?? "",
-      pageSize: lazyData?.pageSize ?? 1,
-      sortState: serverSortState,
-      backendOperationClient,
-    })
+  const {
+    getCellContent: getLazyCellContent,
+    getCachedCellContent,
+    onVisibleRegionChanged,
+  } = useLazyDataLoader({
+    initialChunk: data,
+    columns: originalColumns,
+    numRows: originalNumRows,
+    sourceId: lazyData?.sourceId ?? "",
+    pageSize: lazyData?.pageSize ?? 1,
+    sortState: serverSortState,
+    backendOperationClient,
+  })
 
   // In lazy mode, cells come from the chunked loader; otherwise from the
   // client-sorted eager getter.
   const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+  // Printing must not schedule a chunk request. A request changes
+  // getCellContent when the chunk arrives and would rebuild the print table
+  // while the dialog is open.
+  const getPrintCellContent = isLazy ? getCachedCellContent : getCellContent
 
   // Whether a specific column can be sorted in the current mode. Eager sorting
   // is client-side and works for any column (incl. the index). Lazy sorting is
@@ -981,7 +989,7 @@ function DataFrame({
         slot,
         columns,
         numRows,
-        getCellContent,
+        getPrintCellContent,
         printMeasure,
         // One budget for every dataframe listening to this same event.
         dataFramePrintBudget(event)
@@ -990,15 +998,33 @@ function DataFrame({
     const onAfterPrint = (): void => {
       clearDataFramePrintSlot(slot)
     }
+    // beforeprint still uses screen media, so the first zoom is the on-screen
+    // column. This fires once the page is actually laid out for print.
+    const printMedia = window.matchMedia("print")
+    const onPrintMedia = (): void => {
+      if (printMedia.matches) {
+        fitDataFramePrintTable(slot)
+      }
+    }
 
     window.addEventListener("beforeprint", onBeforePrint)
     window.addEventListener("afterprint", onAfterPrint)
+    printMedia.addEventListener("change", onPrintMedia)
     return () => {
       window.removeEventListener("beforeprint", onBeforePrint)
       window.removeEventListener("afterprint", onAfterPrint)
-      clearDataFramePrintSlot(slot)
+      printMedia.removeEventListener("change", onPrintMedia)
     }
-  }, [columns, getCellContent, isEmptyTable, numRows, printMeasure])
+  }, [columns, getPrintCellContent, isEmptyTable, numRows, printMeasure])
+
+  useEffect(() => {
+    const slot = printSlotRef.current
+    return () => {
+      if (slot) {
+        clearDataFramePrintSlot(slot)
+      }
+    }
+  }, [])
 
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's

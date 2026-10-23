@@ -103,9 +103,9 @@ export const StyledResizableContainer =
           // width inside `calc()` needs typed arithmetic, which older
           // browsers drop, so the table would print unscaled. `atan2` takes
           // the two lengths and `tan` turns that angle back into the ratio.
-          // When print media is already active, `beforeprint` also sets a
-          // unitless inline zoom from the slot width. Linux Chromium keeps
-          // that value where it drops this math.
+          // `beforeprint` also sets a unitless inline zoom from the visible
+          // dataframe, and again when print media starts. The slot is
+          // display:none until then, so it has no width of its own.
           zoom: `min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}))))`,
           "th, td": {
             whiteSpace: "nowrap",

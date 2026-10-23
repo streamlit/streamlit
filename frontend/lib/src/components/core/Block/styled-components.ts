@@ -421,7 +421,10 @@ export const StyledFlexContainerBlock =
                 // alone.
                 ...(gapWidth &&
                   gapWidth !== theme.spacing.none && {
-                    "& > :not(:last-child):not(:has(.stBalloons)):not(:has(.stSnow))":
+                    // A cache spinner and a page link already cancel this gap
+                    // with their own negative margin. This selector is more
+                    // specific, so those containers are left alone too.
+                    "& > :not(:last-child):not(:has(.stBalloons)):not(:has(.stSnow)):not(:has(> .stCacheSpinner)):not(:has(> .stPageLink))":
                       {
                         marginBottom: gapWidth,
                       },

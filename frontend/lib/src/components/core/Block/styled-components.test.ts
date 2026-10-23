@@ -111,6 +111,8 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(gapped).toContain("margin-bottom:16px")
     expect(gapped).toContain(":not(:has(.stBalloons))")
     expect(gapped).toContain(":not(:has(.stSnow))")
+    expect(gapped).toContain(":not(:has(> .stCacheSpinner))")
+    expect(gapped).toContain(":not(:has(> .stPageLink))")
     expect(gapped).not.toContain("padding-bottom:16px")
   })
 
