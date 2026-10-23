@@ -303,7 +303,11 @@ class Page:
 
         ctx = get_script_run_ctx()
         if not ctx:
+            # Navigation APIs check this flag so they can raise a clear error
+            # instead of failing on attributes that are never set below.
+            self._created_outside_run = True
             return
+        self._created_outside_run = False
 
         # Check if page is an external URL
         if isinstance(page, str) and is_url(page):
@@ -419,6 +423,7 @@ class Page:
 
         The title supports GitHub-flavored Markdown as described in ``st.Page``.
         """
+        _raise_if_page_created_outside_run(self)
         return self._title
 
     @property
@@ -427,6 +432,7 @@ class Page:
 
         If no icon was declared in ``st.Page``, this property returns ``""``.
         """
+        _raise_if_page_created_outside_run(self)
         return self._icon
 
     @property
@@ -442,6 +448,7 @@ class Page:
         The default page will always have a ``url_path`` of ``""`` to indicate
         the root URL (e.g. homepage).
         """
+        _raise_if_page_created_outside_run(self)
         return "" if self._default else self._url_path
 
     @property
@@ -464,6 +471,10 @@ class Page:
         the external URL in a new browser tab instead of navigating within
         the app.
         """
+        # Outside a script run, st.navigation still classifies pages while a
+        # launcher is imported. Raise only once a run exists.
+        if get_script_run_ctx() is not None:
+            _raise_if_page_created_outside_run(self)
         return self._external_url is not None
 
     @property
@@ -472,6 +483,10 @@ class Page:
 
         Returns ``None`` if this is not an external URL page.
         """
+        # Outside a script run, st.navigation still classifies pages while a
+        # launcher is imported. Raise only once a run exists.
+        if get_script_run_ctx() is not None:
+            _raise_if_page_created_outside_run(self)
         return self._external_url
 
     def run(self) -> None:
@@ -486,6 +501,15 @@ class Page:
         to the external URL is handled by the frontend.
 
         """
+        # Reject import-time pages once a script run exists. Outside a run, the
+        # page that bare-mode st.navigation returned must stay a no-op; any
+        # other import-time page lacks _can_be_called and would raise
+        # AttributeError.
+        if getattr(self, "_created_outside_run", False) and (
+            get_script_run_ctx() is not None or not hasattr(self, "_can_be_called")
+        ):
+            _raise_if_page_created_outside_run(self)
+
         if not self._can_be_called:
             raise StreamlitAPIException(
                 "This page cannot be called directly. Only the page returned from st.navigation can be called once.",
@@ -533,6 +557,22 @@ def _create_page(page: str | Path, *, default: bool = False) -> Page:
         page_object, page, default=default
     )
     return page_object
+
+
+def _raise_if_page_created_outside_run(page: Page) -> None:
+    """Reject a Page built while no script run was active.
+
+    Importing a callable app can call ``st.Page`` before a run exists.
+    Navigation APIs raise once a script run starts, before they read
+    attributes that were never initialized.
+    """
+    if not getattr(page, "_created_outside_run", False):
+        return
+    raise StreamlitAPIException(
+        "st.Page must be created while the Streamlit script is running. "
+        "Call st.Page inside the app entrypoint, not at module import time.",
+        error_id="page-created-outside-script-run",
+    )
 
 
 def _validate_registered_page(page: Page) -> None:
