@@ -26,6 +26,7 @@ import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
+  dataFramePrintBudget,
   type DataFramePrintMeasure,
   fillDataFramePrintSlot,
   isHiddenFromPrint,
@@ -176,6 +177,145 @@ describe("fillDataFramePrintSlot", () => {
 
     expect(slot.querySelector("table")).toBeNull()
     expect(slot.textContent).toContain("too large")
+  })
+
+  it("shares one print budget across frames and gives it back if a row is loading", () => {
+    const budget = dataFramePrintBudget(new Event("beforeprint"))
+    budget.remaining = 2
+
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      1,
+      () => textCell("Ada"),
+      measure,
+      budget
+    )
+    expect(slot.querySelector("table")).not.toBeNull()
+    expect(budget.remaining).toBe(1)
+
+    const second = document.createElement("div")
+    document.body.appendChild(second)
+    fillDataFramePrintSlot(
+      second,
+      [column("Name"), column("City")],
+      1,
+      () => textCell("Ada"),
+      measure,
+      budget
+    )
+    expect(second.querySelector("table")).toBeNull()
+    expect(second.textContent).toContain("too large")
+    expect(budget.remaining).toBe(1)
+    second.remove()
+
+    const loading = document.createElement("div")
+    document.body.appendChild(loading)
+    const loadingBudget = { remaining: 2 }
+    fillDataFramePrintSlot(
+      loading,
+      [column("Name")],
+      2,
+      ([, row]) =>
+        row === 0
+          ? textCell("Ada")
+          : {
+              kind: GridCellKind.Loading,
+              allowOverlay: false,
+              skeletonWidth: 60,
+            },
+      measure,
+      loadingBudget
+    )
+    expect(loading.querySelector("table")).toBeNull()
+    expect(loadingBudget.remaining).toBe(2)
+    loading.remove()
+
+    const again = dataFramePrintBudget(new Event("beforeprint"))
+    expect(again.remaining).toBe(DATAFRAME_PRINT_CELL_LIMIT)
+    expect(again).not.toBe(budget)
+  })
+
+  it("scales a wide table with a unitless zoom when the slot already has a width", () => {
+    Object.defineProperty(slot, "clientWidth", { value: 80 })
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function width(this: HTMLElement) {
+        if (this.tagName === "TABLE") {
+          return {
+            x: 0,
+            y: 0,
+            width: 320,
+            height: 0,
+            top: 0,
+            right: 320,
+            bottom: 0,
+            left: 0,
+            toJSON: () => ({}),
+          }
+        }
+        return {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          toJSON: () => ({}),
+        }
+      })
+
+    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
+
+    expect(slot.querySelector("table")?.style.zoom).toBe("0.25")
+    spy.mockRestore()
+  })
+
+  it("copies a script nonce onto the probe style and skips an empty one", () => {
+    const script = document.createElement("script")
+    script.setAttribute("nonce", "print-nonce")
+    document.head.append(script)
+    let nonce: string | null = "missing"
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function width(this: HTMLElement) {
+        if (this.tagName === "TABLE") {
+          const style = this.parentElement?.querySelector("style")
+          nonce = style?.getAttribute("nonce") ?? null
+          return {
+            x: 0,
+            y: 0,
+            width: 10,
+            height: 0,
+            top: 0,
+            right: 10,
+            bottom: 0,
+            left: 0,
+            toJSON: () => ({}),
+          }
+        }
+        return {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          toJSON: () => ({}),
+        }
+      })
+
+    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
+    expect(nonce).toBe("print-nonce")
+
+    script.remove()
+    fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), measure)
+    expect(nonce).toBeNull()
+    spy.mockRestore()
   })
 
   it("clears the table so the screen grid is restored after printing", () => {

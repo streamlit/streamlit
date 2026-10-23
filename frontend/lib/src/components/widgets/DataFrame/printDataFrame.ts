@@ -77,7 +77,50 @@ interface DataFramePrintMeasureTheme {
 export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
 
 const PRINT_MEASURE_WIDTH = "100000px"
-const styleNonce = document.currentScript?.nonce ?? ""
+
+/**
+ * Cells still available for this print.
+ *
+ * Each dataframe has its own `beforeprint` listener. They share one budget
+ * so several medium frames cannot all expand in the same pass.
+ */
+export interface DataFramePrintBudget {
+  remaining: number
+}
+
+const printBudgets = new WeakMap<Event, DataFramePrintBudget>()
+
+/** Budget for every dataframe that handles this same `beforeprint` event. */
+export function dataFramePrintBudget(event: Event): DataFramePrintBudget {
+  const existing = printBudgets.get(event)
+  if (existing) {
+    return existing
+  }
+  const created = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
+  printBudgets.set(event, created)
+  return created
+}
+
+/**
+ * Nonce for the off-screen probe stylesheet.
+ *
+ * The app bundle is a module, so `document.currentScript` is null while it
+ * evaluates. A script that still exposes a nonce is the same value Emotion
+ * forwards, and only when it is non-empty.
+ */
+function readStyleNonce(): string {
+  const current = document.currentScript
+  if (current instanceof HTMLScriptElement && current.nonce) {
+    return current.nonce
+  }
+  for (const script of document.querySelectorAll("script")) {
+    const nonce = script.nonce || script.getAttribute("nonce")
+    if (nonce) {
+      return nonce
+    }
+  }
+  return ""
+}
 
 /**
  * Font and spacing of the printed table for the active theme.
@@ -141,7 +184,8 @@ export function fillDataFramePrintSlot(
   columns: readonly BaseColumn[],
   numRows: number,
   getCellContent: (cell: Item) => GridCell,
-  measure: DataFramePrintMeasure
+  measure: DataFramePrintMeasure,
+  budget?: DataFramePrintBudget
 ): void {
   clearDataFramePrintSlot(slot)
 
@@ -154,12 +198,17 @@ export function fillDataFramePrintSlot(
     return
   }
 
-  if (numRows * printable.length > DATAFRAME_PRINT_CELL_LIMIT) {
+  const cellCount = numRows * printable.length
+  const cellLimit = budget?.remaining ?? DATAFRAME_PRINT_CELL_LIMIT
+  if (cellCount > cellLimit) {
     setPrintNote(
       slot,
       "Only the visible part of this table is printed because it is too large to expand."
     )
     return
+  }
+  if (budget) {
+    budget.remaining -= cellCount
   }
 
   const headers = printable.map(
@@ -173,6 +222,9 @@ export function fillDataFramePrintSlot(
       // An unloaded lazy row cannot be fetched before the browser snapshots
       // the page. A partial table would show blanks, so keep the canvas.
       if (content === null) {
+        if (budget) {
+          budget.remaining += cellCount
+        }
         setPrintNote(
           slot,
           "Only the visible part of this table is printed because some rows are still loading."
@@ -185,9 +237,14 @@ export function fillDataFramePrintSlot(
   }
 
   const table = renderPrintTable(headers, rows)
+  // Read this before the table is inserted. A wide table can stretch the
+  // slot, and the scale would then stay at 1.
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const available = slot.clientWidth
   const width = measurePrintWidth(table, measure)
   if (width > 0) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
+    applyPrintZoom(table, available, width)
   }
   slot.replaceChildren(table)
 }
@@ -366,7 +423,12 @@ function measurePrintWidth(
   probe.style.width = PRINT_MEASURE_WIDTH
   probe.style.maxWidth = "none"
   const style = document.createElement("style")
-  style.nonce = styleNonce
+  const nonce = readStyleNonce()
+  // An empty nonce does not match a host `style-src` nonce, and the probe
+  // stylesheet is dropped. Leave it unset in that case.
+  if (nonce) {
+    style.nonce = nonce
+  }
   style.textContent = printMeasureCss(measure)
   probe.append(style, table.cloneNode(true))
   document.body.append(probe)
@@ -376,6 +438,22 @@ function measurePrintWidth(
   const width = laidOut instanceof HTMLElement ? getLaidOutWidth(laidOut) : 0
   probe.remove()
   return width
+}
+
+function applyPrintZoom(
+  table: HTMLTableElement,
+  available: number,
+  width: number
+): void {
+  if (available <= 0 || width <= available) {
+    return
+  }
+  // The fit test already has print media applied, and Linux Chromium still
+  // leaves a wide table outside the frame when the only scale is the CSS
+  // ratio. A unitless zoom is taken from the empty slot. While `beforeprint`
+  // still uses screen media the slot has no width, and the CSS ratio remains
+  // the scale for the print layout that follows.
+  table.style.zoom = String(available / width)
 }
 
 function getLaidOutWidth(element: HTMLElement): number {
@@ -432,6 +510,8 @@ function renderPrintTable(
           const image = document.createElement("img")
           image.alt = ""
           image.src = url
+          // The print snapshot can happen before this image loads. A remote
+          // URL the grid has not already fetched may print as an empty box.
           cell.append(image)
         }
       } else {

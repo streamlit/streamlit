@@ -106,6 +106,7 @@ import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import {
   buildDataFramePrintMeasure,
   clearDataFramePrintSlot,
+  dataFramePrintBudget,
   fillDataFramePrintSlot,
   isHiddenFromPrint,
 } from "./printDataFrame"
@@ -963,7 +964,7 @@ function DataFrame({
       return
     }
 
-    const onBeforePrint = (): void => {
+    const onBeforePrint = (event: Event): void => {
       // The slot is display:none on screen, so visibility is read from the
       // dataframe. A closed tab, a collapsed expander, or any other hidden
       // ancestor stays mounted. A print table there would still match
@@ -981,7 +982,9 @@ function DataFrame({
         columns,
         numRows,
         getCellContent,
-        printMeasure
+        printMeasure,
+        // One budget for every dataframe listening to this same event.
+        dataFramePrintBudget(event)
       )
     }
     const onAfterPrint = (): void => {

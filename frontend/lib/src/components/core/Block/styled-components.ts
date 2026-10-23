@@ -339,6 +339,13 @@ export interface StyledFlexContainerBlockProps {
   overflowX?: React.CSSProperties["overflowX"]
 }
 
+/** A pixel, rem, or percentage height. Content height is `auto` or unset. */
+function hasDefinitePrintHeight(
+  height: React.CSSProperties["height"] | undefined
+): boolean {
+  return height !== undefined && height !== "auto"
+}
+
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
     ({
@@ -362,11 +369,15 @@ export const StyledFlexContainerBlock =
       const mainAxis = getJustifyContent(justify)
       // display:block drops align-items and justify-content. A container
       // that centers or ends its content keeps flex so print matches the
-      // screen. The default start/stretch block is the one whose flex
-      // height collapses and paints a chart over the next heading.
+      // screen. A fixed or percentage height does too: stretch children are
+      // `height: 100%` plus a flex value, and without a flex parent each one
+      // takes the full container instead of sharing it. The default
+      // content-height block is the one whose flex height collapses and
+      // paints a chart over the next heading.
       const keepsPrintFlex =
         direction === Direction.VERTICAL &&
-        (crossAxis === "center" ||
+        (hasDefinitePrintHeight(height) ||
+          crossAxis === "center" ||
           crossAxis === "end" ||
           mainAxis === "center" ||
           mainAxis === "end" ||

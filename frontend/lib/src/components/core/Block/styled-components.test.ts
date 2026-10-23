@@ -113,6 +113,22 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(gapped).toContain(":not(:has(.stSnow))")
     expect(gapped).not.toContain("padding-bottom:16px")
   })
+
+  it("keeps flex when a vertical container has a fixed height", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+        })
+      )
+    )
+
+    // Stretch children are height 100%. A block parent gives each of them
+    // the full container, so a fixed-height container keeps flex.
+    expect(css).not.toContain("@media print")
+  })
 })
 
 describe("StyledColumn print layout", () => {

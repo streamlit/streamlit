@@ -281,15 +281,23 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
                 && inner.right <= outer.right + 1
                 && inner.top >= outer.top - 1
                 && inner.bottom <= outer.bottom + 1;
+            const tableStyle = getComputedStyle(table);
             return {
                 tableInsideFrame: inside(tableBox, frameBox),
                 chartInsideMain: inside(chartBox, mainBox),
                 sidebarBesideMain: sidebarBox.right <= mainBox.left + 1,
                 sidebarIsMinWidth: Math.abs(sidebarBox.width - 12.5 * rootFont) < 1,
+                probeWidth: tableStyle.getPropertyValue("--st-df-print-width"),
+                slotClientWidth: table.parentElement
+                    ? table.parentElement.clientWidth
+                    : 0,
+                zoom: tableStyle.zoom,
+                tableWidth: tableBox.width,
+                frameWidth: frameBox.width,
             };
         }"""
     )
-    assert fit["tableInsideFrame"]
+    assert fit["tableInsideFrame"], fit
     assert fit["chartInsideMain"]
     assert fit["sidebarBesideMain"]
     assert fit["sidebarIsMinWidth"]
