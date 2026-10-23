@@ -38,6 +38,35 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
       borderRadius: theme.radii.default,
       overflow: "hidden",
     }),
+    // A printed column is often narrower than the on-screen card. The label
+    // and delta wrap onto extra lines. The value stays one line and scales
+    // down to the card when the figure is wider than that line.
+    "@media print": {
+      overflow: "visible",
+      "& .stMarkdownEllipsis, & .stMarkdownEllipsis p": {
+        overflow: "visible",
+        textOverflow: "clip",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+        maxWidth: "100%",
+        width: "auto",
+        minWidth: 0,
+      },
+      "& .stMetricValue": {
+        containerType: "inline-size",
+      },
+      "& .stMetricValue .stMarkdownEllipsis, & .stMetricValue .stMarkdownEllipsis p":
+        {
+          whiteSpace: "nowrap",
+          overflowWrap: "normal",
+          // `--st-metric-text-width` is the figure's width at 1em, recorded
+          // in beforeprint. `atan2` divides the print column by that width
+          // without typed arithmetic. A wide card stays at 1em.
+          // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- container query unit, not a theme length
+          fontSize:
+            "min(1em, calc(1em * tan(atan2(100cqi, var(--st-metric-text-width, 100cqi)))))",
+        },
+    },
   })
 )
 
@@ -117,6 +146,9 @@ export const StyledDeltaContainer = styled.div(({ theme }) => ({
   maxWidth: "100%",
   overflow: "hidden",
   paddingBottom: theme.spacing.twoXS,
+  "@media print": {
+    overflow: "visible",
+  },
 }))
 
 export const StyledDeltaDescription = styled.div({
@@ -124,6 +156,9 @@ export const StyledDeltaDescription = styled.div({
   overflow: "hidden",
   flexShrink: 1,
   minWidth: 0,
+  "@media print": {
+    overflow: "visible",
+  },
 })
 
 export const StyledMetricLabelRow = styled.div(({ theme }) => ({
