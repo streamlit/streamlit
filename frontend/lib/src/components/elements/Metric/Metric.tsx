@@ -44,6 +44,7 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_TEXT_WIDTH_VAR,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
@@ -59,9 +60,6 @@ import {
 const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
-
-/** Figure width at the on-screen metric font, read while printing. */
-const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
 
 /**
  * Record the value's width at the card's font size.

@@ -25,6 +25,10 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
+import {
+  DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+} from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -155,12 +159,13 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       // print table is taller than the on-screen grid, and a fallback note
       // sits under the canvas, so the container grows with that content
       // instead of letting it paint outside the card.
-      "&:has(.stDataFramePrintTable), &:has(.stDataFramePrintNote)": {
-        height: "auto",
-        maxHeight: "none",
-        minHeight: 0,
-        contain: "none",
-      },
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+        {
+          height: "auto",
+          maxHeight: "none",
+          minHeight: 0,
+          contain: "none",
+        },
     },
 
     ":has(> .stCacheSpinner)": {
@@ -413,21 +418,16 @@ export const StyledFlexContainerBlock =
             ? {}
             : {
                 display: "block",
-                // `gap` only applies to a flex box. Margin keeps the
-                // space outside the child, so a fixed height is not
-                // eaten by border-box padding. Balloons and snow cancel
-                // the gap with their own negative margin, and this
-                // selector is more specific, so those children are left
-                // alone.
+                // `gap` only applies to a flex box, so print uses a bottom
+                // margin instead. Margin stays outside the child, so
+                // border-box padding does not eat into a fixed height.
+                // Balloons, snow, and the cache spinner are gone before a
+                // print, so they are not excluded here.
                 ...(gapWidth &&
                   gapWidth !== theme.spacing.none && {
-                    // Balloons, snow, and a cache spinner cancel the flex gap
-                    // with their own negative margin. This selector is more
-                    // specific, so those children keep that margin.
-                    "& > :not(:last-child):not(:has(.stBalloons)):not(:has(.stSnow)):not(:has(> .stCacheSpinner)):not(:has(> .stPageLink))":
-                      {
-                        marginBottom: gapWidth,
-                      },
+                    "& > :not(:last-child):not(:has(> .stPageLink))": {
+                      marginBottom: gapWidth,
+                    },
                     // A page link only trims the flex gap, by xs above and
                     // below. Print replaces the gap with margin, so the trim
                     // stays in that margin. The next link's own negative
@@ -448,7 +448,7 @@ export const StyledFlexContainerBlock =
           // A table inside a closed tab is not built, so it does not
           // opt the card out.
           "@media (orientation: landscape)": {
-            "&:not(:has(.stDataFramePrintTable))": {
+            [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
               breakInside: "avoid",
               pageBreakInside: "avoid",
             },

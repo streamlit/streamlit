@@ -125,7 +125,17 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 
 
 def _evaluate_match_media_print(app: Page):
-    app.evaluate("matchMedia('print').matches")
+    """Tell print listeners that print media is active.
+
+    ``emulate_media`` applies the print stylesheet and does not fire the
+    ``matchMedia("print")`` change event. The dataframe refits its table on
+    that event, once the column has its printed width.
+    """
+    app.evaluate(
+        """() => {
+            window.matchMedia("print").dispatchEvent(new Event("change"))
+        }"""
+    )
 
 
 # DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
@@ -264,6 +274,7 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
     fit = app.evaluate(
         """() => {
             const table = document.querySelector(".stDataFramePrintTable");
+            const scale = table.closest(".stDataFramePrintScale");
             const frame = table.closest("[data-testid='stDataFrame']");
             const chart = document.querySelector("[data-testid='stVegaLiteChart']");
             const main = document.querySelector("[data-testid='stMainBlockContainer']");
@@ -282,23 +293,27 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
                 && inner.right <= outer.right + 1
                 && inner.top >= outer.top - 1
                 && inner.bottom <= outer.bottom + 1;
-            const tableStyle = getComputedStyle(table);
+            const scaleStyle = getComputedStyle(scale);
             return {
                 tableInsideFrame: inside(tableBox, frameBox),
                 chartInsideMain: inside(chartBox, mainBox),
                 sidebarBesideMain: sidebarBox.right <= mainBox.left + 1,
                 sidebarIsMinWidth: Math.abs(sidebarBox.width - 12.5 * rootFont) < 1,
-                probeWidth: tableStyle.getPropertyValue("--st-df-print-width"),
-                slotClientWidth: table.parentElement
-                    ? table.parentElement.clientWidth
+                probeWidth: scaleStyle.getPropertyValue("--st-df-print-width"),
+                slotClientWidth: scale.parentElement
+                    ? scale.parentElement.clientWidth
                     : 0,
-                zoom: tableStyle.zoom,
+                zoom: scaleStyle.zoom,
                 tableWidth: tableBox.width,
                 frameWidth: frameBox.width,
             };
         }"""
     )
-    assert fit["tableInsideFrame"], fit
+    assert fit["tableInsideFrame"], (
+        f"print table is outside the dataframe: zoom={fit['zoom']} "
+        f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
+        f"probeWidth={fit['probeWidth']} slotClientWidth={fit['slotClientWidth']}"
+    )
     assert fit["chartInsideMain"]
     assert fit["sidebarBesideMain"]
     assert fit["sidebarIsMinWidth"]

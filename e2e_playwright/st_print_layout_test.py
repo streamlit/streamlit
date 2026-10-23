@@ -31,9 +31,17 @@ def test_print_stacks_columns_and_fits_the_dataframe(
     expect(app.get_by_text("Plain column")).to_be_visible()
     expect(app.get_by_text("Bordered column")).to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active")
+    # A browser fires beforeprint while screen media is still active, then
+    # switches to print. The matchMedia change is what refits the table to
+    # the printed column.
     app.set_viewport_size(_PORTRAIT)
     app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    app.emulate_media(media="print", forced_colors="active")
+    app.evaluate(
+        """() => {
+            window.matchMedia("print").dispatchEvent(new Event("change"))
+        }"""
+    )
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")

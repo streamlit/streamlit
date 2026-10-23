@@ -308,6 +308,7 @@ describe("DataFrame widget", () => {
     // The print table is scaled down to the page so columns past the
     // on-screen viewport are not clipped.
     expect(css).toContain(".stDataFramePrintTable")
+    expect(css).toContain(".stDataFramePrintScale")
     expect(css).toContain(
       "zoom:min(1, tan(atan2(100cqw, var(--st-df-print-width))))"
     )

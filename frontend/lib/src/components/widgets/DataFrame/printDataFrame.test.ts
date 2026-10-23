@@ -25,6 +25,7 @@ import {
   DATAFRAME_PRINT_CELL_LIMIT,
   DATAFRAME_PRINT_IMAGE_LIMIT,
   DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_SCALE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
   dataFramePrintBudget,
@@ -277,7 +278,12 @@ describe("fillDataFramePrintSlot", () => {
       measure
     )
 
-    expect(slot.querySelector("table")?.style.zoom).toBe("0.25")
+    const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
+    const table = slot.querySelector("table")
+    expect(scale?.contains(table)).toBe(true)
+    expect(scale).toHaveProperty("style.zoom", "0.25")
+    // Zoom on the table does not shrink Chromium's border box.
+    expect(table?.getAttribute("style") ?? "").not.toContain("zoom")
     spy.mockRestore()
   })
 
@@ -326,15 +332,16 @@ describe("fillDataFramePrintSlot", () => {
       measure
     )
 
-    expect(slot.querySelector("table")?.style.zoom).toBe("0.25")
+    const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
+    expect(scale).toHaveProperty("style.zoom", "0.25")
     frameWidth = 160
     fitDataFramePrintTable(slot)
-    expect(slot.querySelector("table")?.style.zoom).toBe("0.5")
+    expect(scale).toHaveProperty("style.zoom", "0.5")
     // A stacked print column is wider than the table. The on-screen zoom
     // has to come off, or the table stays shrunk inside that column.
     frameWidth = 400
     fitDataFramePrintTable(slot)
-    expect(slot.querySelector("table")?.style.zoom).toBe("")
+    expect(scale).toHaveProperty("style.zoom", "")
     spy.mockRestore()
     frame.remove()
   })

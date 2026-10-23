@@ -26,6 +26,9 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
+/** Figure width at 1em, recorded in beforeprint and read by the print rule. */
+export const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
+
 interface StyledMetricContainerProps {
   showBorder: boolean
 }
@@ -64,12 +67,10 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
       // scaled size and shrink the figure a second time. The paragraph
       // inherits this size.
       "& .stMetricValue .stMarkdownEllipsis": {
-        // `--st-metric-text-width` is the figure's width at 1em, recorded
-        // in beforeprint. `atan2` divides the print column by that width
+        // The variable is the figure's width at 1em, recorded in
+        // beforeprint. `atan2` divides the print column by that width
         // without typed arithmetic. A wide card stays at 1em.
-        // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- container query unit, not a theme length
-        fontSize:
-          "min(1em, calc(1em * tan(atan2(100cqi, var(--st-metric-text-width, 100cqi)))))",
+        fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
       },
     },
   })

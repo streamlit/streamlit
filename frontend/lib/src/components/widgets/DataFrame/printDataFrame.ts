@@ -27,11 +27,17 @@ import {
 import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-/** Class of the HTML table that replaces the canvas grid when printing. */
-export const DATAFRAME_PRINT_TABLE_CLASS = "stDataFramePrintTable"
+import {
+  DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_SCALE_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+} from "./printClassNames"
 
-/** Shown instead of that table when the frame cannot be expanded. */
-export const DATAFRAME_PRINT_NOTE_CLASS = "stDataFramePrintNote"
+export {
+  DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_SCALE_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+}
 
 /**
  * Natural width of the print table, in px. Print CSS divides the column width
@@ -116,7 +122,8 @@ export function dataFramePrintBudget(event: Event): DataFramePrintBudget {
  *
  * The table uses the app body font at `md`, semi-bold headers, and padding of
  * `threeXS` and `sm`. The off-screen measurement uses these same values.
- * Cell borders are omitted because `zoom` does not scale their layout width.
+ * Cell borders are omitted. An outline draws the grid, and the probe uses
+ * the same box so the measured width matches the printed cells.
  */
 export function buildDataFramePrintMeasure(
   theme: DataFramePrintMeasureTheme
@@ -247,9 +254,15 @@ export function fillDataFramePrintSlot(
   if (width > 0) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
   }
-  slot.replaceChildren(table)
+  // The scale wrapper is what shrinks. Zoom on the table itself leaves
+  // Chromium's border box at the natural width, so the slot stays wide and
+  // the table paints past the column.
+  const scale = document.createElement("div")
+  scale.className = DATAFRAME_PRINT_SCALE_CLASS
+  scale.append(table)
+  slot.replaceChildren(scale)
   if (width > 0) {
-    applyPrintZoom(table, available, width)
+    applyPrintZoom(scale, available, width)
   }
 }
 
@@ -271,8 +284,8 @@ function printColumnHeader(column: BaseColumn): string {
  * and this runs again.
  */
 export function fitDataFramePrintTable(slot: HTMLElement): void {
-  const table = slot.querySelector("table")
-  if (!(table instanceof HTMLTableElement)) {
+  const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
+  if (!(scale instanceof HTMLElement)) {
     return
   }
   const width = Number.parseFloat(
@@ -281,7 +294,7 @@ export function fitDataFramePrintTable(slot: HTMLElement): void {
   if (!Number.isFinite(width) || width <= 0) {
     return
   }
-  applyPrintZoom(table, availablePrintWidth(slot), width)
+  applyPrintZoom(scale, availablePrintWidth(slot), width)
 }
 
 /** Width of the visible dataframe, or the slot when it is measured alone. */
@@ -482,7 +495,7 @@ function measurePrintWidth(
 }
 
 function applyPrintZoom(
-  table: HTMLTableElement,
+  scale: HTMLElement,
   available: number,
   width: number
 ): void {
@@ -495,13 +508,13 @@ function applyPrintZoom(
   // table. The old inline zoom overrides the CSS scale, so clear it and let
   // the table use its own width.
   if (width <= available) {
-    table.style.zoom = ""
+    scale.style.zoom = ""
     return
   }
   // The CSS ratio is the print-layout scale. This inline value covers the
   // case where that ratio is dropped. It is taken from the visible dataframe,
   // which has a width while the slot is still display:none.
-  table.style.zoom = String(available / width)
+  scale.style.zoom = String(available / width)
 }
 
 function applyMeasureStyles(

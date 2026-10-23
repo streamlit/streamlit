@@ -20,6 +20,7 @@ import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-com
 import { printContainRules } from "~lib/components/shared/printContain"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_SCALE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
 } from "~lib/components/widgets/DataFrame/printDataFrame"
@@ -90,15 +91,13 @@ export const StyledResizableContainer =
           // a page break, so the bordered container wraps every row.
           containerType: "inline-size",
         },
-        [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
-          borderCollapse: "collapse",
-          // The table stays at its content width so zoom scales every column
-          // together. fit-content would squeeze it into the slot first.
+        [`& .${DATAFRAME_PRINT_SCALE_CLASS}`]: {
+          // The wrapper is the table's content width, then zoom shrinks that
+          // box. Zoom on the table leaves Chromium's border box unscaled, so
+          // the slot would stay at the natural width and the table would
+          // paint past the column. `100cqw` is the slot, which is the column.
           // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- max-content is the content size, not a theme length
           width: "max-content",
-          // Matches the font measured in buildDataFramePrintMeasure.
-          fontFamily: theme.genericFonts.bodyFont,
-          fontSize: theme.fontSizes.md,
           // `zoom` needs a number. Dividing the column width by the table
           // width inside `calc()` needs typed arithmetic, which older
           // browsers drop, so the table would print unscaled. `atan2` takes
@@ -107,12 +106,21 @@ export const StyledResizableContainer =
           // dataframe, and again when print media starts. The slot is
           // display:none until then, so it has no width of its own.
           zoom: `min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}))))`,
+        },
+        [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
+          borderCollapse: "collapse",
+          // The table stays at its content width so the wrapper scales every
+          // column together. fit-content would squeeze it into the slot first.
+          // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- max-content is the content size, not a theme length
+          width: "max-content",
+          // Matches the font measured in buildDataFramePrintMeasure.
+          fontFamily: theme.genericFonts.bodyFont,
+          fontSize: theme.fontSizes.md,
           "th, td": {
             whiteSpace: "nowrap",
             padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
-            // A border adds layout width that `zoom` does not scale, so a wide
-            // table stays past the column. An outline draws the grid without
-            // adding to that width.
+            // An outline draws the grid without adding to the measured width.
+            // The off-screen probe uses the same box.
             border: "none",
             outline: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
             textAlign: "left",
