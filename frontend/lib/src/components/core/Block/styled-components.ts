@@ -45,9 +45,10 @@ export const PRINT_CARD_CLASS = "stPrintCard"
 
 /**
  * Compound match for content that makes a printed column row stack into one
- * column: a card, a dataframe, or a chart.
+ * column: a card, a dataframe, or a chart. These are the elements' own
+ * classes. Test IDs are not used as selectors.
  */
-const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, [data-testid='stDataFrame'], [data-testid='stVegaLiteChart'], [data-testid='stPlotlyChart'], [data-testid='stDeckGlJsonChart'], [data-testid='stGraphVizChart'], [data-testid='stEChartsChart'])`
+const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, .stDataFrame, .stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)`
 
 /**
  * Matches a column that is itself a card, or holds one. A row of compact

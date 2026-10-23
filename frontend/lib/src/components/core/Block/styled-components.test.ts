@@ -54,8 +54,10 @@ describe("StyledFlexContainerBlock print layout", () => {
     // chart. A row of compact widgets (metrics, buttons) matches none of
     // these and keeps its normal flex layout.
     expect(css).toContain(`:is(.${PRINT_CARD_CLASS}`)
-    expect(css).toContain("[data-testid='stDataFrame']")
-    expect(css).toContain("[data-testid='stVegaLiteChart']")
+    expect(css).toContain(".stDataFrame")
+    expect(css).toContain(".stVegaLiteChart")
+    expect(css).toContain(".stPlotlyChart")
+    expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn{display:block")
   })
 
