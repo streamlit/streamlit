@@ -611,22 +611,24 @@ jobs:
             gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
           fi
 
-      # Auto-approve ai-final-review PRs with an APPROVED verdict, except:
-      # - change:spec (always needs a human, regardless of impact)
-      # - change:feature + impact:users (new user-facing features)
-      # - more than 1000 changed lines (additions + deletions)
-      # - PR originates from a fork
-      # - fewer reviews were reported than configured models
-      # Bugfixes, chores, docs, and other impact:users PRs stay eligible:
-      # they are lower-risk than new user-facing features and benefit most
-      # from the speedup.
+      # Auto-approve an ai-final-review PR with an APPROVED verdict, except when:
+      # - it has change:spec
+      # - it has change:feature and impact:users without qa-approved
+      # - additions plus deletions exceed 5000
+      # - it comes from a fork
+      # - the run reported fewer reviews than the configured model count
+      # Bugfix, chore, docs, impact:internal, and other non-feature PRs stay
+      # eligible without a QA pass.
+      # QA adds qa-approved after a PASS on any commit of the branch. That label
+      # stays valid for later commits on the same PR.
+      # If QA passes after this review finishes, re-add ai-final-review to auto-approve.
       # Requires the repository/organization Actions setting "Allow GitHub
       # Actions to create and approve pull requests" (Settings > Actions >
       # General > Workflow permissions).
       # GitHub does not count GITHUB_TOKEN approvals toward required
       # CODEOWNERS reviews.
-      # Approval targets the current PR HEAD. We intentionally trust contributors
-      # not to push unreviewed changes after approval.
+      # This step approves the current head. Trust authors not to push unreviewed
+      # commits after that approval.
       - name: Auto-approve on final review
         if: needs.parse-models.outputs.has_key == 'true' && needs.parse-models.outputs.trigger_label == 'ai-final-review' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
         env:
@@ -696,9 +698,13 @@ jobs:
 
           HAS_FEATURE=$(echo "$LABELS" | jq 'index("change:feature") != null')
           HAS_USERS=$(echo "$LABELS" | jq 'index("impact:users") != null')
+          HAS_QA_APPROVED=$(echo "$LABELS" | jq 'index("qa-approved") != null')
           if [ "$HAS_FEATURE" = "true" ] && [ "$HAS_USERS" = "true" ]; then
-            echo "Skipping auto-approve: PR is labeled change:feature and impact:users"
-            exit 0
+            if [ "$HAS_QA_APPROVED" != "true" ]; then
+              echo "Skipping auto-approve: PR is labeled change:feature and impact:users without qa-approved"
+              exit 0
+            fi
+            echo "User-facing feature PR has qa-approved"
           fi
 
           ADDITIONS=$(echo "$PR_JSON" | jq -r '.additions')
@@ -708,9 +714,10 @@ jobs:
             exit 0
           fi
           CHANGED_LINES=$((ADDITIONS + DELETIONS))
-          echo "PR changed lines: $CHANGED_LINES (additions=$ADDITIONS, deletions=$DELETIONS)"
-          if [ "$CHANGED_LINES" -gt 1000 ]; then
-            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit 1000)"
+          MAX_CHANGED_LINES=5000
+          echo "PR changed lines: $CHANGED_LINES (additions=$ADDITIONS, deletions=$DELETIONS, limit=$MAX_CHANGED_LINES)"
+          if [ "$CHANGED_LINES" -gt "$MAX_CHANGED_LINES" ]; then
+            echo "Skipping auto-approve: PR has $CHANGED_LINES changed lines (limit $MAX_CHANGED_LINES)"
             exit 0
           fi
 
