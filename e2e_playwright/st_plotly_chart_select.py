@@ -17,6 +17,7 @@ import time
 
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 
 import streamlit as st
 
@@ -206,3 +207,45 @@ if event_sunburst and len(event_sunburst.selection.get("points", [])) > 0:
     st.write(f"ID: {point.get('id', 'N/A')}")
 else:
     st.write("No sunburst selection")
+
+
+st.header("Heatmap with Selection")
+fig_heatmap = go.Figure(
+    data=go.Heatmap(
+        z=[[1, 20, 30], [20, 1, 60], [30, 60, 1]],
+        x=["A", "B", "C"],
+        y=["X", "Y", "Z"],
+        showscale=False,
+    )
+)
+event_heatmap = st.plotly_chart(
+    fig_heatmap, on_select="rerun", key="heatmap_chart", selection_mode="points"
+)
+if event_heatmap and len(event_heatmap.selection.get("points", [])) > 0:
+    st.write("Heatmap selection:")
+    point = event_heatmap.selection["points"][0]
+    st.write(f"Heatmap z: {point.get('z', 'N/A')}")
+    st.write(f"Heatmap point_number: {point.get('point_number', 'N/A')}")
+else:
+    st.write("No heatmap selection")
+
+
+st.header("Sankey with Selection")
+fig_sankey = go.Figure(
+    data=[
+        go.Sankey(
+            node={"label": ["A1", "A2", "B1", "B2"], "pad": 20, "thickness": 20},
+            link={"source": [0, 1, 0], "target": [2, 3, 3], "value": [8, 4, 2]},
+        )
+    ]
+)
+event_sankey = st.plotly_chart(
+    fig_sankey, on_select="rerun", key="sankey_chart", selection_mode="points"
+)
+if event_sankey and len(event_sankey.selection.get("points", [])) > 0:
+    st.write("Sankey selection:")
+    point = event_sankey.selection["points"][0]
+    st.write(f"Sankey label: {point.get('label', 'N/A')}")
+    st.write(f"Sankey value: {point.get('value', 'N/A')}")
+else:
+    st.write("No sankey selection")

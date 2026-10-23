@@ -357,3 +357,36 @@ def test_click_on_sunburst_displays_selection_data(app: Page):
     # Should display the selected segment info
     expect(app.get_by_text("Selected:")).to_be_attached()
     expect(app.get_by_text("ID:")).to_be_attached()
+
+
+def test_click_on_heatmap_displays_selection_data(app: Page):
+    """Test that clicking a heatmap cell emits selection data."""
+    chart = get_element_by_key(app, "heatmap_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    expect(app.get_by_text("No heatmap selection")).to_be_attached()
+
+    chart.locator(".nsewdrag").click(position={"x": 80, "y": 80})
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Heatmap selection:")).to_be_attached()
+    expect(app.get_by_text("No heatmap selection")).not_to_be_attached()
+    expect(app.get_by_text("Heatmap z:")).to_be_attached()
+    expect(app.get_by_text("Heatmap point_number:")).to_be_attached()
+
+
+def test_click_on_sankey_displays_selection_data(app: Page):
+    """Test that clicking a Sankey node emits selection data."""
+    chart = get_element_by_key(app, "sankey_chart")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_be_visible()
+
+    expect(app.get_by_text("No sankey selection")).to_be_attached()
+
+    chart.locator(".sankey-node").first.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Sankey selection:")).to_be_attached()
+    expect(app.get_by_text("No sankey selection")).not_to_be_attached()
+    expect(app.get_by_text("Sankey value:")).to_be_attached()
