@@ -232,11 +232,15 @@ describe("fillDataFramePrintSlot", () => {
       padding: "0.25rem 1rem",
       cellWeight: 400,
       headerWeight: 500,
+      imageWidth: "4rem",
+      imageHeight: "2rem",
     })
 
     expect(css).toContain("Custom, sans-serif")
     expect(css).toContain("1.5rem")
     expect(css).toContain("0.25rem 1rem")
+    expect(css).toContain("width: 4rem")
+    expect(css).toContain("height: 2rem")
     // width:max-content is set too. jsdom drops that keyword, so the
     // companion max-width:none is what this environment can observe.
     expect(probeWidth).toBe("none")
