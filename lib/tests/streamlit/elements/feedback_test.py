@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -31,6 +32,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -130,6 +132,53 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         st.session_state.feedback_key = session_state_index
         val = st.feedback("thumbs", key="feedback_key")
         assert val == session_state_index
+
+    @parameterized.expand(
+        [
+            (2, None),
+            (4, 1),
+            (-1, None),
+            ("1", None),
+            (True, None),
+            (0.5, 1),
+        ]
+    )
+    def test_invalid_session_state_value_resets_to_default(
+        self, session_state_value: Any, default: int | None
+    ) -> None:
+        """Test that a session state value that isn't a valid index resets to the default."""
+        st.session_state.feedback_key = session_state_value
+        val = st.feedback("thumbs", key="feedback_key", default=default)
+
+        assert val == default
+        assert st.session_state.feedback_key == default
+        proto = self.get_delta_from_queue().new_element.feedback
+        assert proto.set_value is True
+        assert proto.HasField("value") is (default is not None)
+
+    def test_numpy_integer_session_state_value_is_kept(self) -> None:
+        """Test that an in-range NumPy integer in session state is not reset."""
+        st.session_state.feedback_key = np.int64(1)
+        val = st.feedback("thumbs", key="feedback_key", default=0)
+
+        assert val == 1
+        assert self.get_delta_from_queue().new_element.feedback.value == 1
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.feedback("stars", key="my_key", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.feedback("stars", persist_state="session")
 
     def test_default_value_thumbs(self):
         """Test that default value is set correctly for thumbs."""
@@ -494,3 +543,65 @@ def test_apptest_feedback_value_retained_on_rerun():
 
     # Value should be retained
     assert at.feedback[0].value == 2
+
+
+@pytest.mark.parametrize(
+    ("persist_clause", "default", "selected", "value_after_show"),
+    [
+        (', persist_state="page"', None, 3, 3),
+        (', persist_state="session"', None, 3, 3),
+        # A cleared rating is restored as cleared, not as the default.
+        (', persist_state="session"', 2, None, None),
+        ("", None, 3, None),
+    ],
+    ids=["page", "session", "session_cleared_rating", "not_persisted"],
+)
+def test_apptest_feedback_persist_state_hide_show(
+    persist_clause: str,
+    default: int | None,
+    selected: int | None,
+    value_after_show: int | None,
+) -> None:
+    """Test that a hidden feedback widget keeps its value only with persist_state."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        f'    st.feedback("stars", key="rating", default={default}{persist_clause})\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.feedback[0].set_value(selected).run()
+    at.toggle[0].set_value(False).run()
+    assert not at.feedback
+
+    at.toggle[0].set_value(True).run()
+    assert at.feedback[0].value == value_after_show
+
+
+def test_apptest_feedback_persisted_value_reset_when_out_of_range() -> None:
+    """Test that a persisted rating outside the new options resets to the default."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        'options = st.session_state.get("options", "stars")\n'
+        'if st.toggle("Show", key="show"):\n'
+        '    st.feedback(options, key="rating", persist_state="session")\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.feedback[0].set_value(4).run()
+    at.toggle[0].set_value(False).run()
+    at.session_state["options"] = "thumbs"
+    at.run()
+    assert at.session_state["rating"] == 4
+
+    at.toggle[0].set_value(True).run()
+    assert at.feedback[0].value is None
+    assert at.session_state["rating"] is None
+
+    # The reset widget still accepts a valid selection.
+    at.feedback[0].set_value(1).run()
+    assert at.feedback[0].value == 1
