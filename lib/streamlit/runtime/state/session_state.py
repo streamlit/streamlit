@@ -70,6 +70,7 @@ from streamlit.runtime.state.common import (
     is_array_value_field_name,
     is_element_id,
     is_keyed_element_id,
+    unpack_widget_state_value,
 )
 from streamlit.runtime.state.presentation import apply_presenter
 from streamlit.runtime.state.query_params import (
@@ -192,22 +193,7 @@ class WStates(MutableMapping[str, Any]):
             "ValueFieldName",
             wstate.value.WhichOneof("value"),
         )
-        value = (
-            wstate.value.__getattribute__(value_field_name)
-            if value_field_name is not None  # None if the widget value was cleared
-            else None
-        )
-
-        if is_array_value_field_name(value_field_name):
-            # Array types are messages with data in a `data` field
-            value = value.data
-        elif value_field_name == "json_value":
-            value = json.loads(cast("str", value))
-        elif value_field_name == "string_trigger_value":
-            # StringTriggerValue is a message with data in a `data` field
-            value = value.data
-
-        deserialized = metadata.deserializer(value)
+        deserialized = metadata.deserializer(unpack_widget_state_value(wstate.value))
 
         # Update metadata to reflect information from WidgetState proto
         self.set_widget_metadata(
@@ -1527,6 +1513,15 @@ class SessionState:
     def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
+
+    def get_widget_id_from_key(self, user_key: str) -> str | None:
+        """Return the element ID the widget with ``user_key`` last registered under.
+
+        The mapping outlives the widget, like its metadata: a widget that
+        stopped rendering keeps its entry until its key is reused or deleted.
+        Returns ``None`` when no widget ever registered ``user_key``.
+        """
+        return self._key_id_mapper.get_id_from_key(user_key)
 
     def get_widget_value(self, widget_id: str) -> Any:
         """Return the value a widget currently holds.
