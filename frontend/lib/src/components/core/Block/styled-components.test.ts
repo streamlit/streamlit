@@ -113,6 +113,10 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(gapped).toContain(":not(:has(.stSnow))")
     expect(gapped).toContain(":not(:has(> .stCacheSpinner))")
     expect(gapped).toContain(":not(:has(> .stPageLink))")
+    // The link's own margin only trims the flex gap by xs. The print margin
+    // is the gap minus that trim.
+    expect(gapped).toContain(":has(> .stPageLink)")
+    expect(gapped).toContain("margin-bottom:calc(16px - 0.375rem)")
     expect(gapped).not.toContain("padding-bottom:16px")
   })
 
