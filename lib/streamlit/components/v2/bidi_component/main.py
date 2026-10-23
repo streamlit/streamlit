@@ -60,7 +60,7 @@ from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.util import calc_hash
+from streamlit.util import AttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import (
@@ -90,6 +90,13 @@ def _described_bidi_data(proto: BidiComponentProto) -> Any:
     if kind == "mixed" and proto.mixed.json:
         return agent_spec.Content(json.loads(proto.mixed.json))
     return None
+
+
+def _deserialize_shared_state(raw: Any) -> dict[str, Any]:
+    """The synced channel values (already parsed from ``json_value``), or an
+    empty dict before the browser sends any.
+    """
+    return raw if isinstance(raw, dict) else {}
 
 
 def _make_trigger_id(base: str, event: str) -> str:
@@ -563,6 +570,66 @@ class BidiComponentMixin:
         state_vals = unwrap_component_state(component_state.value)
 
         return ComponentResult(state_vals, trigger_vals)
+
+    @gather_metrics("_bidi_shared_state")
+    def _bidi_shared_state(
+        self,
+        name: str,
+        *,
+        data: Mapping[str, Any] | None = None,
+        key: BidiComponentKey = None,
+        on_change: WidgetCallback | None = None,
+    ) -> AttributeDictionary:
+        """Declare a shared browser channel and read the values synced from it.
+
+        See ``st.components.v2.shared_state`` for the public documentation.
+        """
+        check_cache_replay_rules()
+
+        if not isinstance(name, str) or not name:
+            raise StreamlitAPIException(
+                "`name` must be a non-empty string.",
+                error_id="bidi-shared-state-invalid-name",
+            )
+        if data is not None and not isinstance(data, Mapping):
+            raise StreamlitAPIException(
+                "`data` must be a mapping of channel keys to values.",
+                error_id="bidi-shared-state-invalid-data",
+            )
+
+        key = to_key(key)
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return AttributeDictionary({})
+
+        proto = BidiComponentProto()
+        proto.shared_channel = name
+        if data:
+            try:
+                serialize_mixed_data(data, proto)
+            except Exception:
+                raise BidiComponentUnserializableDataError()
+        proto.form_id = current_form_id(self.dg)
+        proto.id = compute_and_register_element_id(
+            "bidi_shared_state",
+            user_key=key,
+            key_as_main_identity=True,
+            dg=self.dg,
+            shared_channel=name,
+        )
+
+        state = register_widget(
+            proto.id,
+            deserializer=_deserialize_shared_state,
+            serializer=json.dumps,
+            ctx=ctx,
+            on_change_handler=on_change,
+            value_type="json_value",
+        )
+
+        self.dg._enqueue(INTERNAL_COMPONENT_NAME, proto)
+
+        return AttributeDictionary(state.value)
 
     @property
     def dg(self) -> DeltaGenerator:

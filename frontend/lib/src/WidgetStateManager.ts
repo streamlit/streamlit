@@ -916,6 +916,14 @@ export class WidgetStateManager {
     })
   }
 
+  /**
+   * Rerun with the current widget values, including values buffered with
+   * `triggerRerun: false`. Coalesced with other updates in the same macrotask.
+   */
+  public requestRerun(fragmentId: string | undefined): void {
+    this.scheduleFlush(fragmentId)
+  }
+
   public sendUpdateWidgetsMessage(
     fragmentId: string | undefined,
     isAutoRerun: boolean | undefined = undefined

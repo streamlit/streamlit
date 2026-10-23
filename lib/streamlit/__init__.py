@@ -194,6 +194,7 @@ badge = _main.badge
 balloons = _main.balloons
 bar_chart = _main.bar_chart
 _bidi_component = _main._bidi_component
+_bidi_shared_state = _main._bidi_shared_state
 button = _main.button
 caption = _main.caption
 camera_input = _main.camera_input

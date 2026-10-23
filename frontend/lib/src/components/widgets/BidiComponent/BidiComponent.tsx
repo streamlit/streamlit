@@ -21,6 +21,7 @@ import type { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
 import { BidiComponentContextProvider } from "~lib/components/widgets/BidiComponent/BidiComponentContextProvider"
 import { IsolatedComponent } from "~lib/components/widgets/BidiComponent/IsolatedComponent"
 import { NonIsolatedComponent } from "~lib/components/widgets/BidiComponent/NonIsolatedComponent"
+import SharedChannelElement from "~lib/components/widgets/BidiComponent/SharedChannelElement"
 import { ThemeCssProvider } from "~lib/components/widgets/BidiComponent/ThemeCssProvider"
 import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -40,7 +41,17 @@ const BidiComponent: FC<BidiComponentProps> = ({
   fragmentId,
   componentRegistry,
 }) => {
-  const { isolateStyles } = element
+  const { isolateStyles, sharedChannel } = element
+
+  if (sharedChannel) {
+    return (
+      <SharedChannelElement
+        element={element}
+        widgetMgr={widgetMgr}
+        fragmentId={fragmentId}
+      />
+    )
+  }
 
   return (
     <BidiComponentContextProvider

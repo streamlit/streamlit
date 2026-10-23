@@ -134,6 +134,10 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       zIndex: theme.zIndices.cacheSpinner,
     },
 
+    ":has(> .stSharedChannel)": {
+      display: "none",
+    },
+
     ":has(> .stPageLink)": {
       marginTop: `-${theme.spacing.xs}`,
       marginBottom: `-${theme.spacing.xs}`,

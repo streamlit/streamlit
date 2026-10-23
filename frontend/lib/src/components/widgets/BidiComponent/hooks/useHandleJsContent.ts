@@ -20,6 +20,8 @@ import type {
   CleanupFunction,
   FrontendRendererArgs,
   FrontendState,
+  SetStateValueOptions,
+  SharedChannel,
 } from "@streamlit/component-v2-lib"
 import { generateUuid } from "@streamlit/utils"
 
@@ -31,6 +33,7 @@ import {
 } from "~lib/components/widgets/BidiComponent/utils/error"
 import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
+import { makeScopedChannelHandle } from "~lib/components/widgets/BidiComponent/utils/sharedChannels"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -55,6 +58,7 @@ const loadAndRunModule = async <T extends FrontendState>({
   fragmentId,
   getWidgetValue,
   moduleUrl,
+  ownedUnsubscribes,
   parentElement,
   widgetMgr,
 }: {
@@ -66,6 +70,7 @@ const loadAndRunModule = async <T extends FrontendState>({
   formId: string | undefined
   fragmentId: string | undefined
   moduleUrl: string
+  ownedUnsubscribes: Set<() => void>
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
 }): Promise<CleanupFunction | void> => {
@@ -81,7 +86,8 @@ const loadAndRunModule = async <T extends FrontendState>({
 
   const setStateValue = <T extends FrontendState>(
     name: string,
-    value: T[keyof T]
+    value: T[keyof T],
+    options?: SetStateValueOptions
   ): void => {
     let newValue: T
 
@@ -98,8 +104,22 @@ const loadAndRunModule = async <T extends FrontendState>({
       formId,
       fragmentId,
       fromUser: true,
+      ...(options?.rerun === false ? { triggerRerun: false } : {}),
     })
   }
+
+  const requestRerun = (): void => {
+    if (formId) {
+      LOG.warn(
+        "BidiComponent: requestRerun ignored inside st.form. The form submit button reruns the script."
+      )
+      return
+    }
+    widgetMgr.requestRerun(fragmentId)
+  }
+
+  const shared = (channelName: string): SharedChannel =>
+    makeScopedChannelHandle(channelName, ownedUnsubscribes)
 
   const setTriggerValue = <T extends FrontendState>(
     name: string,
@@ -132,6 +152,8 @@ const loadAndRunModule = async <T extends FrontendState>({
     parentElement,
     setStateValue,
     setTriggerValue,
+    requestRerun,
+    shared,
   } satisfies FrontendRendererArgs)
 }
 
@@ -207,6 +229,7 @@ export const useHandleJsContent = ({
   const cleanupRef = useRef<CleanupFunction | void>()
   const scriptElementRef = useRef<HTMLScriptElement>()
   const unmountedRef = useRef(false)
+  const ownedUnsubscribesRef = useRef(new Set<() => void>())
 
   // Initialization/update effect: runs when inputs change
   useEffect(() => {
@@ -265,6 +288,7 @@ export const useHandleJsContent = ({
               fragmentId,
               getWidgetValue,
               moduleUrl: url,
+              ownedUnsubscribes: ownedUnsubscribesRef.current,
               parentElement: containerRefCurrent,
               widgetMgr,
             })
@@ -301,6 +325,7 @@ export const useHandleJsContent = ({
                 fragmentId,
                 getWidgetValue,
                 moduleUrl: scriptUrl,
+                ownedUnsubscribes: ownedUnsubscribesRef.current,
                 parentElement: containerRefCurrent,
                 widgetMgr,
               })
@@ -353,8 +378,10 @@ export const useHandleJsContent = ({
 
   // Unmount-only cleanup effect
   useEffect(() => {
+    const ownedUnsubscribes = ownedUnsubscribesRef.current
     return () => {
       unmountedRef.current = true
+      ownedUnsubscribes.forEach(unsubscribe => unsubscribe())
 
       const maybeCleanup = cleanupRef.current
       if (maybeCleanup) {

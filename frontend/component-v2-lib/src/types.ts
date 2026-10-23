@@ -50,6 +50,66 @@ export type FrontendState = Record<string, unknown>
 export type ArrowData = Uint8Array<ArrayBufferLike> | null
 
 /**
+ * When Python hears about a shared channel value.
+ *
+ * - `"none"`: the value stays in the browser.
+ * - `"defer"`: Python reads the value on the next rerun, without causing one.
+ * - `"rerun"`: Python reads the value on a rerun that this change starts.
+ */
+export type SharedChannelSync = "none" | "defer" | "rerun"
+
+/** Options for writing to a shared channel. */
+export type SharedChannelSetOptions = {
+  /**
+   * When Python hears about the change. Python reads synced values from the
+   * channel's `st.components.v2.shared_state` element. Defaults to `"none"`.
+   */
+  python?: SharedChannelSync
+}
+
+/** Called with the keys that changed, after the channel has been updated. */
+export type SharedChannelListener = (changedKeys: string[]) => void
+
+/**
+ * Browser state shared by every component on the page that joins the channel
+ * by name, whatever bundle the component comes from.
+ *
+ * Values live for the lifetime of the page and survive reruns. Python can
+ * seed values with `st.components.v2.shared_state(name, data=...)`, and reads
+ * back the values that components set with `python: "defer"` or `"rerun"`.
+ */
+export interface SharedChannel {
+  /** The channel's name. */
+  readonly name: string
+  /** The current value of a key. */
+  get<T = unknown>(key: string): T | undefined
+  /** The keys that have a value. */
+  keys(): string[]
+  /** Set one key and notify subscribers. */
+  set(key: string, value: unknown, options?: SharedChannelSetOptions): void
+  /** Set several keys and notify subscribers once. */
+  update(
+    values: Record<string, unknown>,
+    options?: SharedChannelSetOptions
+  ): void
+  /**
+   * Listen for changes. Returns a function that stops listening. Listening
+   * also stops when the component instance unmounts.
+   */
+  subscribe(listener: SharedChannelListener): () => void
+}
+
+/** Options for `setStateValue`. */
+export type SetStateValueOptions = {
+  /**
+   * Whether this change reruns the script. When `false`, the value is kept in
+   * the browser and Python reads it on the next rerun, as with widgets that
+   * use `on_change="ignore"`. Defaults to `true`.
+   */
+  rerun?: boolean
+}
+
+/**
  * The arguments passed to a Streamlit custom component's top-level
  * `export default` function.
  *
@@ -167,8 +227,15 @@ export type FrontendRendererArgs<
    *
    * @param value The value to associate with the key. Type must match the
    *   corresponding property type in your `TState` interface.
+   *
+   * @param options Pass `{ rerun: false }` to update the value without
+   *   rerunning the script.
    */
-  setStateValue: (name: keyof TState, value: TState[keyof TState]) => void
+  setStateValue: (
+    name: keyof TState,
+    value: TState[keyof TState],
+    options?: SetStateValueOptions
+  ) => void
   /**
    * Set a trigger value by key. This trigger persists for a only single app
    * rerun.
@@ -191,6 +258,17 @@ export type FrontendRendererArgs<
    *   interface.
    */
   setTriggerValue: (name: keyof TState, value: TState[keyof TState]) => void
+  /**
+   * Rerun the script, sending every state value set with `{ rerun: false }`
+   * since the last rerun. Inside a fragment, only the fragment reruns. Calls
+   * in the same task are coalesced into one rerun.
+   */
+  requestRerun: () => void
+  /**
+   * Join the page's shared channel with this name. Every component that joins
+   * a channel of the same name sees the same values.
+   */
+  shared: (name: string) => SharedChannel
 }
 
 /**

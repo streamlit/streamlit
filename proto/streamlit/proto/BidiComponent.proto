@@ -62,4 +62,9 @@ message BidiComponent {
     // Mixed data with JSON structure + embedded Arrow references
     MixedData mixed = 13;
   }
+  // When set, this element declares the shared browser channel with this
+  // name instead of mounting a component. It renders nothing. Its data seeds
+  // channel values, and its widget value holds the channel values that
+  // components chose to send to Python.
+  string shared_channel = 14;
 }

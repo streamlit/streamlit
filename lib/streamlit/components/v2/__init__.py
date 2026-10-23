@@ -28,10 +28,13 @@ from streamlit.components.v2.get_bidi_component_manager import (
 from streamlit.errors import StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from streamlit.components.v2.bidi_component import ComponentResult
     from streamlit.components.v2.types import BidiComponentKey, ComponentRenderer
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
+    from streamlit.util import AttributeDictionary
 
 
 def _register_component(
@@ -586,6 +589,52 @@ def component(
     )
 
 
+def shared_state(
+    name: str,
+    *,
+    data: Mapping[str, Any] | None = None,
+    key: BidiComponentKey = None,
+    on_change: WidgetCallback | None = None,
+) -> AttributeDictionary:
+    """Declare a shared browser channel and read the values synced from it.
+
+    Components join a channel in JavaScript with ``shared(name)``. Every
+    component on the page that joins the same channel, whatever bundle it comes
+    from, sees the same values, and updates between them happen in the browser
+    without rerunning the script.
+
+    Call this once per channel, where its Python side should live. It renders
+    nothing.
+
+    Parameters
+    ----------
+    name : str
+        The channel's name, as components pass it to ``shared(name)``.
+    data : dict or None
+        Values to put in the channel, by key. Values can be anything a
+        component's ``data`` accepts, including dataframes. The browser applies
+        them when they change, and an unchanged value is not resent in full on
+        each rerun when it is larger than ``global.minCachedMessageSize``.
+    key : str, int, or None
+        An optional key, so the synced values are also available as
+        ``st.session_state[key]``.
+    on_change : callable or None
+        Called when the synced values change, before the rerun that reports
+        them.
+
+    Returns
+    -------
+    dict
+        The values that components set with ``python: "defer"`` or
+        ``python: "rerun"``, as of this rerun. Values set with
+        ``python: "none"`` stay in the browser and are never included.
+    """
+    import streamlit as st
+
+    return st._bidi_shared_state(name, data=data, key=key, on_change=on_change)
+
+
 __all__ = [
     "component",
+    "shared_state",
 ]
