@@ -31,7 +31,7 @@ type ToggleTrackVisualState = {
  *
  * - Off rest / disabled: `fadedText10` (same default look as `borderColor`,
  *   but not the configurable border token)
- * - Off hover: `darkenedBgMix15` (same as unchecked radio/checkbox hover)
+ * - Off hover: `fadedText20`
  * - On: `primary` (hover does not change this)
  */
 export function getToggleTrackColor(
@@ -42,7 +42,7 @@ export function getToggleTrackColor(
     return theme.colors.primary
   }
   if (isHovered && !isDisabled) {
-    return theme.colors.darkenedBgMix15
+    return theme.colors.fadedText20
   }
   return theme.colors.fadedText10
 }
