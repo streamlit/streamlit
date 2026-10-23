@@ -24,6 +24,7 @@ import {
   type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
+import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 /** Class of the HTML table that replaces the canvas grid when printing. */
@@ -74,6 +75,9 @@ interface DataFramePrintMeasureTheme {
  * so the on-screen canvas is left in place.
  */
 export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
+
+const PRINT_MEASURE_WIDTH = "100000px"
+const styleNonce = document.currentScript?.nonce ?? ""
 
 /**
  * Font and spacing of the printed table for the active theme.
@@ -143,6 +147,8 @@ export function fillDataFramePrintSlot(
 
   const printable = columns
     .map((column, index) => ({ column, index }))
+    // Button labels are interactive controls, not dataframe values. Match
+    // the CSV export and leave them out of the static print table.
     .filter(({ column }) => !column.isHidden && column.kind !== "button")
   if (printable.length === 0 || numRows <= 0) {
     return
@@ -223,6 +229,16 @@ function printCellContent(cell: GridCell): PrintCellContent | null {
       : { kind: "text", text: "" }
   }
 
+  if (
+    cell.kind === GridCellKind.Uri &&
+    cell.themeOverride?.fontFamily === genericFonts.iconFont
+  ) {
+    return {
+      kind: "text",
+      text: typeof cell.data === "string" ? cell.data : "",
+    }
+  }
+
   if ("displayData" in cell) {
     const displayData = cell.displayData
     if (typeof displayData === "string") {
@@ -263,6 +279,9 @@ function printRecordText(record: Record<string, unknown>): string {
   if (record.kind === "dropdown-cell") {
     return printDropdownText(record)
   }
+  if (record.kind === "multi-select-cell") {
+    return printMultiSelectText(record)
+  }
   if (record.kind === "media-cell") {
     return typeof record.src === "string" ? record.src : ""
   }
@@ -287,6 +306,27 @@ function printRecordText(record: Record<string, unknown>): string {
   return ""
 }
 
+function printMultiSelectText(record: Record<string, unknown>): string {
+  if (!Array.isArray(record.values)) {
+    return ""
+  }
+  return record.values
+    .map(value => printOptionLabel(value, record.options))
+    .join(", ")
+}
+
+function printOptionLabel(value: unknown, options: unknown): string {
+  if (Array.isArray(options)) {
+    const option = options.find(
+      candidate => isLabeledOption(candidate) && candidate.value === value
+    )
+    if (isLabeledOption(option)) {
+      return option.label
+    }
+  }
+  return toSafeString(value)
+}
+
 function isLabeledOption(
   option: unknown
 ): option is { value: unknown; label: string } {
@@ -305,11 +345,7 @@ function printDropdownText(record: Record<string, unknown>): string {
     return ""
   }
   if (Array.isArray(record.allowedValues)) {
-    for (const option of record.allowedValues) {
-      if (isLabeledOption(option) && option.value === value) {
-        return option.label
-      }
-    }
+    return printOptionLabel(value, record.allowedValues)
   }
   return toSafeString(value)
 }
@@ -321,24 +357,30 @@ function measurePrintWidth(
   const probe = document.createElement("div")
   // An absolute box with width:auto is shrink-to-fit and Chromium clamps
   // that to the viewport, so a wider table was measured too narrow and the
-  // print zoom stayed near 1. max-content is the table's own width.
+  // print zoom stayed near 1. A definite box avoids shrink-to-fit and lets
+  // max-content use the table's own width.
   probe.style.position = "absolute"
   probe.style.visibility = "hidden"
   probe.style.left = "0"
   probe.style.top = "0"
-  probe.style.width = "max-content"
+  probe.style.width = PRINT_MEASURE_WIDTH
   probe.style.maxWidth = "none"
   const style = document.createElement("style")
+  style.nonce = styleNonce
   style.textContent = printMeasureCss(measure)
   probe.append(style, table.cloneNode(true))
   document.body.append(probe)
   const laidOut = probe.querySelector("table")
   // beforeprint still uses screen media, so this copy is the only laid-out
   // table. The print slot itself is display:none and has no width.
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const width = laidOut instanceof HTMLElement ? laidOut.scrollWidth : 0
+  const width = laidOut instanceof HTMLElement ? getLaidOutWidth(laidOut) : 0
   probe.remove()
   return width
+}
+
+function getLaidOutWidth(element: HTMLElement): number {
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  return element.getBoundingClientRect().width
 }
 
 function printMeasureCss(measure: DataFramePrintMeasure): string {

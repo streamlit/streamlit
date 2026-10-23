@@ -216,14 +216,34 @@ describe("fillDataFramePrintSlot", () => {
     let css = ""
     let probeWidth = ""
     const spy = vi
-      .spyOn(HTMLElement.prototype, "scrollWidth", "get")
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockImplementation(function width(this: HTMLElement) {
         if (this.tagName === "TABLE") {
           css = this.parentElement?.querySelector("style")?.textContent ?? ""
-          probeWidth = this.parentElement?.style.maxWidth ?? ""
-          return 320
+          probeWidth = this.parentElement?.style.width ?? ""
+          return {
+            x: 0,
+            y: 0,
+            width: 320,
+            height: 0,
+            top: 0,
+            right: 320,
+            bottom: 0,
+            left: 0,
+            toJSON: () => ({}),
+          }
         }
-        return 0
+        return {
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          toJSON: () => ({}),
+        }
       })
 
     fillDataFramePrintSlot(slot, [column("Name")], 1, () => textCell("Ada"), {
@@ -241,16 +261,14 @@ describe("fillDataFramePrintSlot", () => {
     expect(css).toContain("0.25rem 1rem")
     expect(css).toContain("width: 4rem")
     expect(css).toContain("height: 2rem")
-    // width:max-content is set too. jsdom drops that keyword, so the
-    // companion max-width:none is what this environment can observe.
-    expect(probeWidth).toBe("none")
+    expect(probeWidth).toBe("100000px")
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
       "320px"
     )
     spy.mockRestore()
   })
 
-  it("prints select labels, media sources, formatted sparklines, and images", () => {
+  it("prints column values as they appear in the grid", () => {
     fillDataFramePrintSlot(
       slot,
       [
@@ -259,6 +277,8 @@ describe("fillDataFramePrintSlot", () => {
         column("Trend"),
         column("Photo"),
         column("Tags"),
+        column("Teams"),
+        column("Link"),
       ],
       1,
       ([col]) => {
@@ -306,11 +326,33 @@ describe("fillDataFramePrintSlot", () => {
             allowOverlay: true,
           }
         }
+        if (col === 4) {
+          return {
+            kind: GridCellKind.Custom,
+            allowOverlay: false,
+            copyData: "",
+            data: { kind: "list-cell", values: ["red", "blue"] },
+          }
+        }
+        if (col === 5) {
+          return {
+            kind: GridCellKind.Custom,
+            allowOverlay: false,
+            copyData: "",
+            data: {
+              kind: "multi-select-cell",
+              values: ["a", "other"],
+              options: [{ value: "a", label: "Alpha" }],
+            },
+          }
+        }
         return {
-          kind: GridCellKind.Custom,
+          kind: GridCellKind.Uri,
           allowOverlay: false,
-          copyData: "",
-          data: { kind: "list-cell", values: ["red", "blue"] },
+          data: "https://streamlit.io",
+          displayData: "open_in_new",
+          themeOverride: { fontFamily: "Material Symbols Rounded" },
+          onClickUri: () => {},
         }
       },
       measure
@@ -323,6 +365,8 @@ describe("fillDataFramePrintSlot", () => {
       "0, 1.5",
       "",
       "red, blue",
+      "Alpha, other",
+      "https://streamlit.io",
     ])
     expect(cells[3].querySelector("img")).toHaveAttribute(
       "src",

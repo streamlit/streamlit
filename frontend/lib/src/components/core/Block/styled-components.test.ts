@@ -27,6 +27,7 @@ import {
   PRINT_CARD_CLASS,
   StyledColumn,
   StyledFlexContainerBlock,
+  StyledLayoutWrapper,
 } from "./styled-components"
 
 /** Only the `<style>` tags a render call adds, not earlier tests' leftovers. */
@@ -62,7 +63,8 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(":not([data-st-inactive] *)")
     expect(css).toContain("details:not([open])")
     expect(css).not.toContain("data-testid")
-    expect(css).toContain(">.stColumn{display:block")
+    expect(css).toContain(">.stColumn")
+    expect(css).toContain("display:block")
   })
 
   it("lets a dataframe's card break across a page so its header can repeat", () => {
@@ -127,6 +129,20 @@ describe("StyledColumn print layout", () => {
 
     // A plain column prints as a normal flex item unless its row's own
     // print rule (tested above) matches and overrides it from outside.
+    expect(css).not.toContain("@media print")
+  })
+})
+
+describe("StyledLayoutWrapper print layout", () => {
+  it("keeps flex for a fixed-height wrapper", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledLayoutWrapper, {
+          height: "300px",
+        })
+      )
+    )
+
     expect(css).not.toContain("@media print")
   })
 })

@@ -539,8 +539,12 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minHeight,
     maxHeight,
     // See StyledFlexContainerBlock: flex height collapses when printing.
-    "@media print": {
-      display: "block",
-    },
+    // Fixed and stretch-height wrappers keep flex so their child retains its
+    // allocated height.
+    ...((height === undefined || height === "auto") && {
+      "@media print": {
+        display: "block",
+      },
+    }),
   })
 )
