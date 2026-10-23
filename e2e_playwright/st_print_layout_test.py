@@ -82,6 +82,29 @@ def test_print_stacks_columns_and_fits_the_dataframe(
     )
     assert fit
 
+    # A centered or end-aligned container keeps flex. display:block would
+    # drop align-items and justify-content and print the content at the start.
+    centered = get_element_by_key(app, "centered")
+    expect(centered).to_be_visible()
+    centered_style = centered.evaluate(
+        """element => {
+            const style = getComputedStyle(element)
+            return { display: style.display, alignItems: style.alignItems }
+        }"""
+    )
+    assert centered_style["display"] == "flex"
+    assert centered_style["alignItems"] == "center"
+
+    vertically_centered = get_element_by_key(app, "vertically_centered")
+    vertical_style = vertically_centered.evaluate(
+        """element => {
+            const style = getComputedStyle(element)
+            return { display: style.display, justifyContent: style.justifyContent }
+        }"""
+    )
+    assert vertical_style["display"] == "flex"
+    assert vertical_style["justifyContent"] == "center"
+
     assert_snapshot(app, name="st_print_layout-stacked_columns")
 
     app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")

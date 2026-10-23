@@ -278,9 +278,9 @@ export const StyledAppViewBlockContainer =
         ...(isWideMode && applyWideModePadding(theme)),
         [`@media print`]: {
           paddingTop: printPaddingTop,
-          // The on-screen bottom inset leaves room under the last element.
-          // In print that inset can fall on a page of its own.
-          paddingBottom: theme.spacing.lg,
+          // The unset 10rem inset can fall on a page of its own. A configured
+          // paddingBottom is the author's page padding and stays as set.
+          paddingBottom: theme.paddingBottom ?? theme.spacing.lg,
         },
       }
     }

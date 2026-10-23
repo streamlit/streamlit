@@ -281,6 +281,20 @@ describe("DataFrame widget", () => {
     expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
   })
 
+  it("does not expand a dataframe inside a collapsed expander", () => {
+    render(<DataFrame {...props} />)
+    const details = document.createElement("details")
+    const frame = screen.getByTestId("stDataFrame")
+    frame.replaceWith(details)
+    details.append(frame)
+
+    act(() => {
+      window.dispatchEvent(new Event("beforeprint"))
+    })
+
+    expect(document.querySelector(".stDataFramePrintTable")).toBeNull()
+  })
+
   it("caps the grid to its container when printing", () => {
     render(<DataFrame {...props} />)
 

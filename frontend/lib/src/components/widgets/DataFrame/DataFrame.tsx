@@ -107,6 +107,7 @@ import {
   buildDataFramePrintMeasure,
   clearDataFramePrintSlot,
   fillDataFramePrintSlot,
+  isHiddenFromPrint,
 } from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
@@ -963,10 +964,15 @@ function DataFrame({
     }
 
     const onBeforePrint = (): void => {
-      // A closed tab stays mounted with display:none. Building a print table
-      // there would still match :has(.stDataFramePrintTable), and the
-      // surrounding card would be allowed to split across a page.
-      if (isEmptyTable || slot.closest("[data-st-inactive]")) {
+      // The slot is display:none on screen, so visibility is read from the
+      // dataframe. A closed tab, a collapsed expander, or any other hidden
+      // ancestor stays mounted. A print table there would still match
+      // :has(.stDataFramePrintTable) and let the surrounding card split.
+      const frame = slot.closest(".stDataFrame")
+      if (
+        isEmptyTable ||
+        (frame instanceof HTMLElement && isHiddenFromPrint(frame))
+      ) {
         clearDataFramePrintSlot(slot)
         return
       }

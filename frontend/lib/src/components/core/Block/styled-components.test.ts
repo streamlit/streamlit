@@ -18,6 +18,8 @@ import { createElement } from "react"
 
 import { describe, expect, it } from "vitest"
 
+import { Block as BlockProto } from "@streamlit/protobuf"
+
 import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
@@ -57,6 +59,8 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(".stDataFrame")
     expect(css).toContain(".stVegaLiteChart")
     expect(css).toContain(".stPlotlyChart")
+    expect(css).toContain(":not([data-st-inactive] *)")
+    expect(css).toContain("details:not([open])")
     expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn{display:block")
   })
@@ -79,6 +83,33 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("@media (orientation: landscape)")
     expect(css).toContain(":not(:has(.stDataFramePrintTable))")
     expect(css).toContain("break-inside:avoid")
+  })
+
+  it("keeps a centered container's flex alignment and gaps with margin", () => {
+    const centered = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          align: BlockProto.FlexContainer.Align.ALIGN_CENTER,
+        })
+      )
+    )
+    expect(centered).not.toContain("@media print")
+
+    const gapped = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          gap: { pixelGap: 16 },
+        })
+      )
+    )
+    expect(gapped).toContain("margin-bottom:16px")
+    expect(gapped).toContain(":not(:has(.stBalloons))")
+    expect(gapped).toContain(":not(:has(.stSnow))")
+    expect(gapped).not.toContain("padding-bottom:16px")
   })
 })
 

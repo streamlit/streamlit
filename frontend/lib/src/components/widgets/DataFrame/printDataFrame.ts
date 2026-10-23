@@ -53,6 +53,9 @@ export interface DataFramePrintMeasure {
   padding: string
   cellWeight: number
   headerWeight: number
+  /** Fixed box for an image cell, so a data URL is not measured as text. */
+  imageWidth: string
+  imageHeight: string
 }
 
 /** Theme fields that decide the print table's font and column spacing. */
@@ -60,7 +63,7 @@ interface DataFramePrintMeasureTheme {
   fontSizes: { md: string }
   fontWeights: { normal: number; semiBold: number }
   genericFonts: { bodyFont: string }
-  spacing: { threeXS: string; sm: string }
+  spacing: { threeXS: string; sm: string; threeXL: string; fourXL: string }
 }
 
 /**
@@ -88,7 +91,32 @@ export function buildDataFramePrintMeasure(
     padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
     cellWeight: theme.fontWeights.normal,
     headerWeight: theme.fontWeights.semiBold,
+    imageWidth: theme.spacing.fourXL,
+    imageHeight: theme.spacing.threeXL,
   }
+}
+
+/**
+ * True when this element is mounted but not part of the printed page.
+ *
+ * A closed tab and a collapsed expander stay in the DOM. A print table
+ * there would still match `:has(.stDataFramePrintTable)` and let the
+ * surrounding card split. The slot itself is `display: none` on screen,
+ * so this is called on the dataframe, not the slot.
+ */
+export function isHiddenFromPrint(element: HTMLElement): boolean {
+  if (element.closest("[data-st-inactive], details:not([open])")) {
+    return true
+  }
+  // Other unprinted subtrees (for example a display:none ancestor) are
+  // not named above. Off-screen content still counts as visible.
+  if (typeof element.checkVisibility !== "function") {
+    return false
+  }
+  return !element.checkVisibility({
+    checkOpacity: false,
+    checkVisibilityCSS: true,
+  })
 }
 
 /**
@@ -123,7 +151,7 @@ export function fillDataFramePrintSlot(
   if (numRows * printable.length > DATAFRAME_PRINT_CELL_LIMIT) {
     setPrintNote(
       slot,
-      "This table is too large to expand for print, so the on-screen grid is shown."
+      "Only the visible part of this table is printed because it is too large to expand."
     )
     return
   }
@@ -131,31 +159,31 @@ export function fillDataFramePrintSlot(
   const headers = printable.map(
     ({ column }) => column.title || column.name || ""
   )
-  const rows: string[][] = []
+  const rows: PrintCellContent[][] = []
   for (let row = 0; row < numRows; row++) {
-    const texts: string[] = []
+    const cells: PrintCellContent[] = []
     for (const { index } of printable) {
-      const text = printCellText(getCellContent([index, row]))
+      const content = printCellContent(getCellContent([index, row]))
       // An unloaded lazy row cannot be fetched before the browser snapshots
       // the page. A partial table would show blanks, so keep the canvas.
-      if (text === null) {
+      if (content === null) {
         setPrintNote(
           slot,
-          "Some rows are still loading, so the on-screen grid is shown."
+          "Only the visible part of this table is printed because some rows are still loading."
         )
         return
       }
-      texts.push(text)
+      cells.push(content)
     }
-    rows.push(texts)
+    rows.push(cells)
   }
 
-  const tableHtml = renderPrintTable(headers, rows)
-  const width = measurePrintWidth(tableHtml, measure)
+  const table = renderPrintTable(headers, rows)
+  const width = measurePrintWidth(table, measure)
   if (width > 0) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
   }
-  slot.innerHTML = tableHtml
+  slot.replaceChildren(table)
 }
 
 /** Drop the print table so the on-screen grid is unchanged after printing. */
@@ -164,32 +192,52 @@ export function clearDataFramePrintSlot(slot: HTMLElement): void {
   slot.style.removeProperty(DATAFRAME_PRINT_WIDTH_VAR)
 }
 
+/** What one printed cell shows. `null` means the row is still being fetched. */
+type PrintCellContent =
+  | { kind: "text"; text: string }
+  | { kind: "images"; urls: string[] }
+
 /**
- * Text the grid shows for this cell.
+ * What the grid shows for this cell.
  *
  * `null` means the row is still being fetched. Empty progress and chart cells
  * use the same loading kind, without a skeleton, and print as a blank. The
  * formatted display is used when the column has one, so a percentage prints
- * as `42%` rather than the stored `0.42`.
+ * as `42%` rather than the stored `0.42`. An image prints as an image, not
+ * as its URL, so a data URL cannot shrink the other columns.
  */
-function printCellText(cell: GridCell): string | null {
+function printCellContent(cell: GridCell): PrintCellContent | null {
   if (cell.kind === GridCellKind.Loading) {
     // Unloaded lazy rows draw a skeleton. An empty cell has none.
-    return cell.skeletonWidth === undefined ? "" : null
+    return cell.skeletonWidth === undefined ? { kind: "text", text: "" } : null
+  }
+
+  if (cell.kind === GridCellKind.Image && "displayData" in cell) {
+    const urls = Array.isArray(cell.displayData)
+      ? cell.displayData.filter(
+          (item): item is string => typeof item === "string" && item !== ""
+        )
+      : []
+    return urls.length > 0
+      ? { kind: "images", urls }
+      : { kind: "text", text: "" }
   }
 
   if ("displayData" in cell) {
     const displayData = cell.displayData
     if (typeof displayData === "string") {
-      return displayData
+      return { kind: "text", text: displayData }
     }
     if (Array.isArray(displayData)) {
-      return displayData.map(item => toSafeString(item)).join(", ")
+      return {
+        kind: "text",
+        text: displayData.map(item => toSafeString(item)).join(", "),
+      }
     }
   }
 
   if (!("data" in cell) || isNullOrUndefined(cell.data)) {
-    return ""
+    return { kind: "text", text: "" }
   }
 
   const data = cell.data
@@ -198,48 +246,97 @@ function printCellText(cell: GridCell): string | null {
     typeof data === "number" ||
     typeof data === "boolean"
   ) {
-    return String(data)
+    return { kind: "text", text: String(data) }
   }
 
   if (typeof data === "object") {
-    const record = data as Record<string, unknown>
-    if (typeof record.displayDate === "string") {
-      return record.displayDate
-    }
-    if (typeof record.displayValue === "string") {
-      return record.displayValue
-    }
-    if (typeof record.label === "string") {
-      return record.label
-    }
-    if (Array.isArray(record.values)) {
-      return record.values.map(item => toSafeString(item)).join(", ")
+    return {
+      kind: "text",
+      text: printRecordText(data as Record<string, unknown>),
     }
   }
 
+  return { kind: "text", text: "" }
+}
+
+function printRecordText(record: Record<string, unknown>): string {
+  if (record.kind === "dropdown-cell") {
+    return printDropdownText(record)
+  }
+  if (record.kind === "media-cell") {
+    return typeof record.src === "string" ? record.src : ""
+  }
+  // A sparkline stores the normalized series on `values` and the formatted
+  // numbers on `displayValues`. List and multiselect cells only have `values`,
+  // so the formatted series has to win when both exist.
+  if (Array.isArray(record.displayValues)) {
+    return record.displayValues.map(item => toSafeString(item)).join(", ")
+  }
+  if (typeof record.displayDate === "string") {
+    return record.displayDate
+  }
+  if (typeof record.displayValue === "string") {
+    return record.displayValue
+  }
+  if (typeof record.label === "string") {
+    return record.label
+  }
+  if (Array.isArray(record.values)) {
+    return record.values.map(item => toSafeString(item)).join(", ")
+  }
   return ""
 }
 
+function isLabeledOption(
+  option: unknown
+): option is { value: unknown; label: string } {
+  return (
+    option !== null &&
+    typeof option === "object" &&
+    "value" in option &&
+    "label" in option &&
+    typeof option.label === "string"
+  )
+}
+
+function printDropdownText(record: Record<string, unknown>): string {
+  const value = record.value
+  if (isNullOrUndefined(value) || value === "") {
+    return ""
+  }
+  if (Array.isArray(record.allowedValues)) {
+    for (const option of record.allowedValues) {
+      if (isLabeledOption(option) && option.value === value) {
+        return option.label
+      }
+    }
+  }
+  return toSafeString(value)
+}
+
 function measurePrintWidth(
-  tableHtml: string,
+  table: HTMLTableElement,
   measure: DataFramePrintMeasure
 ): number {
   const probe = document.createElement("div")
-  // Kept out of the print snapshot. Visibility hidden still has a layout.
+  // An absolute box with width:auto is shrink-to-fit and Chromium clamps
+  // that to the viewport, so a wider table was measured too narrow and the
+  // print zoom stayed near 1. max-content is the table's own width.
   probe.style.position = "absolute"
   probe.style.visibility = "hidden"
   probe.style.left = "0"
   probe.style.top = "0"
+  probe.style.width = "max-content"
+  probe.style.maxWidth = "none"
   const style = document.createElement("style")
   style.textContent = printMeasureCss(measure)
-  probe.append(style)
-  probe.insertAdjacentHTML("beforeend", tableHtml)
+  probe.append(style, table.cloneNode(true))
   document.body.append(probe)
-  const table = probe.querySelector("table")
+  const laidOut = probe.querySelector("table")
   // beforeprint still uses screen media, so this copy is the only laid-out
   // table. The print slot itself is display:none and has no width.
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const width = table instanceof HTMLElement ? table.offsetWidth : 0
+  const width = laidOut instanceof HTMLElement ? laidOut.scrollWidth : 0
   probe.remove()
   return width
 }
@@ -261,28 +358,49 @@ function printMeasureCss(measure: DataFramePrintMeasure): string {
       text-align: left;
     }
     ${table} th { font-weight: ${measure.headerWeight}; }
+    ${table} img {
+      width: ${measure.imageWidth};
+      height: ${measure.imageHeight};
+      object-fit: contain;
+    }
   `
 }
 
 function renderPrintTable(
   headers: readonly string[],
-  rows: readonly string[][]
-): string {
-  const head = headers.map(text => `<th>${escapeHtml(text)}</th>`).join("")
-  const body = rows
-    .map(
-      row =>
-        `<tr>${row.map(text => `<td>${escapeHtml(text)}</td>`).join("")}</tr>`
-    )
-    .join("")
-  return `<table class="${DATAFRAME_PRINT_TABLE_CLASS}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
+  rows: readonly PrintCellContent[][]
+): HTMLTableElement {
+  const table = document.createElement("table")
+  table.className = DATAFRAME_PRINT_TABLE_CLASS
+  const head = document.createElement("tr")
+  for (const header of headers) {
+    const cell = document.createElement("th")
+    cell.textContent = header
+    head.append(cell)
+  }
+  const thead = document.createElement("thead")
+  thead.append(head)
+  const body = document.createElement("tbody")
+  for (const row of rows) {
+    const line = document.createElement("tr")
+    for (const content of row) {
+      const cell = document.createElement("td")
+      if (content.kind === "images") {
+        for (const url of content.urls) {
+          const image = document.createElement("img")
+          image.alt = ""
+          image.src = url
+          cell.append(image)
+        }
+      } else {
+        cell.textContent = content.text
+      }
+      line.append(cell)
+    }
+    body.append(line)
+  }
+  table.append(thead, body)
+  return table
 }
 
 function setPrintNote(slot: HTMLElement, message: string): void {

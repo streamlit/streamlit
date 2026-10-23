@@ -118,6 +118,13 @@ export const StyledResizableContainer =
           th: {
             fontWeight: theme.fontWeights.semiBold,
           },
+          // The same box the off-screen probe measures, so a data URL is
+          // not laid out as a line of text.
+          img: {
+            width: theme.spacing.fourXL,
+            height: theme.spacing.threeXL,
+            objectFit: "contain",
+          },
         },
         [`& .${DATAFRAME_PRINT_NOTE_CLASS}`]: {
           margin: 0,

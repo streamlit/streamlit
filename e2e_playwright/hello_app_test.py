@@ -255,8 +255,9 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
     headers = table.locator("th")
     expect(headers.first).to_be_visible()
     # The on-screen canvas only paints the viewport. The print table has the
-    # index plus every year column.
-    assert headers.count() > 5
+    # index plus every year column. The year count comes from the remote CSV,
+    # so this waits until at least the index and five years are present.
+    expect(headers.nth(5)).to_be_visible()
     expect(app.locator(".stDataFrameResizable")).to_be_hidden()
 
     fit = app.evaluate(

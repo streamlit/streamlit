@@ -28,6 +28,7 @@ import {
   DATAFRAME_PRINT_WIDTH_VAR,
   type DataFramePrintMeasure,
   fillDataFramePrintSlot,
+  isHiddenFromPrint,
 } from "./printDataFrame"
 
 function column(
@@ -58,6 +59,8 @@ const measure: DataFramePrintMeasure = {
   padding: "0.125rem 0.5rem",
   cellWeight: 400,
   headerWeight: 500,
+  imageWidth: "4rem",
+  imageHeight: "2rem",
 }
 
 describe("fillDataFramePrintSlot", () => {
@@ -159,6 +162,7 @@ describe("fillDataFramePrintSlot", () => {
     expect(slot.querySelector("table")).toBeNull()
     expect(slot.querySelector("p")).toHaveClass(DATAFRAME_PRINT_NOTE_CLASS)
     expect(slot.textContent).toContain("still loading")
+    expect(slot.textContent).not.toContain("on-screen grid")
   })
 
   it("keeps the canvas when the frame is too large to expand", () => {
@@ -210,11 +214,13 @@ describe("fillDataFramePrintSlot", () => {
 
   it("measures the laid-out table, including its font", () => {
     let css = ""
+    let probeWidth = ""
     const spy = vi
-      .spyOn(HTMLElement.prototype, "offsetWidth", "get")
+      .spyOn(HTMLElement.prototype, "scrollWidth", "get")
       .mockImplementation(function width(this: HTMLElement) {
         if (this.tagName === "TABLE") {
           css = this.parentElement?.querySelector("style")?.textContent ?? ""
+          probeWidth = this.parentElement?.style.maxWidth ?? ""
           return 320
         }
         return 0
@@ -231,10 +237,112 @@ describe("fillDataFramePrintSlot", () => {
     expect(css).toContain("Custom, sans-serif")
     expect(css).toContain("1.5rem")
     expect(css).toContain("0.25rem 1rem")
+    // width:max-content is set too. jsdom drops that keyword, so the
+    // companion max-width:none is what this environment can observe.
+    expect(probeWidth).toBe("none")
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
       "320px"
     )
     spy.mockRestore()
+  })
+
+  it("prints select labels, media sources, formatted sparklines, and images", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [
+        column("Choice"),
+        column("Clip"),
+        column("Trend"),
+        column("Photo"),
+        column("Tags"),
+      ],
+      1,
+      ([col]) => {
+        if (col === 0) {
+          return {
+            kind: GridCellKind.Custom,
+            allowOverlay: true,
+            copyData: "a",
+            data: {
+              kind: "dropdown-cell",
+              value: "a",
+              allowedValues: [{ value: "a", label: "Alpha" }, "b"],
+            },
+          }
+        }
+        if (col === 1) {
+          return {
+            kind: GridCellKind.Custom,
+            allowOverlay: false,
+            copyData: "",
+            data: {
+              kind: "media-cell",
+              mediaType: "audio",
+              src: "https://example.com/a.mp3",
+            },
+          }
+        }
+        if (col === 2) {
+          return {
+            kind: GridCellKind.Custom,
+            allowOverlay: false,
+            copyData: "",
+            data: {
+              kind: "sparkline-cell",
+              values: [0, 1],
+              displayValues: ["0", "1.5"],
+            },
+          }
+        }
+        if (col === 3) {
+          return {
+            kind: GridCellKind.Image,
+            data: ["data:image/png;base64,aaaa"],
+            displayData: ["data:image/png;base64,aaaa"],
+            allowOverlay: true,
+          }
+        }
+        return {
+          kind: GridCellKind.Custom,
+          allowOverlay: false,
+          copyData: "",
+          data: { kind: "list-cell", values: ["red", "blue"] },
+        }
+      },
+      measure
+    )
+
+    const cells = [...slot.querySelectorAll("td")]
+    expect(cells.map(cell => cell.textContent)).toEqual([
+      "Alpha",
+      "https://example.com/a.mp3",
+      "0, 1.5",
+      "",
+      "red, blue",
+    ])
+    expect(cells[3].querySelector("img")).toHaveAttribute(
+      "src",
+      "data:image/png;base64,aaaa"
+    )
+    expect(slot.innerHTML).not.toContain("base64,aaaa</")
+  })
+})
+
+describe("isHiddenFromPrint", () => {
+  it("treats a closed tab and a collapsed expander as unprinted", () => {
+    const tab = document.createElement("div")
+    tab.setAttribute("data-st-inactive", "")
+    const frame = document.createElement("div")
+    tab.append(frame)
+    expect(isHiddenFromPrint(frame)).toBe(true)
+
+    const details = document.createElement("details")
+    const hidden = document.createElement("div")
+    details.append(hidden)
+    expect(isHiddenFromPrint(hidden)).toBe(true)
+
+    details.open = true
+    expect(isHiddenFromPrint(hidden)).toBe(false)
   })
 })
 
@@ -245,7 +353,12 @@ describe("buildDataFramePrintMeasure", () => {
         fontSizes: { md: "1rem" },
         fontWeights: { normal: 400, semiBold: 500 },
         genericFonts: { bodyFont: "Custom, sans-serif" },
-        spacing: { threeXS: "0.125rem", sm: "0.5rem" },
+        spacing: {
+          threeXS: "0.125rem",
+          sm: "0.5rem",
+          threeXL: "2rem",
+          fourXL: "4rem",
+        },
       })
     ).toEqual({
       fontFamily: "Custom, sans-serif",
@@ -253,6 +366,8 @@ describe("buildDataFramePrintMeasure", () => {
       padding: "0.125rem 0.5rem",
       cellWeight: 400,
       headerWeight: 500,
+      imageWidth: "4rem",
+      imageHeight: "2rem",
     })
   })
 })

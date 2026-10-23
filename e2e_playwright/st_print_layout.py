@@ -40,3 +40,9 @@ feedback = pd.DataFrame(
 )
 with st.container(border=True, key="feedback"):
     st.dataframe(feedback, hide_index=True, width="stretch")
+
+with st.container(horizontal_alignment="center", key="centered"):
+    st.markdown("Centered line")
+
+with st.container(height=120, vertical_alignment="center", key="vertically_centered"):
+    st.markdown("Vertically centered")

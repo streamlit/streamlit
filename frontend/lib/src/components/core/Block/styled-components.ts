@@ -51,11 +51,17 @@ export const PRINT_CARD_CLASS = "stPrintCard"
 const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, .stDataFrame, .stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)`
 
 /**
+ * A chart or dataframe inside a closed tab or a collapsed expander is still
+ * mounted. It is not on the printed page, so it does not make the row stack.
+ */
+const VISIBLE_PRINT_STACK_TRIGGER = `${PRINT_STACK_TRIGGER}:not([data-st-inactive] *):not(details:not([open]) *)`
+
+/**
  * Matches a column that is itself a card, or holds one. A row of compact
  * widgets (metrics, buttons) matches neither and stays side by side instead
  * of lengthening the printed page.
  */
-const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${PRINT_STACK_TRIGGER}`
+const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${VISIBLE_PRINT_STACK_TRIGGER}`
 
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
@@ -264,10 +270,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
-      // The enclosing row's own print rule gives this column the full page
-      // width, but only for a row that holds a card, chart, or dataframe. A
-      // row of compact widgets has no such rule and prints as a normal flex
-      // row instead of stacking.
+      // Print stacking for columns is set by the parent row.
     }
   }
 )
@@ -355,6 +358,82 @@ export const StyledFlexContainerBlock =
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
       }
+      const crossAxis = getAlignItems(align)
+      const mainAxis = getJustifyContent(justify)
+      // display:block drops align-items and justify-content. A container
+      // that centers or ends its content keeps flex so print matches the
+      // screen. The default start/stretch block is the one whose flex
+      // height collapses and paints a chart over the next heading.
+      const keepsPrintFlex =
+        direction === Direction.VERTICAL &&
+        (crossAxis === "center" ||
+          crossAxis === "end" ||
+          mainAxis === "center" ||
+          mainAxis === "end" ||
+          mainAxis === "space-between")
+      // Chrome's print layout drops the height of a flex or table row, so a
+      // chart paints over the next heading. Vertical blocks use normal
+      // flow. A column row stacks, and each column takes the full page
+      // width, only when it holds a card, chart, or dataframe; a row of
+      // compact widgets stays side by side. A bordered card stays on one
+      // page so the chart cannot land on the heading below.
+      const printRules = {
+        ...(direction === Direction.HORIZONTAL
+          ? {
+              [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
+                display: "block",
+                "> .stColumn": {
+                  display: "block",
+                  float: "none",
+                  clear: "both",
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  ...(gapWidth &&
+                    gapWidth !== theme.spacing.none && {
+                      "&:not(:last-of-type)": {
+                        marginBottom: gapWidth,
+                      },
+                    }),
+                },
+              },
+            }
+          : keepsPrintFlex
+            ? {}
+            : {
+                display: "block",
+                // `gap` only applies to a flex box. Margin keeps the
+                // space outside the child, so a fixed height is not
+                // eaten by border-box padding. Balloons and snow cancel
+                // the gap with their own negative margin, and this
+                // selector is more specific, so those children are left
+                // alone.
+                ...(gapWidth &&
+                  gapWidth !== theme.spacing.none && {
+                    "& > :not(:last-child):not(:has(.stBalloons)):not(:has(.stSnow))":
+                      {
+                        marginBottom: gapWidth,
+                      },
+                  }),
+              }),
+        ...(border && {
+          // A landscape page is too short for a chart card to finish in
+          // the space left below the previous one, so the card was cut
+          // through the middle and the rest of the page stayed empty.
+          // Keeping the card whole moves it to the next page instead.
+          // Portrait is tall enough for the next card to start on the
+          // same page. A dataframe print table can be taller than the
+          // page, so that card may still break and repeat its header.
+          // A table inside a closed tab is not built, so it does not
+          // opt the card out.
+          "@media (orientation: landscape)": {
+            "&:not(:has(.stDataFramePrintTable))": {
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+            },
+          },
+        }),
+      }
 
       return {
         display: "flex",
@@ -414,63 +493,10 @@ export const StyledFlexContainerBlock =
               [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
             },
           }),
-        // Chrome's print layout drops the height of a flex or table row, so a
-        // chart paints over the next heading. Vertical blocks use normal
-        // flow. A column row stacks, and each column takes the full page
-        // width, only when it holds a card, chart, or dataframe; a row of
-        // compact widgets stays side by side. A bordered card stays on one
-        // page so the chart cannot land on the heading below.
-        "@media print": {
-          ...(direction === Direction.HORIZONTAL
-            ? {
-                [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
-                  display: "block",
-                  "> .stColumn": {
-                    display: "block",
-                    float: "none",
-                    clear: "both",
-                    width: "100%",
-                    maxWidth: "100%",
-                    minWidth: 0,
-                    ...(gapWidth &&
-                      gapWidth !== theme.spacing.none && {
-                        "&:not(:last-of-type)": {
-                          marginBottom: gapWidth,
-                        },
-                      }),
-                  },
-                },
-              }
-            : {
-                display: "block",
-                // `gap` only applies to a flex box. Padding keeps the space
-                // between elements. A child that cancels this gap with a
-                // negative margin, such as a balloon, still does.
-                ...(gapWidth &&
-                  gapWidth !== theme.spacing.none && {
-                    "& > :not(:last-child)": {
-                      paddingBottom: gapWidth,
-                    },
-                  }),
-              }),
-          ...(border && {
-            // A landscape page is too short for a chart card to finish in
-            // the space left below the previous one, so the card was cut
-            // through the middle and the rest of the page stayed empty.
-            // Keeping the card whole moves it to the next page instead.
-            // Portrait is tall enough for the next card to start on the
-            // same page. A dataframe print table can be taller than the
-            // page, so that card may still break and repeat its header.
-            // A table inside a closed tab is not built, so it does not
-            // opt the card out.
-            "@media (orientation: landscape)": {
-              "&:not(:has(.stDataFramePrintTable))": {
-                breakInside: "avoid",
-                pageBreakInside: "avoid",
-              },
-            },
-          }),
-        },
+        // An empty print block still emits `@media print {}`.
+        ...(Object.keys(printRules).length > 0
+          ? { "@media print": printRules }
+          : {}),
       }
     }
   )
