@@ -36,6 +36,26 @@ import { assertNever } from "~lib/util/assertNever"
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
+/**
+ * Marks a bordered card (`st.container(border=True)` or a bordered column)
+ * so a printed column row can tell a card from a plain container. A border
+ * is drawn with an emotion style, which has no stable selector of its own.
+ */
+export const PRINT_CARD_CLASS = "stPrintCard"
+
+/**
+ * Compound match for content that makes a printed column row stack into one
+ * column: a card, a dataframe, or a chart.
+ */
+const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, [data-testid='stDataFrame'], [data-testid='stVegaLiteChart'], [data-testid='stPlotlyChart'], [data-testid='stDeckGlJsonChart'], [data-testid='stGraphVizChart'], [data-testid='stEChartsChart'])`
+
+/**
+ * Matches a column that is itself a card, or holds one. A row of compact
+ * widgets (metrics, buttons) matches neither and stays side by side instead
+ * of lengthening the printed page.
+ */
+const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${PRINT_STACK_TRIGGER}`
+
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
   theme: EmotionTheme
@@ -243,23 +263,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
-      // Each column uses the full page width when printing. A flex or table
-      // row is one fragment, so a chart that crosses a page is painted on
-      // top of the next heading, and a half-width column squeezes a
-      // container whether or not that container has a border.
-      "@media print": {
-        display: "block",
-        float: "none",
-        clear: "both",
-        width: "100%",
-        maxWidth: "100%",
-        minWidth: 0,
-        ...(gapWidth !== theme.spacing.none && {
-          "&:not(:last-of-type)": {
-            marginBottom: gapWidth,
-          },
-        }),
-      },
+      // The enclosing row's own print rule gives this column the full page
+      // width, but only for a row that holds a card, chart, or dataframe. A
+      // row of compact widgets has no such rule and prints as a normal flex
+      // row instead of stacking.
     }
   }
 )
@@ -407,15 +414,30 @@ export const StyledFlexContainerBlock =
             },
           }),
         // Chrome's print layout drops the height of a flex or table row, so a
-        // chart paints over the next heading. Vertical blocks and column
-        // rows use normal flow. Columns themselves take the full page width.
-        // A bordered card stays on one page so the chart cannot land on the
-        // heading below.
+        // chart paints over the next heading. Vertical blocks use normal
+        // flow. A column row stacks, and each column takes the full page
+        // width, only when it holds a card, chart, or dataframe; a row of
+        // compact widgets stays side by side. A bordered card stays on one
+        // page so the chart cannot land on the heading below.
         "@media print": {
           ...(direction === Direction.HORIZONTAL
             ? {
-                "&:has(> .stColumn)": {
+                [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
                   display: "block",
+                  "> .stColumn": {
+                    display: "block",
+                    float: "none",
+                    clear: "both",
+                    width: "100%",
+                    maxWidth: "100%",
+                    minWidth: 0,
+                    ...(gapWidth &&
+                      gapWidth !== theme.spacing.none && {
+                        "&:not(:last-of-type)": {
+                          marginBottom: gapWidth,
+                        },
+                      }),
+                  },
                 },
               }
             : {
@@ -431,8 +453,14 @@ export const StyledFlexContainerBlock =
                   }),
               }),
           ...(border && {
-            breakInside: "avoid",
-            pageBreakInside: "avoid",
+            // A dataframe print table can be taller than one page, and its
+            // card grows so the repeated header wraps every row. Keeping
+            // that card from breaking would instead push it whole onto the
+            // next page and clip rows that already fit on this one.
+            "&:not(:has(.stDataFramePrintTable))": {
+              breakInside: "avoid",
+              pageBreakInside: "avoid",
+            },
           }),
         },
       }
