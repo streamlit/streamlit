@@ -16,7 +16,7 @@
 
 import type { CSSProperties } from "react"
 
-import styled from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -377,7 +377,7 @@ export const StyledFlexContainerBlock =
       // width, only when it holds a card, chart, or dataframe; a row of
       // compact widgets stays side by side. A bordered card stays on one
       // page so the chart cannot land on the heading below.
-      const printRules = {
+      const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
               [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
