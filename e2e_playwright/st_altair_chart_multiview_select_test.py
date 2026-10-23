@@ -139,8 +139,10 @@ def test_vconcat_chart_point_selection(app: Page):
     selection_text = app.get_by_text("VConcat chart selection:")
     expect(selection_text).not_to_be_visible()
 
-    # Click on a point in the scatter plot (top view)
-    _click(app, chart, _MousePosition(200, 80))
+    # Click on a point in the scatter plot (top view). Figtree axis metrics shift
+    # the marks relative to Source Sans; (210, 50) hits a dense cluster under the
+    # new default face (the prior (200, 80) landed in empty space).
+    _click(app, chart, _MousePosition(210, 50))
 
     # Verify selection text is displayed - field-based selection returns the Origin value
     expected_prefix = "VConcat chart selection:"

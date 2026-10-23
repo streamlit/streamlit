@@ -3724,7 +3724,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.genericFonts.bodyFont).toBe(
-      'Body Font Test, "Source Sans", sans-serif'
+      'Body Font Test, "Figtree", sans-serif'
     )
   })
 
@@ -3736,7 +3736,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.genericFonts.codeFont).toBe(
-      'Code Font Test, "Source Code Pro", monospace'
+      'Code Font Test, "Geist Mono", monospace'
     )
   })
 
@@ -3748,7 +3748,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.genericFonts.headingFont).toBe(
-      'Heading Font Test, "Source Sans", sans-serif'
+      'Heading Font Test, "Figtree", sans-serif'
     )
   })
 
@@ -3770,7 +3770,7 @@ describe("toThemeInput", () => {
     const { colors } = lightTheme.emotion
     expect(toThemeInput(lightTheme.emotion)).toEqual({
       primaryColor: colors.primary,
-      bodyFont: `"Source Sans", sans-serif`,
+      bodyFont: `"Figtree", sans-serif`,
       backgroundColor: colors.bgColor,
       secondaryBackgroundColor: colors.secondaryBg,
       textColor: colors.bodyText,
@@ -3912,43 +3912,43 @@ describe("theme overrides", () => {
 describe("parseFont", () => {
   it.each([
     // Test standard font mappings
-    ["sans-serif", '"Source Sans", sans-serif'],
-    ["Sans-Serif", '"Source Sans", sans-serif'], // Case insensitive
-    ["SANS-SERIF", '"Source Sans", sans-serif'], // All caps
-    ["sans serif", '"Source Sans", sans-serif'], // With space
+    ["sans-serif", '"Figtree", sans-serif'],
+    ["Sans-Serif", '"Figtree", sans-serif'], // Case insensitive
+    ["SANS-SERIF", '"Figtree", sans-serif'], // All caps
+    ["sans serif", '"Figtree", sans-serif'], // With space
     ["serif", '"Source Serif", serif'],
-    ["monospace", '"Source Code Pro", monospace'],
+    ["monospace", '"Geist Mono", monospace'],
     // Test fonts that aren't in the map (should always append Streamlit default as fallback)
-    ["Arial", 'Arial, "Source Sans", sans-serif'],
-    ["Helvetica", 'Helvetica, "Source Sans", sans-serif'],
-    ["Times New Roman", 'Times New Roman, "Source Sans", sans-serif'],
-    ["Comic Sans MS", 'Comic Sans MS, "Source Sans", sans-serif'],
+    ["Arial", 'Arial, "Figtree", sans-serif'],
+    ["Helvetica", 'Helvetica, "Figtree", sans-serif'],
+    ["Times New Roman", 'Times New Roman, "Figtree", sans-serif'],
+    ["Comic Sans MS", 'Comic Sans MS, "Figtree", sans-serif'],
     // Empty string should return just the fallback font
-    ["", '"Source Sans", sans-serif'],
+    ["", '"Figtree", sans-serif'],
     // Whitespace-only string should also return just the fallback font
-    ["   ", '"Source Sans", sans-serif'],
+    ["   ", '"Figtree", sans-serif'],
     // Test fonts that already have fallbacks (should still append Streamlit default as final fallback)
     [
       '"Roboto", Arial, sans-serif',
-      '"Roboto", Arial, sans-serif, "Source Sans", sans-serif',
+      '"Roboto", Arial, sans-serif, "Figtree", sans-serif',
     ],
     [
       "Arial, Helvetica, sans-serif",
-      'Arial, Helvetica, sans-serif, "Source Sans", sans-serif',
+      'Arial, Helvetica, sans-serif, "Figtree", sans-serif',
     ],
   ])("correctly maps '%s' to '%s'", (input, expected) => {
     expect(parseFont(input)).toBe(expected)
   })
 
   it("allows custom fallback font", () => {
-    expect(parseFont("Arial", '"Source Code Pro", monospace')).toBe(
-      'Arial, "Source Code Pro", monospace'
+    expect(parseFont("Arial", '"Geist Mono", monospace')).toBe(
+      'Arial, "Geist Mono", monospace'
     )
   })
 
   it("appends fallback even to fonts that already have commas", () => {
     expect(parseFont('"My Font", Arial')).toBe(
-      '"My Font", Arial, "Source Sans", sans-serif'
+      '"My Font", Arial, "Figtree", sans-serif'
     )
   })
 })

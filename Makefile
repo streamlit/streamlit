@@ -541,8 +541,8 @@ update-notices:
 	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/@linaria/react
 	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/react-number-format
 
-	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
-	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Geist_Mono/Geist-Mono.LICENSE
+	./scripts/append_license.sh frontend/app/src/assets/fonts/Figtree/Figtree.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Material-Icons.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/img/Open-Iconic.LICENSE
