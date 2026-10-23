@@ -302,16 +302,24 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
             "_LOGGER.warning"
         ) as warning:
-            wrapped_storage.set("first", b"large")
+            wrapped_storage.set("sensitive-cache-key", b"sensitive-cached-value")
             wrapped_storage.set("second", b"larger")
 
         with pytest.raises(CacheStorageKeyNotFoundError):
-            wrapped_storage._read_from_mem_cache("first")
+            wrapped_storage._read_from_mem_cache("sensitive-cache-key")
         assert wrapped_storage._read_from_mem_cache("second") == b"larger"
         warning.assert_called_once_with(
             "A cached result is larger than the st.cache_data size limit and "
-            "was stored anyway."
+            "was stored anyway. Function %r produced %s serialized bytes, "
+            "exceeding %s.",
+            "func-display-name",
+            len(b"sensitive-cached-value"),
+            "max_size (2 bytes)",
         )
+        warning_message = warning.call_args.args[0] % warning.call_args.args[1:]
+        assert "sensitive-cache-key" not in warning_message
+        assert "sensitive-cached-value" not in warning_message
+        assert warning.call_args.kwargs == {}
 
     def test_byte_eviction_preserves_persisted_entry(self) -> None:
         """Byte eviction leaves the persisted copy available for reload."""

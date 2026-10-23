@@ -82,7 +82,7 @@ def _parse_byte_size(value: str) -> int:
 
 
 def _parse_byte_size_with_metadata(value: str) -> tuple[int, bool]:
-    """Parse a unit-bearing size and report whether its numeral is positive."""
+    """Parse a size and report whether its numeral contains a nonzero digit."""
     match = _BYTE_SIZE_RE.fullmatch(value)
     if match is None:
         raise _InvalidByteSizeError
@@ -94,7 +94,8 @@ def _parse_byte_size_with_metadata(value: str) -> tuple[int, bool]:
         raise _ByteSizeTooLongError
     denominator = 10 ** len(fraction)
     size: int = int(digits) * _MULTIPLIERS[unit.lower()] // denominator
-    return size, bool(digits.strip("0"))
+    has_nonzero_numeral = bool(digits.strip("0"))
+    return size, has_nonzero_numeral
 
 
 def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | None:
@@ -165,7 +166,7 @@ def config_max_cache_data_size_to_bytes(value: object) -> int | None:
             error_id="config-max-cache-data-size-invalid",
         )
     try:
-        size, is_positive = _parse_byte_size_with_metadata(value)
+        size, has_nonzero_numeral = _parse_byte_size_with_metadata(value)
     except _InvalidByteSizeError:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHE_DATA_SIZE_ERROR,
@@ -177,7 +178,7 @@ def config_max_cache_data_size_to_bytes(value: object) -> int | None:
             error_id="config-max-cache-data-size-invalid",
         ) from None
     # Reject an explicit zero with a unit ("0gb"); only a bare "0" disables.
-    if not is_positive:
+    if not has_nonzero_numeral:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHE_DATA_SIZE_ZERO_ERROR,
             error_id="config-max-cache-data-size-invalid",

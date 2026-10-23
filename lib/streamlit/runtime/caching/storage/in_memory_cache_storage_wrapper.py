@@ -208,18 +208,18 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
         should_warn = False
+        exceeded_limits = []
+        entry_size = len(entry_bytes)
         candidates = []
         with self._mem_cache_lock:
-            if (
-                (
-                    self._max_size_bytes is not None
-                    and len(entry_bytes) > self._max_size_bytes
+            if self._max_size_bytes is not None and entry_size > self._max_size_bytes:
+                exceeded_limits.append(f"max_size ({self._max_size_bytes} bytes)")
+            global_max_bytes = self._global_budget.max_bytes
+            if global_max_bytes is not None and entry_size > global_max_bytes:
+                exceeded_limits.append(
+                    f"server.maxCacheDataSize ({global_max_bytes} bytes)"
                 )
-                or (
-                    self._global_budget.max_bytes is not None
-                    and len(entry_bytes) > self._global_budget.max_bytes
-                )
-            ) and not self._oversized_warning_emitted:
+            if exceeded_limits and not self._oversized_warning_emitted:
                 self._oversized_warning_emitted = True
                 should_warn = True
             self._mem_cache[key] = entry_bytes
@@ -239,7 +239,11 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         if should_warn:
             _LOGGER.warning(
                 "A cached result is larger than the st.cache_data size limit and "
-                "was stored anyway."
+                "was stored anyway. Function %r produced %s serialized bytes, "
+                "exceeding %s.",
+                self.function_display_name,
+                entry_size,
+                " and ".join(exceeded_limits),
             )
 
     def _remove_from_mem_cache(self, key: str) -> None:

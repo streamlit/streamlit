@@ -259,7 +259,32 @@ def test_oversized_global_entry_is_retained_and_warns_once() -> None:
     assert storage.get("second") == b"larger"
     warning.assert_called_once_with(
         "A cached result is larger than the st.cache_data size limit and "
-        "was stored anyway."
+        "was stored anyway. Function %r produced %s serialized bytes, "
+        "exceeding %s.",
+        "oversized",
+        len(b"large"),
+        "server.maxCacheDataSize (2 bytes)",
+    )
+
+
+def test_oversized_warning_names_both_exceeded_limits() -> None:
+    """The oversized warning identifies both applicable configured limits."""
+    budget = GlobalCacheBudget(max_bytes=2)
+    storage = _create_storage(budget, "both-limits", max_size_bytes=3)
+
+    with patch(
+        "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+        "_LOGGER.warning"
+    ) as warning:
+        storage.set("key", b"large")
+
+    warning.assert_called_once_with(
+        "A cached result is larger than the st.cache_data size limit and "
+        "was stored anyway. Function %r produced %s serialized bytes, "
+        "exceeding %s.",
+        "both-limits",
+        len(b"large"),
+        "max_size (3 bytes) and server.maxCacheDataSize (2 bytes)",
     )
 
 
