@@ -17,7 +17,9 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import string
+import time
 from email.message import EmailMessage
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -1145,8 +1147,8 @@ def test_component_endpoint_serves_html_as_no_cache(tmp_path: Path) -> None:
     assert response.headers["Cache-Control"] == "no-cache"
 
 
-def test_component_endpoint_serves_non_html_asset_as_public(tmp_path: Path) -> None:
-    """A non-HTML component asset is served with a public cache header."""
+def test_component_endpoint_serves_non_html_asset_as_no_cache(tmp_path: Path) -> None:
+    """A non-HTML component asset revalidates; URLs are not content-hashed."""
     comp_dir = tmp_path / "comp"
     comp_dir.mkdir()
     (comp_dir / "bundle.js").write_text("console.log('hi');")
@@ -1155,7 +1157,7 @@ def test_component_endpoint_serves_non_html_asset_as_public(tmp_path: Path) -> N
     response = _client_for(routes).get("/component/comp/bundle.js")
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "public"
+    assert response.headers["Cache-Control"] == "no-cache"
 
 
 def test_component_options_returns_no_content() -> None:
@@ -1240,8 +1242,8 @@ def test_bidi_component_read_error_returns_404(tmp_path: Path) -> None:
     assert response.text == "read error"
 
 
-def test_bidi_component_serves_non_html_asset_as_public(tmp_path: Path) -> None:
-    """A non-HTML bidi component asset is served with a public cache header."""
+def test_bidi_component_serves_non_html_asset_as_no_cache(tmp_path: Path) -> None:
+    """A non-HTML bidi component asset revalidates; URLs are not content-hashed."""
     comp_dir = tmp_path / "comp"
     comp_dir.mkdir()
     (comp_dir / "bundle.js").write_text("console.log('hi');")
@@ -1250,7 +1252,7 @@ def test_bidi_component_serves_non_html_asset_as_public(tmp_path: Path) -> None:
     response = _client_for(routes).get("/_stcore/bidi-components/comp/bundle.js")
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "public"
+    assert response.headers["Cache-Control"] == "no-cache"
 
 
 def test_bidi_component_serves_html_as_no_cache(tmp_path: Path) -> None:
@@ -1272,6 +1274,137 @@ def test_bidi_component_options_returns_no_content() -> None:
     response = _client_for(routes).options("/_stcore/bidi-components/comp/main.js")
 
     assert response.status_code == 204
+
+
+def _component_asset_cases() -> list[tuple[str, Any, str]]:
+    """Return (id, route factory, url) pairs for v1 and v2 component file routes."""
+    return [
+        (
+            "v1",
+            lambda root: create_component_routes(_component_registry(root), ""),
+            "/component/comp/bundle.js",
+        ),
+        (
+            "v2",
+            lambda root: create_bidi_component_routes(_bidi_manager(root), ""),
+            "/_stcore/bidi-components/comp/bundle.js",
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("_label", "create_routes", "url"),
+    _component_asset_cases(),
+    ids=["v1", "v2"],
+)
+def test_component_asset_sends_etag_and_last_modified(
+    tmp_path: Path,
+    _label: str,
+    create_routes: Callable[[str], list[BaseRoute]],
+    url: str,
+) -> None:
+    """A component file response includes ETag and Last-Modified validators."""
+    comp_dir = tmp_path / "comp"
+    comp_dir.mkdir()
+    (comp_dir / "bundle.js").write_text("console.log('hi');")
+    client = _client_for(create_routes(str(comp_dir)))
+
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.headers["etag"]
+    assert response.headers["last-modified"]
+    assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+
+@pytest.mark.parametrize(
+    ("_label", "create_routes", "url"),
+    _component_asset_cases(),
+    ids=["v1", "v2"],
+)
+def test_component_asset_returns_304_for_matching_etag(
+    tmp_path: Path,
+    _label: str,
+    create_routes: Callable[[str], list[BaseRoute]],
+    url: str,
+) -> None:
+    """A matching If-None-Match is answered with 304 and CORS headers."""
+    comp_dir = tmp_path / "comp"
+    comp_dir.mkdir()
+    (comp_dir / "bundle.js").write_text("console.log('hi');")
+    client = _client_for(create_routes(str(comp_dir)))
+
+    first = client.get(url)
+    response = client.get(url, headers={"If-None-Match": first.headers["etag"]})
+
+    assert response.status_code == 304
+    assert response.content == b""
+    assert response.headers["etag"] == first.headers["etag"]
+    assert response.headers["Cache-Control"] == "no-cache"
+    assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+
+@pytest.mark.parametrize(
+    ("_label", "create_routes", "url"),
+    _component_asset_cases(),
+    ids=["v1", "v2"],
+)
+def test_component_asset_returns_304_for_matching_if_modified_since(
+    tmp_path: Path,
+    _label: str,
+    create_routes: Callable[[str], list[BaseRoute]],
+    url: str,
+) -> None:
+    """A matching If-Modified-Since is answered with 304."""
+    comp_dir = tmp_path / "comp"
+    comp_dir.mkdir()
+    (comp_dir / "bundle.js").write_text("console.log('hi');")
+    client = _client_for(create_routes(str(comp_dir)))
+
+    first = client.get(url)
+    response = client.get(
+        url, headers={"If-Modified-Since": first.headers["last-modified"]}
+    )
+
+    assert response.status_code == 304
+    assert response.content == b""
+    assert response.headers["last-modified"] == first.headers["last-modified"]
+    assert response.headers["Access-Control-Allow-Origin"] == "*"
+
+
+@pytest.mark.parametrize(
+    ("_label", "create_routes", "url"),
+    _component_asset_cases(),
+    ids=["v1", "v2"],
+)
+def test_component_asset_returns_new_content_after_file_changes(
+    tmp_path: Path,
+    _label: str,
+    create_routes: Callable[[str], list[BaseRoute]],
+    url: str,
+) -> None:
+    """After the file changes, a stale validator is answered with 200 and new bytes."""
+    comp_dir = tmp_path / "comp"
+    comp_dir.mkdir()
+    bundle = comp_dir / "bundle.js"
+    bundle.write_text("console.log('old');")
+    client = _client_for(create_routes(str(comp_dir)))
+
+    first = client.get(url)
+    bundle.write_text("console.log('new-and-longer');")
+    later = time.time() + 5
+    os.utime(bundle, (later, later))
+
+    by_etag = client.get(url, headers={"If-None-Match": first.headers["etag"]})
+    by_mtime = client.get(
+        url, headers={"If-Modified-Since": first.headers["last-modified"]}
+    )
+
+    assert by_etag.status_code == 200
+    assert by_etag.text == "console.log('new-and-longer');"
+    assert by_etag.headers["etag"] != first.headers["etag"]
+    assert by_mtime.status_code == 200
+    assert by_mtime.text == "console.log('new-and-longer');"
 
 
 def test_app_static_serves_existing_file(tmp_path: Path) -> None:
