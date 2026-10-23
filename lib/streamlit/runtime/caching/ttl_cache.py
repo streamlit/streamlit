@@ -57,6 +57,7 @@ class TTLCache(MutableMapping[K, V]):
         timer: Callable[[], float] = time.monotonic,
         max_total_size: float | None = None,
         getsizeof: Callable[[V], int] | None = None,
+        on_remove: Callable[[K, V], None] | None = None,
     ) -> None:
         """Create a new TTLCache.
 
@@ -75,12 +76,15 @@ class TTLCache(MutableMapping[K, V]):
         getsizeof : Callable[[V], int] | None
             Function that measures values against ``max_total_size``. This must
             be provided together with ``max_total_size``.
+        on_remove : Callable[[K, V], None] | None
+            Callback invoked whenever an entry is removed.
         """
         if (max_total_size is None) != (getsizeof is None):
             raise ValueError("max_total_size and getsizeof must be provided together")
         self._maxsize = maxsize
         self._max_total_size = max_total_size
         self._getsizeof = getsizeof
+        self._on_remove = on_remove
         self._curr_total_size = 0
         self._sizes: dict[K, int] | None = (
             {} if self._max_total_size is not None else None
@@ -235,6 +239,15 @@ class TTLCache(MutableMapping[K, V]):
     def items(self) -> ItemsView[K, V]:
         return self._live_snapshot().items()
 
+    def lru_items(self) -> list[tuple[K, V]]:
+        """Return live entries in least-to-most-recently-used order."""
+        now = self._timer()
+        return [
+            (key, value)
+            for key, value in self._data.items()
+            if now < self._expirations[key]
+        ]
+
     def values(self) -> ValuesView[V]:
         return self._live_snapshot().values()
 
@@ -279,6 +292,8 @@ class TTLCache(MutableMapping[K, V]):
         del self._expirations[key]
         if self._sizes is not None:
             self._curr_total_size -= self._sizes.pop(key)
+        if self._on_remove is not None:
+            self._on_remove(key, value)
         return value
 
     def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:

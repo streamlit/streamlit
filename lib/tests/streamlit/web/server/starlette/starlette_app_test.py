@@ -1718,6 +1718,43 @@ class TestAppRouteValidation:
 class TestAppRun:
     """Tests for App.run()."""
 
+    def test_run_reconfigures_cache_budget_created_in_raw_mode(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run applies its cache limit after an earlier raw-mode cache call."""
+        from streamlit import cache_data
+        from streamlit.runtime.caching.cache_data_api import _data_caches
+        from streamlit.runtime.caching.global_cache_budget import (
+            _GLOBAL_CACHE_BUDGET_HOLDER,
+            GlobalCacheBudget,
+        )
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        budget = GlobalCacheBudget(max_bytes=None)
+        with patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", budget):
+
+            @cache_data
+            def raw_mode_cached_value() -> bytes:
+                return b"cached before App.run"
+
+            raw_mode_cached_value()
+            app = App(script)
+            with (
+                patch("streamlit.config._on_config_parsed.send"),
+                patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+                patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+            ):
+                app.run(config={"server.maxCacheDataSize": "1KiB"})
+
+            assert budget._max_bytes == 1024
+            assert budget.total_bytes > 0
+            _data_caches.clear_all()
+
     def test_run_uses_existing_app_instance_and_bootstrap_helpers(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
     ) -> None:

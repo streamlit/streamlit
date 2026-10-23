@@ -296,23 +296,40 @@ class DataCaches(StatsProvider):
                 del self._function_caches[session_id]
 
         if session_caches is not None:
+            first_error: Exception | None = None
             for cache in session_caches.values():
                 # Detach so a background refresh that completes after the session
                 # ended is discarded rather than repopulating the cache.
                 cache.mark_detached()
-                cache.clear()
-                cache.storage.close()
+                try:
+                    cache.clear()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+                try:
+                    cache.storage.close()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+            if first_error is not None:
+                raise first_error
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
         with self._caches_lock:
-            # Detach every cache so in-flight background refreshes are discarded, even
-            # on the optimized storage-manager clear_all path (which doesn't iterate
-            # individual caches).
-            for data_caches in self._function_caches.values():
-                for data_cache in data_caches.values():
-                    data_cache.mark_detached()
+            all_caches = [
+                cache
+                for data_caches in self._function_caches.values()
+                for cache in data_caches.values()
+            ]
+            for cache in all_caches:
+                cache.mark_detached()
+            # Detach the registry before storage operations so an error cannot leave
+            # inactive caches available for reuse.
+            self._function_caches = {}
 
+            first_error: Exception | None = None
+            clear_individually = False
             try:
                 # try to remove in optimal way if such ability provided by
                 # storage manager clear_all method;
@@ -320,11 +337,25 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                for data_caches in self._function_caches.values():
-                    for data_cache in data_caches.values():
-                        data_cache.clear()
-                        data_cache.storage.close()
-            self._function_caches = {}
+                clear_individually = True
+            except Exception as ex:
+                first_error = ex
+
+            if clear_individually:
+                for cache in all_caches:
+                    try:
+                        cache.clear()
+                    except Exception as ex:
+                        if first_error is None:
+                            first_error = ex
+            for cache in all_caches:
+                try:
+                    cache.storage.close()
+                except Exception as ex:
+                    if first_error is None:
+                        first_error = ex
+            if first_error is not None:
+                raise first_error
 
     def get_stats(
         self,
@@ -589,7 +620,8 @@ class CacheDataAPI:
             ``MB`` / ``GB`` / ``TB`` and ``KiB`` / ``MiB`` / ``GiB`` / ``TiB``
             aliases all use powers of 1024. Fractional values round down to whole
             bytes, so ``"1.1KB"`` is 1126 bytes. If this is ``None`` (default),
-            there is no per-function byte limit.
+            there is no per-function byte limit, but an explicitly configured
+            ``server.maxCacheDataSize`` budget may still evict entries.
 
             When adding a value would exceed the limit, Streamlit drops the
             least-recently-used entries until the new value fits. Reading a cached
