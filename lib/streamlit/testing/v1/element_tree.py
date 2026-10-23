@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import builtins
 import keyword
+import re
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -59,7 +60,7 @@ from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
-from streamlit.testing.v1.errors import AppTestError
+from streamlit.testing.v1.errors import AppTestError, AppTestLookupError
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -552,6 +553,73 @@ class Widget(Element, ABC):
 
 El_co = TypeVar("El_co", bound=Element, covariant=True)
 
+# Element types whose typed collections accept ``label=`` / ``text=`` lookups,
+# mapped to the attribute that holds the user-visible string to match.
+_SEMANTIC_QUERY_ATTRS: Final[dict[str, dict[str, str]]] = {
+    "label": {"button": "label", "text_input": "label"},
+    "text": {"markdown": "value"},
+}
+_MAX_LOOKUP_CANDIDATES: Final = 10
+
+
+def _semantic_content(element: Element, query_name: str) -> str:
+    """Return the collapsed string that a ``label=`` or ``text=`` lookup matches."""
+    supported = _SEMANTIC_QUERY_ATTRS[query_name]
+    attr = supported.get(element.type)
+    if attr is None:
+        raise AppTestError(
+            f"{query_name}= lookups are not supported for {element.type}. "
+            f"AppTest supports {query_name}= on: {', '.join(supported)}. "
+            "Look up this element by key or index instead."
+        )
+    return " ".join(str(getattr(element, attr)).split())
+
+
+def _semantic_query_matches(
+    content: str, query: str | re.Pattern[str], *, exact: bool
+) -> bool:
+    if isinstance(query, re.Pattern):
+        return query.search(content) is not None
+    query = " ".join(query.split())
+    if exact:
+        return content == query
+    return query.casefold() in content.casefold()
+
+
+def _lookup_failure_message(
+    elements: Sequence[Element],
+    match_count: int,
+    *,
+    key: str | None,
+    queries: dict[str, str | re.Pattern[str]],
+    exact: bool,
+) -> str:
+    query_parts = [f"key={key!r}"] if key is not None else []
+    query_parts += [f"{name}={query!r}" for name, query in queries.items()]
+    if not exact:
+        query_parts.append("exact=False")
+    query = ", ".join(query_parts)
+    if match_count:
+        return (
+            f"{match_count} {elements[0].type} elements match {query}. "
+            "Add key= or scope the lookup to a container to select one."
+        )
+    if not elements:
+        return f"No element matches {query}. The collection is empty."
+    # Every element supports the queried fields, or _semantic_content would
+    # already have raised during matching.
+    name = next(iter(queries))
+    values = [
+        textwrap.shorten(_semantic_content(e, name), width=80, placeholder="...")
+        for e in elements[:_MAX_LOOKUP_CANDIDATES]
+    ]
+    candidates = [f"{name}={value!r}" for value in values]
+    if len(elements) > _MAX_LOOKUP_CANDIDATES:
+        candidates.append(f"and {len(elements) - _MAX_LOOKUP_CANDIDATES} more")
+    return (
+        f"No {elements[0].type} matches {query}. Candidates: {', '.join(candidates)}."
+    )
+
 
 class ElementList(Generic[El_co]):
     def __init__(self, els: Sequence[El_co]) -> None:
@@ -589,17 +657,90 @@ class ElementList(Generic[El_co]):
     def __hash__(self) -> int:
         return hash(tuple(self._list))
 
-    def __call__(self, key: str) -> El_co:
-        """Return the first element in this collection with the given user key.
+    def __call__(
+        self,
+        key: str | None = None,
+        *,
+        label: str | re.Pattern[str] | None = None,
+        text: str | re.Pattern[str] | None = None,
+        exact: bool = True,
+    ) -> El_co:
+        """Return an element in this collection by user key, label, or text.
 
-        The same key can appear on different element types, so this returns the
-        first match in this collection. Use ``get_by_key`` when an ambiguous
-        key should raise.
+        With only ``key``, this returns the first element with that user key.
+        The same key can appear on different element types, so use
+        ``get_by_key`` when an ambiguous key should raise.
+
+        With ``label`` or ``text``, the lookup is strict: exactly one element
+        must match every given filter. ``label`` is supported on ``button`` and
+        ``text_input`` collections. ``text`` is supported on ``markdown``
+        collections.
+
+        Parameters
+        ----------
+        key : str or None
+            The user key of the element.
+        label : str, re.Pattern, or None
+            The label of the widget, such as the text on a button.
+        text : str, re.Pattern, or None
+            The text content of the element, such as the body of a markdown
+            element.
+        exact : bool
+            Whether a string ``label`` or ``text`` must match the whole value.
+            If this is ``True`` (default), the strings must be equal. If this
+            is ``False``, the string must appear anywhere in the value,
+            ignoring case. Whitespace is collapsed and trimmed on both sides
+            either way. A compiled regular expression is matched with
+            ``re.search`` against the collapsed value and ignores ``exact``.
+
+        Returns
+        -------
+        Element
+            The matching element.
+
+        Raises
+        ------
+        KeyError
+            If only ``key`` is given and no element has that key.
+        AppTestLookupError
+            If ``label`` or ``text`` is given and zero or several elements
+            match.
+        AppTestError
+            If the collection's element type does not support ``label`` or
+            ``text``.
         """
+        if label is None and text is None:
+            if key is None:
+                raise TypeError("Pass a key, label=, or text= to look up an element.")
+            for e in self._list:
+                if getattr(e, "key", None) == key:
+                    return e
+            raise KeyError(key)
+
+        queries = {
+            name: query
+            for name, query in (("label", label), ("text", text))
+            if query is not None
+        }
+        matches: list[El_co] = []
         for e in self._list:
-            if getattr(e, "key", None) == key:
-                return e
-        raise KeyError(key)
+            # Read every queried field first so an unsupported filter raises
+            # even when another filter would exclude the element.
+            contents = {name: _semantic_content(e, name) for name in queries}
+            if key is not None and getattr(e, "key", None) != key:
+                continue
+            if all(
+                _semantic_query_matches(contents[name], query, exact=exact)
+                for name, query in queries.items()
+            ):
+                matches.append(e)
+        if len(matches) == 1:
+            return matches[0]
+        raise AppTestLookupError(
+            _lookup_failure_message(
+                self._list, len(matches), key=key, queries=queries, exact=exact
+            )
+        )
 
     @property
     def values(self) -> Sequence[Any]:
