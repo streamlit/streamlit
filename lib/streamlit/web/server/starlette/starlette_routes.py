@@ -19,10 +19,12 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import os
 import re
 import time
 from contextlib import aclosing
+from email.utils import parsedate
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
@@ -52,6 +54,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from starlette.datastructures import Headers
     from starlette.requests import Request
     from starlette.responses import Response
     from starlette.routing import BaseRoute
@@ -1020,11 +1023,100 @@ def create_upload_routes(
     ]
 
 
+# Headers a 304 must (or should) echo from the would-be 200, plus CORS so
+# cross-origin component loads can read the revalidation result. Starlette's
+# FileResponse emits ETag/Last-Modified but does not itself honor If-None-Match
+# or If-Modified-Since; StaticFiles wraps it for /static, and these component
+# routes do the same wrapping here.
+_NOT_MODIFIED_HEADER_NAMES: Final = frozenset(
+    {
+        "access-control-allow-origin",
+        "cache-control",
+        "content-location",
+        "date",
+        "etag",
+        "expires",
+        "last-modified",
+        "vary",
+    }
+)
+
+
+def _is_not_modified(request_headers: Headers, response_headers: Headers) -> bool:
+    """Return whether a conditional request can be answered with 304."""
+    if if_none_match := request_headers.get("if-none-match"):
+        if if_none_match.strip() == "*":
+            return True
+        etag = response_headers.get("etag")
+        if etag is None:
+            return False
+        return etag in [
+            tag.strip().removeprefix("W/") for tag in if_none_match.split(",")
+        ]
+
+    try:
+        if_modified_since = parsedate(request_headers["if-modified-since"])
+        last_modified = parsedate(response_headers["last-modified"])
+    except KeyError:
+        return False
+    return (
+        if_modified_since is not None
+        and last_modified is not None
+        and if_modified_since >= last_modified
+    )
+
+
+def _not_modified_response(response: Response) -> Response:
+    """Build a 304 that keeps validators, cache policy, and CORS from ``response``."""
+    from starlette.responses import Response as StarletteResponse
+
+    return StarletteResponse(
+        status_code=304,
+        headers={
+            name: value
+            for name, value in response.headers.items()
+            if name in _NOT_MODIFIED_HEADER_NAMES
+        },
+    )
+
+
+async def _cached_component_file_response(request: Request, abspath: str) -> Response:
+    """Serve a component file with validators, CORS, and conditional 304s.
+
+    Component asset URLs are not content-hashed and stay the same across
+    package releases, so every file is ``Cache-Control: no-cache``: the browser
+    must revalidate, an unchanged file returns 304, and a changed file is
+    picked up on the next request.
+    """
+    import stat as posix_stat
+
+    import anyio
+    from starlette.responses import FileResponse
+
+    stat_result = await anyio.to_thread.run_sync(os.stat, abspath)
+    if not posix_stat.S_ISREG(stat_result.st_mode):
+        error_no = (
+            errno.EISDIR if posix_stat.S_ISDIR(stat_result.st_mode) else errno.EPERM
+        )
+        raise OSError(error_no, "Not a regular file", abspath)
+
+    response = FileResponse(
+        abspath,
+        media_type=guess_content_type(abspath),
+        stat_result=stat_result,
+    )
+    await _set_cors_headers(request, response)
+    response.headers["Cache-Control"] = "no-cache"
+
+    if _is_not_modified(request.headers, response.headers):
+        return _not_modified_response(response)
+    return response
+
+
 def create_component_routes(
     component_registry: BaseComponentRegistry, base_url: str | None
 ) -> list[BaseRoute]:
     """Create custom component route handlers."""
-    import anyio
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
     from starlette.routing import Route
@@ -1050,20 +1142,9 @@ def create_component_routes(
             raise HTTPException(status_code=400, detail="Bad Request")
 
         try:
-            async with await anyio.open_file(abspath, "rb") as file:
-                data = await file.read()
+            return await _cached_component_file_response(request, abspath)
         except OSError as exc:
             raise HTTPException(status_code=404, detail="read error") from exc
-
-        response = Response(content=data, media_type=guess_content_type(abspath))
-        await _set_cors_headers(request, response)
-
-        if not filename or filename.endswith(".html"):
-            response.headers["Cache-Control"] = "no-cache"
-        else:
-            response.headers["Cache-Control"] = "public"
-
-        return response
 
     async def _component_options(request: Request) -> Response:
         response = Response(status_code=204)
@@ -1088,7 +1169,6 @@ def create_bidi_component_routes(
     bidi_component_manager: BidiComponentManager, base_url: str | None
 ) -> list[BaseRoute]:
     """Create bidirectional component route handlers."""
-    import anyio
     from anyio import Path as AsyncPath
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
@@ -1125,24 +1205,13 @@ def create_bidi_component_routes(
             return await _text_response("not found", 404)
 
         try:
-            async with await anyio.open_file(abspath, "rb") as file:
-                data = await file.read()
+            return await _cached_component_file_response(request, abspath)
         except OSError:
             sanitized_abspath = abspath.replace("\n", "").replace("\r", "")
             _LOGGER.exception(
                 "Error reading bidi component asset: %s", sanitized_abspath
             )
             return await _text_response("read error", 404)
-
-        response = Response(content=data, media_type=guess_content_type(abspath))
-        await _set_cors_headers(request, response)
-
-        if filename.endswith(".html"):
-            response.headers["Cache-Control"] = "no-cache"
-        else:
-            response.headers["Cache-Control"] = "public"
-
-        return response
 
     async def _bidi_component_options(request: Request) -> Response:
         response = Response(status_code=204)
