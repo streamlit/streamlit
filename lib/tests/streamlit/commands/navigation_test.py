@@ -95,6 +95,80 @@ class NavigationTest(DeltaGeneratorTestCase):
                 ]
             )
 
+    def test_duplicate_url_path_across_sections_names_both_pages(self):
+        """Test that a cross-section collision names both page files and sections."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                {
+                    "": [st.Page("home.py")],
+                    "Admin": [st.Page("admin/settings.py")],
+                    "User": [st.Page("user/settings.py")],
+                }
+            )
+
+        message = str(exc.value)
+        assert exc.value.error_id == "navigation-duplicate-url-pathname"
+        assert f'`{Path("admin/settings.py")}` (section "Admin")' in message
+        assert f'`{Path("user/settings.py")}` (section "User")' in message
+        assert "Two pages resolve to the URL pathname `/settings`:" in message
+        assert "including pages in different sections" in message
+        assert "default page" not in message
+
+    def test_duplicate_url_path_with_hidden_page_names_both_pages(self):
+        """Test that a hidden page colliding with a callable page is identified."""
+
+        def foo():
+            pass
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page("foo.py", visibility="hidden"),
+                    st.Page(foo),
+                ]
+            )
+
+        message = str(exc.value)
+        assert "`foo.py` (hidden)" in message
+        assert "callable `foo`" in message
+        assert "Two pages resolve to the URL pathname `/foo`:" in message
+
+    def test_duplicate_url_path_with_nameless_callable_uses_title(self):
+        """Test that a callable without ``__name__`` is identified by its title."""
+
+        class Renderer:
+            def __call__(self) -> None:
+                pass
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page("foo.py"),
+                    st.Page(Renderer(), title="Foo", url_path="foo"),
+                ]
+            )
+
+        assert '`foo.py` and callable titled "Foo"' in str(exc.value)
+
+    def test_duplicate_url_path_with_later_default_page_shows_reserved_pathname(
+        self,
+    ):
+        """Test that a default page collision shows the pathname it reserves."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("page1.py", url_path="home"),
+                    st.Page("home.py", default=True),
+                ]
+            )
+
+        message = str(exc.value)
+        assert "`page1.py` and `home.py` (default page)" in message
+        assert "Two pages resolve to the URL pathname `/home`:" in message
+        assert "still reserves this pathname" in message
+
     def test_page_found_by_hash(self):
         found_page = st.Page("page2.py")
         self.script_run_ctx.pages_manager.set_script_intent(found_page._script_hash, "")
@@ -632,20 +706,24 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_external_and_internal_duplicate_url_path_raises(self):
         """Test that duplicate url_path between external and internal pages raises."""
-        with pytest.raises(
-            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
-        ):
+        with pytest.raises(StreamlitAPIException) as exc:
             st.navigation(
                 [
+                    st.Page("page1.py"),
                     st.Page("https://example.com", title="foo", url_path="foo"),
-                    st.Page("page1.py", url_path="foo"),
+                    st.Page("page2.py", url_path="foo"),
                 ]
             )
+
+        message = str(exc.value)
+        assert "external URL `https://example.com` and `page2.py`" in message
+        assert "Two pages resolve to the URL pathname `/foo`:" in message
 
     def test_two_external_pages_duplicate_url_path_raises(self):
         """Test that duplicate url_path between two external pages raises."""
         with pytest.raises(
-            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
+            StreamlitAPIException,
+            match="Two pages resolve to the URL pathname `/shared`:",
         ):
             st.navigation(
                 [

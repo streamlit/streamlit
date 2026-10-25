@@ -181,11 +181,16 @@ class Page:
         see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
 
+        Each page's URL pathname must be unique among all pages passed to
+        ``st.navigation``, including pages in different sections, hidden
+        pages, and external URL pages.
+
         The default page will have a pathname of ``""``, indicating the root
-        URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes because Streamlit doesn't
-        support nested URL pathnames yet. To upvote support for nested
-        pathnames, see GitHub issue
+        URL of the app. If you set ``default=True``, the page is served at the
+        root URL instead of ``url_path``, but its ``url_path`` or inferred
+        pathname must still be unique. ``url_path`` can't include forward
+        slashes because Streamlit doesn't support nested URL pathnames yet.
+        To upvote support for nested pathnames, see GitHub issue
         `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
@@ -194,7 +199,7 @@ class Page:
         nonempty URL pathname. However, if no default page is passed to
         ``st.navigation`` and this is the first page, this page will become the
         default page. If ``default`` is ``True``, then the page will have
-        an empty pathname and ``url_path`` will be ignored.
+        an empty pathname instead of ``url_path``.
 
     visibility : "visible" or "hidden"
         Whether the page is shown in the navigation menu. If this is

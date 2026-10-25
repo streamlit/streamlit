@@ -84,6 +84,70 @@ def send_page_not_found(ctx: ScriptRunContext) -> None:
     ctx.enqueue(msg)
 
 
+def _describe_page_for_url_error(
+    page: Page, section_header: SectionHeader, main_script_parent: Path
+) -> str:
+    """Describe a page by its source and navigation context for error messages."""
+    if page.external_url is not None:
+        description = f"external URL `{page.external_url}`"
+    elif isinstance(page._page, Path):
+        page_path = page._page
+        if page_path.is_relative_to(main_script_parent):
+            page_path = page_path.relative_to(main_script_parent)
+        description = f"`{page_path}`"
+    else:
+        callable_name = getattr(page._page, "__name__", None)
+        description = (
+            f"callable `{callable_name}`"
+            if callable_name
+            else f'callable titled "{page.title}"'
+        )
+
+    context = []
+    if section_header:
+        context.append(f'section "{section_header}"')
+    if page.visibility == "hidden":
+        context.append("hidden")
+    if page._default:
+        context.append("default page")
+    if context:
+        description += f" ({', '.join(context)})"
+    return description
+
+
+def _duplicate_url_pathname_error(
+    first: tuple[SectionHeader, Page],
+    second: tuple[SectionHeader, Page],
+    main_script_parent: Path,
+) -> StreamlitAPIException:
+    first_section, first_page = first
+    second_section, second_page = second
+    first_description = _describe_page_for_url_error(
+        first_page, first_section, main_script_parent
+    )
+    second_description = _describe_page_for_url_error(
+        second_page, second_section, main_script_parent
+    )
+    # The default page is served at the app root, but its script hash still
+    # comes from its inferred or declared pathname.
+    default_page_note = (
+        " The default page is served at the app root, but it still reserves "
+        "this pathname."
+        if first_page._default or second_page._default
+        else ""
+    )
+    return StreamlitAPIException(
+        f"Two pages resolve to the URL pathname `/{second_page._url_path}`: "
+        f"{first_description} and {second_description}. Each page passed to "
+        "`st.navigation` needs a unique URL pathname, including pages in "
+        "different sections, hidden pages, and external URL pages. Streamlit "
+        "infers the pathname from the filename, callable name, or the title of "
+        f"an external URL page.{default_page_note} Set a unique `url_path` in "
+        "`st.Page` for one of these pages.",
+        error_id="navigation-duplicate-url-pathname",
+    )
+
+
 def _set_external_url(page_proto: AppPageProto, page: Page) -> None:
     """Set external_url on the AppPage proto when the page targets an external URL."""
     external_url = page.external_url
@@ -144,6 +208,13 @@ def navigation(
         objects. In this case, the page will have the default title, icon, and
         path inferred from its path or filename. To customize these attributes
         for your page, initialize your page with ``st.Page``.
+
+        Each page must have a unique URL pathname across all of ``pages``,
+        including pages in different sections, hidden pages, and external URL
+        pages. Because the pathname is inferred from the filename,
+        ``admin/settings.py`` and ``user/settings.py`` both resolve to
+        ``settings``. Set ``url_path`` in ``st.Page`` to give one of them a
+        different pathname.
 
     position : "sidebar", "top", or "hidden"
         The position of the navigation menu. If this is ``"sidebar"``
@@ -387,21 +458,22 @@ def _navigation(
         return default_page
 
     # Build the pagehash-to-pageinfo mapping.
+    pages_by_hash: dict[PageHash, tuple[SectionHeader, Page]] = {}
     for section_header in nav_sections:
         for page in nav_sections[section_header]:
             script_path = str(page._page) if isinstance(page._page, Path) else ""
 
             script_hash = page._script_hash
-            if script_hash in pagehash_to_pageinfo:
+            if script_hash in pages_by_hash:
                 # The page script hash is solely based on the url path
                 # So duplicate page script hashes are due to duplicate url paths
-                raise StreamlitAPIException(
-                    f"Multiple Pages specified with URL pathname {page.url_path}. "
-                    "URL pathnames must be unique. The url pathname may be "
-                    "inferred from the filename, callable name, or title.",
-                    error_id="navigation-duplicate-url-pathname",
+                raise _duplicate_url_pathname_error(
+                    pages_by_hash[script_hash],
+                    (section_header, page),
+                    ctx.pages_manager.main_script_parent.resolve(),
                 )
 
+            pages_by_hash[script_hash] = (section_header, page)
             pagehash_to_pageinfo[script_hash] = {
                 "page_script_hash": script_hash,
                 "page_name": page.title,
