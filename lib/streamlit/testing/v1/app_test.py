@@ -1312,9 +1312,11 @@ class AppTest:
         WidgetList of Button
             Sequence of all ``st.form_submit_button`` widgets. Individual
             widgets can be accessed from a WidgetList by index (order on the
-            page) or key. For example, ``at.form_submit_button[0]`` for the
-            first widget or ``at.form_submit_button(key="save")`` for a
-            widget with a given key.
+            page), key, or label. For example, ``at.form_submit_button[0]``
+            for the first widget, ``at.form_submit_button(key="save")`` for a
+            widget with a given key, or
+            ``at.form_submit_button(label="Submit")`` for the only widget with
+            a given label.
         """
         return self._tree.form_submit_button
 

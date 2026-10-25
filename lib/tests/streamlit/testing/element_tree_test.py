@@ -2378,7 +2378,7 @@ def test_widget_list_call_by_key_not_found():
         at.button("nonexistent")
 
 
-def test_widget_list_call_by_label() -> None:
+def test_widget_list_call_by_label_returns_unique_widget() -> None:
     """Button and text input collections return the unique widget with a label."""
 
     def script():
@@ -2421,6 +2421,15 @@ def test_element_list_call_by_text_matches_markdown() -> None:
     assert at.markdown(text="REVENUE", exact=False) is at.markdown[0]
     with pytest.raises(AppTestLookupError, match=r"text='Revenue'"):
         at.markdown(text="Revenue")
+    # Markdown has no key, so the ambiguity hint does not suggest key=.
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"2 markdown elements match text='M\*\*', exact=False\. "
+            r"Use a more specific value or regex"
+        ),
+    ):
+        at.markdown(text="M**", exact=False)
 
 
 def test_element_list_call_by_label_is_strict() -> None:
@@ -2443,36 +2452,65 @@ def test_element_list_call_by_label_is_strict() -> None:
         ),
     ):
         at.button(label="Delete")
-    with pytest.raises(AppTestLookupError, match=r"2 button elements match"):
+    with pytest.raises(
+        AppTestLookupError,
+        match=r"2 button elements match label='Save'\. Add key= or scope",
+    ):
         at.button(label="Save")
     with pytest.raises(AppTestLookupError, match=r"2 button elements match"):
-        at.button(label="sav", exact=False)
+        at.button(label=" sav ", exact=False)
 
     assert at.button("bottom", label="Save") is at.button[1]
     # key= with label= raises AppTestLookupError, not KeyError, when no widget
-    # matches both.
-    with pytest.raises(AppTestLookupError, match=r"key='top', label='Cancel'"):
+    # matches both, and the candidates show their keys.
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"No button matches key='top', label='Cancel'\. "
+            r"Candidates: \(key='top', label='Save'\), "
+            r"\(key='bottom', label='Save'\), \(key=None, label='Cancel'\)\."
+        ),
+    ):
         at.button(key="top", label="Cancel")
 
 
-def test_element_list_call_lookup_error_on_empty_collection() -> None:
-    """An empty collection reports that it has no candidates."""
+@pytest.mark.parametrize(
+    ("lookup", "match"),
+    [
+        pytest.param(
+            lambda at: at.button(label="Save"),
+            r"AppTest supports label= on: button, text_input\.",
+            id="supported",
+        ),
+        pytest.param(
+            lambda at: at.checkbox(label="Agree"),
+            r"AppTest supports label= on: button, text_input\.",
+            id="unsupported",
+        ),
+    ],
+)
+def test_element_list_call_lookup_error_on_empty_collection(
+    lookup: Callable[[AppTest], Any], match: str
+) -> None:
+    """An empty collection names the types that support the filter."""
     at = AppTest.from_string("import streamlit as st").run()
 
     with pytest.raises(
         AppTestLookupError,
-        match=r"No element matches label='Save'\. The collection is empty\.",
+        match=r"No element matches label='\w+'\. The collection is empty\. " + match,
     ):
-        at.button(label="Save")
+        lookup(at)
 
 
 def test_element_list_call_lookup_error_shortens_candidates() -> None:
-    """Lookup errors list at most ten shortened candidates."""
+    """Lookup errors list at most ten candidates, each cut to 80 characters."""
 
     def script():
         import streamlit as st
 
-        for i in range(12):
+        # Text without spaces must still show its start, not only "...".
+        st.markdown("売上高" * 40)
+        for i in range(11):
             st.markdown(f"Paragraph {i}: " + "lorem ipsum " * 10)
 
     at = AppTest.from_function(script).run()
@@ -2480,8 +2518,9 @@ def test_element_list_call_lookup_error_shortens_candidates() -> None:
     with pytest.raises(AppTestLookupError) as exc_info:
         at.markdown(text="Summary")
     message = str(exc_info.value)
-    assert "text='Paragraph 9: lorem ipsum" in message
-    assert "Paragraph 10" not in message
+    assert f"text='{('売上高' * 40)[:77]}...'" in message
+    assert "text='Paragraph 8: lorem ipsum" in message
+    assert "Paragraph 9" not in message
     assert message.endswith("...', and 2 more.")
 
 
