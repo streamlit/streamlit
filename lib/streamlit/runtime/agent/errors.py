@@ -104,9 +104,9 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     "unsupported_element": (
         400,
         (
-            "The element is on the page but cannot be driven here: it is "
-            "display-only, takes input JSON cannot express (uploads), or its "
-            "`support` field says why."
+            "The element is on the page, but this interface cannot set or fire "
+            "it: it is display-only, takes input JSON cannot express (uploads), "
+            "or its `support` field says why."
         ),
     ),
     "unknown_key": (

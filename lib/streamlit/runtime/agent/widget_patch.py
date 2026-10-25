@@ -203,14 +203,14 @@ def _require_actionable(
             f"control changes.{regenerated} Read `actions` from the latest "
             "snapshot.",
         )
-    # Checked before `disabled`: an element this interface cannot drive at all
-    # stays undrivable when the app enables it, so reporting it as disabled
+    # Checked before `disabled`: an element this interface cannot set or fire
+    # stays that way when the app enables it, so reporting it as disabled
     # would send the caller looking for the control that flips it.
     if state.support is not None:
         raise AgentRequestError(
             "unsupported_element",
-            f"The element with key {key!r} is on the page but cannot be driven "
-            f"through this interface ({state.support}).",
+            f"The element with key {key!r} is on the page, but this interface "
+            f"cannot set or fire it ({state.support}).",
         )
     # Checked before `disabled` for the same reason: enabling the element
     # would not make it usable.
