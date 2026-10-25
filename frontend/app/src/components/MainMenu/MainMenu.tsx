@@ -431,7 +431,7 @@ function buildCommonItems(
 
   // Report a bug - shown if URL provided and not hidden
   const reportABugUrl = menuItems?.reportABugUrl
-  if (reportABugUrl && !menuItems?.hideReportABug) {
+  if (reportABugUrl && !menuItems.hideReportABug) {
     items.push({
       type: "action",
       key: "report",
@@ -442,7 +442,7 @@ function buildCommonItems(
 
   // Get help - shown if URL provided and not hidden
   const getHelpUrl = menuItems?.getHelpUrl
-  if (getHelpUrl && !menuItems?.hideGetHelp) {
+  if (getHelpUrl && !menuItems.hideGetHelp) {
     items.push({
       type: "action",
       key: "community",
