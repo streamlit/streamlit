@@ -583,6 +583,28 @@ def _lookup_filter_value(element: Element, filter_name: str) -> str:
     return " ".join(str(getattr(element, attr)).split())
 
 
+def _check_lookup_query(
+    filter_name: str, query: str | re.Pattern[str], *, exact: bool
+) -> None:
+    """Raise ``AppTestError`` for a query that matches every value.
+
+    A blank string with ``exact=False`` and an empty regex match every value,
+    so they would select the only element of a one-element collection without
+    naming it.
+    """
+    if isinstance(query, re.Pattern):
+        if not query.pattern:
+            raise AppTestError(
+                f"{filter_name}= cannot be an empty regular expression because "
+                "it matches every element."
+            )
+    elif not exact and not query.strip():
+        raise AppTestError(
+            f"{filter_name}= cannot be blank with exact=False because it "
+            "matches every element."
+        )
+
+
 def _lookup_filter_matches(
     value: str, query: str | re.Pattern[str], *, exact: bool
 ) -> bool:
@@ -599,14 +621,41 @@ def _lookup_filter_matches(
     return query.casefold() in value.casefold()
 
 
+def _lookup_candidates(
+    elements: Sequence[Element], filter_name: str, *, show_keys: bool
+) -> str:
+    """Return the elements' filter values as a bounded, comma-separated list."""
+    candidates = []
+    for e in elements[:_MAX_LOOKUP_CANDIDATES]:
+        # Matching already read these values from every element, so this
+        # cannot raise.
+        value = _lookup_filter_value(e, filter_name)
+        if len(value) > _MAX_LOOKUP_CANDIDATE_LENGTH:
+            value = value[: _MAX_LOOKUP_CANDIDATE_LENGTH - 3] + "..."
+        candidates.append(
+            f"(key={e.key!r}, {filter_name}={value!r})"
+            if show_keys
+            else f"{filter_name}={value!r}"
+        )
+    if len(elements) > _MAX_LOOKUP_CANDIDATES:
+        candidates.append(f"and {len(elements) - _MAX_LOOKUP_CANDIDATES} more")
+    return ", ".join(candidates)
+
+
 def _lookup_failure_message(
     elements: Sequence[Element],
-    match_count: int,
+    matches: Sequence[Element],
+    value_matches: Sequence[Element],
     *,
     key: str | None,
     filters: dict[str, str | re.Pattern[str]],
     exact: bool,
 ) -> str:
+    """Return the message for a lookup that matched zero or several elements.
+
+    ``value_matches`` are the elements that match every filter, ignoring
+    ``key``. ``matches`` are those of them that also have the given key.
+    """
     lookup_parts = [f"key={key!r}"] if key is not None else []
     lookup_parts += [f"{name}={query!r}" for name, query in filters.items()]
     if not exact:
@@ -618,37 +667,32 @@ def _lookup_failure_message(
         support = " ".join(_lookup_filter_support(name) for name in filters)
         return f"No element matches {lookup_repr}. The collection is empty. {support}"
     element_type = elements[0].type
-    if match_count:
-        # Of the filterable types, only widgets accept a user key.
+    name = next(iter(filters))
+    if matches:
+        # Of the filterable types, only widgets accept a user key, so only
+        # widget matches show their keys.
+        is_widget = isinstance(elements[0], Widget)
         narrow_hint = (
             "Add key= or scope the lookup to a container to select one."
-            if isinstance(elements[0], Widget)
+            if is_widget
             else "Use a more specific value or regex, or scope the lookup to a "
             "container to select one."
         )
+        matched = _lookup_candidates(matches, name, show_keys=is_widget)
         return (
-            f"{match_count} {element_type} elements match {lookup_repr}. {narrow_hint}"
+            f"{len(matches)} {element_type} elements match {lookup_repr}: "
+            f"{matched}. {narrow_hint}"
         )
-    # Matching already read these values from every element, so this cannot
-    # raise.
-    name = next(iter(filters))
-    candidates = []
-    for e in elements[:_MAX_LOOKUP_CANDIDATES]:
-        value = _lookup_filter_value(e, name)
-        if len(value) > _MAX_LOOKUP_CANDIDATE_LENGTH:
-            value = value[: _MAX_LOOKUP_CANDIDATE_LENGTH - 3] + "..."
+    if key is None:
+        candidates = _lookup_candidates(elements, name, show_keys=False)
+    else:
         # With key=, show each candidate's key so a candidate with the right
-        # value but a different key is recognizable.
-        candidates.append(
-            f"(key={e.key!r}, {name}={value!r})"
-            if key is not None
-            else f"{name}={value!r}"
-        )
-    if len(elements) > _MAX_LOOKUP_CANDIDATES:
-        candidates.append(f"and {len(elements) - _MAX_LOOKUP_CANDIDATES} more")
-    return (
-        f"No {element_type} matches {lookup_repr}. Candidates: {', '.join(candidates)}."
-    )
+        # value but a different key is recognizable. List those candidates
+        # first so the candidate limit cannot drop them.
+        value_match_ids = {id(e) for e in value_matches}
+        ranked = sorted(elements, key=lambda e: id(e) not in value_match_ids)
+        candidates = _lookup_candidates(ranked, name, show_keys=True)
+    return f"No {element_type} matches {lookup_repr}. Candidates: {candidates}."
 
 
 class ElementList(Generic[El_co]):
@@ -712,8 +756,9 @@ class ElementList(Generic[El_co]):
             The user key of the element. If this is ``None`` (default), only
             ``label`` and ``text`` select the element.
         label : str, re.Pattern, or None
-            The label of the widget, such as the text on a button. If this is
-            ``None`` (default), labels are not compared.
+            The widget's ``label`` argument, including Markdown and icon syntax
+            such as ``**Save**``. If this is ``None`` (default), labels are not
+            compared.
         text : str, re.Pattern, or None
             The text of the element. For ``st.markdown``, this is the Markdown
             source, including syntax such as ``**``. If this is ``None``
@@ -735,20 +780,25 @@ class ElementList(Generic[El_co]):
         Raises
         ------
         TypeError
-            If none of ``key``, ``label``, or ``text`` is given.
+            If none of ``key``, ``label``, or ``text`` is given, or if
+            ``exact=False`` is given without ``label`` or ``text``.
         KeyError
             If only ``key`` is given and no element has that key.
         AppTestLookupError
             If ``label`` or ``text`` is given and zero or several elements
-            match. For an empty collection, the message names the element
-            types that support the filter.
+            match. An empty collection raises this error even when its element
+            type does not support the filter, and the message names the
+            element types that do.
         AppTestError
             If the collection's element type does not support ``label`` or
-            ``text``.
+            ``text``, or if a query matches every value: a blank string with
+            ``exact=False`` or an empty regular expression.
         """
         if label is None and text is None:
             if key is None:
                 raise TypeError("Pass a key, label=, or text= to look up an element.")
+            if not exact:
+                raise TypeError("exact= applies only to label= and text= lookups.")
             for e in self._list:
                 if getattr(e, "key", None) == key:
                     return e
@@ -759,23 +809,33 @@ class ElementList(Generic[El_co]):
             for name, query in (("label", label), ("text", text))
             if query is not None
         }
-        matches: list[El_co] = []
+        for name, query in filters.items():
+            _check_lookup_query(name, query, exact=exact)
+        value_matches: list[El_co] = []
         for e in self._list:
             # Read every filtered value first so an unsupported filter raises
             # even when another filter would exclude the element.
             values = {name: _lookup_filter_value(e, name) for name in filters}
-            if key is not None and getattr(e, "key", None) != key:
-                continue
             if all(
                 _lookup_filter_matches(values[name], query, exact=exact)
                 for name, query in filters.items()
             ):
-                matches.append(e)
+                value_matches.append(e)
+        matches = (
+            value_matches
+            if key is None
+            else [e for e in value_matches if getattr(e, "key", None) == key]
+        )
         if len(matches) == 1:
             return matches[0]
         raise AppTestLookupError(
             _lookup_failure_message(
-                self._list, len(matches), key=key, filters=filters, exact=exact
+                self._list,
+                matches,
+                value_matches,
+                key=key,
+                filters=filters,
+                exact=exact,
             )
         )
 

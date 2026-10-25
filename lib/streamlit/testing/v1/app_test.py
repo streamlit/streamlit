@@ -1456,8 +1456,9 @@ class AppTest:
             Sequence of all ``st.markdown`` elements. Individual elements can be
             accessed from an ElementList by index (order on the page) or text.
             For example, ``at.markdown[0]`` for the first element or
-            ``at.markdown(text="Done")`` for the only element with a given
-            body. Markdown is an extension of the Element class.
+            ``at.markdown(text="Done")`` for the only element whose Markdown
+            source is ``"Done"``. Markdown is an extension of the Element
+            class.
         """
         return self._tree.markdown
 
