@@ -159,7 +159,7 @@ function BaseDateTimeColumn(
   const validateInput = (data?: unknown): boolean | Date => {
     const cellData: Date | null | undefined = toSafeDate(data)
     if (cellData === null) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true

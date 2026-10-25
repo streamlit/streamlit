@@ -194,7 +194,7 @@ export function PlotlyChart({
     )
 
     // Customize the plotly toolbar:
-    if (!disableFullscreenMode) {
+    if (disableFullscreenMode !== true) {
       // Add a fullscreen button to the plotly toolbar:
       const fullscreenLabel = isFullScreen ? "Close fullscreen" : "Fullscreen"
       config.modeBarButtonsToAdd = [
@@ -289,6 +289,7 @@ export function PlotlyChart({
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false clickmode gets the selection default
       if (!initialFigureSpec.layout.clickmode) {
         // If the user has already set the clickmode, we don't want to override it here.
         // Otherwise, we are selecting the best clickmode based on the selection modes.
@@ -302,11 +303,13 @@ export function PlotlyChart({
         }
       }
 
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false hovermode gets the selection default
       if (!initialFigureSpec.layout.hovermode) {
         // If the user has already set the hovermode, we don't want to override it here.
         updatedHoverMode = "closest"
       }
 
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false dragmode gets the selection default
       if (!initialFigureSpec.layout.dragmode) {
         // If the user has already set the dragmode, we don't want to override it here.
         // If not, we are selecting the best drag mode based on the selection modes.

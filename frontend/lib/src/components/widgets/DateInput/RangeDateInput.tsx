@@ -516,9 +516,8 @@ function RangeDateInput({
     // the same condition that advances `prevResetKey`: a discarded render
     // retries against live focus rather than keeping a stale `true`. Strict
     // Mode's double render sees the same focus.
-    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
-      document.activeElement
-    )
+    shouldRestoreFocusRef.current =
+      triggerRef.current?.contains(document.activeElement) === true
   }
 
   const activePreset = useMemo(() => {
@@ -690,7 +689,7 @@ function RangeDateInput({
   // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+    if (calendarButtonRef.current?.contains(document.activeElement) !== true) {
       if (isCalendarActiveRef.current && activeOriginRef.current) {
         activeOriginRef.current.focus()
       } else {
@@ -819,8 +818,8 @@ function RangeDateInput({
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return
-      if (clearButtonRef.current?.contains(e.target)) return
-      if (calendarButtonRef.current?.contains(e.target)) return
+      if (clearButtonRef.current?.contains(e.target) === true) return
+      if (calendarButtonRef.current?.contains(e.target) === true) return
       if (!disabled) setIsOpenState(true)
     },
     [disabled]
@@ -830,8 +829,9 @@ function RangeDateInput({
   // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
-      if (clearButtonRef.current?.contains(e.target as Node)) return
-      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      if (clearButtonRef.current?.contains(e.target as Node) === true) return
+      if (calendarButtonRef.current?.contains(e.target as Node) === true)
+        return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
@@ -1167,7 +1167,7 @@ function RangeDateInput({
       }
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
-        triggerRef.current?.contains(document.activeElement)
+        triggerRef.current?.contains(document.activeElement) === true
           ? document.activeElement
           : undefined
       // Focus returns here when the dialog closes: the focused field control, or
@@ -1200,6 +1200,7 @@ function RangeDateInput({
     (keys: "all" | Set<Key>): void => {
       if (keys === "all") return
       const key = [...keys][0]
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an empty selection has no key and clears the field
       if (key) {
         handleQuickSelect(String(key))
       } else {

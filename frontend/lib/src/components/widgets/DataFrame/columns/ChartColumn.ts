@@ -84,6 +84,7 @@ function BaseChartColumn(
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` is a branded string, which the rule cannot classify
     defaultColor = parameters.color
       ? resolveNamedColor(parameters.color, theme)
       : undefined

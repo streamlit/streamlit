@@ -270,7 +270,7 @@ function ComponentInstance(props: Props): ReactElement {
   }, [componentSourceUrl, componentName, registry])
 
   useEffect(() => {
-    if (isReadyTimeout && !isReadyRef.current) {
+    if (isReadyTimeout === true && !isReadyRef.current) {
       // Send timeout error if we've timed out waiting for the READY message from the component
       LOG.error(
         `Client Error: Custom Component ${componentName} timeout error`
@@ -408,7 +408,7 @@ function ComponentInstance(props: Props): ReactElement {
   // but while we also have not waited until the ready timeout
 
   const loadingSkeleton = !isReadyRef.current &&
-    !isReadyTimeout &&
+    isReadyTimeout !== true &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
@@ -422,7 +422,7 @@ function ComponentInstance(props: Props): ReactElement {
   // If we've timed out waiting for the READY message from the component,
   // display a warning.
   const warns =
-    !isReadyRef.current && isReadyTimeout ? (
+    !isReadyRef.current && isReadyTimeout === true ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
         kind={Kind.WARNING}

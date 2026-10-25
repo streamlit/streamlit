@@ -673,6 +673,31 @@ export default defineConfig([
       "@typescript-eslint/no-unnecessary-condition": "error",
     },
   },
+  // A nullable boolean in a condition silently treats a missing value like
+  // `false`. Default it or compare it with `=== true` so the nullish case is
+  // explicit. Strings, numbers, nullable objects, and enums stay allowed, and
+  // other directories stay off until they are cleaned up.
+  {
+    files: [
+      "lib/src/components/elements/**/*.{ts,tsx}",
+      "lib/src/components/widgets/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        {
+          allowString: true,
+          allowNumber: true,
+          allowNullableObject: true,
+          allowNullableBoolean: false,
+          allowNullableString: true,
+          allowNullableNumber: true,
+          allowNullableEnum: true,
+          allowAny: true,
+        },
+      ],
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],

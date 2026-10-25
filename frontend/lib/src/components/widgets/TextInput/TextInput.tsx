@@ -556,7 +556,7 @@ function TextInput({
     (e: FocusEvent<HTMLInputElement>): void => {
       // When keyboard Tab moves focus to the password toggle, focus stays
       // within the widget — don't commit yet, the user is still composing.
-      if (elementRef.current?.contains(e.relatedTarget)) {
+      if (elementRef.current?.contains(e.relatedTarget) === true) {
         setFocused(false)
         return
       }

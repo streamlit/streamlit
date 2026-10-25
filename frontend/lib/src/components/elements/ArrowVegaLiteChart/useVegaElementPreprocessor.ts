@@ -268,6 +268,7 @@ const generateSpec = (
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- spec JSON may set title to a string, array, object, or null
   if (spec.title) {
     const title =
       typeof spec.title === "string" ? { text: spec.title } : spec.title

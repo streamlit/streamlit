@@ -130,6 +130,7 @@ function DateTimeInput({
 
   const { locale } = useContext(LibConfigContext)
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `step` is a number or Long; an unset 0 falls back to 900 seconds
   const step = element.step ? Number(element.step) : 900
 
   const minDateTime = useMemo(
@@ -267,7 +268,7 @@ function DateTimeInput({
   // pending edit so the submit validator and the required error follow the
   // restored value.
   const handleClose = useCallback(
-    (shouldClearError?: boolean): void => {
+    (shouldClearError = false): void => {
       if (!shouldClearError) return
       pendingIsoRef.current = lastWrittenIsoRef.current ?? null
       setHasRequiredError(false)

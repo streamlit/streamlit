@@ -54,7 +54,7 @@ export function shouldUseContentWidth(
  */
 export function shouldUseStretchHeight(
   heightConfig?: streamlit.HeightConfig.$Properties | null,
-  isInRoot?: boolean
+  isInRoot = false
 ): boolean {
   if (isInRoot) {
     return false

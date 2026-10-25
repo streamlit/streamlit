@@ -178,7 +178,7 @@ function MultiselectColumn(
       )
 
       if (
-        validate &&
+        validate === true &&
         cellData.length > 0 &&
         parameters.accept_new_options === false
       ) {
