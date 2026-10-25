@@ -39,8 +39,17 @@ if TYPE_CHECKING:
             args=(4,),
             kwargs={"label": "excellent"},
             width="stretch",
+            bind="query-params",
             persist_state="session",
         ),
+        Literal[0, 1, 2, 3, 4] | None,
+    )
+    assert_type(
+        feedback("thumbs", key="bound_thumbs", bind="query-params"),
+        Literal[0, 1] | None,
+    )
+    assert_type(
+        feedback("faces", key="unbound_faces", bind=None),
         Literal[0, 1, 2, 3, 4] | None,
     )
     assert_type(

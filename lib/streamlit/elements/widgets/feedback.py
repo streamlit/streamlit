@@ -49,6 +49,7 @@ from streamlit.runtime.state import (
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
+        BindOption,
         OnChangeMode,
         PersistStateOption,
         WidgetArgs,
@@ -95,7 +96,8 @@ class FeedbackSerde:
     The session state and return values are always int | None.
     """
 
-    def __init__(self, default_value: int | None = None):
+    def __init__(self, num_options: int, default_value: int | None = None):
+        self.num_options = num_options
         self.default_value = default_value
 
     def serialize(self, value: int | None) -> str:
@@ -108,7 +110,12 @@ class FeedbackSerde:
             return self.default_value  # No UI interaction yet
         if ui_value == "":
             return None  # User explicitly cleared
-        return int(ui_value)  # User selected a value
+        value = int(ui_value)  # User selected a value
+        # An index outside the options (e.g. ?rating=4 in the URL of a "thumbs"
+        # widget) falls back to the default, so a bound URL param is cleared.
+        if not 0 <= value < self.num_options:
+            return self.default_value
+        return value
 
 
 class FeedbackMixin:
@@ -124,6 +131,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> Literal[0, 1] | None: ...
 
@@ -139,6 +147,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
 
@@ -154,6 +163,7 @@ class FeedbackMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> int | None:
         """Display a feedback widget.
@@ -222,7 +232,8 @@ class FeedbackMixin:
               UI. The new value is available on the next rerun triggered by
               something else, such as another widget interaction. Ignored
               commits are held in the browser and are lost if the page is
-              refreshed before that rerun. Inside ``st.form``, this has no
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
               effect: the form already defers all commits until submit.
 
             - A ``callable``: Streamlit will rerun the app and execute the
@@ -250,6 +261,33 @@ class FeedbackMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            The query parameter holds the index of the selected option, the
+            same integer the widget returns (e.g., ``?rating=4`` for five
+            stars). When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?rating=``) clears the
+            widget. Invalid query parameter values are ignored and removed
+            from the URL.
+
+            When ``on_change="ignore"``, Streamlit updates the URL on the
+            same commits described above. As with widgets inside a form,
+            the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page load
+            or share uses the updated URL value.
+
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
             If this is ``None`` (default), the value is lost when the widget
@@ -260,7 +298,10 @@ class FeedbackMixin:
             restored if the user returns to the page. If this is ``"session"``,
             the value is preserved for the entire session, including across
             page switches, so it returns when the user navigates back. This
-            requires ``key`` to be set.
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -343,10 +384,14 @@ class FeedbackMixin:
         if default is not None:
             proto.default = default
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         if isinstance(on_change, str) and on_change == "ignore":
             proto.ignore_rerun = True
 
-        serde = FeedbackSerde(default_value=default)
+        serde = FeedbackSerde(num_options, default_value=default)
 
         widget_state = register_widget(
             proto.id,
@@ -358,7 +403,10 @@ class FeedbackMixin:
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
+            bind=bind,
             persist_state=persist_state,
+            # Choosing the selected option again clears it.
+            clearable=True,
         )
 
         current_value = widget_state.value
