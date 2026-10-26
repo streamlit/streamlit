@@ -271,6 +271,39 @@ function getGraphSeriesSelection(
   ].filter(entry => entry.dataIndex.length > 0)
 }
 
+function isLinkedDataType(dataType: unknown): dataType is "node" | "edge" {
+  return dataType === "node" || dataType === "edge"
+}
+
+/**
+ * Take ECharts' snapshot, except for node/edge series the action did not
+ * target. Their snapshot entries repeat one shared index map for both data
+ * types, so the groups reconstructed from earlier typed actions are kept
+ * instead. A linked series without earlier groups keeps its snapshot entries.
+ */
+function keepUntouchedLinkedGroups(
+  previous: SelectedEntry[],
+  snapshot: SelectedEntry[],
+  actionSeriesIndex: unknown
+): SelectedEntry[] {
+  const keptSeries = new Set<number>()
+  const next: SelectedEntry[] = []
+  for (const entry of snapshot) {
+    const previousGroups =
+      isLinkedDataType(entry.dataType) &&
+      entry.seriesIndex !== actionSeriesIndex
+        ? previous.filter(group => group.seriesIndex === entry.seriesIndex)
+        : []
+    if (previousGroups.length === 0) {
+      next.push(entry)
+    } else if (!keptSeries.has(entry.seriesIndex)) {
+      keptSeries.add(entry.seriesIndex)
+      next.push(...previousGroups)
+    }
+  }
+  return next
+}
+
 /**
  * ECharts 6 stores graph node and edge selection in one internal map, so its
  * full snapshot repeats matching raw indices for both data types. Apply the
@@ -285,18 +318,23 @@ export function normalizeNativeSelection(
   const seriesIndex = payload?.seriesIndex
   const dataType = payload?.dataType
   // Cheap payload checks first so non-graph clicks never clone ``getOption()``.
-  if (
-    typeof seriesIndex !== "number" ||
-    (dataType !== "node" && dataType !== "edge")
-  ) {
-    return params.selected ?? []
+  if (typeof seriesIndex !== "number" || !isLinkedDataType(dataType)) {
+    return keepUntouchedLinkedGroups(
+      previous,
+      params.selected ?? [],
+      seriesIndex
+    )
   }
   // Graph and Sankey (and any other linked node/edge series) share one
   // internal selected-index map, so the snapshot repeats matching raw
   // indices for both data types.
   const seriesOption = getSeriesOption(getResolvedOption(), seriesIndex)
   if (isNullOrUndefined(seriesOption)) {
-    return params.selected ?? []
+    return keepUntouchedLinkedGroups(
+      previous,
+      params.selected ?? [],
+      seriesIndex
+    )
   }
 
   const action =

@@ -1198,6 +1198,111 @@ describe("useEChartsSelections", () => {
     expectSelectionWrite([], [])
   })
 
+  it("keeps graph node and edge groups when another series is selected", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      chart.setOption({
+        animation: false,
+        xAxis: { type: "category", data: ["x", "y", "z"] },
+        yAxis: { type: "value" },
+        series: [
+          {
+            id: "network",
+            type: "graph",
+            layout: "none",
+            selectedMode: "multiple",
+            data: [
+              { name: "a", x: 0, y: 0 },
+              { name: "b", x: 10, y: 10 },
+            ],
+            links: [{ source: "a", target: "b" }],
+          },
+          {
+            id: "sales",
+            type: "bar",
+            selectedMode: "multiple",
+            data: [1, 2, 3],
+          },
+        ],
+      })
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+      const networkGroups = [
+        {
+          series_index: 0,
+          series_id: "network",
+          series_name: null,
+          data_type: "node",
+          data_indices: [1],
+        },
+        {
+          series_index: 0,
+          series_id: "network",
+          series_name: null,
+          data_type: "edge",
+          data_indices: [0],
+        },
+      ]
+
+      act(() => {
+        result.current.bindSelections(chart)
+        chart.dispatchAction({
+          type: "select",
+          seriesIndex: 0,
+          dataType: "node",
+          dataIndex: 1,
+        })
+        chart.dispatchAction({
+          type: "select",
+          seriesIndex: 0,
+          dataType: "edge",
+          dataIndex: 0,
+        })
+      })
+      flush()
+      expectSelectionWrite(networkGroups, [])
+
+      act(() => {
+        chart.dispatchAction({ type: "select", seriesIndex: 1, dataIndex: 2 })
+      })
+      flush()
+
+      // ECharts' snapshot for the bar click repeats the graph's shared
+      // selection map (node 1 and edge 0) under both data types.
+      expectSelectionWrite(
+        [
+          ...networkGroups,
+          {
+            series_index: 1,
+            series_id: "sales",
+            series_name: null,
+            data_type: "main",
+            data_indices: [2],
+          },
+        ],
+        [],
+        2
+      )
+      expect(widgetMgr.setElementState).toHaveBeenLastCalledWith(
+        "chart-id",
+        "selectedPoints",
+        [
+          { seriesIndex: 0, dataType: "node", dataIndex: [1] },
+          { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
+          { seriesIndex: 1, dataIndex: [2] },
+        ]
+      )
+    } finally {
+      chart.dispose()
+    }
+  })
+
   it("persists native points without clearing the brush cache", () => {
     const { result } = renderHook(() =>
       useEChartsSelections(createElement(), widgetMgr)
