@@ -265,10 +265,11 @@ def element(
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
     data_url
-        Where the element's complete data can be fetched, from
-        ``data_offload.serve_arrow_over_http``. Reported as ``data.url``
-        rather than under ``props``, because it is not an argument the author
-        passed.
+        Where the element's complete data can be fetched, reported as
+        ``data.url`` rather than under ``props``, because it is not an
+        argument the author passed. It serves the Arrow IPC stream of the
+        element's payload, registered by
+        ``data_offload.serve_arrow_over_http``.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
