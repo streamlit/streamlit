@@ -225,6 +225,8 @@ function ComponentInstance(props: Props): ReactElement {
 
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
+  // Starts as `undefined` so that `setIsReadyTimeout(false)` on COMPONENT_READY
+  // is a real state change and re-renders to hide the loading skeleton.
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
   // Initial iframe height comes from args.height, e.g. my_custom_component(height=100)
   // or st.pdf, which sends a numeric string. Numbers and numeric strings are used;

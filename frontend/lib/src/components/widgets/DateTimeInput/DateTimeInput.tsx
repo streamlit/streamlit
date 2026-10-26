@@ -268,7 +268,7 @@ function DateTimeInput({
   // pending edit so the submit validator and the required error follow the
   // restored value.
   const handleClose = useCallback(
-    (shouldClearError = false): void => {
+    (shouldClearError: boolean): void => {
       if (!shouldClearError) return
       pendingIsoRef.current = lastWrittenIsoRef.current ?? null
       setHasRequiredError(false)

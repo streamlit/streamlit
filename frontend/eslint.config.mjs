@@ -675,8 +675,9 @@ export default defineConfig([
   },
   // A nullable boolean in a condition silently treats a missing value like
   // `false`. Default it or compare it with `=== true` so the nullish case is
-  // explicit. Strings, numbers, nullable objects, and enums stay allowed, and
-  // other directories stay off until they are cleaned up.
+  // explicit. Mixed-type unions (e.g. `string | number`) are always reported;
+  // disable those inline with a reason. Other types, including `any`, stay
+  // allowed for now, and other directories stay off until they are cleaned up.
   {
     files: [
       "lib/src/components/elements/**/*.{ts,tsx}",

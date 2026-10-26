@@ -829,9 +829,9 @@ function RangeDateInput({
   // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
-      if (clearButtonRef.current?.contains(e.target as Node) === true) return
-      if (calendarButtonRef.current?.contains(e.target as Node) === true)
-        return
+      const target = e.target as Node
+      if (clearButtonRef.current?.contains(target) === true) return
+      if (calendarButtonRef.current?.contains(target) === true) return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)

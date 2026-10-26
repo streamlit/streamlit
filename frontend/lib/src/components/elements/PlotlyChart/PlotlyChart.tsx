@@ -289,7 +289,7 @@ export function PlotlyChart({
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false clickmode gets the selection default
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Plotly types clickmode with `string & {}`, which the rule reads as an object; an unset or empty clickmode gets the selection default
       if (!initialFigureSpec.layout.clickmode) {
         // If the user has already set the clickmode, we don't want to override it here.
         // Otherwise, we are selecting the best clickmode based on the selection modes.

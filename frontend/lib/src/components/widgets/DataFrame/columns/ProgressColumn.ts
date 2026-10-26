@@ -219,7 +219,7 @@ function ProgressColumn(
             : theme.colors.greenColor
         }
       } else if (
-        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` is a branded string, which the rule cannot classify
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` includes a branded `string & {…}`, which the rule reads as an object
         parameters.color
       ) {
         progressColor = resolveNamedColor(parameters.color, theme)
