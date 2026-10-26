@@ -28,6 +28,7 @@ import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
 import type { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -490,7 +491,11 @@ const AudioInput: React.FC<Props> = ({
       }
       const { blob } = await current.stop()
       await current.approve(blob)
-    } catch {
+    } catch (error) {
+      // A cancelled stop (clear, reset, unmount) is not a failure.
+      if (error instanceof RecordingCancelledError) {
+        return
+      }
       // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }

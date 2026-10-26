@@ -162,12 +162,12 @@ function IFrame({
           type?: string
           width?: number
           height?: number
-        }
+        } | null
         // Validate dimensions: must be finite numbers >= 0 to prevent invalid CSS values
         if (
           data?.type === IFRAME_SIZE_MESSAGE_TYPE &&
-          typeof data?.width === "number" &&
-          typeof data?.height === "number" &&
+          typeof data.width === "number" &&
+          typeof data.height === "number" &&
           Number.isFinite(data.width) &&
           Number.isFinite(data.height) &&
           data.width >= 0 &&

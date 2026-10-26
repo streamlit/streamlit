@@ -139,3 +139,12 @@ def test_block_marks_a_transparent_wrapper() -> None:
     decoded = json.loads(encoded)
     assert decoded["transparent"] is True
     assert decoded["props"] == {}
+
+
+def test_decode_returns_an_object_and_ignores_malformed_input() -> None:
+    """A description is a JSON object. Anything else is treated as undescribed."""
+    assert agent_spec.decode('{"type": "markdown"}') == {"type": "markdown"}
+    assert agent_spec.decode("{") == {}
+    assert agent_spec.decode("[]") == {}
+    assert agent_spec.decode("null") == {}
+    assert agent_spec.decode(None) == {}

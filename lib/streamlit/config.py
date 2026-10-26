@@ -626,8 +626,11 @@ _create_option(
         - "viewer"    : Hide the developer options, including the rerun, clear
                         cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
-                        Streamlit Community Cloud) or through st.set_page_config.
-                        If there are no options left, hide the menu.
+                        Streamlit Community Cloud) or through
+                        st.set_page_config. If there are no such options,
+                        hide the menu. When the menu is shown and there is
+                        more than one theme to choose from, it also includes
+                        the theme selector.
     """,
     default_val="auto",
     type_=str,
@@ -1254,6 +1257,70 @@ _create_option(
         more information, see https://docs.streamlit.io/replication.
     """,
     default_val=120,
+    type_=int,
+)
+
+_create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/interact`.
+
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous.
+
+        Note: This is an experimental feature. The API and its options are
+        subject to change.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentWaitTimeout",
+    description="""
+        Maximum number of seconds an agent API request waits for the app's run
+        chain to settle before returning `wait_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running, and a retry
+        of the same request waits for it instead of starting it over. Keep it
+        below the request timeout of the clients you expect.
+    """,
+    visibility="hidden",
+    default_val=30,
+    type_=int,
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        An agent session is reclaimed after this much time without an
+        interaction, so clients do not have to close sessions explicitly.
+    """,
+    visibility="hidden",
+    default_val=900,
+    type_=int,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        An agent session outlives the request that created it, so this bounds
+        what a loop of creating calls can hold in memory. When the limit is
+        reached, sessions idle past `server.agentSessionTTL` are reclaimed
+        first, and new sessions are then refused.
+    """,
+    visibility="hidden",
+    default_val=100,
     type_=int,
 )
 

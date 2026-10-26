@@ -22,7 +22,7 @@ import styled from "@emotion/styled"
  */
 export const StyledEChartsChartRoot = styled.div<{
   isStretchHeight?: boolean
-}>(({ theme, isStretchHeight }) => ({
+}>(({ theme, isStretchHeight = false }) => ({
   position: "relative",
   width: "100%",
   height: "100%",
@@ -35,7 +35,7 @@ export const StyledEChartsChartRoot = styled.div<{
  */
 export const StyledEChartsChartFill = styled.div<{
   isStretchHeight?: boolean
-}>(({ isStretchHeight }) =>
+}>(({ isStretchHeight = false }) =>
   isStretchHeight
     ? {
         position: "absolute",

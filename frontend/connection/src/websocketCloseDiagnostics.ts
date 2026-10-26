@@ -79,11 +79,11 @@ export function isNormalWebsocketClosure(
  */
 export function sanitizeWebsocketCloseReason(reason: string): string {
   const sanitized = reason
-    .replace(CONTROL_CHARS_RE, " ")
-    .replace(URL_RE, REDACTED_CLOSE_REASON)
-    .replace(UUID_RE, REDACTED_CLOSE_REASON)
-    .replace(JWT_RE, REDACTED_CLOSE_REASON)
-    .replace(LONG_TOKEN_RE, REDACTED_CLOSE_REASON)
+    .replaceAll(CONTROL_CHARS_RE, " ")
+    .replaceAll(URL_RE, REDACTED_CLOSE_REASON)
+    .replaceAll(UUID_RE, REDACTED_CLOSE_REASON)
+    .replaceAll(JWT_RE, REDACTED_CLOSE_REASON)
+    .replaceAll(LONG_TOKEN_RE, REDACTED_CLOSE_REASON)
     .replaceAll('"', "'")
     .trim()
 

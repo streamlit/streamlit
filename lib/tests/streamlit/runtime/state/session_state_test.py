@@ -1686,6 +1686,50 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
     assert ss["chat"] == "new"
 
 
+def test_session_state_value_precedes_serialized_chat_proto() -> None:
+    """A session-state value wins over a still-serialized chat proto.
+
+    The read returns the proto's text without running its deserializer. A
+    value written through session state is returned instead, and the proto
+    stays serialized.
+    """
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    proto = WidgetStateProto(id="chat")
+    proto.chat_input_value.data = "from-proto"
+    ss._new_widget_state.states["chat"] = Serialized(proto)
+
+    assert ss.get_widget_value("chat") == "from-proto"
+
+    ss._new_session_state["prompt"] = "from-session"
+
+    assert ss.get_widget_value("chat") == "from-session"
+    assert isinstance(ss._new_widget_state.states["chat"], Serialized)
+
+
+def test_get_widget_value_falls_back_to_previous_run() -> None:
+    """The previous run's value is returned when this run has not stored one."""
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    ss._old_state["chat"] = "previous"
+
+    assert ss.get_widget_value("chat") == "previous"
+
+    with pytest.raises(KeyError):
+        ss.get_widget_value("missing")
+
+
+def test_get_widget_id_from_key_returns_the_registered_id() -> None:
+    """A user key maps to the element ID it last registered under, else None."""
+    ss = SessionState()
+    ss._set_key_widget_mapping("$$ID-old-prompt", "prompt")
+    ss._set_key_widget_mapping("$$ID-new-prompt", "prompt")
+
+    assert ss.get_widget_id_from_key("prompt") == "$$ID-new-prompt"
+    assert ss.get_widget_id_from_key("$$ID-new-prompt") is None
+    assert ss.get_widget_id_from_key("missing") is None
+
+
 def test_callback_mutation_survives_replay_overlay() -> None:
     """A replay overlay does not overwrite mutations made by fresh callbacks."""
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)

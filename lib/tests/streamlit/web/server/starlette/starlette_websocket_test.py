@@ -29,15 +29,15 @@ from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
     StarletteClientContext,
     StarletteSessionClient,
-    _gather_user_info,
     _get_signed_cookie_with_chunks,
-    _is_host_allowed,
     _is_origin_allowed,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
     _parse_user_cookie_signed,
     create_websocket_handler,
     create_websocket_routes,
+    gather_user_info,
+    is_host_allowed,
 )
 from tests.testutil import patch_config_options
 
@@ -124,14 +124,14 @@ class TestParseSubprotocols:
 
 
 class TestGatherUserInfo:
-    """Tests for _gather_user_info function."""
+    """Tests for gather_user_info function."""
 
     @patch_config_options({"server.trustedUserHeaders": {}})
     def test_returns_empty_dict_when_no_mapping(self) -> None:
         """Test that empty dict is returned when no header mapping configured."""
         headers = MagicMock()
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {}
 
@@ -140,7 +140,7 @@ class TestGatherUserInfo:
         """Test that empty dict is returned when mapping is not a dict."""
         headers = MagicMock()
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {}
 
@@ -150,7 +150,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = ["user@example.com"]
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "user@example.com"}
         headers.getlist.assert_called_with("X-User-Email")
@@ -161,7 +161,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = []
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": None}
 
@@ -181,7 +181,7 @@ class TestGatherUserInfo:
             "X-User-Name": ["John Doe"],
         }.get(h, [])
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "user@example.com", "name": "John Doe"}
 
@@ -191,7 +191,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = ["first@example.com", "second@example.com"]
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "first@example.com"}
 
@@ -365,7 +365,7 @@ class TestParseUserCookieSigned:
 
 
 class TestIsHostAllowed:
-    """Tests for _is_host_allowed function."""
+    """Tests for is_host_allowed function."""
 
     @pytest.mark.parametrize(
         ("host", "expected"),
@@ -405,20 +405,20 @@ class TestIsHostAllowed:
     )
     def test_host_allowlist(self, host: str | None, expected: bool) -> None:
         """Test exact, wildcard, and IP Host allow-list entries."""
-        assert _is_host_allowed(host) is expected
+        assert is_host_allowed(host) is expected
 
     @patch_config_options({"server.allowedHosts": []})
     def test_empty_host_allowlist_preserves_existing_behavior(self) -> None:
         """Test that Host validation remains opt-in for compatibility."""
-        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
-        assert _is_host_allowed(None) is True
+        assert is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert is_host_allowed(None) is True
 
     @patch_config_options({"server.allowedHosts": ["*"]})
     def test_global_host_wildcard_allows_any_valid_host(self) -> None:
         """Test that the global wildcard accepts any valid Host header."""
-        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
-        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
-        assert _is_host_allowed(None) is False
+        assert is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert is_host_allowed(None) is False
 
 
 class TestIsOriginAllowed:

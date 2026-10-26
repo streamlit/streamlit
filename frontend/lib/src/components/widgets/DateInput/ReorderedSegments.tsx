@@ -64,8 +64,8 @@ function buildDateTimeSegments(
 export function ReorderedSegments({
   format,
   isRange,
-  includeTime,
-  required,
+  includeTime = false,
+  required = false,
 }: {
   format: string
   isRange?: boolean

@@ -23,7 +23,7 @@ interface StyledDeckGlChartProps {
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ isStretchHeight }) => ({
+  ({ isStretchHeight = false }) => ({
     position: "relative",
     height: "100%",
     width: "100%",

@@ -211,6 +211,19 @@ if key is None or key == "audio_only":
         if audio_only_value.audio:
             st.audio(audio_only_value.audio)
 
+if key is None or key == "audio_height_200":
+    audio_height_value = st.container().chat_input(
+        "Chat input (audio, height=200px)",
+        accept_audio=True,
+        height=200,
+        key="audio_height_200",
+    )
+
+    if audio_height_value:
+        st.write(
+            f"audio_height_200 - audio: {audio_height_value.audio.name if audio_height_value.audio else None}"
+        )
+
 if key is None or key == "audio_disabled":
     # Note: This input is disabled, so audio_disabled_value will always be None.
     # The st.write output is intentionally omitted since tests only verify the disabled UI state.

@@ -44,15 +44,13 @@ export function shouldWidthStretch(
 ): boolean {
   // Some elements (e.g. ButtonGroup) need styles applied to the element itself, to support
   // the width configuration.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch must not hide a positive pixel width
-  return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+  return widthConfig?.useStretch === true || !!widthConfig?.pixelWidth
 }
 
 export function shouldHeightStretch(
   heightConfig: streamlit.HeightConfig.$Properties | undefined | null
 ): boolean {
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch must not hide a positive pixel height
-  return !!(heightConfig?.useStretch || heightConfig?.pixelHeight)
+  return heightConfig?.useStretch === true || !!heightConfig?.pixelHeight
 }
 
 const alignmentMap: Record<

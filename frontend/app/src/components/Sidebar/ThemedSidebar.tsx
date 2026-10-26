@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactElement, useContext } from "react"
+import { type ReactElement, useContext, useMemo } from "react"
 
 import {
   createSidebarTheme,
@@ -29,7 +29,13 @@ const ThemedSidebar = ({
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
-  const sidebarTheme = createSidebarTheme(activeTheme)
+  // Memoize so the sidebar ThemeProvider value stays stable. Otherwise every
+  // descendant that depends on the theme object (custom components, Markdown)
+  // re-runs its effects on each sidebar render.
+  const sidebarTheme = useMemo(
+    () => createSidebarTheme(activeTheme),
+    [activeTheme]
+  )
 
   return (
     <ThemeProvider theme={sidebarTheme.emotion}>

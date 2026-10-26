@@ -147,7 +147,9 @@ function MultiselectColumn(
       kind: "multi-select-cell",
       values: [],
       options: preparedOptions,
-      allowCreation: parameters.accept_new_options ?? false,
+      // Column config is untyped JSON. Coerce it so the editor (truthiness)
+      // and paste (`!== true`) treat a non-boolean value the same way.
+      allowCreation: Boolean(parameters.accept_new_options),
       allowDuplicates: false,
     },
     copyData: "",
@@ -178,7 +180,7 @@ function MultiselectColumn(
       )
 
       if (
-        validate &&
+        validate === true &&
         cellData.length > 0 &&
         parameters.accept_new_options === false
       ) {

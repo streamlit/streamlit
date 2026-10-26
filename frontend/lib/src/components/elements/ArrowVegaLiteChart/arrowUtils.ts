@@ -118,7 +118,7 @@ export function getDataArrays(
 export function getDataSets(
   datasets: WrappedNamedDataset[]
 ): { [dataset: string]: Quiver } | null {
-  if (datasets?.length === 0) {
+  if (datasets.length === 0) {
     return null
   }
 
@@ -150,7 +150,7 @@ export function getDataArray(quiverData: Quiver): VegaLiteDataRow[] {
 
   // This currently only implemented to work with a single index column.
   // If the dataframe is multi-index, the remaining index columns will be ignored.
-  const firstIndexColumnType = quiverData.columnTypes[0] ?? undefined
+  const firstIndexColumnType = quiverData.columnTypes.at(0)
   const hasSupportedIndex =
     firstIndexColumnType?.type === DataFrameCellType.INDEX &&
     (isNumericType(firstIndexColumnType) ||

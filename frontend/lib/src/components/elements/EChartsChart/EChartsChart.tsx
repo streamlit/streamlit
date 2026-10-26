@@ -179,7 +179,7 @@ export function EChartsChart({
   heightConfig,
 }: Readonly<EChartsChartProps>): ReactElement {
   const theme = useEmotionTheme()
-  const isStretchHeight = !!heightConfig?.useStretch
+  const isStretchHeight = heightConfig?.useStretch === true
 
   const {
     expanded: isFullScreen,

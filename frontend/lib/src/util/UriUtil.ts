@@ -52,7 +52,7 @@ const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
  */
 export function isDangerousLinkUri(uri: string): boolean {
   const normalizedUri = uri
-    .replace(C0_CONTROL_CHARS_REGEX, "")
+    .replaceAll(C0_CONTROL_CHARS_REGEX, "")
     .toLowerCase()
     .trim()
 

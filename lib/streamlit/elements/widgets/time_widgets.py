@@ -1208,6 +1208,8 @@ class TimeWidgetsMixin:
                 "time_input",
                 key=element_id,
                 action="value",
+                # No initial time, and not required: a later value can be cleared.
+                clearable=parsed_time is None and not required,
                 # JSON Schema "time" is RFC 3339 and requires an offset. A naive
                 # time has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
@@ -1241,6 +1243,7 @@ class TimeWidgetsMixin:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1263,6 +1266,7 @@ class TimeWidgetsMixin:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1285,6 +1289,7 @@ class TimeWidgetsMixin:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1422,6 +1427,26 @@ class TimeWidgetsMixin:
             An optional boolean that disables the widget if set to ``True``.
             The default is ``False``.
 
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            datetime input still starts at the current date and time unless
+            you pass ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -1532,6 +1557,7 @@ class TimeWidgetsMixin:
             format=format,
             step=step,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             width=width,
             bind=bind,
@@ -1554,6 +1580,7 @@ class TimeWidgetsMixin:
         format: str = "YYYY/MM/DD",
         step: int | timedelta = timedelta(minutes=DEFAULT_STEP_MINUTES),
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1598,7 +1625,9 @@ class TimeWidgetsMixin:
             user_key=key,
             # When a key is set, format and step stay in the widget identity,
             # so a format change resets the widget and a new step invalidates
-            # the current selection.
+            # the current selection. `required` is hashed only for unkeyed
+            # widgets: toggling it cannot make a stored value incompatible, so
+            # it is omitted from keyed identity.
             key_as_main_identity={"format", "step"},
             dg=self.dg,
             label=label,
@@ -1609,6 +1638,7 @@ class TimeWidgetsMixin:
             format=format,
             step=step,
             width=width,
+            required=required,
         )
         # Track if user explicitly set bounds (before del)
         has_explicit_bounds = min_value is not None or max_value is not None
@@ -1652,6 +1682,7 @@ class TimeWidgetsMixin:
         date_time_input_proto.form_id = current_form_id(self.dg)
         date_time_input_proto.step = step_seconds
         date_time_input_proto.disabled = disabled
+        date_time_input_proto.required = required
         date_time_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1719,6 +1750,11 @@ class TimeWidgetsMixin:
                 "datetime_input",
                 key=element_id,
                 action="value",
+                # The browser clears when the default it receives is empty.
+                # Session state None empties that default even when the author
+                # set one, so the flag follows the value sent to the browser.
+                # A required field cannot be emptied.
+                clearable=default_value_for_proto is None and not required,
                 # JSON Schema "date-time" is RFC 3339 and requires an offset. A
                 # naive datetime has none, so the value stays a plain string.
                 value_schema=agent_spec.STRING,
@@ -1732,6 +1768,7 @@ class TimeWidgetsMixin:
                 format=date_time_input_proto.format or None,
                 help=date_time_input_proto.help or None,
                 disabled=disabled,
+                required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),
@@ -2318,6 +2355,8 @@ class TimeWidgetsMixin:
                 "date_input",
                 key=element_id,
                 action="value",
+                # No initial date, and not required: a later value can be cleared.
+                clearable=parsed_values.value is None and not required,
                 value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
                 if parsed_values.is_range
                 else agent_spec.DATE,

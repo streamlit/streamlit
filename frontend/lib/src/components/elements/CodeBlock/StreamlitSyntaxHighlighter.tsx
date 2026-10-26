@@ -176,7 +176,11 @@ function StreamlitSyntaxHighlighter({
             // using a renderer that wraps individual lines of code in their
             // own spans.
             // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-            renderer={showLineNumbers && wrapLines ? renderer : undefined}
+            renderer={
+              showLineNumbers === true && wrapLines === true
+                ? renderer
+                : undefined
+            }
           >
             {text}
           </SyntaxHighlighter>

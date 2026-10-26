@@ -100,6 +100,7 @@ const calculateHeight = (
   if (isExtended) {
     return `${scrollHeight + ROUNDING_OFFSET}px`
   }
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `defaultHeight` is `string | number`; a 0 or empty height leaves the style unset
   return defaultHeight ? String(defaultHeight) : ""
 }
 

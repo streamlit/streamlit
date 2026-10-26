@@ -842,7 +842,7 @@ class LayoutsMixin:
         >>> left, middle, right = st.columns(3, vertical_alignment="bottom")
         >>>
         >>> left.text_input("Write something")
-        >>> middle.button("Click me", use_container_width=True)
+        >>> middle.button("Click me", width="stretch")
         >>> right.checkbox("Check me")
 
         .. output::
@@ -1451,6 +1451,10 @@ class LayoutsMixin:
                 key=element_id or key,
                 action="value" if is_stateful else None,
                 value_schema=agent_spec.STRING if is_stateful else None,
+                # A request selects a tab by its label. That list is `tabs`,
+                # not an `options` parameter. A stateless container has no
+                # action, so it publishes no membership list.
+                choices=list(tabs) if is_stateful else None,
                 tabs=list(tabs),
                 on_change=_reported_on_change(on_change, stateful=is_stateful),
             ),

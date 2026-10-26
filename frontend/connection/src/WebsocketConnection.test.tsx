@@ -1561,6 +1561,24 @@ describe("WebsocketConnection", () => {
     expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
   })
 
+  it("sends context fields set to false or 0, which the server reads as stated", async () => {
+    await vi.runAllTimersAsync()
+    await server.connected
+
+    // @ts-expect-error - websocket is private
+    const sendSpy = vi.spyOn(client.websocket, "send")
+
+    client.sendMessage({
+      rerunScript: { contextInfo: { isEmbedded: false, timezoneOffset: 0 } },
+    })
+
+    const [sentBytes] = sendSpy.mock.calls[0] as unknown as [Uint8Array]
+    const contextInfo = BackMsg.decode(sentBytes).rerunScript?.contextInfo
+    expect(contextInfo?.isEmbedded).toBe(false)
+    expect(contextInfo?.timezoneOffset).toBe(0)
+    expect(contextInfo?.locale).toBeNull()
+  })
+
   it("dispatches queued messages in arrival order if a later payload resolves first", async () => {
     // @ts-expect-error - private args for test
     const onMessage = client.args.onMessage as ReturnType<typeof vi.fn>

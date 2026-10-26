@@ -651,7 +651,7 @@ describe("readCalendarDateFromField", () => {
     for (const part of parts) {
       const segment = document.createElement("span")
       segment.setAttribute("data-type", part.type)
-      if (part.placeholder) {
+      if (part.placeholder === true) {
         segment.setAttribute("data-placeholder", "true")
       }
       segment.textContent = part.text
