@@ -104,7 +104,14 @@ export const useVegaLiteSelections = (
         }
       }
 
-      const handleDiscreteInput = (): void => {
+      const handleDiscreteInput = (event?: Event): void => {
+        if (
+          (event?.type === "keydown" || event?.type === "keyup") &&
+          (event.target instanceof HTMLInputElement ||
+            event.target instanceof HTMLTextAreaElement)
+        ) {
+          return
+        }
         clearDiscreteInput()
         isDiscreteInputTask = true
         // Keep the marker through microtasks queued by this input event, but
@@ -145,6 +152,12 @@ export const useVegaLiteSelections = (
         if (
           event.type === "pointermove" &&
           !isPointerDown &&
+          (event as PointerEvent).buttons !== 0
+        ) {
+          startPointerGesture(event as PointerEvent)
+        } else if (
+          event.type === "pointermove" &&
+          pendingPointerReleaseGestureId !== null &&
           (event as PointerEvent).buttons !== 0
         ) {
           startPointerGesture(event as PointerEvent)
@@ -197,7 +210,14 @@ export const useVegaLiteSelections = (
           // Return selected points directly instead of Vega-Lite's vlPoint wrapper:
           // https://github.com/vega/altair/blob/f1b4e2c84da2fba220022c8a285cc8280f824ed8/altair/utils/selection.py#L50
           let processedSelection = value
-          if ("vlPoint" in value && "or" in value.vlPoint) {
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "vlPoint" in value &&
+            typeof value.vlPoint === "object" &&
+            value.vlPoint !== null &&
+            "or" in value.vlPoint
+          ) {
             processedSelection = value.vlPoint.or
           }
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy signal still falls back to an empty selection
@@ -270,11 +290,11 @@ export const useVegaLiteSelections = (
         releasedGestureId: number
       ): Promise<void> => {
         try {
-          // Vega serializes this run behind dataflow work queued by its release
-          // handler, so release-generated signals remain held until they finish.
+          // Vega serializes this run behind queued dataflow work, so final
+          // gesture signals remain held until they finish.
           await vegaView.runAsync()
         } catch (error) {
-          LOG.warn("Failed to finish Vega pointer release processing", error)
+          LOG.warn("Failed to finish Vega pointer gesture processing", error)
         } finally {
           if (
             isActive &&
@@ -287,12 +307,8 @@ export const useVegaLiteSelections = (
         }
       }
 
-      const handlePointerRelease = (event: PointerEvent): void => {
-        if (
-          !isPointerDown ||
-          event.pointerId !== activePointerId ||
-          pendingPointerReleaseGestureId !== null
-        ) {
+      const schedulePointerGestureFinish = (): void => {
+        if (!isPointerDown || pendingPointerReleaseGestureId !== null) {
           return
         }
         const releasedGestureId = pointerGestureId
@@ -300,26 +316,30 @@ export const useVegaLiteSelections = (
         void finishPointerRelease(releasedGestureId)
       }
 
+      const handlePointerRelease = (event: PointerEvent): void => {
+        if (!isPointerDown || event.pointerId !== activePointerId) {
+          return
+        }
+        schedulePointerGestureFinish()
+      }
+
       const handlePointerOut = (event: PointerEvent): void => {
         if (
           event.relatedTarget !== null ||
-          event.pointerId !== activePointerId ||
-          pendingPointerReleaseGestureId !== null
+          event.pointerId !== activePointerId
         ) {
           return
         }
-        finishActivePointerGesture()
+        schedulePointerGestureFinish()
       }
 
       const handleWindowBlur = (): void => {
-        if (isPointerDown && pendingPointerReleaseGestureId === null) {
-          finishActivePointerGesture()
-        }
+        schedulePointerGestureFinish()
       }
 
       const handleContextMenu = (): void => {
-        if (isPointerDown && pendingPointerReleaseGestureId === null) {
-          finishActivePointerGesture()
+        if (isPointerDown) {
+          schedulePointerGestureFinish()
         } else {
           handleDiscreteInput()
         }

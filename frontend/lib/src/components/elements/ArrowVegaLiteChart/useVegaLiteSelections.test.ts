@@ -478,6 +478,33 @@ describe("useVegaLiteSelections", () => {
       ])
     })
 
+    it.each(["input", "textarea"])(
+      "keeps %s binding key updates trailing-debounced",
+      tagName => {
+        const { container, fire } = setup()
+        const textControl = document.createElement(tagName)
+        container.appendChild(textControl)
+
+        dispatch(textControl, "keydown")
+        fire("sel", { value: "typed" })
+
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+        advanceTimers(DEBOUNCE_TIME_MS)
+        expect(sentStates()).toEqual([
+          { selection: { sel: { value: "typed" } } },
+        ])
+      }
+    )
+
+    it("handles a null selection signal", () => {
+      const { container, fire } = setup()
+      dispatch(container, "click")
+
+      fire("sel", null as never)
+
+      expect(sentStates()).toEqual([{ selection: { sel: {} } }])
+    })
+
     it("does not hold signals from Vega binding controls", () => {
       const { container, fire } = setup()
       const select = document.createElement("select")
@@ -554,13 +581,22 @@ describe("useVegaLiteSelections", () => {
       outside.remove()
     })
 
-    it("flushes when a pointer leaves the document and resumes if held", async () => {
-      const { container, fire } = setup()
+    it("settles queued signals when a pointer leaves and resumes if held", async () => {
+      const { container, fire, mockVegaView } = setup()
       dispatch(container, "pointerdown")
       fire("sel", { x: [1, 4] })
+      mockVegaView.runAsync.mockImplementationOnce(
+        async (): Promise<VegaView> => {
+          await Promise.resolve()
+          fire("sel", { x: [1, 5] })
+          return mockVegaView
+        }
+      )
 
       dispatch(container, "pointerout")
-      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      await flushAsyncWork()
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 5] } } }])
 
       dispatch(container, "pointermove", 1, 1)
       fire("sel", { x: [1, 6] })
@@ -569,29 +605,65 @@ describe("useVegaLiteSelections", () => {
       dispatch(window, "pointerup")
       await flushAsyncWork()
       expect(sentStates()).toEqual([
-        { selection: { sel: { x: [1, 4] } } },
+        { selection: { sel: { x: [1, 5] } } },
         { selection: { sel: { x: [1, 6] } } },
       ])
     })
 
-    it("flushes held values when the window loses focus", () => {
-      const { container, fire } = setup()
+    it("resumes a held pointer while pointerout processing is pending", async () => {
+      const { container, fire, mockVegaView } = setup()
+      let resolvePointerOutRun: ((view: VegaView) => void) | undefined
+      mockVegaView.runAsync.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolvePointerOutRun = resolve
+          })
+      )
       dispatch(container, "pointerdown")
-      fire("sel", { x: [2, 6] })
+      fire("sel", { x: [1, 4] })
+      dispatch(container, "pointerout")
 
-      dispatch(window, "blur")
+      dispatch(container, "pointermove", 1, 1)
+      fire("sel", { x: [1, 6] })
+      await act(async () => {
+        resolvePointerOutRun?.(mockVegaView)
+        await Promise.resolve()
+      })
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
 
-      expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 6] } } }])
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 6] } } }])
     })
 
-    it("flushes held values when a context menu opens", () => {
-      const { container, fire } = setup()
+    it("settles queued signals when the window loses focus", async () => {
+      const { container, fire, mockVegaView } = setup()
       dispatch(container, "pointerdown")
-      fire("sel", { x: [2, 7] })
+      fire("sel", { x: [2, 6] })
+      mockVegaView.runAsync.mockImplementationOnce(
+        async (): Promise<VegaView> => {
+          await Promise.resolve()
+          fire("sel", { x: [2, 7] })
+          return mockVegaView
+        }
+      )
 
-      dispatch(container, "contextmenu")
+      dispatch(window, "blur")
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      await flushAsyncWork()
 
       expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 7] } } }])
+    })
+
+    it("flushes held values when a context menu opens", async () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [2, 8] })
+
+      dispatch(container, "contextmenu")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 8] } } }])
     })
 
     it("flushes held values on pointercancel", async () => {
