@@ -1825,7 +1825,7 @@ async def test_a_client_leaving_during_validation_keeps_the_session_claimed(
         session = app.registry._sessions[handle]
         started = threading.Event()
         release = threading.Event()
-        real_validation = interaction.widget_patch.build_widget_states
+        real_validation = interaction.widget_writes.build_widget_states
 
         def slow_validation(*args: Any, **kwargs: Any) -> Any:
             started.set()
@@ -1834,7 +1834,7 @@ async def test_a_client_leaving_during_validation_keeps_the_session_claimed(
 
         click = {"session_id": handle, "trigger": {"key": "go"}}
         with patch.object(
-            interaction.widget_patch,
+            interaction.widget_writes,
             "build_widget_states",
             side_effect=slow_validation,
         ):

@@ -45,7 +45,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
-from streamlit.runtime.agent import snapshot, widget_patch
+from streamlit.runtime.agent import snapshot, widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
@@ -1074,14 +1074,14 @@ def _validate_in_worker(
     key, such as a form error, wins over ``cross_dialog_batch``.
     """
     with _script_ctx(ctx):
-        widget_states = widget_patch.build_widget_states(
+        widget_states = widget_writes.build_widget_states(
             session_state,
             widget_state=widget_state,
             trigger=trigger,
             element_states=element_states,
             compile_error=compile_error,
         )
-        fragment_id = widget_patch.resolve_fragment(
+        fragment_id = widget_writes.resolve_fragment(
             session_state,
             element_states,
             widget_state=widget_state,
@@ -1210,7 +1210,7 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
                 f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
                 "has a `key` and, for payload-bearing triggers, a `value`.",
             )
-        widget_patch.require_trigger_key(trigger)
+        widget_writes.require_trigger_key(trigger)
 
     writes = [
         name for name in ("widget_state", "trigger") if request.get(name) is not None
