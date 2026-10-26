@@ -136,8 +136,9 @@ def _duplicate_url_pathname_error(
     second_description = _describe_page_for_url_error(
         second_page, second_section, main_script_parent
     )
-    # The default page is served at the app root, but its script hash still
-    # comes from its inferred or declared pathname.
+    # Streamlit serves the default page at the app root, but the page still
+    # occupies its inferred or declared pathname. Mention that when either
+    # colliding page is the default.
     default_page_note = (
         " The default page is served at the app root, but it still reserves "
         "this pathname."
