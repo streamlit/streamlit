@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import math
 import pickle  # noqa: S403
 import threading
 from typing import (
@@ -33,7 +34,11 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import byte_util, runtime
-from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
@@ -66,6 +71,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
@@ -87,6 +93,8 @@ CACHE_DATA_MESSAGE_REPLAY_CTX = CachedMessageReplayContext(CacheType.DATA)
 
 # The cache persistence options we support: "disk" or None
 CachePersistType: TypeAlias = Literal["disk"] | None
+# The cache copy modes supported by this evaluation prototype.
+CacheCopyType: TypeAlias = Literal["deep", "cow"]
 
 
 P = ParamSpec("P")
@@ -100,6 +108,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
     max_entries: int | None
     max_size_bytes: int | None
     ttl: float | timedelta | str | None
+    copy: CacheCopyType
 
     def __init__(
         self,
@@ -113,6 +122,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        copy: CacheCopyType = "deep",
     ) -> None:
         super().__init__(
             func,
@@ -126,6 +136,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         self.max_entries = max_entries
         self.max_size_bytes = max_size_bytes
         self.ttl = ttl
+        self.copy = copy
 
         self.validate_params()
 
@@ -147,6 +158,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             display_name=self.display_name,
             scope=self.scope,
             refresh_mode=self.refresh_mode,
+            copy=self.copy,
         )
 
     def validate_params(self) -> None:
@@ -189,6 +201,7 @@ class DataCaches(StatsProvider):
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
         max_size_bytes: int | None = None,
+        copy: CacheCopyType = "deep",
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
@@ -226,6 +239,7 @@ class DataCaches(StatsProvider):
                 and cache.max_size_bytes == max_size_bytes
                 and cache.persist == persist
                 and cache.refresh_mode == refresh_mode
+                and cache.copy == copy
             ):
                 return cache
 
@@ -236,25 +250,29 @@ class DataCaches(StatsProvider):
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
-                    "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s) "
+                    "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, "
+                    "ttl=%s, copy=%s) "
                     "before creating new one with different params",
                     key,
                     persist,
                     max_entries,
                     max_size_bytes,
                     ttl,
+                    copy,
                 )
                 cache.storage.close()
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
                 "Creating new DataCache "
-                "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, ttl=%s)",
+                "(key=%s, persist=%s, max_entries=%s, max_size_bytes=%s, "
+                "ttl=%s, copy=%s)",
                 key,
                 persist,
                 max_entries,
                 max_size_bytes,
                 ttl,
+                copy,
             )
 
             # Resolved after the reuse check so the hot path never reads config.
@@ -283,6 +301,7 @@ class DataCaches(StatsProvider):
                 fresh_ttl_seconds=fresh_ttl_seconds,
                 display_name=display_name,
                 refresh_mode=refresh_mode,
+                copy=copy,
             )
             self._function_caches[session_id][key] = cache
             return cache
@@ -312,6 +331,8 @@ class DataCaches(StatsProvider):
             for data_caches in self._function_caches.values():
                 for data_cache in data_caches.values():
                     data_cache.mark_detached()
+                    if data_cache.copy == "cow":
+                        data_cache.clear()
 
             try:
                 # try to remove in optimal way if such ability provided by
@@ -470,6 +491,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        copy: CacheCopyType = "deep",
     ) -> Callable[[Callable[P, R]], CachedFunc[P, R]]: ...
 
     def __call__(
@@ -485,6 +507,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        copy: CacheCopyType = "deep",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         return self._decorator(
             func,  # ty: ignore[invalid-argument-type]
@@ -497,6 +520,7 @@ class CacheDataAPI:
             hash_funcs=hash_funcs,
             scope=scope,
             refresh_mode=refresh_mode,
+            copy=copy,
         )
 
     def _decorator(
@@ -512,6 +536,7 @@ class CacheDataAPI:
         hash_funcs: HashFuncsDict | None = None,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        copy: CacheCopyType = "deep",
     ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
         """Decorator to cache functions that return data (e.g. dataframe transforms, database queries, ML inference).
 
@@ -520,9 +545,11 @@ class CacheDataAPI:
         data is only available in the current session and removed when the
         session disconnects.
 
-        Cached objects are stored in "pickled" form, which means that the return
-        value of a cached function must be pickleable. Each caller of the cached
-        function gets its own copy of the cached data.
+        By default, cached objects are stored in "pickled" form, which means that
+        the return value of a cached function must be pickleable. Each caller of
+        the cached function gets its own copy of the cached data. The experimental
+        ``copy="cow"`` mode instead uses pandas Copy-on-Write for pandas-managed data
+        and shares nested Python objects between callers.
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
@@ -661,6 +688,20 @@ class CacheDataAPI:
                 commands that display elements. Streamlit doesn't replay these elements
                 for cached results and shows a warning when the function creates them.
 
+        copy : "deep" or "cow"
+            How to isolate the cached return value between callers.
+
+            - ``"deep"`` (default): Serialize the value with pickle and deserialize it
+              for every cache hit.
+            - ``"cow"``: Keep a process-local pandas Copy-on-Write baseline and return
+              shallow DataFrame or Series copies. Pandas-managed writes are isolated,
+              but nested Python objects, including mutable values in object-dtype
+              columns, are shared. The app developer is responsible for avoiding
+              unsafe mutations and synchronizing access to shared objects. Pandas
+              objects nested in built-in tuples, lists, and dictionaries also receive
+              shallow copies. This mode can't be combined with ``persist="disk"`` or
+              ``max_size``.
+
         Examples
         --------
         >>> import streamlit as st
@@ -791,6 +832,29 @@ class CacheDataAPI:
 
         max_size_bytes = byte_util.cache_data_max_size_to_bytes(max_size)
 
+        if copy not in {"deep", "cow"}:
+            raise StreamlitValueError("copy", ["'deep'", "'cow'"])
+
+        if copy == "cow" and persist_string is not None:
+            raise StreamlitIncompatibleParametersError(
+                'copy="cow"',
+                f"persist={persist!r}",
+                explanation=(
+                    "Copy-on-Write cache entries are process-local and cannot be "
+                    "persisted to disk."
+                ),
+            )
+
+        if copy == "cow" and max_size_bytes is not None:
+            raise StreamlitIncompatibleParametersError(
+                'copy="cow"',
+                f"max_size={max_size!r}",
+                explanation=(
+                    "Copy-on-Write entries are stored as live objects, while "
+                    "`max_size` limits serialized cache bytes."
+                ),
+            )
+
         validate_refresh_mode(
             refresh_mode,
             time_to_seconds(ttl, coerce_none_to_inf=False),
@@ -820,6 +884,7 @@ class CacheDataAPI:
                     hash_funcs=hash_funcs,
                     scope=scope,
                     refresh_mode=refresh_mode,
+                    copy=copy,
                 )
             )
 
@@ -838,6 +903,7 @@ class CacheDataAPI:
                 hash_funcs=hash_funcs,
                 scope=scope,
                 refresh_mode=refresh_mode,
+                copy=copy,
             )
         )
 
@@ -845,6 +911,28 @@ class CacheDataAPI:
     def clear(self) -> None:
         """Clear all in-memory and on-disk data caches."""
         _data_caches.clear_all()
+
+
+def _copy_cow_value(value: Any) -> Any:
+    """Return shallow pandas wrappers while sharing nested Python objects."""
+    import pandas as pd
+
+    if isinstance(value, (pd.DataFrame, pd.Series)):
+        pandas_major_version = int(pd.__version__.split(".", maxsplit=1)[0])
+        if pandas_major_version < 3 and pd.options.mode.copy_on_write is not True:
+            raise StreamlitAPIException(
+                "Pandas Copy-on-Write must be enabled before using "
+                '`st.cache_data(copy="cow")`. Upgrade to pandas 3 or set '
+                "`pd.options.mode.copy_on_write = True`."
+            )
+        return value.copy(deep=False)
+    if type(value) is tuple:
+        return tuple(_copy_cow_value(item) for item in value)
+    if type(value) is list:
+        return [_copy_cow_value(item) for item in value]
+    if type(value) is dict:
+        return {key: _copy_cow_value(item) for key, item in value.items()}
+    return value
 
 
 class DataCache(Cache[R]):
@@ -861,6 +949,7 @@ class DataCache(Cache[R]):
         max_size_bytes: int | None = None,
         fresh_ttl_seconds: float | None = None,
         refresh_mode: RefreshMode = "foreground",
+        copy: CacheCopyType = "deep",
     ) -> None:
         super().__init__()
         self.key = key
@@ -873,6 +962,7 @@ class DataCache(Cache[R]):
         self.max_size_bytes = max_size_bytes
         self.persist = persist
         self.refresh_mode = refresh_mode
+        self.copy = copy
         # The user-facing freshness ttl (equals ttl_seconds in foreground mode).
         self.fresh_ttl_seconds = (
             fresh_ttl_seconds if fresh_ttl_seconds is not None else ttl_seconds
@@ -881,10 +971,29 @@ class DataCache(Cache[R]):
         # orphan check (generation/presence) and the write stay atomic relative to a
         # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
         self._write_lock = threading.Lock()
+        self._cow_cache: TTLCache[str, CachedResult[R]] = TTLCache(
+            maxsize=max_entries if max_entries is not None else math.inf,
+            ttl=ttl_seconds if ttl_seconds is not None else math.inf,
+            timer=cache_utils.TTLCACHE_TIMER,
+        )
 
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
+        if self.copy == "cow":
+            with self._write_lock:
+                entry_count = len(self._cow_cache)
+            if entry_count == 0:
+                return {}
+            return {
+                CACHE_MEMORY_FAMILY: [
+                    CacheStat(
+                        category_name="st_cache_data",
+                        cache_name=self.display_name,
+                        byte_length=entry_count,
+                    )
+                ]
+            }
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.
@@ -897,6 +1006,20 @@ class DataCache(Cache[R]):
         if the value doesn't exist, and `CacheError` if the value exists but can't
         be unpickled.
         """
+        if self.copy == "cow":
+            with self._write_lock:
+                try:
+                    entry = self._cow_cache[value_key]
+                except KeyError as exc:
+                    raise CacheKeyNotFoundError() from exc
+            return CachedResult(
+                value=cast("R", _copy_cow_value(entry.value)),
+                messages=list(entry.messages),
+                main_id=entry.main_id,
+                sidebar_id=entry.sidebar_id,
+                stored_at=entry.stored_at,
+            )
+
         try:
             pickled_entry = self.storage.get(value_key)
         except CacheStorageKeyNotFoundError as e:
@@ -933,9 +1056,24 @@ class DataCache(Cache[R]):
 
     @gather_metrics("_cache_data_object")
     def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
-        """Write a value and associated messages to the cache.
-        The value must be pickleable.
-        """
+        """Write a value and associated messages to the cache."""
+        if self.copy == "cow":
+            cached_value = cast("R", _copy_cow_value(value))
+            stored_at = (
+                cache_utils.TTLCACHE_TIMER()
+                if self.refresh_mode == "background"
+                else None
+            )
+            with self._write_lock:
+                self._cow_cache[value_key] = CachedResult(
+                    cached_value,
+                    list(messages),
+                    st._main._id,
+                    st.sidebar._id,
+                    stored_at=stored_at,
+                )
+            return
+
         pickled_entry = self._pickle_result(value_key, value, messages)
         self.storage.set(value_key, pickled_entry)
 
@@ -974,6 +1112,21 @@ class DataCache(Cache[R]):
         """Write an async foreground result if no relevant clear invalidated it."""
         if not self._invalidation_token_is_current(value_key, invalidation_token):
             return False
+
+        if self.copy == "cow":
+            cached_value = cast("R", _copy_cow_value(value))
+            with self._write_lock:
+                if not self._invalidation_token_is_current(
+                    value_key, invalidation_token
+                ):
+                    return False
+                self._cow_cache[value_key] = CachedResult(
+                    cached_value,
+                    list(messages),
+                    st._main._id,
+                    st.sidebar._id,
+                )
+                return True
 
         # Serialize outside the lock. If clear wins during serialization, the check
         # under the lock discards the result without touching storage.
@@ -1017,6 +1170,26 @@ class DataCache(Cache[R]):
         # it has no ScriptRunContext.
         main_id = st._main._id
         sidebar_id = st.sidebar._id
+        if self.copy == "cow":
+            cached_value = cast("R", _copy_cow_value(value))
+            with self._write_lock:
+                if self._refresh_is_orphaned(
+                    value_key,
+                    expected_generation=expected_generation,
+                    expected_key_generation=expected_key_generation,
+                ):
+                    return
+                if value_key not in self._cow_cache:
+                    return
+                self._cow_cache[value_key] = CachedResult(
+                    cached_value,
+                    [],
+                    main_id,
+                    sidebar_id,
+                    stored_at=cache_utils.TTLCACHE_TIMER(),
+                )
+            return
+
         entry = CachedResult(
             value, [], main_id, sidebar_id, stored_at=cache_utils.TTLCACHE_TIMER()
         )
@@ -1049,7 +1222,12 @@ class DataCache(Cache[R]):
 
     def _clear(self, key: str | None = None) -> None:
         with self._write_lock:
-            if not key:
+            if self.copy == "cow":
+                if key is None:
+                    self._cow_cache.clear()
+                else:
+                    self._cow_cache.pop(key, None)
+            elif not key:
                 self.storage.clear()
             else:
                 self.storage.delete(key)

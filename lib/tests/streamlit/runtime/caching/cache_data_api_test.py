@@ -22,10 +22,12 @@ import pickle
 import re
 import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import numpy as np
+import pandas as pd
 import pytest
 from parameterized import parameterized
 
@@ -137,6 +139,183 @@ class CacheDataTest(unittest.TestCase):
 
         assert r1 == [1, 1]
         assert r2 == [0, 1]
+
+    def test_cow_dataframe_hit_shares_data_and_isolates_mutation(self) -> None:
+        """CoW hits share buffers while pandas-managed writes remain isolated."""
+        calls = 0
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            nonlocal calls
+            calls += 1
+            return pd.DataFrame({"value": [1, 2], "label": ["a", "b"]})
+
+        first = get_data()
+        second = get_data()
+
+        assert calls == 1
+        assert np.shares_memory(first["value"].to_numpy(), second["value"].to_numpy())
+
+        first.loc[0, "value"] = 99
+
+        third = get_data()
+        assert third.loc[0, "value"] == 1
+
+    def test_cow_nested_dashboard_return_is_isolated(self) -> None:
+        """The dashboard's tuple of DataFrames and timestamp is supported."""
+
+        @st.cache_data(copy="cow")
+        def prepare() -> tuple[pd.DataFrame, pd.DataFrame, pd.Timestamp]:
+            return (
+                pd.DataFrame({"area": ["A"], "score": [1]}),
+                pd.DataFrame({"org": ["O"], "score": [2]}),
+                pd.Timestamp("2026-10-12"),
+            )
+
+        first = prepare()
+        first[0].loc[0, "score"] = 100
+        first[1].loc[0, "score"] = 200
+
+        second = prepare()
+        assert second[0].loc[0, "score"] == 1
+        assert second[1].loc[0, "score"] == 2
+        assert second[2] == pd.Timestamp("2026-10-12")
+
+    def test_cow_concurrent_readers_isolate_mutation(self) -> None:
+        """Concurrent callers cannot mutate each other or the cached baseline."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": range(1000)})
+
+        get_data()
+        barrier = threading.Barrier(8)
+
+        def read_and_mutate(marker: int) -> int:
+            result = get_data()
+            barrier.wait()
+            result.loc[0, "value"] = marker
+            return int(result.loc[0, "value"])
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            observed = list(executor.map(read_and_mutate, range(10, 18)))
+
+        assert observed == list(range(10, 18))
+        assert get_data().loc[0, "value"] == 0
+
+    def test_cow_concurrent_hits_copy_outside_cache_lock(self) -> None:
+        """Concurrent callers can create their shallow wrappers in parallel."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": [1]})
+
+        get_data()
+        copy_barrier = threading.Barrier(2)
+
+        def copy_after_barrier(value: pd.DataFrame) -> pd.DataFrame:
+            copy_barrier.wait(timeout=2)
+            return value.copy(deep=False)
+
+        with (
+            patch(
+                "streamlit.runtime.caching.cache_data_api._copy_cow_value",
+                side_effect=copy_after_barrier,
+            ),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            results = list(executor.map(lambda _: get_data(), range(2)))
+
+        assert all(result.loc[0, "value"] == 1 for result in results)
+
+    def test_cow_clear_and_lru_eviction_recompute_values(self) -> None:
+        """Function clear and max_entries eviction remove CoW baselines."""
+        calls: list[int] = []
+
+        @st.cache_data(copy="cow", max_entries=1)
+        def get_data(key: int) -> pd.DataFrame:
+            calls.append(key)
+            return pd.DataFrame({"key": [key]})
+
+        get_data(1)
+        get_data(2)
+        get_data(1)
+        assert calls == [1, 2, 1]
+
+        get_data.clear()
+        get_data(1)
+        assert calls == [1, 2, 1, 1]
+
+    def test_cow_shares_nested_mutable_value(self) -> None:
+        """Non-pandas mutable values are shared under the opt-in contract."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> dict[str, set[int]]:
+            return {"mutable": {1, 2}}
+
+        first = get_data()
+        second = get_data()
+
+        assert first is not second
+        assert first["mutable"] is second["mutable"]
+        first["mutable"].add(3)
+        assert get_data()["mutable"] == {1, 2, 3}
+
+    def test_cow_shares_mutable_dataframe_object_cell(self) -> None:
+        """Pandas CoW does not isolate in-place mutation within object cells."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"nested": [["mutable"]]})
+
+        first = get_data()
+        second = get_data()
+
+        assert first.at[0, "nested"] is second.at[0, "nested"]
+        first.at[0, "nested"].append("shared")
+        assert get_data().at[0, "nested"] == ["mutable", "shared"]
+
+    def test_cow_requires_pandas_copy_on_write_before_pandas_3(self) -> None:
+        """Older pandas versions must explicitly enable Copy-on-Write."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": [1]})
+
+        pandas_options = MagicMock()
+        pandas_options.mode.copy_on_write = False
+        with (
+            patch.object(pd, "__version__", "2.2.0"),
+            patch.object(pd, "options", pandas_options),
+            pytest.raises(StreamlitAPIException, match="must be enabled"),
+        ):
+            get_data()
+
+    def test_invalid_copy_mode_raises(self) -> None:
+        """An unknown cache copy mode is rejected at decoration time."""
+        with pytest.raises(StreamlitValueError, match="copy"):
+
+            @st.cache_data(copy="shared")  # type: ignore[arg-type]
+            def get_data() -> int:
+                return 1
+
+    def test_cow_cannot_be_persisted(self) -> None:
+        """Process-local CoW entries cannot be combined with disk persistence."""
+        with pytest.raises(StreamlitIncompatibleParametersError, match=r'copy="cow"'):
+
+            @st.cache_data(copy="cow", persist="disk")
+            def get_data() -> pd.DataFrame:
+                return pd.DataFrame({"value": [1]})
+
+    def test_cow_cannot_use_serialized_size_limit(self) -> None:
+        """Live CoW objects cannot use the serialized-byte size limit."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError, match=r"max_size='1MB'"
+        ):
+
+            @st.cache_data(copy="cow", max_size="1MB")
+            def get_data() -> pd.DataFrame:
+                return pd.DataFrame({"value": [1]})
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
