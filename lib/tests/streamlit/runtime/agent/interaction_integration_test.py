@@ -1329,8 +1329,18 @@ async def test_a_fragment_the_runtime_dropped_falls_back_to_a_full_rerun(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "outer_decorator",
+    [
+        "@st.fragment",
+        # A full run creates a parallel fragment's container before the
+        # fragment runs, untagged; the fragment's own rerun re-sends it
+        # tagged with the fragment's ID.
+        "@st.fragment(parallel=True)",
+    ],
+)
 async def test_an_outer_fragment_rerun_drops_rows_a_nested_fragment_stopped_rendering(
-    tmp_path: Path, options: dict[str, Any]
+    tmp_path: Path, options: dict[str, Any], outer_decorator: str
 ) -> None:
     """Rows a nested fragment no longer renders leave `actions` when the outer
     fragment reruns, so a write to one is refused before its callback runs.
@@ -1348,14 +1358,14 @@ async def test_an_outer_fragment_rerun_drops_rows_a_nested_fragment_stopped_rend
         for i in range(n):
             st.button(f"Delete row {i}", key=f"del{i}", on_click=delete, args=(i,))
 
-    @st.fragment
+    OUTER_DECORATOR
     def table():
         n = st.number_input("Rows", value=3, key="n")
         rows(n)
 
     st.text(f"deleted={st.session_state.deleted}")
     table()
-    """
+    """.replace("OUTER_DECORATOR", outer_decorator)
     async with _running_app(tmp_path, options, script) as app:
         handle = (await app.call())["session_id"]
         shrunk = await app.call({"session_id": handle, "widget_state": {"n": 1}})

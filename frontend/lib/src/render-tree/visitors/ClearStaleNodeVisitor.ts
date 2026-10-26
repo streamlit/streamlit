@@ -35,6 +35,12 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *    which means they are stale.
  * 4. We recursively clear our children.
  *
+ * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
+ * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
+ * the agent API's message buffer. The agent API checks writes against what
+ * that buffer keeps, so a rule that differs lets an agent write to widgets the
+ * browser removed.
+ *
  * Usage:
  * ```typescript
  * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock)

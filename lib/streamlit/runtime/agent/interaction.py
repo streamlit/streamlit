@@ -263,6 +263,11 @@ class AgentSessionClient(SessionClient):
         that container rendered before. As in the browser's tree, a container
         is judged by position, so a dropped one takes its contents with it.
         """
+        # Keep in sync with `ClearStaleNodeVisitor` in
+        # frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts,
+        # which applies this rule to the browser's tree. Writes are checked
+        # against what this buffer keeps, so content the browser dropped but
+        # this kept would still accept writes.
         running = self._fragments_this_run
         # Its indexes point into the list being replaced.
         self._element_at = {}
