@@ -198,8 +198,9 @@ class Page:
         loaded. If ``default`` is ``False`` (default), the page will have a
         nonempty URL pathname. However, if no default page is passed to
         ``st.navigation`` and this is the first page, this page will become the
-        default page. If ``default`` is ``True``, then the page will have
-        an empty pathname instead of ``url_path``.
+        default page. If ``default`` is ``True``, the page is served at the
+        app's root URL, so its pathname is ``""``. The ``url_path`` you pass,
+        or the inferred pathname if you omit it, must still be unique.
 
     visibility : "visible" or "hidden"
         Whether the page is shown in the navigation menu. If this is

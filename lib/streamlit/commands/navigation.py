@@ -97,11 +97,11 @@ def _describe_page_for_url_error(
         description = f"`{page_path}`"
     else:
         callable_name = getattr(page._page, "__name__", None)
-        description = (
-            f"callable `{callable_name}`"
-            if callable_name
-            else f'callable titled "{page.title}"'
-        )
+        # Every lambda is named "<lambda>", so the title identifies it better.
+        if callable_name and callable_name != "<lambda>":
+            description = f"callable `{callable_name}`"
+        else:
+            description = f'callable titled "{page.title}"'
 
     context = []
     if section_header:

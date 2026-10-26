@@ -95,7 +95,7 @@ class NavigationTest(DeltaGeneratorTestCase):
                 ]
             )
 
-    def test_duplicate_url_path_across_sections_names_both_pages(self):
+    def test_duplicate_url_path_across_sections_names_both_pages(self) -> None:
         """Test that a cross-section collision names both page files and sections."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.navigation(
@@ -114,10 +114,10 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert "including pages in different sections" in message
         assert "default page" not in message
 
-    def test_duplicate_url_path_with_hidden_page_names_both_pages(self):
+    def test_duplicate_url_path_with_hidden_page_names_both_pages(self) -> None:
         """Test that a hidden page colliding with a callable page is identified."""
 
-        def foo():
+        def foo() -> None:
             pass
 
         with pytest.raises(StreamlitAPIException) as exc:
@@ -134,7 +134,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert "callable `foo`" in message
         assert "Two pages resolve to the URL pathname `/foo`:" in message
 
-    def test_duplicate_url_path_with_nameless_callable_uses_title(self):
+    def test_duplicate_url_path_with_nameless_callable_uses_title(self) -> None:
         """Test that a callable without ``__name__`` is identified by its title."""
 
         class Renderer:
@@ -152,9 +152,24 @@ class NavigationTest(DeltaGeneratorTestCase):
 
         assert '`foo.py` and callable titled "Foo"' in str(exc.value)
 
+    def test_duplicate_url_path_with_lambdas_uses_titles(self) -> None:
+        """Test that lambdas sharing the inferred pathname are identified by title."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(lambda: None, title="Alpha"),
+                    st.Page(lambda: None, title="Beta"),
+                ]
+            )
+
+        message = str(exc.value)
+        assert 'callable titled "Alpha" and callable titled "Beta"' in message
+        assert "callable `<lambda>`" not in message
+
     def test_duplicate_url_path_with_later_default_page_shows_reserved_pathname(
         self,
-    ):
+    ) -> None:
         """Test that a default page collision shows the pathname it reserves."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.navigation(
@@ -167,6 +182,21 @@ class NavigationTest(DeltaGeneratorTestCase):
         message = str(exc.value)
         assert "`page1.py` and `home.py` (default page)" in message
         assert "Two pages resolve to the URL pathname `/home`:" in message
+        assert "still reserves this pathname" in message
+
+    def test_duplicate_url_path_with_implicit_default_page_shows_reservation(
+        self,
+    ) -> None:
+        """Test that the implicit first default page is labeled in a collision."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation([st.Page("admin/settings.py"), st.Page("user/settings.py")])
+
+        message = str(exc.value)
+        assert (
+            f"`{Path('admin/settings.py')}` (default page) and "
+            f"`{Path('user/settings.py')}`. Each page"
+        ) in message
+        assert "Two pages resolve to the URL pathname `/settings`:" in message
         assert "still reserves this pathname" in message
 
     def test_page_found_by_hash(self):
