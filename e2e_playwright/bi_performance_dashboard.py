@@ -94,7 +94,10 @@ def _apply_named_range(rows: pd.DataFrame, range_name: str) -> pd.DataFrame:
     if range_name == "All":
         return rows
     days = {"1M": 30, "3M": 90, "6M": 180}[range_name]
-    return rows[rows["ts"] >= rows["ts"].max() - pd.Timedelta(days=days)]
+    filtered_rows: pd.DataFrame = rows[
+        rows["ts"] >= rows["ts"].max() - pd.Timedelta(days=days)
+    ]
+    return filtered_rows
 
 
 def _daily_series(
