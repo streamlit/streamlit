@@ -843,7 +843,8 @@ class PlotlyMixin:
                         for mode in plotly_chart_proto.selection_mode
                     )
                     or None,
-                    on_select="ignore" if on_select == "ignore" else "rerun",
+                    # A callback reaches the server too, so it is "rerun".
+                    on_select="rerun",
                     alt=plotly_chart_proto.alt or None,
                 ),
             )
@@ -857,7 +858,6 @@ class PlotlyMixin:
             agent_props=agent_spec.element(
                 "plotly_chart",
                 key=key,
-                on_select="ignore" if on_select == "ignore" else "rerun",
                 alt=plotly_chart_proto.alt or None,
             ),
         )

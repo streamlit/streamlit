@@ -2793,7 +2793,6 @@ class VegaChartsMixin:
                     command=agent_command,
                     encoding=agent_encoding,
                     selection_mode=list(vega_lite_proto.selection_mode),
-                    on_select=on_select,
                 ),
             )
             return widget_state.value
@@ -2810,7 +2809,6 @@ class VegaChartsMixin:
                 command=agent_command,
                 encoding=agent_encoding,
                 key=key,
-                on_select=on_select,
             ),
         )
 
@@ -2822,7 +2820,6 @@ class VegaChartsMixin:
         encoding: dict[str, Any] | None,
         selection_mode: list[str] | None = None,
         key: str | None = None,
-        on_select: Literal["rerun", "ignore"] | WidgetCallback | None = None,
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
@@ -2840,9 +2837,11 @@ class VegaChartsMixin:
             if encoding is not None
             else {"selection_mode": selection_mode or None}
         )
-        if command in {"altair_chart", "vega_lite_chart"}:
-            # A callback reaches the server, so it is the same mode as "rerun".
-            own_arguments["on_select"] = "ignore" if on_select == "ignore" else "rerun"
+        if selection_mode:
+            # Reported only with selections on; the documented default,
+            # "ignore", is left out. A callback reaches the server too, so it is
+            # the same mode as "rerun".
+            own_arguments["on_select"] = "rerun"
         return agent_spec.element(
             command,
             # A chart without selections has no element ID, only the author's key.

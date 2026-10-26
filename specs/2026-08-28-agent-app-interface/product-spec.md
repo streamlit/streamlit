@@ -499,10 +499,7 @@ right now. Naming follows the public API, for the reason above:
           },
           {
             "type": "dataframe",
-            "props": {
-              "column_config": { "quarter": { "label": "Quarter" } },
-              "on_select": "ignore"
-            },
+            "props": { "column_config": { "quarter": { "label": "Quarter" } } },
             "data": {
               "columns": [
                 { "name": "quarter", "type": "large_string" },
@@ -561,8 +558,8 @@ right now. Naming follows the public API, for the reason above:
 Three things in that example are worth pointing at: both key forms appear, since `region`
 is authored and the button falls back to its element ID; the collapsed expander still
 carries its `children`, `label`, and `icon`, which would otherwise be invisible to a
-non-browser client; and the dataframe shows the `props`/`data` split, with only its
-parameters above the line. Data representation, including what `data.url` is and is
+non-browser client; and the dataframe shows the `props`/`data` split, with only
+`column_config` above the line. Data representation, including what `data.url` is and is
 not, is [its own section](#data-charts-and-media-in-v1), and the selectbox's
 `value_schema` is explained in [Actions in v1](#actions-in-v1).
 

@@ -741,10 +741,7 @@ _SPEC_EXAMPLE: Final = json.loads(
           },
           {
             "type": "dataframe",
-            "props": {
-              "column_config": { "quarter": { "label": "Quarter" } },
-              "on_select": "ignore"
-            },
+            "props": { "column_config": { "quarter": { "label": "Quarter" } } },
             "data": {
               "columns": [
                 { "name": "quarter", "type": "large_string" },

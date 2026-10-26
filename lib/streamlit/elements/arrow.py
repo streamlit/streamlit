@@ -1312,7 +1312,10 @@ class ArrowMixin:
                 column_order=list(proto.column_order) or None,
                 hide_index=described_hide_index(column_config_mapping),
                 selection_mode=sorted(selection_mode_set) or None,
-                on_select="ignore" if on_select == "ignore" else "rerun",
+                # Reported only with selections on; the documented default,
+                # "ignore", is left out. A callback reaches the server too, so
+                # it is "rerun".
+                on_select="rerun" if is_selection_activated else None,
                 # The text shown for missing values, which the preview reports
                 # as null.
                 placeholder=placeholder,

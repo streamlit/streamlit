@@ -345,6 +345,37 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert set(chart["props"]["selection_mode"]) == {"points", "box"}
         assert "theme" not in chart["props"]
 
+    def test_on_select_is_reported_only_with_selections_on(self) -> None:
+        """`on_select` appears only when selections are on, as "rerun" even for a
+        callback. The documented default, "ignore", is left out.
+        """
+        import altair as alt
+        import plotly.graph_objects as go
+        import pydeck as pdk
+
+        self._record()
+        frame = pd.DataFrame({"a": [1, 2]})
+        chart = alt.Chart(frame).mark_bar().encode(x="a")
+        figure = go.Figure(go.Scatter(x=[1], y=[1]))
+        st.dataframe(frame)
+        st.dataframe(frame, on_select=lambda: None, key="selectable_dataframe")
+        st.plotly_chart(figure)
+        st.plotly_chart(figure, on_select="rerun", key="selectable_plotly")
+        st.pydeck_chart(pdk.Deck())
+        st.pydeck_chart(pdk.Deck(), on_select="rerun", key="selectable_deck")
+        st.altair_chart(chart)
+        st.altair_chart(
+            chart.add_params(alt.selection_point()),
+            on_select="rerun",
+            key="selectable_altair",
+        )
+
+        described = _descriptions(list(self.forward_msg_queue._queue))
+        for command in ("dataframe", "plotly_chart", "pydeck_chart", "altair_chart"):
+            plain, selectable = [item for item in described if item["type"] == command]
+            assert "on_select" not in plain["props"], command
+            assert selectable["props"]["on_select"] == "rerun", command
+
     def test_text_help_matches_the_dedented_proto(self) -> None:
         """Help is the dedented string the browser receives."""
         self._record()
