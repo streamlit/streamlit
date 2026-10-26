@@ -244,7 +244,7 @@ jobs:
             gh api "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
               --paginate \
               --slurp |
-              jq -r 'map(.[]) | map(select(.body | contains("<!-- bi-performance-results -->"))) | first | .id // empty'
+              jq -r 'map(.[]) | map(select(.user.login == "github-actions[bot]" and (.body | contains("<!-- bi-performance-results -->")))) | first | .id // empty'
           )
 
           if [[ -n "$comment_id" ]]; then
