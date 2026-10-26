@@ -445,12 +445,11 @@ def _plotly_data(proto: PlotlyChartProto) -> dict[str, Any] | None:
     figure from one the app never configured. A template can also carry
     content, such as a "DRAFT" annotation, and that is kept.
 
-    Nothing else is dropped, at any size. For these charts the specification
-    holds the values, so trimming further would remove the only part worth
-    reading, and a figure large enough to matter is large because it plots a lot
-    of data -- the same bytes the app already sends its own client. Saying the
-    figure is `complete` is the point: a client already has everything, so it
-    does not go looking for a `url`.
+    Nothing beyond the template is dropped, at any size: the specification
+    holds the figure's values, so trimming further would remove the only part
+    worth reading, and a large figure is large because it plots a lot of data,
+    the same bytes the app already sends its own client. The figure is
+    therefore `complete`, and a client has no `url` to look for.
     """
     spec = agent_data.parse_spec(proto.spec)
     if spec is None:
@@ -516,6 +515,7 @@ def _expand_typed_arrays(value: Any) -> Any:
 
 
 def _decode_typed_array(value: dict[str, Any]) -> Any:
+    """Decode a Plotly base64 typed array (``bdata``) into JSON-compatible values."""
     import base64
 
     import numpy as np

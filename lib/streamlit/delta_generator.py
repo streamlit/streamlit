@@ -529,7 +529,7 @@ class DeltaGenerator(
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
     def _get_write_delta_path_str(self) -> str:
-        """Return the delta path where ``_enqueue`` writes this DG's next element.
+        """Return the delta path where this DeltaGenerator's next element is written.
 
         Unlike ``_get_delta_path_str``, this follows a fragment's write to a
         container declared outside it into the wrapper block ``_enqueue``

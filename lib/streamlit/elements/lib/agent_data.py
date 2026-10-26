@@ -54,6 +54,7 @@ from streamlit.runtime.agent import json_encoding
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import pyarrow as pa
     from google.protobuf.message import Message
 
 _LOGGER: Final = get_logger(__name__)
@@ -177,9 +178,9 @@ def arrow(arrow_bytes: bytes, *, coordinates: str) -> dict[str, Any] | None:
     if data is None:
         return None
     if data["complete"] is False:
-        # A recording session has a runtime, so the size bound is the only
-        # reason the copy is not registered. A new one in
-        # `_serve_arrow_over_http` needs its own `unavailable` value.
+        # A recording session always has a runtime, so the copy goes unregistered
+        # only above `server.maxMessageSize`. A new early return in
+        # `_serve_arrow_over_http` needs its own `unavailable` reason here.
         data.update(unavailable("too_large_to_serve"))
     return data
 
@@ -373,7 +374,7 @@ def _preview_row_limit() -> int:
     return max(0, int(config.get_option("server.agentPreviewRows")))
 
 
-def _arrow_columns(table: Any) -> list[dict[str, str]]:
+def _arrow_columns(table: pa.Table) -> list[dict[str, str]]:
     """An Arrow table's columns with their types, by position.
 
     Every column the bytes behind `data.url` carry, under the same names, so
@@ -387,7 +388,7 @@ def _arrow_columns(table: Any) -> list[dict[str, str]]:
     ]
 
 
-def _arrow_rows(table: Any, limit: int) -> list[list[Any]]:
+def _arrow_rows(table: pa.Table, limit: int) -> list[list[Any]]:
     """Return up to ``limit`` rows as lists of cell values in column order.
 
     By position rather than by name, so a table with two columns of the same

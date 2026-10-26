@@ -31,7 +31,7 @@ import pydeck as pdk
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements import arrow, plotly_chart, vega_charts
+from streamlit.elements import arrow, deck_gl_json_chart, plotly_chart, vega_charts
 from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
@@ -480,7 +480,10 @@ class SnapshotDataTest(SnapshotCase):
             (1.0, 3.0),
             (2.0, 4.0),
         ]
-        assert empty == {"spec": empty["spec"], "complete": True}
+        assert empty == {
+            "spec": dict(deck_gl_json_chart.EMPTY_MAP),
+            "complete": True,
+        }
         rendered = json.dumps(document)
         for withheld in ("ada@example.com", "cust-17", "customer"):
             assert withheld not in rendered

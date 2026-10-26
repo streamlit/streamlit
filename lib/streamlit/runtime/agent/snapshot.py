@@ -557,9 +557,9 @@ def _data_block(
     if "unavailable" in data or not isinstance(data.get("url"), str):
         data.pop("url", None)
     if data["complete"] is False and "url" not in data and "unavailable" not in data:
-        # Each builder names its own gap, so this only keeps a block that did
-        # not from passing for complete or servable. It is reported the way
-        # `agent_data.arrow` reports a copy it did not register.
+        # Builders set their own `unavailable` reason. This fallback only stops a
+        # block that set none from looking complete or servable, using the reason
+        # `agent_data.arrow` gives for a copy it did not register.
         data.update(agent_data.unavailable("too_large_to_serve"))
     return data
 
@@ -567,7 +567,13 @@ def _data_block(
 def _payload_data(
     proto_field: str, payload: Any, *, described: bool
 ) -> dict[str, Any] | None:
-    """The `data` read from an element's payload, for an element that built none.
+    """Read `data` from the payload when the description has no block.
+
+    Deck.gl and ECharts are read here even when the command described itself,
+    because the description does not store a second copy of the specification.
+    ``described`` skips the Arrow fallback: a command that described itself and
+    built no block reports no table. A table replayed from a cache a browser
+    filled is summarized from its payload instead.
 
     ``payload`` is typed loosely because each branch narrows it to a different
     proto by way of ``proto_field``.

@@ -310,7 +310,8 @@ class MapMixin:
             map_proto,
             layout_config=layout_config,
             # st.map and st.pydeck_chart share a proto. Size and color are the
-            # arguments the author passed; the plotted table shows the columns.
+            # arguments the author passed. The snapshot reads the Deck.gl spec
+            # from this payload; the description does not repeat it.
             agent_props=agent_spec.element(
                 "map",
                 latitude=latitude,

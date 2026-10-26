@@ -823,6 +823,9 @@ _NOT_DATA_SOURCES: Final = frozenset({"datasets", "usermeta", "values"})
 
 
 def _loads_from_url(value: Any) -> bool:
+    """Whether ``value`` holds a ``{"data": {"url": ...}}`` at any depth, outside
+    ``_NOT_DATA_SOURCES``.
+    """
     if isinstance(value, dict):
         data = value.get("data")
         if isinstance(data, dict) and "url" in data:
