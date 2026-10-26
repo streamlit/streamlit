@@ -144,8 +144,8 @@ describe("StyledFlexContainerBlock print layout", () => {
     // the full container, so a fixed-height container keeps flex, unless it
     // holds an expanded print table, which clips against the fixed height.
     expect(css).not.toContain("display:block")
-    expect(css).toContain(
-      ":has(.stDataFramePrintTable){height:auto;max-height:none;overflow:visible"
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{height:auto;max-height:none;overflow:visible/
     )
   })
 })
@@ -181,8 +181,8 @@ describe("StyledLayoutWrapper print layout", () => {
     // Stays flex so its child retains the fixed height, unless that child
     // is an expanded print table, which needs to grow past it.
     expect(css).toContain("height:300px")
-    expect(css).toContain(
-      ":has(.stDataFramePrintTable){display:block;height:auto;max-height:none"
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;height:auto;max-height:none/
     )
   })
 })

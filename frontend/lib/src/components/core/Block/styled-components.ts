@@ -457,14 +457,16 @@ export const StyledFlexContainerBlock =
             },
           },
         }),
-        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
-          // A fixed-height container (st.container(height=...)) scrolls its
-          // overflow on screen. The print table can be taller than that
-          // height, so the container grows instead of clipping rows.
-          height: "auto",
-          maxHeight: "none",
-          overflow: "visible",
-        },
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+          {
+            // A fixed-height container (st.container(height=...)) scrolls
+            // its overflow on screen. A print table, or a fallback note
+            // stacked under the canvas, can be taller than that height, so
+            // the container grows instead of clipping them.
+            height: "auto",
+            maxHeight: "none",
+            overflow: "visible",
+          },
       }
 
       return {
@@ -577,13 +579,15 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
       ...((height === undefined || height === "auto") && {
         display: "block",
       }),
-      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
-        // A fixed height clips the print table through the inner
-        // container's overflow:auto. Grow this wrapper with it.
-        display: "block",
-        height: "auto",
-        maxHeight: "none",
-      },
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+        {
+          // A fixed height clips a print table, or a fallback note stacked
+          // under the canvas, through the inner container's overflow:auto.
+          // Grow this wrapper with it.
+          display: "block",
+          height: "auto",
+          maxHeight: "none",
+        },
     },
   })
 )
