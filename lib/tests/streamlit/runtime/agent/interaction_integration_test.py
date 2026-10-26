@@ -1976,3 +1976,37 @@ async def test_sessions_showing_the_same_table_share_its_data_file(
     assert _data_file(second, "orders") == shared
     assert stored_after_first == {shared}
     assert stored_after_both == set()
+
+
+@pytest.mark.anyio
+async def test_elements_showing_the_same_table_share_its_data_file(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Two elements of one page with identical data are one stored file, which
+    stays while either still renders and is released once neither does.
+    """
+    script = """
+    import pandas as pd
+    import streamlit as st
+
+    frame = pd.DataFrame({"n": range(150)})
+    st.dataframe(frame, key="kept")
+    if st.checkbox("Show copy", value=True, key="show_copy"):
+        st.dataframe(frame, key="copy")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call()
+        handle = first["session_id"]
+        hidden = await app.call(
+            {"session_id": handle, "widget_state": {"show_copy": False}}
+        )
+        stored_hidden = _stored_files(app)
+        app.registry.close(handle)
+        stored_closed = _stored_files(app)
+
+    shared = _data_file(first, "kept")
+    assert _data_file(first, "copy") == shared
+    assert "copy" not in {node.get("key") for node in _nodes(hidden)}
+    assert _data_file(hidden, "kept") == shared
+    assert stored_hidden == {shared}
+    assert stored_closed == set()
