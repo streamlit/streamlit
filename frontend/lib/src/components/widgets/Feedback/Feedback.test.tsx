@@ -842,3 +842,71 @@ describe("on_change='ignore' mode", () => {
     expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 })
+
+describe("Feedback query param binding", () => {
+  afterEach(() => {
+    window.history.replaceState({}, "", "/")
+  })
+
+  it("registers a clearable string binding when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "rating", default: 1 })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Feedback {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "rating",
+      "string_value",
+      1,
+      true,
+      undefined
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Feedback {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "rating" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<Feedback {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("writes the selected index to the URL and keeps an empty param when cleared", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ queryParamKey: "rating", default: 0 })
+
+    render(<Feedback {...props} />)
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+    expect(window.location.search).toBe("?rating=1")
+
+    // Clearing a rating that has a default keeps ?rating= so a reload stays cleared.
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+    expect(window.location.search).toBe("?rating=")
+
+    // Selecting the default removes the param.
+    await user.click(screen.getByRole("radio", { name: "Thumbs down" }))
+    expect(window.location.search).toBe("")
+  })
+})

@@ -205,6 +205,15 @@ function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Clicking the selected option again clears it.
+        clearable: true,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
     FeedbackProto
@@ -217,6 +226,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
     formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)
