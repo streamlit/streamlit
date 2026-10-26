@@ -177,6 +177,44 @@ describe("Quiver", () => {
         )
       })
     })
+
+    describe("getDataColumnReader", () => {
+      it.each([
+        { name: "UNICODE", data: UNICODE },
+        { name: "CATEGORICAL", data: CATEGORICAL },
+        { name: "MULTI", data: MULTI },
+      ])("reads the same data values as getCell for $name", ({ data }) => {
+        const q = new Quiver({ data })
+        const { numIndexColumns, numDataRows, numDataColumns } = q.dimensions
+
+        for (let column = 0; column < numDataColumns; column++) {
+          const read = q.getDataColumnReader(column)
+          for (let row = 0; row < numDataRows; row++) {
+            expect(read(row)).toEqual(
+              q.getCell(row, numIndexColumns + column).content
+            )
+          }
+        }
+      })
+
+      it("skips index columns", () => {
+        const q = new Quiver({ data: UNICODE })
+
+        // `getCell` column 0 is the "i1" index; data column 0 starts at "foo".
+        expect(q.getDataColumnReader(0)(0)).toEqual("foo")
+      })
+
+      it.each([-1, 2])(
+        "throws an exception if data column index %s is out of range",
+        column => {
+          const q = new Quiver({ data: UNICODE })
+
+          expect(() => q.getDataColumnReader(column)).toThrow(
+            `Data column index is out of range: ${column}`
+          )
+        }
+      )
+    })
   })
 
   describe("Display", () => {

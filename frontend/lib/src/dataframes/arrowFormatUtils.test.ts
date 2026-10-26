@@ -20,6 +20,7 @@ import {
   DateDay,
   Decimal,
   DecimalBuilder,
+  Duration,
   Field,
   Float64,
   Int64,
@@ -48,6 +49,7 @@ import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
+  convertDurationToMilliseconds,
   convertTimeToDate,
   format,
   formatPeriodFromFreq,
@@ -388,6 +390,40 @@ describe("format", () => {
     expect(format(value, arrowType)).toEqual("42")
   })
 
+  it.each([
+    { unscaled: 5, scale: 2, expected: "0.05" },
+    { unscaled: -5, scale: 2, expected: "-0.05" },
+    { unscaled: -5, scale: 3, expected: "-0.005" },
+    { unscaled: -12, scale: 3, expected: "-0.012" },
+    { unscaled: -12345, scale: 2, expected: "-123.45" },
+  ])(
+    "decimal $unscaled with scale $scale formats as $expected",
+    ({ unscaled, scale, expected }) => {
+      const decimalType = new Decimal(scale, 10)
+      const builder = new DecimalBuilder({
+        type: decimalType,
+        nullValues: null,
+      })
+      // Little-endian 128-bit two's complement words.
+      const fill = unscaled < 0 ? 0xffffffff : 0
+      builder.append(new Uint32Array([unscaled >>> 0, fill, fill, fill]))
+      const value = builder.finish().toVector().get(0)
+      const arrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", decimalType, true),
+        pandasType: {
+          field_name: "c",
+          name: "c",
+          pandas_type: "decimal",
+          numpy_type: "object",
+          metadata: null,
+        },
+      }
+
+      expect(format(value, arrowType)).toEqual(expected)
+    }
+  )
+
   it("list JSON coerces bigint with Number() for serialization", () => {
     expect(
       format([{ x: BigInt("9007199254740993") }] as never, {
@@ -666,5 +702,55 @@ describe("convertTimeToDate", () => {
       unit ? new Field("test", new Timestamp(unit), true, null) : undefined
     )
     expect(result.toISOString()).toBe(expected)
+  })
+})
+
+describe("convertDurationToMilliseconds", () => {
+  // 120 days plus 0.123456789 seconds: above Number.MAX_SAFE_INTEGER in ns.
+  const unsafeNanoseconds =
+    BigInt(10_368_000) * BigInt(1_000_000_000) + BigInt(123_456_789)
+
+  it.each([
+    // [duration, unit, expected milliseconds]
+    [1_500_000, TimeUnit.NANOSECOND, 1.5],
+    [BigInt(1_500_000), TimeUnit.NANOSECOND, 1.5],
+    [BigInt(-1_500_000), TimeUnit.NANOSECOND, -1.5],
+    [1500, TimeUnit.MICROSECOND, 1.5],
+    [BigInt(1500), TimeUnit.MICROSECOND, 1.5],
+    [1500, TimeUnit.MILLISECOND, 1500],
+    [BigInt(1500), TimeUnit.MILLISECOND, 1500],
+    [2, TimeUnit.SECOND, 2000],
+    [BigInt(-2), TimeUnit.SECOND, -2000],
+    // Without a field, the value is read as nanoseconds (the pandas default).
+    [1_500_000, undefined, 1.5],
+    // Unsafe bigints keep whole-millisecond precision via bigint division.
+    [unsafeNanoseconds, TimeUnit.NANOSECOND, 10_368_000_123],
+    [-unsafeNanoseconds, TimeUnit.NANOSECOND, -10_368_000_123],
+    [
+      BigInt(Number.MAX_SAFE_INTEGER) * BigInt(10) + BigInt(7),
+      TimeUnit.MICROSECOND,
+      90_071_992_547_409,
+    ],
+  ])(
+    "converts duration %s with unit %s to %s ms",
+    (duration, unit, expected) => {
+      const field =
+        unit === undefined
+          ? undefined
+          : new Field("test", new Duration(unit), true, null)
+      expect(convertDurationToMilliseconds(duration, field)).toBe(expected)
+    }
+  )
+
+  it("keeps sub-millisecond fractions of a safe bigint", () => {
+    const field = new Field(
+      "test",
+      new Duration(TimeUnit.NANOSECOND),
+      true,
+      null
+    )
+    const result = convertDurationToMilliseconds(BigInt(1_234_567), field)
+    expect(result).toBe(1.234567)
+    expect(Number.isInteger(result)).toBe(false)
   })
 })

@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowNamedDataSet.proto";
+
 message EChartsChart {
   // JSON-serialized ECharts option object.
   string spec = 1;
@@ -38,7 +40,11 @@ message EChartsChart {
   // ECharts `aria.label.description` (→ aria-label on role="img").
   optional string alt = 7;
 
-  // Next ID: 8
+  // Arrow IPC for dataframe-like `dataset.source` values. The spec references
+  // each one as `{"name": "<content hash>"}`; identical frames share one entry.
+  repeated ArrowNamedDataSet datasets = 8;
+
+  // Next ID: 9
 
   // Available renderers:
   enum Renderer {

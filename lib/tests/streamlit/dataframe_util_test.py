@@ -1676,6 +1676,51 @@ def test_direct_polars_to_arrow_bytes_lazyframe_exact_row_count_no_warning() -> 
 
 
 @pytest.mark.require_integration
+@pytest.mark.parametrize(
+    ("num_rows", "expected_rows", "shows_caption"),
+    [(51, 50, True), (50, 50, False), (30, 30, False)],
+    ids=["over_limit", "at_limit", "under_limit"],
+)
+def test_collect_polars_lazyframe(
+    num_rows: int, expected_rows: int, shows_caption: bool
+) -> None:
+    """A LazyFrame is collected up to the limit, with a caption only if truncated."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(num_rows)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        collected = dataframe_util.collect_polars_lazyframe(lf, max_unevaluated_rows=50)
+
+    assert isinstance(collected, pl.DataFrame)
+    assert collected["x"].to_list() == list(range(expected_rows))
+    assert mock_info.called is shows_caption
+
+
+@pytest.mark.require_integration
+def test_direct_polars_lazyframe_fallback_does_not_collect_twice() -> None:
+    """The pandas fallback reuses the collected LazyFrame and its single caption."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(100)})
+
+    with (
+        patch.object(
+            dataframe_util,
+            "_convert_polars_to_arrow_bytes",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+
+    mock_info.assert_called_once()
+    assert pa.RecordBatchStreamReader(result).read_all().num_rows == 50
+
+
+@pytest.mark.require_integration
 def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
     """Polars fast path falls back to Pandas path when conversion fails."""
     import polars as pl

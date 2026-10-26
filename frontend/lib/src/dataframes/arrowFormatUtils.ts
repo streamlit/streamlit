@@ -308,6 +308,44 @@ export function convertTimeToDate(
 }
 
 /**
+ * Converts a duration (timedelta) value to milliseconds based on the unit
+ * information in the field.
+ *
+ * Sub-millisecond fractions are kept while the raw count is a safe integer.
+ * Larger bigint counts use bigint division, so they keep whole-millisecond
+ * precision instead of losing the low digits in a float conversion.
+ *
+ * @param duration The duration value in the field's unit.
+ * @param field The field containing the unit information. Without one, the
+ * value is read as nanoseconds (the pandas default).
+ * @returns The duration in milliseconds.
+ */
+export function convertDurationToMilliseconds(
+  duration: number | bigint,
+  field?: Field
+): number {
+  const unit = getArrowTimeUnit(field, TimeUnit.NANOSECOND)
+  const isUnsafeBigint =
+    typeof duration === "bigint" && !Number.isSafeInteger(Number(duration))
+
+  if (unit === TimeUnit.NANOSECOND) {
+    return isUnsafeBigint
+      ? Number(duration / BigInt(1_000_000))
+      : Number(duration) / 1e6
+  }
+  if (unit === TimeUnit.MICROSECOND) {
+    return isUnsafeBigint
+      ? Number(duration / BigInt(1_000))
+      : Number(duration) / 1e3
+  }
+  if (unit === TimeUnit.MILLISECOND) {
+    return Number(duration)
+  }
+  // Interpret it as seconds as a fallback.
+  return Number(duration) * 1000
+}
+
+/**
  * Formats a time value based on the unit information in the field.
  *
  * @param timestamp The time value to format.
@@ -417,9 +455,8 @@ function formatDuration(duration: number | bigint, field?: Field): string {
 function formatDecimal(value: Uint32Array, field?: Field): string {
   const scale = getArrowScale(field)
 
-  // Format Uint32Array to a numerical string and pad it with zeros
-  // So that it is exactly the length of the scale.
-  let numString = util.bigNumToString(new util.BN(value)).padStart(scale, "0")
+  // Format Uint32Array to a numerical string.
+  let numString = util.bigNumToString(new util.BN(value))
 
   // ArrowJS 13 correctly adds a minus sign for negative numbers.
   // but it doesn't handle th fractional part yet. So we can just return
@@ -437,6 +474,9 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
     sign = "-"
     numString = numString.slice(1)
   }
+  // Pad the digits (without the sign) with zeros so that they are at least
+  // as long as the scale, e.g. 5 with scale 3 is 0.005.
+  numString = numString.padStart(scale, "0")
   // Extract the whole number part. If the number is < 1, it doesn't
   // have a whole number part, so we'll use "0" instead.
   // E.g for 123450 with scale 3, we'll get "123" as the whole part.

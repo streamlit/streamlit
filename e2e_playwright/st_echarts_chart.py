@@ -22,6 +22,7 @@ without a ``key`` of their own.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from typing import Any
 
@@ -182,6 +183,34 @@ st.echarts_chart(
     key="dataset_df",
     height=_HEIGHT,
 )
+
+# 5b) A dataset.source DataFrame with date, naive datetime, and NaN columns.
+#     The frame ships as Arrow; dates must render as wall-clock labels in any
+#     browser timezone, and "Show data" swaps the chart for a table of it.
+arrow_dataset_df = pd.DataFrame(
+    {
+        "day": [dt.date(2020, 1, 1) + dt.timedelta(days=i) for i in range(5)],
+        "ts": pd.date_range("2020-01-01 08:30", periods=5, freq="D"),
+        "sales": [12, 20, 15, 8, 18],
+        "cost": [5.5, 7.25, np.nan, 4.0, 6.75],
+    }
+)
+with st.container(key="c_dataset_arrow"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": arrow_dataset_df},
+            "xAxis": {"type": "category"},
+            "yAxis": {"type": "value"},
+            "series": [
+                {"type": "bar", "encode": {"x": "day", "y": "sales"}},
+                {"type": "line", "encode": {"x": "day", "y": "cost"}},
+            ],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        key="dataset_arrow",
+        height=_HEIGHT,
+    )
 
 # 6) A chart built from a JSON string input.
 st.echarts_chart(
