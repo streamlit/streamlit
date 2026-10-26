@@ -182,7 +182,7 @@ class GlobalCacheBudget(StatsProvider):
             self._unregister_locked(storage_id)
 
     def _drain_recency_hints_locked(self) -> None:
-        while self._recency_hints:
+        for _ in range(len(self._recency_hints)):
             storage_id, key, generation = self._recency_hints.popleft()
             entry_key = (storage_id, key)
             current = self._entries.get(entry_key)

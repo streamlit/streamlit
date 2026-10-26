@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import threading
 import weakref
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
@@ -259,6 +260,42 @@ def test_recency_hints_are_bounded_and_drained_by_write() -> None:
 
     storage.set("other", b"y")
     assert not budget._recency_hints
+
+
+def test_recency_hint_drain_ignores_hints_appended_during_drain() -> None:
+    """A drain processes only the hints queued when it starts."""
+
+    class ReplenishingDeque(deque[tuple[int, str, int]]):
+        def __init__(self, hints: list[tuple[int, str, int]]) -> None:
+            super().__init__(hints, maxlen=len(hints))
+            self.popleft_calls = 0
+            self.replenishments_remaining = len(hints)
+
+        def popleft(self) -> tuple[int, str, int]:
+            hint = super().popleft()
+            self.popleft_calls += 1
+            if self.replenishments_remaining:
+                self.replenishments_remaining -= 1
+                self.append(hint)
+            return hint
+
+    budget = GlobalCacheBudget(max_bytes=100)
+    hints = ReplenishingDeque([(0, "first", 1), (0, "second", 1)])
+    budget._recency_hints = hints
+    starting_count = len(hints)
+
+    with budget._lock:
+        budget._drain_recency_hints_locked()
+
+    assert hints.popleft_calls == starting_count
+    assert len(hints) == starting_count
+
+    hints.replenishments_remaining = 0
+    with budget._lock:
+        budget._drain_recency_hints_locked()
+
+    assert hints.popleft_calls == starting_count * 2
+    assert not hints
 
 
 def test_oversized_global_entry_is_retained_and_warns_once() -> None:
