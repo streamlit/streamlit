@@ -283,9 +283,17 @@ describe("useVegaLiteSelections", () => {
   describe("send timing and teardown", () => {
     const cleanups: Array<() => void> = []
 
-    const dispatch = (target: EventTarget, eventType: string): void => {
+    const dispatch = (
+      target: EventTarget,
+      eventType: string,
+      pointerId = 1
+    ): void => {
       act(() => {
-        target.dispatchEvent(new Event(eventType, { bubbles: true }))
+        const event = new Event(eventType, { bubbles: true })
+        if (eventType.startsWith("pointer")) {
+          Object.defineProperty(event, "pointerId", { value: pointerId })
+        }
+        target.dispatchEvent(event)
       })
     }
 
@@ -475,6 +483,53 @@ describe("useVegaLiteSelections", () => {
       await flushAsyncWork()
 
       expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 5] } } }])
+    })
+
+    it("ignores releases from another pointer", async () => {
+      const { container, fire, mockVegaView } = setup()
+      dispatch(container, "pointerdown", 1)
+      fire("sel", { x: [0, 1] })
+
+      dispatch(window, "pointerup", 2)
+      await flushAsyncWork()
+      fire("sel", { x: [0, 2] })
+
+      expect(mockVegaView.runAsync).not.toHaveBeenCalled()
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      dispatch(window, "pointerup", 1)
+      await flushAsyncWork()
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 2] } } }])
+    })
+
+    it("does not let an older release finish a newer gesture", async () => {
+      const { container, fire, mockVegaView } = setup()
+      let resolveFirstRelease: ((view: VegaView) => void) | undefined
+      mockVegaView.runAsync.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveFirstRelease = resolve
+          })
+      )
+
+      dispatch(container, "pointerdown", 1)
+      fire("sel", { x: [0, 1] })
+      dispatch(window, "pointerup", 1)
+
+      dispatch(container, "pointerdown", 2)
+      fire("sel", { x: [0, 2] })
+      await act(async () => {
+        resolveFirstRelease?.(mockVegaView)
+        await Promise.resolve()
+      })
+      fire("sel", { x: [0, 3] })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      dispatch(window, "pointerup", 2)
+      await flushAsyncWork()
+
+      expect(mockVegaView.runAsync).toHaveBeenCalledTimes(2)
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 3] } } }])
     })
 
     it("flushes two held parameters in one widget update", async () => {

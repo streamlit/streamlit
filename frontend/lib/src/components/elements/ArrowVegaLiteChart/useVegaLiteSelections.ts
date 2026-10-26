@@ -79,7 +79,9 @@ export const useVegaLiteSelections = (
 
       let isActive = true
       let isPointerDown = false
-      let isPointerReleasePending = false
+      let activePointerId: number | null = null
+      let pointerGestureId = 0
+      let pendingPointerReleaseGestureId: number | null = null
       let isDiscreteInputTask = false
       let discreteInputResetTimerId: ReturnType<typeof setTimeout> | null =
         null
@@ -113,9 +115,17 @@ export const useVegaLiteSelections = (
         }
       }
 
-      const handlePointerDown = (): void => {
+      const handlePointerDown = (event: PointerEvent): void => {
+        // Ignore additional pointers while the initiating pointer is held. A
+        // new gesture may start while the previous release is still settling.
+        if (isPointerDown && pendingPointerReleaseGestureId === null) {
+          return
+        }
         clearDiscreteInput()
+        pointerGestureId += 1
+        activePointerId = event.pointerId
         isPointerDown = true
+        pendingPointerReleaseGestureId = null
       }
 
       const clearDebouncedSelection = (name: string): void => {
@@ -215,7 +225,9 @@ export const useVegaLiteSelections = (
         sendSelections(selections)
       }
 
-      const finishPointerRelease = async (): Promise<void> => {
+      const finishPointerRelease = async (
+        releasedGestureId: number
+      ): Promise<void> => {
         try {
           // Vega serializes this run behind dataflow work queued by its release
           // handler, so release-generated signals remain held until they finish.
@@ -223,9 +235,14 @@ export const useVegaLiteSelections = (
         } catch (error) {
           LOG.warn("Failed to finish Vega pointer release processing", error)
         } finally {
-          if (isActive) {
+          if (
+            isActive &&
+            pointerGestureId === releasedGestureId &&
+            pendingPointerReleaseGestureId === releasedGestureId
+          ) {
             isPointerDown = false
-            isPointerReleasePending = false
+            activePointerId = null
+            pendingPointerReleaseGestureId = null
             // Signals queued by the release belong to the same discrete input.
             handleDiscreteInput()
             flushHeldSelections()
@@ -233,12 +250,17 @@ export const useVegaLiteSelections = (
         }
       }
 
-      const handlePointerRelease = (): void => {
-        if (!isPointerDown || isPointerReleasePending) {
+      const handlePointerRelease = (event: PointerEvent): void => {
+        if (
+          !isPointerDown ||
+          event.pointerId !== activePointerId ||
+          pendingPointerReleaseGestureId !== null
+        ) {
           return
         }
-        isPointerReleasePending = true
-        void finishPointerRelease()
+        const releasedGestureId = pointerGestureId
+        pendingPointerReleaseGestureId = releasedGestureId
+        void finishPointerRelease(releasedGestureId)
       }
 
       const container = vegaView.container()
