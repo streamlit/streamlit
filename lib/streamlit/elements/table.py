@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.utils import normalize_alt
@@ -422,7 +422,7 @@ class TableMixin:
             # never needs.
             agent_props=agent_spec.element(
                 "table",
-                data_url=data_offload.serve_arrow_over_http(
+                data_url=agent_data.serve_arrow_over_http(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

@@ -26,7 +26,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import runtime
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import build_snapshot
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
@@ -73,7 +73,7 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         return [
             file.content
             for file in self.media_file_storage._files_by_id.values()
-            if file.mimetype == data_offload.ARROW_MIMETYPE
+            if file.mimetype == agent_data.ARROW_MIMETYPE
         ]
 
     def _start_full_run(self) -> None:
@@ -619,9 +619,9 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
     def test_browser_session_registers_no_table_data(self) -> None:
         """No element mock serves Arrow data, or even tries to, in a browser session."""
         with patch.object(
-            data_offload,
+            agent_data,
             "serve_arrow_over_http",
-            wraps=data_offload.serve_arrow_over_http,
+            wraps=agent_data.serve_arrow_over_http,
         ) as serve:
             for producers in _PRODUCERS.values():
                 for producer in producers:

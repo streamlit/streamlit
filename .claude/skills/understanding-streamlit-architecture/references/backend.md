@@ -357,7 +357,7 @@ disrupt the newly reconnected client.
 
 ## Media file management (`lib/streamlit/runtime/media_file_manager.py`)
 
-Media files (images, audio, video, and an agent session's Arrow data copies from `elements/lib/data_offload.py`) are managed separately from the protobuf element tree.
+Media files (images, audio, video, and an agent session's Arrow data copies from `elements/lib/agent_data.py`) are managed separately from the protobuf element tree.
 
 **Flow**:
 1. `st.image(data)` -> `MediaFileManager.add()` registers file with unique ID

@@ -25,7 +25,7 @@ import pandas as pd
 
 import streamlit as st
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Table_pb2 import Table as TableProto
@@ -57,14 +57,14 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
 
     def test_a_browser_session_registers_nothing(self) -> None:
         """Without recording there is no URL and no second copy of the data."""
-        assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
+        assert agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
         assert self._stored() == {}
 
     def test_an_agent_session_registers_the_arrow_bytes(self) -> None:
         """The URL has no extension and serves the bytes under the Arrow type."""
         self._record()
 
-        url = data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
+        url = agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
 
         assert url is not None
         assert re.fullmatch(r"/media/[0-9a-f]+", url)
@@ -79,14 +79,14 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         with patch.object(
             runtime_util, "get_max_message_size_bytes", return_value=len(_ARROW)
         ):
-            assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
+            assert agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
 
         self._stored().clear()
         with patch.object(
             runtime_util, "get_max_message_size_bytes", return_value=len(_ARROW) - 1
         ):
             assert (
-                data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
+                agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
             )
         assert self._stored() == {}
 
@@ -94,11 +94,11 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         """Empty data has nothing to serve, and without a runtime nothing serves it."""
         self._record()
 
-        assert data_offload.serve_arrow_over_http(b"", coordinates="[0, 0]") is None
-        assert data_offload.serve_arrow_over_http(None, coordinates="[0, 0]") is None
+        assert agent_data.serve_arrow_over_http(b"", coordinates="[0, 0]") is None
+        assert agent_data.serve_arrow_over_http(None, coordinates="[0, 0]") is None
 
         Runtime._instance = None
-        assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
+        assert agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
 
     def test_a_cache_entry_keeps_no_second_copy(self) -> None:
         """An agent-filled cache entry stores no Arrow copy beside the payload,
@@ -122,17 +122,17 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         that same URL; one without registers nothing.
         """
         self._record()
-        url = data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
+        url = agent_data.serve_arrow_over_http(_ARROW, coordinates="[0, 0]")
         self.media_file_storage._files_by_id.clear()
         payload = DataframeProto()
         payload.arrow_data.data = _ARROW
 
-        data_offload.serve_replayed_arrow(
+        agent_data.serve_replayed_arrow(
             payload, json.dumps({"type": "dataframe"}), coordinates="[0, 1]"
         )
         assert self._stored() == {}
 
-        data_offload.serve_replayed_arrow(
+        agent_data.serve_replayed_arrow(
             payload,
             json.dumps({"type": "dataframe", "data_url": url}),
             coordinates="[0, 1]",
@@ -153,8 +153,8 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         first = bytes(2_000_000)
         second = first[:300_000] + b"\x01" + first[300_001:]
 
-        first_url = data_offload.serve_arrow_over_http(first, coordinates="[0, 0]")
-        second_url = data_offload.serve_arrow_over_http(second, coordinates="[0, 1]")
+        first_url = agent_data.serve_arrow_over_http(first, coordinates="[0, 0]")
+        second_url = agent_data.serve_arrow_over_http(second, coordinates="[0, 1]")
 
         assert first_url is not None
         assert second_url is not None
@@ -178,8 +178,8 @@ def test_a_replay_reads_tables_and_single_buffer_charts_from_their_payload() -> 
     layered.data.data = _ARROW
     layered.datasets.add().data.data = _ARROW
 
-    assert data_offload._arrow_in_payload(dataframe) == _ARROW
-    assert data_offload._arrow_in_payload(table) == _ARROW
-    assert data_offload._arrow_in_payload(chart) == _ARROW
-    assert data_offload._arrow_in_payload(layered) == b""
-    assert data_offload._arrow_in_payload(MarkdownProto(body="no data")) == b""
+    assert agent_data._arrow_in_payload(dataframe) == _ARROW
+    assert agent_data._arrow_in_payload(table) == _ARROW
+    assert agent_data._arrow_in_payload(chart) == _ARROW
+    assert agent_data._arrow_in_payload(layered) == b""
+    assert agent_data._arrow_in_payload(MarkdownProto(body="no data")) == b""

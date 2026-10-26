@@ -37,7 +37,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
@@ -2904,7 +2904,7 @@ class VegaChartsMixin:
             support="action_unsupported" if selection_mode else None,
             # The snapshot reports a chart over several datasets or URL-loaded
             # data as unavailable, so a registered copy would only hold memory.
-            data_url=data_offload.serve_arrow_over_http(
+            data_url=agent_data.serve_arrow_over_http(
                 buffers[0], coordinates=self.dg._get_write_delta_path_str()
             )
             if len(buffers) == 1 and not loads_data_from_url(proto.spec)

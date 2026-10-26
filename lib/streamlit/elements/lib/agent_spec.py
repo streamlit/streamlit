@@ -269,7 +269,7 @@ def element(
         ``data.url`` rather than under ``props``, because it is not an
         argument the author passed. It serves the Arrow IPC stream of the
         element's payload, registered by
-        ``data_offload.serve_arrow_over_http``.
+        ``agent_data.serve_arrow_over_http``.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.

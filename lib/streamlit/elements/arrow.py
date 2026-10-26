@@ -33,7 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -1298,7 +1298,7 @@ class ArrowMixin:
                 key=proto.id or key,
                 # A lazy table has no `arrow_data`, so nothing is served: its
                 # first chunk, served alone, would pass for the whole table.
-                data_url=data_offload.serve_arrow_over_http(
+                data_url=agent_data.serve_arrow_over_http(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

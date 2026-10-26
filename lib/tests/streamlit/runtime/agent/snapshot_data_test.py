@@ -37,7 +37,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import dataframe_util
 from streamlit.elements import vega_charts
-from streamlit.elements.lib import agent_spec, data_offload
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
 from streamlit.runtime.agent import snapshot
@@ -113,7 +113,7 @@ def _arrow_files(storage: MemoryMediaFileStorage) -> list[bytes]:
     return [
         file.content
         for file in storage._files_by_id.values()
-        if file.mimetype == data_offload.ARROW_MIMETYPE
+        if file.mimetype == agent_data.ARROW_MIMETYPE
     ]
 
 
@@ -287,7 +287,7 @@ class SnapshotDataTest(SnapshotCase):
         payload = self.get_delta_from_queue().new_element.dataframe.arrow_data.data
         served = self._served(data["url"])
         assert served.content == payload
-        assert served.mimetype == data_offload.ARROW_MIMETYPE
+        assert served.mimetype == agent_data.ARROW_MIMETYPE
 
     def test_a_short_table_is_complete_and_keeps_its_url(self) -> None:
         """Four rows are all in the preview, and the URL is still reported."""

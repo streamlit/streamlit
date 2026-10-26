@@ -354,9 +354,9 @@ def replay_cached_messages(
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 agent_props = _agent_props_for_this_session(msg.agent_props)
                 if agent_props is not None:
-                    from streamlit.elements.lib import data_offload
+                    from streamlit.elements.lib import agent_data
 
-                    data_offload.serve_replayed_arrow(
+                    agent_data.serve_replayed_arrow(
                         msg.message,
                         agent_props,
                         coordinates=dg._get_write_delta_path_str(),
