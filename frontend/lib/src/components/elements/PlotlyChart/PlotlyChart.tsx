@@ -289,10 +289,10 @@ export function PlotlyChart({
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Plotly types clickmode with `string & {}`, which the rule reads as an object; an unset or empty clickmode gets the selection default
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Plotly types clickmode with `string & {}`, which the rule reads as an object; see comment below
       if (!initialFigureSpec.layout.clickmode) {
-        // If the user has already set the clickmode, we don't want to override it here.
-        // Otherwise, we are selecting the best clickmode based on the selection modes.
+        // A user-set clickmode is kept. Missing and empty clickmode count as
+        // unset and get the best click mode for the selection modes.
         if (isPointsSelectionActivated) {
           // https://plotly.com/javascript/reference/layout/#layout-clickmode
           // This allows single point selections and shift click to add / remove selections
@@ -303,14 +303,14 @@ export function PlotlyChart({
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false hovermode gets the selection default
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment below
       if (!initialFigureSpec.layout.hovermode) {
         // A user-set hovermode is kept. Missing, empty, and `false` count as
         // unset and take the selection default.
         updatedHoverMode = "closest"
       }
 
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false dragmode gets the selection default
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment below
       if (!initialFigureSpec.layout.dragmode) {
         // A user-set dragmode is kept. Missing, empty, and `false` count as
         // unset and get the best drag mode for the selection modes.

@@ -673,11 +673,12 @@ export default defineConfig([
       "@typescript-eslint/no-unnecessary-condition": "error",
     },
   },
-  // A nullable boolean in a condition silently treats a missing value like
-  // `false`. Default it or compare it with `=== true` so the nullish case is
-  // explicit. Mixed-type unions (e.g. `string | number`) are always reported;
-  // disable those inline with a reason. Other types, including `any`, stay
-  // allowed for now, and other directories stay off until they are cleaned up.
+  // A nullable boolean in a condition treats a missing value like `false`.
+  // Default it, or compare with `=== true`. Negate with `!== true`; the
+  // rule's suggested `=== false` is false for null and undefined. The rule
+  // always reports mixed-type unions (for example `string | number`); disable
+  // those inline with a reason. Other types, including `any`, stay allowed,
+  // and other directories stay off until they are cleaned up.
   {
     files: [
       "lib/src/components/elements/**/*.{ts,tsx}",
