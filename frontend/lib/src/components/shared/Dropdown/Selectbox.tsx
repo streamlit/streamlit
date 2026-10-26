@@ -221,7 +221,7 @@ const Selectbox: FC<Props> = ({
   labelVisibility,
   help,
   placeholder,
-  clearable,
+  clearable = false,
   acceptNewOptions,
   filterMode: filterModeProp,
 }) => {
@@ -373,10 +373,10 @@ const Selectbox: FC<Props> = ({
   const enterTargetId = useMemo((): string | null => {
     if (creatableItem) return CREATABLE_ID
     const exactMatch = displayOptions.find(
-      o => !o.isCreatable && o.value === inputValue
+      o => o.isCreatable !== true && o.value === inputValue
     )
     if (exactMatch) return exactMatch.id
-    const first = displayOptions.find(o => !o.isCreatable)
+    const first = displayOptions.find(o => o.isCreatable !== true)
     return first?.id ?? null
   }, [creatableItem, displayOptions, inputValue])
 
@@ -582,8 +582,8 @@ const Selectbox: FC<Props> = ({
         const focused = state?.selectionManager.focusedKey
         if (state && isNullOrUndefined(focused)) {
           const options = displayOptionsRef.current
-          if (options[0]?.isCreatable) {
-            const firstMatch = options.find(o => !o.isCreatable)
+          if (options[0]?.isCreatable === true) {
+            const firstMatch = options.find(o => o.isCreatable !== true)
             if (firstMatch) {
               e.preventDefault()
               e.stopPropagation()
@@ -646,7 +646,7 @@ const Selectbox: FC<Props> = ({
       const targetId = enterTargetIdRef.current
       const options = displayOptionsRef.current
       const target = targetId ? options.find(o => o.id === targetId) : null
-      if (target?.isCreatable) {
+      if (target?.isCreatable === true) {
         commitSelection(inputValueRef.current)
         closeDropdownRef.current?.()
         return
@@ -654,7 +654,7 @@ const Selectbox: FC<Props> = ({
 
       if (!wasOpenBeforeEnterRef.current) return
 
-      if (target && !target.isCreatable) {
+      if (target) {
         commitSelection(target.value)
         closeDropdownRef.current?.()
       }

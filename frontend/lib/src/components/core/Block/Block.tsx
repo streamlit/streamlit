@@ -215,7 +215,7 @@ export const ContainerContentsWrapper = (
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
-        {props.padContentEnd && (
+        {props.padContentEnd === true && (
           <StyledDialogContentEndPad
             aria-hidden="true"
             data-testid="stDialogContentEndPad"
@@ -268,9 +268,10 @@ export const FlexBoxContainer = (
     // - pixel: set here so the block can scroll.
     // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
     //   auto height lets taller content grow the wrapper instead of overflowing.
-    height: props.node.deltaBlock.heightConfig?.useStretch
-      ? "auto"
-      : layout_styles.height,
+    height:
+      props.node.deltaBlock.heightConfig?.useStretch === true
+        ? "auto"
+        : layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -380,8 +381,7 @@ export const BlockNodeRenderer = (
   // (e.g., via libConfig or ancestor dialog/popover),
   // or if this block itself is a dialog or popover
   const disableFullscreenMode =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets a dialog or popover disable fullscreen
-    props.disableFullscreenMode ||
+    props.disableFullscreenMode === true ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
@@ -561,7 +561,7 @@ export const BlockNodeRenderer = (
     // shadows).
     const heightConfig = node.deltaBlock.heightConfig
     const hasConstrainingHeight =
-      notNullOrUndefined(heightConfig) && !heightConfig.useContent
+      notNullOrUndefined(heightConfig) && heightConfig.useContent !== true
     const contentHeight = hasConstrainingHeight ? "100%" : "auto"
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth

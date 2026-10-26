@@ -308,7 +308,7 @@ export const StyledFlexContainerBlock =
       direction,
       gap,
       flex,
-      $wrap,
+      $wrap = false,
       height,
       border,
       align,
