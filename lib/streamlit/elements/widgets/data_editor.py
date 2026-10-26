@@ -1557,7 +1557,7 @@ class DataEditorMixin:
             agent_props=agent_spec.element(
                 "data_editor",
                 key=proto.id or None,
-                data_url=agent_data.serve_arrow_over_http(
+                data_block=agent_data.arrow(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

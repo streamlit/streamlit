@@ -631,6 +631,27 @@ def _marshall_lazy_dataframe(
     return True
 
 
+@agent_data.builder
+def _lazy_dataframe_data(lazy_data: LazyDataframeProto) -> dict[str, Any] | None:
+    """A lazily loaded dataframe's agent ``data``, previewed from its first chunk.
+
+    The preview is the first ``server.agentPreviewRows`` rows of the chunk the
+    browser receives, the same cap as any table. Rows past the chunk are only
+    fetched by a browser as it scrolls, so nothing serves them, and the chunk
+    alone would pass for the whole table. The row count is the source's,
+    reported only when the source knows it.
+    """
+    data = agent_data.summarize_arrow(lazy_data.initial_chunk.data)
+    if data is None:
+        return None
+    data.update(agent_data.unavailable("lazy_loading"))
+    if lazy_data.HasField("row_count"):
+        data["row_count"] = lazy_data.row_count
+    else:
+        del data["row_count"]
+    return data
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -1287,8 +1308,8 @@ class ArrowMixin:
             """The agent description for this dataframe.
 
             Called at each enqueue so the selection path can read ``proto.id``
-            after it is assigned. Column config is walked and the Arrow copy
-            registered only while recording.
+            after it is assigned. Column config is walked and the data block
+            built only while recording.
             """
             if not agent_spec.is_recording():
                 return None
@@ -1298,7 +1319,9 @@ class ArrowMixin:
                 key=proto.id or key,
                 # A lazy table has no `arrow_data`, so nothing is served: its
                 # first chunk, served alone, would pass for the whole table.
-                data_url=agent_data.serve_arrow_over_http(
+                data_block=_lazy_dataframe_data(proto.lazy_data)
+                if lazy_marshalled
+                else agent_data.arrow(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

@@ -17,10 +17,7 @@
 from __future__ import annotations
 
 import base64
-import datetime as dt
-import decimal
 import json
-import math
 import re
 from typing import TYPE_CHECKING, Any, get_args
 from unittest.mock import patch
@@ -31,22 +28,20 @@ import pandas as pd
 import plotly.graph_objects as go
 import pyarrow as pa
 import pydeck as pdk
-import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import dataframe_util
-from streamlit.elements import vega_charts
+from streamlit.elements import arrow, plotly_chart, vega_charts
 from streamlit.elements.lib import agent_data, agent_spec
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
+from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime import runtime_util
-from streamlit.runtime.agent import snapshot
-from streamlit.runtime.agent.snapshot import UnavailableReason, _summarize_arrow
 from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.runtime.agent.snapshot_test_case import (
     SnapshotCase,
     _assert_data_resolves,
     _by_type,
+    _describe,
     _one,
     _walk,
 )
@@ -104,10 +99,6 @@ _VEGA_CASES: list[tuple[str, Callable[[], object], str | None]] = [
 ]
 
 
-def _arrow(table: pa.Table) -> bytes:
-    return dataframe_util.convert_arrow_table_to_arrow_bytes(table)
-
-
 def _arrow_files(storage: MemoryMediaFileStorage) -> list[bytes]:
     """Contents of every Arrow file in media storage."""
     return [
@@ -123,121 +114,6 @@ def _names(data: dict[str, Any]) -> list[str]:
 
 def _frame(rows: int) -> pd.DataFrame:
     return pd.DataFrame({"n": range(rows), "label": [f"row {i}" for i in range(rows)]})
-
-
-def test_summarize_arrow_keeps_duplicate_column_names() -> None:
-    """A `pa.Table` may repeat a name. Both columns and both values stay, by position."""
-    table = pa.Table.from_arrays(
-        [pa.array([1, 2]), pa.array(["x", "y"])], names=["a", "a"]
-    )
-
-    summary = _summarize_arrow(_arrow(table))
-
-    assert summary is not None
-    assert summary["columns"] == [
-        {"name": "a", "type": "int64"},
-        {"name": "a", "type": "string"},
-    ]
-    assert summary["column_count"] == 2
-    assert summary["preview"]["rows"] == [[1, "x"], [2, "y"]]
-
-
-def test_summarize_arrow_reports_non_finite_numbers_as_null() -> None:
-    """NaN, infinities, Decimal NaN, and Arrow nulls are null; finite values stay."""
-    floats = pa.table({"f": pa.array([1.5, math.nan, math.inf, -math.inf, None])})
-    decimals = pd.DataFrame(
-        {"d": [decimal.Decimal("0.25"), decimal.Decimal("NaN")]}, dtype=object
-    )
-
-    float_rows = _summarize_arrow(_arrow(floats))
-    decimal_rows = _summarize_arrow(
-        dataframe_util.convert_pandas_df_to_arrow_bytes(decimals)
-    )
-
-    assert float_rows is not None
-    assert float_rows["preview"]["rows"] == [[1.5], [None], [None], [None], [None]]
-    assert decimal_rows is not None
-    assert decimal_rows["preview"]["rows"] == [["0.25"], [None]]
-
-
-def test_preview_cells_follow_the_encoding_table() -> None:
-    """Each Arrow type's cells read as the JSON the agent API pins for them."""
-    berlin_morning = dt.datetime(2026, 1, 1, 9, 30, tzinfo=dt.UTC)
-    table = pa.table(
-        {
-            "tz": pa.array([berlin_morning], pa.timestamp("us", tz="Europe/Berlin")),
-            "naive": pa.array([dt.datetime(2026, 1, 1)], pa.timestamp("us")),
-            "duration": pa.array([dt.timedelta(hours=1)], pa.duration("us")),
-            "decimal": pa.array([decimal.Decimal("0.10")], pa.decimal128(4, 2)),
-            "binary": pa.array([b"abc"], pa.binary()),
-            "list": pa.array([[1, 2]], pa.list_(pa.int64())),
-            "struct": pa.array([{"a": 1}], pa.struct([("a", pa.int64())])),
-            "dictionary": pa.array(["x"]).dictionary_encode(),
-            "date": pa.array([dt.date(2026, 1, 2)], pa.date32()),
-            "time": pa.array([dt.time(9, 30)], pa.time64("us")),
-            "big": pa.array([2**63 - 1], pa.int64()),
-        }
-    )
-
-    summary = _summarize_arrow(_arrow(table))
-
-    assert summary is not None
-    assert summary["preview"]["rows"] == [
-        [
-            "2026-01-01T10:30:00+01:00",
-            "2026-01-01T00:00:00",
-            3600.0,
-            "0.10",
-            {"bytes": 3},
-            [1, 2],
-            {"a": 1},
-            "x",
-            "2026-01-02",
-            "09:30:00",
-            9223372036854775807,
-        ]
-    ]
-
-
-def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
-    """A table with rows and no columns previews one empty row per row it counts.
-
-    Otherwise a preview of no rows would be reported as the complete table.
-    """
-    arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
-        pd.DataFrame(index=range(5))
-    )
-
-    summary = _summarize_arrow(arrow_bytes)
-
-    assert summary is not None
-    assert summary["row_count"] == 5
-    assert summary["complete"] is True
-    assert summary["preview"]["rows"] == [[]] * 5
-
-    with patch_config_options({"server.agentPreviewRows": 2}):
-        bounded = _summarize_arrow(arrow_bytes)
-    assert bounded is not None
-    assert bounded["complete"] is False
-    assert bounded["preview"]["rows"] == [[]] * 2
-
-
-def test_summarize_arrow_keeps_the_schema_when_its_preview_fails() -> None:
-    """A column pyarrow cannot convert leaves the schema and size, marked incomplete."""
-    with patch.object(snapshot, "_arrow_rows", side_effect=NotImplementedError):
-        summary = _summarize_arrow(_arrow(pa.table({"n": [1, 2]})))
-
-    assert summary is not None
-    assert summary["columns"] == [{"name": "n", "type": "int64"}]
-    assert summary["row_count"] == 2
-    assert summary["complete"] is False
-    assert summary["preview"]["rows"] == []
-
-
-@pytest.mark.parametrize("arrow_bytes", [b"", b"not an arrow stream"])
-def test_summarize_arrow_returns_none_for_unreadable_bytes(arrow_bytes: bytes) -> None:
-    """Empty or malformed bytes have no summary, and summarizing them does not raise."""
-    assert _summarize_arrow(arrow_bytes) is None
 
 
 def _bar_figure_spec(**layout: Any) -> str:
@@ -336,21 +212,22 @@ class SnapshotDataTest(SnapshotCase):
         assert _names(self._data("dataframe")) == expected
 
     def test_preview_rows_follow_server_agent_preview_rows(self) -> None:
-        """The preview holds that many rows; zero or less holds none, with a URL."""
-        st.dataframe(_frame(5))
+        """The preview holds that many rows when the element is emitted; zero
+        holds none, with a URL. A later change does not reach it.
+        """
         with patch_config_options({"server.agentPreviewRows": 2}):
-            data = self._data("dataframe")
+            st.dataframe(_frame(5))
+        data = self._data("dataframe")
         assert data["preview"]["rows"] == [[0, "row 0"], [1, "row 1"]]
         assert data["complete"] is False
 
         self.clear_queue()
-        st.dataframe(_frame(1))
-        for limit in (0, -5):
-            with patch_config_options({"server.agentPreviewRows": limit}):
-                data = self._data("dataframe")
-            assert data["preview"]["rows"] == []
-            assert data["complete"] is False
-            assert "url" in data
+        with patch_config_options({"server.agentPreviewRows": 0}):
+            st.dataframe(_frame(1))
+        data = self._data("dataframe")
+        assert data["preview"]["rows"] == []
+        assert data["complete"] is False
+        assert "url" in data
 
     def test_a_table_over_the_size_limit_is_too_large_to_serve(self) -> None:
         """Above `server.maxMessageSize` nothing is served, and the block says why.
@@ -391,11 +268,11 @@ class SnapshotDataTest(SnapshotCase):
         assert "url" not in data
         assert _arrow_files(self.media_file_storage) == []
 
-        unknown = ForwardMsg()
-        unknown.CopyFrom(lazy_message)
-        unknown.delta.new_element.dataframe.lazy_data.ClearField("row_count")
-        self.clear_queue()
-        unknown_data = _one(self._build(unknown).document, "dataframe")["data"]
+        unknown = LazyDataframeProto()
+        unknown.CopyFrom(lazy_message.delta.new_element.dataframe.lazy_data)
+        unknown.ClearField("row_count")
+        unknown_data = arrow._lazy_dataframe_data(unknown)
+        assert unknown_data is not None
         assert "row_count" not in unknown_data
         assert unknown_data["unavailable"] == "lazy_loading"
 
@@ -438,21 +315,83 @@ class SnapshotDataTest(SnapshotCase):
 
     def test_a_table_whose_summary_fails_still_reports_its_url(self) -> None:
         """The registered copy still serves the whole table, so it is not dropped."""
-        st.dataframe(_frame(5))
+        with patch.object(agent_data, "summarize_arrow", return_value=None):
+            st.dataframe(_frame(5))
 
-        with patch.object(snapshot, "_summarize_arrow", return_value=None):
-            data = self._data("dataframe")
+        data = self._data("dataframe")
 
         assert data.keys() == {"complete", "url"}
         assert data["complete"] is False
         assert _MEDIA_URL.fullmatch(data["url"])
 
+    @parameterized.expand(
+        [
+            (
+                "dataframe",
+                lambda: st.dataframe(_frame(5)),
+                agent_data,
+                "summarize_arrow",
+            ),
+            (
+                "plotly_chart",
+                lambda: st.plotly_chart(go.Figure(go.Bar(x=["a"], y=[1]))),
+                plotly_chart,
+                "_expand_typed_arrays",
+            ),
+        ]
+    )
+    def test_a_failing_builder_reports_no_data(
+        self,
+        element_type: str,
+        emit: Callable[[], object],
+        module: object,
+        helper: str,
+    ) -> None:
+        """A bug while building `data` leaves the command working and described,
+        with no `data` and no registered copy.
+        """
+        with patch.object(module, helper, side_effect=RuntimeError("boom")):
+            emit()
+
+        node = _one(self._build().document, element_type)
+        assert "data" not in node
+        assert _arrow_files(self.media_file_storage) == []
+
+    def test_a_described_block_is_copied_and_resolved(self) -> None:
+        """The snapshot copies a command's block as given and only makes it resolve:
+        a reason drops a `url`, and an unresolved gap gets a reason.
+        """
+        described = _describe(
+            [0, 0], {"type": "markdown", "data": {"complete": True, "spec": [1]}}
+        )
+        contradictory = _describe(
+            [0, 1],
+            {
+                "type": "markdown",
+                "data": {"url": "/media/x", "unavailable": "multiple_datasets"},
+            },
+        )
+        unresolved = _describe(
+            [0, 2], {"type": "markdown", "data": {"preview": {"rows": []}}}
+        )
+
+        document = self._build(described, contradictory, unresolved).document
+
+        blocks = [node["data"] for node in _by_type(document, "markdown")]
+        assert blocks == [
+            {"complete": True, "spec": [1]},
+            {"unavailable": "multiple_datasets", "complete": False},
+            {
+                "preview": {"rows": []},
+                "complete": False,
+                "unavailable": "too_large_to_serve",
+            },
+        ]
+
     def test_plotly_keeps_template_content(self) -> None:
         """Content a template adds, such as an annotation, stays; the rest is named."""
-        message = ForwardMsg()
-        message.metadata.delta_path[:] = [0, 0]
-        message.metadata.agent_props = json.dumps({"type": "plotly_chart"})
-        message.delta.new_element.plotly_chart.spec = _bar_figure_spec(
+        proto = PlotlyChartProto()
+        proto.spec = _bar_figure_spec(
             template={
                 "data": {"bar": [{"marker": {"color": "red"}}]},
                 "layout": {
@@ -463,8 +402,9 @@ class SnapshotDataTest(SnapshotCase):
             title={"text": "Sales"},
         )
 
-        data = _one(self._build(message).document, "plotly_chart")["data"]
+        data = plotly_chart._plotly_data(proto)
 
+        assert data is not None
         assert data["spec"]["layout"] == {
             "title": {"text": "Sales"},
             "template": {"layout": {"annotations": [{"text": "DRAFT"}]}},
@@ -594,7 +534,7 @@ class SnapshotDataTest(SnapshotCase):
         for data in blocks:
             _assert_data_resolves(data)
         reasons = {data.get("unavailable") for data in blocks}
-        assert reasons == {None, *get_args(UnavailableReason)}
+        assert reasons == {None, *get_args(agent_data.UnavailableReason)}
 
 
 class VegaDataTest(SnapshotCase):

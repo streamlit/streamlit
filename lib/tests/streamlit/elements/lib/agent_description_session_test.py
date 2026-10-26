@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import ExitStack
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
@@ -490,7 +491,7 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             assert len(tables) == 3
             for message in tables:
                 [described] = _descriptions([message])
-                file_id = described["data_url"].rsplit("/", 1)[-1]
+                file_id = described["data"]["url"].rsplit("/", 1)[-1]
                 assert refs[str(list(message.metadata.delta_path))] == file_id
             self._media_file_mgr().remove_orphaned_files()
             assert len(self._arrow_files()) == 3
@@ -616,18 +617,25 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         filled_by_browser()
         assert _descriptions(list(self.forward_msg_queue._queue)) == []
 
-    def test_browser_session_registers_no_table_data(self) -> None:
-        """No element mock serves Arrow data, or even tries to, in a browser session."""
-        with patch.object(
-            agent_data,
-            "serve_arrow_over_http",
-            wraps=agent_data.serve_arrow_over_http,
-        ) as serve:
+    def test_browser_session_builds_and_registers_no_data(self) -> None:
+        """No element mock builds a data block or serves Arrow data, or even
+        tries to, in a browser session: every builder's body reads its payload
+        through one of these helpers.
+        """
+        helpers = ("_serve_arrow_over_http", "summarize_arrow", "parse_spec")
+        with ExitStack() as stack:
+            spies = [
+                stack.enter_context(
+                    patch.object(agent_data, helper, wraps=getattr(agent_data, helper))
+                )
+                for helper in helpers
+            ]
             for producers in _PRODUCERS.values():
                 for producer in producers:
                     producer()
 
-        serve.assert_not_called()
+        for spy in spies:
+            spy.assert_not_called()
         assert self._arrow_files() == []
 
     @parameterized.expand(SHARED_TEST_CASES)
@@ -672,9 +680,9 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         filled_by_agent()
         self._media_file_mgr().remove_orphaned_files()
         [replayed] = _descriptions(list(self.forward_msg_queue._queue))
-        assert replayed["data_url"] == described["data_url"]
+        assert replayed["data"] == described["data"]
         assert len(self._arrow_files()) == 1
-        self.media_file_storage.get_file(described["data_url"].rsplit("/", 1)[-1])
+        self.media_file_storage.get_file(described["data"]["url"].rsplit("/", 1)[-1])
 
         agent_spec.forget_agent_session(self.script_run_ctx.session_id)
         self._start_full_run()
@@ -710,9 +718,9 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         self._media_file_mgr().remove_orphaned_files()
 
         [replayed] = _descriptions(list(self.forward_msg_queue._queue))
-        assert replayed["data_url"] == described["data_url"]
+        assert replayed["data"] == described["data"]
         served = self.media_file_storage.get_file(
-            replayed["data_url"].rsplit("/", 1)[-1]
+            replayed["data"]["url"].rsplit("/", 1)[-1]
         )
         assert served.content == original
 
@@ -763,7 +771,7 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             for item in _descriptions(list(self.forward_msg_queue._queue))
             if item["type"] == "dataframe"
         )
-        self.media_file_storage.get_file(replayed["data_url"].rsplit("/", 1)[-1])
+        self.media_file_storage.get_file(replayed["data"]["url"].rsplit("/", 1)[-1])
         assert len(self._arrow_files()) == 1
 
     def test_nested_cache_replay_keeps_the_inner_tables_file(self) -> None:
@@ -792,7 +800,7 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         self._media_file_mgr().remove_orphaned_files()
 
         [replayed] = _descriptions(list(self.forward_msg_queue._queue))
-        self.media_file_storage.get_file(replayed["data_url"].rsplit("/", 1)[-1])
+        self.media_file_storage.get_file(replayed["data"]["url"].rsplit("/", 1)[-1])
         assert len(self._arrow_files()) == 1
 
     def test_status_update_resends_the_new_state(self) -> None:

@@ -60,18 +60,20 @@ clearing back to an empty default.
 ``choices`` is the list a request may send when that list is not the ``options``
 parameter. Only the command knows either one, so the snapshot copies them.
 
-Two things deliberately stay out of a command's description, because the command
-cannot know them yet:
+``value``, the widget's current value, deliberately stays out of a command's
+description: the command cannot know it yet, because it is only settled after
+the next run's callbacks and widget reconciliation. It is filled in at snapshot
+time.
 
-- ``value``, the widget's current value, which is only settled after the next
-  run's callbacks and widget reconciliation.
-- ``data``, the derived facts about a table or chart (schema, row counts, a
-  bounded preview), which the serializer reads from the payload.
+``data``, the derived facts about a table, chart, or map (schema, row counts, a
+preview bounded by ``server.agentPreviewRows``, and where the complete data is
+served), is built by the command while recording, with ``agent_data``, and the
+serializer copies it. The preview is therefore fixed when the element is
+emitted, so a later request can only shrink it.
 
-Both are filled in at snapshot time. That split is the same one the agent
-protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived). A data command records only
-``data_url``, where its complete data is served.
+That split is the same one the agent protocol draws between ``props`` (how the
+element was built), ``value`` (what it holds now), and ``data`` (what Streamlit
+derived).
 """
 
 from __future__ import annotations
@@ -106,7 +108,7 @@ _TRANSPARENT_KEY: Final = "transparent"
 _VALUE_SCHEMA_KEY: Final = "value_schema"
 _CLEARABLE_KEY: Final = "clearable"
 _CHOICES_KEY: Final = "choices"
-_DATA_URL_KEY: Final = "data_url"
+_DATA_KEY: Final = "data"
 
 # Building blocks for ``value_schema``: the JSON Schema of the value a request
 # sends an element, in the form the snapshot reports it. They describe shape
@@ -193,7 +195,7 @@ def _json_description(
     transparent: bool = False,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_url: str | None = None,
+    data_block: dict[str, Any] | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -214,8 +216,8 @@ def _json_description(
         description[_CLEARABLE_KEY] = True
     if choices is not None:
         description[_CHOICES_KEY] = choices
-    if data_url is not None:
-        description[_DATA_URL_KEY] = data_url
+    if data_block is not None:
+        description[_DATA_KEY] = data_block
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
@@ -230,7 +232,7 @@ def element(
     support: SupportReason | None = None,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_url: str | None = None,
+    data_block: dict[str, Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -264,12 +266,11 @@ def element(
     choices
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
-    data_url
-        Where the element's complete data can be fetched, reported as
-        ``data.url`` rather than under ``props``, because it is not an
-        argument the author passed. It serves the Arrow IPC stream of the
-        element's payload, registered by
-        ``agent_data.serve_arrow_over_http``.
+    data_block
+        The element's ``data``, built while recording with ``agent_data``,
+        and reported beside ``props`` because it is derived rather than an
+        argument the author passed. Named ``data_block`` because a custom
+        component reports a ``data`` prop.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -286,7 +287,7 @@ def element(
         value_schema=value_schema,
         clearable=clearable,
         choices=choices,
-        data_url=data_url,
+        data_block=data_block,
     )
 
 

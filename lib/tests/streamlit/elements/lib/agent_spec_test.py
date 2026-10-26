@@ -141,15 +141,16 @@ def test_block_marks_a_transparent_wrapper() -> None:
     assert decoded["props"] == {}
 
 
-def test_data_url_sits_beside_props() -> None:
-    """The data URL is a top-level key the serializer owns, never a prop."""
-    decoded = _recorded("dataframe", data_url="/media/abc", placeholder="-")
+def test_data_block_sits_beside_props() -> None:
+    """The data block is the top-level `data` the serializer owns, never a prop."""
+    block = {"complete": True, "url": "/media/abc"}
+    decoded = _recorded("dataframe", data_block=block, placeholder="-")
 
-    assert decoded["data_url"] == "/media/abc"
+    assert decoded["data"] == block
     assert decoded["props"] == {"placeholder": "-"}
 
-    unset = _recorded("dataframe", data_url=None)
-    assert "data_url" not in unset
+    unset = _recorded("dataframe", data_block=None)
+    assert "data" not in unset
 
 
 def test_decode_returns_an_object_and_ignores_malformed_input() -> None:

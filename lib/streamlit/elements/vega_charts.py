@@ -837,6 +837,45 @@ def _loads_from_url(value: Any) -> bool:
     return False
 
 
+@agent_data.builder
+def _vega_data(proto: VegaLiteChartProto, *, coordinates: str) -> dict[str, Any]:
+    """A Vega-Lite chart's agent ``data``: its one table and its specification.
+
+    Only a chart over a single Arrow buffer is summarized and served. Several
+    buffers are not one table, and data the specification loads from a URL is
+    fetched by the browser, which the agent API does not do; in either case
+    none of it is served, rather than a part passed off as the whole.
+    """
+    buffers = arrow_buffers(proto)
+    spec = agent_data.parse_spec(proto.spec)
+    data: dict[str, Any]
+    if len(buffers) > 1:
+        data = agent_data.unavailable("multiple_datasets")
+    elif loads_data_from_url(spec):
+        data = agent_data.unavailable("external_url")
+    elif buffers:
+        # No block means the buffer could be neither read nor registered, and
+        # an Arrow copy is only left unregistered above the size bound.
+        data = agent_data.arrow(
+            buffers[0], coordinates=coordinates
+        ) or agent_data.unavailable("too_large_to_serve")
+    else:
+        # Inline values travel as Arrow, so what is left in the specification,
+        # such as GeoJSON, is all of it.
+        data = {"complete": True}
+    if isinstance(spec, dict):
+        # The built-in charts write 0 for a size the author left unset, which
+        # means "fill the container", not a size.
+        spec = {
+            name: value
+            for name, value in spec.items()
+            if not (name in {"width", "height"} and value == 0)
+        }
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
 class VegaChartsMixin:
     """Mix-in class for all vega-related chart commands.
 
@@ -2881,7 +2920,6 @@ class VegaChartsMixin:
         """
         if not agent_spec.is_recording():
             return None
-        buffers = arrow_buffers(proto)
         # A built-in chart has no selection parameter, so it reports its own
         # arguments only. `theme` is surface styling and is left out.
         own_arguments: dict[str, Any] = (
@@ -2902,13 +2940,9 @@ class VegaChartsMixin:
             # chart without selections has nothing to withhold, so it is fully
             # supported.
             support="action_unsupported" if selection_mode else None,
-            # The snapshot reports a chart over several datasets or URL-loaded
-            # data as unavailable, so a registered copy would only hold memory.
-            data_url=agent_data.serve_arrow_over_http(
-                buffers[0], coordinates=self.dg._get_write_delta_path_str()
-            )
-            if len(buffers) == 1 and not loads_data_from_url(proto.spec)
-            else None,
+            data_block=_vega_data(
+                proto, coordinates=self.dg._get_write_delta_path_str()
+            ),
             alt=proto.alt or None,
             **own_arguments,
         )

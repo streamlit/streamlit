@@ -22,12 +22,11 @@ from typing import TYPE_CHECKING, Any, get_args
 from zoneinfo import ZoneInfo
 
 import streamlit as st
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import (
     ElementState,
     Snapshot,
-    UnavailableReason,
     _public_key,
     build_snapshot,
 )
@@ -75,7 +74,7 @@ def _assert_data_resolves(data: dict[str, Any]) -> None:
     assert data["complete"] is True or "url" in data or "unavailable" in data, data
     assert not ("url" in data and "unavailable" in data), data
     if "unavailable" in data:
-        assert data["unavailable"] in get_args(UnavailableReason), data
+        assert data["unavailable"] in get_args(agent_data.UnavailableReason), data
         assert data["complete"] is False, data
 
 

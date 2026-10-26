@@ -20,23 +20,23 @@ Each command already described itself when it emitted its element (see
 ``value`` from ``widget_values``, because proto defaults stop being accurate
 after the first interaction.
 
-``data``, the derived facts about a table, chart, or map, is read here from the
-element's payload. Its preview is bounded by ``server.agentPreviewRows``.
-``url``, where the complete data is served, comes from the command's
-description, and ``unavailable`` says why there is none when the preview is
-not everything. A command's parameters stay in ``props``.
+``data``, the derived facts about a table, chart, or map, is built by the
+command while recording (see ``elements/lib/agent_data.py``) and copied from
+its description, so its preview is bounded by ``server.agentPreviewRows`` when
+the element is emitted. This walk only checks that the block resolves:
+``complete``, or a ``url`` serving the rest, or ``unavailable`` saying why
+nothing does. Two cases are read from the payload instead: an ECharts or
+Deck.gl specification, reported as given, and the Arrow data of an element
+replayed without a description. A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
-from streamlit import config
-from streamlit.elements import vega_charts
-from streamlit.logger import get_logger
+from streamlit.elements.lib import agent_data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -51,33 +51,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
-_LOGGER: Final = get_logger(__name__)
-
 SCHEMA_VERSION: Final = 1
 
 # Why an element the snapshot shows cannot be used now.
 BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
-
-# Why an element's `data` is incomplete and has no `url` serving the rest:
-# - ``too_large_to_serve``: above `server.maxMessageSize`.
-# - ``multiple_datasets``: a chart over several tables.
-# - ``external_url``: a Vega-Lite chart whose specification loads data from a
-#   URL, which only a browser fetches.
-# - ``lazy_loading``: a lazily loaded dataframe, previewed from the chunk its
-#   browser received.
-# - ``undescribed``: an element replayed from a cache a browser filled, which
-#   registered nothing.
-UnavailableReason: TypeAlias = Literal[
-    "too_large_to_serve",
-    "multiple_datasets",
-    "external_url",
-    "lazy_loading",
-    "undescribed",
-]
-
-# What a Plotly template can add to a figure's content rather than its styling,
-# such as a "DRAFT" annotation. Kept when the rest of the template is dropped.
-_TEMPLATE_CONTENT: Final = ("annotations", "shapes", "images")
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, style-only HTML, and a loading skeleton, which by the
@@ -551,16 +528,6 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     return description.get("type") == "text_input" and props.get("type") == "password"
 
 
-def _preview_row_limit() -> int:
-    """Rows included in a `data.preview`, from `server.agentPreviewRows`.
-
-    The default is large enough that most filtered tables are reported complete
-    and need no second request, and small enough that a page of them does not
-    dominate the response. A negative setting includes no rows.
-    """
-    return max(0, int(config.get_option("server.agentPreviewRows")))
-
-
 def _data_block(
     proto_field: str,
     payload: Any,
@@ -572,42 +539,35 @@ def _data_block(
 
     Either the preview is everything (`complete: true`), or `url` serves all of
     it, or `unavailable` says why nothing does. A `url` never comes with an
-    `unavailable` reason. ``described`` is whether the command described itself;
-    an element without a description registered no data to serve.
+    `unavailable` reason. A data command builds its block while recording, so
+    it is copied from the description and only checked here. ``described`` is
+    whether the command described itself.
     """
-    data = _element_data(proto_field, payload) or {}
-    url = description.get("data_url")
-    if not isinstance(url, str):
-        url = None
-    # Nothing summarized and nothing registered means no `data`. A registered
-    # copy alone is still reported, since it serves the whole table even when
-    # its summary failed.
-    if not data and not url:
+    built = description.get("data")
+    data = (
+        dict(built)
+        if isinstance(built, dict)
+        else _payload_data(proto_field, payload, described=described)
+    )
+    if not data:
         return None
 
-    if data.get("complete") is not True:
+    if data.get("complete") is not True or "unavailable" in data:
         data["complete"] = False
-    if url and "unavailable" not in data:
-        # A fetch-now handle the script registered. A complete table gets one too,
-        # so every table has the same contract. The media manager collects the file
-        # once the element that produced it stops rendering.
-        data["url"] = url
-    elif data["complete"] is False:
-        # A described element has no URL only when its payload is over
-        # `server.maxMessageSize` or no runtime exists to register it with.
-        # Any other gap sets its own `unavailable` reason before this point;
-        # a new one in `serve_arrow_over_http` needs its own value too.
-        reason: UnavailableReason = "too_large_to_serve" if described else "undescribed"
-        data.setdefault("unavailable", reason)
+    if "unavailable" in data or not isinstance(data.get("url"), str):
+        data.pop("url", None)
+    if data["complete"] is False and "url" not in data and "unavailable" not in data:
+        # Each builder names its own gap, so this only keeps a block that did
+        # not from passing for complete or servable. It is reported the way
+        # `agent_data.arrow` reports a copy it did not register.
+        data.update(agent_data.unavailable("too_large_to_serve"))
     return data
 
 
-def _unavailable(reason: UnavailableReason) -> dict[str, Any]:
-    return {"complete": False, "unavailable": reason}
-
-
-def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
-    """Describe the data an element's payload carries, as derived facts.
+def _payload_data(
+    proto_field: str, payload: Any, *, described: bool
+) -> dict[str, Any] | None:
+    """The `data` read from an element's payload, for an element that built none.
 
     ``payload`` is typed loosely because each branch narrows it to a different
     proto by way of ``proto_field``.
@@ -615,274 +575,29 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
     if payload is None:
         return None
 
-    if proto_field == "dataframe":
-        if payload.HasField("lazy_data"):
-            return _lazy_dataframe_data(payload.lazy_data)
-        return _summarize_arrow(payload.arrow_data.data)
-
-    if proto_field == "table":
-        return _summarize_arrow(payload.arrow_data.data)
-
-    if proto_field == "vega_lite_chart":
-        return _vega_data(payload)
-
-    # The remaining charts are given a specification rather than a dataframe,
-    # so their values are inside it and there is no separate table to fetch.
-    # Saying so is the point: `complete` means a client already has
-    # everything, so it does not go looking for a `url`.
-    if proto_field == "plotly_chart":
-        return _plotly_data(_parse_json(payload.spec))
-
     if proto_field in {"echarts_chart", "deck_gl_json_chart"}:
-        # Reported as given. `st.map` and `st.pydeck_chart` share the Deck.gl
-        # proto, which carries its specification as `json`.
-        spec = _parse_json(
+        # Reported as given, so it is read from the payload rather than copied
+        # into the description, which would carry a second copy of a
+        # potentially large option or map. `st.map` and `st.pydeck_chart`
+        # share the Deck.gl proto, which carries its specification as `json`.
+        spec = agent_data.parse_spec(
             payload.json if proto_field == "deck_gl_json_chart" else payload.spec
         )
+        # The values are inside the specification, so there is no separate
+        # table to fetch. Saying so is the point: `complete` means a client
+        # already has everything, so it does not go looking for a `url`.
         return None if spec is None else {"spec": spec, "complete": True}
 
-    return None
-
-
-def _lazy_dataframe_data(lazy_data: Any) -> dict[str, Any] | None:
-    """A lazily loaded dataframe, previewed from the chunk its browser received.
-
-    The preview is the first ``server.agentPreviewRows`` rows of that chunk,
-    the same cap as any table. Rows past the chunk are only fetched by a
-    browser as it scrolls, so nothing serves them, and the chunk alone would
-    pass for the whole table. The row count is the source's, reported only
-    when the source knows it.
-    """
-    data = _summarize_arrow(lazy_data.initial_chunk.data)
-    if data is None:
+    arrow_data = getattr(payload, "arrow_data", None)
+    if described or arrow_data is None:
         return None
-    data.update(_unavailable("lazy_loading"))
-    if lazy_data.HasField("row_count"):
-        data["row_count"] = lazy_data.row_count
-    else:
-        del data["row_count"]
+    # An element replayed from a cache a browser filled built no `data` and
+    # registered no copy, so its payload is summarized and nothing serves the
+    # rest.
+    data = agent_data.summarize_arrow(arrow_data.data)
+    if data is not None and data["complete"] is False:
+        data.update(agent_data.unavailable("undescribed"))
     return data
-
-
-def _vega_data(payload: Any) -> dict[str, Any]:
-    """A Vega-Lite chart's one table and its specification.
-
-    Only a chart over a single Arrow buffer is summarized. Several buffers are
-    not one table, and data the specification loads from a URL is fetched by
-    the browser, which this API does not do; in either case none of it is
-    served, rather than a part passed off as the whole.
-    """
-    buffers = vega_charts.arrow_buffers(payload)
-    spec = _parse_json(payload.spec)
-    data: dict[str, Any]
-    if len(buffers) > 1:
-        data = _unavailable("multiple_datasets")
-    elif vega_charts.loads_data_from_url(spec):
-        data = _unavailable("external_url")
-    elif buffers:
-        data = _summarize_arrow(buffers[0]) or {}
-    else:
-        # Inline values travel as Arrow, so what is left in the specification,
-        # such as GeoJSON, is all of it.
-        data = {"complete": True}
-    if isinstance(spec, dict):
-        # The built-in charts write 0 for a size the author left unset, which
-        # means "fill the container", not a size.
-        spec = {
-            name: value
-            for name, value in spec.items()
-            if not (name in {"width", "height"} and value == 0)
-        }
-    if spec is not None:
-        data["spec"] = spec
-    return data
-
-
-def _plotly_data(spec: Any) -> dict[str, Any] | None:
-    """Describe a Plotly figure, whose values live inside its specification.
-
-    The theme is dropped, because it is weight without meaning for a non-visual
-    client: Plotly's `layout.template` is about nine tenths of a small figure.
-    Dropping it is named in `spec_omitted`, so a client can tell a trimmed
-    figure from one the app never configured. A template can also carry
-    content, such as a "DRAFT" annotation, and that is kept.
-
-    Nothing else is dropped, at any size. For these charts the specification
-    holds the values, so trimming further would remove the only part worth
-    reading, and a figure large enough to matter is large because it plots a lot
-    of data -- the same bytes the app already sends its own client.
-    """
-    if spec is None:
-        return None
-
-    data: dict[str, Any] = {}
-
-    layout = spec.get("layout") if isinstance(spec, dict) else None
-    if isinstance(layout, dict) and "template" in layout:
-        template = layout["template"]
-        template_layout = template.get("layout") if isinstance(template, dict) else None
-        if not isinstance(template_layout, dict):
-            template_layout = {}
-        content = {
-            name: template_layout[name]
-            for name in _TEMPLATE_CONTENT
-            if template_layout.get(name)
-        }
-        trimmed_layout = {
-            name: value for name, value in layout.items() if name != "template"
-        }
-        if content:
-            trimmed_layout["template"] = {"layout": content}
-            data["spec_omitted"] = [
-                f"layout.template.{name}" for name in template if name != "layout"
-            ] + [
-                f"layout.template.layout.{name}"
-                for name in template_layout
-                if name not in content
-            ]
-        else:
-            data["spec_omitted"] = ["layout.template"]
-        spec = {**spec, "layout": trimmed_layout}
-
-    data["spec"] = _expand_typed_arrays(spec)
-    data["complete"] = True
-    return data
-
-
-def _expand_typed_arrays(value: Any) -> Any:
-    """Expand Plotly's base64 typed arrays into lists of numbers, at any depth.
-
-    Plotly writes a NumPy array as `{"dtype": "f8", "bdata": "<base64>"}`,
-    which a browser decodes and a language model cannot read. Those arrays are
-    the values that make a figure `complete`, so they are reported as numbers,
-    at the cost of a longer specification.
-    """
-    if isinstance(value, list):
-        return [_expand_typed_arrays(item) for item in value]
-    if not isinstance(value, dict):
-        return value
-    if (
-        isinstance(value.get("bdata"), str)
-        and isinstance(value.get("dtype"), str)
-        and set(value) <= {"bdata", "dtype", "shape"}
-    ):
-        try:
-            return _decode_typed_array(value)
-        except Exception:
-            _LOGGER.debug("Could not decode a Plotly typed array.", exc_info=True)
-            return value
-    return {name: _expand_typed_arrays(item) for name, item in value.items()}
-
-
-def _decode_typed_array(value: dict[str, Any]) -> Any:
-    import base64
-
-    import numpy as np
-
-    # Plotly.js reads these buffers as little-endian.
-    dtype = np.dtype(value["dtype"]).newbyteorder("<")
-    array = np.frombuffer(base64.b64decode(value["bdata"]), dtype=dtype)
-    if shape := value.get("shape"):
-        dims = shape if isinstance(shape, list) else str(shape).split(",")
-        array = array.reshape([int(dim) for dim in dims])
-    # Through the JSON encoding, so a NaN in a float array becomes null.
-    return json_encoding.to_json_value(array.tolist())
-
-
-def _parse_json(value: str) -> Any:
-    """Parse a chart or map specification for the response.
-
-    `NaN` and infinities become null, as they do in table previews: the
-    specifications are written with Python's lenient encoder, so a missing
-    value in a layer's data arrives as `NaN`, which strict JSON cannot carry.
-    """
-    if not value:
-        return None
-    try:
-        return json.loads(value, parse_constant=lambda _constant: None)
-    except json.JSONDecodeError:
-        return None
-
-
-def _summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
-    """Describe an Arrow IPC stream: its schema, its size, and a row preview.
-
-    The preview holds the first ``server.agentPreviewRows`` rows, as values in
-    column order, and ``complete`` is whether those rows are the whole table.
-    Returns the element's ``data`` without a ``url``, or ``None`` for empty or
-    unreadable bytes.
-    """
-    if not arrow_bytes:
-        return None
-
-    import pyarrow as pa
-
-    limit = _preview_row_limit()
-    try:
-        table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
-        columns = _arrow_columns(table)
-    except Exception:
-        # Any failure, not just a malformed stream: an element without a
-        # summary costs far less than a failed snapshot.
-        _LOGGER.debug("Could not read an Arrow payload.", exc_info=True)
-        return None
-
-    rows: list[list[Any]] | None
-    try:
-        rows = _arrow_rows(table, limit)
-    except Exception:
-        # A column pyarrow cannot convert to Python values. The schema and
-        # size still describe the table, and the empty preview is incomplete.
-        _LOGGER.debug("Could not preview an Arrow payload.", exc_info=True)
-        rows = None
-
-    return {
-        "columns": columns,
-        "row_count": table.num_rows,
-        "column_count": len(columns),
-        # `complete` sits at the top of `data` because it is the first question
-        # a client asks, and it is the only flag: a second one inside `preview`
-        # would only ever be its inverse.
-        "complete": rows is not None and table.num_rows <= limit,
-        "preview": {
-            # Rows are values in `columns` order rather than objects, because
-            # repeating the column names on every row is most of a preview's
-            # size once it gets long.
-            "rows": rows or [],
-        },
-    }
-
-
-def _arrow_columns(table: Any) -> list[dict[str, str]]:
-    """An Arrow table's columns with their types, by position.
-
-    Every column the bytes behind `data.url` carry, under the same names, so
-    the reported schema is the schema of what a client fetches. That includes
-    an unnamed, non-range index, which pandas stores as `__index_level_N__` and
-    `st.dataframe` displays.
-    """
-    return [
-        {"name": name, "type": str(dtype)}
-        for name, dtype in zip(table.schema.names, table.schema.types, strict=True)
-    ]
-
-
-def _arrow_rows(table: Any, limit: int) -> list[list[Any]]:
-    """Return up to ``limit`` rows as lists of cell values in column order.
-
-    By position rather than by name, so a table with two columns of the same
-    name keeps both.
-    """
-    if table.num_columns == 0:
-        # Zipping no columns yields no rows, but the table still has them.
-        return [[] for _ in range(min(table.num_rows, limit))]
-    return [
-        [json_encoding.to_json_value(cell) for cell in row]
-        for row in zip(
-            *(column.to_pylist() for column in table.slice(0, limit).columns),
-            strict=True,
-        )
-    ]
 
 
 def build_snapshot(
