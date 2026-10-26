@@ -130,6 +130,11 @@ function DateTimeInput({
 
   const { locale } = useContext(LibConfigContext)
 
+  // `step` is `number | Long`, which the rule always reports. A missing or
+  // numeric 0 step falls back to 900 seconds. An unset int64 decodes as a
+  // Long zero, which is truthy and skips the fallback; Python always sends a
+  // positive step.
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment above
   const step = element.step ? Number(element.step) : 900
 
   const minDateTime = useMemo(
@@ -267,7 +272,7 @@ function DateTimeInput({
   // pending edit so the submit validator and the required error follow the
   // restored value.
   const handleClose = useCallback(
-    (shouldClearError?: boolean): void => {
+    (shouldClearError: boolean): void => {
       if (!shouldClearError) return
       pendingIsoRef.current = lastWrittenIsoRef.current ?? null
       setHasRequiredError(false)

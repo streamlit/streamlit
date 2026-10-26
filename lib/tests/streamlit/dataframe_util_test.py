@@ -1331,6 +1331,33 @@ def test_convert_sequence_pydantic_path_attribute_error_falls_through() -> None:
     assert len(df) == 2
 
 
+@pytest.mark.parametrize(
+    ("module_name", "expected"),
+    [
+        # DuckDB 2.0
+        ("duckdb._relation", True),
+        # DuckDB 1.x
+        ("_duckdb", True),
+        # Older DuckDB releases
+        ("duckdb.duckdb", True),
+        # A similarly named type from another module is not a relation.
+        ("duckdb", False),
+    ],
+)
+def test_is_duckdb_relation_accepts_known_type_paths(
+    module_name: str, expected: bool
+) -> None:
+    """Recognize DuckDB relations from the current and older module paths."""
+
+    class DuckDBPyRelation:
+        pass
+
+    DuckDBPyRelation.__module__ = module_name
+    DuckDBPyRelation.__qualname__ = "DuckDBPyRelation"
+
+    assert dataframe_util.is_duckdb_relation(DuckDBPyRelation()) is expected
+
+
 def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
     """DuckDB relations respect max_unevaluated_rows and may show an info caption."""
 

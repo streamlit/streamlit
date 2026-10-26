@@ -151,7 +151,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         cellData = toSafeString(data)
       }
 
-      if (validate) {
+      if (validate === true) {
         const isValidValue = cellTemplate.data.allowedValues.some(option => {
           if (option === null) {
             return cellData === null

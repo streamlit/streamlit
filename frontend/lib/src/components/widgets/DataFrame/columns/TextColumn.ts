@@ -76,7 +76,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
   const validateInput = (data?: unknown): boolean | string => {
     if (isNullOrUndefined(data)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -116,7 +116,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(data), validateRegex)
       }
 
-      if (validate) {
+      if (validate === true) {
         const validationResult = validateInput(data)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will

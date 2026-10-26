@@ -55,7 +55,7 @@ function Audio({
       "preventAutoplay"
     )
 
-    if (!preventAutoplayState) {
+    if (preventAutoplayState !== true) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)

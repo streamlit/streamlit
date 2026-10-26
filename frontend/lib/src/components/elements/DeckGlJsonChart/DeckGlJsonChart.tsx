@@ -67,7 +67,7 @@ const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const {
-    disabled,
+    disabled = false,
     disableFullscreenMode,
     element,
     fragmentId,
@@ -83,7 +83,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const isStretchHeight = !!heightConfig?.useStretch
+  const isStretchHeight = heightConfig?.useStretch === true
 
   const {
     createTooltip,
@@ -287,6 +287,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               <>
                 <StaticMap
                   mapStyle={
+                    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null or empty styles from pydeck JSON pass through unchanged
                     deck.mapStyle &&
                     (typeof deck.mapStyle === "string"
                       ? deck.mapStyle

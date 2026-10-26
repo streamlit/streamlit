@@ -77,7 +77,7 @@ function ButtonActionMenu({
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
-      if (panelRef.current?.contains(event.target as Node)) {
+      if (panelRef.current?.contains(event.target as Node) === true) {
         return
       }
       // Close on any scroll event outside the menu (including dataframe scroll,

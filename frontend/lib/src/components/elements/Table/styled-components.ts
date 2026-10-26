@@ -52,7 +52,7 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
 export const StyledTableBorder = styled.div<{
   borderMode: Table.BorderMode
   hasScrollableHeight?: boolean
-}>(({ theme, borderMode, hasScrollableHeight }) => ({
+}>(({ theme, borderMode, hasScrollableHeight = false }) => ({
   // Add the enclosing border on an extra wrapper around the table. This ensures that
   // when the table scrolls horizontally on small windows, it still shows a border all
   // around the table and the table doesn't look cut off.
@@ -80,7 +80,7 @@ export const StyledTableBorder = styled.div<{
 export const StyledTable = styled.table<{
   useContentWidth?: boolean
   hasScrollableWidth?: boolean
-}>(({ theme, useContentWidth, hasScrollableWidth }) => ({
+}>(({ theme, useContentWidth = false, hasScrollableWidth = false }) => ({
   color: theme.colors.bodyText,
   borderSpacing: 0,
   // Inline-table helps preserve content-based column sizing, so narrow

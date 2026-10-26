@@ -56,6 +56,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
 }) => {
   let parsedJson = undefined
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null, undefined, and empty strings have nothing to parse
   if (jsonValue) {
     // Try to parse the JSON value.
     try {
