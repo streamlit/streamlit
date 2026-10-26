@@ -39,7 +39,6 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -274,14 +273,17 @@ export function EChartsChart({
   }, [themeArg])
   const appliedThemeRef = useRef(themeArg)
 
-  const {
-    isSelectionActivated,
-    configureSelectionOption,
-    bindSelections,
-    restoreSelection,
-    onFormCleared,
-    prunePixelOnlyBrushAfterResize,
-  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
+  // Called before the effects below so its binding effect runs first, and
+  // `restoreSelection` / `pruneAfterResize` reach the current instance.
+  const { configureSelectionOption, restoreSelection, pruneAfterResize } =
+    useEChartsSelections({
+      element,
+      widgetMgr,
+      chart: chartInstance,
+      fragmentId,
+      disabled,
+      parsedOption: option,
+    })
 
   // The option handed to setOption: Streamlit theme defaults, plus a
   // non-pointer series cursor on display-only charts so they do not look
@@ -403,7 +405,7 @@ export function EChartsChart({
       setOpError("theme", null)
       // Re-theming re-runs the render pipeline, which drops the native
       // select/brush visuals, so put them back.
-      restoreSelection(chartInstance)
+      restoreSelection()
     } catch (error) {
       setOpError("theme", ensureError(error).message)
     }
@@ -447,7 +449,7 @@ export function EChartsChart({
       setOpError("option", null)
       setHasRendered(true)
       // A full replacement clears the selected/brushed state, so restore it.
-      restoreSelection(chartInstance)
+      restoreSelection()
     } catch (error) {
       setOpError("option", ensureError(error).message)
     }
@@ -459,17 +461,6 @@ export function EChartsChart({
     setOpError,
     element.alt,
   ])
-
-  // Bind selection handlers to the current instance (no-op for display-only).
-  // Order relative to the option-apply and theme effects does not matter:
-  // `restoreSelection` suppresses the events its own dispatches fire, and
-  // ECharts fires no selection events from `setOption`.
-  useEffect(() => {
-    if (!chartInstance || chartInstance.isDisposed()) {
-      return
-    }
-    return bindSelections(chartInstance)
-  }, [chartInstance, bindSelections])
 
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
@@ -511,7 +502,7 @@ export function EChartsChart({
         previousSize &&
         (previousSize.width !== width || previousSize.height !== height)
       ) {
-        prunePixelOnlyBrushAfterResize(chartInstance)
+        pruneAfterResize()
       }
     } catch (error) {
       // `resize` re-runs the full render pipeline, so an option that already
@@ -520,31 +511,7 @@ export function EChartsChart({
       // replace the element with an unrecoverable stack trace.
       setOpError("resize", ensureError(error).message)
     }
-  }, [
-    chartInstance,
-    width,
-    height,
-    setOpError,
-    prunePixelOnlyBrushAfterResize,
-  ])
-
-  // Reset the selection when the surrounding form is cleared.
-  useEffect(() => {
-    if (!element.formId || !isSelectionActivated) {
-      return
-    }
-
-    const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      onFormCleared
-    )
-
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
+  }, [chartInstance, width, height, setOpError, pruneAfterResize])
 
   useInsideDataZoomWheelGuard(containerRef, option)
 
