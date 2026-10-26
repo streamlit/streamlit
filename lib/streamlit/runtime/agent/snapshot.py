@@ -588,13 +588,12 @@ def _payload_data(
         # already has everything, so it does not go looking for a `url`.
         return None if spec is None else {"spec": spec, "complete": True}
 
-    arrow_data = getattr(payload, "arrow_data", None)
-    if described or arrow_data is None:
+    if described or proto_field not in {"dataframe", "table"}:
         return None
-    # An element replayed from a cache a browser filled built no `data` and
+    # A table replayed from a cache a browser filled built no `data` and
     # registered no copy, so its payload is summarized and nothing serves the
     # rest.
-    data = agent_data.summarize_arrow(arrow_data.data)
+    data = agent_data.summarize_arrow(payload.arrow_data.data)
     if data is not None and data["complete"] is False:
         data.update(agent_data.unavailable("undescribed"))
     return data
