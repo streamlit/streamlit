@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import { type FC, memo, useCallback } from "react"
+import { type FC, memo, useCallback, useEffect, useRef, useState } from "react"
 
 import type { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
 import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import {
   useBasicWidgetState,
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
+  isInForm,
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
@@ -91,8 +93,12 @@ const Selectbox: FC<Props> = ({
     placeholder,
     acceptNewOptions,
     filterMode,
+    formId,
   } = element
 
+  // Query-param emptiness follows the default, not `required`: `?key=` still
+  // seeds the empty default, and a required selectbox never commits null from
+  // the UI.
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
@@ -116,6 +122,26 @@ const Selectbox: FC<Props> = ({
     queryParamBinding,
   })
 
+  /**
+   * Set by a failed form submit while the selectbox is required and empty.
+   * The displayed error is derived from this flag, the current `required`
+   * flag, and the current value.
+   */
+  const [hasRequiredError, setHasRequiredError] = useState(false)
+
+  // Drop the stored flag once the error is hidden (a selection, a
+  // session_state write, or `required` turned off). `required` is not part of
+  // keyed widget identity, so the flag would otherwise reappear when
+  // `required` turns back on or a programmatic write empties the field.
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isNullOrUndefined(value)
+  )
+  if (hasRequiredError && requiredError === null) {
+    setHasRequiredError(false)
+  }
+
   const onChange = useCallback(
     (valueArg: SelectboxValue) => {
       setValueWithSource({ value: valueArg, fromUser: true })
@@ -123,7 +149,43 @@ const Selectbox: FC<Props> = ({
     [setValueWithSource]
   )
 
-  const clearable = isNullOrUndefined(element.default) && !disabled
+  /**
+   * Form submit validator: blocks the submit and shows the required error
+   * while the selectbox is required and empty. Reads this render's `value`,
+   * which is current because every submit runs in a later event than the
+   * selection that set it.
+   */
+  const validateRequired = (): boolean => {
+    if (element.required && isNullOrUndefined(value)) {
+      setHasRequiredError(true)
+      return false
+    }
+    return true
+  }
+  const formSubmitValidatorRef = useRef(validateRequired)
+  formSubmitValidatorRef.current = validateRequired
+
+  const inForm = isInForm({ formId })
+
+  // Outside a form there is no empty commit to block (see `clearable`), so
+  // only a form submit can show the required error.
+  useEffect(() => {
+    if (!inForm || !element.required) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(formId, element.id)
+    }
+  }, [element.id, element.required, formId, inForm, widgetMgr])
+
+  // The clear button and Escape are the only UI paths that commit null, so
+  // they are enabled only when the default is empty and never when required.
+  const clearable =
+    isNullOrUndefined(element.default) && !disabled && !element.required
 
   return (
     <UISelectbox
@@ -138,6 +200,8 @@ const Selectbox: FC<Props> = ({
       clearable={clearable}
       acceptNewOptions={acceptNewOptions ?? false}
       filterMode={filterMode}
+      required={element.required}
+      error={requiredError}
     />
   )
 }
