@@ -44,8 +44,8 @@ const enforceMemo = createRule<[], MessageIds>({
     messages: {
       enforceMemo: "React components should be wrapped with memo",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     // Track state for components used in various contexts
     const componentsUsedInHOCs = new Map<string, string | boolean>() // Maps component name to HOC variable name or true if memoized
@@ -259,9 +259,11 @@ const enforceMemo = createRule<[], MessageIds>({
           "\nimport { memo } from 'react';"
         )
       }
-      // Add at the beginning of the file
+      // Add before the first statement. The Program node's range starts at
+      // offset 0, so anchoring on it would place the import above leading
+      // comments such as the license header.
       return fixer.insertTextBefore(
-        sourceCode.ast,
+        sourceCode.ast.body[0] ?? sourceCode.ast,
         "import { memo } from 'react';\n\n"
       )
     }
