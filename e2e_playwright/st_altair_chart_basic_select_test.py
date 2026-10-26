@@ -123,6 +123,7 @@ def _get_in_fragment_chart(app: Page) -> Locator:
 
 def test_point_bar_chart_displays_selection_text(app: Page):
     chart = _get_selection_point_bar_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
 
     # click on E-bar
     _click(app, chart, _MousePosition(150, 180))
@@ -132,22 +133,76 @@ def test_point_bar_chart_displays_selection_text(app: Page):
         r"\{'selection': \{'param_1': \[\{'a': 'B', 'b': 55\}]\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
 
 
 def test_interval_bar_chart_displays_selection_text(app: Page):
     chart = _get_selection_interval_bar_chart(app)
     expect(chart).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    chart.scroll_into_view_if_needed()
 
-    # change also height, because otherwise the selection is not triggered
-    _create_selection_rectangle(
-        app, chart, _MousePosition(90, 150), _MousePosition(175, 155)
+    bounding_box = chart.bounding_box()
+    assert bounding_box is not None
+    start_x = bounding_box["x"] + 90
+    start_y = bounding_box["y"] + 150
+    app.mouse.move(start_x, start_y)
+    app.mouse.down()
+    app.mouse.move(
+        bounding_box["x"] + 140,
+        bounding_box["y"] + 153,
+        steps=5,
     )
+    # Staying held past the old debounce window must not start a rerun.
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    app.mouse.move(
+        bounding_box["x"] + 175,
+        bounding_box["y"] + 155,
+        steps=5,
+    )
+    app.mouse.up()
+    wait_for_app_run(app)
 
     expected_prefix = "Bar chart with selection_interval:"
     expected_selection = re.compile(
         r"\{'selection': \{'param_1': \{'a': \['A', 'B'\], 'b': \[.+, .+\]\}\}\}"
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
+
+
+def test_interval_drag_released_outside_chart(app: Page):
+    chart = _get_selection_interval_bar_chart(app)
+    expect(chart).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    bounding_box = chart.bounding_box()
+    assert bounding_box is not None
+    app.mouse.move(bounding_box["x"] + 90, bounding_box["y"] + 150)
+    app.mouse.down()
+    app.mouse.move(
+        bounding_box["x"] + bounding_box["width"] + 20,
+        bounding_box["y"] + 155,
+        steps=8,
+    )
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expected_selection = re.compile(
+        r"\{'selection': \{'param_1': \{'a': \[.+\], 'b': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(
+        app, "Bar chart with selection_interval:", expected_selection
+    )
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
 
 
 def test_point_area_chart_displays_selection_text(app: Page):
@@ -330,7 +385,8 @@ def test_in_form_selection_and_session_state(app: Page):
     chart = _get_in_form_chart(app)
     expect(chart).to_be_visible()
 
-    _click(app, chart, _MousePosition(255, 238))
+    chart.scroll_into_view_if_needed()
+    chart.click(position={"x": 255, "y": 238})
 
     markdown_prefix = "Histogram-in-form selection:"
     markdown_prefix_session_state = "Histogram-in-form selection in session state:"
@@ -347,9 +403,8 @@ def test_in_form_selection_and_session_state(app: Page):
         empty_selection,
     )
 
-    # submit the form. The selection uses a debounce of 200ms; if we click too early,
-    # the state is not updated correctly and we submit the old, unselected values
-    app.wait_for_timeout(210)
+    # Submit immediately after the click so the staged form value cannot rely
+    # on the chart selection debounce.
     click_form_button(app, "Submit")
 
     expected_selection = re.compile(
@@ -412,6 +467,9 @@ def test_selection_state_remains_after_unmounting_snapshot(
         has_text="Create some elements to unmount component"
     ).locator("button").click()
     wait_for_app_run(app, wait_delay=4000)
+    expect(app.get_by_text("Runs: 6", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 7", exact=True)).not_to_be_visible()
     chart.scroll_into_view_if_needed()
     # Use the same snapshot name as the previous test to ensure visual consistency
     # Increase the image_threshold slightly because the second image is a little bit moved for some reason
@@ -492,7 +550,13 @@ def test_binding_widgets_not_duplicated_with_on_select(app: Page):
     _assert_single_region_bind(radio_chart, role="radio", count=3)
 
     radio_chart.get_by_role("radio", name="Europe").click()
+    wait_for_app_run(app)
     _assert_single_region_bind(radio_chart, role="radio", count=3)
+    expect_prefixed_markdown(
+        app,
+        "Radio-bound selection:",
+        re.compile(r"'bind_radio_origin': \[\{'Origin': 'Europe'\}\]"),
+    )
 
     expect(select_chart).to_be_visible()
     expect(get_vega_graphics_document(select_chart)).to_be_visible()
@@ -500,3 +564,18 @@ def test_binding_widgets_not_duplicated_with_on_select(app: Page):
 
     select_chart.get_by_role("combobox").select_option("Europe")
     _assert_single_region_bind(select_chart, role="combobox", count=1)
+
+
+def test_legend_bound_selection_reaches_python(app: Page):
+    legend_chart = get_element_by_key(app, "legend_bound_selection")
+    graphics = get_vega_graphics_document(legend_chart)
+    expect(graphics).to_be_visible()
+
+    graphics.get_by_text("Europe", exact=True).click()
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Legend-bound selection:",
+        re.compile(r"'legend_pick': \[\{'Origin': 'Europe'\}\]"),
+    )

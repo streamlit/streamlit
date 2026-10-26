@@ -18,18 +18,12 @@ import { act, renderHook } from "@testing-library/react"
 import type { View as VegaView } from "vega"
 import type { Mock, Mocked } from "vitest"
 
-import { debounce } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
-// Mock the debounce so we can control how/when it is invoked.
-vi.mock("~lib/util/utils", async () => ({
-  // we will override the `debounce`
-  ...(await vi.importActual("~lib/util/utils")),
-  debounce: vi.fn(),
-}))
+const DEBOUNCE_TIME_MS = 150
 
 describe("useVegaLiteSelections", () => {
   // Use a mocked version of the WidgetStateManager
@@ -46,12 +40,6 @@ describe("useVegaLiteSelections", () => {
       getStringValue: vi.fn(),
       addFormClearedListener: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
     } as unknown as Mocked<WidgetStateManager>
-
-    const debouncedMock = debounce as Mock
-    // By default, the mocked debounce simply calls its callback immediately.
-    debouncedMock.mockImplementation(
-      (_delay: number, fn: (...args: unknown[]) => void) => fn
-    )
   })
 
   afterEach(() => {
@@ -62,7 +50,9 @@ describe("useVegaLiteSelections", () => {
   it("adds signal listeners for each selectionMode parameter", () => {
     const mockVegaView = {
       addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
       getState: vi.fn(),
+      container: vi.fn(() => null),
     } as unknown as Mocked<VegaView>
 
     const selectionMode = ["param1", "param2"]
@@ -92,12 +82,15 @@ describe("useVegaLiteSelections", () => {
         expect.any(Function)
       )
     })
+    act(() => result.current.teardownSelections())
   })
 
   it("stores the vega viewState in the widget manager on signal fire", () => {
     const mockVegaView = {
       addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
       getState: vi.fn(() => ({ some: "state" })),
+      container: vi.fn(() => null),
     } as unknown as Mocked<VegaView>
 
     const selectionMode = ["param1"]
@@ -136,12 +129,15 @@ describe("useVegaLiteSelections", () => {
       "viewState",
       { some: "state" }
     )
+    act(() => result.current.teardownSelections())
   })
 
   it("updates widget state with processed selection on signal fire", () => {
     const mockVegaView = {
       addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
       getState: vi.fn(() => ({ some: "state" })),
+      container: vi.fn(() => null),
     } as unknown as Mocked<VegaView>
 
     const selectionMode = ["param1"]
@@ -187,12 +183,15 @@ describe("useVegaLiteSelections", () => {
       }),
       { formId: "formId", fragmentId: undefined, fromUser: true } // fragmentId not passed in this test
     )
+    act(() => result.current.teardownSelections())
   })
 
   it("does not update widget state if the state hasn't changed", () => {
     const mockVegaView = {
       addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
       getState: vi.fn(() => ({ some: "state" })),
+      container: vi.fn(() => null),
     } as unknown as Mocked<VegaView>
 
     const selectionMode = ["param1"]
@@ -235,6 +234,7 @@ describe("useVegaLiteSelections", () => {
     })
 
     expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    act(() => result.current.teardownSelections())
   })
 
   it("resets selection state when form is cleared", () => {
@@ -278,5 +278,324 @@ describe("useVegaLiteSelections", () => {
       }),
       { formId: "formId", fragmentId: undefined, fromUser: true }
     )
+  })
+
+  describe("send timing and teardown", () => {
+    const cleanups: Array<() => void> = []
+
+    const dispatch = (target: EventTarget, eventType: string): void => {
+      act(() => {
+        target.dispatchEvent(new Event(eventType, { bubbles: true }))
+      })
+    }
+
+    const advanceTimers = (milliseconds: number): void => {
+      act(() => {
+        vi.advanceTimersByTime(milliseconds)
+      })
+    }
+
+    const flushAsyncWork = async (): Promise<void> => {
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+
+    interface SetupResult {
+      container: HTMLDivElement
+      fire: (name: string, value: Record<string, unknown>) => void
+      mockVegaView: Mocked<VegaView>
+      teardown: () => void
+    }
+
+    const setup = ({
+      formId = "",
+      selectionMode = ["sel"],
+    }: {
+      formId?: string
+      selectionMode?: string[]
+    } = {}): SetupResult => {
+      const container = document.createElement("div")
+      document.body.appendChild(container)
+      const signalListeners = new Map<
+        string,
+        (name: string, value: Record<string, unknown>) => void
+      >()
+      const mockVegaView = {
+        addSignalListener: vi.fn(
+          (
+            name: string,
+            listener: (name: string, value: Record<string, unknown>) => void
+          ) => {
+            signalListeners.set(name, listener)
+          }
+        ),
+        removeSignalListener: vi.fn(),
+        getState: vi.fn(() => ({ some: "state" })),
+        setState: vi.fn().mockReturnThis(),
+        container: vi.fn(() => container),
+        runAsync: vi.fn(),
+      } as unknown as Mocked<VegaView>
+      mockVegaView.runAsync.mockResolvedValue(mockVegaView)
+
+      let currentWidgetState = ""
+      mockWidgetMgr.getStringValue.mockImplementation(() => currentWidgetState)
+      mockWidgetMgr.setStringValue.mockImplementation((_id, value) => {
+        currentWidgetState = value ?? ""
+      })
+
+      const { result, unmount } = renderHook(() =>
+        useVegaLiteSelections(
+          {
+            id: "chartId",
+            formId,
+            selectionMode,
+          } as VegaLiteChartElement,
+          mockWidgetMgr
+        )
+      )
+      act(() => {
+        result.current.maybeConfigureSelections(mockVegaView)
+      })
+
+      const teardown = (): void => {
+        act(() => result.current.teardownSelections())
+      }
+      cleanups.push(() => {
+        teardown()
+        unmount()
+        container.remove()
+      })
+
+      return {
+        container,
+        fire: (name: string, value: Record<string, unknown>): void => {
+          act(() => signalListeners.get(name)?.(name, value))
+        },
+        mockVegaView,
+        teardown,
+      }
+    }
+
+    const sentStates = (): Array<{
+      selection: Record<string, unknown>
+    }> =>
+      mockWidgetMgr.setStringValue.mock.calls.map(([, value]) =>
+        JSON.parse(value as string)
+      )
+
+    afterEach(() => {
+      cleanups.splice(0).forEach(cleanup => cleanup())
+    })
+
+    it.each(["click", "dblclick", "keydown", "keyup"])(
+      "sends a selection caused by %s immediately",
+      eventType => {
+        const { container, fire } = setup()
+
+        dispatch(container, eventType)
+        fire("sel", { value: eventType })
+
+        expect(sentStates()).toEqual([
+          { selection: { sel: { value: eventType } } },
+        ])
+      }
+    )
+
+    it("does not reuse a discrete event marker in a later task", () => {
+      const { container, fire } = setup()
+      dispatch(container, "click")
+      fire("sel", { value: "click" })
+      advanceTimers(0)
+      mockWidgetMgr.setStringValue.mockClear()
+
+      fire("sel", { value: "later" })
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      advanceTimers(DEBOUNCE_TIME_MS)
+
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "later" } } },
+      ])
+    })
+
+    it("holds pointer updates and sends only the latest value on release", async () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 1] })
+      fire("sel", { x: [0, 2] })
+      advanceTimers(DEBOUNCE_TIME_MS * 2)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 2] } } }])
+    })
+
+    it("uses an asynchronous release signal as the final value", async () => {
+      const { container, fire, mockVegaView } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 1] })
+      mockVegaView.runAsync.mockImplementationOnce(
+        async (): Promise<VegaView> => {
+          await Promise.resolve()
+          fire("sel", { x: [0, 3] })
+          return mockVegaView
+        }
+      )
+
+      dispatch(container, "pointerup")
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 3] } } }])
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+    })
+
+    it("flushes a drag released outside the chart", async () => {
+      const { container, fire } = setup()
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [1, 4] })
+
+      dispatch(outside, "pointerup")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
+      outside.remove()
+    })
+
+    it("flushes held values on pointercancel", async () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [2, 5] })
+
+      dispatch(container, "pointercancel")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 5] } } }])
+    })
+
+    it("flushes two held parameters in one widget update", async () => {
+      const { container, fire } = setup({
+        selectionMode: ["brush", "legend"],
+      })
+      dispatch(container, "pointerdown")
+      fire("brush", { x: [0, 10] })
+      fire("legend", { region: ["Europe"] })
+
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
+
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+      expect(sentStates()).toEqual([
+        {
+          selection: {
+            brush: { x: [0, 10] },
+            legend: { region: ["Europe"] },
+          },
+        },
+      ])
+    })
+
+    it("does not flush again when teardown precedes release completion", async () => {
+      const { container, fire, mockVegaView, teardown } = setup()
+      let resolveReleaseRun: ((view: VegaView) => void) | undefined
+      mockVegaView.runAsync.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveReleaseRun = resolve
+          })
+      )
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 4] })
+      dispatch(window, "pointerup")
+
+      teardown()
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 4] } } }])
+
+      await act(async () => {
+        resolveReleaseRun?.(mockVegaView)
+        await Promise.resolve()
+      })
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+    })
+
+    it.each(["pointermove", "wheel"])(
+      "keeps %s selection changes trailing-debounced",
+      eventType => {
+        const { container, fire } = setup()
+        dispatch(container, eventType)
+        fire("sel", { value: "first" })
+        fire("sel", { value: "last" })
+
+        advanceTimers(DEBOUNCE_TIME_MS - 1)
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+        advanceTimers(1)
+
+        expect(sentStates()).toEqual([
+          { selection: { sel: { value: "last" } } },
+        ])
+      }
+    )
+
+    it("cancels an older debounced value when a click sends a newer value", () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointermove")
+      fire("sel", { value: "hover" })
+      dispatch(container, "click")
+      fire("sel", { value: "click" })
+      advanceTimers(DEBOUNCE_TIME_MS)
+
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "click" } } },
+      ])
+    })
+
+    it("sends every selection update immediately inside a form", () => {
+      const { container, fire } = setup({ formId: "formId" })
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 1] })
+      fire("sel", { x: [0, 2] })
+
+      expect(sentStates()).toEqual([
+        { selection: { sel: { x: [0, 1] } } },
+        { selection: { sel: { x: [0, 2] } } },
+      ])
+    })
+
+    it("flushes pending values and removes listeners on teardown", () => {
+      const { container, fire, mockVegaView, teardown } = setup()
+      const removeEventListenerSpy = vi.spyOn(container, "removeEventListener")
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 4] })
+
+      teardown()
+      teardown()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 4] } } }])
+      expect(mockVegaView.removeSignalListener).toHaveBeenCalledOnce()
+      expect(removeEventListenerSpy).toHaveBeenCalled()
+
+      mockWidgetMgr.setStringValue.mockClear()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 5] })
+      advanceTimers(DEBOUNCE_TIME_MS)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("flushes and cancels a pending debounced value on teardown", () => {
+      const { fire, teardown } = setup()
+      fire("sel", { value: "pending" })
+
+      teardown()
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "pending" } } },
+      ])
+
+      advanceTimers(DEBOUNCE_TIME_MS)
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+    })
   })
 })

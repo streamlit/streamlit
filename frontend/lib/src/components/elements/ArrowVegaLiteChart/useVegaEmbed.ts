@@ -88,11 +88,8 @@ export function useVegaEmbed(
   const [isCreatingView, setIsCreatingView] = useState(false)
 
   // Setup interactivity for the chart if it supports selections
-  const { maybeConfigureSelections, onFormCleared } = useVegaLiteSelections(
-    inputElement,
-    widgetMgr,
-    fragmentId
-  )
+  const { maybeConfigureSelections, teardownSelections, onFormCleared } =
+    useVegaLiteSelections(inputElement, widgetMgr, fragmentId)
 
   useFormClearHelper({ widgetMgr, element: inputElement, onFormCleared })
 
@@ -285,6 +282,7 @@ export function useVegaEmbed(
         const unbindRangeProgress = bindVegaRangeProgress(container)
         vegaFinalizerRef.current = () => {
           unbindRangeProgress()
+          teardownSelections()
           finalize()
         }
 
@@ -357,7 +355,7 @@ export function useVegaEmbed(
         }
       }
     },
-    [finalizeView, maybeConfigureSelections, syncViewData]
+    [finalizeView, maybeConfigureSelections, syncViewData, teardownSelections]
   )
 
   const updateView = useCallback(
