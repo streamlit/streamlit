@@ -212,18 +212,18 @@ export const parseFont = (
 
 /**
  * Helper function to parse/validate a config color value
- * @param color: a string - the color value passed in as a given config
+ * @param color: a theme field value that may be a color string
  * @param configKey: a string - the config that the color value was passed for
  * @param inSidebar: boolean - whether this is for sidebar theming (for error messages)
  * @returns the validated color value, or undefined if blank/unset or invalid
  */
 const parseColor = (
-  color: string,
+  color: unknown,
   configKey: string,
   inSidebar: boolean = false
 ): string | undefined => {
-  // Blank strings are unset. Proto3 defaults are ""; whitespace-only config is
-  // treated the same. Nested values are not colors.
+  // Blank and whitespace-only strings are unset (proto3's default is "").
+  // Non-strings, such as nested theme sections, are not colors.
   if (typeof color !== "string" || !color.trim()) {
     return undefined
   }
@@ -816,7 +816,6 @@ export const createEmotionTheme = (
   const parsedColors = Object.entries(customColors).reduce(
     // parseColor drops unset or invalid colors, so a lookup can return undefined.
     (colorsArg: Partial<Record<string, string>>, [key, color]) => {
-      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -1238,17 +1237,23 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
   }
 }
 
-const isProtobufDefaultValue = (value: unknown): boolean =>
+/** True for null, blank or whitespace-only strings, and empty arrays. */
+const isUnsetThemeValue = (value: unknown): boolean =>
   value === null ||
   (typeof value === "string" && !value.trim()) ||
   (Array.isArray(value) && value.length === 0)
 
 /**
- * Drop protobuf default values so lodash mergeWith does not copy them onto an
- * empty destination. Returning `undefined` from a mergeWith customizer means
- * "use default merge", which would still assign `""` / `null` / `[]`.
+ * Returns the own, non-unset fields of a theme input so lodash merges cannot
+ * copy them onto an empty destination.
+ *
+ * - protobufjs exposes proto3 defaults (for example `textColor = ""`) on the
+ *   message prototype, and `mergeWith` iterates inherited keys.
+ * - A customizer that returns `undefined` tells `mergeWith` to assign the
+ *   source, so skipping defaults still copies `""` onto a missing key.
+ * Nested sections are left as-is; callers run this on those objects too.
  */
-const omitProtobufDefaults = <T extends object>(
+const omitUnsetThemeValues = <T extends object>(
   input: T | null | undefined
 ): Partial<T> => {
   if (!input) {
@@ -1256,20 +1261,20 @@ const omitProtobufDefaults = <T extends object>(
   }
 
   return Object.fromEntries(
-    Object.entries(input).filter(([, value]) => !isProtobufDefaultValue(value))
+    Object.entries(input).filter(([, value]) => !isUnsetThemeValue(value))
   ) as Partial<T>
 }
 
 /**
- * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
- * and replaces non-empty arrays atomically instead of merging by index.
+ * Customizer for lodash mergeWith that skips unset theme values (blank or
+ * whitespace-only strings, null, empty arrays) so they do not overwrite valid
+ * values, and replaces non-empty arrays atomically instead of merging by index.
  */
-const skipProtobufDefaults = (
+const skipUnsetThemeValues = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {
-  if (isProtobufDefaultValue(srcValue)) {
+  if (isUnsetThemeValue(srcValue)) {
     return objValue
   }
   // Replace non-empty arrays wholesale — lodash index-merges arrays, which
@@ -1284,14 +1289,14 @@ const completeThemeInput = (
   partialInput: Partial<CustomThemeConfig>,
   baseThemeArg: ThemeConfig
 ): CustomThemeConfig => {
-  // Drop unset protobuf defaults ("", null, []) so they don't override base
-  // theme values.
+  // Drop unset theme values ("", whitespace, null, []) so they don't override
+  // base theme values.
   return new CustomThemeConfig(
     mergeWith(
       {},
       toThemeInput(baseThemeArg.emotion),
-      omitProtobufDefaults(partialInput),
-      skipProtobufDefaults
+      omitUnsetThemeValues(partialInput),
+      skipUnsetThemeValues
     )
   )
 }
@@ -1575,22 +1580,22 @@ export const handleSectionInheritance = (
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
-  // Omit empty protobuf defaults before merge so they are not copied onto {}.
+  // Omit unset theme values before merge so they are not copied onto {}.
   const result = mergeWith(
     {} as CustomThemeConfig,
-    omitProtobufDefaults(commonTheme),
-    omitProtobufDefaults(variantTheme),
+    omitUnsetThemeValues(commonTheme),
+    omitUnsetThemeValues(variantTheme),
     { base }, // Set base last to override any base from commonTheme/variantTheme
-    skipProtobufDefaults
+    skipUnsetThemeValues
   )
 
   // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
   if (baseSidebar || variantSidebar) {
     result.sidebar = mergeWith(
       {},
-      omitProtobufDefaults(baseSidebar),
-      omitProtobufDefaults(variantSidebar),
-      skipProtobufDefaults
+      omitUnsetThemeValues(baseSidebar),
+      omitUnsetThemeValues(variantSidebar),
+      skipUnsetThemeValues
     )
   }
 
@@ -1812,12 +1817,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Omit unset protobuf defaults (e.g. textColor "") so they are not copied onto
-  // the empty destination and later rejected as invalid colors.
+  // Omit unset theme values (e.g. textColor "") so they are not copied onto the
+  // empty destination and later rejected as invalid colors.
   const mergedSidebarThemeInput = mergeWith(
     {},
-    omitProtobufDefaults(activeTheme.themeInput),
-    omitProtobufDefaults(sidebarThemeInput),
+    omitUnsetThemeValues(activeTheme.themeInput),
+    omitUnsetThemeValues(sidebarThemeInput),
     {
       // Explicit overrides that should always be applied
       base: baseTheme,
@@ -1825,7 +1830,7 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       secondaryBackgroundColor: secondaryBackgroundColor,
       headingFontSizes: headingFontSizes,
     },
-    skipProtobufDefaults
+    skipUnsetThemeValues
   )
 
   // Create the theme with overrides

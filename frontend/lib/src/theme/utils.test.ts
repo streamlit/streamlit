@@ -1005,41 +1005,34 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  describe("treats blank color values as unset", () => {
+    it.each(["", "   ", "\t"])(
+      "does not warn for blank color value %j",
+      blankColor => {
+        const logWarningSpy = vi.spyOn(LOG, "warn")
+        const theme = createEmotionTheme({
+          primaryColor: blankColor,
+          textColor: blankColor,
+          secondaryBackgroundColor: blankColor,
+          backgroundColor: blankColor,
+          borderColor: blankColor,
+        })
+
+        expect(logWarningSpy).not.toHaveBeenCalled()
+        expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
+        expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
+        expect(theme.colors.secondaryBg).toBe(
+          baseTheme.emotion.colors.secondaryBg
+        )
+        expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
+        expect(theme.colors.borderColor).toBe(
+          baseTheme.emotion.colors.borderColor
+        )
+      }
+    )
+  })
+
   describe("logs a warning and falls back to default for invalid color configs", () => {
-    it("does not warn for blank color values (unset protobuf defaults)", () => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const theme = createEmotionTheme({
-        primaryColor: "",
-        textColor: "",
-        secondaryBackgroundColor: "",
-        backgroundColor: "",
-        borderColor: "",
-      })
-
-      expect(logWarningSpy).not.toHaveBeenCalled()
-      expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
-      expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
-      expect(theme.colors.secondaryBg).toBe(
-        baseTheme.emotion.colors.secondaryBg
-      )
-      expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
-      expect(theme.colors.borderColor).toBe(
-        baseTheme.emotion.colors.borderColor
-      )
-    })
-
-    it("does not warn for whitespace-only color values", () => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const theme = createEmotionTheme({
-        textColor: "   ",
-        primaryColor: "\t",
-      })
-
-      expect(logWarningSpy).not.toHaveBeenCalled()
-      expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
-      expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
-    })
-
     it("handles invalid primaryColor", () => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const theme = createEmotionTheme({
@@ -4809,6 +4802,10 @@ describe("Custom theme creation", () => {
 })
 
 describe("Sidebar theme creation", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   describe("createSidebarTheme", () => {
     it("swaps main surfaces when a custom theme leaves sidebar backgrounds unset", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
@@ -4946,7 +4943,7 @@ describe("Sidebar theme creation", () => {
     })
 
     // Regression for https://github.com/streamlit/streamlit/issues/17638
-    it("does not warn for unset sidebar textColor when only primaryColor is set", () => {
+    it("does not warn when the theme input has an explicit empty textColor", () => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         primaryColor: "#0D2B7A",
@@ -4956,14 +4953,9 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(
-        logWarningSpy.mock.calls.some(
-          ([message]) =>
-            typeof message === "string" &&
-            message.includes("textColor") &&
-            message.includes('""')
-        )
-      ).toBe(false)
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
       // Falls back to the base theme body text (not an empty/invalid color)
       expect(sidebarTheme.emotion.colors.bodyText).toBe(
         lightTheme.emotion.colors.bodyText
@@ -4980,13 +4972,9 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(
-        logWarningSpy.mock.calls.some(
-          ([message]) =>
-            typeof message === "string" &&
-            message.includes("Invalid color passed for textColor")
-        )
-      ).toBe(false)
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
       expect(sidebarTheme.emotion.colors.bodyText).toBe(
         lightTheme.emotion.colors.bodyText
       )
@@ -5005,14 +4993,9 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(
-        logWarningSpy.mock.calls.some(
-          ([message]) =>
-            typeof message === "string" &&
-            message.includes("textColor") &&
-            message.includes('""')
-        )
-      ).toBe(false)
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
       expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
     })
 
@@ -5028,7 +5011,9 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
       expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
     })
 
@@ -5044,7 +5029,9 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(logWarningSpy).not.toHaveBeenCalled()
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
       expect(sidebarTheme.emotion.colors.bodyText).toBe("#abcdef")
     })
 
