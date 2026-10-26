@@ -45,7 +45,7 @@ def test_data_frame_with_different_sizes(app: Page):
             "height": "368px",
         },
         {"width": "704px", "height": "177px"},
-        {"width": "672px", "height": "144px"},
+        {"width": "672px", "height": "177px"},
         {"width": "704px", "height": "563px"},
         {"width": "704px", "height": "10048px"},  # 300 rows content height (capped)
     ]
