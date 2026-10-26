@@ -28,9 +28,9 @@ complete data. Every non-empty eager Arrow payload within
 ``server.maxMessageSize`` is registered, even when its preview is already
 complete: completeness is a question about row count, not bytes.
 
-Apart from the recording gate and the agent-only cache marker, nothing here is
-agent-specific, so a frontend that fetches Arrow over HTTP
-(https://github.com/streamlit/streamlit/issues/16378) can reuse it.
+Apart from the recording gate, nothing here is agent-specific, so a frontend
+that fetches Arrow over HTTP (https://github.com/streamlit/streamlit/issues/16378)
+can reuse it.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from streamlit import runtime, util
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
-from streamlit.runtime import caching, runtime_util
+from streamlit.runtime import runtime_util
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -68,8 +68,8 @@ def serve_arrow_over_http(arrow_bytes: bytes | None, *, coordinates: str) -> str
     ----------
     arrow_bytes
         The Arrow IPC stream the element's payload carries, exactly as the
-        browser receives it, so ``arrow_in_payload`` can read it back from a
-        replayed ``st.cache_data`` entry.
+        browser receives it, so ``serve_replayed_arrow`` can read it back from
+        a replayed ``st.cache_data`` entry.
     coordinates
         A string identifying this data's position in the app, from
         ``DeltaGenerator._get_write_delta_path_str()``. The media file manager
@@ -108,29 +108,41 @@ def serve_arrow_over_http(arrow_bytes: bytes | None, *, coordinates: str) -> str
     # the second would be served the first one's bytes. Passing the full
     # digest as the file name, which only downloads read, makes the ID cover
     # every byte.
-    file_name = util.calc_hash(arrow_bytes)
-    url = runtime.get_instance().media_file_mgr.add(
-        arrow_bytes, ARROW_MIMETYPE, coordinates, file_name=file_name
-    )
-    # Recorded like an image's bytes, so an element replayed from an
-    # `st.cache_data` result registers its file again: the replayed
-    # description carries this URL, and without that the file is collected
-    # after the run that replayed it. Marked agent-only, so a browser session
-    # replaying the same entry does not register a file nobody fetches. The
-    # bytes are left out, since the payload already carries them and every
-    # session that hits the entry, browsers included, would unpickle a second
-    # copy; a replay reads them back with `arrow_in_payload`.
-    caching.save_media_data(
-        b"",
+    return runtime.get_instance().media_file_mgr.add(
+        arrow_bytes,
         ARROW_MIMETYPE,
         coordinates,
-        file_name=file_name,
-        agent_only=True,
+        file_name=util.calc_hash(arrow_bytes),
     )
-    return url
 
 
-def arrow_in_payload(message: Message) -> bytes:
+def serve_replayed_arrow(
+    message: Message, agent_props: str, *, coordinates: str
+) -> None:
+    """Register an element's Arrow copy again when it is replayed from a cache.
+
+    A replayed description keeps the ``data_url`` of the run that filled the
+    cache, but that run's file is collected once nothing renders it. The
+    entry stores no copy of its own: the element's payload already holds the
+    bytes, and identical bytes register under the same URL.
+
+    Parameters
+    ----------
+    message
+        The replayed element's proto.
+    agent_props
+        The replayed element's agent description, which only a recording
+        session replays.
+    coordinates
+        Where this replay writes the element, from
+        ``DeltaGenerator._get_write_delta_path_str()``. It may differ from
+        where the run that filled the cache wrote it.
+    """
+    if "data_url" in agent_spec.decode(agent_props):
+        serve_arrow_over_http(_arrow_in_payload(message), coordinates=coordinates)
+
+
+def _arrow_in_payload(message: Message) -> bytes:
     """The Arrow data an element's payload carries, or empty bytes.
 
     A table's payload is its Arrow data. A Vega-Lite chart's is the one buffer

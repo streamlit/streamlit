@@ -178,7 +178,7 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
-Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay; the Arrow copy behind a `data_url` is agent-only, so it is registered only for a recording session, under the replayed element's delta path.
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay. A replayed description with a `data_url` registers its Arrow copy again from the element's payload, under the replayed element's delta path; the entry stores no copy of its own.
 
 ## Web server (`lib/streamlit/web/server/`)
 

@@ -93,20 +93,9 @@ def save_block_message(
     )
 
 
-def save_media_data(
-    media_data: bytes | str,
-    mimetype: str,
-    media_id: str,
-    *,
-    file_name: str | None = None,
-    agent_only: bool = False,
-) -> None:
-    CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data(
-        media_data, mimetype, media_id, file_name=file_name, agent_only=agent_only
-    )
-    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_media_data(
-        media_data, mimetype, media_id, file_name=file_name, agent_only=agent_only
-    )
+def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> None:
+    CACHE_DATA_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
+    CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_media_data(media_data, mimetype, media_id)
 
 
 # Create and export public API singletons.

@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     from google.protobuf.message import Message
 
-    from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Block_pb2 import Block
     from streamlit.runtime.caching.cache_type import CacheType
@@ -44,15 +43,6 @@ class MediaMsgData:
     media: bytes | str
     mimetype: str
     media_id: str
-    # Part of the file's ID, so a replay must register it under the same name
-    # for the replayed element's URL to resolve.
-    file_name: str | None = None
-    # Table data behind an agent description's `data_url`. Only an agent
-    # session fetches it, so a browser session replaying the entry does not
-    # register it. Its `media` is empty, because the element's payload carries
-    # the bytes. Defaults let cache entries pickled before these fields existed
-    # still load.
-    agent_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -60,8 +50,7 @@ class ElementMsgData:
     """An element's message and related metadata for
     replaying that element's function call.
 
-    media_data holds the media files the element registered: images, audio,
-    video, and in an agent session the Arrow copy behind its ``data_url``.
+    media_data is filled in iff this is a media element (image, audio, video).
     """
 
     delta_type: str
@@ -302,28 +291,13 @@ class CachedMessageReplayContext:
         return invoked_id
 
     def save_media_data(
-        self,
-        media_data: bytes | str,
-        mimetype: str,
-        media_id: str,
-        *,
-        file_name: str | None = None,
-        agent_only: bool = False,
+        self, media_data: bytes | str, mimetype: str, media_id: str
     ) -> None:
         if not in_cached_function.get():
             return
 
         self._media_data_var.set(
-            (
-                *self._media_data_var.get(),
-                MediaMsgData(
-                    media_data,
-                    mimetype,
-                    media_id,
-                    file_name=file_name,
-                    agent_only=agent_only,
-                ),
-            )
+            (*self._media_data_var.get(), MediaMsgData(media_data, mimetype, media_id))
         )
 
 
@@ -341,44 +315,6 @@ def _agent_props_for_this_session(agent_props: str | None) -> str | None:
     from streamlit.elements.lib import agent_spec
 
     return agent_props if agent_spec.is_recording() else None
-
-
-def _register_replayed_media(msg: ElementMsgData, dg: DeltaGenerator) -> None:
-    """Register a replayed element's media files for the replaying session.
-
-    Agent-only table data is registered only for a recording session, at the
-    replayed element's current delta path rather than the one stored in the
-    cache entry. With the stored path, another element rendered at that path
-    would replace the reference, and the file would be collected while the
-    snapshot still reports its URL. Its bytes are read back from the replayed
-    payload, since the entry does not store them.
-
-    Each registered file is also recorded for any cached function that is
-    being filled around this replay, so a later hit on that outer function
-    registers the file too.
-    """
-    from streamlit.elements.lib import agent_spec, data_offload
-    from streamlit.runtime import caching
-
-    media_file_mgr = runtime.get_instance().media_file_mgr
-    for data in msg.media_data or ():
-        coordinates = data.media_id
-        media = data.media
-        if data.agent_only:
-            if not agent_spec.is_recording():
-                continue
-            coordinates = dg._get_write_delta_path_str()
-            media = data_offload.arrow_in_payload(msg.message)
-            if not media:
-                continue
-        media_file_mgr.add(media, data.mimetype, coordinates, file_name=data.file_name)
-        caching.save_media_data(
-            data.media,
-            data.mimetype,
-            data.media_id,
-            file_name=data.file_name,
-            agent_only=data.agent_only,
-        )
 
 
 def replay_cached_messages(
@@ -410,14 +346,26 @@ def replay_cached_messages(
     try:
         for msg in result.messages:
             if isinstance(msg, ElementMsgData):
+                if msg.media_data is not None:
+                    for data in msg.media_data:
+                        runtime.get_instance().media_file_mgr.add(
+                            data.media, data.mimetype, data.media_id
+                        )
                 dg = returned_dgs[msg.id_of_dg_called_on]
-                if msg.media_data:
-                    _register_replayed_media(msg, dg)
+                agent_props = _agent_props_for_this_session(msg.agent_props)
+                if agent_props is not None:
+                    from streamlit.elements.lib import data_offload
+
+                    data_offload.serve_replayed_arrow(
+                        msg.message,
+                        agent_props,
+                        coordinates=dg._get_write_delta_path_str(),
+                    )
                 maybe_dg = dg._enqueue(
                     msg.delta_type,
                     msg.message,
                     layout_config=msg.layout_config,
-                    agent_props=_agent_props_for_this_session(msg.agent_props),
+                    agent_props=agent_props,
                 )
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg
