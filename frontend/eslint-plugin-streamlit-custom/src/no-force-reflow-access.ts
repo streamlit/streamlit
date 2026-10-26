@@ -44,8 +44,8 @@ const noForceReflowAccess = createRule<[], MessageIds>({
       noForceReflowVisualViewport:
         "Accessing 'visualViewport.{{property}}' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     // Properties that force reflow when accessed
     const forceReflowProperties = new Set([
