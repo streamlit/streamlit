@@ -54,7 +54,7 @@ type MaybePatchedCanvasContext = Omit<CanvasContext, "canvas" | "device"> & {
 
 const canvasContextProto = CanvasContext.prototype as MaybePatchedCanvasContext
 
-if (!canvasContextProto.__streamlitMaxTexturePatchApplied) {
+if (canvasContextProto.__streamlitMaxTexturePatchApplied !== true) {
   const originalGetMaxDrawingBufferSize =
     // Prototype patch must capture the original to `.call(this)`. Binding the
     // method to the prototype would lock `this` to CanvasContext.prototype.

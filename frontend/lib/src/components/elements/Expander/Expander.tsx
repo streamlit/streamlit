@@ -274,7 +274,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showLeadingChevron = !isCompact && (!icon || isHovered)
   const showLeadingUserIcon = isCompact
     ? Boolean(icon) && !hideCompactSpinnerForShimmer
-    : icon && !isHovered
+    : Boolean(icon) && !isHovered
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({

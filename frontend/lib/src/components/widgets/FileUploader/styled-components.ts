@@ -89,7 +89,7 @@ export const StyledFileDropzoneInstructions = styled.div({
 
 export const StyledFileDropzoneInstructionsSubtext = styled.span<{
   disabled?: boolean
-}>(({ theme, disabled }) => ({
+}>(({ theme, disabled = false }) => ({
   fontSize: theme.fontSizes.sm,
   color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
   display: "block",
