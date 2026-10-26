@@ -1011,6 +1011,33 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  describe("treats blank color values as unset", () => {
+    it.each(["", "   ", "\t"])(
+      "does not warn for blank color value %j",
+      blankColor => {
+        const logWarningSpy = vi.spyOn(LOG, "warn")
+        const theme = createEmotionTheme({
+          primaryColor: blankColor,
+          textColor: blankColor,
+          secondaryBackgroundColor: blankColor,
+          backgroundColor: blankColor,
+          borderColor: blankColor,
+        })
+
+        expect(logWarningSpy).not.toHaveBeenCalled()
+        expect(theme.colors.primary).toBe(baseTheme.emotion.colors.primary)
+        expect(theme.colors.bodyText).toBe(baseTheme.emotion.colors.bodyText)
+        expect(theme.colors.secondaryBg).toBe(
+          baseTheme.emotion.colors.secondaryBg
+        )
+        expect(theme.colors.bgColor).toBe(baseTheme.emotion.colors.bgColor)
+        expect(theme.colors.borderColor).toBe(
+          baseTheme.emotion.colors.borderColor
+        )
+      }
+    )
+  })
+
   describe("logs a warning and falls back to default for invalid color configs", () => {
     it("handles invalid primaryColor", () => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
@@ -4855,6 +4882,10 @@ describe("Custom theme creation", () => {
 })
 
 describe("Sidebar theme creation", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   describe("createSidebarTheme", () => {
     it("swaps main surfaces when a custom theme leaves sidebar backgrounds unset", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
@@ -5159,6 +5190,134 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
+    it("treats a whitespace-only sidebar backgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "blue",
+        sidebar: {
+          backgroundColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Falls back to main secondary (classic swap), not the main background
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("blue")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
+    // Regression for https://github.com/streamlit/streamlit/issues/17638
+    it("does not warn when the theme input has an explicit empty textColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "#0D2B7A",
+        // Simulate unset proto3 string default surviving on the theme input
+        textColor: "",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
+      // Falls back to the base theme body text (not an empty/invalid color)
+      expect(sidebarTheme.emotion.colors.bodyText).toBe(
+        lightTheme.emotion.colors.bodyText
+      )
+      expect(sidebarTheme.emotion.colors.primary).toBe("#0D2B7A")
+    })
+
+    it("does not warn for unset textColor on a CustomThemeConfig with only primaryColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput = new CustomThemeConfig({
+        primaryColor: "#0D2B7A",
+      })
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
+      expect(sidebarTheme.emotion.colors.bodyText).toBe(
+        lightTheme.emotion.colors.bodyText
+      )
+      expect(sidebarTheme.emotion.colors.primary).toBe("#0D2B7A")
+    })
+
+    it("inherits main textColor when sidebar textColor is blank", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "red",
+        textColor: "#123456",
+        sidebar: {
+          textColor: "",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
+      expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
+    })
+
+    it("inherits main textColor when sidebar textColor is whitespace-only", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "red",
+        textColor: "#123456",
+        sidebar: {
+          textColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
+      expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
+    })
+
+    it("applies configured sidebar textColor without warning", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "red",
+        textColor: "#123456",
+        sidebar: {
+          textColor: "#abcdef",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("Invalid color passed for textColor")
+      )
+      expect(sidebarTheme.emotion.colors.bodyText).toBe("#abcdef")
+    })
+
+    it("still warns for an invalid non-empty sidebar textColor", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "red",
+        sidebar: {
+          textColor: "not-a-color",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        'Invalid color passed for textColor in theme.sidebar: "not-a-color"'
+      )
+      expect(sidebarTheme.emotion.colors.bodyText).toBe(
+        lightTheme.emotion.colors.bodyText
+      )
+    })
+
     it("uses configured sidebar secondaryBackgroundColor when provided", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",
@@ -5188,6 +5347,22 @@ describe("Sidebar theme creation", () => {
       const sidebarTheme = createSidebarTheme(mainTheme)
 
       expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
+    it("treats a whitespace-only sidebar secondaryBackgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "blue",
+        sidebar: {
+          secondaryBackgroundColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("blue")
+      // Falls back to main background (classic swap), not left as whitespace
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
