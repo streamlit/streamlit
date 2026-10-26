@@ -358,6 +358,11 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         frame = pd.DataFrame({"a": [1, 2]})
         chart = alt.Chart(frame).mark_bar().encode(x="a")
         figure = go.Figure(go.Scatter(x=[1], y=[1]))
+        option = {
+            "xAxis": {"type": "category", "data": ["A", "B"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [1, 2], "selectedMode": "single"}],
+        }
         st.dataframe(frame)
         st.dataframe(frame, on_select=lambda: None, key="selectable_dataframe")
         st.plotly_chart(figure)
@@ -370,9 +375,17 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             on_select="rerun",
             key="selectable_altair",
         )
+        st.echarts_chart(option)
+        st.echarts_chart(option, on_select=lambda: None, key="selectable_echarts")
 
         described = _descriptions(list(self.forward_msg_queue._queue))
-        for command in ("dataframe", "plotly_chart", "pydeck_chart", "altair_chart"):
+        for command in (
+            "dataframe",
+            "plotly_chart",
+            "pydeck_chart",
+            "altair_chart",
+            "echarts_chart",
+        ):
             plain, selectable = [item for item in described if item["type"] == command]
             assert "on_select" not in plain["props"], command
             assert selectable["props"]["on_select"] == "rerun", command
