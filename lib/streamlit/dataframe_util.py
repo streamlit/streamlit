@@ -77,8 +77,11 @@ _DASK_INDEX: Final = "dask.dataframe.dask_expr._collection.Index"
 _DASK_DATAFRAME_LEGACY: Final = "dask.dataframe.core.DataFrame"
 _DASK_SERIES_LEGACY: Final = "dask.dataframe.core.Series"
 _DASK_INDEX_LEGACY: Final = "dask.dataframe.core.Index"
-_DUCKDB_RELATION: Final = "_duckdb.DuckDBPyRelation"
-_DUCKDB_RELATION_LEGACY: Final = "duckdb.duckdb.DuckDBPyRelation"
+# DuckDB moved DuckDBPyRelation across modules. Keep every path so current
+# and older releases are recognized.
+_DUCKDB_RELATION: Final = "duckdb._relation.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY: Final = "_duckdb.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY_NESTED: Final = "duckdb.duckdb.DuckDBPyRelation"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
@@ -475,7 +478,11 @@ def is_duckdb_relation(obj: object) -> bool:
     https://duckdb.org/docs/api/python/relational_api
     """
 
-    return is_type(obj, _DUCKDB_RELATION) or is_type(obj, _DUCKDB_RELATION_LEGACY)
+    return (
+        is_type(obj, _DUCKDB_RELATION)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY_NESTED)
+    )
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
