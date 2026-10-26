@@ -165,7 +165,7 @@ def get_python_files(files: list[str]) -> list[str]:
 
 
 def get_python_test_files(files: list[str]) -> list[str]:
-    """Get Python unit test files from lib/tests/, including mapped tests from changed source files.
+    """Get Python unit tests, including mapped tests from changed source files.
 
     Note: E2E tests (e2e_playwright/) are excluded - use --e2e for those.
     """
@@ -182,8 +182,8 @@ def get_python_test_files(files: list[str]) -> list[str]:
         if f.startswith(E2E_PREFIX):
             continue
 
-        # Direct test file (must be in lib/ directory)
-        if f.endswith(PYTHON_TEST_SUFFIX) and f.startswith("lib/"):
+        # Direct unit test file.
+        if f.endswith(PYTHON_TEST_SUFFIX) and f.startswith(("lib/", "scripts/")):
             test_files.add(f)
             continue
 
