@@ -97,9 +97,17 @@ def _describe_page_for_url_error(
         description = f"`{page_path}`"
     else:
         callable_name = getattr(page._page, "__name__", None)
+        qualname = getattr(page._page, "__qualname__", None) or callable_name
+        # Keep a class prefix that separates methods such as `Admin.settings`
+        # and `User.settings`, but drop the scope of an enclosing function.
+        display_name = str(qualname).rpartition("<locals>.")[2] if qualname else ""
         # Every lambda is named "<lambda>", so the title identifies it better.
-        if callable_name and callable_name != "<lambda>":
-            description = f"callable `{callable_name}`"
+        if display_name and not display_name.endswith("<lambda>"):
+            description = f"callable `{display_name}`"
+            # A custom title separates callables that share a name.
+            inferred_title = str(callable_name).replace("_", " ")
+            if callable_name is None or page.title != inferred_title:
+                description += f' titled "{page.title}"'
         else:
             description = f'callable titled "{page.title}"'
 

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -166,6 +167,75 @@ class NavigationTest(DeltaGeneratorTestCase):
         message = str(exc.value)
         assert 'callable titled "Alpha" and callable titled "Beta"' in message
         assert "callable `<lambda>`" not in message
+
+    def test_duplicate_url_path_with_same_named_methods_uses_class_names(
+        self,
+    ) -> None:
+        """Test that methods sharing ``__name__`` are named with their class."""
+
+        class Admin:
+            def settings(self) -> None:
+                pass
+
+        class User:
+            def settings(self) -> None:
+                pass
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(Admin().settings),
+                    st.Page(User().settings),
+                ]
+            )
+
+        message = str(exc.value)
+        assert "callable `Admin.settings` and callable `User.settings`." in message
+        assert "<locals>" not in message
+        assert "titled" not in message
+
+    def test_duplicate_url_path_with_same_named_callables_adds_titles(
+        self,
+    ) -> None:
+        """Test that callables sharing a name are told apart by custom titles."""
+
+        def make_page() -> Callable[[], None]:
+            def settings() -> None:
+                pass
+
+            return settings
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(make_page(), title="Admin settings"),
+                    st.Page(make_page(), title="User settings"),
+                ]
+            )
+
+        assert (
+            'callable `settings` titled "Admin settings" and '
+            'callable `settings` titled "User settings"'
+        ) in str(exc.value)
+
+    def test_duplicate_url_path_outside_entrypoint_dir_shows_absolute_path(
+        self,
+    ) -> None:
+        """Test that a page file outside the entrypoint directory stays absolute."""
+        outside_page = Path("/abs/elsewhere/settings.py")
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(outside_page),
+                    st.Page("settings.py"),
+                ]
+            )
+
+        assert f"`{outside_page.resolve()}` and `settings.py`" in str(exc.value)
 
     def test_duplicate_url_path_with_later_default_page_shows_reserved_pathname(
         self,
