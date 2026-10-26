@@ -244,7 +244,8 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
-  const errorId = `${useId()}-error`
+  const id = useId()
+  const errorId = `${id}-error`
   const hasError = Boolean(error)
 
   // Floating UI provides scroll-tracking via autoUpdate. Unlike Popover and

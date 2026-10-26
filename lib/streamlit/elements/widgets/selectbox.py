@@ -879,8 +879,9 @@ class SelectboxMixin:
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",
                 disabled=disabled,
-                # `required` is checked by the browser, not by this interface,
-                # so a client has to send values that pass it.
+                # Checked by the browser, not by this interface: `null` still
+                # resets the widget to its default, which is empty for
+                # `index=None`.
                 required=required,
                 label_visibility=label_visibility,
                 accept_new_options=accept_new_options,

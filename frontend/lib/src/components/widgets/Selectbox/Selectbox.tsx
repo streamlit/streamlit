@@ -96,9 +96,10 @@ const Selectbox: FC<Props> = ({
     formId,
   } = element
 
-  // Query-param emptiness follows the default, not `required`: `?key=` still
-  // seeds the empty default, and a required selectbox never commits null from
-  // the UI.
+  // Keep the query-param binding clearable whenever the default is empty, even
+  // when `required` is set, so `?key=` still restores the empty default. The UI
+  // never commits null for a required selectbox, so it never writes an empty
+  // param.
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
