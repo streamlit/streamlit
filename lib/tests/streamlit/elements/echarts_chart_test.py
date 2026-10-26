@@ -1091,15 +1091,20 @@ def test_dataset_source_duplicate_column_labels_raise(source: Any) -> None:
     assert exc.value.error_id == "echarts-dataset-duplicate-columns"
 
 
-def test_dataset_source_multiindex_columns_use_arrow_field_names() -> None:
-    """``dimensions`` match the Arrow field names the browser uses as row keys."""
-    df = pd.DataFrame([[1, 2]], columns=pd.MultiIndex.from_tuples([(1, 2), (1, 3)]))
+def test_dataset_source_multiindex_columns_use_str_labels() -> None:
+    """MultiIndex columns use ``str(column)`` as field names and ``dimensions``."""
+    columns = pd.MultiIndex.from_tuples([(1, 2), (1, 3)])
+    df = pd.DataFrame([[1, 2]], columns=columns)
 
     dataset, table = _convert_source(df)
 
+    assert table.column_names == ["(1, 2)", "(1, 3)"]
     assert dataset["dimensions"] == table.column_names
-    # ``str(column)`` gives "(1, 2)", which is not an Arrow field name.
-    assert "(1, 2)" not in dataset["dimensions"]
+    assert table.to_pylist() == [{"(1, 2)": 1, "(1, 3)": 2}]
+    # PyArrow's own naming stringifies each level instead.
+    assert "('1', '2')" not in dataset["dimensions"]
+    # The caller's dataframe keeps its MultiIndex.
+    assert df.columns.equals(columns)
 
 
 def test_dataset_source_mixed_object_column_is_stringified() -> None:

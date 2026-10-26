@@ -281,9 +281,13 @@ export function isPeriodType(type?: ArrowType): boolean {
   if (isNullOrUndefined(type)) {
     return false
   }
+  // pandas tags its period extension "pandas.period". The tag is the only
+  // marker when no pandas column metadata applies (for example, a
+  // `pyarrow.Table` column or the values of a dictionary-encoded column).
+  const extensionName = type.arrowField.metadata.get("ARROW:extension:name")
   return (
     (ArrowDataType.isInt(type.arrowField.type) &&
-      type.arrowField.metadata.get("ARROW:extension:name") === "period") ||
+      (extensionName === "period" || extensionName === "pandas.period")) ||
     (getPandasTypeName(type)?.startsWith("period") ?? false)
   )
 }

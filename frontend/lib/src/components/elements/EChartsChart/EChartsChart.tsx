@@ -27,6 +27,7 @@ import {
 
 import {
   FileDownload,
+  FullscreenExit,
   InsertChart,
   TableChart,
 } from "@emotion-icons/material-outlined"
@@ -275,7 +276,7 @@ export function EChartsChart({
         dataViewData: null,
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataset names are content hashes, so an unchanged spec means unchanged data; element.datasets is a new proto object every rerun
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
 
   const rendererStr =
@@ -606,9 +607,10 @@ export function EChartsChart({
     element.theme,
   ])
 
-  // "Show data" swaps the chart for a read-only table of the first Arrow
-  // dataset the option uses. The chart is hidden, not unmounted, so ECharts
-  // keeps its zoom, legend, and timeline state.
+  // "Show data" swaps the chart for a read-only table of the dataset that
+  // `hydrateArrowDatasetSources` picks (the default chart's dataset first).
+  // The chart is hidden, not unmounted, so ECharts keeps its zoom, legend, and
+  // timeline state.
   const [isShowingData, setIsShowingData] = useState(false)
   const [dataViewHeight, setDataViewHeight] = useState<number | undefined>()
   // Close the table when a rerun drops its dataset, so the chart shows instead
@@ -655,6 +657,19 @@ export function EChartsChart({
               onClick={handleShowChart}
               labelContext={labelContext}
             />,
+            // The grid hides its own fullscreen controls, so without this the
+            // table would only leave fullscreen through Escape.
+            ...(isFullScreen
+              ? [
+                  <ToolbarAction
+                    key="close-fullscreen"
+                    label="Close fullscreen"
+                    icon={FullscreenExit}
+                    onClick={collapse}
+                    labelContext={labelContext}
+                  />,
+                ]
+              : []),
           ]}
         />
       )}

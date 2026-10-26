@@ -54,6 +54,7 @@ import { INTERVAL_CATEGORICAL } from "~lib/mocks/arrow/types/intervalCategorical
 import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
 import { MIXED_DTYPES } from "~lib/mocks/arrow/types/mixedDtypes"
 import { PERIOD } from "~lib/mocks/arrow/types/period"
+import { PERIOD_EXTENSION } from "~lib/mocks/arrow/types/periodExtension"
 import { RANGE } from "~lib/mocks/arrow/types/range"
 import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
@@ -313,6 +314,20 @@ describe("quiverToEChartsRows", () => {
     })
     expect(second).toMatchObject({ M: "1970-01", D: "1970-01-01" })
     expectJsonLikeRows([first, second])
+  })
+
+  it("converts period extension columns without pandas metadata to labels", () => {
+    const rows = toRows(PERIOD_EXTENSION)
+
+    // The dictionary-encoded column holds the categories 2020-01 and 2020-02
+    // and indices [1, 0, 1]. Both columns would be period ordinals without the
+    // `pandas.period` extension tag.
+    expect(rows).toEqual([
+      { month: "2020-01", month_cat: "2020-02", count: 1 },
+      { month: "2020-02", month_cat: "2020-01", count: 2 },
+      { month: "2020-03", month_cat: "2020-02", count: 3 },
+    ])
+    expectJsonLikeRows(rows)
   })
 
   it("converts a pandas frame with mixed dtypes", () => {

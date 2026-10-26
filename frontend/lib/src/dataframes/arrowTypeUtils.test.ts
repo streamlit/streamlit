@@ -1125,6 +1125,31 @@ describe("isPeriodType", () => {
       expect(isPeriodType(arrowType)).toEqual(expected)
     }
   )
+
+  it.each([
+    ["pandas.period", new Int64(), true],
+    ["period", new Int64(), true],
+    ["pandas.interval", new Int64(), false],
+    ["pandas.period", new Utf8(), false],
+  ])(
+    "classifies extension %s on %s without pandas metadata as period: %s",
+    (extensionName, arrowType, expected) => {
+      // A `pyarrow.Table` column or the values of a dictionary-encoded column
+      // carry no pandas column metadata, so only the Arrow extension name
+      // identifies them as periods.
+      const type: ArrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          arrowType,
+          true,
+          new Map([["ARROW:extension:name", extensionName]])
+        ),
+        pandasType: undefined,
+      }
+      expect(isPeriodType(type)).toBe(expected)
+    }
+  )
 })
 
 describe("isBytesType", () => {

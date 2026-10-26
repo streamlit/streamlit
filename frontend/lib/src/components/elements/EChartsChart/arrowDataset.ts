@@ -109,7 +109,7 @@ function toEpochMs(content: DataType): number | null {
  * pass through, bigints become numbers, and any other Arrow object is
  * formatted to the string `st.dataframe` shows so it cannot reach ECharts.
  */
-function getPrimitiveConverter(type: ArrowType): CellConverter {
+function getFallbackConverter(type: ArrowType): CellConverter {
   return content => {
     if (typeof content === "bigint") {
       return Number(content)
@@ -132,7 +132,7 @@ function getPrimitiveConverter(type: ArrowType): CellConverter {
 function getCategoricalConverter(type: ArrowType): CellConverter {
   const field = type.arrowField
   if (!ArrowDataType.isDictionary(field.type)) {
-    return getPrimitiveConverter(type)
+    return getFallbackConverter(type)
   }
   // Copy the field metadata so extension tags (for example
   // `pandas.interval` on `pd.cut` categories) survive. The pandas type is
@@ -163,7 +163,7 @@ function getListConverter(type: ArrowType): CellConverter {
         arrowField: childField,
         pandasType: undefined,
       })
-    : getPrimitiveConverter(type)
+    : getFallbackConverter(type)
 
   return content => {
     const candidate = content as { length?: unknown; get?: unknown }
@@ -271,7 +271,7 @@ function getNonNullCellConverter(type: ArrowType): CellConverter {
     // Not plottable as numbers or dates: use the label `st.dataframe` shows.
     return content => format(content, type)
   }
-  return getPrimitiveConverter(type)
+  return getFallbackConverter(type)
 }
 
 /** Picks the conversion for every cell (including nulls) of one column. */

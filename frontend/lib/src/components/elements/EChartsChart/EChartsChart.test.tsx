@@ -197,10 +197,12 @@ describe("EChartsChart", () => {
     element,
     isFullScreen = false,
     disabled = false,
+    collapse,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
     disabled?: boolean
+    collapse?: () => void
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
@@ -209,9 +211,9 @@ describe("EChartsChart", () => {
         // Like the real wrapper, the screen height is only set when expanded.
         height: isFullScreen ? 400 : undefined,
         expand: vi.fn(),
-        collapse: vi.fn(),
+        collapse: collapse ?? vi.fn(),
       }),
-      [isFullScreen]
+      [isFullScreen, collapse]
     )
     return (
       <ElementFullscreenContext.Provider value={contextValue}>
@@ -1270,6 +1272,37 @@ describe("EChartsChart", () => {
       rerender(<Wrapper element={createDatasetElement()} />)
 
       expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("offers Close fullscreen in the table only while fullscreen", async () => {
+      const user = userEvent.setup()
+      const collapse = vi.fn()
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          isFullScreen
+          collapse={collapse}
+        />
+      )
+
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The chart's own Close fullscreen button is hidden with the chart, so
+      // only the table's button is in the accessibility tree.
+      await user.click(
+        screen.getByRole("button", { name: "Close fullscreen" })
+      )
+
+      expect(collapse).toHaveBeenCalledTimes(1)
+
+      rerender(
+        <Wrapper element={createDatasetElement()} collapse={collapse} />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
+      expect(
+        screen.queryByRole("button", { name: "Close fullscreen" })
+      ).not.toBeInTheDocument()
     })
   })
 

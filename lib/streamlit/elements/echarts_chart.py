@@ -490,6 +490,7 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
     Only data columns are kept: the dataframe index never becomes a column of
     the chart's source rows or ``dimensions``.
     """
+    import pandas as pd
     import pyarrow as pa
 
     if dataframe_util.is_polars_lazyframe(source):
@@ -508,9 +509,17 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
         return _drop_pandas_index_fields(source)
 
     df = dataframe_util.convert_anything_to_pandas_df(source)
+    labels = [str(column) for column in df.columns]
     # Check before converting: PyArrow raises a bare ValueError for exact
     # duplicates, which would otherwise surface as a conversion error.
-    _ensure_unique_dataset_labels([str(column) for column in df.columns])
+    _ensure_unique_dataset_labels(labels)
+    if isinstance(df.columns, pd.MultiIndex):
+        # PyArrow would name each field after its stringified levels
+        # (`"('1', '2')"` for `(1, 2)`). Flatten to `str(column)` (`"(1, 2)"`),
+        # the name apps write in `encode` and `dimensions`. The shallow copy
+        # leaves the caller's dataframe unchanged.
+        df = df.copy(deep=False)
+        df.columns = pd.Index(labels)
     return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=False)
 
 
@@ -535,8 +544,8 @@ def _convert_single_dataset(
     )
     try:
         table = _dataset_source_to_arrow_table(source)
-        # Arrow field names can differ from ``str(column)`` (for example, for
-        # MultiIndex headers), and they are the row keys the browser uses.
+        # The browser keys each row by Arrow field name, so ``dimensions`` and
+        # the duplicate check use those names.
         labels = table.column_names
         _ensure_unique_dataset_labels(labels)
         data_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
