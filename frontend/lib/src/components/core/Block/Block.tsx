@@ -549,7 +549,9 @@ export const BlockNodeRenderer = (
         $wrap={flexContext?.wrap ?? true}
         className={[
           "stColumn",
-          node.deltaBlock.column.showBorder ? PRINT_CARD_CLASS : undefined,
+          node.deltaBlock.column.showBorder === true
+            ? PRINT_CARD_CLASS
+            : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
