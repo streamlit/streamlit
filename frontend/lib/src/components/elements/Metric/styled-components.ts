@@ -72,7 +72,7 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
       // content-width card is sized by that value, so containing it would
       // shrink the card to the label. The figure still scales when the
       // printed column, recorded in `--st-metric-available`, is narrower.
-      ...(contentWidth
+      ...(contentWidth === true
         ? {
             "& .stMetricValue .stMarkdownEllipsis": {
               fontSize: `min(1em, calc(1em * tan(atan2(var(${METRIC_AVAILABLE_VAR}, var(${METRIC_TEXT_WIDTH_VAR}, 100vw)), var(${METRIC_TEXT_WIDTH_VAR}, 100vw)))))`,

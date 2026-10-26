@@ -71,22 +71,17 @@ export const StyledResizableContainer =
         // narrower page does not spill it. A fixed or content width stays
         // that size when the canvas is the fallback.
         ...printContainRules,
-        [`&:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]: {
-          // A note sits under the canvas. The on-screen box is a fixed
-          // height, so it grows instead of painting over the next element.
-          height: "auto",
-          maxHeight: "none",
-        },
-        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
-          // The print slot has no intrinsic width, so a shrink-to-fit box
-          // would collapse to zero and the table could not be scaled to
-          // the column. The table follows its rows, including a header
-          // repeated after a page break.
-          display: "block",
-          width: "100%",
-          height: "auto",
-          maxHeight: "none",
-        },
+        [`&:has(.${DATAFRAME_PRINT_NOTE_CLASS}), &:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]:
+          {
+            // A note or a print table sits under the canvas, not beside it.
+            // The on-screen box is a fixed height and, when resize is
+            // disabled, a fixed display too; grow and stack both so the
+            // fallback note and the table are not clipped or pushed aside.
+            display: "block",
+            width: "100%",
+            height: "auto",
+            maxHeight: "none",
+          },
         [`& .${DATAFRAME_PRINT_SLOT_CLASS}`]: {
           display: "block",
           width: "100%",

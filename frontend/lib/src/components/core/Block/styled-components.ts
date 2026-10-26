@@ -457,6 +457,14 @@ export const StyledFlexContainerBlock =
             },
           },
         }),
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+          // A fixed-height container (st.container(height=...)) scrolls its
+          // overflow on screen. The print table can be taller than that
+          // height, so the container grows instead of clipping rows.
+          height: "auto",
+          maxHeight: "none",
+          overflow: "visible",
+        },
       }
 
       return {
@@ -562,13 +570,20 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     alignSelf,
     minHeight,
     maxHeight,
-    // See StyledFlexContainerBlock: flex height collapses when printing.
-    // Fixed and stretch-height wrappers keep flex so their child retains its
-    // allocated height.
-    ...((height === undefined || height === "auto") && {
-      "@media print": {
+    "@media print": {
+      // See StyledFlexContainerBlock: flex height collapses when printing.
+      // Fixed and stretch-height wrappers keep flex so their child retains
+      // its allocated height.
+      ...((height === undefined || height === "auto") && {
         display: "block",
+      }),
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+        // A fixed height clips the print table through the inner
+        // container's overflow:auto. Grow this wrapper with it.
+        display: "block",
+        height: "auto",
+        maxHeight: "none",
       },
-    }),
+    },
   })
 )

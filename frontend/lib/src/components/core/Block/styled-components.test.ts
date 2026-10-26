@@ -101,7 +101,11 @@ describe("StyledFlexContainerBlock print layout", () => {
         })
       )
     )
-    expect(centered).not.toContain("@media print")
+    // No fixed height or gap to clear, but the dataframe-print-table escape
+    // hatch (tested below) applies to every flex container.
+    expect(centered).toContain("@media print")
+    expect(centered).toContain(":has(.stDataFramePrintTable)")
+    expect(centered).not.toContain("display:block")
 
     const gapped = cssAddedBy(() =>
       render(
@@ -137,8 +141,12 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // Stretch children are height 100%. A block parent gives each of them
-    // the full container, so a fixed-height container keeps flex.
-    expect(css).not.toContain("@media print")
+    // the full container, so a fixed-height container keeps flex, unless it
+    // holds an expanded print table, which clips against the fixed height.
+    expect(css).not.toContain("display:block")
+    expect(css).toContain(
+      ":has(.stDataFramePrintTable){height:auto;max-height:none;overflow:visible"
+    )
   })
 })
 
@@ -170,6 +178,11 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
 
-    expect(css).not.toContain("@media print")
+    // Stays flex so its child retains the fixed height, unless that child
+    // is an expanded print table, which needs to grow past it.
+    expect(css).toContain("height:300px")
+    expect(css).toContain(
+      ":has(.stDataFramePrintTable){display:block;height:auto;max-height:none"
+    )
   })
 })
