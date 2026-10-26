@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { debounce, isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
@@ -122,7 +128,8 @@ function brushSelectDispatcher(
  *
  * ``debounce`` always defers ``brushSelected``, even at delay 0, and
  * ``fixRate`` defers while a drag is still inside ``throttleDelay``. Either
- * one can still be pending when a form submits. ``fixRate`` at delay 0
+ * one can still be pending when a form submits, and either one would deliver
+ * a resize prune's snapshot after its restore guard. ``fixRate`` at delay 0
  * publishes the snapshot on this turn; the user's settings are restored
  * before we return.
  */
@@ -263,24 +270,17 @@ export function useEChartsSelections(
   // data-only updates (keyed live data, fragment reruns). Rebinding would
   // cancel a pending debounce and drop the widget write.
   const parsedOptionRef = useRef(parsedOption)
-  parsedOptionRef.current = parsedOption
+  // A layout effect runs before the chart's passive effects, so prune and the
+  // bound handlers never read a stale spec.
+  useLayoutEffect(() => {
+    parsedOptionRef.current = parsedOption
+  }, [parsedOption])
 
-  // Keep the latest bound chart so form-clear resets can clear the visible brush.
-  const chartRef = useRef<EChartsSelectionInstance | null>(null)
-  const clearBoundSelectionRef = useRef<((fromUser?: boolean) => void) | null>(
-    null
-  )
+  const clearBoundSelectionRef = useRef<(() => void) | null>(null)
   // Suppress widget emits from programmatic restore dispatches so a data-only
   // rerun cannot loop: ``restoreSelection`` runs while handlers are already
   // bound, and ECharts fires ``selectchanged`` for ``dispatchAction("select")``.
   const isRestoringRef = useRef(false)
-  // Programmatic ``brush`` dispatches still go through ECharts' throttle.
-  // A delayed ``brushSelected`` after prune must update widget state.
-  // If that event never arrives, the flag can go stale until the next
-  // ``bindSelections`` or ``handleBrushEnd``; the next drag then writes
-  // once with ``fromUser: Boolean(formId)`` before End re-commits as a
-  // user gesture.
-  const awaitingPrunedBrushRef = useRef(false)
   const latestBrushSelectionRef = useRef<BrushSelection[]>([])
   const committedBrushSelectionRef = useRef<BrushSelection[]>([])
   const flushPendingBrushForSubmitRef = useRef<(() => boolean) | null>(null)
@@ -387,8 +387,7 @@ export function useEChartsSelections(
   )
 
   const clearSelection = useCallback(
-    (fromUser = true): void => {
-      const chart = chartRef.current
+    (chart: EChartsSelectionInstance | null): void => {
       if (chart) {
         // Programmatic unselect/brush-clear fire the same events as a user
         // gesture. Suppress the emit so we write empty once via this path.
@@ -417,7 +416,7 @@ export function useEChartsSelections(
         widgetMgr.setElementState(chartId, BRUSH_SELECTION_STATE_KEY, [])
         widgetMgr.setElementState(chartId, SELECTED_POINTS_STATE_KEY, [])
       }
-      writeSelection(EMPTY_SELECTION, fromUser)
+      writeSelection(EMPTY_SELECTION)
     },
     [chartId, widgetMgr, writeSelection]
   )
@@ -429,7 +428,8 @@ export function useEChartsSelections(
     if (clearBoundSelectionRef.current) {
       clearBoundSelectionRef.current()
     } else {
-      clearSelection()
+      // No chart is bound yet, so only the stored selection needs clearing.
+      clearSelection(null)
     }
   }, [clearSelection])
 
@@ -460,45 +460,52 @@ export function useEChartsSelections(
         chartId,
         SELECTED_POINTS_STATE_KEY
       )
+      // Captured before the hit-test replaces the dispatcher. A callback the
+      // user's throttle scheduled earlier still holds a pre-prune snapshot.
+      const scheduledHitTest = brushSelectDispatcher(chart)
       // Programmatic ``brush`` dispatches would otherwise re-enter the bound
       // handlers (empty snapshots look like toolbox-clear). Restore-style
-      // suppression keeps resize from emitting a user rerun.
-      awaitingPrunedBrushRef.current = true
+      // suppression keeps resize from emitting a user rerun. The synchronous
+      // hit-test delivers ``brushSelected`` inside this guard, whatever
+      // throttle the spec configures.
       isRestoringRef.current = true
       try {
-        for (const brush of current) {
-          const nextAreas =
-            pruned.find(item => item.brushIndex === brush.brushIndex)?.areas ??
-            []
-          try {
-            chart.dispatchAction({
-              type: "brush",
-              brushIndex: brush.brushIndex,
-              areas: nextAreas,
-            })
-          } catch (error) {
-            LOG.warn(
-              "Failed to prune pixel-only brush areas after resize",
-              error
-            )
+        runWithSynchronousBrushHitTest(chart, () => {
+          for (const brush of current) {
+            const nextAreas =
+              pruned.find(item => item.brushIndex === brush.brushIndex)
+                ?.areas ?? []
+            try {
+              chart.dispatchAction({
+                type: "brush",
+                brushIndex: brush.brushIndex,
+                areas: nextAreas,
+              })
+            } catch (error) {
+              LOG.warn(
+                "Failed to prune pixel-only brush areas after resize",
+                error
+              )
+            }
           }
-        }
+        })
       } finally {
         isRestoringRef.current = false
       }
       // ``brushSelected`` still updates the snapshot during restore. When the
       // same component mixed coord + pixel-only areas, that rebuilds
-      // ``selected`` from the remaining areas. Fake ``dispatchAction`` in
-      // tests does not fire events, so fall back to the locally pruned copy.
+      // ``selected`` from the remaining areas. Without bound handlers (a
+      // disabled widget, or a test fake that fires no events), keep the
+      // locally pruned copy.
       const nextBrush = latestBrushSelectionRef.current
       if (nextBrush !== pruned) {
+        scheduledHitTest?.clear?.()
         committedBrushSelectionRef.current = nextBrush
         widgetMgr.setElementState(
           chartId,
           BRUSH_SELECTION_STATE_KEY,
           nextBrush
         )
-        awaitingPrunedBrushRef.current = false
       }
       // Inside a form, route through the pending dict so resize does not
       // commit a new value without submit. Outside a form, ``fromUser:
@@ -526,15 +533,12 @@ export function useEChartsSelections(
         return () => {}
       }
 
-      chartRef.current = chart
-
       // Native and brush selection are independent ECharts channels. Cache their
       // full snapshots separately, then expose a deterministic grouped union.
       let latestNativeSelection: SelectedEntry[] = []
       let pendingBrushEnd: BrushEndParams | undefined
       latestBrushSelectionRef.current = []
       committedBrushSelectionRef.current = []
-      awaitingPrunedBrushRef.current = false
 
       // Seed both channels so an interaction after a remount cannot drop the
       // other channel's restored state.
@@ -636,7 +640,9 @@ export function useEChartsSelections(
         } catch (error) {
           LOG.warn("Failed to flush pending form brush snapshot", error)
         }
-        if (!pendingBrushEnd) {
+        // ``commitBrushSelection`` clears ``pendingBrushEnd`` when the
+        // hit-test published matching indices.
+        if (pendingBrushEnd !== pending) {
           scheduledHitTest?.clear?.()
           return true
         }
@@ -679,26 +685,6 @@ export function useEChartsSelections(
         if (isRestoringRef.current) {
           return
         }
-        if (awaitingPrunedBrushRef.current) {
-          awaitingPrunedBrushRef.current = false
-          committedBrushSelectionRef.current = latestBrushSelectionRef.current
-          if (chartId) {
-            widgetMgr.setElementState(
-              chartId,
-              BRUSH_SELECTION_STATE_KEY,
-              latestBrushSelectionRef.current
-            )
-          }
-          writeSelection(
-            buildSelectionState(
-              resolveLiveOption(),
-              latestNativeSelection,
-              latestBrushSelectionRef.current
-            ),
-            Boolean(formId)
-          )
-          return
-        }
 
         // Toolbox clear emits a full snapshot with one empty-area placeholder
         // per brush component, but no brushEnd.
@@ -724,7 +710,6 @@ export function useEChartsSelections(
 
       const handleBrushEnd = (raw: unknown): void => {
         beginSelectionEvent()
-        awaitingPrunedBrushRef.current = false
         const params = raw as BrushEndParams
         const areas = params.areas ?? []
         // Completing a lasso may be a double-click on zrender, but ECharts 6
@@ -774,13 +759,13 @@ export function useEChartsSelections(
         }
       }
 
-      const clearBoundSelection = (fromUser = true): void => {
+      const clearBoundSelection = (): void => {
         emitSelectionDebounced.cancel()
         latestNativeSelection = []
         latestBrushSelectionRef.current = []
         committedBrushSelectionRef.current = []
         pendingBrushEnd = undefined
-        clearSelection(fromUser)
+        clearSelection(chart)
       }
       clearBoundSelectionRef.current = clearBoundSelection
 
@@ -822,9 +807,6 @@ export function useEChartsSelections(
         emitSelectionDebounced.flush()
         if (deferredClearTimer !== undefined) {
           clearTimeout(deferredClearTimer)
-        }
-        if (chartRef.current === chart) {
-          chartRef.current = null
         }
         if (clearBoundSelectionRef.current === clearBoundSelection) {
           clearBoundSelectionRef.current = null

@@ -340,6 +340,7 @@ export function normalizeNativeSelection(
   const action =
     params.fromAction ??
     (typeof payload?.type === "string" ? payload.type : undefined)
+  const isToggleAction = action?.startsWith("toggle") === true
   const keyMatches = (entry: SelectedEntry): boolean =>
     entry.seriesIndex === seriesIndex &&
     normalizeDataType(entry.dataType) === dataType
@@ -353,7 +354,7 @@ export function normalizeNativeSelection(
     const next = previous.filter(entry => entry.seriesIndex !== seriesIndex)
     const isToggleOff =
       action === "unselect" ||
-      (action?.startsWith("toggle") &&
+      (isToggleAction &&
         previous.some(entry => entry.seriesIndex === seriesIndex))
     return isToggleOff
       ? next
@@ -366,17 +367,14 @@ export function normalizeNativeSelection(
       previousIndices.has(index)
     )
     previousIndices.clear()
-    if (
-      action !== "unselect" &&
-      !(action?.startsWith("toggle") && wasSelected)
-    ) {
+    if (action !== "unselect" && !(isToggleAction && wasSelected)) {
       actionIndices.forEach(index => previousIndices.add(index))
     }
   } else {
     for (const index of actionIndices) {
       if (action === "unselect") {
         previousIndices.delete(index)
-      } else if (action?.startsWith("toggle")) {
+      } else if (isToggleAction) {
         if (previousIndices.has(index)) {
           previousIndices.delete(index)
         } else {
@@ -425,7 +423,7 @@ function appendSelectedEntries(
       }
       groups.set(key, group)
     }
-    for (const dataIndex of entry.dataIndex ?? []) {
+    for (const dataIndex of entry.dataIndex) {
       if (typeof dataIndex === "number") {
         group.dataIndices.add(dataIndex)
       }

@@ -53,7 +53,7 @@ export const StyledEChartsChartFill = styled.div<{
  */
 export const StyledEChartsChartContainer = styled.div<{
   isDisabled?: boolean
-}>(({ isDisabled }) => ({
+}>(({ isDisabled = false }) => ({
   width: "100%",
   height: "100%",
   // Block in-chart edits on a disabled selection widget (host-disabled

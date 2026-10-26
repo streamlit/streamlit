@@ -19,6 +19,7 @@ import {
   type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -268,7 +269,9 @@ export function EChartsChart({
   // The create effect reads the theme through a ref so that re-theming doesn't
   // recreate the instance; `appliedThemeRef` tracks what the live instance has.
   const themeArgRef = useRef(themeArg)
-  themeArgRef.current = themeArg
+  useLayoutEffect(() => {
+    themeArgRef.current = themeArg
+  }, [themeArg])
   const appliedThemeRef = useRef(themeArg)
 
   const {
@@ -318,7 +321,9 @@ export function EChartsChart({
   const hasValidSpec = option !== null
   const hasValidDimensions = width > 0 && height > 0
   const sizeRef = useRef({ width, height })
-  sizeRef.current = { width, height }
+  useLayoutEffect(() => {
+    sizeRef.current = { width, height }
+  }, [width, height])
   // When ``echarts.init`` runs against a 0x0 container (hasBeenSized is latched
   // but the current measurement is 0), the first positive-size pass must
   // ``resize()`` instead of being treated as the coincident init skip.
@@ -456,9 +461,9 @@ export function EChartsChart({
   ])
 
   // Bind selection handlers to the current instance (no-op for display-only).
-  // This effect is intentionally declared *after* the option-apply effect so
-  // that, when the instance is (re)created, `restoreSelection` runs before
-  // these handlers are bound and its dispatch does not re-emit a selection.
+  // Order relative to the option-apply and theme effects does not matter:
+  // `restoreSelection` suppresses the events its own dispatches fire, and
+  // ECharts fires no selection events from `setOption`.
   useEffect(() => {
     if (!chartInstance || chartInstance.isDisposed()) {
       return

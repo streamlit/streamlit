@@ -1741,7 +1741,7 @@ describe("useEChartsSelections", () => {
     )
   })
 
-  it("does not treat the first user brush after rebind as a prune follow-up", () => {
+  it("reruns the first user brush after a prune and rebind", () => {
     const pixelOnly = createBrushSelection({
       brushId: "brush-0",
       brushIndex: 0,
@@ -1876,81 +1876,181 @@ describe("useEChartsSelections", () => {
     )
   })
 
-  it("commits a delayed prune snapshot after a throttled brushSelected", () => {
-    const mixed = createBrushSelection({
-      brushId: "brush-0",
-      brushIndex: 0,
-      areas: [
-        {
-          brushType: "rect",
-          range: [
-            [10, 20],
-            [30, 40],
+  it("hit-tests pruned brush areas on the resize turn despite the user's throttle", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      chart.setOption({
+        animation: false,
+        xAxis: { type: "value", min: 0, max: 10 },
+        yAxis: { type: "value", min: 0, max: 10 },
+        brush: { xAxisIndex: "all", yAxisIndex: "all" },
+        series: {
+          type: "scatter",
+          data: [
+            [1, 1],
+            [2, 2],
+            [8, 8],
           ],
         },
-        { brushType: "lineX", coordRange: [1, 3] },
-      ],
-      selected: selectedWithMainHits([9, 1]),
-    })
-    const remaining = createBrushSelection({
-      brushId: "brush-0",
-      brushIndex: 0,
-      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
-      selected: selectedWithMainHits([1]),
-    })
-    widgetMgr.getElementState.mockImplementation(
-      (_id: string, key: string) => {
-        if (key === "brushSelection") {
-          return [mixed]
-        }
-        if (key === "selectedPoints") {
-          return []
-        }
-        return undefined
+      })
+      const coordArea = {
+        brushType: "rect",
+        coordRange: [
+          [0, 3],
+          [0, 3],
+        ],
+        xAxisIndex: 0,
+        yAxisIndex: 0,
       }
-    )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
-    const chart = createFakeChart()
+      // A global pixel-space rect around [8, 8] that no longer maps to the
+      // chart once it resizes.
+      const [left, top] = chart.convertToPixel({ gridIndex: 0 }, [7, 9])
+      const [right, bottom] = chart.convertToPixel({ gridIndex: 0 }, [9, 7])
+      const pixelOnlyArea = {
+        brushType: "rect",
+        range: [
+          [left, right],
+          [top, bottom],
+        ],
+      }
+      const mixed = createBrushSelection({
+        areas: [coordArea, pixelOnlyArea],
+        selected: [{ seriesIndex: 0, dataIndex: [0, 1, 2] }],
+      })
+      widgetMgr.getElementState.mockImplementation(
+        (_id: string, key: string) =>
+          key === "brushSelection" ? [mixed] : undefined
+      )
+      const brushModel = readBrushModel(chart)
+      brushModel.option.throttleType = "debounce"
+      brushModel.option.throttleDelay = 10_000
 
-    act(() => {
-      result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
-    })
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
 
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    ;(widgetMgr.setStringValue as Mock).mockClear()
+      act(() => {
+        result.current.bindSelections(chart)
+        result.current.prunePixelOnlyBrushAfterResize(chart)
+      })
 
-    act(() => {
-      chart.trigger("brushSelected", { batch: [remaining] })
-    })
-
-    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
-    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-      "chart-id",
-      JSON.stringify({
+      // One write on the resize turn, already carrying the hit-test of the
+      // remaining coord area, without a user rerun.
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      const [, json, options] = (widgetMgr.setStringValue as Mock).mock
+        .calls[0] as [string, string, unknown]
+      const { selection } = JSON.parse(json) as {
         selection: {
-          selected: [
-            {
-              series_index: 0,
-              series_id: null,
-              series_name: null,
-              data_type: "main",
-              data_indices: [1],
-            },
-          ],
-          areas: [
-            {
-              brush_index: 0,
-              brush_type: "lineX",
-              coord_range: [1, 3],
-            },
+          selected: Array<{ data_indices: number[] }>
+          areas: Array<{ brush_type: string }>
+        }
+      }
+      expect(selection.selected.map(group => group.data_indices)).toEqual([
+        [0, 1],
+      ])
+      expect(selection.areas).toEqual([
+        expect.objectContaining({ brush_index: 0, brush_type: "rect" }),
+      ])
+      expect(options).toEqual({
+        formId: "",
+        fragmentId: undefined,
+        fromUser: false,
+      })
+      expect(brushModel.option).toMatchObject({
+        throttleType: "debounce",
+        throttleDelay: 10_000,
+      })
+
+      // The user's throttle had nothing left to deliver.
+      act(() => {
+        vi.advanceTimersByTime(10_000 + DEBOUNCE_TIME_MS)
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    } finally {
+      chart.dispose()
+    }
+  })
+
+  it("restores without emitting while handlers stay bound across setOption", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      const option = {
+        animation: false,
+        xAxis: { type: "value", min: 0, max: 10 },
+        yAxis: { type: "value", min: 0, max: 10 },
+        brush: { xAxisIndex: "all", yAxisIndex: "all" },
+        series: {
+          type: "scatter",
+          selectedMode: "multiple",
+          data: [
+            [1, 1],
+            [2, 2],
+            [8, 8],
           ],
         },
-      }),
-      { formId: "", fragmentId: undefined, fromUser: false }
-    )
+      }
+      chart.setOption(option)
+      const brush = createBrushSelection({
+        areas: [
+          {
+            brushType: "rect",
+            coordRange: [
+              [0, 3],
+              [0, 3],
+            ],
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+          },
+        ],
+        selected: [{ seriesIndex: 0, dataIndex: [0, 1] }],
+      })
+      widgetMgr.getElementState.mockImplementation(
+        (_id: string, key: string) => {
+          if (key === "brushSelection") {
+            return [brush]
+          }
+          if (key === "selectedPoints") {
+            return [{ seriesIndex: 0, dataIndex: [2] }]
+          }
+          return undefined
+        }
+      )
+      const selectChanged = vi.fn()
+      const brushSelected = vi.fn()
+      chart.on("selectchanged", selectChanged)
+      chart.on("brushSelected", brushSelected)
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+
+      act(() => {
+        // Bind before the option-replacing setOption and restore, the
+        // reverse of a fresh instance's effect order.
+        result.current.bindSelections(chart)
+        chart.setOption(option, { notMerge: true })
+        result.current.restoreSelection(chart)
+      })
+      flush()
+
+      // Restore really fired ECharts' selection events...
+      expect(selectChanged).toHaveBeenCalled()
+      expect(brushSelected).toHaveBeenCalled()
+      // ...and none of them reached widget or element state.
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(widgetMgr.setElementState).not.toHaveBeenCalled()
+    } finally {
+      chart.dispose()
+    }
   })
 
   it("reruns a user brushEnd that matches a programmatic prune write", () => {
@@ -1995,14 +2095,25 @@ describe("useEChartsSelections", () => {
       useEChartsSelections(createElement(), widgetMgr)
     )
     const chart = createFakeChart()
+    // Prune hit-tests synchronously, so its snapshot arrives inside the
+    // dispatch.
+    chart.dispatchAction.mockImplementation(
+      (action: Record<string, unknown>) => {
+        if (action.type === "brush") {
+          chart.trigger("brushSelected", { batch: [remaining] })
+        }
+      }
+    )
 
     act(() => {
       result.current.bindSelections(chart)
       result.current.prunePixelOnlyBrushAfterResize(chart)
     })
-    act(() => {
-      chart.trigger("brushSelected", { batch: [remaining] })
-    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      expect.any(String),
+      { formId: "", fragmentId: undefined, fromUser: false }
+    )
     ;(widgetMgr.setStringValue as Mock).mockClear()
 
     act(() => {
