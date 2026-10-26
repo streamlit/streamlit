@@ -92,5 +92,6 @@ def test_bi_workflow_comments_from_a_separate_write_enabled_job() -> None:
         publish_job
     )
     assert "<!-- bi-performance-results -->" in publish_job
+    assert "--slurp |\n              jq -r" in publish_job
     assert "--method PATCH" in publish_job
     assert "--method POST" in publish_job

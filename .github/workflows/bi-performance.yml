@@ -243,8 +243,8 @@ jobs:
           comment_id=$(
             gh api "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
               --paginate \
-              --slurp \
-              --jq 'map(.[]) | map(select(.body | contains("<!-- bi-performance-results -->"))) | first | .id // empty'
+              --slurp |
+              jq -r 'map(.[]) | map(select(.body | contains("<!-- bi-performance-results -->"))) | first | .id // empty'
           )
 
           if [[ -n "$comment_id" ]]; then
