@@ -275,15 +275,19 @@ export function EChartsChart({
 
   // Called before the effects below so its binding effect runs first, and
   // `restoreSelection` / `pruneAfterResize` reach the current instance.
-  const { configureSelectionOption, restoreSelection, pruneAfterResize } =
-    useEChartsSelections({
-      element,
-      widgetMgr,
-      chart: chartInstance,
-      fragmentId,
-      disabled,
-      parsedOption: option,
-    })
+  const {
+    applyDisplayOnlyCursorDefault,
+    restoreSelection,
+    pruneAfterResize,
+    releaseSelection,
+  } = useEChartsSelections({
+    element,
+    widgetMgr,
+    chart: chartInstance,
+    fragmentId,
+    disabled,
+    parsedOption: option,
+  })
 
   // The option handed to setOption: Streamlit theme defaults, plus a
   // non-pointer series cursor on display-only charts so they do not look
@@ -296,7 +300,7 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    let prepared = configureSelectionOption(
+    let prepared = applyDisplayOnlyCursorDefault(
       applyStreamlitOptionDefaults(option, element.theme, theme)
     )
     // Proto `alt` wins over generated / author aria.label.description and
@@ -310,7 +314,7 @@ export function EChartsChart({
   }, [
     option,
     element.theme,
-    configureSelectionOption,
+    applyDisplayOnlyCursorDefault,
     element.alt,
     spacing.sm,
     spacing.md,
@@ -381,11 +385,21 @@ export function EChartsChart({
     setChartInstance(chart)
 
     return () => {
+      // A finished brush still waiting on its throttled hit-test needs the
+      // live instance to commit.
+      releaseSelection()
       chart.dispose()
       setChartInstance(null)
       setHasRendered(false)
     }
-  }, [containerRef, rendererStr, hasValidSpec, hasBeenSized, setOpError])
+  }, [
+    containerRef,
+    rendererStr,
+    hasValidSpec,
+    hasBeenSized,
+    setOpError,
+    releaseSelection,
+  ])
 
   // Re-theme in place when the app switches between light and dark. ECharts
   // 6's `setTheme` keeps the current option model, so this avoids the

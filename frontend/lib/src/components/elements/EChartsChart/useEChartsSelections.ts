@@ -60,13 +60,13 @@ export interface UseEChartsSelectionsOptions {
 
 export interface UseEChartsSelectionsOutput {
   /**
-   * Prepare the option for rendering. Streamlit does not inject any selection
-   * config — selections are whatever the user configured in their spec
-   * (``selectedMode`` on a series, a ``brush`` component). For display-only
-   * charts this only resets the misleading ``"pointer"`` cursor; for selection
-   * widgets it returns the option unchanged.
+   * Replace the misleading ``"pointer"`` series cursor on display-only
+   * charts, which aren't clickable. Selection widgets get the option
+   * unchanged: Streamlit never injects selection config, so selections are
+   * whatever the spec enables (``selectedMode`` on a series, a ``brush``
+   * component).
    */
-  configureSelectionOption: (
+  applyDisplayOnlyCursorDefault: (
     option: EChartsOptionObject
   ) => EChartsOptionObject
   /**
@@ -79,6 +79,13 @@ export interface UseEChartsSelectionsOutput {
    * display-only charts.
    */
   pruneAfterResize: () => void
+  /**
+   * Dispose the binding while its chart can still hit-test. Call right before
+   * ``chart.dispose()``: a renderer change disposes the instance before the
+   * binding effect sees the new one, and a finished brush waiting on its
+   * throttled snapshot would be lost.
+   */
+  releaseSelection: () => void
 }
 
 /**
@@ -105,11 +112,10 @@ export function useEChartsSelections({
   const chartId = element.id
   const formId = element.formId
 
-  // Bind/emit gate: proto says this is a selection widget *and* the host
-  // is not disabled. Distinct from ``element.selectionActivated``, which
-  // restore, prune, cursor defaults, and the disabled overlay still use so
-  // a disconnected widget keeps its highlight.
-  const isSelectionActivated = element.selectionActivated && !disabled
+  // Handlers and user writes need an enabled host. Everything else (restore,
+  // prune, the cursor default) follows ``element.selectionActivated``, so a
+  // disconnected widget keeps its highlight.
+  const isSelectionInteractive = element.selectionActivated && !disabled
   const parsedOption = useMemo(
     () =>
       parsedOptionInput !== undefined
@@ -160,19 +166,13 @@ export function useEChartsSelections({
     [widgetMgr, widgetInfo, fragmentId]
   )
 
-  const configureSelectionOption = useCallback(
+  const applyDisplayOnlyCursorDefault = useCallback(
     (option: EChartsOptionObject): EChartsOptionObject => {
-      // Gate the cursor default on the proto flag, not ``isSelectionActivated``.
-      // Folding in ``disabled`` would rewrite the option on disconnect and
-      // replay the entry animation.
-      if (!element.selectionActivated) {
-        // Display-only charts aren't clickable, so don't imply it via the
-        // default "pointer" cursor on series items.
-        return withDefaultSeriesCursor(option)
-      }
-      // Selection widgets are left untouched: the user configures selection in
-      // their own spec (`selectedMode`, `brush`); we only listen and report.
-      return option
+      // Ignores ``disabled``: folding it in would rewrite the option on
+      // disconnect and replay the entry animation.
+      return element.selectionActivated
+        ? option
+        : withDefaultSeriesCursor(option)
     },
     [element.selectionActivated]
   )
@@ -185,9 +185,9 @@ export function useEChartsSelections({
     // Keyed display-only charts also have an element ID (CSS class + remount
     // identity). Binding against that ID would re-apply leftover widget state
     // after ``on_select`` is turned off, with no handlers to clear the
-    // highlight. Gate on the proto flag, not ``isSelectionActivated``: a
-    // disabled selection widget (host-disabled inputs or a dropped
-    // connection) still restores and prunes its overlay.
+    // highlight. A disabled selection widget (host-disabled inputs or a
+    // dropped connection) still gets a binding, without handlers, so it
+    // restores and prunes its overlay.
     if (
       !chart ||
       chart.isDisposed() ||
@@ -203,7 +203,7 @@ export function useEChartsSelections({
       widgetMgr,
       writeSelection,
       getParsedOption: () => parsedOptionRef.current,
-      isInteractive: isSelectionActivated,
+      isInteractive: isSelectionInteractive,
     })
     bindingRef.current = binding
     // A rebind (re-enable, form or fragment change) gets no new
@@ -212,7 +212,9 @@ export function useEChartsSelections({
     // before that, ECharts ignores the dispatches.
     binding.restore()
     return () => {
-      bindingRef.current = null
+      if (bindingRef.current === binding) {
+        bindingRef.current = null
+      }
       binding.dispose()
     }
   }, [
@@ -220,7 +222,7 @@ export function useEChartsSelections({
     chartId,
     formId,
     element.selectionActivated,
-    isSelectionActivated,
+    isSelectionInteractive,
     widgetMgr,
     writeSelection,
   ])
@@ -233,8 +235,14 @@ export function useEChartsSelections({
     bindingRef.current?.pruneAfterResize()
   }, [])
 
+  const releaseSelection = useCallback((): void => {
+    const binding = bindingRef.current
+    bindingRef.current = null
+    binding?.dispose()
+  }, [])
+
   useEffect(() => {
-    if (!formId || !chartId || !isSelectionActivated) {
+    if (!formId || !chartId || !isSelectionInteractive) {
       return
     }
     const validator = (): boolean =>
@@ -243,14 +251,14 @@ export function useEChartsSelections({
     return () => {
       widgetMgr.removeFormSubmitValidator(formId, chartId)
     }
-  }, [formId, chartId, isSelectionActivated, widgetMgr])
+  }, [formId, chartId, isSelectionInteractive, widgetMgr])
 
   // Reset the selection when the surrounding form is cleared. Match
   // Plotly/Vega/basic widgets: ``fromUser: true`` writes into the form's
   // pending dict. Python keeps the last submitted selection until the next
   // submit.
   useEffect(() => {
-    if (!formId || !chartId || !isSelectionActivated) {
+    if (!formId || !chartId || !isSelectionInteractive) {
       return
     }
     const handleFormCleared = (): void => {
@@ -270,11 +278,12 @@ export function useEChartsSelections({
     return () => {
       formClearHelper.disconnect()
     }
-  }, [formId, chartId, isSelectionActivated, widgetMgr, writeSelection])
+  }, [formId, chartId, isSelectionInteractive, widgetMgr, writeSelection])
 
   return {
-    configureSelectionOption,
+    applyDisplayOnlyCursorDefault,
     restoreSelection,
     pruneAfterResize,
+    releaseSelection,
   }
 }

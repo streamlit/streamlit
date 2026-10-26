@@ -16,7 +16,7 @@
 
 import { type ReactElement, useMemo } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
@@ -617,6 +617,93 @@ describe("EChartsChart", () => {
     expect(mockChart.dispose).toHaveBeenCalledTimes(1)
     expect(mockInit).toHaveBeenCalledTimes(2)
     expect(mockInit.mock.calls[1][2]).toEqual({ renderer: "svg" })
+  })
+
+  it("commits a pending brush before a renderer change disposes the instance", () => {
+    function createChartInstance(): typeof mockChart & {
+      disposed: boolean
+      trigger: (event: string, params: unknown) => void
+    } {
+      const handlers = new Map<string, (params: unknown) => void>()
+      const chart = {
+        ...mockChart,
+        disposed: false,
+        on: vi.fn((event: string, handler: (params: unknown) => void) => {
+          handlers.set(event, handler)
+        }),
+        off: vi.fn(),
+        dispatchAction: vi.fn(),
+        trigger: (event: string, params: unknown) => {
+          handlers.get(event)?.(params)
+        },
+      }
+      chart.dispose = vi.fn(() => {
+        chart.disposed = true
+      })
+      chart.isDisposed = vi.fn(() => chart.disposed)
+      return chart
+    }
+    const charts: Array<ReturnType<typeof createChartInstance>> = []
+    mockInit.mockImplementation(() => {
+      const chart = createChartInstance()
+      charts.push(chart)
+      return chart
+    })
+    const area = { brushType: "lineX", coordRange: [0, 2] }
+    const finishedBrush = {
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [area],
+      selected: [],
+    }
+
+    const { rerender } = render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+    const [oldChart] = charts
+    // The hit-test publishes the finished brush's snapshot.
+    oldChart.dispatchAction.mockImplementation(
+      (payload: Record<string, unknown>) => {
+        if (payload.type === "brush" && payload.brushId === "brush-0") {
+          oldChart.trigger("brushSelected", { batch: [finishedBrush] })
+        }
+      }
+    )
+    // The user's throttle still holds the brushSelected for this brushEnd.
+    act(() => {
+      oldChart.trigger("brushEnd", { brushId: "brush-0", areas: [area] })
+    })
+
+    rerender(
+      <Wrapper
+        element={createElement({
+          id: "chart-id",
+          selectionActivated: true,
+          renderer: EChartsChartProto.Renderer.SVG,
+        })}
+      />
+    )
+
+    expect(oldChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushId: "brush-0",
+      areas: [area],
+    })
+    expect(
+      Math.max(...oldChart.dispatchAction.mock.invocationCallOrder)
+    ).toBeLessThan(oldChart.dispose.mock.invocationCallOrder[0])
+    expect(widgetMgr.getElementState("chart-id", "brushSelection")).toEqual([
+      finishedBrush,
+    ])
+    // The new instance restores the committed brush.
+    expect(charts).toHaveLength(2)
+    expect(charts[1].dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [area],
+    })
   })
 
   it("re-themes in place instead of recreating the instance on a runtime theme switch", () => {

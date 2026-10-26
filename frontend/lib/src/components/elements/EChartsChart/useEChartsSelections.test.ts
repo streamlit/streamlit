@@ -326,7 +326,9 @@ describe("useEChartsSelections", () => {
     bind(chart)
     expect(chart.on).not.toHaveBeenCalled()
     expect(
-      result.current.configureSelectionOption({ series: [{ type: "bar" }] })
+      result.current.applyDisplayOnlyCursorDefault({
+        series: [{ type: "bar" }],
+      })
     ).toEqual({
       series: [{ type: "bar", cursor: "default" }],
     })
@@ -567,7 +569,7 @@ describe("useEChartsSelections", () => {
     const { result } = renderSelections()
     const option = { series: [{ type: "bar", data: [1, 2, 3] }] }
 
-    const configured = result.current.configureSelectionOption(option)
+    const configured = result.current.applyDisplayOnlyCursorDefault(option)
 
     expect(configured).toBe(option)
     expect(configured.brush).toBeUndefined()
@@ -581,7 +583,7 @@ describe("useEChartsSelections", () => {
     const { result } = renderSelections(createElement(), { disabled: true })
     const option = { series: [{ type: "bar", data: [1, 2, 3] }] }
 
-    const configured = result.current.configureSelectionOption(option)
+    const configured = result.current.applyDisplayOnlyCursorDefault(option)
 
     expect(configured).toBe(option)
     const series = configured.series as Array<Record<string, unknown>>
@@ -591,7 +593,7 @@ describe("useEChartsSelections", () => {
   it("uses a default cursor only for display-only series without one", () => {
     const { result } = renderSelections(createElement(""))
 
-    const configured = result.current.configureSelectionOption({
+    const configured = result.current.applyDisplayOnlyCursorDefault({
       series: [
         { type: "bar", data: [1] },
         { type: "line", data: [2], cursor: "crosshair" },
@@ -601,19 +603,21 @@ describe("useEChartsSelections", () => {
     expect(series[0].cursor).toBe("default")
     expect(series[1].cursor).toBe("crosshair")
 
-    const single = result.current.configureSelectionOption({
+    const single = result.current.applyDisplayOnlyCursorDefault({
       series: { type: "pie", data: [] },
     })
     expect((single.series as Record<string, unknown>).cursor).toBe("default")
 
     const noSeries = {}
-    expect(result.current.configureSelectionOption(noSeries)).toBe(noSeries)
+    expect(result.current.applyDisplayOnlyCursorDefault(noSeries)).toBe(
+      noSeries
+    )
   })
 
   it("applies the default cursor inside timeline baseOption and options", () => {
     const { result } = renderSelections(createElement(""))
 
-    const configured = result.current.configureSelectionOption({
+    const configured = result.current.applyDisplayOnlyCursorDefault({
       baseOption: { series: [{ type: "bar", data: [1] }] },
       options: [{ series: [{ type: "line", data: [2] }] }],
     })

@@ -242,7 +242,7 @@ export interface EChartsSelectionBinding {
   flushPendingBrushForSubmit: () => boolean
   /**
    * Commit a finished brush still waiting on its throttled snapshot, flush
-   * the pending write, and remove the handlers.
+   * the pending write, and remove the handlers. Later calls do nothing.
    */
   dispose: () => void
 }
@@ -631,7 +631,14 @@ export function createEChartsSelectionBinding({
     zr.on("dblclick", handleDoubleClick)
   }
 
+  let isDisposed = false
   const dispose = (): void => {
+    // The chart releases its binding before disposing the instance, and the
+    // binding effect's cleanup disposes it again later.
+    if (isDisposed) {
+      return
+    }
+    isDisposed = true
     if (!isInteractive) {
       return
     }
