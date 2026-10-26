@@ -74,3 +74,23 @@ def test_bi_workflow_runs_only_bi_targets_and_publishes_existing_report() -> Non
     assert "- name: Fail incomplete benchmark execution" in _BI_WORKFLOW
     assert "steps.base_benchmark.outcome != 'success'" in _BI_WORKFLOW
     assert "steps.candidate_benchmark.outcome != 'success'" in _BI_WORKFLOW
+
+
+def test_bi_workflow_comments_from_a_separate_write_enabled_job() -> None:
+    compare_job, publish_job = _BI_WORKFLOW.split("\n  publish:", maxsplit=1)
+
+    assert (
+        "pull-requests: write" not in compare_job.split("\n  compare:", maxsplit=1)[1]
+    )
+    assert "needs: compare" in publish_job
+    assert "github.event_name == 'pull_request'" in publish_job
+    assert "github.event.label.name == 'run-bi-performance'" in publish_job
+    assert "actions: read" in publish_job
+    assert "pull-requests: write" in publish_job
+    assert "continue-on-error: true" in publish_job
+    assert "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333" in (
+        publish_job
+    )
+    assert "<!-- bi-performance-results -->" in publish_job
+    assert "--method PATCH" in publish_job
+    assert "--method POST" in publish_job

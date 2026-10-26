@@ -196,3 +196,63 @@ jobs:
           echo "Base benchmark: $BASE_STATUS"
           echo "Candidate benchmark: $CANDIDATE_STATUS"
           exit 1
+
+  publish:
+    needs: compare
+    if: |
+      always() &&
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'run-bi-performance'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Download paired BI performance results
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bi_performance_comparison_${{ github.event.pull_request.number }}
+          path: bi-results
+
+      - name: Publish PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          marker="<!-- bi-performance-results -->"
+          summary_file="bi-results/summary.md"
+          comment_file="$RUNNER_TEMP/bi-performance-comment.md"
+
+          {
+            echo "$marker"
+            if [[ -f "$summary_file" ]]; then
+              cat "$summary_file"
+            else
+              echo "## BI dashboard performance comparison"
+              echo
+              echo "The comparison did not produce a summary. Inspect the workflow run for details."
+            fi
+            echo
+            echo "[View workflow run]($RUN_URL)"
+          } > "$comment_file"
+
+          comment_id=$(
+            gh api "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
+              --paginate \
+              --slurp \
+              --jq 'map(.[]) | map(select(.body | contains("<!-- bi-performance-results -->"))) | first | .id // empty'
+          )
+
+          if [[ -n "$comment_id" ]]; then
+            gh api "repos/$REPOSITORY/issues/comments/$comment_id" \
+              --method PATCH \
+              --raw-field body="$(cat "$comment_file")"
+          else
+            gh api "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
+              --method POST \
+              --raw-field body="$(cat "$comment_file")"
+          fi
