@@ -113,8 +113,10 @@ function useTableSizer(
    *   - 0 rows → 1-row minimum
    *   - 1-3 rows → match actual number of rows
    *   - 4+ rows → 3-row minimum
-   *   - Without a definite parent height (and outside fullscreen) → the
-   *     default height (at most 10 rows)
+   *
+   * Without a definite parent height (and outside fullscreen), the default
+   * (auto) height replaces the row minimums above: capped at
+   * defaultTableHeight, but never less than the 1-row base minimum.
    */
 
   const configuredHeight = getConfiguredHeight(heightConfig)
@@ -148,10 +150,18 @@ function useTableSizer(
   if (useStretchHeight && hasFallbackHeight && !isFullScreen) {
     // Without a definite parent height, use the auto height (initialHeight)
     // as the minimum, since "100%" would resolve to the content height and
-    // collapse the table. The table still grows with taller siblings. The
-    // grid applies this minimum inside the resizable border, so subtract the
-    // border to render at exactly the auto height.
-    minHeight = initialHeight - 2 * gridTheme.tableBorderWidth
+    // collapse the table. The table still grows with taller siblings. Like
+    // the auto height, it never drops below one full row, e.g. with a custom
+    // row height taller than the default table height. The grid applies this
+    // minimum inside the resizable border, so subtract the border to render
+    // at exactly the auto height.
+    const oneRowHeight = calculateTableHeight({
+      numRows: 1,
+      rowHeight,
+      theme: gridTheme,
+    })
+    minHeight =
+      Math.max(oneRowHeight, initialHeight) - 2 * gridTheme.tableBorderWidth
   }
 
   if (

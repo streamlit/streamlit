@@ -243,11 +243,16 @@ def test_stretch_dataframe_default_height(app: Page):
     dataframe_card = get_element_by_key(app, "stretch-dataframe-card")
     chart_card = get_element_by_key(app, "stretch-chart-card")
     card_dataframe = dataframe_card.get_by_test_id("stDataFrame")
-    _expect_heights_match(app, dataframe_card, [chart_card])
-    wait_until(
-        app,
-        lambda: (_height(card_dataframe) or 0) >= DEFAULT_DATAFRAME_HEIGHT_PX,
-    )
+
+    def _cards_match_at_default_height() -> bool:
+        dataframe_card_height = _height(dataframe_card)
+        return (
+            bool(dataframe_card_height)
+            and _height(chart_card) == dataframe_card_height
+            and (_height(card_dataframe) or 0) >= DEFAULT_DATAFRAME_HEIGHT_PX
+        )
+
+    wait_until(app, _cards_match_at_default_height)
 
     # In a definite-height card, the dataframe shrinks to fit below the title
     # instead of claiming its default height and scrolling the card.

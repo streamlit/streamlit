@@ -637,6 +637,44 @@ describe("useTableSizer hook", () => {
       expect(result.current.minHeight).toEqual(140)
     })
 
+    it.each([
+      // 3 rows (3*150 + 35 + 2 = 487) exceed the 400px default height, but
+      // one row (150 + 35 + 2 = 187) fits, so the default height still wins.
+      [150, 398],
+      // One row (500 + 35 + 2 = 537) exceeds the 400px default height, so
+      // the fallback keeps one full row instead of cutting it off.
+      [500, 535],
+    ])(
+      "never drops the fallback minimum below one row (row height %i)",
+      (rowHeight, expectedMinHeight) => {
+        const heightConfig = new streamlit.HeightConfig({ useStretch: true })
+
+        const { result } = renderHook(() =>
+          useTableSizer(
+            DataframeProto.create({
+              arrowData: { data: TEN_BY_TEN },
+              rowHeight,
+            }),
+            mockTheme,
+            40,
+            false,
+            700,
+            undefined,
+            false,
+            undefined,
+            heightConfig,
+            undefined,
+            true // no definite parent height
+          )
+        )
+
+        expect(result.current.minHeight).toEqual(expectedMinHeight)
+        expect(result.current.maxHeight).toBeGreaterThanOrEqual(
+          expectedMinHeight
+        )
+      }
+    )
+
     it("keeps the 3-row stretch minimum with a definite parent height", () => {
       const heightConfig = new streamlit.HeightConfig({ useStretch: true })
 
