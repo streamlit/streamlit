@@ -123,7 +123,7 @@ at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
 
-`at.button`, `at.form_submit_button`, and `at.text_input` also accept `label=`. `at.markdown` accepts `text=`, which matches the Markdown source, including syntax such as `**`. Other collections raise `AppTestError` for these filters. These lookups are strict: zero or several matches raise `AppTestLookupError`. Matching collapses whitespace. `exact=False` is a case-insensitive substring. A compiled regex is searched against the collapsed text:
+`at.button`, `at.form_submit_button`, and `at.text_input` also accept `label=`. `at.markdown` accepts `text=`, which matches the Markdown source, including syntax such as `**`. Other element collections raise `AppTestError` for these filters (`AppTestLookupError` when the collection is empty), and block collections such as `at.container` raise `TypeError`. These lookups are strict: zero or several matches raise `AppTestLookupError`. Matching collapses whitespace. `exact=False` is a case-insensitive substring. A compiled regex is searched against the collapsed text:
 
 ```python
 import re

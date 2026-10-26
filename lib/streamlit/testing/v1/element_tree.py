@@ -564,6 +564,7 @@ _MAX_LOOKUP_CANDIDATE_LENGTH: Final = 80
 
 
 def _lookup_filter_support(filter_name: str) -> str:
+    """Return a sentence naming the element types that support this filter."""
     supported = ", ".join(_LOOKUP_FILTER_ATTRS[filter_name])
     return f"AppTest supports {filter_name}= on: {supported}."
 
@@ -583,12 +584,12 @@ def _lookup_filter_value(element: Element, filter_name: str) -> str:
     return " ".join(str(getattr(element, attr)).split())
 
 
-def _check_lookup_query(
-    filter_name: str, query: str | re.Pattern[str], *, exact: bool
-) -> None:
-    """Raise ``AppTestError`` for a blank ``exact=False`` string or an empty regex.
+def _check_lookup_query(filter_name: str, query: object, *, exact: bool) -> None:
+    """Validate a ``label=`` or ``text=`` query before matching.
 
-    Both match every value, so they would select the only element of a
+    Raises ``TypeError`` if the query is not a string or compiled regex.
+    Raises ``AppTestError`` for a blank ``exact=False`` string or an empty
+    regex: both match every value, so they would select the only element of a
     one-element collection without naming it. They usually come from an empty
     variable. A regex such as ``.*`` is an explicit choice and is allowed.
     """
@@ -598,6 +599,11 @@ def _check_lookup_query(
                 f"{filter_name}= cannot be an empty regular expression because "
                 "it matches every element."
             )
+    elif not isinstance(query, str):
+        raise TypeError(
+            f"{filter_name}= must be a str or a compiled regular expression. "
+            f"Got {type(query).__name__}."
+        )
     elif not exact and not query.strip():
         raise AppTestError(
             f"{filter_name}= cannot be blank with exact=False because it "
@@ -627,8 +633,8 @@ def _lookup_candidates(
     """Return the elements' filter values as a bounded, comma-separated list."""
     candidates = []
     for e in elements[:_MAX_LOOKUP_CANDIDATES]:
-        # Matching already read these values from every element, so this
-        # cannot raise.
+        # ElementList.__call__ already read this filter from every element,
+        # so an unsupported type would have raised there.
         value = _lookup_filter_value(e, filter_name)
         if len(value) > _MAX_LOOKUP_CANDIDATE_LENGTH:
             value = value[: _MAX_LOOKUP_CANDIDATE_LENGTH - 3] + "..."
@@ -781,8 +787,10 @@ class ElementList(Generic[El_co]):
         Raises
         ------
         TypeError
-            If none of ``key``, ``label``, or ``text`` is given, or if
-            ``exact=False`` is given without ``label`` or ``text``.
+            If none of ``key``, ``label``, or ``text`` is given, if
+            ``exact=False`` is given without ``label`` or ``text``, or if
+            ``label`` or ``text`` is neither a string nor a compiled regular
+            expression.
         KeyError
             If only ``key`` is given and no element has that key.
         AppTestLookupError

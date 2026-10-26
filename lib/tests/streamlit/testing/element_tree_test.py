@@ -2634,6 +2634,16 @@ def test_element_list_call_requires_a_filter() -> None:
         at.button("go", exact=False)
 
 
+def test_element_list_call_rejects_non_string_queries() -> None:
+    """A label= or text= query must be a str or a compiled regex."""
+    at = AppTest.from_string("import streamlit as st\nst.button('Go')").run()
+
+    with pytest.raises(
+        TypeError, match=r"label= must be a str or a compiled regular expression\. "
+    ):
+        at.button(label=b"Go")  # type: ignore[arg-type]
+
+
 def test_file_uploader_single():
     """Test st.file_uploader with single file upload."""
 
