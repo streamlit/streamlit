@@ -2363,7 +2363,7 @@ class TestAppConfigDiscovery:
 
         with patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", None):
 
-            @cache_data
+            @cache_data(show_spinner=False)
             def raw_mode_cached_value() -> bytes:
                 return b"cached before external App startup"
 
