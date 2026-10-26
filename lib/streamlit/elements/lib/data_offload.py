@@ -59,9 +59,12 @@ def serve_arrow_over_http(
 ) -> str | None:
     """Register Arrow data for HTTP fetch and return its URL.
 
-    Returns ``None`` when this session is not recording, when ``arrow_bytes``
-    is empty, when there is no runtime to serve from, or when the payload is
-    larger than ``server.maxMessageSize``.
+    Returns ``None`` when there is nothing to serve:
+
+    - this session is not recording
+    - ``arrow_bytes`` is empty
+    - there is no runtime to serve from
+    - the payload is larger than ``server.maxMessageSize``
 
     Parameters
     ----------
@@ -71,8 +74,8 @@ def serve_arrow_over_http(
         serializes for its agent data block.
     coordinates
         A string identifying this data's position in the app, from
-        ``DeltaGenerator._get_delta_path_str()``. The media file manager keys
-        references by it so data replaced in place does not leak.
+        ``DeltaGenerator._get_write_delta_path_str()``. The media file manager
+        keys references by it so data replaced in place does not leak.
     in_payload
         Whether the element's own message already carries ``arrow_bytes``, so
         an ``st.cache_data`` entry need not store them again: a replay reads

@@ -1300,7 +1300,7 @@ class ArrowMixin:
                 # first chunk, served alone, would pass for the whole table.
                 data_url=data_offload.serve_arrow_over_http(
                     proto.arrow_data.data,
-                    coordinates=self.dg._get_delta_path_str(),
+                    coordinates=self.dg._get_write_delta_path_str(),
                 ),
                 # A browser user can select rows or press a button column. This
                 # API only reports that. A display-only table has nothing to

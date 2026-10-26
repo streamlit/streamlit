@@ -1559,7 +1559,7 @@ class DataEditorMixin:
                 key=proto.id or None,
                 data_url=data_offload.serve_arrow_over_http(
                     proto.arrow_data.data,
-                    coordinates=self.dg._get_delta_path_str(),
+                    coordinates=self.dg._get_write_delta_path_str(),
                 ),
                 # A browser user can edit the table. This API only reports it.
                 # Kept even when the app locks the editor: unlike a chart

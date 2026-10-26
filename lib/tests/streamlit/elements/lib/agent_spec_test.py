@@ -199,6 +199,16 @@ def test_vega_arrow_buffers_lists_inline_and_named_datasets() -> None:
         pytest.param('{"data": {"url": "d.csv"}}', True, id="json-text"),
         pytest.param({"data": {"name": "frame"}}, False, id="named-data"),
         pytest.param({"data": {"values": [{"url": "e"}]}}, False, id="a-url-value"),
+        pytest.param(
+            {"data": {"values": [{"data": {"url": "f.csv"}}]}},
+            False,
+            id="a-row-shaped-like-a-source",
+        ),
+        pytest.param(
+            {"usermeta": {"data": {"url": "g.csv"}}, "mark": "point"},
+            False,
+            id="usermeta",
+        ),
         pytest.param('{"data": {"url"', False, id="malformed-json"),
     ],
 )

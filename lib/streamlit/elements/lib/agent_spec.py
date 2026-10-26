@@ -70,9 +70,10 @@ cannot know them yet:
 
 Both are filled in at snapshot time. That split is the same one the agent
 protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived). A data command adds only what
-its payload cannot say: ``data_url``, where its complete data is served, and,
-when the payload does not carry its table, ``data_summary``.
+holds now), and ``data`` (what Streamlit derived). Most ``data`` fields are
+derived at snapshot time from the payload. Commands additionally record
+``data_url``, where the complete data is served, and commands whose payload does
+not carry their table, such as ``st.map``, record ``data_summary``.
 """
 
 from __future__ import annotations
@@ -396,9 +397,10 @@ def vega_loads_from_url(spec: Any) -> bool:
     """Whether a Vega-Lite specification loads any of its data from a URL.
 
     Checked at any depth: the top level, a layer, or a ``lookup``'s
-    ``from.data``. The browser fetches that data itself, so no Arrow buffer
-    holds all of the chart's data. ``spec`` is the parsed specification or its
-    JSON text; malformed text loads nothing.
+    ``from.data``, but not inside inline rows or ``usermeta``. The browser
+    fetches that data itself, so no Arrow buffer holds all of the chart's data.
+    ``spec`` is the parsed specification or its JSON text; malformed text loads
+    nothing.
     """
     if isinstance(spec, str):
         try:
@@ -408,12 +410,21 @@ def vega_loads_from_url(spec: Any) -> bool:
     return _loads_from_url(spec)
 
 
+# Keys whose values hold inline rows or arbitrary author metadata, never a data
+# source, so a nested `{"data": {"url": ...}}` there loads nothing.
+_NOT_DATA_SOURCES: Final = frozenset({"datasets", "usermeta", "values"})
+
+
 def _loads_from_url(value: Any) -> bool:
     if isinstance(value, dict):
         data = value.get("data")
         if isinstance(data, dict) and "url" in data:
             return True
-        return any(_loads_from_url(item) for item in value.values())
+        return any(
+            _loads_from_url(item)
+            for key, item in value.items()
+            if key not in _NOT_DATA_SOURCES
+        )
     if isinstance(value, list):
         return any(_loads_from_url(item) for item in value)
     return False

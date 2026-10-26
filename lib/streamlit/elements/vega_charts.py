@@ -2851,11 +2851,10 @@ class VegaChartsMixin:
             # chart without selections has nothing to withhold, so it is fully
             # supported.
             support="action_unsupported" if selection_mode else None,
-            # Not registered for several datasets or URL-loaded data: the
-            # snapshot then serves none of it, so the copy would only hold
-            # memory.
+            # The snapshot reports a chart over several datasets or URL-loaded
+            # data as unavailable, so a registered copy would only hold memory.
             data_url=data_offload.serve_arrow_over_http(
-                buffers[0], coordinates=self.dg._get_delta_path_str()
+                buffers[0], coordinates=self.dg._get_write_delta_path_str()
             )
             if len(buffers) == 1 and not agent_spec.vega_loads_from_url(proto.spec)
             else None,

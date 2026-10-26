@@ -346,14 +346,19 @@ def _agent_props_for_this_session(agent_props: str | None) -> str | None:
 def _register_replayed_media(msg: ElementMsgData, dg: DeltaGenerator) -> None:
     """Register a replayed element's media files for the replaying session.
 
-    Agent-only table data is registered only when this session records, as its
-    description is. It is keyed by where this replay puts the element, which
-    may differ from where the run that filled the cache put it: under stale
-    coordinates another element could displace the reference, and the file
-    would be collected while the snapshot still reports its URL. When the entry
-    left the bytes out, they are read back from the replayed payload.
+    Agent-only table data is registered only for a recording session, at the
+    replayed element's current delta path rather than the one stored in the
+    cache entry. With the stored path, another element rendered at that path
+    would replace the reference, and the file would be collected while the
+    snapshot still reports its URL. When the entry omitted the bytes, they are
+    read back from the replayed payload.
+
+    Each registered file is also recorded for any cached function that is
+    being filled around this replay, so a later hit on that outer function
+    registers the file too.
     """
     from streamlit.elements.lib import agent_spec, data_offload
+    from streamlit.runtime import caching
 
     media_file_mgr = runtime.get_instance().media_file_mgr
     for data in msg.media_data or ():
@@ -362,11 +367,18 @@ def _register_replayed_media(msg: ElementMsgData, dg: DeltaGenerator) -> None:
         if data.agent_only:
             if not agent_spec.is_recording():
                 continue
-            coordinates = dg._get_delta_path_str()
+            coordinates = dg._get_write_delta_path_str()
             media = media or data_offload.arrow_in_payload(msg.message)
             if not media:
                 continue
         media_file_mgr.add(media, data.mimetype, coordinates, file_name=data.file_name)
+        caching.save_media_data(
+            data.media,
+            data.mimetype,
+            data.media_id,
+            file_name=data.file_name,
+            agent_only=data.agent_only,
+        )
 
 
 def replay_cached_messages(

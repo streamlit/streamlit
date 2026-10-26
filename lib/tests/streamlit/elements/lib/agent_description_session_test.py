@@ -25,7 +25,7 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import runtime
+from streamlit import dataframe_util, runtime
 from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.map import to_deckgl_json
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -432,6 +432,48 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             {"type": "container", "transparent": True, "props": {}}
         ]
 
+    def test_fragment_tables_in_an_outside_container_keep_their_files(self) -> None:
+        """Each table a fragment writes to the sidebar is registered where it renders.
+
+        The fragment's writes go into one wrapper block, and the sidebar's own
+        cursor advances once for it, so its position would be the same for the
+        second and third tables. The third would replace the second's
+        reference, and the second's file would be collected while the snapshot
+        still reports its URL. A fragment rerun reuses the wrapper.
+        """
+        self._record()
+
+        @st.fragment
+        def writer() -> None:
+            for rows in (1, 2, 3):
+                st.sidebar.dataframe(pd.DataFrame({"n": range(rows)}))
+
+        def assert_registered_where_rendered() -> None:
+            refs = self._media_file_mgr()._files_by_session_and_coord[
+                self.script_run_ctx.session_id
+            ]
+            tables = [
+                message
+                for message in self.forward_msg_queue._queue
+                if message.delta.new_element.WhichOneof("type") == "dataframe"
+            ]
+            assert len(tables) == 3
+            for message in tables:
+                [described] = _descriptions([message])
+                file_id = described["data_url"].rsplit("/", 1)[-1]
+                assert refs[str(list(message.metadata.delta_path))] == file_id
+            self._media_file_mgr().remove_orphaned_files()
+            assert len(self._arrow_files()) == 3
+
+        writer()
+        assert_registered_where_rendered()
+
+        fragment_id = next(iter(self.script_run_ctx.fragment_storage._fragments))
+        self.script_run_ctx.fragment_ids_this_run = [fragment_id]
+        self.clear_queue()
+        self.script_run_ctx.fragment_storage._fragments[fragment_id]()
+        assert_registered_where_rendered()
+
     def test_radio_series_captions_do_not_raise(self) -> None:
         """Captions may be a pandas Series, which has no truth value."""
         self._record()
@@ -636,6 +678,20 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert plotted is not None
         assert plotted["tone"].tolist() == ["#ff0000"]
 
+    def test_map_columns_arrow_cannot_convert_report_no_data(self) -> None:
+        """The generated Deck.gl spec never stands in for a map's table."""
+        self._record()
+        with patch.object(
+            dataframe_util,
+            "convert_pandas_df_to_arrow_bytes",
+            side_effect=pa.ArrowInvalid("unconvertible"),
+        ):
+            st.map(pd.DataFrame({"lat": [1.0], "lon": [2.0]}))
+
+        node = _one(self._snapshot(list(self.forward_msg_queue._queue)), "map")
+        assert "data" not in node
+        assert self._arrow_files() == []
+
     def test_cache_replay_registers_table_data_only_for_agent_sessions(self) -> None:
         """A replay into the agent session registers the table again; a replay into
         a browser session registers nothing and attaches no description.
@@ -749,6 +805,35 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
             for item in _descriptions(list(self.forward_msg_queue._queue))
             if item["type"] == "dataframe"
         )
+        self.media_file_storage.get_file(replayed["data_url"].rsplit("/", 1)[-1])
+        assert len(self._arrow_files()) == 1
+
+    def test_nested_cache_replay_keeps_the_inner_tables_file(self) -> None:
+        """An outer cache filled around an inner cache hit serves the inner table.
+
+        The inner hit registers its file while the outer function is being
+        filled, and the outer entry records that file too, so a later outer
+        hit registers it as well instead of reporting a collected URL.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def inner() -> int:
+            st.dataframe(pd.DataFrame({"n": range(150)}))
+            return 1
+
+        @st.cache_data(show_spinner=False)
+        def outer() -> int:
+            return inner() + 1
+
+        self._record()
+        inner()
+        self._start_full_run()
+        outer()
+        self._start_full_run()
+        outer()
+        self._media_file_mgr().remove_orphaned_files()
+
+        [replayed] = _descriptions(list(self.forward_msg_queue._queue))
         self.media_file_storage.get_file(replayed["data_url"].rsplit("/", 1)[-1])
         assert len(self._arrow_files()) == 1
 

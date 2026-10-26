@@ -423,7 +423,8 @@ class TableMixin:
             agent_props=agent_spec.element(
                 "table",
                 data_url=data_offload.serve_arrow_over_http(
-                    proto.arrow_data.data, coordinates=delta_path
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_write_delta_path_str(),
                 ),
                 # `border` is surface styling; `hide_index` and `hide_header`
                 # stay because they change which data is presented.

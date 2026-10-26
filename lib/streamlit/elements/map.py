@@ -361,19 +361,21 @@ def _map_agent_props(
             frame.reset_index(drop=True)
         )
     except Exception:
-        # A map draws some data Arrow cannot convert. `data_summary` is then
-        # left unset, and the snapshot reads the Deck.gl spec, which carries
-        # the same points.
+        # A map draws some data Arrow cannot convert. The map then reports no
+        # `data`, as a table whose payload cannot be read does.
         _LOGGER.debug("Could not describe map data as Arrow.", exc_info=True)
 
     return agent_spec.element(
         "map",
         data_url=data_offload.serve_arrow_over_http(
-            arrow_bytes, coordinates=dg._get_delta_path_str(), in_payload=False
+            arrow_bytes, coordinates=dg._get_write_delta_path_str(), in_payload=False
         )
         if plotted is not None
         else None,
-        data_summary=snapshot.summarize_arrow(arrow_bytes) if arrow_bytes else None,
+        # Always a summary, even an empty one, so the snapshot never falls
+        # back to reporting the generated Deck.gl spec as the map's data.
+        data_summary=(snapshot.summarize_arrow(arrow_bytes) if arrow_bytes else None)
+        or {},
         **props,
     )
 
@@ -386,11 +388,10 @@ def to_deckgl_json(
     color: str | Collection[float] | None,
     zoom: int | None,
 ) -> tuple[str, DataFrame | None]:
-    """Serialize the map to a PyDeck JSON string.
+    """Serialize the map to a PyDeck JSON string, and return the plotted columns
+    of the author's data for an agent description.
 
-    Also returns the plotted columns of the author's data, with the author's
-    values, while an agent session records. Otherwise, and for a map with no
-    data, that is ``None``.
+    The columns are ``None`` in a browser session and for a map with no data.
     """
     if data is None:
         return json.dumps(_DEFAULT_MAP), None

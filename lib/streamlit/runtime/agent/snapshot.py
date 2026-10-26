@@ -595,9 +595,9 @@ def _data_block(
     if data.get("complete") is not True:
         data["complete"] = False
     if url and "unavailable" not in data:
-        # A fetch-now handle, registered while the script ran. Also reported
-        # for a complete table, so every table has the same contract. The file
-        # is collected once the element that produced it stops rendering.
+        # A fetch-now handle the script registered. A complete table gets one too,
+        # so every table has the same contract. The media manager collects the file
+        # once the element that produced it stops rendering.
         data["url"] = url
     elif data["complete"] is False:
         # In a recording session with a runtime, the size bound is the only
@@ -909,7 +909,7 @@ def _arrow_columns(table: Any) -> list[dict[str, str]]:
 
 
 def _arrow_rows(table: Any, limit: int) -> list[list[Any]]:
-    """Up to ``limit`` rows, as JSON values in column order.
+    """Return up to ``limit`` rows as lists of cell values in column order.
 
     By position rather than by name, so a table with two columns of the same
     name keeps both.
