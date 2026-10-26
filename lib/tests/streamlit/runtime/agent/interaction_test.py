@@ -53,10 +53,11 @@ def _markdown(path: list[int], body: str, fragment_id: str = "") -> ForwardMsg:
     return msg
 
 
-def _block(path: list[int]) -> ForwardMsg:
+def _block(path: list[int], fragment_id: str = "") -> ForwardMsg:
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = path
     msg.delta.add_block.vertical.SetInParent()
+    msg.delta.fragment_id = fragment_id
     return msg
 
 
@@ -196,6 +197,78 @@ def test_client_keeps_the_app_when_a_callback_reruns_a_fragment() -> None:
     )
 
     assert _bodies(client) == ["app", "fragment v2"]
+
+
+def _nested_fragment_run(*inner_rows: str) -> list[ForwardMsg]:
+    """An outer fragment's container at [0, 1] holding an inner fragment's."""
+    return [
+        _block([0, 1], fragment_id="outer"),
+        _markdown([0, 1, 0], "outer", fragment_id="outer"),
+        _block([0, 1, 1], fragment_id="inner"),
+        *(
+            _markdown([0, 1, 1, index], row, fragment_id="inner")
+            for index, row in enumerate(inner_rows)
+        ),
+    ]
+
+
+def test_client_outer_fragment_run_drops_a_nested_fragments_old_content() -> None:
+    """An outer fragment rerun replaces everything under its container, the
+    rows a nested fragment rendered before included, as the browser does.
+    """
+    client = interaction.AgentSessionClient()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "app"),
+        *_nested_fragment_run("row 0", "row 1", "row 2"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+        _new_session("r2", fragment_ids=["outer"]),
+        *_nested_fragment_run("row 0"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["app", "outer", "row 0"]
+
+
+def test_client_inner_fragment_run_keeps_the_outer_fragment() -> None:
+    """A nested fragment's own rerun replaces only its container's contents."""
+    client = interaction.AgentSessionClient()
+    _write_all(
+        client,
+        _new_session("r1"),
+        *_nested_fragment_run("row 0", "row 1"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+        _new_session("r2", fragment_ids=["inner"]),
+        _block([0, 1, 1], fragment_id="inner"),
+        _markdown([0, 1, 1, 0], "row 0 v2", fragment_id="inner"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["outer", "row 0 v2"]
+
+
+def test_client_fragment_run_drops_the_body_of_the_dialog_it_opened() -> None:
+    """A dialog opened from a fragment sits in the event container. When that
+    fragment reruns without reopening it, the dialog's body goes with it.
+    """
+    client = interaction.AgentSessionClient()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _block([0, 0], fragment_id="opener"),
+        _markdown([0, 0, 0], "open button", fragment_id="opener"),
+        _block([2, 0], fragment_id="opener"),
+        _block([2, 0, 0], fragment_id="dialog"),
+        _markdown([2, 0, 0, 0], "dialog field", fragment_id="dialog"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+        _new_session("r2", fragment_ids=["opener"]),
+        _block([0, 0], fragment_id="opener"),
+        _markdown([0, 0, 0], "open button", fragment_id="opener"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["open button"]
 
 
 def test_client_compile_error_prunes_the_previous_page() -> None:

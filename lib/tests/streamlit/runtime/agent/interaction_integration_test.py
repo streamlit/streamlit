@@ -1329,6 +1329,131 @@ async def test_a_fragment_the_runtime_dropped_falls_back_to_a_full_rerun(
 
 
 @pytest.mark.anyio
+async def test_an_outer_fragment_rerun_drops_rows_a_nested_fragment_stopped_rendering(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Rows a nested fragment no longer renders leave `actions` when the outer
+    fragment reruns, so a write to one is refused before its callback runs.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("deleted", [])
+
+    def delete(i):
+        st.session_state.deleted.append(i)
+
+    @st.fragment
+    def rows(n):
+        for i in range(n):
+            st.button(f"Delete row {i}", key=f"del{i}", on_click=delete, args=(i,))
+
+    @st.fragment
+    def table():
+        n = st.number_input("Rows", value=3, key="n")
+        rows(n)
+
+    st.text(f"deleted={st.session_state.deleted}")
+    table()
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        shrunk = await app.call({"session_id": handle, "widget_state": {"n": 1}})
+        stale = await app.refused({"session_id": handle, "trigger": {"key": "del2"}})
+        after = await app.call({"session_id": handle})
+
+    assert [action["key"] for action in shrunk["actions"]] == ["n", "del0"]
+    assert stale.code == "not_on_page"
+    assert _line(after, "deleted") == "[]"
+
+
+@pytest.mark.anyio
+async def test_a_nested_fragment_that_moves_is_listed_once(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """When an outer fragment rerun shifts a nested fragment to a new position,
+    only the new copy stays, as in the browser.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("runs", 0)
+
+    @st.fragment
+    def outer():
+        st.session_state.runs += 1
+        st.button("Rerun outer", key="outer")
+        if st.session_state.runs < 3:
+            st.text("early")
+        inner()
+
+    @st.fragment
+    def inner():
+        st.button("Rerun inner")
+
+    outer()
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        for _ in range(3):
+            last = await app.call({"session_id": handle, "trigger": {"key": "outer"}})
+
+    inner_buttons = [
+        node
+        for node in _nodes(last)
+        if node["type"] == "button" and node["props"]["label"] == "Rerun inner"
+    ]
+    assert len(inner_buttons) == 1
+    assert "early" not in _texts(last)
+
+
+@pytest.mark.anyio
+async def test_a_dialog_dismissed_from_its_opener_fragment_leaves_actions(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Dismissing a dialog opened from a fragment reruns that fragment, and the
+    dialog's widgets leave `actions` with it.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("log", [])
+
+    def dismissed():
+        st.session_state.log.append("dismissed")
+
+    @st.dialog("Edit", on_dismiss=dismissed)
+    def edit():
+        st.text_input("Name", key="name")
+
+    @st.fragment
+    def panel():
+        if st.button("Edit", key="open"):
+            edit()
+        st.text(f"log={st.session_state.log}")
+
+    panel()
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        handle = (await app.call())["session_id"]
+        opened = await app.call({"session_id": handle, "trigger": {"key": "open"}})
+        dialog = _dialog(opened)
+        assert dialog is not None
+        dismissed = await app.call(
+            {"session_id": handle, "trigger": {"key": dialog["key"]}}
+        )
+        stale = await app.refused(
+            {"session_id": handle, "widget_state": {"name": "Ada"}}
+        )
+
+    assert "name" in [action["key"] for action in opened["actions"]]
+    assert _line(dismissed, "log") == "['dismissed']"
+    assert "name" not in [action["key"] for action in dismissed["actions"]]
+    assert _dialog(dismissed) is None
+    assert stale.code == "not_on_page"
+
+
+@pytest.mark.anyio
 async def test_a_dialog_stays_open_through_its_steps_and_closes_when_dismissed(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
