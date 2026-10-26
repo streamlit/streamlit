@@ -1000,9 +1000,8 @@ Charts and maps:
 - **A map reports the specification its browser renders.** `st.map` compiles the columns
   it plots into a Deck.gl layer, and v1 reports that layer's specification as `spec`, as
   `st.pydeck_chart` does. It carries every plotted point and nothing else from the
-  author's table, so the map is `complete`, with a `row_count` when every layer carries
-  its rows inline. Serving the plotted columns as Arrow, described like a dataframe's, is
-  follow-up #9.
+  author's table, so the map is `complete`. Serving the plotted columns as Arrow,
+  described like a dataframe's, is follow-up #9.
 
 `data.url` and media URLs:
 

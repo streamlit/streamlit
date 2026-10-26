@@ -475,12 +475,18 @@ class SnapshotDataTest(SnapshotCase):
         ]
         assert data["spec"]["data"][0]["y"] == [1.5, None, 3.0]
 
-    def test_echarts_reports_its_option_as_complete(self) -> None:
-        """An ECharts option is its own data."""
+    def test_echarts_reports_its_option_as_given(self) -> None:
+        """An ECharts option is its own data, reported unchanged: what would be
+        a Plotly template or typed array is left as the author wrote it.
+        """
         option = {
             "xAxis": {"type": "category", "data": ["a", "b"]},
             "yAxis": {},
-            "series": [{"type": "bar", "data": [1, 2]}],
+            "series": [
+                {"type": "bar", "data": [1, 2]},
+                {"type": "line", "data": {"dtype": "f8", "bdata": "AAAAAAAA8D8="}},
+            ],
+            "layout": {"template": {"name": "kept"}},
         }
         st.echarts_chart(option)
 
@@ -488,34 +494,24 @@ class SnapshotDataTest(SnapshotCase):
 
         assert data == {"spec": option, "complete": True}
 
-    def test_pydeck_reports_its_spec(self) -> None:
-        """Inline layers are counted; a layer the browser fetches leaves no count."""
+    def test_pydeck_reports_its_spec_as_given(self) -> None:
+        """A Deck.gl spec is complete, whether its layers carry rows inline or
+        the browser fetches them, and nothing is counted or served beside it.
+        """
         st.pydeck_chart(
             pdk.Deck(
                 layers=[
                     pdk.Layer("ScatterplotLayer", data=[{"p": [0, 0]}, {"p": [1, 1]}]),
-                    pdk.Layer("ScatterplotLayer", data=pd.DataFrame({"p": [2, 3, 4]})),
-                ]
-            )
-        )
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=[{"p": [0, 0]}]),
                     pdk.Layer("GeoJsonLayer", data="https://example.com/a.geojson"),
                 ]
             )
         )
 
-        inline, fetched = (
-            node["data"] for node in _by_type(self._build().document, "pydeck_chart")
-        )
-        assert inline["complete"] is True
-        assert inline["row_count"] == 5
-        assert len(inline["spec"]["layers"]) == 2
-        assert fetched["complete"] is True
-        assert "row_count" not in fetched
-        assert "url" not in fetched
+        data = self._data("pydeck_chart")
+
+        assert data.keys() == {"spec", "complete"}
+        assert data["complete"] is True
+        assert len(data["spec"]["layers"]) == 2
 
     def test_a_map_reports_the_deck_gl_spec_its_browser_renders(self) -> None:
         """`st.map` reports its generated Deck.gl spec as a complete chart, like
@@ -537,14 +533,13 @@ class SnapshotDataTest(SnapshotCase):
         document = self._build().document
         plotted, empty = (node["data"] for node in _by_type(document, "map"))
 
+        assert plotted.keys() == {"spec", "complete"}
         assert plotted["complete"] is True
-        assert plotted["row_count"] == 2
         [layer] = plotted["spec"]["layers"]
         assert [(row["lat"], row["lon"]) for row in layer["data"]] == [
             (1.0, 3.0),
             (2.0, 4.0),
         ]
-        assert "url" not in plotted
         assert empty == {"spec": empty["spec"], "complete": True}
         rendered = json.dumps(document)
         for withheld in ("ada@example.com", "cust-17", "customer"):

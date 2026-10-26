@@ -626,24 +626,20 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
     if proto_field == "vega_lite_chart":
         return _vega_data(payload)
 
-    if proto_field in {"plotly_chart", "echarts_chart"}:
-        # These take a figure or an option object rather than a dataframe, so
-        # the values are inside the specification and there is no separate
-        # table to fetch. Saying so is the point: `complete` means a client
-        # already has everything, so it does not go looking for a `url`.
-        return _figure_data(_parse_json(payload.spec))
+    # The remaining charts are given a specification rather than a dataframe,
+    # so their values are inside it and there is no separate table to fetch.
+    # Saying so is the point: `complete` means a client already has
+    # everything, so it does not go looking for a `url`.
+    if proto_field == "plotly_chart":
+        return _plotly_data(_parse_json(payload.spec))
 
-    if proto_field == "deck_gl_json_chart":
-        spec = _parse_json(payload.json)
-        if spec is None:
-            return None
-        # `st.map` and `st.pydeck_chart` share this proto. Either is a chart
-        # given a specification, so it is complete, as a Plotly figure is. Its
-        # rows are counted only when every layer has them inline.
-        deck_data: dict[str, Any] = {"spec": spec, "complete": True}
-        if (row_count := _deck_gl_row_count(spec)) is not None:
-            deck_data["row_count"] = row_count
-        return deck_data
+    if proto_field in {"echarts_chart", "deck_gl_json_chart"}:
+        # Reported as given. `st.map` and `st.pydeck_chart` share the Deck.gl
+        # proto, which carries its specification as `json`.
+        spec = _parse_json(
+            payload.json if proto_field == "deck_gl_json_chart" else payload.spec
+        )
+        return None if spec is None else {"spec": spec, "complete": True}
 
     return None
 
@@ -702,8 +698,8 @@ def _vega_data(payload: Any) -> dict[str, Any]:
     return data
 
 
-def _figure_data(spec: Any) -> dict[str, Any] | None:
-    """Describe a chart whose values live inside its own specification.
+def _plotly_data(spec: Any) -> dict[str, Any] | None:
+    """Describe a Plotly figure, whose values live inside its specification.
 
     The theme is dropped, because it is weight without meaning for a non-visual
     client: Plotly's `layout.template` is about nine tenths of a small figure.
@@ -791,28 +787,6 @@ def _decode_typed_array(value: dict[str, Any]) -> Any:
         array = array.reshape([int(dim) for dim in dims])
     # Through the JSON encoding, so a NaN in a float array becomes null.
     return json_encoding.to_json_value(array.tolist())
-
-
-def _deck_gl_row_count(spec: Any) -> int | None:
-    """Count the rows a Deck.gl specification plots, across its layers.
-
-    Only when every layer carries its rows inline. A layer whose data is a URL
-    or an object such as GeoJSON has no count to read, and a partial sum would
-    pass for the whole.
-    """
-    if not isinstance(spec, dict):
-        return None
-    layers = spec.get("layers")
-    if not isinstance(layers, list):
-        return None
-
-    total = 0
-    for layer in layers:
-        rows = layer.get("data") if isinstance(layer, dict) else None
-        if not isinstance(rows, list):
-            return None
-        total += len(rows)
-    return total
 
 
 def _parse_json(value: str) -> Any:
