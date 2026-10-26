@@ -580,20 +580,23 @@ def test_byte_sizing_retains_one_oversized_entry() -> None:
 
 
 def test_byte_size_is_updated_by_all_removal_paths() -> None:
-    """Every removal path updates byte size."""
+    """Every removal path updates byte size and invokes the callback."""
     clock = _FakeClock()
+    removed: list[str] = []
     cache = TTLCache[str, bytes](
         maxsize=math.inf,
         max_total_size=100,
         ttl=10,
         timer=clock,
         getsizeof=len,
+        on_remove=lambda key, _value: removed.append(key),
     )
     cache["a"] = b"aaaa"
     cache["b"] = b"bb"
     cache["a"] = b"a"
     assert cache.currsize == 2
     assert cache.curr_total_size == 3
+    assert removed == ["a"]
 
     assert cache.pop("b") == b"bb"
     assert cache.currsize == 1
@@ -601,9 +604,12 @@ def test_byte_size_is_updated_by_all_removal_paths() -> None:
     clock.now = 10
     assert cache.currsize == 0
     assert cache.curr_total_size == 0
+    assert removed == ["a", "b"]
+    assert "a" in cache._data
     assert cache._curr_total_size == 1
     assert cache.expire() == [("a", b"a")]
     assert cache._curr_total_size == 0
+    assert removed == ["a", "b", "a"]
 
     cache["c"] = b"ccc"
     del cache["c"]
@@ -611,3 +617,4 @@ def test_byte_size_is_updated_by_all_removal_paths() -> None:
     cache.clear()
     assert cache.currsize == 0
     assert cache.curr_total_size == 0
+    assert removed[-2:] == ["c", "d"]

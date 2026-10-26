@@ -110,7 +110,7 @@ class EditingState {
           const cellValue = column.getCellValue(cell)
 
           if (
-            column.isRequired &&
+            column.isRequired === true &&
             column.isEditable &&
             isMissingValueCell(cell)
           ) {

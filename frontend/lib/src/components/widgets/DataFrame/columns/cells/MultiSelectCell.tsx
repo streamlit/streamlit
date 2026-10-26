@@ -148,7 +148,7 @@ export const prepareOptions = (
 export const resolveValues = (
   values: string[] | null | undefined,
   options: readonly SelectOption[],
-  allowDuplicates?: boolean
+  allowDuplicates = false
 ): { value: string; label?: string; color?: string }[] => {
   if (isNullOrUndefined(values)) {
     return []
@@ -233,7 +233,7 @@ const StyledMenuWrapper: FC<CustomMenuProps> = props => {
   const menuDisabled = (
     props.selectProps as { menuDisabled?: boolean } | undefined
   )?.menuDisabled
-  if (menuDisabled) {
+  if (menuDisabled === true) {
     return null
   }
   return (
@@ -253,8 +253,8 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
   const {
     options: optionsIn,
     values: valuesIn,
-    allowCreation,
-    allowDuplicates,
+    allowCreation = false,
+    allowDuplicates = false,
   } = cell.data
 
   const theme = useTheme()
@@ -342,7 +342,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         }
       },
       input: (styles, { isDisabled }) => {
-        if (isDisabled) {
+        if (isDisabled === true) {
           return {
             display: "none",
           }
@@ -519,13 +519,15 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         inputValue={inputValue}
         onInputChange={setInputValue}
         options={options}
-        placeholder={cell.readonly ? "" : allowCreation ? "Add..." : undefined}
+        placeholder={
+          cell.readonly === true ? "" : allowCreation ? "Add..." : undefined
+        }
         noOptionsMessage={noOptionsMessage}
-        menuIsOpen={cell.readonly ? false : menuOpen}
+        menuIsOpen={cell.readonly === true ? false : menuOpen}
         onMenuOpen={handleMenuOpen}
         onMenuClose={handleMenuClose}
         value={resolveValues(value, options, allowDuplicates)}
-        onKeyDown={cell.readonly ? undefined : handleKeyDown}
+        onKeyDown={cell.readonly === true ? undefined : handleKeyDown}
         menuPlacement={"auto"}
         menuPortalTarget={portalTarget}
         autoFocus={true}
@@ -688,12 +690,12 @@ const renderer: CustomRenderer<MultiSelectCell> = {
     }
     let values = val.split(",").map(s => s.trim())
 
-    if (!cell.allowDuplicates) {
+    if (cell.allowDuplicates !== true) {
       // Remove all duplicates
       values = values.filter((v, index) => values.indexOf(v) === index)
     }
 
-    if (!cell.allowCreation) {
+    if (cell.allowCreation !== true) {
       // Only allow values that are part of the options:
       const options = prepareOptions(cell.options ?? [])
       values = values.filter(v => options.find(o => o.value === v))

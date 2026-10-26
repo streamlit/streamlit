@@ -592,7 +592,11 @@ describe("DataFrame widget", () => {
       matches: true,
       media: query,
       onchange: null,
+      // MediaQueryList still declares these deprecated methods as required
+      // members, so the typed mock has to provide them.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       addListener: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
       removeListener: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),

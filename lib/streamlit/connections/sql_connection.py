@@ -424,11 +424,15 @@ class SQLConnection(BaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
+        >>> from sqlalchemy import text
+        >>>
         >>> conn = st.connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
         ...     with conn.session as session:
-        ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
+        ...         session.execute(
+        ...             text("INSERT INTO numbers (val) VALUES (:n);"), {"n": n}
+        ...         )
         ...         session.commit()
         """
         from sqlalchemy.orm import Session

@@ -50,7 +50,7 @@ export const StyledDateFieldContainer = styled.div({
 
 export const StyledDateField = styled("div", {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+})<{ $isRange?: boolean }>(({ theme, $isRange = false }) => ({
   flex: $isRange ? "0 0 auto" : "1 0 auto",
   minWidth: 0,
   ...($isRange && {
@@ -125,7 +125,7 @@ export const StyledDateFieldsScroller = styled.div({
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
 export const StyledDateFieldInput = styled(Group, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+})<{ $isRange?: boolean }>(({ theme, $isRange = false }) => ({
   display: "flex",
   alignItems: "center",
   flex: "1 0 auto",
@@ -352,7 +352,7 @@ export const StyledQuickSelectLabel = styled.div(({ theme }) => ({
 
 export const StyledQuickSelectTrigger = styled(Button, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isPlaceholder?: boolean }>(({ theme, $isPlaceholder }) => ({
+})<{ $isPlaceholder?: boolean }>(({ theme, $isPlaceholder = false }) => ({
   appearance: "none",
   display: "flex",
   alignItems: "center",

@@ -25,7 +25,7 @@ import {
 export const StyledMenuButtonLabelContainer = styled.div<{
   $hideChevron?: boolean
   $truncate?: boolean
-}>(({ theme, $hideChevron, $truncate }) => ({
+}>(({ theme, $hideChevron = false, $truncate = false }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,

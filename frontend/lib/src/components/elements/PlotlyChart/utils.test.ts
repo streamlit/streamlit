@@ -150,7 +150,6 @@ describe("PlotlyChart utils", () => {
       const widgetMgr = getWidgetMgr()
       vi.spyOn(widgetMgr, "setStringValue")
 
-      // @ts-expect-error - selection event argument is required
       handleSelection(undefined, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
     })

@@ -329,7 +329,7 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
 
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
-- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.text_area`: `required` and `max_chars`. `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
 - `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
 - `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
@@ -478,7 +478,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep a parallel fragment's output inside its own body: during a full-app run it runs on a separate thread, and writing to a container created outside it raises an error, even if that container was created earlier in the run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its output inside its own body; it cannot write to containers created outside it.
 
 ## Perceived performance (loading states)
 

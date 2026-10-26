@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { REQUIRED_FIELD_MESSAGE, requiredFieldError } from "./requiredField"
+import {
+  isRequiredEmptyText,
+  REQUIRED_FIELD_MESSAGE,
+  requiredFieldError,
+} from "./requiredField"
 
 describe("REQUIRED_FIELD_MESSAGE", () => {
   it("is the user-facing required copy", () => {
@@ -36,4 +40,14 @@ describe("requiredFieldError", () => {
       )
     }
   )
+})
+
+describe("isRequiredEmptyText", () => {
+  it.each([null, "", "   ", "\t\n"])("treats %j as required-empty", value => {
+    expect(isRequiredEmptyText(value)).toBe(true)
+  })
+
+  it.each(["a", " a ", "0"])("treats %j as not required-empty", value => {
+    expect(isRequiredEmptyText(value)).toBe(false)
+  })
 })

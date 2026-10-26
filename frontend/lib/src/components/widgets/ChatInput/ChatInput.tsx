@@ -49,6 +49,8 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
+import type { StopResult } from "~lib/components/audio/core/types"
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import { LOG } from "~lib/components/ChatInput/logger"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -910,8 +912,17 @@ function ChatInput({
   }, [controller])
 
   const handleRecordingApprove = useCallback(async () => {
-    const { blob } = await controller.stop()
-    await controller.approve(blob)
+    let stopResult: StopResult
+    try {
+      stopResult = await controller.stop()
+    } catch (error) {
+      // Cancelling while the stop is pending is not a recording failure.
+      if (error instanceof RecordingCancelledError) {
+        return
+      }
+      throw error
+    }
+    await controller.approve(stopResult.blob)
   }, [controller])
 
   // Void wrappers for async handlers to satisfy eslint
@@ -952,7 +963,10 @@ function ChatInput({
     const handleDragEnter = (event: DragEvent): void => {
       event.preventDefault()
       event.stopPropagation()
-      if (!fileDragged && event.dataTransfer?.types.includes("Files")) {
+      if (
+        !fileDragged &&
+        event.dataTransfer?.types.includes("Files") === true
+      ) {
         setFileDragged(true)
       }
     }
@@ -1033,10 +1047,10 @@ function ChatInput({
   // Calculate minimum height for the textarea based on heightConfig.
   // Subtracts container padding and border from pixel height to get inner textarea height.
   const textareaMinHeight = useMemo((): string | undefined => {
-    if (!heightConfig || heightConfig.useContent) {
+    if (!heightConfig || heightConfig.useContent === true) {
       return undefined
     }
-    if (heightConfig.useStretch) {
+    if (heightConfig.useStretch === true) {
       return "100%"
     }
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {

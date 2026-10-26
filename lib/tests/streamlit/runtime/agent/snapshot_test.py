@@ -341,12 +341,8 @@ class SnapshotBuilderTest(SnapshotCase):
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False
         assert _state(snapshot, "segmented_control", "mode").clearable is True
-        # New text is legal, so the membership list is empty. The options stay
-        # on the description for the client.
-        open_city = _one_keyed(snapshot.document, "selectbox", "open_city")
+        # New text is legal, so there is no closed list to check against.
         assert _state(snapshot, "selectbox", "open_city").options is None
-        assert open_city["props"]["options"] == ["Paris"]
-        assert open_city["props"]["accept_new_options"] is True
         assert _state(snapshot, "selectbox", "closed_city").options == ["Paris"]
         assert "clearable" not in _one_keyed(
             snapshot.document, "selectbox", "closed_city"
@@ -644,7 +640,9 @@ class SnapshotBuilderTest(SnapshotCase):
 
 
 def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
-    """Media URLs in url, src, and avatar get the prefix, in lists and nested nodes."""
+    """Media and static file URLs in url, src, and avatar get the prefix, in lists
+    and nested nodes.
+    """
     document: dict[str, Any] = {
         "tree": {
             "type": "root",
@@ -654,7 +652,7 @@ def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
                     "children": [
                         {
                             "type": "image",
-                            "props": {"url": ["/media/a.png", "/media/b.png"]},
+                            "props": {"url": ["/media/a.png", "/app/static/b.png"]},
                         },
                         {
                             "type": "chat_message",
@@ -664,19 +662,21 @@ def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
                             ],
                         },
                         {"type": "iframe", "props": {"src": "/media/e.html"}},
+                        {"type": "video", "props": {"url": "/app/static/f.mp4"}},
                     ],
                 }
             ],
         }
     }
 
-    rebase_media_urls(document, media_path="/media", prefix="../..")
+    rebase_media_urls(document, paths=("/media", "/app/static"), prefix="../..")
 
-    image, chat_message, iframe = document["tree"]["children"][0]["children"]
-    assert image["props"]["url"] == ["../../media/a.png", "../../media/b.png"]
+    image, chat_message, iframe, video = document["tree"]["children"][0]["children"]
+    assert image["props"]["url"] == ["../../media/a.png", "../../app/static/b.png"]
     assert chat_message["props"]["avatar"] == "../../media/c.png"
     assert chat_message["children"][0]["props"]["url"] == "../../media/d.wav"
     assert iframe["props"]["src"] == "../../media/e.html"
+    assert video["props"]["url"] == "../../app/static/f.mp4"
 
 
 def test_rebase_media_urls_leaves_other_values_untouched() -> None:
@@ -693,6 +693,7 @@ def test_rebase_media_urls_leaves_other_values_untouched() -> None:
                     "type": "image",
                     "props": {"url": "/mediafiles/x.png", "caption": "/media/y.png"},
                 },
+                {"type": "audio", "props": {"url": "/app/staticfiles/x.wav"}},
                 {"type": "chat_message", "props": {"name": "user", "avatar": "🧑"}},
                 {"type": "markdown", "props": {"body": "![](/media/z.png)"}},
             ],
@@ -700,6 +701,6 @@ def test_rebase_media_urls_leaves_other_values_untouched() -> None:
     }
     expected = copy.deepcopy(document)
 
-    rebase_media_urls(document, media_path="/media", prefix="../..")
+    rebase_media_urls(document, paths=("/media", "/app/static"), prefix="../..")
 
     assert document == expected

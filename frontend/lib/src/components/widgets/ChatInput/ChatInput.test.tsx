@@ -25,8 +25,10 @@ import {
   FileURLs as FileURLsProto,
 } from "@streamlit/protobuf"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import type {
   RecordingState,
+  StopResult,
   WaveformController,
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
@@ -1856,6 +1858,34 @@ describe("ChatInput widget", () => {
       expect(mockController.approve).toHaveBeenCalled()
     })
     expect(mockController.start).not.toHaveBeenCalled()
+  })
+
+  it("skips approval without an error when a pending submit is cancelled", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    let rejectStop: (error: Error) => void = () => {}
+    mockController.stop = vi.fn(
+      () =>
+        new Promise<StopResult>((_resolve, reject) => {
+          rejectStop = reject
+        })
+    )
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputApproveButton"))
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+    await act(async () => {
+      rejectStop(new RecordingCancelledError())
+      await Promise.resolve()
+    })
+
+    expect(mockController.cancel).toHaveBeenCalledTimes(1)
+    expect(mockController.approve).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
   })
 
   it("cancels an in-progress recording", async () => {

@@ -101,8 +101,8 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   const borderMode = props.element.borderMode
 
   // Hide index and header settings from proto
-  const hideIndex = props.element.hideIndex ?? false
-  const hideHeader = props.element.hideHeader ?? false
+  const hideIndex = props.element.hideIndex
+  const hideHeader = props.element.hideHeader
 
   // Calculate visible columns based on hideIndex
   const visibleNumIndexColumns = hideIndex ? 0 : numIndexColumns
@@ -362,7 +362,7 @@ function generateTableCell(
     textAlign: isNumericType(contentType) ? "right" : "left",
   }
 
-  if (formattedContent?.endsWith(`<span class="pd-t"></span>`)) {
+  if (formattedContent.endsWith(`<span class="pd-t"></span>`)) {
     // This is a bit hacky, but to support the Pandas Styler's tooltip feature,
     // we need to convert the specific HTML element (used for tooltips) from
     // the display value into an actual span element.

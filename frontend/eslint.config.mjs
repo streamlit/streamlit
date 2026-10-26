@@ -665,13 +665,37 @@ export default defineConfig([
     },
   },
   // Flags redundant optional chains and always-true checks.
-  // Tests stay off until production source is clean. Elements and non-widget
-  // packages stay off until those directories are cleaned.
+  // Tests stay off until they are cleaned up.
   {
-    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
+  // A nullable boolean in a condition treats a missing value like `false`.
+  // Default it, or compare with `=== true`. Negate with `!== true`; the
+  // rule's suggested `=== false` is false for null and undefined. The rule
+  // always reports mixed-type unions (for example `string | number`); disable
+  // those inline with a reason. Other types, including `any`, stay allowed.
+  // The glob covers all of `lib/src`, tests and `vendor/` included; other
+  // packages stay off until they are cleaned up.
+  {
+    files: ["lib/src/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        {
+          allowString: true,
+          allowNumber: true,
+          allowNullableObject: true,
+          allowNullableBoolean: false,
+          allowNullableString: true,
+          allowNullableNumber: true,
+          allowNullableEnum: true,
+          allowAny: true,
+        },
+      ],
     },
   },
   // Styled components files

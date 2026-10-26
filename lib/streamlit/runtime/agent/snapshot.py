@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
@@ -36,12 +36,18 @@ from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from google.protobuf.message import Message
 
+    from streamlit.elements.lib.agent_spec import ActionKind
     from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
 SCHEMA_VERSION: Final = 1
+
+# Why an element the snapshot shows cannot be used now.
+BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, style-only HTML, and a loading skeleton, which by the
@@ -89,6 +95,16 @@ class ElementState(NamedTuple):
     # Whether a browser user can empty it, so a later request's null clears it
     # rather than resetting it to a non-empty default.
     clearable: bool = False
+    # What the element is acted on with, "value" or "trigger", or None for a
+    # display-only element. It decides whether `widget_state` or `trigger`
+    # addresses it, and tells a display-only element from one that cannot be
+    # used right now, such as a widget in a closed dialog.
+    action: ActionKind | None = None
+    # Why an element the snapshot shows cannot be used now: "closed_dialog"
+    # for one in a closed dialog, "compile_error" for one left from an
+    # earlier run when the script failed to compile. Enabling it would not
+    # help.
+    blocked_by: BlockedReason | None = None
 
 
 @dataclass
@@ -96,7 +112,12 @@ class Snapshot:
     """A serialized snapshot plus the bookkeeping the next request needs."""
 
     document: dict[str, Any]
+    # Keyed by element ID, in tree order, which a batched write's widget
+    # states are encoded in.
     element_states: dict[str, ElementState]
+    # Whether the run failed to compile. The page it leaves usually has no
+    # elements, so a write to one from the page before names this cause.
+    compile_error: bool = False
 
 
 class _SnapshotBuilder:
@@ -165,14 +186,28 @@ class _SnapshotBuilder:
         support = node.description.get("support") or inherited_support
         is_dialog = node.description.get("type") == "dialog"
         dialog_props = (node.description.get("props") or {}) if is_dialog else {}
-        actions_before_children = len(self.actions)
+        closed_dialog = dialog_props.get("is_open") is False
+        if (
+            node.root_name is None
+            and node.block is not None
+            and not node.description.get("transparent")
+        ):
+            # Recorded before its body, so `actions` and `element_states` both
+            # follow tree order, which a batched write's callbacks run in, and
+            # a dialog's own state stays outside the in-dialog window.
+            self._record_element_state(
+                node.description,
+                inherited_support,
+                None,
+                node.fragment_id,
+                unusable=closed_dialog,
+            )
         # A dialog closed in this run still has its body in the tree. Only an
         # open one makes those widgets cross-dialog writes. A closed one is
         # unmounted, so nothing in it can be set or fired. The flag covers the
-        # body; the dialog's own dismiss trigger is passed below.
+        # body; the dialog's own dismiss trigger is recorded above.
         if dialog_props.get("is_open") is True:
             self._in_dialog = True
-        closed_dialog = dialog_props.get("is_open") is False
         if closed_dialog:
             self._closed_dialog = True
         children = self.serialize_children(node, support)
@@ -227,19 +262,6 @@ class _SnapshotBuilder:
                 value_schema=description.get("value_schema"),
             )
             _attach_value(result, action, value, description.get("value_schema"))
-        # The container is recorded after its body so a dialog's own state
-        # stays outside the in-dialog window. Its action is then moved in
-        # front of the children's, so `actions` follows tree order.
-        before_record = len(self.actions)
-        self._record_element_state(
-            description,
-            inherited_support,
-            None,
-            node.fragment_id,
-            unusable=closed_dialog,
-        )
-        if len(self.actions) == before_record + 1:
-            self.actions.insert(actions_before_children, self.actions.pop())
 
         result["children"] = children
         return [result]
@@ -340,6 +362,7 @@ class _SnapshotBuilder:
         # text has no such list: any value of the right schema is legal, and
         # its options stay on the description. Otherwise a command publishes
         # `choices` when the list is not its `options` parameter.
+        options: list[Any] | None
         if props.get("accept_new_options") is True:
             options = None
         else:
@@ -350,12 +373,9 @@ class _SnapshotBuilder:
                 candidate = props.get("options")
                 options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
+        in_closed_dialog = unusable or self._closed_dialog
         actionable = (
-            bool(action)
-            and not support
-            and not disabled
-            and not unusable
-            and not self._closed_dialog
+            bool(action) and not support and not disabled and not in_closed_dialog
         )
 
         self.element_states[element_id] = ElementState(
@@ -374,6 +394,8 @@ class _SnapshotBuilder:
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
+            action=action if action in {"value", "trigger"} else None,
+            blocked_by="closed_dialog" if in_closed_dialog else None,
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
@@ -526,7 +548,7 @@ def build_snapshot(
         # the caller passed, and none of them can be used.
         builder.actions.clear()
         builder.element_states = {
-            element_id: state._replace(actionable=False)
+            element_id: state._replace(actionable=False, blocked_by="compile_error")
             for element_id, state in builder.element_states.items()
         }
 
@@ -560,38 +582,44 @@ def build_snapshot(
         # real command name.
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
-    return Snapshot(document=document, element_states=builder.element_states)
+    return Snapshot(
+        document=document,
+        element_states=builder.element_states,
+        compile_error=compile_error,
+    )
 
 
 def rebase_media_urls(
-    document: dict[str, Any], *, media_path: str, prefix: str
+    document: dict[str, Any], *, paths: Iterable[str], prefix: str
 ) -> None:
     """Prefix a snapshot's media URLs with the way back to the app's root, in place.
 
     Media storage hands out URLs relative to the app's root (``/media/<id>``),
-    which a browser resolves against its own base path. A client of this API
+    and so does an app that serves its own static files (``/app/static/<file>``).
+    A browser resolves both against its own base path. A client of this API
     has no base path to resolve against, so the URL has to say how to reach the
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
     is a 404 or a login redirect.
 
     Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
-    under ``media_path``, so an external link an app displays is never
+    under one of ``paths``, so an external link an app displays is never
     rewritten.
 
     Parameters
     ----------
     document : dict[str, Any]
         A snapshot document from ``build_snapshot``.
-    media_path : str
-        The path media storage serves files under, such as ``"/media"``.
+    paths : Iterable[str]
+        The paths below the app's root that media URLs start with, such as
+        ``"/media"`` and ``"/app/static"``.
     prefix : str
         The relative path from the request's URL to the app's root, such as
         ``"../.."``. It is prepended to each media URL.
     """
-    media_prefix = media_path.rstrip("/") + "/"
+    path_prefixes = tuple(path.rstrip("/") + "/" for path in paths)
 
     def rebase(value: Any) -> Any:
-        if isinstance(value, str) and value.startswith(media_prefix):
+        if isinstance(value, str) and value.startswith(path_prefixes):
             return prefix + value
         # Several images report a list of URLs.
         if isinstance(value, list):

@@ -128,8 +128,7 @@ export const getMergedDarkTheme = once(() =>
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  const prefersDark =
-    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
 
   return prefersDark ? "dark" : "light"
 }
@@ -622,7 +621,7 @@ const isValidFontWeight = (
   fontWeight: number | null | undefined,
   minWeight: number,
   maxWeight: number,
-  inSidebar?: boolean
+  inSidebar = false
 ): boolean => {
   const themeSection = inSidebar ? "theme.sidebar" : "theme"
 
@@ -664,9 +663,9 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize?.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem") === true) {
     return validatedSize
-  } else if (validatedSize?.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px") === true) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
@@ -850,7 +849,8 @@ export const createEmotionTheme = (
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
-    (colorsArg: Record<string, string>, [key, color]) => {
+    // parseColor drops unset or invalid colors, so a lookup can return undefined.
+    (colorsArg: Partial<Record<string, string>>, [key, color]) => {
       // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {

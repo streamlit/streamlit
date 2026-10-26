@@ -62,7 +62,7 @@ interface StyledContentProps {
 }
 
 export const StyledContent = styled.div<StyledContentProps>(
-  ({ theme, visibility, $truncate }) => ({
+  ({ theme, visibility, $truncate = false }) => ({
     display: visibility === LabelVisibilityOptions.Collapsed ? "none" : "flex",
     visibility:
       visibility === LabelVisibilityOptions.Hidden ? "hidden" : "visible",
@@ -87,7 +87,7 @@ interface StyledLabelTextProps {
  * box so the markdown can ellipsize; otherwise it stays transparent to layout.
  */
 export const StyledLabelText = styled.div<StyledLabelTextProps>(
-  ({ $truncate }) =>
+  ({ $truncate = false }) =>
     $truncate
       ? { display: "flex", alignItems: "center", minWidth: 0 }
       : { display: "contents" }
@@ -104,7 +104,7 @@ interface StyledButtonProps {
  */
 const buttonStyles = ({
   theme,
-  $truncate,
+  $truncate = false,
 }: { theme: EmotionTheme } & StyledButtonProps): CSSObject => ({
   display: "flex",
   alignItems: "flex-start",

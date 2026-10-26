@@ -162,7 +162,7 @@ export function useDrawerResize({
       }
       event.preventDefault()
       event.stopPropagation()
-      event.currentTarget.setPointerCapture?.(event.pointerId)
+      event.currentTarget.setPointerCapture(event.pointerId)
       document.body.style.userSelect = "none"
       dragRef.current = {
         startX: event.clientX,
@@ -182,7 +182,7 @@ export function useDrawerResize({
 
   const handlePointerUp = useCallback(
     (event: PointerEvent<HTMLDivElement>): void => {
-      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
       endDrag()

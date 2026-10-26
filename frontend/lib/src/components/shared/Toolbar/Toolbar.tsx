@@ -55,7 +55,7 @@ export interface ToolbarActionProps {
 
 export function ToolbarAction({
   label,
-  show_label,
+  show_label = false,
   icon,
   onClick,
   labelContext,
@@ -84,9 +84,7 @@ export function ToolbarAction({
       >
         <Button
           onClick={event => {
-            if (onClick) {
-              onClick()
-            }
+            onClick()
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
@@ -123,23 +121,22 @@ export interface ToolbarProps {
 const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
-  isFullScreen,
-  locked,
+  isFullScreen = false,
+  locked = false,
   children,
   target,
-  disableFullscreenMode,
+  disableFullscreenMode = false,
   labelContext,
 }): ReactElement => {
   const showFullscreenButton =
-    onExpand && !disableFullscreenMode && !isFullScreen
+    onExpand !== undefined && !disableFullscreenMode && !isFullScreen
   const showCloseFullscreenButton =
-    onCollapse && !disableFullscreenMode && isFullScreen
+    onCollapse !== undefined && !disableFullscreenMode && isFullScreen
 
   return (
     <StyledToolbarWrapper
       className="stElementToolbar"
       data-testid="stElementToolbar"
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false locked flag still locks in fullscreen
       locked={locked || isFullScreen}
       target={target}
     >

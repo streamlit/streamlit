@@ -386,14 +386,17 @@ class ChatInputSerde:
     accept_files: bool = False
     accept_audio: bool = False
     allowed_types: Sequence[str] | None = None
+    # The browser stops input at this length, and 0 or None means no limit.
+    max_chars: int | None = None
 
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
+        text = ui_value.data[: self.max_chars] if self.max_chars else ui_value.data
         if not self.accept_files and not self.accept_audio:
-            return ui_value.data
+            return text
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
         for file in uploaded_files:
             if self.allowed_types and not isinstance(file, DeletedFile):
@@ -405,7 +408,7 @@ class ChatInputSerde:
         )
 
         return ChatInputValue(
-            text=ui_value.data,
+            text=text,
             files=uploaded_files,
             audio=audio_file,
             _include_files=self.accept_files,
@@ -1119,6 +1122,7 @@ class ChatMixin:
             accept_files=accept_file in {True, "multiple", "directory"},
             accept_audio=accept_audio,
             allowed_types=file_type,
+            max_chars=max_chars,
         )
         widget_state = register_widget(
             chat_input_proto.id,

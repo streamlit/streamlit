@@ -32,12 +32,11 @@ interface MockEventListenersResult {
 // Mocking "message" event listeners on the window;
 // returns helpers to dispatch events and inspect listener counts
 function mockEventListeners(): MockEventListenersResult {
-  const listeners: { [name: string]: ((event: Event) => void)[] } = {}
+  const listeners: Partial<Record<string, ((event: Event) => void)[]>> = {}
 
   window.addEventListener = vi.fn(
     (event: string, cb: EventListenerOrEventListenerObject) => {
-      listeners[event] = listeners[event] || []
-      listeners[event].push(cb as EventListener)
+      ;(listeners[event] ??= []).push(cb as EventListener)
     }
   )
 

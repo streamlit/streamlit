@@ -255,6 +255,11 @@ function TimeInput({
   const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
   const { locale } = useContext(LibConfigContext)
+  // `step` is `number | Long`, which the rule always reports. A missing or
+  // numeric 0 step falls back to 900 seconds. An unset int64 decodes as a
+  // Long zero, which is truthy and skips the fallback; Python always sends a
+  // positive step.
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment above
   const step = element.step ? Number(element.step) : 900
   // The field can be emptied only when its default is empty. Required fields
   // hide the clear button; users can still clear eligible fields with the keyboard.

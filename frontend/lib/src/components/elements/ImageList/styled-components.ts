@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 export const StyledImageList = styled.div<{
   shouldStretch?: boolean
-}>(({ theme, shouldStretch }) => ({
+}>(({ theme, shouldStretch = false }) => ({
   display: "flex",
   flexDirection: "row",
   flexWrap: "wrap",
@@ -30,7 +30,7 @@ export const StyledImageList = styled.div<{
 
 export const StyledImageContainer = styled.div<{
   shouldStretch?: boolean
-}>(({ theme, shouldStretch }) => ({
+}>(({ theme, shouldStretch = false }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",

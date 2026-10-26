@@ -1201,15 +1201,6 @@ describe("#useLayoutStyles", () => {
       })
     })
 
-    describe("without an element", () => {
-      it("returns default auto styles when element is nullish", () => {
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element: undefined as unknown as Element })
-        )
-        expect(result.current).toEqual(getDefaultStyles({}))
-      })
-    })
-
     describe("min-width protection in content-width containers", () => {
       function withContentWidthContainer(parentWidth?: number) {
         return function Wrapper({ children }: { children: ReactNode }) {

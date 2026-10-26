@@ -114,10 +114,10 @@ export function useHoverSubmenu({
 
     const handleMouseOver = (e: MouseEvent): void => {
       const target = e.target as Element
-      if (anchorRef.current?.contains(target)) {
+      if (anchorRef.current?.contains(target) === true) {
         clearClose()
         onOpenChange(true)
-      } else if (isOpen && panelRef.current?.contains(target)) {
+      } else if (isOpen && panelRef.current?.contains(target) === true) {
         clearClose()
       } else if (isOpen) {
         scheduleClose()

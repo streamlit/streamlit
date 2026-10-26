@@ -528,6 +528,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         forceStretchWidth ? currentWidth : 0,
         forceStretchHeight ? currentHeight : 0
       )
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets ignore during the await
       if (success && !ignore) {
         lastDimensionsRef.current = {
           width: currentWidth,
@@ -566,7 +567,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     const observer = new ResizeObserver(entries => {
-      const entry = entries[0]
+      // Browsers without `borderBoxSize` report only the content rect.
+      const entry = entries[0] as Partial<ResizeObserverEntry> | undefined
       setBindingMeasurement({
         spec: inputElement.spec,
         height:
@@ -596,10 +598,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   useEffect(() => {
-    // We only show data if its provided via data or if there
-    // is one data set in the datasets array. In this case,
-    // only the first dataset is shown:
-    if (data || datasets?.[0]?.data) {
+    // Show data if it's provided via data or via at least one dataset
+    // (only the first dataset is shown).
+    if (data || datasets.length > 0) {
       setEnableShowData(true)
     } else {
       setEnableShowData(false)

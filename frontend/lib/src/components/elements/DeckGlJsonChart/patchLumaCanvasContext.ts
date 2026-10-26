@@ -41,7 +41,8 @@
  */
 import { CanvasContext } from "@luma.gl/core"
 
-type MaybePatchedCanvasContext = CanvasContext & {
+/** Treats `canvas` and `device` as possibly missing on the fallback path. */
+type MaybePatchedCanvasContext = Omit<CanvasContext, "canvas" | "device"> & {
   __streamlitMaxTexturePatchApplied?: boolean
   canvas?: { width?: number; height?: number }
   device?: {
@@ -53,11 +54,10 @@ type MaybePatchedCanvasContext = CanvasContext & {
 
 const canvasContextProto = CanvasContext.prototype as MaybePatchedCanvasContext
 
-if (!canvasContextProto.__streamlitMaxTexturePatchApplied) {
+if (canvasContextProto.__streamlitMaxTexturePatchApplied !== true) {
   const originalGetMaxDrawingBufferSize =
     // Prototype patch must capture the original to `.call(this)`. Binding the
     // method to the prototype would lock `this` to CanvasContext.prototype.
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- see above
     canvasContextProto.getMaxDrawingBufferSize
 
   canvasContextProto.getMaxDrawingBufferSize =
