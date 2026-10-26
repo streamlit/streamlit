@@ -94,13 +94,39 @@ describe("PlotlyChart CustomTheme", () => {
       expect(result).not.toContain("#000021")
     })
 
-    it("replaces GO specific colors", () => {
+    it("replaces GO specific colors for streamlit theme", () => {
       // #000032 is INCREASING
       const spec = JSON.stringify({ color: "#000032" })
       const result = replaceTemporaryColors(spec, theme, "streamlit")
 
       // getIncreasingGreen(theme) -> usually equals theme.colors.green80 or similar logic
       expect(result).not.toContain("#000032")
+    })
+
+    it("maps GO placeholders to Plotly defaults when theme is empty", () => {
+      // #000036 is GRAY_70 (Sankey textfont / waterfall connector in the
+      // process-wide streamlit template). Dark app theme would resolve this to
+      // a near-white gray via getGray70 — unreadable on Plotly's white paper.
+      const darkAppTheme = {
+        ...theme,
+        colors: {
+          ...theme.colors,
+          bgColor: "#0e1117",
+          bodyText: "#fafafa",
+        },
+      }
+      const spec = JSON.stringify({
+        textfont: { color: "#000036" },
+        cells: { fill: { color: "#000038" } },
+      })
+      const result = replaceTemporaryColors(spec, darkAppTheme, "")
+
+      expect(result).toContain("#2a3f5f")
+      expect(result).toContain("#EBF0F8")
+      expect(result).not.toContain("#000036")
+      expect(result).not.toContain("#000038")
+      expect(result).not.toContain("#fafafa")
+      expect(result).not.toContain("#0e1117")
     })
   })
 
@@ -378,8 +404,30 @@ describe("PlotlyChart CustomTheme", () => {
   })
 
   describe("applyTheming with theme=None", () => {
-    it("does not inject Streamlit font color over a light figure", () => {
-      const darkTheme = {
+    it("leaves unset font and backgrounds unset", () => {
+      const themeWithLightText = {
+        ...theme,
+        colors: {
+          ...theme.colors,
+          bodyText: "#fafafa",
+        },
+      }
+      const figure = {
+        data: [{}],
+        layout: {},
+        frames: [],
+      }
+
+      const result = applyTheming(figure, "", themeWithLightText)
+      const layout = result.layout as Record<string, unknown>
+
+      expect(layout.font).toBeUndefined()
+      expect(layout.paper_bgcolor).toBeUndefined()
+      expect(layout.plot_bgcolor).toBeUndefined()
+    })
+
+    it("preserves an explicit layout.font", () => {
+      const themeWithLightText = {
         ...theme,
         colors: {
           ...theme.colors,
@@ -389,20 +437,20 @@ describe("PlotlyChart CustomTheme", () => {
       const figure = {
         data: [{}],
         layout: {
+          font: { color: "#111111", family: "Courier" },
           paper_bgcolor: "white",
           plot_bgcolor: "white",
-          showlegend: true,
         },
         frames: [],
       }
 
-      const result = applyTheming(figure, "", darkTheme)
+      const result = applyTheming(figure, "", themeWithLightText)
       const layout = result.layout as Record<string, unknown>
-      const font = layout.font as Record<string, unknown> | undefined
+      const font = layout.font as Record<string, unknown>
 
+      expect(font).toEqual({ color: "#111111", family: "Courier" })
       expect(layout.paper_bgcolor).toBe("white")
       expect(layout.plot_bgcolor).toBe("white")
-      expect(font?.color).not.toBe("#fafafa")
     })
   })
 })

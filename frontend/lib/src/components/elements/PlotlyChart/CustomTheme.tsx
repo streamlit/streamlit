@@ -372,7 +372,11 @@ function replaceDivergingColors(
  * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
  * we use this method to specifically replace these graph properties.
  * */
-function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
+function replaceGOSpecificColors(
+  spec: string,
+  theme: EmotionTheme,
+  elementTheme: string
+): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const INCREASING = "#000032"
   const DECREASING = "#000033"
@@ -385,17 +389,34 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
   const FADED_TEXT_05 = "#000039"
   const BG_MIX = "#000040"
 
-  spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
-  spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
-  spec = spec.replaceAll(TOTAL, getBlue80(theme))
+  if (elementTheme === "streamlit") {
+    spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
+    spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
+    spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
-  spec = spec.replaceAll(GRAY_30, getGray30(theme))
-  spec = spec.replaceAll(GRAY_70, getGray70(theme))
-  spec = spec.replaceAll(GRAY_90, getGray90(theme))
+    spec = spec.replaceAll(GRAY_30, getGray30(theme))
+    spec = spec.replaceAll(GRAY_70, getGray70(theme))
+    spec = spec.replaceAll(GRAY_90, getGray90(theme))
 
-  spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
-  spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
-  spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+    spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
+    spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
+    spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+  } else {
+    // Plotly defaults (readable on Plotly's white paper / light plot bg).
+    // Candlestick increasing/decreasing match plotly.js trace defaults;
+    // table and font colors match the "plotly" layout template.
+    spec = spec.replaceAll(INCREASING, "#3D9970")
+    spec = spec.replaceAll(DECREASING, "#FF4136")
+    spec = spec.replaceAll(TOTAL, "#636efa")
+
+    spec = spec.replaceAll(GRAY_30, "#B2B5BE")
+    spec = spec.replaceAll(GRAY_70, "#2a3f5f")
+    spec = spec.replaceAll(GRAY_90, "#2a3f5f")
+
+    spec = spec.replaceAll(BG_COLOR, "#EBF0F8")
+    spec = spec.replaceAll(FADED_TEXT_05, "white")
+    spec = spec.replaceAll(BG_MIX, "#C8D4E3")
+  }
   return spec
 }
 
@@ -404,7 +425,7 @@ export function replaceTemporaryColors(
   theme: EmotionTheme,
   elementTheme: string
 ): string {
-  spec = replaceGOSpecificColors(spec, theme)
+  spec = replaceGOSpecificColors(spec, theme, elementTheme)
   spec = replaceCategoricalColors(spec, theme, elementTheme)
   spec = replaceSequentialColors(spec, theme, elementTheme)
   spec = replaceDivergingColors(spec, theme, elementTheme)
