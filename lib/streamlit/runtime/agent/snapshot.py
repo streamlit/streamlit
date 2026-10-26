@@ -593,9 +593,10 @@ def _data_block(
         # once the element that produced it stops rendering.
         data["url"] = url
     elif data["complete"] is False:
-        # In a recording session with a runtime, the size bound is the only
-        # reason `serve_arrow_over_http` registers nothing for a non-empty
-        # table. A new reason there needs its own `unavailable` value.
+        # A described element has no URL only when its payload is over
+        # `server.maxMessageSize` or no runtime exists to register it with.
+        # Any other gap sets its own `unavailable` reason before this point;
+        # a new one in `serve_arrow_over_http` needs its own value too.
         reason: UnavailableReason = "too_large_to_serve" if described else "undescribed"
         data.setdefault("unavailable", reason)
     return data
@@ -651,10 +652,10 @@ def _lazy_dataframe_data(lazy_data: Any) -> dict[str, Any] | None:
     """A lazily loaded dataframe, previewed from the chunk its browser received.
 
     The preview is the first ``server.agentPreviewRows`` rows of that chunk,
-    the same cap as any table. The rest is only fetched by a browser as it
-    scrolls, so nothing serves it, and the chunk alone would pass for the whole
-    table. The row count is the source's, reported only when the source knows
-    it.
+    the same cap as any table. Rows past the chunk are only fetched by a
+    browser as it scrolls, so nothing serves them, and the chunk alone would
+    pass for the whole table. The row count is the source's, reported only
+    when the source knows it.
     """
     data = _summarize_arrow(lazy_data.initial_chunk.data)
     if data is None:
