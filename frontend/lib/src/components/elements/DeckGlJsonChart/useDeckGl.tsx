@@ -625,6 +625,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     let { mapStyle, cartoKey } = converted
     if (
       !hadUnsetMapStyleSentinel &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- pydeck JSON may send null or an empty string for an unset style
       !mapStyle &&
       isMapCompatibleViewSpec(providedViews)
     ) {

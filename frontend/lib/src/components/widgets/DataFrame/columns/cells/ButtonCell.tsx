@@ -301,6 +301,7 @@ export function getButtonCellClickTarget(
   }
 ): ButtonCellClickTarget | undefined {
   const { data, alignment } = cell.data
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null and empty-string labels render no button
   if (!data) return undefined
 
   const label = getSingleButtonLabel(data)

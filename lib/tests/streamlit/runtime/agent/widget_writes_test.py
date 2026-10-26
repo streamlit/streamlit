@@ -28,7 +28,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.agent import widget_patch
+from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.session_state import WStates
 from tests.streamlit.runtime.agent.snapshot_test_case import (
@@ -101,7 +101,7 @@ def _render_two_forms() -> None:
     st.button("Go", key="go")
 
 
-class WidgetPatchTest(SnapshotCase):
+class WidgetWritesTest(SnapshotCase):
     """Writes are validated against the snapshot and encoded as a browser sends them."""
 
     def _write(
@@ -113,7 +113,7 @@ class WidgetPatchTest(SnapshotCase):
     ) -> WidgetStates:
         """Validate and encode a request against ``snapshot``, or a fresh one."""
         built = snapshot or self._build()
-        return widget_patch.build_widget_states(
+        return widget_writes.build_widget_states(
             self._session_state(),
             widget_state=widget_state,
             trigger=trigger,
@@ -215,7 +215,7 @@ class WidgetPatchTest(SnapshotCase):
         )
 
         def resolve(key: str) -> str:
-            return widget_patch.resolve_element_id(session_state, key, states)
+            return widget_writes.resolve_element_id(session_state, key, states)
 
         assert resolve("agree") == self._element_id("agree")
         assert resolve(unkeyed) == unkeyed
@@ -262,7 +262,7 @@ class WidgetPatchTest(SnapshotCase):
             st.form_submit_button("Send", key="send")
         snapshot = self._build()
 
-        resolved = widget_patch.resolve_element_id(
+        resolved = widget_writes.resolve_element_id(
             self._session_state(), "draft", snapshot.element_states
         )
         assert resolved == "draft"
@@ -824,7 +824,7 @@ class WidgetPatchTest(SnapshotCase):
         snapshot = self._build()
 
         def scope(widget_state: dict[str, Any], *, held: bool = True) -> str:
-            return widget_patch.resolve_fragment(
+            return widget_writes.resolve_fragment(
                 self._session_state(),
                 snapshot.element_states,
                 widget_state=widget_state,
@@ -861,7 +861,7 @@ class WidgetPatchTest(SnapshotCase):
             *,
             held: bool = True,
         ) -> str:
-            return widget_patch.resolve_fragment(
+            return widget_writes.resolve_fragment(
                 self._session_state(),
                 snapshot.element_states,
                 widget_state=widget_state,

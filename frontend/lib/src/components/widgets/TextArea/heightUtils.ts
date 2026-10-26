@@ -35,7 +35,7 @@ export const getTextAreaHeight = (
   element: TextAreaProto
 ): string => {
   let height = "auto"
-  if (outerElement.heightConfig?.useStretch) {
+  if (outerElement.heightConfig?.useStretch === true) {
     height = "100%"
   } else if (
     outerElement.heightConfig?.pixelHeight &&

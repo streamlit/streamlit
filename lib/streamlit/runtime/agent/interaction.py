@@ -45,7 +45,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
-from streamlit.runtime.agent import snapshot, widget_patch
+from streamlit.runtime.agent import snapshot, widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
@@ -255,18 +255,47 @@ class AgentSessionClient(SessionClient):
     def _drop_stale_deltas(self) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
 
-        This is the frontend's stale-node rule over a message list: a full run
-        replaces the whole tree, so anything older is gone, while a fragment run
+        This is the frontend's stale-node rule over a message list. A full run
+        replaces the whole tree, so anything older is gone. A fragment run
         replaces only its own region and leaves the rest of the app standing.
+        That region is the fragment's own older deltas and everything older
+        under a container it wrote, which includes what a fragment nested in
+        that container rendered before. As in the browser's tree, a container
+        is judged by position, so a dropped one takes its contents with it.
         """
+        # Keep in sync with `ClearStaleNodeVisitor` in
+        # frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts,
+        # which applies this rule to the browser's tree. Writes are checked
+        # against what this buffer keeps, so content the browser dropped but
+        # this kept would still accept writes.
         running = self._fragments_this_run
         # Its indexes point into the list being replaced.
         self._element_at = {}
+        if not running:
+            self._deltas = [
+                (run_id, msg) for run_id, msg in self._deltas if run_id == self._run_id
+            ]
+            return
+
+        # Containers of a fragment that ran: re-sent, so this run decides their
+        # contents, or not re-sent, so they and their contents are gone.
+        replaced = {
+            tuple(msg.metadata.delta_path)
+            for _, msg in self._deltas
+            if msg.delta.fragment_id in running
+            and msg.delta.WhichOneof("type") == "add_block"
+        }
+
+        def is_stale(run_id: str, msg: ForwardMsg) -> bool:
+            if run_id == self._run_id:
+                return False
+            if msg.delta.fragment_id in running:
+                return True
+            path = tuple(msg.metadata.delta_path)
+            return any(path[:depth] in replaced for depth in range(1, len(path) + 1))
+
         self._deltas = [
-            (run_id, msg)
-            for run_id, msg in self._deltas
-            if run_id == self._run_id
-            or (running and msg.delta.fragment_id not in running)
+            (run_id, msg) for run_id, msg in self._deltas if not is_stale(run_id, msg)
         ]
 
 
@@ -1050,14 +1079,14 @@ def _validate_in_worker(
     key, such as a form error, wins over ``cross_dialog_batch``.
     """
     with _script_ctx(ctx):
-        widget_states = widget_patch.build_widget_states(
+        widget_states = widget_writes.build_widget_states(
             session_state,
             widget_state=widget_state,
             trigger=trigger,
             element_states=element_states,
             compile_error=compile_error,
         )
-        fragment_id = widget_patch.resolve_fragment(
+        fragment_id = widget_writes.resolve_fragment(
             session_state,
             element_states,
             widget_state=widget_state,
@@ -1186,7 +1215,7 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
                 f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
                 "has a `key` and, for payload-bearing triggers, a `value`.",
             )
-        widget_patch.require_trigger_key(trigger)
+        widget_writes.require_trigger_key(trigger)
 
     writes = [
         name for name in ("widget_state", "trigger") if request.get(name) is not None

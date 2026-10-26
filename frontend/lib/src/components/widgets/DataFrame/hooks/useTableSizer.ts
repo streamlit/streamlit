@@ -79,7 +79,7 @@ function useTableSizer(
   usesGroupRow: boolean,
   containerWidth: number,
   fullscreenContainerHeight?: number,
-  isFullScreen?: boolean,
+  isFullScreen = false,
   widthConfig?: streamlit.WidthConfig.$Properties | null,
   heightConfig?: streamlit.HeightConfig.$Properties | null,
   measuredContainerHeight?: number,

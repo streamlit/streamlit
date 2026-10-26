@@ -183,7 +183,7 @@ export function getPandasTypeName(type: ArrowType): string | undefined {
 export function getTimezone(type: ArrowType): string | undefined {
   // `Field.type` is `any` on untyped tables. Read `timezone` as `unknown`
   // before the nullish fallback below.
-  const dataType = type.arrowField?.type as { timezone?: unknown } | undefined
+  const dataType = type.arrowField.type as { timezone?: unknown } | undefined
   const arrowTimezone = dataType?.timezone
   const pandasTimezone = (
     type.pandasType?.metadata as Record<string, unknown> | null | undefined

@@ -144,3 +144,8 @@ st.write("Ignore default feedback value:", ignore_default_feedback)
 
 if st.button("Apply ignore default feedback", key="apply_ignore_default_feedback"):
     st.write("Applied ignore default feedback value:", ignore_default_feedback)
+
+bound_feedback = st.feedback(
+    "stars", key="bound_rating", default=2, bind="query-params"
+)
+st.write("Bound feedback value:", bound_feedback)

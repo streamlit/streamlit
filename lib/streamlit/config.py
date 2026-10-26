@@ -626,8 +626,11 @@ _create_option(
         - "viewer"    : Hide the developer options, including the rerun, clear
                         cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
-                        Streamlit Community Cloud) or through st.set_page_config.
-                        If there are no options left, hide the menu.
+                        Streamlit Community Cloud) or through
+                        st.set_page_config. If there are no such options,
+                        hide the menu. When the menu is shown and there is
+                        more than one theme to choose from, it also includes
+                        the theme selector.
     """,
     default_val="auto",
     type_=str,

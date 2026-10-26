@@ -361,7 +361,7 @@ export function parseDateFieldPaste(
 ): ParsedDateFieldPaste | null {
   const trimmed = text.trim()
 
-  if (options.allowRangePaste) {
+  if (options.allowRangePaste === true) {
     const range = parsePastedDateRange(trimmed, format)
     if (range) return { kind: "range", ...range }
   }

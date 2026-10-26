@@ -333,7 +333,7 @@ function DateInput({
   // Drop the buffered pending edit so form submit does not commit empty or
   // block on a required field that is already showing the restored date.
   const handleClose = useCallback(
-    (shouldClearError?: boolean): void => {
+    (shouldClearError: boolean): void => {
       if (!shouldClearError) {
         return
       }

@@ -118,7 +118,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     let cellData: number | null = toSafeNumber(data)
 
     if (isNullOrUndefined(cellData)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true

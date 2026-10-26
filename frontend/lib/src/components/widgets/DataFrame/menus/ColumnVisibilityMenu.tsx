@@ -67,7 +67,7 @@ interface CheckboxItemProps {
 const CheckboxItem: React.FC<CheckboxItemProps> = ({
   label,
   initialValue,
-  isIndeterminate,
+  isIndeterminate = false,
   onChange,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -75,7 +75,7 @@ const CheckboxItem: React.FC<CheckboxItemProps> = ({
   // Set the indeterminate property imperatively — it cannot be set via HTML attributes.
   useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.indeterminate = isIndeterminate ?? false
+      inputRef.current.indeterminate = isIndeterminate
     }
   }, [isIndeterminate])
 

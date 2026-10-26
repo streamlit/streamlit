@@ -89,7 +89,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // maintain component identity across positional shifts (e.g. when a
     // conditional element above the container causes it to move).
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
-    const blockId = node.deltaBlock?.id || undefined
+    const blockId = node.deltaBlock.id || undefined
     const key = this.getCurrentKey(blockId)
     this.index += 1
     // Keep the first sibling with this block id and skip later copies. A rerun

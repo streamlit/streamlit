@@ -59,7 +59,7 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   }
 
   visitBlockNode(node: BlockNode): Set<Element> {
-    if (node.deltaBlock?.id) {
+    if (node.deltaBlock.id) {
       this.blockIds.add(node.deltaBlock.id)
     }
     for (const child of node.children) {

@@ -72,11 +72,11 @@ function getImageWidth(
   containerWidth: number
 ): number | undefined {
   if (widthConfig) {
-    if (widthConfig.useStretch) {
+    if (widthConfig.useStretch === true) {
       return containerWidth
     }
 
-    if (widthConfig.useContent) {
+    if (widthConfig.useContent === true) {
       // Use original image size (content width)
       return undefined
     }
