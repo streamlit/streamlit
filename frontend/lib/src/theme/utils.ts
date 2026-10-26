@@ -222,6 +222,11 @@ const parseColor = (
   configKey: string,
   inSidebar: boolean = false
 ): string | undefined => {
+  // Unset protobuf color defaults are empty/whitespace strings — not invalid input.
+  if (typeof color !== "string" || !color.trim()) {
+    return undefined
+  }
+
   // First try the color as-is
   if (isColor(color)) {
     return color
@@ -1232,14 +1237,62 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
   }
 }
 
+const isProtobufDefaultValue = (value: unknown): boolean =>
+  value === "" ||
+  value === null ||
+  (Array.isArray(value) && value.length === 0)
+
+/**
+ * Drop protobuf default values so lodash mergeWith does not copy them onto an
+ * empty destination. Returning `undefined` from a mergeWith customizer means
+ * "use default merge", which would still assign `""` / `null` / `[]`.
+ */
+const omitProtobufDefaults = <T extends object>(
+  input: T | null | undefined
+): Partial<T> => {
+  if (!input) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => !isProtobufDefaultValue(value))
+  ) as Partial<T>
+}
+
+/**
+ * Customizer function for lodash mergeWith that skips protobuf default values
+ * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
+ * and replaces non-empty arrays atomically instead of merging by index.
+ */
+const skipProtobufDefaults = (
+  objValue: unknown,
+  srcValue: unknown
+): unknown => {
+  if (isProtobufDefaultValue(srcValue)) {
+    return objValue
+  }
+  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
+  // leaves leftover parent colors/sizes when a section override is shorter.
+  if (Array.isArray(srcValue) && srcValue.length > 0) {
+    return srcValue
+  }
+  return undefined
+}
+
 const completeThemeInput = (
   partialInput: Partial<CustomThemeConfig>,
   baseThemeArg: ThemeConfig
 ): CustomThemeConfig => {
-  return new CustomThemeConfig({
-    ...toThemeInput(baseThemeArg.emotion),
-    ...partialInput,
-  })
+  // mergeWith + skipProtobufDefaults keeps base theme colors when the partial
+  // input still carries unset proto3 string defaults ("").
+  return new CustomThemeConfig(
+    mergeWith(
+      {},
+      toThemeInput(baseThemeArg.emotion),
+      omitProtobufDefaults(partialInput),
+      skipProtobufDefaults
+    )
+  )
 }
 
 export const createTheme = (
@@ -1494,30 +1547,6 @@ export const convertRemToPx = (
 }
 
 /**
- * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
- * and replaces non-empty arrays atomically instead of merging by index.
- */
-const skipProtobufDefaults = (
-  objValue: unknown,
-  srcValue: unknown
-): unknown => {
-  if (
-    srcValue === "" ||
-    srcValue === null ||
-    (Array.isArray(srcValue) && srcValue.length === 0)
-  ) {
-    return objValue
-  }
-  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
-  // leaves leftover parent colors/sizes when a section override is shorter.
-  if (Array.isArray(srcValue) && srcValue.length > 0) {
-    return srcValue
-  }
-  return undefined
-}
-
-/**
  * Helper function to merge theme section configs (light/dark and light.sidebar/dark.sidebar)
  * into a consolidated theme input with proper inheritance.
  * Custom Light theme = uses streamlit base theme + [theme] configs + [theme.light] config overrides
@@ -1545,22 +1574,21 @@ export const handleSectionInheritance = (
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
-  // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
+  // Omit empty protobuf defaults before merge so they are not copied onto {}.
   const result = mergeWith(
     {} as CustomThemeConfig,
-    commonTheme, // Common theme properties from themeInput
-    variantTheme, // Variant-specific theme overrides (without sidebar)
+    omitProtobufDefaults(commonTheme),
+    omitProtobufDefaults(variantTheme),
     { base }, // Set base last to override any base from commonTheme/variantTheme
     skipProtobufDefaults
   )
 
   // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
   if (baseSidebar || variantSidebar) {
-    // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
     result.sidebar = mergeWith(
       {},
-      baseSidebar,
-      variantSidebar,
+      omitProtobufDefaults(baseSidebar),
+      omitProtobufDefaults(variantSidebar),
       skipProtobufDefaults
     )
   }
@@ -1783,11 +1811,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
+  // Omit empty protobuf defaults before merge so unset colors (e.g. textColor "")
+  // are not copied onto the empty destination object (see #17638).
   const mergedSidebarThemeInput = mergeWith(
     {},
-    activeTheme.themeInput, // Use the theme props from the main theme as basis
-    sidebarThemeInput, // Merge sidebar configs
+    omitProtobufDefaults(activeTheme.themeInput),
+    omitProtobufDefaults(sidebarThemeInput),
     {
       // Explicit overrides that should always be applied
       base: baseTheme,
