@@ -4929,6 +4929,22 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
+    it("treats a whitespace-only sidebar backgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "blue",
+        sidebar: {
+          backgroundColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Falls back to main secondary (classic swap), not the main background
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("blue")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
     // Regression for https://github.com/streamlit/streamlit/issues/17638
     it("does not warn for unset sidebar textColor when only primaryColor is set", () => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
@@ -5080,6 +5096,22 @@ describe("Sidebar theme creation", () => {
       const sidebarTheme = createSidebarTheme(mainTheme)
 
       expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
+    it("treats a whitespace-only sidebar secondaryBackgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "blue",
+        sidebar: {
+          secondaryBackgroundColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("blue")
+      // Falls back to main background (classic swap), not left as whitespace
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 

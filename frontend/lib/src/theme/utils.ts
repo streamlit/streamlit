@@ -1790,12 +1790,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
     : bgColor
 
   const sidebarBackground =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
-    sidebarThemeInput?.backgroundColor || fallbackBackground
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank/whitespace background color means unset
+    sidebarThemeInput?.backgroundColor?.trim() || fallbackBackground
 
   const secondaryBackgroundColor =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
-    sidebarThemeInput?.secondaryBackgroundColor || fallbackSecondary
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank/whitespace secondary background color means unset
+    sidebarThemeInput?.secondaryBackgroundColor?.trim() || fallbackSecondary
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(
