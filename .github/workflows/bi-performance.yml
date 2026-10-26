@@ -1,0 +1,189 @@
+name: BI Performance Comparison
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Base revision to compare"
+        required: true
+        default: "develop"
+      candidate_ref:
+        description: "Candidate revision to compare"
+        required: true
+        default: "develop"
+      tier:
+        description: "Benchmark tier"
+        required: true
+        default: "short"
+        type: choice
+        options:
+          - short
+          - extended
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coordinate:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.action == 'labeled' &&
+       github.event.label.name == 'run-performance')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove run-performance label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPOSITORY/issues/$PR_NUMBER/labels/run-performance" \
+            --method DELETE || true
+
+  compare:
+    needs: coordinate
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 35
+    permissions:
+      contents: read
+
+    env:
+      BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || inputs.base_ref }}
+      CANDIDATE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || inputs.candidate_ref }}
+      BENCHMARK_TIER: ${{ github.event_name == 'pull_request' && 'short' || inputs.tier }}
+
+    steps:
+      - name: Checkout PR merge revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 1
+
+      - name: Checkout exact base revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE_SHA }}
+          path: base-revision
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 1
+
+      - name: Resolve checked-out revisions
+        shell: bash
+        run: |
+          echo "BASE_SHA=$(git -C base-revision rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "CANDIDATE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Set up candidate environment
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+          use_cached_venv: "false"
+
+      - name: Install Playwright system dependencies
+        uses: ./.github/actions/playwright_install
+
+      - name: Run exact-base benchmarks
+        id: base_benchmark
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          started_at=$(date +%s)
+          cd base-revision
+          export UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/bi-base-venv"
+          export PYTHON_SYNC_LOCK_FLAG=--locked
+          export INSTALL_PLAYWRIGHT=false
+          make python-init
+          make frontend-init
+          make protobuf
+          make frontend-with-profiler
+          uv run --no-sync python -m playwright install chromium
+          if [[ "$BENCHMARK_TIER" == "extended" ]]; then
+            benchmark_target=bi-performance-extended
+          else
+            benchmark_target=bi-performance-short
+          fi
+          BI_PERFORMANCE_REVISION="$BASE_SHA" \
+            BI_PERFORMANCE_OUTPUT_DIR="$RUNNER_TEMP/bi-results/base" \
+            make "$benchmark_target"
+          finished_at=$(date +%s)
+          echo "$((finished_at - started_at))" > "$RUNNER_TEMP/bi-base-runtime-seconds"
+
+      - name: Run PR merge benchmarks
+        id: candidate_benchmark
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          started_at=$(date +%s)
+          make frontend-with-profiler
+          if [[ "$BENCHMARK_TIER" == "extended" ]]; then
+            benchmark_target=bi-performance-extended
+          else
+            benchmark_target=bi-performance-short
+          fi
+          BI_PERFORMANCE_REVISION="$CANDIDATE_SHA" \
+            BI_PERFORMANCE_OUTPUT_DIR="$RUNNER_TEMP/bi-results/candidate" \
+            make "$benchmark_target"
+          finished_at=$(date +%s)
+          echo "$((finished_at - started_at))" > "$RUNNER_TEMP/bi-candidate-runtime-seconds"
+
+      - name: Generate paired comparison
+        if: always()
+        shell: bash
+        env:
+          BASE_STATUS: ${{ steps.base_benchmark.outcome }}
+          CANDIDATE_STATUS: ${{ steps.candidate_benchmark.outcome }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/bi-results/base" "$RUNNER_TEMP/bi-results/candidate"
+          uv run python scripts/bi_performance_compare.py \
+            --base-dir "$RUNNER_TEMP/bi-results/base" \
+            --candidate-dir "$RUNNER_TEMP/bi-results/candidate" \
+            --base-sha "$BASE_SHA" \
+            --candidate-sha "$CANDIDATE_SHA" \
+            --base-status "$BASE_STATUS" \
+            --candidate-status "$CANDIDATE_STATUS" \
+            --output "$RUNNER_TEMP/bi-results/comparison.json" \
+            --summary "$RUNNER_TEMP/bi-results/summary.md"
+
+          {
+            echo
+            echo "### Runtime"
+            echo
+            echo "- Tier: \`$BENCHMARK_TIER\`"
+            if [[ -f "$RUNNER_TEMP/bi-base-runtime-seconds" ]]; then
+              echo "- Exact base: $(cat "$RUNNER_TEMP/bi-base-runtime-seconds") seconds"
+            else
+              echo "- Exact base: incomplete"
+            fi
+            if [[ -f "$RUNNER_TEMP/bi-candidate-runtime-seconds" ]]; then
+              echo "- PR merge: $(cat "$RUNNER_TEMP/bi-candidate-runtime-seconds") seconds"
+            else
+              echo "- PR merge: incomplete"
+            fi
+          } >> "$RUNNER_TEMP/bi-results/summary.md"
+          cat "$RUNNER_TEMP/bi-results/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload paired BI performance results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bi_performance_comparison_${{ github.event.pull_request.number || github.run_id }}
+          path: ${{ runner.temp }}/bi-results
+          retention-days: 90

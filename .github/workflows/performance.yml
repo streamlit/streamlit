@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - "develop"
-  pull_request:
-    types: [labeled]
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -26,43 +24,24 @@ jobs:
   prepare:
     if: |
       github.event_name == 'workflow_call' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'run-performance')
-    # Keep label cleanup in a lightweight coordination job before checking out PR code.
+      github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     outputs:
       checkout_ref: ${{ steps.compute.outputs.checkout_ref }}
       sha_short: ${{ steps.compute.outputs.sha_short }}
     steps:
-      - name: Remove run-performance label
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh api "repos/$REPOSITORY/issues/$PR_NUMBER/labels/run-performance" \
-            --method DELETE || true
       - name: Compute checkout inputs
         id: compute
         shell: bash
         env:
           INPUT_REF: ${{ inputs.ref }}
-          EVENT_NAME: ${{ github.event_name }}
           EVENT_SHA: ${{ github.sha }}
-          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [[ -n "$INPUT_REF" ]]; then
             echo "checkout_ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
           fi
 
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            echo "sha_short=${EVENT_PR_HEAD_SHA:0:6}" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha_short=${EVENT_SHA:0:6}" >> "$GITHUB_OUTPUT"
-          fi
+          echo "sha_short=${EVENT_SHA:0:6}" >> "$GITHUB_OUTPUT"
 
   performance:
     needs: prepare
@@ -108,7 +87,7 @@ jobs:
         run: |
           cd e2e_playwright
           rm -rf ./test-results
-          pytest --browser chromium -n 1 --reruns 1 -m "performance" --count=10
+          pytest --browser chromium -n 1 --reruns 1 -m "performance and not bi_performance" --count=10
       - name: Run make python-performance-tests
         run: make python-performance-tests
       - name: Run make lighthouse-tests
