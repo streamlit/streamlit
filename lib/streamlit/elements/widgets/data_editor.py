@@ -970,11 +970,10 @@ class DataEditorMixin:
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
               share the available vertical space evenly. Inside a container
-              that already has a fixed height, the editor maintains a minimum
-              height to display up to three rows, but otherwise won't exceed
-              the available height. Otherwise, the editor uses its default
-              height (up to ten rows) and still grows to match a taller
-              sibling.
+              that already has a fixed height, the editor won't exceed the
+              available height but keeps a minimum height that displays up to
+              three rows. Otherwise, the editor uses its default height (up to
+              ten rows) and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
 

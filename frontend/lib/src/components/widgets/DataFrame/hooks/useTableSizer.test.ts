@@ -537,8 +537,8 @@ describe("useTableSizer hook", () => {
       expect(result.current.minHeight).toEqual(STRETCH_MIN_HEIGHT)
     })
 
-    // The default (auto) height minus the 2px resizable border, which the
-    // grid's minimum sits inside of.
+    // Expected minimum: the default (auto) height minus the 2px resizable
+    // border, since the grid applies its minimum inside that border.
     it.each([
       // 0 rows: 1-row default = 35 + 35 + 2 = 72
       [0, 70],
@@ -566,7 +566,7 @@ describe("useTableSizer hook", () => {
             false,
             undefined,
             heightConfig,
-            15,
+            undefined,
             true // no definite parent height
           )
         )
@@ -577,6 +577,65 @@ describe("useTableSizer hook", () => {
         )
       }
     )
+
+    it("keeps the fallback minimum once the table switches to 100% height", () => {
+      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
+
+      const { result, rerender } = renderHook(
+        ({ measuredContainerHeight }: { measuredContainerHeight: number }) =>
+          useTableSizer(
+            DataframeProto.create({
+              arrowData: { data: TEN_BY_TEN },
+            }),
+            mockTheme,
+            40,
+            false,
+            700,
+            undefined,
+            false,
+            undefined,
+            heightConfig,
+            measuredContainerHeight,
+            true // no definite parent height
+          ),
+        { initialProps: { measuredContainerHeight: -1 } }
+      )
+
+      // On mount, the table uses the pixel auto height.
+      expect(result.current.resizableSize.height).toEqual(400)
+
+      // The first measurement switches the table to "100%", which the
+      // fallback minimum keeps at the auto height.
+      rerender({ measuredContainerHeight: 408 })
+      expect(result.current.resizableSize.height).toEqual("100%")
+      expect(result.current.minHeight).toEqual(398)
+    })
+
+    it("includes the trailing add-row row in the fallback minimum", () => {
+      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+          }),
+          mockTheme,
+          2,
+          false,
+          700,
+          undefined,
+          false,
+          undefined,
+          heightConfig,
+          undefined,
+          true // no definite parent height
+        )
+      )
+
+      // 2 rows + 1 trailing row = 3*35 + 35 + 2 = 142, minus the 2px border
+      expect(result.current.minHeight).toEqual(140)
+    })
 
     it("keeps the 3-row stretch minimum with a definite parent height", () => {
       const heightConfig = new streamlit.HeightConfig({ useStretch: true })

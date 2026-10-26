@@ -232,7 +232,7 @@ def test_stretch_charts_fit_containers_with_definite_height(app: Page):
 
 
 def test_stretch_dataframe_default_height(app: Page):
-    """Stretch dataframes use their default height without a definite parent height."""
+    """Stretch dataframes keep their default height and shrink in fixed-height cards."""
     plain_dataframe = get_element_by_key(app, "stretch-dataframe-plain").get_by_test_id(
         "stDataFrame"
     )

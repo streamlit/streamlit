@@ -308,9 +308,9 @@ bindings_chart = (
 with st.container(height=300, border=True, key="fixed-card-chart-with-bindings"):
     st.altair_chart(bindings_chart, height="stretch")
 
-# Without a definite parent height, a stretch dataframe uses its default
-# height instead of collapsing to three rows. In a definite-height card, it
-# still shrinks to fit below the title.
+# Without a definite parent height, a stretch dataframe keeps its default
+# height as a minimum. In a definite-height card, it shrinks to fit below the
+# title.
 tall_df = pd.DataFrame({"a": range(40), "b": range(40)})
 with st.container(key="stretch-dataframe-plain"):
     st.dataframe(tall_df, height="stretch")

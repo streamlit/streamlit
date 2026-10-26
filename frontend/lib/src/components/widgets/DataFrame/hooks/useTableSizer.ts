@@ -68,7 +68,7 @@ type AutoSizerReturn = {
  * @param widthConfig - The width configuration of the table
  * @param heightConfig - The height configuration of the table
  * @param measuredContainerHeight - The measured height of the container for height="stretch"
- * @param hasFallbackHeight - Whether a height="stretch" table has no definite parent height to fill
+ * @param hasFallbackHeight - Whether the parent has no definite height for a height="stretch" table to fill
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
@@ -146,11 +146,11 @@ function useTableSizer(
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
   if (useStretchHeight && hasFallbackHeight && !isFullScreen) {
-    // With no definite parent height, the "100%" stretch height resolves to
-    // the content height, so the table would collapse to its minimum. Use the
-    // default height as the minimum instead; it still grows with taller
-    // siblings. The grid applies this minimum inside the resizable border,
-    // so subtract the border to render at exactly the default height.
+    // Without a definite parent height, use the auto height (initialHeight)
+    // as the minimum, since "100%" would resolve to the content height and
+    // collapse the table. The table still grows with taller siblings. The
+    // grid applies this minimum inside the resizable border, so subtract the
+    // border to render at exactly the auto height.
     minHeight = initialHeight - 2 * gridTheme.tableBorderWidth
   }
 
