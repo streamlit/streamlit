@@ -3531,6 +3531,138 @@ describe("useEChartsSelections", () => {
     }
   })
 
+  it("commits a throttled brush when its handlers unbind before brushSelected", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      chart.setOption({
+        animation: false,
+        xAxis: { type: "value" },
+        yAxis: { type: "value" },
+        brush: {
+          xAxisIndex: "all",
+          yAxisIndex: "all",
+          throttleType: "fixRate",
+          throttleDelay: 0,
+        },
+        series: {
+          type: "scatter",
+          data: [
+            [0, 0],
+            [1, 1],
+            [5, 5],
+          ],
+        },
+      })
+      const finishedAreas = captureBrushAreas(chart, [
+        {
+          brushType: "rect",
+          coordRange: [
+            [-1, 10],
+            [-1, 10],
+          ],
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+        },
+      ])
+      const brushModel = readBrushModel(chart)
+      brushModel.option.throttleType = "debounce"
+      brushModel.option.throttleDelay = 10_000
+
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+      let cleanup: () => void = () => {}
+
+      act(() => {
+        cleanup = result.current.bindSelections(chart)
+        chart.dispatchAction({
+          type: "brush",
+          brushId: brushModel.id,
+          areas: [],
+        })
+        chart.dispatchAction({
+          type: "brushEnd",
+          brushId: brushModel.id,
+          areas: finishedAreas,
+        })
+      })
+      flush()
+
+      // The finished gesture is still waiting on the throttled snapshot.
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      act(() => {
+        cleanup()
+      })
+
+      expect(brushModel.option).toMatchObject({
+        throttleType: "debounce",
+        throttleDelay: 10_000,
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expectSelectionWrite(
+        [
+          {
+            series_index: 0,
+            series_id: null,
+            series_name: null,
+            data_type: "main",
+            data_indices: [0, 1, 2],
+          },
+        ],
+        [
+          {
+            brush_index: 0,
+            brush_type: "rect",
+            coord_range: [
+              [-1, 10],
+              [-1, 10],
+            ],
+          },
+        ]
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    } finally {
+      chart.dispose()
+    }
+  })
+
+  it("does not hit-test a pending brush on cleanup after the chart is disposed", () => {
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+    const brush = createBrushSelection({
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
+    let cleanup: () => void = () => {}
+
+    act(() => {
+      cleanup = result.current.bindSelections(chart)
+      chart.trigger("brushEnd", {
+        brushId: brush.brushId,
+        areas: brush.areas,
+      })
+    })
+
+    chart.isDisposed.mockReturnValue(true)
+    act(() => {
+      cleanup()
+    })
+
+    expect(chart.dispatchAction).not.toHaveBeenCalled()
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
   it("clears selection state when its form is cleared", () => {
     widgetMgr.getStringValue.mockReturnValue(
       JSON.stringify({

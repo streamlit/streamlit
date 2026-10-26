@@ -218,7 +218,8 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
     ...     ],
     ... }
 
-    For a single series, index your data with:
+    If ``event`` is the return value of ``st.echarts_chart`` and ``df`` holds
+    the data of a single series, filter it with:
 
     >>> rows = (
     ...     event.selection.selected[0]["data_indices"]
@@ -981,7 +982,8 @@ class EChartsMixin:
             follows its position in the app, so moving it can reset the chart
             and replay its entry animation. If this is ``None`` and selections
             are activated, identity also includes the chart's parameters, so a
-            change to the spec, theme, renderer, or size resets the selection.
+            change to the spec, theme, renderer, size, or ``alt`` resets the
+            selection.
 
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
@@ -1019,10 +1021,15 @@ class EChartsMixin:
             ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
             enable region selection by adding a
             `brush <https://echarts.apache.org/en/option.html#brush>`_ component
-            or ``toolbox.feature.brush``.
+            or ``toolbox.feature.brush``. Target an axis on the brush (for
+            example, ``"brush": {"xAxisIndex": "all"}``) so its regions are
+            reported in ``areas`` and survive resizes. A brush without an
+            axis, grid, or geo target only has pixel geometry, so its regions
+            are omitted from ``areas`` and dropped when the chart resizes.
             Selected data is grouped by series in ``EChartsState.selection.selected``,
             and brush geometry is returned in ``EChartsState.selection.areas``.
-            Selections are re-applied visually after reruns. If your ``spec``
+            Selections are re-applied visually after reruns. Double-click the
+            chart to clear both point and brush selections. If your ``spec``
             enables neither, the chart still renders but never returns a
             selection, and Streamlit logs a warning.
 

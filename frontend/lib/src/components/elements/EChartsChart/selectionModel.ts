@@ -89,6 +89,12 @@ function resolveChartOption(
     : null
 }
 
+/**
+ * Parse the element's JSON spec into a plain object. Returns ``null`` when the
+ * spec is empty, is not valid JSON, or is not a JSON object.
+ * ``resolveSelectionOption`` treats ``null`` as having no usable series and
+ * falls back to the chart's ``getOption()``.
+ */
 export function parseOptionSpec(spec: string): Record<string, unknown> | null {
   if (!spec) {
     return null

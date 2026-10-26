@@ -124,22 +124,21 @@ function brushSelectDispatcher(
 }
 
 /**
- * Run one brush hit-test outside the user's throttle.
+ * Run ``run`` with every brush component's throttle disabled, so the
+ * ``brushSelected`` it triggers fires on this turn.
  *
- * ``debounce`` always defers ``brushSelected``, even at delay 0, and
- * ``fixRate`` defers while a drag is still inside ``throttleDelay``. Either
- * one can still be pending when a form submits, and either one would deliver
- * a resize prune's snapshot after its restore guard. ``fixRate`` at delay 0
- * publishes the snapshot on this turn; the user's settings are restored
- * before we return.
+ * Form submit, resize pruning, and unbinding need the hit-test result
+ * immediately; a user-configured ``debounce`` or ``fixRate`` throttle would
+ * deliver it later. This mutates ECharts' private brush model (``setOption``
+ * would re-render) and restores the user's throttle settings before
+ * returning.
  */
 function runWithSynchronousBrushHitTest(
   chart: EChartsSelectionInstance,
   run: () => void
 ): void {
   const restores: Array<() => void> = []
-  // Call as a method so ECharts keeps its ``this``. ``setOption`` would
-  // re-render the chart to change the same throttle fields.
+  // Call as a method so ECharts keeps its ``this``.
   ;(chart as BrushModelReader)
     .getModel?.()
     .eachComponent({ mainType: "brush" }, model => {
@@ -183,8 +182,9 @@ export interface UseEChartsSelectionsOutput {
   ) => EChartsOptionObject
   /**
    * Bind selection handlers (``selectchanged`` / brush / double-click) to a
-   * chart instance. Returns a cleanup function that removes the handlers. A
-   * no-op for display-only charts.
+   * chart instance. Returns a cleanup function that commits a finished brush
+   * still waiting on its throttled snapshot, flushes the pending write, and
+   * removes the handlers. A no-op for display-only charts.
    */
   bindSelections: (chart: EChartsSelectionInstance) => () => void
   /**
@@ -612,7 +612,12 @@ export function useEChartsSelections(
         emitSelection()
       }
 
-      const flushPendingBrushForSubmit = (): boolean => {
+      /**
+       * Commit a finished brush whose throttled ``brushSelected`` has not
+       * arrived yet. Returns ``false`` when the hit-test published no
+       * matching indices.
+       */
+      const flushPendingBrush = (): boolean => {
         if (!pendingBrushEnd) {
           return true
         }
@@ -622,12 +627,13 @@ export function useEChartsSelections(
           pending
         )
         // Captured before the hit-test replaces the dispatcher. The in-flight
-        // callback still closes over the pre-submit snapshot.
+        // callback still closes over the previous snapshot.
         const scheduledHitTest = brushSelectDispatcher(chart)
-        // Hit-test the finished areas on this turn. A throttled
-        // ``brushSelected`` can still hold the previous point indices (or
-        // none). Submitting those with the new areas would persist after
-        // the delayed event, which only updates the next pending form value.
+        // Hit-test the finished areas synchronously. Otherwise the throttled
+        // ``brushSelected`` may not have arrived yet: submit would pair the
+        // new areas with the previous indices (the late event would only
+        // update the next pending form value, not the submitted one), and
+        // unbinding would drop the gesture.
         const brushTarget: Record<string, unknown> = {}
         if (typeof existing?.brushIndex === "number") {
           brushTarget.brushIndex = existing.brushIndex
@@ -643,12 +649,19 @@ export function useEChartsSelections(
             })
           })
         } catch (error) {
-          LOG.warn("Failed to flush pending form brush snapshot", error)
+          LOG.warn("Failed to hit-test the pending brush snapshot", error)
         }
         // ``commitBrushSelection`` clears ``pendingBrushEnd`` when the
         // hit-test published matching indices.
         if (pendingBrushEnd !== pending) {
           scheduledHitTest?.clear?.()
+          return true
+        }
+        return false
+      }
+
+      const flushPendingBrushForSubmit = (): boolean => {
+        if (flushPendingBrush()) {
           return true
         }
         // The hit-test did not publish indices. Refuse the submit so the
@@ -807,6 +820,13 @@ export function useEChartsSelections(
       zr.on("dblclick", handleDoubleClick)
 
       return () => {
+        // A rebind (disconnect, fragment change) inside the user's brush
+        // throttle would drop a finished gesture whose ``brushSelected`` has
+        // not arrived yet. Hit-test it while the handlers are still bound. A
+        // fully torn-down chart is already disposed and cannot hit-test.
+        if (!chart.isDisposed()) {
+          flushPendingBrush()
+        }
         // Flush a pending write even if the instance is already disposed —
         // the widget value does not need the chart. Cancel would drop it.
         emitSelectionDebounced.flush()
