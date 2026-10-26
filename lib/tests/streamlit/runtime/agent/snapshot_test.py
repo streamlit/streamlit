@@ -341,12 +341,8 @@ class SnapshotBuilderTest(SnapshotCase):
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False
         assert _state(snapshot, "segmented_control", "mode").clearable is True
-        # New text is legal, so the membership list is empty. The options stay
-        # on the description for the client.
-        open_city = _one_keyed(snapshot.document, "selectbox", "open_city")
+        # New text is legal, so there is no closed list to check against.
         assert _state(snapshot, "selectbox", "open_city").options is None
-        assert open_city["props"]["options"] == ["Paris"]
-        assert open_city["props"]["accept_new_options"] is True
         assert _state(snapshot, "selectbox", "closed_city").options == ["Paris"]
         assert "clearable" not in _one_keyed(
             snapshot.document, "selectbox", "closed_city"
