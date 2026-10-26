@@ -202,7 +202,7 @@ python-tests:
 	@# MPLBACKEND=Agg avoids matplotlib crashing the interpreter on macOS (its default 'macosx' backend must run on the main thread).
 	MPLBACKEND=Agg uv run pytest -c lib/pyproject.toml -v -l \
 		-m "not performance" \
-		lib/tests/
+		lib/tests/ scripts/*_test.py
 
 .PHONY: python-performance-tests
 # Run Python performance tests.

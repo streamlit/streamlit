@@ -96,7 +96,8 @@ runner's system Python.
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
-| `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
+| `performance.yml` | Push to `develop`, `run-performance` label on PR | Generic candidate-only performance suite (Playwright, Python, Lighthouse) |
+| `bi-performance.yml` | `run-bi-performance` label on PR, manual | Paired BI dashboard comparison of the exact PR base and merge revisions |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
