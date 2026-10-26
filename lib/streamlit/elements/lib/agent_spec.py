@@ -70,18 +70,14 @@ cannot know them yet:
 
 Both are filled in at snapshot time. That split is the same one the agent
 protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived). ``data`` is derived at
-snapshot time from the payload; a command records only ``data_url``, where its
-complete data is served.
+holds now), and ``data`` (what Streamlit derived). A data command records only
+``data_url``, where its complete data is served.
 """
 
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple
-
-if TYPE_CHECKING:
-    from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
+from typing import Any, Final, Literal, NamedTuple
 
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
@@ -365,58 +361,6 @@ class Content(NamedTuple):
     """
 
     value: Any
-
-
-def vega_arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
-    """Every Arrow buffer a Vega-Lite chart's data is split across.
-
-    Inline data and named datasets are both Arrow. The built-in charts and a
-    single-dataframe Altair chart have one; Altair gives each dataframe in a
-    layered or concatenated chart its own named dataset. Only a single buffer
-    is served or previewed: several cannot be described as one table, and
-    serving just the first would claim ``complete`` while leaving the rest out,
-    so callers report several as unavailable instead.
-    """
-    buffers = [proto.data.data] if proto.data.data else []
-    buffers.extend(dataset.data.data for dataset in proto.datasets if dataset.data.data)
-    return buffers
-
-
-def vega_loads_from_url(spec: Any) -> bool:
-    """Whether a Vega-Lite specification loads any of its data from a URL.
-
-    Checked at any depth: the top level, a layer, or a ``lookup``'s
-    ``from.data``, but not inside inline rows or ``usermeta``. The browser
-    fetches that data itself, so no Arrow buffer holds all of the chart's data.
-    ``spec`` is the parsed specification or its JSON text; malformed text loads
-    nothing.
-    """
-    if isinstance(spec, str):
-        try:
-            spec = json.loads(spec)
-        except ValueError:
-            return False
-    return _loads_from_url(spec)
-
-
-# Keys whose values hold inline rows or arbitrary author metadata, never a data
-# source, so a nested `{"data": {"url": ...}}` there loads nothing.
-_NOT_DATA_SOURCES: Final = frozenset({"datasets", "usermeta", "values"})
-
-
-def _loads_from_url(value: Any) -> bool:
-    if isinstance(value, dict):
-        data = value.get("data")
-        if isinstance(data, dict) and "url" in data:
-            return True
-        return any(
-            _loads_from_url(item)
-            for key, item in value.items()
-            if key not in _NOT_DATA_SOURCES
-        )
-    if isinstance(value, list):
-        return any(_loads_from_url(item) for item in value)
-    return False
 
 
 def block(

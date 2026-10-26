@@ -36,6 +36,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util
+from streamlit.elements import vega_charts
 from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
@@ -626,7 +627,7 @@ class VegaDataTest(SnapshotCase):
         assert data["spec"].get("height") != 0
         _assert_data_resolves(data)
         if unavailable is None:
-            [buffer] = agent_spec.vega_arrow_buffers(proto)
+            [buffer] = vega_charts.arrow_buffers(proto)
             assert (
                 data["row_count"]
                 == pa.RecordBatchStreamReader(buffer).read_all().num_rows

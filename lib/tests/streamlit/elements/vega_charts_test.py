@@ -43,12 +43,15 @@ from streamlit.elements.vega_charts import (
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
+    arrow_buffers,
+    loads_data_from_url,
 )
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
 from streamlit.util import ReadOnlyAttributeDictionary
@@ -5011,3 +5014,62 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
 
             # ID should change since no key is provided and data changed
             assert id1 != id2
+
+
+def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
+    """Inline data comes first, then every named dataset; no data is no buffer.
+
+    An empty named dataset is skipped like empty inline data, so it does not
+    turn a single-table chart into `multiple_datasets`.
+    """
+    proto = VegaLiteChartProto()
+    proto.data.data = b"inline"
+    for name, data in (("first", b"one"), ("empty", b""), ("second", b"two")):
+        dataset = proto.datasets.add()
+        dataset.name = name
+        dataset.data.data = data
+
+    assert arrow_buffers(proto) == [b"inline", b"one", b"two"]
+    assert arrow_buffers(VegaLiteChartProto()) == []
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        pytest.param({"data": {"url": "https://example.com/a.csv"}}, True, id="top"),
+        pytest.param(
+            {"layer": [{"mark": "point"}, {"data": {"url": "b.json"}}]},
+            True,
+            id="layer",
+        ),
+        pytest.param(
+            {
+                "transform": [
+                    {
+                        "lookup": "id",
+                        "from": {"data": {"url": "c.csv"}, "key": "id"},
+                    }
+                ]
+            },
+            True,
+            id="lookup",
+        ),
+        pytest.param('{"data": {"url": "d.csv"}}', True, id="json-text"),
+        pytest.param({"data": {"name": "frame"}}, False, id="named-data"),
+        pytest.param({"data": {"values": [{"url": "e"}]}}, False, id="a-url-value"),
+        pytest.param(
+            {"data": {"values": [{"data": {"url": "f.csv"}}]}},
+            False,
+            id="a-row-shaped-like-a-source",
+        ),
+        pytest.param(
+            {"usermeta": {"data": {"url": "g.csv"}}, "mark": "point"},
+            False,
+            id="usermeta",
+        ),
+        pytest.param('{"data": {"url"', False, id="malformed-json"),
+    ],
+)
+def test_loads_data_from_url_at_any_depth(spec: Any, expected: bool) -> None:
+    """A URL anywhere a Vega-Lite spec takes data counts; a value named url does not."""
+    assert loads_data_from_url(spec) is expected

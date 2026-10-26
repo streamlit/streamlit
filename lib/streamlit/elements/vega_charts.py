@@ -785,6 +785,58 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
+def arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
+    """Every Arrow buffer a Vega-Lite chart's data is split across.
+
+    Inline data and named datasets are both Arrow. The built-in charts and a
+    single-dataframe Altair chart have one; Altair gives each dataframe in a
+    layered or concatenated chart its own named dataset. The agent API serves
+    and previews only a single buffer: several cannot be described as one
+    table, and serving just the first would claim ``complete`` while leaving
+    the rest out, so it reports several as unavailable instead.
+    """
+    buffers = [proto.data.data] if proto.data.data else []
+    buffers.extend(dataset.data.data for dataset in proto.datasets if dataset.data.data)
+    return buffers
+
+
+def loads_data_from_url(spec: Any) -> bool:
+    """Whether a Vega-Lite specification loads any of its data from a URL.
+
+    Checked at any depth: the top level, a layer, or a ``lookup``'s
+    ``from.data``, but not inside inline rows or ``usermeta``. The browser
+    fetches that data itself, so no Arrow buffer holds all of the chart's data.
+    ``spec`` is the parsed specification or its JSON text; malformed text loads
+    nothing.
+    """
+    if isinstance(spec, str):
+        try:
+            spec = json.loads(spec)
+        except ValueError:
+            return False
+    return _loads_from_url(spec)
+
+
+# Keys whose values hold inline rows or arbitrary author metadata, never a data
+# source, so a nested `{"data": {"url": ...}}` there loads nothing.
+_NOT_DATA_SOURCES: Final = frozenset({"datasets", "usermeta", "values"})
+
+
+def _loads_from_url(value: Any) -> bool:
+    if isinstance(value, dict):
+        data = value.get("data")
+        if isinstance(data, dict) and "url" in data:
+            return True
+        return any(
+            _loads_from_url(item)
+            for key, item in value.items()
+            if key not in _NOT_DATA_SOURCES
+        )
+    if isinstance(value, list):
+        return any(_loads_from_url(item) for item in value)
+    return False
+
+
 class VegaChartsMixin:
     """Mix-in class for all vega-related chart commands.
 
@@ -2829,7 +2881,7 @@ class VegaChartsMixin:
         """
         if not agent_spec.is_recording():
             return None
-        buffers = agent_spec.vega_arrow_buffers(proto)
+        buffers = arrow_buffers(proto)
         # A built-in chart has no selection parameter, so it reports its own
         # arguments only. `theme` is surface styling and is left out.
         own_arguments: dict[str, Any] = (
@@ -2855,7 +2907,7 @@ class VegaChartsMixin:
             data_url=data_offload.serve_arrow_over_http(
                 buffers[0], coordinates=self.dg._get_write_delta_path_str()
             )
-            if len(buffers) == 1 and not agent_spec.vega_loads_from_url(proto.spec)
+            if len(buffers) == 1 and not loads_data_from_url(proto.spec)
             else None,
             alt=proto.alt or None,
             **own_arguments,

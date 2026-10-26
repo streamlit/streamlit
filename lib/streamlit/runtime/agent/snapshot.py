@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
 from streamlit import config
-from streamlit.elements.lib import agent_spec
+from streamlit.elements import vega_charts
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
@@ -675,12 +675,12 @@ def _vega_data(payload: Any) -> dict[str, Any]:
     the browser, which this API does not do; in either case none of it is
     served, rather than a part passed off as the whole.
     """
-    buffers = agent_spec.vega_arrow_buffers(payload)
+    buffers = vega_charts.arrow_buffers(payload)
     spec = _parse_json(payload.spec)
     data: dict[str, Any]
     if len(buffers) > 1:
         data = _unavailable("multiple_datasets")
-    elif agent_spec.vega_loads_from_url(spec):
+    elif vega_charts.loads_data_from_url(spec):
         data = _unavailable("external_url")
     elif buffers:
         data = _summarize_arrow(buffers[0]) or {}

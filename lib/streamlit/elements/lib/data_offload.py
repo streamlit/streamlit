@@ -149,7 +149,10 @@ def _arrow_in_payload(message: Message) -> bytes:
     its data is in, since only a chart with a single buffer registers a copy.
     """
     if isinstance(message, VegaLiteChartProto):
-        buffers = agent_spec.vega_arrow_buffers(message)
+        # Imported here: `vega_charts` imports this module.
+        from streamlit.elements import vega_charts
+
+        buffers = vega_charts.arrow_buffers(message)
         return buffers[0] if len(buffers) == 1 else b""
     arrow_data = getattr(message, "arrow_data", None)
     return arrow_data.data if arrow_data is not None else b""
