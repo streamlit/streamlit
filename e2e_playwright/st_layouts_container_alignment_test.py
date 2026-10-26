@@ -26,6 +26,8 @@ DEFAULT_CHART_HEIGHT_PX = 350
 DEFAULT_CHART_WIDTH_PX = 400
 # Figure layout.height in the app. Distinct from Plotly's 450px default.
 PLOTLY_FIGURE_HEIGHT_PX = 320
+# Match the dataframe's default height (defaultTableHeight, 25rem).
+DEFAULT_DATAFRAME_HEIGHT_PX = 400
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -227,6 +229,45 @@ def test_stretch_charts_fit_containers_with_definite_height(app: Page):
     bindings_card = get_element_by_key(app, "fixed-card-chart-with-bindings")
     expect(bindings_card.locator("form.vega-bindings")).to_be_visible()
     wait_until(app, lambda: _content_fits(bindings_card))
+
+
+def test_stretch_dataframe_default_height(app: Page):
+    """Stretch dataframes keep their default height and shrink in fixed-height cards."""
+    plain_dataframe = get_element_by_key(app, "stretch-dataframe-plain").get_by_test_id(
+        "stDataFrame"
+    )
+    expect(plain_dataframe).to_have_css("height", f"{DEFAULT_DATAFRAME_HEIGHT_PX}px")
+
+    # The dataframe card keeps the default height, and the chart card next to
+    # it stretches to match instead of setting the row height.
+    dataframe_card = get_element_by_key(app, "stretch-dataframe-card")
+    chart_card = get_element_by_key(app, "stretch-chart-card")
+    card_dataframe = dataframe_card.get_by_test_id("stDataFrame")
+
+    def _cards_match_at_default_height() -> bool:
+        dataframe_card_height = _height(dataframe_card)
+        return (
+            bool(dataframe_card_height)
+            and _height(chart_card) == dataframe_card_height
+            and (_height(card_dataframe) or 0) >= DEFAULT_DATAFRAME_HEIGHT_PX
+        )
+
+    wait_until(app, _cards_match_at_default_height)
+
+    # In a definite-height card, the dataframe shrinks to fit below the title
+    # instead of claiming its default height and scrolling the card.
+    fixed_card = get_element_by_key(app, "fixed-card-title-and-dataframe")
+    fixed_dataframe = fixed_card.get_by_test_id("stDataFrame")
+
+    def _dataframe_fits() -> bool:
+        height = _height(fixed_dataframe)
+        return (
+            _content_fits(fixed_card)
+            and height is not None
+            and 0 < height < DEFAULT_DATAFRAME_HEIGHT_PX
+        )
+
+    wait_until(app, _dataframe_fits)
 
 
 def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
