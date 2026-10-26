@@ -403,11 +403,11 @@ function replaceGOSpecificColors(
     spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
   } else {
     // Plotly defaults (readable on Plotly's white paper / light plot bg).
-    // Candlestick increasing/decreasing match plotly.js trace defaults;
-    // table and font colors match the "plotly" layout template.
+    // Candlestick increasing/decreasing and waterfall totals match plotly.js
+    // supplyDefaults; table and font colors match the "plotly" layout template.
     spec = spec.replaceAll(INCREASING, "#3D9970")
     spec = spec.replaceAll(DECREASING, "#FF4136")
-    spec = spec.replaceAll(TOTAL, "#636efa")
+    spec = spec.replaceAll(TOTAL, "#4499FF")
 
     spec = spec.replaceAll(GRAY_30, "#B2B5BE")
     spec = spec.replaceAll(GRAY_70, "#2a3f5f")

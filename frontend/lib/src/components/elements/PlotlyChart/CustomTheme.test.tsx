@@ -103,10 +103,11 @@ describe("PlotlyChart CustomTheme", () => {
       expect(result).not.toContain("#000032")
     })
 
-    it("maps GO placeholders to Plotly defaults when theme is empty", () => {
+    it("maps graph-object placeholders to Plotly defaults when theme is empty", () => {
       // #000036 is GRAY_70 (Sankey textfont / waterfall connector in the
       // process-wide streamlit template). Dark app theme would resolve this to
       // a near-white gray via getGray70 — unreadable on Plotly's white paper.
+      // #000034 is TOTAL (waterfall totals); plotly.js supplyDefaults use #4499FF.
       const darkAppTheme = {
         ...theme,
         colors: {
@@ -118,13 +119,16 @@ describe("PlotlyChart CustomTheme", () => {
       const spec = JSON.stringify({
         textfont: { color: "#000036" },
         cells: { fill: { color: "#000038" } },
+        totals: { marker: { color: "#000034" } },
       })
       const result = replaceTemporaryColors(spec, darkAppTheme, "")
 
       expect(result).toContain("#2a3f5f")
       expect(result).toContain("#EBF0F8")
+      expect(result).toContain("#4499FF")
       expect(result).not.toContain("#000036")
       expect(result).not.toContain("#000038")
+      expect(result).not.toContain("#000034")
       expect(result).not.toContain("#fafafa")
       expect(result).not.toContain("#0e1117")
     })
