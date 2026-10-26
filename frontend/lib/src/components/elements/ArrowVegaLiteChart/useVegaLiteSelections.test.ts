@@ -85,6 +85,46 @@ describe("useVegaLiteSelections", () => {
     act(() => result.current.teardownSelections())
   })
 
+  it("does not attach listeners when no selections are configured", () => {
+    const container = document.createElement("div")
+    const containerListenerSpy = vi.spyOn(container, "addEventListener")
+    const mockVegaView = {
+      addSignalListener: vi.fn(),
+      removeSignalListener: vi.fn(),
+      container: vi.fn(() => container),
+    } as unknown as Mocked<VegaView>
+
+    const { result, unmount } = renderHook(() =>
+      useVegaLiteSelections(
+        {
+          id: "chartId",
+          data: null,
+          datasets: [],
+          spec: "",
+          useContainerWidth: false,
+          vegaLiteTheme: "",
+          formId: "",
+          selectionMode: [],
+        },
+        mockWidgetMgr
+      )
+    )
+    const windowListenerSpy = vi.spyOn(window, "addEventListener")
+
+    act(() => {
+      result.current.maybeConfigureSelections(mockVegaView)
+    })
+
+    expect(mockVegaView.addSignalListener).not.toHaveBeenCalled()
+    expect(containerListenerSpy).not.toHaveBeenCalled()
+    expect(windowListenerSpy).not.toHaveBeenCalled()
+
+    act(() => result.current.teardownSelections())
+    windowListenerSpy.mockRestore()
+    containerListenerSpy.mockRestore()
+    unmount()
+  })
+
   it("stores the vega viewState in the widget manager on signal fire", () => {
     const mockVegaView = {
       addSignalListener: vi.fn(),
@@ -286,12 +326,15 @@ describe("useVegaLiteSelections", () => {
     const dispatch = (
       target: EventTarget,
       eventType: string,
-      pointerId = 1
+      pointerId = 1,
+      buttons = 0
     ): void => {
       act(() => {
         const event = new Event(eventType, { bubbles: true })
         if (eventType.startsWith("pointer")) {
           Object.defineProperty(event, "pointerId", { value: pointerId })
+          Object.defineProperty(event, "buttons", { value: buttons })
+          Object.defineProperty(event, "relatedTarget", { value: null })
         }
         target.dispatchEvent(event)
       })
@@ -474,6 +517,36 @@ describe("useVegaLiteSelections", () => {
       outside.remove()
     })
 
+    it("flushes when a pointer leaves the document and resumes if held", async () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [1, 4] })
+
+      dispatch(container, "pointerout")
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
+
+      dispatch(container, "pointermove", 1, 1)
+      fire("sel", { x: [1, 6] })
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
+      expect(sentStates()).toEqual([
+        { selection: { sel: { x: [1, 4] } } },
+        { selection: { sel: { x: [1, 6] } } },
+      ])
+    })
+
+    it("flushes held values when the window loses focus", () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [2, 6] })
+
+      dispatch(window, "blur")
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 6] } } }])
+    })
+
     it("flushes held values on pointercancel", async () => {
       const { container, fire } = setup()
       dispatch(container, "pointerdown")
@@ -637,6 +710,18 @@ describe("useVegaLiteSelections", () => {
       dispatch(container, "pointerdown")
       fire("sel", { x: [0, 5] })
       advanceTimers(DEBOUNCE_TIME_MS)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("contains errors while flushing held values on teardown", () => {
+      const { container, fire, mockVegaView, teardown } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [0, 4] })
+      mockVegaView.getState.mockImplementationOnce(() => {
+        throw new Error("invalid Vega state")
+      })
+
+      expect(teardown).not.toThrow()
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
 

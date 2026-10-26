@@ -77,6 +77,10 @@ export const useVegaLiteSelections = (
     (vegaView: VegaView): VegaView => {
       teardownSelections()
 
+      if (selectionMode.length === 0) {
+        return vegaView
+      }
+
       let isActive = true
       let isPointerDown = false
       let activePointerId: number | null = null
@@ -109,12 +113,6 @@ export const useVegaLiteSelections = (
         discreteInputResetTimerId = setTimeout(clearDiscreteInput, 0)
       }
 
-      const handleContinuousInput = (): void => {
-        if (!isPointerDown) {
-          clearDiscreteInput()
-        }
-      }
-
       const handlePointerDown = (event: PointerEvent): void => {
         // Ignore additional pointers while the initiating pointer is held. A
         // new gesture may start while the previous release is still settling.
@@ -126,6 +124,18 @@ export const useVegaLiteSelections = (
         activePointerId = event.pointerId
         isPointerDown = true
         pendingPointerReleaseGestureId = null
+      }
+
+      const handleContinuousInput = (event: Event): void => {
+        if (
+          event.type === "pointermove" &&
+          !isPointerDown &&
+          (event as PointerEvent).buttons !== 0
+        ) {
+          handlePointerDown(event as PointerEvent)
+        } else if (!isPointerDown) {
+          clearDiscreteInput()
+        }
       }
 
       const clearDebouncedSelection = (name: string): void => {
@@ -225,6 +235,22 @@ export const useVegaLiteSelections = (
         sendSelections(selections)
       }
 
+      const flushHeldSelectionsSafely = (): void => {
+        try {
+          flushHeldSelections()
+        } catch (error) {
+          LOG.warn("Failed to flush Vega selections", error)
+        }
+      }
+
+      const finishActivePointerGesture = (): void => {
+        isPointerDown = false
+        activePointerId = null
+        pendingPointerReleaseGestureId = null
+        handleDiscreteInput()
+        flushHeldSelectionsSafely()
+      }
+
       const finishPointerRelease = async (
         releasedGestureId: number
       ): Promise<void> => {
@@ -240,12 +266,8 @@ export const useVegaLiteSelections = (
             pointerGestureId === releasedGestureId &&
             pendingPointerReleaseGestureId === releasedGestureId
           ) {
-            isPointerDown = false
-            activePointerId = null
-            pendingPointerReleaseGestureId = null
             // Signals queued by the release belong to the same discrete input.
-            handleDiscreteInput()
-            flushHeldSelections()
+            finishActivePointerGesture()
           }
         }
       }
@@ -263,9 +285,29 @@ export const useVegaLiteSelections = (
         void finishPointerRelease(releasedGestureId)
       }
 
+      const handlePointerOut = (event: PointerEvent): void => {
+        if (
+          event.relatedTarget !== null ||
+          event.pointerId !== activePointerId ||
+          pendingPointerReleaseGestureId !== null
+        ) {
+          return
+        }
+        finishActivePointerGesture()
+      }
+
+      const handleWindowBlur = (): void => {
+        if (isPointerDown && pendingPointerReleaseGestureId === null) {
+          finishActivePointerGesture()
+        }
+      }
+
       const container = vegaView.container()
       container?.addEventListener("pointerdown", handlePointerDown, {
         capture: true,
+        passive: true,
+      })
+      container?.addEventListener("pointerout", handlePointerOut, {
         passive: true,
       })
       DISCRETE_INPUT_EVENTS.forEach(type =>
@@ -283,6 +325,7 @@ export const useVegaLiteSelections = (
       // Window-level listeners catch releases after a drag leaves the chart.
       window.addEventListener("pointerup", handlePointerRelease)
       window.addEventListener("pointercancel", handlePointerRelease)
+      window.addEventListener("blur", handleWindowBlur)
 
       // Add listeners for all selection events. Find out more here:
       // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
@@ -313,6 +356,7 @@ export const useVegaLiteSelections = (
         isActive = false
 
         container?.removeEventListener("pointerdown", handlePointerDown, true)
+        container?.removeEventListener("pointerout", handlePointerOut)
         DISCRETE_INPUT_EVENTS.forEach(type =>
           container?.removeEventListener(type, handleDiscreteInput, true)
         )
@@ -321,6 +365,7 @@ export const useVegaLiteSelections = (
         )
         window.removeEventListener("pointerup", handlePointerRelease)
         window.removeEventListener("pointercancel", handlePointerRelease)
+        window.removeEventListener("blur", handleWindowBlur)
         signalListeners.forEach((listener, param) => {
           vegaView.removeSignalListener(param, listener)
         })
@@ -333,7 +378,11 @@ export const useVegaLiteSelections = (
           selections.set(name, debouncedSelection.value)
         })
         debouncedSelections.clear()
-        sendSelections(selections)
+        try {
+          sendSelections(selections)
+        } catch (error) {
+          LOG.warn("Failed to flush Vega selections during teardown", error)
+        }
       }
 
       // Try to load the previous state of the chart from the element state.

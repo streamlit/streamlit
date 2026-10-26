@@ -316,6 +316,40 @@ describe("useVegaEmbed hook", () => {
     expect(teardownSelections).toHaveBeenCalledTimes(1)
   })
 
+  it("finalizes and clears the view when selection teardown throws", async () => {
+    const chartElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["selection"],
+      formId: "",
+    }
+    const { result } = renderHook(() =>
+      useVegaEmbed(chartElement, mockWidgetMgr)
+    )
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    teardownSelections.mockImplementationOnce(() => {
+      throw new Error("selection teardown failed")
+    })
+
+    expect(() => result.current.finalizeView()).toThrow(
+      "selection teardown failed"
+    )
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
+
+    expect(() => result.current.finalizeView()).not.toThrow()
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
+  })
+
   it("updateView returns null if no vegaView is present", async () => {
     const chartElement: VegaLiteChartElement = {
       id: "chartId",

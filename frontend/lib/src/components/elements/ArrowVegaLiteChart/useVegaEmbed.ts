@@ -115,12 +115,12 @@ export function useVegaEmbed(
     // assign or replay into a finalized or replacement view.
     createGenerationRef.current += 1
 
-    if (vegaFinalizerRef.current) {
-      vegaFinalizerRef.current()
+    try {
+      vegaFinalizerRef.current?.()
+    } finally {
+      vegaFinalizerRef.current = null
+      vegaViewRef.current = null
     }
-
-    vegaFinalizerRef.current = null
-    vegaViewRef.current = null
   }, [])
 
   const updateData = useCallback(
@@ -282,8 +282,11 @@ export function useVegaEmbed(
         const unbindRangeProgress = bindVegaRangeProgress(container)
         vegaFinalizerRef.current = () => {
           unbindRangeProgress()
-          teardownSelections()
-          finalize()
+          try {
+            teardownSelections()
+          } finally {
+            finalize()
+          }
         }
 
         const isSuperseded = (): boolean =>
