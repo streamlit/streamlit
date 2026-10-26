@@ -789,6 +789,7 @@ function DataFrame({
   // To activate the group row feature (multi-level headers),
   // we need more than one header row.
   const usesGroupRow = data.dimensions.numHeaderRows > 1
+  const hasFallbackHeight = hasStretchHeightFallback(flexContext)
   const {
     minHeight,
     maxHeight,
@@ -808,7 +809,7 @@ function DataFrame({
     widthConfig,
     heightConfig,
     measuredContainerHeight,
-    hasStretchHeightFallback(flexContext)
+    hasFallbackHeight
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:

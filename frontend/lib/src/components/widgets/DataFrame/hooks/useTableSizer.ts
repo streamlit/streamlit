@@ -68,7 +68,7 @@ type AutoSizerReturn = {
  * @param widthConfig - The width configuration of the table
  * @param heightConfig - The height configuration of the table
  * @param measuredContainerHeight - The measured height of the container for height="stretch"
- * @param hasFallbackHeight - Whether the parent has no definite height for a height="stretch" table to fill
+ * @param hasFallbackHeight - Whether a height="stretch" table falls back to its default height because its parent has no definite height to fill
  *
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
@@ -114,9 +114,8 @@ function useTableSizer(
    *   - 1-3 rows → match actual number of rows
    *   - 4+ rows → 3-row minimum
    *
-   * Without a definite parent height (and outside fullscreen), the default
-   * (auto) height replaces the row minimums above: capped at
-   * defaultTableHeight, but never less than the 1-row base minimum.
+   * With no definite parent height, and outside fullscreen, the minimum is
+   * the auto height instead: at most defaultTableHeight, and at least one row.
    */
 
   const configuredHeight = getConfiguredHeight(heightConfig)
@@ -148,13 +147,10 @@ function useTableSizer(
   let initialHeight = Math.min(maxHeight, gridTheme.defaultTableHeight)
 
   if (useStretchHeight && hasFallbackHeight && !isFullScreen) {
-    // Without a definite parent height, use the auto height (initialHeight)
-    // as the minimum, since "100%" would resolve to the content height and
-    // collapse the table. The table still grows with taller siblings. Like
-    // the auto height, it never drops below one full row, e.g. with a custom
-    // row height taller than the default table height. The grid applies this
-    // minimum inside the resizable border, so subtract the border to render
-    // at exactly the auto height.
+    // "100%" collapses when the parent has no definite height, so the minimum
+    // is the auto height, and the table still grows with taller siblings. The
+    // grid applies that minimum inside the resizable border, so subtract the
+    // border and the outer height matches auto.
     const oneRowHeight = calculateTableHeight({
       numRows: 1,
       rowHeight,
