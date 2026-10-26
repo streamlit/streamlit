@@ -13,13 +13,6 @@ make bi-performance-short
 make bi-performance-extended
 ```
 
-The short tier is the canonical labeled-PR suite; the extended tier covers
-larger payloads. Apply the `run-bi-performance` label to compare the PR merge
-commit with its exact base SHA. Both revisions run sequentially on the same
-runner. The report is informational: compare medians and reruns alongside the
-noise indicator, and treat changed benchmark definitions or toolchains as
-non-comparable.
-
 To add an interaction, follow the existing cases in
 `bi_performance_dashboard_test.py`: use deterministic app-visible completion
 data, warm and reset the interaction, and keep correctness assertions outside
