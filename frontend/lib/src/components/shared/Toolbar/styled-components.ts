@@ -85,7 +85,7 @@ export const StyledToolbarElementContainer = styled.div<{
 }>(({ height, useContainerWidth, topCentered, useContainerHeight }) => ({
   position: "relative",
   height:
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `string | number`; a 0 or empty height falls back to the container height
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `number | string | undefined`; a 0 or empty height counts as unset and skips the explicit-height branch
     useContainerWidth && height
       ? height
       : useContainerHeight === true
