@@ -943,12 +943,18 @@ export const createEmotionTheme = (
   // Built-in themes keep opaque stock chrome from themeColors.ts. Partial custom
   // themes that override surfaces (or primary) but leave chrome keys unset still
   // derive those edges from the resolved surfaces, matching pre-chrome behavior.
+  //
+  // Compare against the base emotion palette — not mere presence. `createTheme`
+  // → `completeThemeInput` always copies stock primary/bg/secondary via
+  // `toThemeInput`, so presence alone would make every production theme derive.
   // textColor alone does not gate this: header text still tracks body text via
   // fadedText60, but borders/fills/code text stay on stock chrome.
   const shouldDeriveUnsetChrome =
-    notNullOrUndefined(bgColor) ||
-    notNullOrUndefined(secondaryBg) ||
-    notNullOrUndefined(primary)
+    (notNullOrUndefined(bgColor) &&
+      !colorsMatchAsHex(bgColor, colors.bgColor)) ||
+    (notNullOrUndefined(secondaryBg) &&
+      !colorsMatchAsHex(secondaryBg, colors.secondaryBg)) ||
+    (notNullOrUndefined(primary) && !colorsMatchAsHex(primary, colors.primary))
 
   if (shouldDeriveUnsetChrome) {
     if (!notNullOrUndefined(borderColor)) {

@@ -1395,6 +1395,59 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it("keeps stock chrome through createTheme when surfaces match the base", () => {
+    // createTheme → completeThemeInput fills stock primary/bg/secondary even
+    // when the author left them unset; those filled-in values must not flip
+    // chrome onto fadedText*/bgMix.
+    const theme = createTheme("Custom", {})
+    expect(theme.emotion.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.emotion.colors.dataframeBorderColor).toBe(
+      lightTheme.emotion.colors.dataframeBorderColor
+    )
+    expect(theme.emotion.colors.codeBackgroundColor).toBe(
+      lightTheme.emotion.colors.codeBackgroundColor
+    )
+    expect(theme.emotion.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
+  })
+
+  it("keeps stock chrome through createTheme when only textColor is set", () => {
+    const theme = createTheme("Custom", { textColor: "#111111" })
+    expect(theme.emotion.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.emotion.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
+  })
+
+  it("derives unset chrome through createTheme when a surface differs from stock", () => {
+    const theme = createTheme("Custom", {
+      backgroundColor: "#eeeeee",
+      secondaryBackgroundColor: "#FAFAF9",
+    })
+    expect(theme.emotion.colors.borderColor).toBe(
+      theme.emotion.colors.fadedText10
+    )
+    expect(theme.emotion.colors.codeBackgroundColor).toBe(
+      theme.emotion.colors.bgMix
+    )
+  })
+
+  it("derives unset chrome through createTheme when primaryColor differs from stock", () => {
+    const theme = createTheme("Custom", {
+      primaryColor: "#7c3aed",
+      greenTextColor: "#00aa00",
+    })
+    expect(theme.emotion.colors.codeTextColor).toBe("#00aa00")
+    expect(theme.emotion.colors.borderColor).toBe(
+      theme.emotion.colors.fadedText10
+    )
+  })
+
   it("sets the dataframeBorderColor if configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "red",
