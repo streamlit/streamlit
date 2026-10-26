@@ -1327,11 +1327,14 @@ _create_option(
 _create_option(
     "server.agentPreviewRows",
     description="""
-        Maximum number of rows the agent API includes in a table's
-        `data.preview`.
+        Maximum number of rows an agent API response includes inline, as the
+        `data.preview` of each element whose data is serialized as Arrow:
+        `st.dataframe`, `st.data_editor`, `st.table`, and Vega-Lite charts
+        (`st.altair_chart`, `st.vega_lite_chart`, and built-in charts such as
+        `st.line_chart`).
 
-        Rows past this stay out of the snapshot. When the element serves the
-        rest, the snapshot points at it with `data.url`.
+        An element with more rows is reported as incomplete. Its full data is
+        at `data.url`, unless `data.unavailable` says why it cannot be served.
     """,
     visibility="hidden",
     default_val=100,
