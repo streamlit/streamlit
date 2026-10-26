@@ -308,6 +308,25 @@ bindings_chart = (
 with st.container(height=300, border=True, key="fixed-card-chart-with-bindings"):
     st.altair_chart(bindings_chart, height="stretch")
 
+# Without a definite parent height, a stretch dataframe uses its default
+# height instead of collapsing to three rows. In a definite-height card, it
+# still shrinks to fit below the title.
+tall_df = pd.DataFrame({"a": range(40), "b": range(40)})
+with st.container(key="stretch-dataframe-plain"):
+    st.dataframe(tall_df, height="stretch")
+
+dataframe_column, chart_column = st.columns(2)
+with dataframe_column.container(
+    border=True, height="stretch", key="stretch-dataframe-card"
+):
+    st.dataframe(tall_df, height="stretch")
+with chart_column.container(border=True, height="stretch", key="stretch-chart-card"):
+    st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(height=300, border=True, key="fixed-card-title-and-dataframe"):
+    st.subheader("Orders")
+    st.dataframe(tall_df, height="stretch")
+
 tall_card = st.toggle("Tall card", value=True)
 with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
     with st.container(border=True, key="stretch-chart-shrink-card"):

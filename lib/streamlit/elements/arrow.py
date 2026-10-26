@@ -768,10 +768,12 @@ class ArrowMixin:
             - ``"stretch"``: The height of the element expands to fill the
               available vertical space in its parent container. When multiple
               elements with stretch height are in the same container, they
-              share the available vertical space evenly. The dataframe will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              share the available vertical space evenly. Inside a container
+              that already has a fixed height, the dataframe maintains a
+              minimum height to display up to three rows, but otherwise won't
+              exceed the available height. Otherwise, the dataframe uses its
+              default height (up to ten rows) and still grows to match a
+              taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height.
 

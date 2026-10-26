@@ -370,7 +370,7 @@ describe("useTableSizer hook", () => {
           undefined,
           heightConfig,
           MEASURED_CONTAINER_HEIGHT,
-          false // not in root
+          false // definite parent height
         )
       )
 
@@ -409,7 +409,7 @@ describe("useTableSizer hook", () => {
           undefined,
           heightConfig,
           MEASURED_CONTAINER_HEIGHT,
-          false // not in root
+          false // definite parent height
         )
       )
 
@@ -443,7 +443,7 @@ describe("useTableSizer hook", () => {
           undefined,
           heightConfig,
           MEASURED_CONTAINER_HEIGHT,
-          false // not in root
+          false // definite parent height
         )
       )
 
@@ -478,7 +478,7 @@ describe("useTableSizer hook", () => {
           undefined,
           heightConfig,
           MEASURED_CONTAINER_HEIGHT,
-          false // not in root
+          false // definite parent height
         )
       )
 
@@ -514,7 +514,7 @@ describe("useTableSizer hook", () => {
           undefined,
           heightConfig,
           MEASURED_CONTAINER_HEIGHT,
-          false // not in root
+          false // definite parent height
         )
       )
 
@@ -537,9 +537,48 @@ describe("useTableSizer hook", () => {
       expect(result.current.minHeight).toEqual(STRETCH_MIN_HEIGHT)
     })
 
-    it("does not apply stretch height when in root container", () => {
-      const NUMBER_OF_ROWS = 10
-      const MEASURED_CONTAINER_HEIGHT = 300
+    // The default (auto) height minus the 2px resizable border, which the
+    // grid's minimum sits inside of.
+    it.each([
+      // 0 rows: 1-row default = 35 + 35 + 2 = 72
+      [0, 70],
+      // 2 rows: all rows = 2*35 + 35 + 2 = 107
+      [2, 105],
+      // 5 rows: all rows = 5*35 + 35 + 2 = 212 (above the 3-row minimum)
+      [5, 210],
+      // 40 rows: capped at the 400px default table height
+      [40, 398],
+    ])(
+      "uses the default height as the stretch minimum without a definite parent height (%i rows)",
+      (numRows, expectedMinHeight) => {
+        const heightConfig = new streamlit.HeightConfig({ useStretch: true })
+
+        const { result } = renderHook(() =>
+          useTableSizer(
+            DataframeProto.create({
+              arrowData: { data: TEN_BY_TEN },
+            }),
+            mockTheme,
+            numRows,
+            false,
+            700,
+            undefined,
+            false,
+            undefined,
+            heightConfig,
+            15,
+            true // no definite parent height
+          )
+        )
+
+        expect(result.current.minHeight).toEqual(expectedMinHeight)
+        expect(result.current.maxHeight).toBeGreaterThanOrEqual(
+          expectedMinHeight
+        )
+      }
+    )
+
+    it("keeps the 3-row stretch minimum with a definite parent height", () => {
       const heightConfig = new streamlit.HeightConfig({ useStretch: true })
 
       const { result } = renderHook(() =>
@@ -548,29 +587,71 @@ describe("useTableSizer hook", () => {
             arrowData: { data: TEN_BY_TEN },
           }),
           mockTheme,
-          NUMBER_OF_ROWS,
+          40,
           false,
           700,
           undefined,
           false,
           undefined,
           heightConfig,
-          MEASURED_CONTAINER_HEIGHT,
-          true // in root - stretch doesn't work here
+          300,
+          false // definite parent height
         )
       )
 
-      // When in root, stretch height shouldn't be applied
-      // With 10 rows: maxHeight = 10*35 + 35 + 2 = 387
-      // initialHeight = min(387, 400) = 387
-      const expectedHeight = calculateTableHeight({
-        numRows: NUMBER_OF_ROWS,
-        rowHeight: mockTheme.defaultRowHeight,
-        theme: mockTheme,
-      })
+      // 3-row minimum = 3*35 + 35 + 2 = 142, not the 400px default height
+      expect(result.current.minHeight).toEqual(142)
+    })
 
-      expect(result.current.resizableSize.height).not.toEqual("100%")
-      expect(result.current.resizableSize.height).toEqual(expectedHeight)
+    it("does not use the default height as the stretch minimum in fullscreen", () => {
+      const FULLSCREEN_HEIGHT = 300
+      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
+
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
+          }),
+          mockTheme,
+          40,
+          false,
+          700,
+          FULLSCREEN_HEIGHT,
+          true,
+          undefined,
+          heightConfig,
+          undefined,
+          true // no definite parent height
+        )
+      )
+
+      // The 400px default height would not fit the 300px fullscreen area.
+      expect(result.current.minHeight).toEqual(142)
+      expect(result.current.maxHeight).toEqual(FULLSCREEN_HEIGHT)
+    })
+
+    it("does not change the minimum height of non-stretch tables", () => {
+      const { result } = renderHook(() =>
+        useTableSizer(
+          DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
+          }),
+          mockTheme,
+          40,
+          false,
+          700,
+          undefined,
+          false,
+          undefined,
+          undefined,
+          undefined,
+          true // no definite parent height
+        )
+      )
+
+      // 1-row minimum = 35 + 35 + 2 = 72
+      expect(result.current.minHeight).toEqual(72)
+      expect(result.current.resizableSize.height).toEqual(400)
     })
   })
 
