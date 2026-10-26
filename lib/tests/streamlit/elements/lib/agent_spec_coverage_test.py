@@ -289,7 +289,9 @@ _RESERVED_FIELDS: dict[
     "dialog": frozenset({(None, False, None, None)}),
     "divider": frozenset({(None, False, None, None)}),
     "download_button": frozenset({("trigger", True, None, None)}),
-    "echarts_chart": frozenset({(None, False, None, None)}),
+    "echarts_chart": frozenset(
+        {(None, False, None, None), (None, True, "action_unsupported", None)}
+    ),
     "empty": frozenset({(None, False, None, None)}),
     "error": frozenset({(None, False, None, None)}),
     "exception": frozenset({(None, False, None, None)}),

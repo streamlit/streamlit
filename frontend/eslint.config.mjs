@@ -677,13 +677,11 @@ export default defineConfig([
   // Default it, or compare with `=== true`. Negate with `!== true`; the
   // rule's suggested `=== false` is false for null and undefined. The rule
   // always reports mixed-type unions (for example `string | number`); disable
-  // those inline with a reason. Other types, including `any`, stay allowed,
-  // and other directories stay off until they are cleaned up.
+  // those inline with a reason. Other types, including `any`, stay allowed.
+  // The glob covers all of `lib/src`, tests and `vendor/` included; other
+  // packages stay off until they are cleaned up.
   {
-    files: [
-      "lib/src/components/elements/**/*.{ts,tsx}",
-      "lib/src/components/widgets/**/*.{ts,tsx}",
-    ],
+    files: ["lib/src/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

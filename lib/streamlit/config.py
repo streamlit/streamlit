@@ -27,7 +27,7 @@ from collections import OrderedDict
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from streamlit import config_util, development, env_util, file_util, util
+from streamlit import byte_util, config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 from streamlit.signal_util import Signal
@@ -955,6 +955,25 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "server.maxCacheDataSize",
+    description="""
+        Maximum combined serialized size of all in-memory @st.cache_data entries
+        across functions and sessions. This limit counts serialized bytes, not
+        process RSS, and does not apply to st.cache_resource.
+        Use a binary-unit string such as "2gb" or "500mb" (units are powers of
+        1024). Leave unset (the default), or set to bare TOML 0 or the string
+        "0", to disable the limit.
+        When the total exceeds the limit, Streamlit evicts the least-recently-used
+        in-memory entries; persisted disk entries are not deleted. A single value
+        larger than the limit is still cached. Budget enforcement runs when entries
+        are inserted and can reduce throughput when many sessions populate caches
+        concurrently. Streamlit reads this value when the server starts.
+    """,
+    default_val=None,
+    type_=str,
 )
 
 
@@ -3308,6 +3327,15 @@ def _check_conflicts() -> None:
     from streamlit.logger import get_logger
 
     logger: Final = get_logger(__name__)
+
+    # Validate this option at config-load time so an invalid value is reported as a
+    # config error instead of failing later during Runtime construction.
+    try:
+        byte_util.config_max_cache_data_size_to_bytes(
+            get_option("server.maxCacheDataSize")
+        )
+    except StreamlitAPIException as exc:
+        raise RuntimeError(str(exc)) from exc
 
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):

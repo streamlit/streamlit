@@ -50,28 +50,29 @@ export function useSyncComboBoxEnterTargetFocus(
   const focusedKey = state?.selectionManager.focusedKey ?? null
   // String tokens (not booleans): restart when the mismatched/absent key changes.
   const absentFocusedKey =
-    state?.isOpen &&
+    state?.isOpen === true &&
     notNullOrUndefined(focusedKey) &&
     !state.collection.getItem(focusedKey)
       ? String(focusedKey)
       : null
   const focusMismatchToken =
-    state?.isOpen &&
+    state?.isOpen === true &&
     notNullOrUndefined(enterTargetKey) &&
     (isNullOrUndefined(focusedKey) ||
       String(focusedKey) !== String(enterTargetKey))
       ? `${String(enterTargetKey)}:${isNullOrUndefined(focusedKey) ? "" : String(focusedKey)}`
       : null
-  const collectionVersion = state?.isOpen
-    ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
-    : ""
+  const collectionVersion =
+    state?.isOpen === true
+      ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
+      : ""
 
   // Arrow moved focus off the Enter target: drop lastSynced so returning to
   // that key is user-owned (focusMismatchToken must not snap to the first row).
   useLayoutEffect(() => {
     const prev = prevFocusedKeyRef.current
     prevFocusedKeyRef.current = focusedKey
-    if (!state?.isOpen) {
+    if (state?.isOpen !== true) {
       lastSyncedKeyRef.current = null
       return
     }
@@ -86,11 +87,11 @@ export function useSyncComboBoxEnterTargetFocus(
   }, [focusedKey, state?.isOpen, enterTargetKey])
 
   useLayoutEffect(() => {
-    if (!state?.isOpen) {
+    if (state?.isOpen !== true) {
       lastSyncedKeyRef.current = null
       return
     }
-    if (skipApplyRef?.current) {
+    if (skipApplyRef?.current === true) {
       skipApplyRef.current = false
       return
     }
