@@ -327,16 +327,24 @@ describe("useVegaLiteSelections", () => {
       target: EventTarget,
       eventType: string,
       pointerId = 1,
-      buttons = 0
+      buttons = 0,
+      button = 0,
+      isPrimary = true
     ): void => {
       act(() => {
         const event = new Event(eventType, { bubbles: true })
+        const eventTarget =
+          eventType.startsWith("pointer") && target instanceof HTMLDivElement
+            ? (target.querySelector("canvas") ?? target)
+            : target
         if (eventType.startsWith("pointer")) {
           Object.defineProperty(event, "pointerId", { value: pointerId })
           Object.defineProperty(event, "buttons", { value: buttons })
+          Object.defineProperty(event, "button", { value: button })
+          Object.defineProperty(event, "isPrimary", { value: isPrimary })
           Object.defineProperty(event, "relatedTarget", { value: null })
         }
-        target.dispatchEvent(event)
+        eventTarget.dispatchEvent(event)
       })
     }
 
@@ -367,6 +375,7 @@ describe("useVegaLiteSelections", () => {
       selectionMode?: string[]
     } = {}): SetupResult => {
       const container = document.createElement("div")
+      container.appendChild(document.createElement("canvas"))
       document.body.appendChild(container)
       const signalListeners = new Map<
         string,
@@ -469,6 +478,34 @@ describe("useVegaLiteSelections", () => {
       ])
     })
 
+    it("does not hold signals from Vega binding controls", () => {
+      const { container, fire } = setup()
+      const select = document.createElement("select")
+      container.appendChild(select)
+
+      dispatch(select, "pointerdown")
+      fire("sel", { value: "binding" })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      advanceTimers(DEBOUNCE_TIME_MS)
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "binding" } } },
+      ])
+    })
+
+    it("does not hold signals from a secondary-button press", () => {
+      const { container, fire } = setup()
+
+      dispatch(container, "pointerdown", 1, 2, 2)
+      fire("sel", { value: "context-menu" })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      advanceTimers(DEBOUNCE_TIME_MS)
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "context-menu" } } },
+      ])
+    })
+
     it("holds pointer updates and sends only the latest value on release", async () => {
       const { container, fire } = setup()
       dispatch(container, "pointerdown")
@@ -545,6 +582,16 @@ describe("useVegaLiteSelections", () => {
       dispatch(window, "blur")
 
       expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 6] } } }])
+    })
+
+    it("flushes held values when a context menu opens", () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [2, 7] })
+
+      dispatch(container, "contextmenu")
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [2, 7] } } }])
     })
 
     it("flushes held values on pointercancel", async () => {

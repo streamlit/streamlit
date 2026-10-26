@@ -113,7 +113,7 @@ export const useVegaLiteSelections = (
         discreteInputResetTimerId = setTimeout(clearDiscreteInput, 0)
       }
 
-      const handlePointerDown = (event: PointerEvent): void => {
+      const startPointerGesture = (event: PointerEvent): void => {
         // Ignore additional pointers while the initiating pointer is held. A
         // new gesture may start while the previous release is still settling.
         if (isPointerDown && pendingPointerReleaseGestureId === null) {
@@ -126,13 +126,28 @@ export const useVegaLiteSelections = (
         pendingPointerReleaseGestureId = null
       }
 
+      const handlePointerDown = (event: PointerEvent): void => {
+        const target = event.target
+        if (
+          event.button !== 0 ||
+          event.isPrimary === false ||
+          !(target instanceof Element) ||
+          target.closest(".vega-bindings, select, input, textarea, button") !==
+            null ||
+          target.closest("canvas, svg") === null
+        ) {
+          return
+        }
+        startPointerGesture(event)
+      }
+
       const handleContinuousInput = (event: Event): void => {
         if (
           event.type === "pointermove" &&
           !isPointerDown &&
           (event as PointerEvent).buttons !== 0
         ) {
-          handlePointerDown(event as PointerEvent)
+          startPointerGesture(event as PointerEvent)
         } else if (!isPointerDown) {
           clearDiscreteInput()
         }
@@ -302,12 +317,24 @@ export const useVegaLiteSelections = (
         }
       }
 
+      const handleContextMenu = (): void => {
+        if (isPointerDown && pendingPointerReleaseGestureId === null) {
+          finishActivePointerGesture()
+        } else {
+          handleDiscreteInput()
+        }
+      }
+
       const container = vegaView.container()
       container?.addEventListener("pointerdown", handlePointerDown, {
         capture: true,
         passive: true,
       })
       container?.addEventListener("pointerout", handlePointerOut, {
+        passive: true,
+      })
+      container?.addEventListener("contextmenu", handleContextMenu, {
+        capture: true,
         passive: true,
       })
       DISCRETE_INPUT_EVENTS.forEach(type =>
@@ -357,6 +384,7 @@ export const useVegaLiteSelections = (
 
         container?.removeEventListener("pointerdown", handlePointerDown, true)
         container?.removeEventListener("pointerout", handlePointerOut)
+        container?.removeEventListener("contextmenu", handleContextMenu, true)
         DISCRETE_INPUT_EVENTS.forEach(type =>
           container?.removeEventListener(type, handleDiscreteInput, true)
         )
