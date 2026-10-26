@@ -955,6 +955,8 @@ class AppTest:
             ``at.button[0]`` for the first widget,
             ``at.button(key="my_key")`` for a widget with a given key, or
             ``at.button(label="Save")`` for the only widget with a given label.
+            A label lookup that matches zero or several widgets raises
+            ``AppTestLookupError``.
         """
         return self._tree.button
 
@@ -1316,7 +1318,8 @@ class AppTest:
             for the first widget, ``at.form_submit_button(key="save")`` for a
             widget with a given key, or
             ``at.form_submit_button(label="Submit")`` for the only widget with
-            a given label.
+            a given label. A label lookup that matches zero or several widgets
+            raises ``AppTestLookupError``.
         """
         return self._tree.form_submit_button
 
@@ -1457,8 +1460,9 @@ class AppTest:
             accessed from an ElementList by index (order on the page) or text.
             For example, ``at.markdown[0]`` for the first element or
             ``at.markdown(text="Done")`` for the only element whose Markdown
-            source is ``"Done"``. Markdown is an extension of the Element
-            class.
+            source is ``"Done"``. A text lookup that matches zero or several
+            elements raises ``AppTestLookupError``. Markdown is an extension
+            of the Element class.
         """
         return self._tree.markdown
 
@@ -1746,7 +1750,8 @@ class AppTest:
             label. For example, ``at.text_input[0]`` for the first widget,
             ``at.text_input(key="my_key")`` for a widget with a given key, or
             ``at.text_input(label="Name")`` for the only widget with a given
-            label.
+            label. A label lookup that matches zero or several widgets raises
+            ``AppTestLookupError``.
         """
         return self._tree.text_input
 

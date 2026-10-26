@@ -587,13 +587,18 @@ def _lookup_filter_value(element: Element, filter_name: str) -> str:
 def _check_lookup_query(filter_name: str, query: object, *, exact: bool) -> None:
     """Validate a ``label=`` or ``text=`` query before matching.
 
-    Raises ``TypeError`` if the query is not a string or compiled regex.
-    Raises ``AppTestError`` for a blank ``exact=False`` string or an empty
-    regex: both match every value, so they would select the only element of a
-    one-element collection without naming it. They usually come from an empty
-    variable. A regex such as ``.*`` is an explicit choice and is allowed.
+    Raises ``TypeError`` if the query is not a string or a regex compiled from
+    a string. Raises ``AppTestError`` for a blank ``exact=False`` string or an
+    empty regex: both match every value, so they would select the only element
+    of a one-element collection without naming it. They usually come from an
+    empty variable. A regex such as ``.*`` is an explicit choice and is allowed.
     """
     if isinstance(query, re.Pattern):
+        if not isinstance(query.pattern, str):
+            raise TypeError(
+                f"{filter_name}= must be a str or a compiled regular expression. "
+                "Got a bytes regular expression. Compile a str pattern instead."
+            )
         if not query.pattern:
             raise AppTestError(
                 f"{filter_name}= cannot be an empty regular expression because "
@@ -771,12 +776,12 @@ class ElementList(Generic[El_co]):
             source, including syntax such as ``**``. If this is ``None``
             (default), text is not compared.
         exact : bool
-            Whether a string ``label`` or ``text`` must match the whole value.
-            If this is ``True`` (default), the strings must be equal. If this
-            is ``False``, the string must appear anywhere in the value,
-            ignoring case. Both modes collapse and trim whitespace in the
-            query and the value. A compiled regular expression is matched with
-            ``re.search`` against the collapsed value and ignores ``exact``.
+            Full-value matching for a string ``label`` or ``text``. If this is
+            ``True`` (default), the strings must be equal. If this is
+            ``False``, the string must appear anywhere in the value, ignoring
+            case. Both modes collapse and trim whitespace in the query and the
+            value. A compiled regular expression is matched with ``re.search``
+            against the collapsed value and ignores ``exact``.
 
         Returns
         -------
@@ -789,8 +794,8 @@ class ElementList(Generic[El_co]):
         TypeError
             If none of ``key``, ``label``, or ``text`` is given, if
             ``exact=False`` is given without ``label`` or ``text``, or if
-            ``label`` or ``text`` is neither a string nor a compiled regular
-            expression.
+            ``label`` or ``text`` is neither a string nor a regular expression
+            compiled from a string.
         KeyError
             If only ``key`` is given and no element has that key.
         AppTestLookupError

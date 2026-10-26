@@ -2611,6 +2611,12 @@ def test_element_list_call_rejects_queries_that_match_everything(
             r"AppTest supports text= on: markdown\.",
             id="button-text",
         ),
+        pytest.param(
+            "st.button('Go')",
+            lambda at: at.button(label="Stop", text="Go"),
+            r"text= lookups are not supported for button\.",
+            id="button-text-with-non-matching-label",
+        ),
     ],
 )
 def test_element_list_call_rejects_unsupported_filters(
@@ -2634,14 +2640,24 @@ def test_element_list_call_requires_a_filter() -> None:
         at.button("go", exact=False)
 
 
-def test_element_list_call_rejects_non_string_queries() -> None:
-    """A label= or text= query must be a str or a compiled regex."""
+@pytest.mark.parametrize(
+    ("query", "got"),
+    [
+        pytest.param(b"Go", r"Got bytes\.", id="bytes"),
+        pytest.param(
+            re.compile(rb"Go"), r"Got a bytes regular expression\.", id="bytes-regex"
+        ),
+    ],
+)
+def test_element_list_call_rejects_non_string_queries(query: object, got: str) -> None:
+    """A label= or text= query must be a str or a regex compiled from a str."""
     at = AppTest.from_string("import streamlit as st\nst.button('Go')").run()
 
     with pytest.raises(
-        TypeError, match=r"label= must be a str or a compiled regular expression\. "
+        TypeError,
+        match=r"label= must be a str or a compiled regular expression\. " + got,
     ):
-        at.button(label=b"Go")  # type: ignore[arg-type]
+        at.button(label=query)  # type: ignore[arg-type]
 
 
 def test_file_uploader_single():

@@ -26,13 +26,12 @@ class AppTestError(Exception):
     """Raised when an AppTest query or interaction is invalid.
 
     AppTest can run apps that contain unimplemented, partially modeled, or
-    browser-only elements. This error is reserved for an explicit test action
-    that AppTest cannot perform, such as updating a disabled widget or calling
+    browser-only elements, so it raises this error only for an explicit test
+    action it cannot perform. Examples are updating a disabled widget, calling
     ``set_value`` / ``click`` on an element that AppTest can inspect but not
-    interact with. It is also raised when a ``label=`` or ``text=`` filter is
-    not supported by the collection or matches every value.
-    ``AppTestLookupError`` is the subclass for a supported filter that matches
-    zero or several elements.
+    interact with, and a ``label=`` or ``text=`` filter that the collection
+    does not support or that matches every value. ``AppTestLookupError`` is
+    the subclass for a supported filter that matches zero elements or several.
     """
 
 
