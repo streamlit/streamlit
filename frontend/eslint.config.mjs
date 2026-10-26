@@ -680,10 +680,7 @@ export default defineConfig([
   // those inline with a reason. Other types, including `any`, stay allowed,
   // and other directories stay off until they are cleaned up.
   {
-    files: [
-      "lib/src/components/elements/**/*.{ts,tsx}",
-      "lib/src/components/widgets/**/*.{ts,tsx}",
-    ],
+    files: ["lib/src/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

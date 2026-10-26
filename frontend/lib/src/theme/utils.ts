@@ -580,7 +580,7 @@ const isValidFontWeight = (
   fontWeight: number | null | undefined,
   minWeight: number,
   maxWeight: number,
-  inSidebar?: boolean
+  inSidebar = false
 ): boolean => {
   const themeSection = inSidebar ? "theme.sidebar" : "theme"
 
@@ -622,9 +622,9 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize?.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem") === true) {
     return validatedSize
-  } else if (validatedSize?.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px") === true) {
     // Convert the font size to rem, and round to nearest 8th
     const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
@@ -927,7 +927,7 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder) {
+  if (showWidgetBorder === true) {
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
   }

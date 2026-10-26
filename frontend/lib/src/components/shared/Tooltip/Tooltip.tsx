@@ -230,13 +230,13 @@ function Tooltip({
   content,
   placement,
   children,
-  inline,
+  inline = false,
   style,
   onMouseEnterDelay,
   closeDelay,
-  containerWidth,
-  constrainWidth,
-  error,
+  containerWidth = false,
+  constrainWidth = false,
+  error = false,
   dismissOnClick = false,
   interactive = true,
 }: TooltipProps): ReactElement {
@@ -247,6 +247,7 @@ function Tooltip({
     delay: onMouseEnterDelay ?? 200,
     closeDelay: closeDelay ?? 300,
   })
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `content` is a ReactNode; empty content (null, "", false) disables the tooltip
   const isDisabled = !content
 
   // Stable ref so effects always call close() on the latest state without

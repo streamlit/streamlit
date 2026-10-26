@@ -81,7 +81,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   const {
     disabled,
     value: propValue,
-    showValue,
+    showValue = false,
     label,
     labelVisibility,
     onChange,
@@ -158,8 +158,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       if (Date.now() - openedAtRef.current < 50) return
       const target = e.target as Node
       if (
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
+        triggerRef.current?.contains(target) !== true &&
+        popoverRef.current?.contains(target) !== true
       ) {
         setIsOpen(false)
         onColorClose()
@@ -187,7 +187,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     const handleFocusIn = (e: FocusEvent): void => {
       if (!tabbingRef.current) return
       tabbingRef.current = false
-      if (!popoverRef.current?.contains(e.target as Node)) {
+      if (popoverRef.current?.contains(e.target as Node) !== true) {
         setIsOpen(false)
         onColorClose()
       }

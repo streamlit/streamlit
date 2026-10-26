@@ -314,7 +314,7 @@ interface HeadingActionElements {
 const HeaderActionElements: FC<HeadingActionElements> = ({
   elementId,
   help,
-  hideAnchor,
+  hideAnchor = false,
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
@@ -358,7 +358,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   tag,
   anchor: propsAnchor,
   help,
-  hideAnchor,
+  hideAnchor = false,
   children,
   tagProps,
   icon,
@@ -433,7 +433,6 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     <HeaderActionElements
       elementId={elementId}
       help={help}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- sidebar and dialog always hide the anchor; false must not force the link to show
       hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
   )
@@ -619,7 +618,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
  * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
-  inline,
+  inline = false,
   className,
   children,
   ...props
@@ -874,8 +873,8 @@ function createRemarkColoringAndSmall(
       // Handle custom color directive (:color[text]{foreground="...", background="..."})
       if (nodeName === "color" && node.attributes) {
         const { foreground, background } = node.attributes
-        const validForeground = foreground && isValidCssColor(foreground)
-        const validBackground = background && isValidCssColor(background)
+        const validForeground = isValidCssColor(foreground ?? "")
+        const validBackground = isValidCssColor(background ?? "")
 
         const data = (node.data ??= {})
         data.hName = "span"
@@ -1232,7 +1231,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href?.startsWith("#")) {
+  if (href?.startsWith("#") === true) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }
@@ -1257,12 +1256,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
-  isLabel,
-  disableLinks,
+  isLabel = false,
+  disableLinks = false,
   helpText,
-  unterminatedParsing,
+  unterminatedParsing = false,
   hideAnchors,
-  truncate,
+  truncate = false,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1440,7 +1439,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   return (
-    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+    <StreamingContext.Provider value={unterminatedParsing}>
       <HelpTextContext.Provider value={helpText}>
         <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
           <ErrorBoundary>
@@ -1466,7 +1465,7 @@ const StreamlitMarkdown: FC<Props> = ({
   source,
   allowHTML,
   style,
-  isCaption,
+  isCaption = false,
   isLabel,
   boldLabel,
   disableLinks,
@@ -1474,7 +1473,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   inheritLineHeight,
   helpText,
-  truncate,
+  truncate = false,
   unterminatedParsing,
   hideAnchors,
 }) => {
@@ -1482,7 +1481,7 @@ const StreamlitMarkdown: FC<Props> = ({
 
   return (
     <StyledStreamlitMarkdown
-      isCaption={Boolean(isCaption)}
+      isCaption={isCaption}
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}
