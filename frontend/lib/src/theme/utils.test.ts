@@ -4940,9 +4940,6 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(logWarningSpy).not.toHaveBeenCalledWith(
-        'Invalid color passed for textColor in theme.sidebar: ""'
-      )
       expect(
         logWarningSpy.mock.calls.some(
           ([message]) =>
@@ -4965,7 +4962,7 @@ describe("Sidebar theme creation", () => {
       })
       const mainTheme = createTheme(CUSTOM_THEME_NAME, themeInput)
 
-      createSidebarTheme(mainTheme)
+      const sidebarTheme = createSidebarTheme(mainTheme)
 
       expect(
         logWarningSpy.mock.calls.some(
@@ -4974,6 +4971,10 @@ describe("Sidebar theme creation", () => {
             message.includes("Invalid color passed for textColor")
         )
       ).toBe(false)
+      expect(sidebarTheme.emotion.colors.bodyText).toBe(
+        lightTheme.emotion.colors.bodyText
+      )
+      expect(sidebarTheme.emotion.colors.primary).toBe("#0D2B7A")
     })
 
     it("inherits main textColor when sidebar textColor is blank", () => {
@@ -4988,9 +4989,30 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(logWarningSpy).not.toHaveBeenCalledWith(
-        'Invalid color passed for textColor in theme.sidebar: ""'
-      )
+      expect(
+        logWarningSpy.mock.calls.some(
+          ([message]) =>
+            typeof message === "string" &&
+            message.includes("textColor") &&
+            message.includes('""')
+        )
+      ).toBe(false)
+      expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
+    })
+
+    it("inherits main textColor when sidebar textColor is whitespace-only", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "red",
+        textColor: "#123456",
+        sidebar: {
+          textColor: "  ",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(logWarningSpy).not.toHaveBeenCalled()
       expect(sidebarTheme.emotion.colors.bodyText).toBe("#123456")
     })
 

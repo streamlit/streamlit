@@ -215,14 +215,15 @@ export const parseFont = (
  * @param color: a string - the color value passed in as a given config
  * @param configKey: a string - the config that the color value was passed for
  * @param inSidebar: boolean - whether this is for sidebar theming (for error messages)
- * @returns the validated color value or undefined if the color is invalid
+ * @returns the validated color value, or undefined if blank/unset or invalid
  */
 const parseColor = (
   color: string,
   configKey: string,
   inSidebar: boolean = false
 ): string | undefined => {
-  // Unset protobuf color defaults are empty/whitespace strings — not invalid input.
+  // Blank strings are unset. Proto3 defaults are ""; whitespace-only config is
+  // treated the same. Nested values are not colors.
   if (typeof color !== "string" || !color.trim()) {
     return undefined
   }
@@ -1238,8 +1239,8 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
 }
 
 const isProtobufDefaultValue = (value: unknown): boolean =>
-  value === "" ||
   value === null ||
+  (typeof value === "string" && !value.trim()) ||
   (Array.isArray(value) && value.length === 0)
 
 /**
@@ -1283,8 +1284,8 @@ const completeThemeInput = (
   partialInput: Partial<CustomThemeConfig>,
   baseThemeArg: ThemeConfig
 ): CustomThemeConfig => {
-  // mergeWith + skipProtobufDefaults keeps base theme colors when the partial
-  // input still carries unset proto3 string defaults ("").
+  // Drop unset protobuf defaults ("", null, []) so they don't override base
+  // theme values.
   return new CustomThemeConfig(
     mergeWith(
       {},
@@ -1811,8 +1812,8 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Omit empty protobuf defaults before merge so unset colors (e.g. textColor "")
-  // are not copied onto the empty destination object (see #17638).
+  // Omit unset protobuf defaults (e.g. textColor "") so they are not copied onto
+  // the empty destination and later rejected as invalid colors.
   const mergedSidebarThemeInput = mergeWith(
     {},
     omitProtobufDefaults(activeTheme.themeInput),
