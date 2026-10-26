@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import pytest
@@ -75,7 +75,7 @@ def _read_completion(app: Page) -> dict[str, Any]:
     end = text.rfind("}")
     if start < 0 or end < start:
         raise AssertionError(f"Completion JSON was not found in {text!r}")
-    return json.loads(text[start : end + 1])
+    return cast("dict[str, Any]", json.loads(text[start : end + 1]))
 
 
 def _websocket_send_count(app: Page) -> int:
@@ -289,13 +289,20 @@ def _find_point_position(app: Page) -> tuple[float, float]:
             _chart_visual_signature(linked_chart) if linked_chart.count() > 0 else None
         )
         _select_point(app, position=position)
+
+        def has_point_selection(
+            completion: dict[str, Any],
+            before: dict[str, Any] = before,
+        ) -> bool:
+            return bool(
+                completion["run_count"] > before["run_count"]
+                and completion["filter_state"]["regions"]
+            )
+
         try:
             completion = _wait_for_completion(
                 app,
-                lambda completion, before=before: (
-                    completion["run_count"] > before["run_count"]
-                    and completion["filter_state"]["regions"] != []
-                ),
+                has_point_selection,
                 timeout_ms=1_500,
             )
         except AssertionError:
@@ -347,12 +354,19 @@ def _select_brush(
             if gesture_updates is None:
                 gesture_updates = _websocket_send_count(app) > before_send_count
             if gesture_updates:
-                completion = _wait_for_completion(
-                    app,
-                    lambda value, before_move=before_move: (
+
+                def has_intermediate_brush(
+                    value: dict[str, Any],
+                    before_move: dict[str, Any] = before_move,
+                ) -> bool:
+                    return bool(
                         value["run_count"] > before_move["run_count"]
                         and value["filter_state"]["start"] is not None
-                    ),
+                    )
+
+                completion = _wait_for_completion(
+                    app,
+                    has_intermediate_brush,
                 )
                 if release_chart is not None:
                     assert before_signature is not None
@@ -664,9 +678,9 @@ def _measure_point_selection(
 
     def wait_for_point_output() -> dict[str, Any]:
         def predicate(completion: dict[str, Any]) -> bool:
-            return (
+            return bool(
                 completion["run_count"] > before["run_count"]
-                and completion["filter_state"]["regions"] != []
+                and completion["filter_state"]["regions"]
             )
 
         if scenario == "linked":
