@@ -12,17 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Validate an agent's widget writes and encode them as ``WidgetStates``.
+"""Check an agent's widget writes and turn them into the rerun a browser sends.
 
-Nothing from the request reaches a protobuf until it has been checked, and the
-whole request is refused before any callback runs.
+A request's ``widget_state`` and ``trigger`` pass through here before anything
+runs. Nothing from the request reaches a protobuf until it has been checked,
+and the whole request is refused if any part of it is not legal. This covers:
 
-Every acceptance decision comes from the last snapshot's ``ElementState``: what
-the client was shown, including whether an element takes a value or a trigger,
-what is disabled or unsupported, form membership, options, and limits. The
-snapshot has the final say, because it is the document the client wrote
-against. The widget registry supplies only the codec: each widget's wire type,
-serializer, and deserializer.
+- Addressing (``resolve_element_id``): a key is an authored key or an element
+  ID the snapshot reported. An element that is gone, disabled, unsupported, or
+  display-only is refused with the code that names why, and so is a value sent
+  to a trigger, a trigger fired as a value, or one element set twice.
+- Values and triggers (``build_widget_states``): each value must have the
+  JSON type its ``value_schema`` states, be one of its options, and be readable
+  by the widget's own deserializer, and ``null`` resets or clears it. Accepted
+  values and the one trigger are encoded in each widget's wire type, in
+  snapshot order, as the ``WidgetStates`` a browser would send.
+- Forms: a form's fields go with one of its submit triggers, and a request
+  cannot span two forms or mix a form with other controls.
+- Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
+  that fragment, and an open dialog's widgets cannot be mixed with anything
+  outside the dialog.
+
+Every acceptance decision comes from the last snapshot's ``ElementState``,
+because the snapshot is the document the client wrote against. The widget
+registry supplies only the codec: each widget's wire type, serializer, and
+deserializer.
 
 Constraints a widget owns are left to the widget, which resets, truncates, or
 trims the value for browsers and agents alike: bounds, fractions sent to an
