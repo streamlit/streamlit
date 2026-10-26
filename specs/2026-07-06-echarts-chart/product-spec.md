@@ -300,7 +300,10 @@ the correlated snapshot rather than a fixed grace period is deliberate: any fixe
 than a user-configured `brush.throttleDelay` would flush the stale cache and defeat the throttle.
 The wait is unbounded — a snapshot that never arrives never flushes — but ECharts always emits
 one; a timeout would reintroduce the stale-flush risk. Either event order yields exactly one
-rerun with the final indices.
+rerun with the final indices. Inside a form there is no rerun until submit, and submit cannot
+wait out `throttleDelay`. The submit handler forces one unthrottled hit-test of the finished
+areas and sends those indices. If that hit-test does not arrive, submit is refused rather than
+sending the previous point indices with the new areas.
 
 ```python
 spec = {
