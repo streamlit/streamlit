@@ -2457,6 +2457,11 @@ def test_element_list_call_by_label_is_strict() -> None:
         ),
     ):
         at.button(label="Delete")
+    # A regex ignores exact=, so the message does not report exact=False.
+    with pytest.raises(
+        AppTestLookupError, match=r"No button matches label=re\.compile\('save'\)\. "
+    ):
+        at.button(label=re.compile(r"save"), exact=False)
     with pytest.raises(
         AppTestLookupError,
         match=(

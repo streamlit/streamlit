@@ -586,11 +586,11 @@ def _lookup_filter_value(element: Element, filter_name: str) -> str:
 def _check_lookup_query(
     filter_name: str, query: str | re.Pattern[str], *, exact: bool
 ) -> None:
-    """Raise ``AppTestError`` for a query that matches every value.
+    """Raise ``AppTestError`` for a blank ``exact=False`` string or an empty regex.
 
-    A blank string with ``exact=False`` and an empty regex match every value,
-    so they would select the only element of a one-element collection without
-    naming it.
+    Both match every value, so they would select the only element of a
+    one-element collection without naming it. They usually come from an empty
+    variable. A regex such as ``.*`` is an explicit choice and is allowed.
     """
     if isinstance(query, re.Pattern):
         if not query.pattern:
@@ -610,8 +610,8 @@ def _lookup_filter_matches(
 ) -> bool:
     """Return whether a whitespace-collapsed value matches a lookup filter.
 
-    A regex is searched. A string must equal the value or, with
-    ``exact=False``, appear in it ignoring case.
+    Search a regex with ``re.search``. Compare a string for equality or, when
+    ``exact`` is false, as a case-insensitive substring.
     """
     if isinstance(query, re.Pattern):
         return query.search(value) is not None
@@ -658,7 +658,8 @@ def _lookup_failure_message(
     """
     lookup_parts = [f"key={key!r}"] if key is not None else []
     lookup_parts += [f"{name}={query!r}" for name, query in filters.items()]
-    if not exact:
+    # A regex ignores exact=, so show it only when a string filter used it.
+    if not exact and any(isinstance(query, str) for query in filters.values()):
         lookup_parts.append("exact=False")
     lookup_repr = ", ".join(lookup_parts)
     if not elements:
@@ -756,9 +757,9 @@ class ElementList(Generic[El_co]):
             The user key of the element. If this is ``None`` (default), only
             ``label`` and ``text`` select the element.
         label : str, re.Pattern, or None
-            The widget's ``label`` argument, including Markdown and icon syntax
-            such as ``**Save**``. If this is ``None`` (default), labels are not
-            compared.
+            The widget's ``label`` argument. Markdown written in that string,
+            such as ``**Save**`` or ``:material/save:``, is matched as stored.
+            If this is ``None`` (default), labels are not compared.
         text : str, re.Pattern, or None
             The text of the element. For ``st.markdown``, this is the Markdown
             source, including syntax such as ``**``. If this is ``None``
