@@ -136,6 +136,7 @@ describe("StyledFlexContainerBlock print layout", () => {
           direction: Direction.VERTICAL,
           border: false,
           height: "300px",
+          gap: { pixelGap: 16 },
         })
       )
     )
@@ -143,10 +144,14 @@ describe("StyledFlexContainerBlock print layout", () => {
     // Stretch children are height 100%. A block parent gives each of them
     // the full container, so a fixed-height container keeps flex until a
     // print table or note releases that height. Then it becomes block,
-    // which is the content-height case Chrome collapses.
+    // which is the content-height case Chrome collapses. The block box
+    // loses gap, so the same bottom margin is restored there.
     expect(css).toMatch(
-      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;height:auto;max-height:none;overflow:visible/
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;/
     )
+    expect(css).toContain("height:auto;max-height:none;overflow:visible")
+    expect(css).toContain("margin-bottom:16px")
+    expect(css).toContain("margin-bottom:calc(16px - 0.375rem)")
 
     const aligned = cssAddedBy(() =>
       render(
@@ -154,15 +159,18 @@ describe("StyledFlexContainerBlock print layout", () => {
           direction: Direction.VERTICAL,
           border: false,
           height: "300px",
+          gap: { pixelGap: 16 },
           align: BlockProto.FlexContainer.Align.ALIGN_CENTER,
         })
       )
     )
-    // Alignment still needs flex after the height is released.
+    // Alignment still needs flex after the height is released, so gap
+    // keeps working and print does not add a block margin.
     expect(aligned).toMatch(
       /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{height:auto;max-height:none;overflow:visible/
     )
     expect(aligned).not.toContain("display:block")
+    expect(aligned).not.toContain("margin-bottom")
   })
 })
 

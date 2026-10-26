@@ -67,34 +67,36 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  *
  * Print layout narrows the card after `beforeprint`. The print rule divides
  * the card by this width, so the figure scales down only when the card is
- * the narrower of the two. The probe uses the card's font, which stays at
- * the theme size while the text inside it is scaled.
+ * the narrower of the two.
  *
- * The face is set as longhands. Firefox leaves the `font` shorthand empty
- * in that case, so the probe copies family, size, weight, style, and
- * letter spacing on their own.
+ * The on-screen markdown is ellipsized, so its box is the clipped width. A
+ * clone of that markdown is measured unconstrained. The clone keeps bold and
+ * inline code, which are wider than the container's plain font, and stays
+ * inside the value so it inherits that font. Firefox returns an empty `font`
+ * shorthand when the theme sets the face through longhands.
  */
 function recordMetricValueWidth(value: HTMLElement): void {
-  const source = value.querySelector("p")
-  const text = source?.textContent ?? ""
-  if (text === "") {
+  const source = value.querySelector(".stMarkdownEllipsis")
+  if (!(source instanceof HTMLElement) || source.textContent === "") {
     value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
     return
   }
 
-  const font = getComputedStyle(value)
-  const probe = document.createElement("span")
-  probe.textContent = text
-  probe.style.fontFamily = font.fontFamily
-  probe.style.fontSize = font.fontSize
-  probe.style.fontWeight = font.fontWeight
-  probe.style.fontStyle = font.fontStyle
-  probe.style.letterSpacing = font.letterSpacing
-  probe.style.whiteSpace = "nowrap"
+  const probe = source.cloneNode(true)
+  if (!(probe instanceof HTMLElement)) {
+    return
+  }
+  // The class keeps max-width and overflow from the card. Clear them so the
+  // measurement is the unwrapped figure, including bold and inline code.
   probe.style.position = "absolute"
   probe.style.visibility = "hidden"
   probe.style.width = "max-content"
-  document.body.appendChild(probe)
+  probe.style.maxWidth = "none"
+  probe.style.minWidth = "max-content"
+  probe.style.overflow = "visible"
+  probe.style.whiteSpace = "nowrap"
+  probe.style.textOverflow = "clip"
+  value.appendChild(probe)
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
   const width = probe.getBoundingClientRect().width
   probe.remove()

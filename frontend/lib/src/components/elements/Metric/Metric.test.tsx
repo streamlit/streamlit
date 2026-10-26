@@ -243,37 +243,40 @@ describe("Metric element", () => {
     ).toBe("112px")
   })
 
-  it("measures a printed metric from font longhands when the shorthand is empty", () => {
-    render(<Metric {...getProps({ body: "$48.6M" })} />)
-    const font = {
-      font: "",
-      fontFamily: "Custom Face, sans-serif",
-      fontSize: "36px",
-      fontWeight: "600",
-      fontStyle: "italic",
-      letterSpacing: "0.5px",
-    } as CSSStyleDeclaration
-    const computed = vi.spyOn(window, "getComputedStyle").mockReturnValue(font)
-    const append = vi
-      .spyOn(document.body, "appendChild")
-      .mockImplementation(node => node)
-    try {
-      window.dispatchEvent(new Event("beforeprint"))
-      const probe = append.mock.calls
-        .map(([node]) => node)
-        .find(
-          (node): node is HTMLSpanElement => node instanceof HTMLSpanElement
-        )
+  it("measures a bold metric value from the rendered markdown", () => {
+    render(<Metric {...getProps({ body: "**$48.6M** `code`" })} />)
+    const value = screen.getByTestId("stMetricValue")
+    // The card font is weight 400. Bold and inline code are wider than a
+    // plain copy of that font, so the probe has to be the rendered markdown.
+    expect(value.querySelector("strong")).not.toBeNull()
+    expect(value.querySelector("code")).not.toBeNull()
 
-      expect(probe?.style.fontFamily).toBe("Custom Face, sans-serif")
-      expect(probe?.style.fontSize).toBe("36px")
-      expect(probe?.style.fontWeight).toBe("600")
-      expect(probe?.style.fontStyle).toBe("italic")
-      expect(probe?.style.letterSpacing).toBe("0.5px")
-    } finally {
-      computed.mockRestore()
-      append.mockRestore()
-    }
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const rendered =
+          this.querySelector("strong") !== null &&
+          this.querySelector("code") !== null
+        const width = rendered ? 180 : 40
+        return {
+          width,
+          height: 36,
+          top: 0,
+          left: 0,
+          bottom: 36,
+          right: width,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }
+      })
+    window.dispatchEvent(new Event("beforeprint"))
+    rect.mockRestore()
+
+    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe(
+      "180px"
+    )
+    expect(value.querySelectorAll(".stMarkdownEllipsis")).toHaveLength(1)
   })
 
   it("keeps a content-width metric at its own width when printing", () => {

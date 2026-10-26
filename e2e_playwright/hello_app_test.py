@@ -124,7 +124,7 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 # printing candidate.
 
 
-def _evaluate_match_media_print(app: Page):
+def _flush_print_media_change(app: Page):
     """Let the dataframe refit once print media is active.
 
     ``emulate_media`` fires ``change`` on the ``MediaQueryList`` objects the
@@ -161,7 +161,7 @@ def test_app_print_mode_portrait_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-    _evaluate_match_media_print(app)
+    _flush_print_media_change(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
@@ -191,7 +191,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _evaluate_match_media_print(app)
+    _flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
 
@@ -207,7 +207,7 @@ def test_app_print_mode_landscape_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
-    _evaluate_match_media_print(app)
+    _flush_print_media_change(app)
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
@@ -236,7 +236,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _evaluate_match_media_print(app)
+    _flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 
@@ -257,7 +257,7 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
     _set_portrait_dimensions(app)
     app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
     app.emulate_media(media="print", forced_colors="active")
-    _evaluate_match_media_print(app)
+    _flush_print_media_change(app)
     table = app.locator(".stDataFramePrintTable")
     expect(table).to_be_visible()
     expect(table).to_contain_text("China")

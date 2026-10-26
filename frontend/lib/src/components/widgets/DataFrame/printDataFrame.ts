@@ -80,6 +80,7 @@ export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
  */
 export const DATAFRAME_PRINT_IMAGE_LIMIT = 32
 
+/** Definite probe width so Chromium does not clamp a wide table to the viewport while measuring. */
 const PRINT_MEASURE_WIDTH = "100000px"
 
 /**
@@ -405,6 +406,8 @@ function printCellContent(cell: GridCell): PrintCellContent | null {
     cell.kind === GridCellKind.Uri &&
     cell.themeOverride?.fontFamily === genericFonts.iconFont
   ) {
+    // Icon-only links store the glyph in displayData and the URL in data.
+    // The print table uses the body font, so print the URL instead.
     return {
       kind: "text",
       text: typeof cell.data === "string" ? cell.data : "",

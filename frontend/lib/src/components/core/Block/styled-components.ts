@@ -71,6 +71,33 @@ const VISIBLE_PRINT_STACK_TRIGGER = `${PRINT_STACK_TRIGGER}:not([data-st-inactiv
  */
 const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${VISIBLE_PRINT_STACK_TRIGGER}`
 
+/**
+ * Bottom margins that replace flex `gap` once a vertical block prints as a
+ * block box. `gap` does not apply there. Margin stays outside the child, so
+ * border-box padding does not eat into a fixed height.
+ *
+ * A page link only trims the flex gap, by xs above and below. Print replaces
+ * the gap with margin, so the trim stays in that margin. The next link's own
+ * negative margin-top then collapses with it. Balloons, snow, and the cache
+ * spinner are gone before a print, so they are not excluded here.
+ */
+function printBlockGapMargins(
+  gapWidth: string | undefined,
+  theme: EmotionTheme
+): CSSObject {
+  if (gapWidth === undefined || gapWidth === theme.spacing.none) {
+    return {}
+  }
+  return {
+    "& > :not(:last-child):not(:has(> .stPageLink))": {
+      marginBottom: gapWidth,
+    },
+    "& > :not(:last-child):has(> .stPageLink)": {
+      marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
+    },
+  }
+}
+
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
   theme: EmotionTheme
@@ -376,15 +403,13 @@ export const StyledFlexContainerBlock =
       }
       const crossAxis = getAlignItems(align)
       const mainAxis = getJustifyContent(justify)
-      // display:block drops align-items and justify-content. A container
-      // that centers, ends, or spaces its content keeps flex so print
-      // matches the screen. Block layout has no equivalent for those
-      // alignments. A fixed or percentage height does too: stretch children
-      // are `height: 100%` plus a flex value, and without a flex parent
-      // each one takes the full container instead of sharing it. Only a
-      // content-height container with default alignment switches to block
-      // layout, because that is the case where Chrome's print layout drops
-      // the flex height and a chart paints over the next heading.
+      // Print switches a vertical block to display:block, because Chrome's
+      // print layout drops the height of a content-height flex column and a
+      // chart then paints over the next heading. It keeps flex when:
+      // - it centers, ends, or spaces its content (block has no equivalent), or
+      // - it has any set height other than auto (stretch children rely on
+      //   flex to share it instead of each taking 100%).
+      // Only a content-height container with default alignment switches.
       const keepsPrintFlexForAlignment =
         direction === Direction.VERTICAL &&
         (crossAxis === "center" ||
@@ -428,24 +453,7 @@ export const StyledFlexContainerBlock =
             ? {}
             : {
                 display: "block",
-                // `gap` only applies to a flex box, so print uses a bottom
-                // margin instead. Margin stays outside the child, so
-                // border-box padding does not eat into a fixed height.
-                // Balloons, snow, and the cache spinner are gone before a
-                // print, so they are not excluded here.
-                ...(gapWidth &&
-                  gapWidth !== theme.spacing.none && {
-                    "& > :not(:last-child):not(:has(> .stPageLink))": {
-                      marginBottom: gapWidth,
-                    },
-                    // A page link only trims the flex gap, by xs above and
-                    // below. Print replaces the gap with margin, so the trim
-                    // stays in that margin. The next link's own negative
-                    // margin-top then collapses with it.
-                    "& > :not(:last-child):has(> .stPageLink)": {
-                      marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
-                    },
-                  }),
+                ...printBlockGapMargins(gapWidth, theme),
               }),
         ...(border && {
           // Landscape: keep a bordered card on one page so a chart is not
@@ -469,10 +477,13 @@ export const StyledFlexContainerBlock =
             // the container grows instead of clipping them. Releasing that
             // height makes this the content-height column Chrome collapses,
             // so drop flex when the height was the only reason to keep it.
-            // Center, end, and space-between stay flex.
+            // That block box loses `gap`, so it uses the same bottom margins
+            // as a content-height container. Center, end, and space-between
+            // stay flex, and their gap still applies.
             ...(keepsPrintFlexForHeight &&
               !keepsPrintFlexForAlignment && {
                 display: "block",
+                ...printBlockGapMargins(gapWidth, theme),
               }),
             height: "auto",
             maxHeight: "none",
@@ -538,10 +549,7 @@ export const StyledFlexContainerBlock =
               [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
             },
           }),
-        // An empty print block still emits `@media print {}`.
-        ...(Object.keys(printRules).length > 0
-          ? { "@media print": printRules }
-          : {}),
+        "@media print": printRules,
       }
     }
   )
