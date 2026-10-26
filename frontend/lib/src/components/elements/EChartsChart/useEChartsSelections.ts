@@ -463,6 +463,14 @@ export function useEChartsSelections(
       // Captured before the hit-test replaces the dispatcher. A callback the
       // user's throttle scheduled earlier still holds a pre-prune snapshot.
       const scheduledHitTest = brushSelectDispatcher(chart)
+      // A disabled widget has no bound handlers, so listen for the hit-test
+      // here. When a component mixed coord + pixel-only areas, it rebuilds
+      // ``selected`` from the remaining areas.
+      const captureHitTest = (raw: unknown): void => {
+        latestBrushSelectionRef.current =
+          (raw as BrushSelectedParams).batch ?? []
+      }
+      chart.on("brushSelected", captureHitTest)
       // Programmatic ``brush`` dispatches would otherwise re-enter the bound
       // handlers (empty snapshots look like toolbox-clear). Restore-style
       // suppression keeps resize from emitting a user rerun. The synchronous
@@ -491,12 +499,9 @@ export function useEChartsSelections(
         })
       } finally {
         isRestoringRef.current = false
+        chart.off("brushSelected", captureHitTest)
       }
-      // ``brushSelected`` still updates the snapshot during restore. When the
-      // same component mixed coord + pixel-only areas, that rebuilds
-      // ``selected`` from the remaining areas. Without bound handlers (a
-      // disabled widget, or a test fake that fires no events), keep the
-      // locally pruned copy.
+      // A test fake that fires no events keeps the locally pruned copy.
       const nextBrush = latestBrushSelectionRef.current
       if (nextBrush !== pruned) {
         scheduledHitTest?.clear?.()
