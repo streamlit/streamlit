@@ -141,12 +141,28 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // Stretch children are height 100%. A block parent gives each of them
-    // the full container, so a fixed-height container keeps flex, unless it
-    // holds an expanded print table, which clips against the fixed height.
-    expect(css).not.toContain("display:block")
+    // the full container, so a fixed-height container keeps flex until a
+    // print table or note releases that height. Then it becomes block,
+    // which is the content-height case Chrome collapses.
     expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;height:auto;max-height:none;overflow:visible/
+    )
+
+    const aligned = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+          align: BlockProto.FlexContainer.Align.ALIGN_CENTER,
+        })
+      )
+    )
+    // Alignment still needs flex after the height is released.
+    expect(aligned).toMatch(
       /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{height:auto;max-height:none;overflow:visible/
     )
+    expect(aligned).not.toContain("display:block")
   })
 })
 

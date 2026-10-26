@@ -348,7 +348,7 @@ export interface StyledFlexContainerBlockProps {
   overflowX?: React.CSSProperties["overflowX"]
 }
 
-/** A pixel, rem, or percentage height. Content height is `auto` or unset. */
+/** Any set height other than auto, including fit-content. Content height is what collapses in print. */
 function hasDefinitePrintHeight(
   height: React.CSSProperties["height"] | undefined
 ): boolean {
@@ -381,17 +381,21 @@ export const StyledFlexContainerBlock =
       // matches the screen. Block layout has no equivalent for those
       // alignments. A fixed or percentage height does too: stretch children
       // are `height: 100%` plus a flex value, and without a flex parent
-      // each one takes the full container instead of sharing it. The
-      // collapse is the default content-height column, whose flex height
-      // drops and paints a chart over the next heading.
-      const keepsPrintFlex =
+      // each one takes the full container instead of sharing it. Only a
+      // content-height container with default alignment switches to block
+      // layout, because that is the case where Chrome's print layout drops
+      // the flex height and a chart paints over the next heading.
+      const keepsPrintFlexForAlignment =
         direction === Direction.VERTICAL &&
-        (hasDefinitePrintHeight(height) ||
-          crossAxis === "center" ||
+        (crossAxis === "center" ||
           crossAxis === "end" ||
           mainAxis === "center" ||
           mainAxis === "end" ||
           mainAxis === "space-between")
+      const keepsPrintFlexForHeight =
+        direction === Direction.VERTICAL && hasDefinitePrintHeight(height)
+      const keepsPrintFlex =
+        keepsPrintFlexForAlignment || keepsPrintFlexForHeight
       // Chrome's print layout drops the height of a flex or table row, so a
       // chart paints over the next heading. Vertical blocks use normal
       // flow. A column row stacks, and each column takes the full page
@@ -462,7 +466,14 @@ export const StyledFlexContainerBlock =
             // A fixed-height container (st.container(height=...)) scrolls
             // its overflow on screen. A print table, or a fallback note
             // stacked under the canvas, can be taller than that height, so
-            // the container grows instead of clipping them.
+            // the container grows instead of clipping them. Releasing that
+            // height makes this the content-height column Chrome collapses,
+            // so drop flex when the height was the only reason to keep it.
+            // Center, end, and space-between stay flex.
+            ...(keepsPrintFlexForHeight &&
+              !keepsPrintFlexForAlignment && {
+                display: "block",
+              }),
             height: "auto",
             maxHeight: "none",
             overflow: "visible",
