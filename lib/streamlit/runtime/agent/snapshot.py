@@ -20,9 +20,8 @@ Each command already described itself when it emitted its element (see
 ``value`` from ``widget_values``, because proto defaults stop being accurate
 after the first interaction.
 
-``data``, the derived facts about a table or chart, is read here from the
-element's payload, or taken from the command's ``data_summary`` when the payload
-does not carry its table. Its preview is bounded by ``server.agentPreviewRows``.
+``data``, the derived facts about a table, chart, or map, is read here from the
+element's payload. Its preview is bounded by ``server.agentPreviewRows``.
 ``url``, where the complete data is served, comes from the command's
 description, and ``unavailable`` says why there is none when the preview is
 not everything. A command's parameters stay in ``props``.
@@ -576,13 +575,7 @@ def _data_block(
     `unavailable` reason. ``described`` is whether the command described itself;
     an element without a description registered no data to serve.
     """
-    if "data_summary" in description:
-        # A command whose payload does not carry its table supplies the summary
-        # itself: `st.map` emits a generated Deck.gl spec.
-        summary = description["data_summary"]
-        data = dict(summary) if isinstance(summary, dict) else {}
-    else:
-        data = _element_data(proto_field, payload) or {}
+    data = _element_data(proto_field, payload) or {}
     url = description.get("data_url")
     if not isinstance(url, str):
         url = None
@@ -624,10 +617,10 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
     if proto_field == "dataframe":
         if payload.HasField("lazy_data"):
             return _lazy_dataframe_data(payload.lazy_data)
-        return summarize_arrow(payload.arrow_data.data)
+        return _summarize_arrow(payload.arrow_data.data)
 
     if proto_field == "table":
-        return summarize_arrow(payload.arrow_data.data)
+        return _summarize_arrow(payload.arrow_data.data)
 
     if proto_field == "vega_lite_chart":
         return _vega_data(payload)
@@ -643,8 +636,9 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         spec = _parse_json(payload.json)
         if spec is None:
             return None
-        # A chart given a specification is reported complete, as a Plotly
-        # figure is. Its rows are counted only when every layer has them inline.
+        # `st.map` and `st.pydeck_chart` share this proto. Either is a chart
+        # given a specification, so it is complete, as a Plotly figure is. Its
+        # rows are counted only when every layer has them inline.
         deck_data: dict[str, Any] = {"spec": spec, "complete": True}
         if (row_count := _deck_gl_row_count(spec)) is not None:
             deck_data["row_count"] = row_count
@@ -662,7 +656,7 @@ def _lazy_dataframe_data(lazy_data: Any) -> dict[str, Any] | None:
     table. The row count is the source's, reported only when the source knows
     it.
     """
-    data = summarize_arrow(lazy_data.initial_chunk.data)
+    data = _summarize_arrow(lazy_data.initial_chunk.data)
     if data is None:
         return None
     data.update(_unavailable("lazy_loading"))
@@ -689,7 +683,7 @@ def _vega_data(payload: Any) -> dict[str, Any]:
     elif agent_spec.vega_loads_from_url(spec):
         data = _unavailable("external_url")
     elif buffers:
-        data = summarize_arrow(buffers[0]) or {}
+        data = _summarize_arrow(buffers[0]) or {}
     else:
         # Inline values travel as Arrow, so what is left in the specification,
         # such as GeoJSON, is all of it.
@@ -835,22 +829,13 @@ def _parse_json(value: str) -> Any:
         return None
 
 
-def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
+def _summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     """Describe an Arrow IPC stream: its schema, its size, and a row preview.
 
     The preview holds the first ``server.agentPreviewRows`` rows, as values in
-    column order. ``complete`` is whether those rows are the whole table.
-
-    Parameters
-    ----------
-    arrow_bytes : bytes
-        The serialized Arrow IPC stream, as an element's payload carries it.
-
-    Returns
-    -------
-    dict[str, Any] or None
-        The element's ``data`` without a ``url``, or ``None`` for empty or
-        unreadable bytes.
+    column order, and ``complete`` is whether those rows are the whole table.
+    Returns the element's ``data`` without a ``url``, or ``None`` for empty or
+    unreadable bytes.
     """
     if not arrow_bytes:
         return None
@@ -863,8 +848,7 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
         columns = _arrow_columns(table)
     except Exception:
         # Any failure, not just a malformed stream: an element without a
-        # summary costs far less than a failed snapshot, or a failed command
-        # for `st.map`, which summarizes its table while the script runs.
+        # summary costs far less than a failed snapshot.
         _LOGGER.debug("Could not read an Arrow payload.", exc_info=True)
         return None
 

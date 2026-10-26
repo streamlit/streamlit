@@ -70,10 +70,9 @@ cannot know them yet:
 
 Both are filled in at snapshot time. That split is the same one the agent
 protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived). Most ``data`` fields are
-derived at snapshot time from the payload. Commands additionally record
-``data_url``, where the complete data is served, and commands whose payload does
-not carry their table, such as ``st.map``, record ``data_summary``.
+holds now), and ``data`` (what Streamlit derived). ``data`` is derived at
+snapshot time from the payload; a command records only ``data_url``, where its
+complete data is served.
 """
 
 from __future__ import annotations
@@ -112,7 +111,6 @@ _VALUE_SCHEMA_KEY: Final = "value_schema"
 _CLEARABLE_KEY: Final = "clearable"
 _CHOICES_KEY: Final = "choices"
 _DATA_URL_KEY: Final = "data_url"
-_DATA_SUMMARY_KEY: Final = "data_summary"
 
 # Building blocks for ``value_schema``: the JSON Schema of the value a request
 # sends an element, in the form the snapshot reports it. They describe shape
@@ -200,7 +198,6 @@ def _json_description(
     clearable: bool = False,
     choices: list[Any] | None = None,
     data_url: str | None = None,
-    data_summary: dict[str, Any] | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -223,8 +220,6 @@ def _json_description(
         description[_CHOICES_KEY] = choices
     if data_url is not None:
         description[_DATA_URL_KEY] = data_url
-    if data_summary is not None:
-        description[_DATA_SUMMARY_KEY] = data_summary
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
@@ -240,7 +235,6 @@ def element(
     clearable: bool = False,
     choices: list[Any] | None = None,
     data_url: str | None = None,
-    data_summary: dict[str, Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -279,10 +273,6 @@ def element(
         ``data_offload.serve_arrow_over_http``. Reported as ``data.url``
         rather than under ``props``, because it is not an argument the author
         passed.
-    data_summary
-        The element's ``data``, for a command whose payload does not carry its
-        table, so the snapshot cannot derive it: ``st.map`` emits a generated
-        Deck.gl specification. Built with ``snapshot.summarize_arrow``.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -300,7 +290,6 @@ def element(
         clearable=clearable,
         choices=choices,
         data_url=data_url,
-        data_summary=data_summary,
     )
 
 

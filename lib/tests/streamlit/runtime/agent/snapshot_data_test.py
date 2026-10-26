@@ -40,7 +40,7 @@ from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import runtime_util
 from streamlit.runtime.agent import snapshot
-from streamlit.runtime.agent.snapshot import UnavailableReason, summarize_arrow
+from streamlit.runtime.agent.snapshot import UnavailableReason, _summarize_arrow
 from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.runtime.agent.snapshot_test_case import (
     SnapshotCase,
@@ -130,7 +130,7 @@ def test_summarize_arrow_keeps_duplicate_column_names() -> None:
         [pa.array([1, 2]), pa.array(["x", "y"])], names=["a", "a"]
     )
 
-    summary = summarize_arrow(_arrow(table))
+    summary = _summarize_arrow(_arrow(table))
 
     assert summary is not None
     assert summary["columns"] == [
@@ -148,8 +148,8 @@ def test_summarize_arrow_reports_non_finite_numbers_as_null() -> None:
         {"d": [decimal.Decimal("0.25"), decimal.Decimal("NaN")]}, dtype=object
     )
 
-    float_rows = summarize_arrow(_arrow(floats))
-    decimal_rows = summarize_arrow(
+    float_rows = _summarize_arrow(_arrow(floats))
+    decimal_rows = _summarize_arrow(
         dataframe_util.convert_pandas_df_to_arrow_bytes(decimals)
     )
 
@@ -178,7 +178,7 @@ def test_preview_cells_follow_the_encoding_table() -> None:
         }
     )
 
-    summary = summarize_arrow(_arrow(table))
+    summary = _summarize_arrow(_arrow(table))
 
     assert summary is not None
     assert summary["preview"]["rows"] == [
@@ -207,7 +207,7 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
         pd.DataFrame(index=range(5))
     )
 
-    summary = summarize_arrow(arrow_bytes)
+    summary = _summarize_arrow(arrow_bytes)
 
     assert summary is not None
     assert summary["row_count"] == 5
@@ -215,7 +215,7 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
     assert summary["preview"]["rows"] == [[]] * 5
 
     with patch_config_options({"server.agentPreviewRows": 2}):
-        bounded = summarize_arrow(arrow_bytes)
+        bounded = _summarize_arrow(arrow_bytes)
     assert bounded is not None
     assert bounded["complete"] is False
     assert bounded["preview"]["rows"] == [[]] * 2
@@ -224,7 +224,7 @@ def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
 def test_summarize_arrow_keeps_the_schema_when_its_preview_fails() -> None:
     """A column pyarrow cannot convert leaves the schema and size, marked incomplete."""
     with patch.object(snapshot, "_arrow_rows", side_effect=NotImplementedError):
-        summary = summarize_arrow(_arrow(pa.table({"n": [1, 2]})))
+        summary = _summarize_arrow(_arrow(pa.table({"n": [1, 2]})))
 
     assert summary is not None
     assert summary["columns"] == [{"name": "n", "type": "int64"}]
@@ -236,7 +236,7 @@ def test_summarize_arrow_keeps_the_schema_when_its_preview_fails() -> None:
 @pytest.mark.parametrize("arrow_bytes", [b"", b"not an arrow stream"])
 def test_summarize_arrow_returns_none_for_unreadable_bytes(arrow_bytes: bytes) -> None:
     """Empty or malformed bytes have no summary, and summarizing them does not raise."""
-    assert summarize_arrow(arrow_bytes) is None
+    assert _summarize_arrow(arrow_bytes) is None
 
 
 def _bar_figure_spec(**layout: Any) -> str:
@@ -439,7 +439,7 @@ class SnapshotDataTest(SnapshotCase):
         """The registered copy still serves the whole table, so it is not dropped."""
         st.dataframe(_frame(5))
 
-        with patch.object(snapshot, "summarize_arrow", return_value=None):
+        with patch.object(snapshot, "_summarize_arrow", return_value=None):
             data = self._data("dataframe")
 
         assert data.keys() == {"complete", "url"}
@@ -516,50 +516,38 @@ class SnapshotDataTest(SnapshotCase):
         assert "row_count" not in fetched
         assert "url" not in fetched
 
-    def test_a_map_reports_its_plotted_columns_without_the_index(self) -> None:
-        """Only the plotted columns, with the author's values, and never the index."""
+    def test_a_map_reports_the_deck_gl_spec_its_browser_renders(self) -> None:
+        """`st.map` reports its generated Deck.gl spec as a complete chart, like
+        `st.pydeck_chart`, and serves no Arrow copy. Columns it does not plot
+        and the index stay out, as they do in the browser's payload.
+        """
         st.map(
             pd.DataFrame(
                 {
                     "lat": [1.0, 2.0],
                     "lon": [3.0, 4.0],
-                    "tone": ["#ff0000", "#00ff00"],
                     "email": ["ada@example.com", "bob@example.com"],
                 },
                 index=pd.Index(["cust-17", "cust-42"], name="customer"),
-            ),
-            color="tone",
+            )
         )
+        st.map()
 
         document = self._build().document
-        data = _one(document, "map")["data"]
+        plotted, empty = (node["data"] for node in _by_type(document, "map"))
 
-        assert _names(data) == ["lat", "lon", "tone"]
-        assert data["preview"]["rows"] == [[1.0, 3.0, "#ff0000"], [2.0, 4.0, "#00ff00"]]
-        assert data["complete"] is True
-        assert "spec" not in data
+        assert plotted["complete"] is True
+        assert plotted["row_count"] == 2
+        [layer] = plotted["spec"]["layers"]
+        assert [(row["lat"], row["lon"]) for row in layer["data"]] == [
+            (1.0, 3.0),
+            (2.0, 4.0),
+        ]
+        assert "url" not in plotted
+        assert empty == {"spec": empty["spec"], "complete": True}
         rendered = json.dumps(document)
-        served = self._served(data["url"]).content
         for withheld in ("ada@example.com", "cust-17", "customer"):
             assert withheld not in rendered
-            assert withheld.encode() not in served
-        assert pa.RecordBatchStreamReader(served).read_all().schema.names == [
-            "lat",
-            "lon",
-            "tone",
-        ]
-
-    def test_an_empty_map_reports_an_empty_table(self) -> None:
-        """A map without points reports an empty table and serves nothing."""
-        st.map()
-        st.map(pd.DataFrame({"lat": [], "lon": []}))
-
-        for node in _by_type(self._build().document, "map"):
-            assert node["data"]["columns"] == []
-            assert node["data"]["row_count"] == 0
-            assert node["data"]["complete"] is True
-            assert "url" not in node["data"]
-            assert "spec" not in node["data"]
         assert _arrow_files(self.media_file_storage) == []
 
     def test_an_undescribed_table_says_so(self) -> None:

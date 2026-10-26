@@ -65,7 +65,6 @@ _RESERVED_KEYWORDS = frozenset(
         "clearable",
         "choices",
         "data_url",
-        "data_summary",
     }
 )
 

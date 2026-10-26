@@ -25,9 +25,8 @@ import pyarrow as pa
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit import dataframe_util, runtime
+from streamlit import runtime
 from streamlit.elements.lib import agent_spec, data_offload
-from streamlit.elements.map import to_deckgl_json
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import build_snapshot
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
@@ -623,75 +622,6 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
                 == pa.RecordBatchStreamReader(payload).read_all().num_rows
             )
 
-    @parameterized.expand(
-        [
-            ("dict", {"lat": [1.0, 2.0], "lon": [3.0, 4.0]}, {}, 2),
-            ("arrow", pa.table({"lat": [1.0], "lon": [2.0]}), {}, 1),
-            (
-                "rgba_tuples",
-                pd.DataFrame({"lat": [1.0], "lon": [2.0], "tone": [(255, 0, 0, 255)]}),
-                {"color": "tone"},
-                1,
-            ),
-            (
-                "primary_column",
-                pd.DataFrame({"lat": [1.0], "lon": [2.0], "primary": ["#ff0000"]}),
-                {"color": "primary"},
-                1,
-            ),
-            (
-                "numeric_column_names",
-                pd.DataFrame({"lat": [1.0], "lon": [2.0], 7: ["x"]}),
-                {},
-                1,
-            ),
-            ("none", None, {}, 0),
-            ("empty", pd.DataFrame({"lat": [], "lon": []}), {}, 0),
-        ]
-    )
-    def test_map_data_accepts_the_inputs_map_accepts(
-        self, _name: str, data: Any, arguments: dict[str, Any], rows: int
-    ) -> None:
-        """A map's data arguments never raise, and recording gives a resolved block."""
-        st.map(data, **arguments)
-        assert _descriptions(list(self.forward_msg_queue._queue)) == []
-
-        self.clear_queue()
-        self._record()
-        st.map(data, **arguments)
-
-        block = _one(self._snapshot(list(self.forward_msg_queue._queue)), "map")["data"]
-        _assert_data_resolves(block)
-        assert block["row_count"] == rows
-
-    def test_map_keeps_its_plotted_columns_only_while_recording(self) -> None:
-        """A browser session holds no frame beyond the one the Deck.gl payload
-        needs; an agent session keeps the author's plotted values.
-        """
-        frame = pd.DataFrame({"lat": [1.0], "lon": [2.0], "tone": ["#ff0000"]})
-
-        _, plotted = to_deckgl_json(frame, None, None, None, "tone", None)
-        assert plotted is None
-
-        self._record()
-        _, plotted = to_deckgl_json(frame, None, None, None, "tone", None)
-        assert plotted is not None
-        assert plotted["tone"].tolist() == ["#ff0000"]
-
-    def test_map_columns_arrow_cannot_convert_report_no_data(self) -> None:
-        """The generated Deck.gl spec never stands in for a map's table."""
-        self._record()
-        with patch.object(
-            dataframe_util,
-            "convert_pandas_df_to_arrow_bytes",
-            side_effect=pa.ArrowInvalid("unconvertible"),
-        ):
-            st.map(pd.DataFrame({"lat": [1.0], "lon": [2.0]}))
-
-        node = _one(self._snapshot(list(self.forward_msg_queue._queue)), "map")
-        assert "data" not in node
-        assert self._arrow_files() == []
-
     def test_cache_replay_registers_table_data_only_for_agent_sessions(self) -> None:
         """A replay into the agent session registers the table again; a replay into
         a browser session registers nothing and attaches no description.
@@ -725,16 +655,13 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         [
             ("table", lambda: st.table(pd.DataFrame({"n": range(3)}))),
             ("chart", lambda: st.line_chart(pd.DataFrame({"n": range(3)}))),
-            ("map", lambda: st.map(pd.DataFrame({"lat": [1.0], "lon": [2.0]}))),
         ]
     )
     def test_cache_replay_serves_each_kind_of_data_again(
         self, _name: str, emit: Callable[[], object]
     ) -> None:
-        """A replayed table, chart, or map serves the bytes its first run did.
-
-        A table's and a chart's bytes are read back from the replayed payload;
-        a map's derived table is kept with the cache entry.
+        """A replayed table or chart serves the bytes its first run did, read
+        back from the replayed payload.
         """
 
         @st.cache_data(show_spinner=False)

@@ -54,9 +54,7 @@ _LOGGER: Final = get_logger(__name__)
 ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 
 
-def serve_arrow_over_http(
-    arrow_bytes: bytes | None, *, coordinates: str, in_payload: bool = True
-) -> str | None:
+def serve_arrow_over_http(arrow_bytes: bytes | None, *, coordinates: str) -> str | None:
     """Register Arrow data for HTTP fetch and return its URL.
 
     Returns ``None`` when there is nothing to serve:
@@ -69,18 +67,13 @@ def serve_arrow_over_http(
     Parameters
     ----------
     arrow_bytes
-        The serialized Arrow IPC stream to serve. Payload-backed elements pass
-        the browser's payload; ``st.map`` passes the plotted columns it
-        serializes for its agent data block.
+        The Arrow IPC stream the element's payload carries, exactly as the
+        browser receives it, so ``arrow_in_payload`` can read it back from a
+        replayed ``st.cache_data`` entry.
     coordinates
         A string identifying this data's position in the app, from
         ``DeltaGenerator._get_write_delta_path_str()``. The media file manager
         keys references by it so data replaced in place does not leak.
-    in_payload
-        Whether the element's own message already carries ``arrow_bytes``, so
-        an ``st.cache_data`` entry need not store them again: a replay reads
-        them back with ``arrow_in_payload``. Pass ``False`` for a table the
-        command derived, such as ``st.map``'s, so the entry keeps the bytes.
     """
     if not arrow_bytes or not agent_spec.is_recording():
         return None
@@ -123,11 +116,12 @@ def serve_arrow_over_http(
     # `st.cache_data` result registers its file again: the replayed
     # description carries this URL, and without that the file is collected
     # after the run that replayed it. Marked agent-only, so a browser session
-    # replaying the same entry does not register a file nobody fetches. Bytes
-    # the payload already carries are left out, because every session that
-    # hits the entry, browsers included, would unpickle a second copy.
+    # replaying the same entry does not register a file nobody fetches. The
+    # bytes are left out, since the payload already carries them and every
+    # session that hits the entry, browsers included, would unpickle a second
+    # copy; a replay reads them back with `arrow_in_payload`.
     caching.save_media_data(
-        b"" if in_payload else arrow_bytes,
+        b"",
         ARROW_MIMETYPE,
         coordinates,
         file_name=file_name,

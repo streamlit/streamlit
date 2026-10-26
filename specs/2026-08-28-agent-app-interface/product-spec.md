@@ -964,7 +964,7 @@ without introducing a new authorization surface.
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up.                |
 | Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. |
-| Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |
+| Map                            | The Deck.gl specification the browser renders, under `data` as `spec`, for `st.map` and `st.pydeck_chart` alike. Serving `st.map`'s plotted columns as Arrow, like a dataframe's, is follow-up #9.                                                       |
 | Image, audio, video            | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. `st.pdf` renders through the `streamlit-pdf` custom component and is reported as one. |
 | Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` leaves nothing to fire. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
@@ -999,11 +999,13 @@ Charts and maps:
   must not remove meaning. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
   the figure's data. Serving a large specification behind `data.url`, and an ECharts
-  `dataset.source` as Arrow as `st.map` serves its table, is follow-up #9.
-- **A rendering specification is not a data contract.** `st.map` compiles its points into
-  a Deck.gl layer, so a map's `data` is the columns it plots from the author's table,
-  which is all its browser receives, described like a dataframe's, and the generated
-  specification is left out.
+  `dataset.source` as Arrow, is follow-up #9.
+- **A map reports the specification its browser renders.** `st.map` compiles the columns
+  it plots into a Deck.gl layer, and v1 reports that layer's specification as `spec`, as
+  `st.pydeck_chart` does. It carries every plotted point and nothing else from the
+  author's table, so the map is `complete`, with a `row_count` when every layer carries
+  its rows inline. Serving the plotted columns as Arrow, described like a dataframe's, is
+  follow-up #9.
 
 `data.url` and media URLs:
 
@@ -1365,7 +1367,8 @@ than ranked, and say where one builds on another.
    list, or text body — a long Markdown document, or its raw copy in a collapsed
    expander — is served behind a URL, readable through `get_data`, with the start of
    it, `truncated: true`, and its full length or option count in the snapshot. An
-   ECharts `dataset.source` is served as Arrow, as `st.map` serves its table. Table
+   ECharts `dataset.source` and `st.map`'s plotted columns are served as Arrow, as a
+   dataframe's table is. Table
    previews get a byte budget beside the row cap, since a few long strings or nested
    values can make 100 rows enormous, and a request can ask for fewer preview rows; the
    preview then says `complete: false`, as it does past the row cap. Nothing that holds

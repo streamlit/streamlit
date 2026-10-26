@@ -49,8 +49,8 @@ class MediaMsgData:
     file_name: str | None = None
     # Table data behind an agent description's `data_url`. Only an agent
     # session fetches it, so a browser session replaying the entry does not
-    # register it. Its `media` is empty when the element's payload carries the
-    # bytes. Defaults let cache entries pickled before these fields existed
+    # register it. Its `media` is empty, because the element's payload carries
+    # the bytes. Defaults let cache entries pickled before these fields existed
     # still load.
     agent_only: bool = False
 
@@ -350,8 +350,8 @@ def _register_replayed_media(msg: ElementMsgData, dg: DeltaGenerator) -> None:
     replayed element's current delta path rather than the one stored in the
     cache entry. With the stored path, another element rendered at that path
     would replace the reference, and the file would be collected while the
-    snapshot still reports its URL. When the entry omitted the bytes, they are
-    read back from the replayed payload.
+    snapshot still reports its URL. Its bytes are read back from the replayed
+    payload, since the entry does not store them.
 
     Each registered file is also recorded for any cached function that is
     being filled around this replay, so a later hit on that outer function
@@ -368,7 +368,7 @@ def _register_replayed_media(msg: ElementMsgData, dg: DeltaGenerator) -> None:
             if not agent_spec.is_recording():
                 continue
             coordinates = dg._get_write_delta_path_str()
-            media = media or data_offload.arrow_in_payload(msg.message)
+            media = data_offload.arrow_in_payload(msg.message)
             if not media:
                 continue
         media_file_mgr.add(media, data.mimetype, coordinates, file_name=data.file_name)

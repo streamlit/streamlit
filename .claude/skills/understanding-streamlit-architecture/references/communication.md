@@ -64,11 +64,7 @@ message ForwardMsgMetadata {
 
 Agent sessions store a command description on `ForwardMsg.metadata.agent_props` for the snapshot described in `specs/2026-08-28-agent-app-interface/product-spec.md`.
 
-`ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`. Data commands add:
-
-- `data_url`: the media-storage URL of an Arrow copy of a command's one eager Arrow dataset, registered by `elements/lib/data_offload.py` for agent sessions only. Lazy, empty, oversized, multi-dataset, and URL-loaded data get none.
-- `data_summary`: set by `st.map`, because its proto does not carry the source table.
-- Cache replay registers these copies again only when an agent session replays the element.
+`ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`. A data command whose payload is Arrow also adds `data_url`: the media-storage URL of an Arrow copy of its one eager Arrow dataset, registered by `elements/lib/data_offload.py` for agent sessions only. Lazy, empty, oversized, multi-dataset, and URL-loaded data get none. Cache replay registers these copies again only when an agent session replays the element.
 
 `element` and `block` return `None` unless `agent_spec.register_agent_session` has marked the current session. `agent_spec.is_recording()` is that check: a marked session is recording, meaning each command attaches its description. A browser session on the same server is not recording, so its messages carry none.
 

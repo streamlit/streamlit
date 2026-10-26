@@ -22,7 +22,6 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pandas as pd
-from parameterized import parameterized
 
 import streamlit as st
 from streamlit import dataframe_util, util
@@ -104,20 +103,17 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         Runtime._instance = None
         assert data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 0]") is None
 
-    @parameterized.expand([("payload", True, b""), ("derived", False, _ARROW)])
     def test_inside_a_cached_function_the_file_is_saved_as_agent_only(
-        self, _name: str, in_payload: bool, kept: bytes
+        self,
     ) -> None:
-        """The cache entry records the file for agents only, and keeps its bytes
-        only when the element's payload does not already carry them.
+        """The cache entry records the file for agents only, without its bytes,
+        which the element's payload already carries.
         """
         self._record()
 
         @st.cache_data(show_spinner=False)
         def fill() -> None:
-            url = data_offload.serve_arrow_over_http(
-                _ARROW, coordinates="[0, 7]", in_payload=in_payload
-            )
+            url = data_offload.serve_arrow_over_http(_ARROW, coordinates="[0, 7]")
             st.markdown(str(url))
 
         fill()
@@ -126,7 +122,7 @@ class ServeArrowOverHttpTest(DeltaGeneratorTestCase):
         assert isinstance(message, ElementMsgData)
         assert message.media_data == [
             MediaMsgData(
-                kept,
+                b"",
                 data_offload.ARROW_MIMETYPE,
                 "[0, 7]",
                 file_name=util.calc_hash(_ARROW),

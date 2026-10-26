@@ -142,20 +142,15 @@ def test_block_marks_a_transparent_wrapper() -> None:
     assert decoded["props"] == {}
 
 
-def test_data_url_and_summary_sit_beside_props() -> None:
-    """The data arguments are top-level keys the serializer owns, never props."""
-    summary = {"columns": [], "row_count": 0, "column_count": 0, "complete": True}
-    decoded = _recorded(
-        "map", data_url="/media/abc", data_summary=summary, latitude="lat"
-    )
+def test_data_url_sits_beside_props() -> None:
+    """The data URL is a top-level key the serializer owns, never a prop."""
+    decoded = _recorded("dataframe", data_url="/media/abc", placeholder="-")
 
     assert decoded["data_url"] == "/media/abc"
-    assert decoded["data_summary"] == summary
-    assert decoded["props"] == {"latitude": "lat"}
+    assert decoded["props"] == {"placeholder": "-"}
 
-    unset = _recorded("dataframe", data_url=None, data_summary=None)
+    unset = _recorded("dataframe", data_url=None)
     assert "data_url" not in unset
-    assert "data_summary" not in unset
 
 
 def test_vega_arrow_buffers_lists_inline_and_named_datasets() -> None:
