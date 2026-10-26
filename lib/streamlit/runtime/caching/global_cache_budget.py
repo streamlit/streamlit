@@ -67,6 +67,8 @@ class GlobalCacheBudget(StatsProvider):
 
     Storages report every write, read, and removal. Reads append to a bounded,
     lock-free hint buffer; writers drain those hints before selecting a victim.
+    Buffer overflow drops the oldest hints, so cross-cache recency is approximate
+    under heavy read load.
     Because a victim is chosen without holding its storage's lock, each record
     carries the entry's write generation. The storage validates that generation
     before deletion.
@@ -94,15 +96,6 @@ class GlobalCacheBudget(StatsProvider):
         self._total_bytes = 0
         self._global_evictions = 0
         self._eviction_warning_emitted = False
-
-    @classmethod
-    def from_config(cls) -> GlobalCacheBudget:
-        """Create a budget from ``server.maxCacheDataSize``."""
-        return cls(
-            config_max_cache_data_size_to_bytes(
-                config.get_option("server.maxCacheDataSize")
-            )
-        )
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -415,27 +408,31 @@ _GLOBAL_CACHE_BUDGET_LOCK = threading.Lock()
 
 
 def get_global_cache_budget() -> GlobalCacheBudget:
-    """Return the lazily configured process-wide data-cache budget."""
+    """Return the process-wide data-cache budget."""
     budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
     if budget is None:
         with _GLOBAL_CACHE_BUDGET_LOCK:
             budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
             if budget is None:
-                budget = GlobalCacheBudget.from_config()
+                # Raw-mode caches can exist before server config is loaded. Start
+                # disabled so creating one cannot freeze an incomplete config
+                # snapshot; server startup reconfigures this shared instance.
+                budget = GlobalCacheBudget(max_bytes=None)
                 _GLOBAL_CACHE_BUDGET_HOLDER.budget = budget
     return budget
 
 
 def reconfigure_global_cache_budget_from_config() -> None:
-    """Refresh an already-created budget after server config is loaded."""
+    """Configure the process-wide budget after server config is loaded."""
     with _GLOBAL_CACHE_BUDGET_LOCK:
         budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
-        if budget is not None:
-            budget.reconfigure(
-                config_max_cache_data_size_to_bytes(
-                    config.get_option("server.maxCacheDataSize")
-                )
-            )
+        max_bytes = config_max_cache_data_size_to_bytes(
+            config.get_option("server.maxCacheDataSize")
+        )
+        if budget is None:
+            _GLOBAL_CACHE_BUDGET_HOLDER.budget = GlobalCacheBudget(max_bytes=max_bytes)
+        else:
+            budget.reconfigure(max_bytes)
 
 
 def _format_byte_size(size: int) -> str:

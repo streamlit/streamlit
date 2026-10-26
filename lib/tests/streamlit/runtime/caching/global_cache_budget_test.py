@@ -22,8 +22,11 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.runtime.caching.global_cache_budget import (
+    _GLOBAL_CACHE_BUDGET_HOLDER,
     CACHE_DATA_EVICTIONS_FAMILY,
     GlobalCacheBudget,
+    get_global_cache_budget,
+    reconfigure_global_cache_budget_from_config,
 )
 from streamlit.runtime.caching.storage import (
     CacheStorageContext,
@@ -103,20 +106,34 @@ def _create_storage(
         )
 
 
-def test_budget_from_config_uses_configured_limit() -> None:
-    """The configured byte limit initializes the global budget."""
-    with patch(
-        "streamlit.runtime.caching.global_cache_budget.config.get_option",
-        return_value="1KiB",
+def test_lazy_global_budget_creation_does_not_read_config() -> None:
+    """Raw-mode cache creation cannot snapshot config before server startup."""
+    with (
+        patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", None),
+        patch(
+            "streamlit.runtime.caching.global_cache_budget.config.get_option"
+        ) as get_option,
     ):
-        budget = GlobalCacheBudget.from_config()
+        budget = get_global_cache_budget()
 
+    assert budget.max_bytes is None
+    get_option.assert_not_called()
+
+
+def test_startup_configuration_creates_global_budget() -> None:
+    """Server startup configures the budget when no raw-mode cache created it."""
+    with (
+        patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", None),
+        patch(
+            "streamlit.runtime.caching.global_cache_budget.config.get_option",
+            return_value="1KiB",
+        ),
+    ):
+        reconfigure_global_cache_budget_from_config()
+        budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
+
+    assert budget is not None
     assert budget.max_bytes == 1024
-
-
-def test_budget_from_default_config_is_disabled() -> None:
-    """The default configuration leaves the global budget disabled."""
-    assert GlobalCacheBudget.from_config().max_bytes is None
 
 
 def test_disabled_budget_does_not_track_entries_or_recency() -> None:

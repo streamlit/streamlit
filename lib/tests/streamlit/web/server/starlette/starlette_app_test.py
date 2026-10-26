@@ -2335,6 +2335,57 @@ class TestAppConfigDiscovery:
     discover the script-level `.streamlit/config.toml`.
     """
 
+    def test_raw_mode_cache_does_not_snapshot_config_before_external_startup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reset_runtime: None,
+    ) -> None:
+        """A pre-start cache is activated using the app script's config."""
+        from streamlit import cache_data, config
+        from streamlit.runtime.caching.cache_data_api import _data_caches
+        from streamlit.runtime.caching.global_cache_budget import (
+            _GLOBAL_CACHE_BUDGET_HOLDER,
+            get_global_cache_budget,
+        )
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[server]\nmaxCacheDataSize = "1KiB"\n[theme]\nprimaryColor = "#ff0000"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        with patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", None):
+
+            @cache_data
+            def raw_mode_cached_value() -> bytes:
+                return b"cached before external App startup"
+
+            try:
+                raw_mode_cached_value()
+                budget = get_global_cache_budget()
+
+                assert budget.max_bytes is None
+                assert config._config_options is None
+
+                app = App("myapp/app.py")
+                # Creating the externally managed lifespan creates Runtime,
+                # which is the explicit cache-budget configuration point.
+                with patch.object(config._on_config_parsed, "send"):
+                    app.lifespan()
+
+                assert budget.max_bytes == 1024
+                assert budget.total_bytes > 0
+                assert config.get_option("theme.primaryColor") == "#ff0000"
+            finally:
+                _data_caches.clear_all()
+
     def test_script_level_config_discovered_with_relative_script_path(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
