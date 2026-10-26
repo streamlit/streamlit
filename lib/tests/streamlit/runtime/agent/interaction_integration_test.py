@@ -561,33 +561,36 @@ async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
 
         def slow_build(**kwargs: Any) -> snapshot.Snapshot:
             build_started.set()
-            assert build_may_finish.wait(5)
+            # No timeout: one that expired on a slow machine would fail the
+            # abandoned build, and the requests below would then misbehave.
+            build_may_finish.wait()
             return real_build(**kwargs)
 
         with patch.object(
             interaction.snapshot, "build_snapshot", side_effect=slow_build
         ) as build:
-            left = asyncio.create_task(
-                app.call({"session_id": handle, "query_params": {"q": ["left"]}})
-            )
-            assert await asyncio.to_thread(build_started.wait, 5)
-            left.cancel()
-            early = await app.refused(
-                {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
-            )
-            assert early.code == "wait_timed_out"
-            assert early.session_id == handle
-            retry = asyncio.create_task(app.call({"session_id": handle}))
-            await asyncio.sleep(0.05)
+            try:
+                left = asyncio.create_task(
+                    app.call({"session_id": handle, "query_params": {"q": ["left"]}})
+                )
+                assert await asyncio.to_thread(build_started.wait, 5)
+                left.cancel()
+                early = await app.refused(
+                    {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
+                )
+                assert early.code == "wait_timed_out"
+                assert early.session_id == handle
+                retry = asyncio.create_task(app.call({"session_id": handle}))
+                await asyncio.sleep(0.05)
 
-            busy = await app.refused(
-                {"session_id": handle, "query_params": {"q": ["other"]}}
-            )
-            assert busy.code == "session_busy"
-            assert not left.done()
-            assert not retry.done()
-
-            build_may_finish.set()
+                busy = await app.refused(
+                    {"session_id": handle, "query_params": {"q": ["other"]}}
+                )
+                assert busy.code == "session_busy"
+                assert not left.done()
+                assert not retry.done()
+            finally:
+                build_may_finish.set()
             with pytest.raises(asyncio.CancelledError):
                 await left
             collected = await retry
