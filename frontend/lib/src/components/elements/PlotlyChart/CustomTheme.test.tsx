@@ -23,9 +23,9 @@ import { getGray70 } from "~lib/theme/getColors"
 import {
   applyStreamlitTheme,
   applyStreamlitThemeTemplateLayout,
-  layoutWithThemeDefaults,
   replaceTemporaryColors,
 } from "./CustomTheme"
+import { applyTheming } from "./utils"
 
 const theme = mockTheme.emotion
 
@@ -377,29 +377,32 @@ describe("PlotlyChart CustomTheme", () => {
     })
   })
 
-  describe("layoutWithThemeDefaults", () => {
-    it("applies defaults when properties are missing", () => {
-      const layout = {}
-      const result = layoutWithThemeDefaults(layout, theme)
-
-      expect((result.font as Record<string, unknown>).family).toBe(
-        theme.genericFonts.bodyFont
-      )
-      expect(result.paper_bgcolor).toBe(theme.colors.bgColor)
-      expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
-    })
-
-    it("preserves existing properties", () => {
-      const layout = {
-        font: { family: "Arial" },
-        paper_bgcolor: "red",
+  describe("applyTheming with theme=None", () => {
+    it("does not inject Streamlit font color over a light figure", () => {
+      const darkTheme = {
+        ...theme,
+        colors: {
+          ...theme.colors,
+          bodyText: "#fafafa",
+        },
       }
-      const result = layoutWithThemeDefaults(layout, theme)
+      const figure = {
+        data: [{}],
+        layout: {
+          paper_bgcolor: "white",
+          plot_bgcolor: "white",
+          showlegend: true,
+        },
+        frames: [],
+      }
 
-      expect((result.font as Record<string, unknown>).family).toBe("Arial")
-      expect(result.paper_bgcolor).toBe("red")
-      // Should still apply missing ones
-      expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
+      const result = applyTheming(figure, "", darkTheme)
+      const layout = result.layout as Record<string, unknown>
+      const font = layout.font as Record<string, unknown> | undefined
+
+      expect(layout.paper_bgcolor).toBe("white")
+      expect(layout.plot_bgcolor).toBe("white")
+      expect(font?.color).not.toBe("#fafafa")
     })
   })
 })

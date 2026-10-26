@@ -517,38 +517,3 @@ function respectUserFontOnTemplateTraces(
     }
   }
 }
-
-/**
- * Apply minimum changes to graph to fit streamlit
- * @param layout - spec.layout
- * @param theme - theme from useEmotionTheme()
- * @returns modified spec.layout
- */
-export function layoutWithThemeDefaults(
-  layout: Record<string, unknown>,
-  theme: EmotionTheme
-): Record<string, unknown> {
-  const { colors, genericFonts } = theme
-
-  const themeDefaults = {
-    font: {
-      color: colors.bodyText,
-      family: genericFonts.bodyFont,
-    },
-    paper_bgcolor: colors.bgColor,
-    plot_bgcolor: colors.secondaryBg,
-  }
-
-  // Fill in theme defaults where the user didn't specify layout options.
-  return {
-    ...layout,
-    font: {
-      ...themeDefaults.font,
-      ...(layout.font as Record<string, unknown> | undefined),
-    },
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank paper color uses the theme
-    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank plot color uses the theme
-    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
-  }
-}

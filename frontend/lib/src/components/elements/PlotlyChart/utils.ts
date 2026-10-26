@@ -23,11 +23,7 @@ import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  replaceTemporaryColors,
-} from "./CustomTheme"
+import { applyStreamlitTheme, replaceTemporaryColors } from "./CustomTheme"
 
 // Copied and Pasted from Plotly type def
 interface SelectionRange {
@@ -209,14 +205,10 @@ export function applyTheming(
   const spec = JSON.parse(
     replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
   ) as Record<string, unknown>
+  // theme=None is sent as "" and must keep Plotly-native styling (no Streamlit
+  // font/background injection). See https://github.com/streamlit/streamlit/issues/17665
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(
-      (spec.layout ?? {}) as Record<string, unknown>,
-      theme
-    )
   }
   return spec as unknown as PlotlyFigureType
 }
