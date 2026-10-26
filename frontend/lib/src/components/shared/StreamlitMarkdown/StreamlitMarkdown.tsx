@@ -1260,7 +1260,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks = false,
   helpText,
   unterminatedParsing = false,
-  hideAnchors,
+  hideAnchors = false,
   truncate = false,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
@@ -1441,7 +1441,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   return (
     <StreamingContext.Provider value={unterminatedParsing}>
       <HelpTextContext.Provider value={helpText}>
-        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+        <HideAnchorsContext.Provider value={hideAnchors}>
           <ErrorBoundary>
             {truncate ? (
               <TruncateContext.Provider value={true}>

@@ -141,6 +141,8 @@ const getWidth = (
   const isContent =
     element.widthConfig?.useContent === true ||
     subElement?.widthConfig?.useContent === true
+  // `!!` treats a width of 0 as unset, so the `=== 0` clause is what keeps an
+  // explicit element width of 0 counting as a pixel width.
   const isPixel =
     !!element.widthConfig?.pixelWidth ||
     !!subElement?.widthConfig?.pixelWidth ||
