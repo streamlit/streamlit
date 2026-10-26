@@ -130,7 +130,7 @@ function DateTimeInput({
 
   const { locale } = useContext(LibConfigContext)
 
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `step` is a number or Long; an unset 0 falls back to 900 seconds
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `step` is `number | Long`; the proto3 default (numeric 0) falls back to 900 seconds
   const step = element.step ? Number(element.step) : 900
 
   const minDateTime = useMemo(

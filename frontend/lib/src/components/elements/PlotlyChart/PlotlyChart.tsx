@@ -305,14 +305,15 @@ export function PlotlyChart({
 
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false hovermode gets the selection default
       if (!initialFigureSpec.layout.hovermode) {
-        // If the user has already set the hovermode, we don't want to override it here.
+        // A user-set hovermode is kept. Missing, empty, and `false` count as
+        // unset and take the selection default.
         updatedHoverMode = "closest"
       }
 
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- an unset, empty, or false dragmode gets the selection default
       if (!initialFigureSpec.layout.dragmode) {
-        // If the user has already set the dragmode, we don't want to override it here.
-        // If not, we are selecting the best drag mode based on the selection modes.
+        // A user-set dragmode is kept. Missing, empty, and `false` count as
+        // unset and get the best drag mode for the selection modes.
         if (isPointsSelectionActivated) {
           // Pan drag mode has priority in case points selection is activated
           updatedDragMode = "pan"

@@ -255,7 +255,7 @@ function TimeInput({
   const validationErrorId = `${id}-validation-error`
   const theme = useEmotionTheme()
   const { locale } = useContext(LibConfigContext)
-  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `step` is a number or Long; an unset 0 falls back to 900 seconds
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `step` is `number | Long`; the proto3 default (numeric 0) falls back to 900 seconds
   const step = element.step ? Number(element.step) : 900
   // The field can be emptied only when its default is empty. Required fields
   // hide the clear button; users can still clear eligible fields with the keyboard.
