@@ -78,6 +78,13 @@ _VEGA_CASES: list[tuple[str, Callable[[], object], str | None]] = [
         lambda: st.altair_chart(_line(_FRAME) + _line(_OTHER)),
         "multiple_datasets",
     ),
+    (
+        "reference_line_beside_a_frame",
+        lambda: st.altair_chart(
+            _line(_FRAME) + alt.Chart().mark_rule().encode(y=alt.datum(5))
+        ),
+        None,
+    ),
     ("url", lambda: st.altair_chart(_line(_CSV)), "external_url"),
     (
         "url_layer_beside_a_frame",
@@ -531,7 +538,7 @@ class SnapshotDataTest(SnapshotCase):
             if "data" in node
         ]
 
-        assert len(blocks) == 20
+        assert len(blocks) == 21
         for data in blocks:
             _assert_data_resolves(data)
         reasons = {data.get("unavailable") for data in blocks}

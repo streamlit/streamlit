@@ -32,6 +32,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
+    convert_anything_to_arrow_bytes,
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
@@ -5019,17 +5020,26 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
 def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
     """Inline data comes first, then every named dataset; no data is no buffer.
 
-    An empty named dataset is skipped like empty inline data, so it does not
-    turn a single-table chart into `multiple_datasets`.
+    An empty named dataset, and the one empty row Altair gives a layer without
+    data, are skipped like empty inline data, so they do not turn a
+    single-table chart into `multiple_datasets`. Rows without columns are kept.
     """
+    placeholder = convert_anything_to_arrow_bytes(pd.DataFrame([{}]))
+    rows_without_columns = convert_anything_to_arrow_bytes(pd.DataFrame(index=range(2)))
     proto = VegaLiteChartProto()
     proto.data.data = b"inline"
-    for name, data in (("first", b"one"), ("empty", b""), ("second", b"two")):
+    for name, data in (
+        ("first", b"one"),
+        ("empty", b""),
+        ("placeholder", placeholder),
+        ("rows", rows_without_columns),
+        ("second", b"two"),
+    ):
         dataset = proto.datasets.add()
         dataset.name = name
         dataset.data.data = data
 
-    assert arrow_buffers(proto) == [b"inline", b"one", b"two"]
+    assert arrow_buffers(proto) == [b"inline", b"one", rows_without_columns, b"two"]
     assert arrow_buffers(VegaLiteChartProto()) == []
 
 

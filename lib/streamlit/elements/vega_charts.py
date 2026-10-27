@@ -794,10 +794,28 @@ def arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
     and previews only a single buffer: several cannot be described as one
     table, and serving just the first would claim ``complete`` while leaving
     the rest out, so it reports several as unavailable instead.
+
+    Buffers that hold no data are left out, so a reference line drawn beside a
+    dataframe does not turn the chart into several tables.
     """
-    buffers = [proto.data.data] if proto.data.data else []
-    buffers.extend(dataset.data.data for dataset in proto.datasets if dataset.data.data)
-    return buffers
+    buffers = [proto.data.data, *(dataset.data.data for dataset in proto.datasets)]
+    return [buffer for buffer in buffers if buffer and not _holds_no_data(buffer)]
+
+
+def _holds_no_data(arrow_bytes: bytes) -> bool:
+    """Whether an Arrow stream has no columns and at most one row.
+
+    Altair gives a layer without data, such as a rule or a text label at an
+    ``alt.datum`` position, a placeholder dataset of one empty row. Unreadable
+    bytes count as data.
+    """
+    import pyarrow as pa
+
+    try:
+        reader = pa.ipc.open_stream(arrow_bytes)
+        return not reader.schema.names and reader.read_all().num_rows <= 1
+    except pa.ArrowException:
+        return False
 
 
 def loads_data_from_url(spec: Any) -> bool:
