@@ -18,7 +18,10 @@ The tests call the route over HTTP with `page.request`, which sends no
 `Origin` header, like the programmatic clients the route serves. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
 with `server.enableAgentApi` on, so they derive every URL from `app_base_url`
-and tolerate headers a hosting platform adds.
+and tolerate headers a hosting platform adds. They open the app before calling
+the route, because a host that guards the app's origin with a login cookie,
+as Snowflake does, sets it while the app loads, and `page.request` sends the
+browser context's cookies.
 """
 
 from __future__ import annotations
@@ -34,6 +37,8 @@ from e2e_playwright.conftest import build_app_url
 
 if TYPE_CHECKING:
     from playwright.sync_api import APIResponse, Page
+
+    from e2e_playwright.shared.app_target import AppTarget
 
 _INTERACT_PATH: Final = "/_stcore/agent/interact"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
@@ -52,6 +57,14 @@ def app_server_extra_args() -> list[str]:
     return ["--server.enableAgentApi=true", "--server.agentWaitTimeout=5"]
 
 
+@pytest.fixture
+def app_page(app_target: AppTarget) -> Page:
+    """Return the page after the app has loaded, so its context holds any
+    login cookie the host sets.
+    """
+    return app_target.page
+
+
 def _interact_url(app_base_url: str) -> str:
     return build_app_url(app_base_url, path=_INTERACT_PATH)
 
@@ -63,12 +76,29 @@ def _interact(
     *,
     headers: dict[str, str] | None = None,
 ) -> APIResponse:
-    return page.request.post(_interact_url(app_base_url), data=body, headers=headers)
+    # A login redirect can turn the POST into a GET without its body, which
+    # the route refuses with a 405 that hides the redirect.
+    return page.request.post(
+        _interact_url(app_base_url), data=body, headers=headers, max_redirects=0
+    )
+
+
+def _describe(response: APIResponse) -> str:
+    """Return the headers and body that show who answered a failed request.
+
+    A redirect sets `Location`. The route's own 405 sends `Allow: POST`, so a
+    405 without it came from a proxy in front of the app.
+    """
+    headers = response.headers
+    return (
+        f"Location: {headers.get('location')}, Allow: {headers.get('allow')}, "
+        f"body: {response.text()!r}"
+    )
 
 
 def _snapshot(response: APIResponse) -> dict[str, Any]:
     """Return the snapshot of a successful interaction."""
-    assert response.status == 200, response.text()
+    assert response.status == 200, _describe(response)
     assert response.headers["content-type"].startswith("application/json")
     document: dict[str, Any] = response.json()
     return document
@@ -76,7 +106,7 @@ def _snapshot(response: APIResponse) -> dict[str, Any]:
 
 def _refusal(response: APIResponse, status: int, code: str) -> dict[str, Any]:
     """Return the body of a refused interaction, checked for status and code."""
-    assert response.status == status, response.text()
+    assert response.status == status, _describe(response)
     body: dict[str, Any] = response.json()
     assert body["error"]["code"] == code, body
     assert body["error"]["message"]
@@ -274,7 +304,7 @@ def test_slow_run_times_out_and_is_collected(page: Page, app_base_url: str) -> N
 
 @pytest.mark.external_test
 def test_snapshot_urls_context_and_headers_follow_the_request(
-    page: Page, app_base_url: str
+    app_page: Page, app_base_url: str
 ) -> None:
     """Media URLs resolve against the request's URL, `context` reaches the
     app's `st.context`, and every interaction's run sees that request's
@@ -285,7 +315,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     """
     token_header = {_TOKEN_HEADER: _TOKEN_VALUE}
     response = _interact(
-        page,
+        app_page,
         app_base_url,
         {"context": {"timezone": "Asia/Kolkata", "locale": "de-DE"}},
         headers=token_header,
@@ -304,13 +334,13 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     )
     # Relative to the request, the one base a path-stripping proxy cannot hide.
     assert image_url.startswith("../../media/")
-    image = page.request.get(urljoin(_interact_url(app_base_url), image_url))
+    image = app_page.request.get(urljoin(_interact_url(app_base_url), image_url))
     assert image.status == 200
     assert image.headers["content-type"].startswith("image/")
 
     rerun = _snapshot(
         _interact(
-            page,
+            app_page,
             app_base_url,
             {"session_id": created["session_id"]},
             headers=token_header,
@@ -324,24 +354,28 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
 
 @pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
-    page: Page, app_base_url: str
+    app_page: Page, app_base_url: str
 ) -> None:
     """A web page's request and other methods than POST are refused without
     the app's HTML, and neither made-up identity headers nor cookies, a forged
     login cookie included, reach `st.user` or `st.context.cookies`.
     """
     _refusal(
-        _interact(page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}),
+        _interact(
+            app_page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}
+        ),
         403,
         "origin_not_allowed",
     )
     for method in ["GET", "PUT"]:
-        response = page.request.fetch(_interact_url(app_base_url), method=method)
-        assert response.status == 405, f"{method}: {response.status}"
+        response = app_page.request.fetch(
+            _interact_url(app_base_url), method=method, max_redirects=0
+        )
+        assert response.status == 405, f"{method}: {_describe(response)}"
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
-    page.context.add_cookies(
+    app_page.context.add_cookies(
         [
             {
                 "name": "_streamlit_user",
@@ -357,7 +391,7 @@ def test_refuses_web_pages_and_ignores_client_identity(
         "Remote-User",
     ]
     response = _interact(
-        page,
+        app_page,
         app_base_url,
         {},
         headers=dict.fromkeys(identity_headers, _SPOOFED_IDENTITY),
