@@ -612,6 +612,32 @@ class VegaDataTest(SnapshotCase):
         assert "url" not in data
         assert "columns" not in data
 
+    def test_empty_rows_serve_no_table_and_stay_in_the_spec(self) -> None:
+        """At most one row without columns is reported in `spec`, not served.
+
+        A mark draws once for it, and a `calculate` transform fills a value
+        into it, so it stays where the browser's chart reads it.
+        """
+        st.vega_lite_chart(
+            {
+                "data": {"values": [{}]},
+                "transform": [{"calculate": "42", "as": "v"}],
+                "mark": "text",
+                "encoding": {"text": {"field": "v", "type": "quantitative"}},
+            }
+        )
+        st.altair_chart(_line(_FRAME) + alt.Chart().mark_rule().encode(y=alt.datum(5)))
+
+        document = self._build().document
+        inline = _one(document, "vega_lite_chart")["data"]
+        layered = _one(document, "altair_chart")["data"]
+
+        assert inline["complete"] is True
+        assert "url" not in inline
+        assert inline["spec"]["data"] == {"values": [{}]}
+        assert layered["row_count"] == 3
+        assert list(layered["spec"]["datasets"].values()) == [[{}]]
+
     def test_a_chart_with_selections_keeps_its_data(self) -> None:
         """A selectable chart reports that it cannot be driven, and its data."""
         st.altair_chart(

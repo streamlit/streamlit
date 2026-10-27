@@ -795,27 +795,60 @@ def arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
     table, and serving just the first would claim ``complete`` while leaving
     the rest out, so it reports several as unavailable instead.
 
-    Buffers that hold no data are left out, so a reference line drawn beside a
-    dataframe does not turn the chart into several tables.
+    A buffer of at most one empty row is left out, so a reference line drawn
+    beside a dataframe does not turn the chart into several tables. The agent
+    API reports those rows in the specification instead.
     """
-    buffers = [proto.data.data, *(dataset.data.data for dataset in proto.datasets)]
-    return [buffer for buffer in buffers if buffer and not _holds_no_data(buffer)]
+    return [
+        buffer
+        for _name, buffer in _arrow_datasets(proto)
+        if _empty_rows(buffer) is None
+    ]
 
 
-def _holds_no_data(arrow_bytes: bytes) -> bool:
-    """Whether an Arrow stream has no columns and at most one row.
+def _arrow_datasets(proto: VegaLiteChartProto) -> list[tuple[str | None, bytes]]:
+    """Each non-empty Arrow buffer with its dataset name, ``None`` for inline data."""
+    datasets = [
+        (None, proto.data.data),
+        *((dataset.name, dataset.data.data) for dataset in proto.datasets),
+    ]
+    return [(name, buffer) for name, buffer in datasets if buffer]
+
+
+def _empty_rows(arrow_bytes: bytes) -> list[dict[str, Any]] | None:
+    """The rows of an Arrow stream with no columns and at most one row.
 
     Altair gives a layer without data, such as a rule or a text label at an
-    ``alt.datum`` position, a placeholder dataset of one empty row. Unreadable
-    bytes count as data.
+    ``alt.datum`` position, a placeholder dataset of one empty row. ``None``
+    for a stream with columns or more rows, and for unreadable bytes.
     """
     import pyarrow as pa
 
     try:
         reader = pa.ipc.open_stream(arrow_bytes)
-        return not reader.schema.names and reader.read_all().num_rows <= 1
+        if reader.schema.names:
+            return None
+        row_count = reader.read_all().num_rows
     except pa.ArrowException:
-        return False
+        return None
+    return [{} for _ in range(row_count)] if row_count <= 1 else None
+
+
+def _restore_empty_datasets(spec: dict[str, Any], proto: VegaLiteChartProto) -> None:
+    """Put the empty rows ``arrow_buffers`` leaves out back into ``spec``.
+
+    A mark can draw once for such a row, and a ``calculate`` transform can fill
+    a value into it, so the reported specification keeps them where the
+    browser's chart reads them.
+    """
+    for name, buffer in _arrow_datasets(proto):
+        rows = _empty_rows(buffer)
+        if rows is None:
+            continue
+        if name is None:
+            spec["data"] = {"values": rows}
+        else:
+            spec["datasets"] = {**spec.get("datasets", {}), name: rows}
 
 
 def loads_data_from_url(spec: Any) -> bool:
@@ -891,6 +924,7 @@ def _vega_data(proto: VegaLiteChartProto, *, coordinates: str) -> dict[str, Any]
             for name, value in spec.items()
             if not (name in {"width", "height"} and value == 0)
         }
+        _restore_empty_datasets(spec, proto)
     if spec is not None:
         data["spec"] = spec
     return data
