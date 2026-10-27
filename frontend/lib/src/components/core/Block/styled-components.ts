@@ -460,12 +460,19 @@ export const StyledFlexContainerBlock =
                   // column has no definite height, so that percentage is
                   // auto and a flex column collapses in Chrome print. A
                   // chart then paints over the next heading. Block layout
-                  // keeps the column content gap (small) as margin. An
+                  // keeps the column content gap (the small gap
+                  // ContainerContentsWrapper always sets) as margin. An
                   // unstacked column is not matched, so a 100% block in a
                   // sized parent stays flex.
                   "> .stVerticalBlock": {
                     display: "block",
-                    ...printBlockGapMargins(theme.spacing.lg, theme),
+                    ...printBlockGapMargins(
+                      translateGapWidth(
+                        { gapSize: streamlit.GapSize.SMALL },
+                        theme
+                      ),
+                      theme
+                    ),
                   },
                 },
               },

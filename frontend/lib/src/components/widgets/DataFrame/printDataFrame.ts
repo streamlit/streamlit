@@ -724,7 +724,9 @@ function renderPrintTable(
       if (content.kind === "images") {
         for (const url of content.urls) {
           const image = document.createElement("img")
-          image.alt = ""
+          // An empty alt would drop the image from a tagged PDF. The label
+          // is not laid out, so it does not change the measured width.
+          image.alt = "Image"
           image.src = url
           // The print snapshot can happen before this image loads. A remote
           // URL the grid has not already fetched may print as an empty box.

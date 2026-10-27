@@ -302,7 +302,9 @@ describe("Metric element", () => {
     Object.defineProperty(column, "clientWidth", { value: 80 })
     const closest = vi
       .spyOn(Element.prototype, "closest")
-      .mockReturnValue(column)
+      .mockImplementation(selector =>
+        selector === ".stElementContainer" ? column : null
+      )
     const rect = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
       .mockReturnValue({
@@ -317,6 +319,7 @@ describe("Metric element", () => {
         toJSON: () => ({}),
       })
     window.dispatchEvent(new Event("beforeprint"))
+    expect(closest).toHaveBeenCalledWith(".stElementContainer")
     closest.mockRestore()
     rect.mockRestore()
 

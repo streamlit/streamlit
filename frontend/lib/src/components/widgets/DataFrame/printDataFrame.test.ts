@@ -749,6 +749,7 @@ describe("fillDataFramePrintSlot", () => {
       "src",
       "data:image/png;base64,aaaa"
     )
+    expect(cells[3].querySelector("img")).toHaveAttribute("alt", "Image")
     expect(slot.innerHTML).not.toContain("base64,aaaa</")
   })
 

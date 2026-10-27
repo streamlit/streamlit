@@ -107,15 +107,16 @@ function recordMetricValueWidth(value: HTMLElement): void {
 }
 
 /**
- * Record the column width a content-width metric has to fit.
+ * Record the width a content-width metric has to fit.
  *
- * The value is not a container, so its own size cannot be the column.
- * The nearest vertical block is that column once print layout has run.
- * `beforeprint` still uses the screen column, and the print-media change
+ * The value is not a container, so its own size cannot be that slot.
+ * The element container is the slot, including inside a horizontal
+ * container where the ancestor column is wider than the metric.
+ * `beforeprint` still uses the screen slot, and the print-media change
  * records the printed one.
  */
 function recordMetricAvailableWidth(value: HTMLElement): void {
-  const column = value.closest(".stVerticalBlock, .stColumn")
+  const column = value.closest(".stElementContainer")
   const box = column instanceof HTMLElement ? column : value.parentElement
   if (!(box instanceof HTMLElement)) {
     return
