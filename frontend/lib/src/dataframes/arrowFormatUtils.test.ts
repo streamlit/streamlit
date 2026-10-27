@@ -39,6 +39,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
 import { DICTIONARY } from "~lib/mocks/arrow/types/dictionary"
 import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { INTERVAL_CATEGORICAL } from "~lib/mocks/arrow/types/intervalCategorical"
 import { INTERVAL_DATETIME64 } from "~lib/mocks/arrow/types/intervalDatetime64"
 import { INTERVAL_FLOAT64 } from "~lib/mocks/arrow/types/intervalFloat64"
 import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
@@ -393,6 +394,22 @@ describe("format", () => {
     expect(format(content, contentType)).not.toEqual(String(content))
   })
 
+  it.each([
+    // [categories, arrow data, column index, expected]
+    ["pd.cut", INTERVAL_CATEGORICAL, 0, "(0, 1]"],
+    ["dictionary-encoded period", PERIOD_EXTENSION, 1, "2020-02"],
+  ])(
+    "formats %s categories with the category type",
+    (_name, data, columnIndex, expected) => {
+      const { content, contentType } = new Quiver({ data }).getCell(
+        0,
+        columnIndex
+      )
+
+      expect(format(content, contentType)).toEqual(expected)
+    }
+  )
+
   it("list[unicode]", () => {
     expect(
       format(vectorFromArray(["foo", "bar", "baz"]), {
@@ -422,6 +439,22 @@ describe("format", () => {
       })
     ).toEqual("00:00:01.500")
   })
+
+  it.each([
+    { value: 3723, unit: TimeUnit.SECOND, expected: "01:02:03" },
+    { value: 3723456, unit: TimeUnit.MILLISECOND, expected: "01:02:03.456" },
+  ])(
+    "time32 value $value formats as $expected",
+    ({ value, unit, expected }) => {
+      expect(
+        format(value, {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("t", new Time(unit, 32), true),
+          pandasType: undefined,
+        })
+      ).toEqual(expected)
+    }
+  )
 
   it("timedelta via pandas metadata uses nanosecond unit when arrow field has no unit", () => {
     expect(

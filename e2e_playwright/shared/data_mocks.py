@@ -398,6 +398,11 @@ PYARROW_TABLE_TYPES = pa.table(
         ),
         "interval": pa.array(pd.interval_range(0, 3)),
         "interval_category": pa.array(pd.cut([0.5, 1.5, 2.5], bins=[0, 1, 2, 3])),
+        "date_category": pa.array(
+            [date(2024, 1, 2), date(2024, 1, 1), date(2024, 1, 2)]
+        ).dictionary_encode(),
+        "list_of_dicts": pa.array([[{"a": 1}], [{"a": 2}, {"a": 3}], []]),
+        "float_inf": pa.array([float("inf"), float("-inf"), 1.5]),
     }
 )
 

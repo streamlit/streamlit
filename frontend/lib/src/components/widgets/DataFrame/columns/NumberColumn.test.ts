@@ -312,6 +312,17 @@ describe("NumberColumn", () => {
   })
 
   it.each([
+    [Infinity, "Infinity"],
+    [-Infinity, "-Infinity"],
+  ])("shows %s as %s instead of an empty cell", (value, expected) => {
+    const mockCell = getNumberColumn(MOCK_FLOAT_ARROW_TYPE).getCell(value)
+
+    expect(isErrorCell(mockCell)).toEqual(false)
+    expect((mockCell as NumberCell).data).toEqual(value)
+    expect((mockCell as NumberCell).displayData).toEqual(expected)
+  })
+
+  it.each([
     // This should support everything that is supported by formatNumber
     // So we are not testing all the cases here, just a few to make sure it works
     // All other cases are tested for formatNumber in utils.test.ts

@@ -31,6 +31,7 @@ import {
   type ArrowType,
   DataFrameCellType,
   type DataType,
+  getFormattableCategoryType,
   isDatetimeType,
   isDateType,
   isDecimalType,
@@ -651,6 +652,13 @@ export function format(x: DataType, type: ArrowType): string {
       return ""
     }
 
+    // Categorical cells hold the category value, e.g. an epoch timestamp for
+    // a date category, so format them with the category type.
+    const categoryType = getFormattableCategoryType(type)
+    if (notNullOrUndefined(categoryType)) {
+      return format(x, categoryType)
+    }
+
     if (isStringType(type)) {
       return String(x)
     }
@@ -660,7 +668,8 @@ export function format(x: DataType, type: ArrowType): string {
       return formatDate(x as Date | number)
     }
 
-    if (typeof x === "bigint" && isTimeType(type)) {
+    // time64 values are bigints, time32 values are numbers.
+    if ((typeof x === "bigint" || typeof x === "number") && isTimeType(type)) {
       return formatTime(Number(x), type.arrowField)
     }
 

@@ -17,7 +17,7 @@
 import {
   DataType as ArrowDataType,
   type Dictionary,
-  type Field,
+  Field,
   type Struct,
   type StructRow,
   type Vector,
@@ -334,6 +334,47 @@ export function isCategoricalType(type?: ArrowType): boolean {
     ArrowDataType.isDictionary(type.arrowField.type) ||
     getPandasTypeName(type) === "categorical"
   )
+}
+
+/**
+ * Returns the type of the categories of a dictionary-encoded column if the raw
+ * category values need formatting to be readable: periods, intervals, dates,
+ * datetimes, and times. Other categories, like strings or numbers, are shown
+ * as they are.
+ *
+ * @param type The arrow type of the categorical column.
+ * @returns The category type, or undefined if the categories need no formatting.
+ */
+export function getFormattableCategoryType(
+  type?: ArrowType
+): ArrowType | undefined {
+  if (
+    isNullOrUndefined(type) ||
+    !ArrowDataType.isDictionary(type.arrowField.type)
+  ) {
+    return undefined
+  }
+  const { name, metadata } = type.arrowField
+  // The categories carry no pandas column metadata, so only the Arrow value
+  // type and the extension tag on the column field identify them.
+  const categoryType: ArrowType = {
+    type: type.type,
+    arrowField: new Field(
+      name,
+      type.arrowField.type.dictionary,
+      true,
+      metadata
+    ),
+    pandasType: undefined,
+  }
+  const isFormattable = [
+    isPeriodType,
+    isIntervalType,
+    isDateType,
+    isDatetimeType,
+    isTimeType,
+  ].some(isType => isType(categoryType))
+  return isFormattable ? categoryType : undefined
 }
 
 /** True if the arrow type is a list type. */

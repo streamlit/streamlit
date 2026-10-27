@@ -16,14 +16,12 @@
 
 import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
-import { DataType as ArrowDataType, Field } from "apache-arrow"
 
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
   type ArrowType,
+  getFormattableCategoryType,
   isBooleanType,
-  isIntervalType,
-  isPeriodType,
 } from "~lib/dataframes/arrowTypeUtils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -76,9 +74,9 @@ export const prepareOptions = (
 /**
  * Returns the default options of a categorical column.
  *
- * Period and interval categories get a formatted label, e.g. `(0, 1]` instead
- * of `{"left": 0, "right": 1}`. The option value stays the raw category, so it
- * still matches the cell values.
+ * Period, interval, date, datetime, and time categories get a formatted label,
+ * e.g. `(0, 1]` instead of `{"left": 0, "right": 1}`. The option value stays
+ * the raw category, so it still matches the cell values.
  *
  * @param arrowType The arrow type of the categorical column.
  * @returns The categorical options.
@@ -87,18 +85,8 @@ function getCategoricalOptions(
   arrowType: ArrowType
 ): (string | SelectOption)[] {
   const options = arrowType.categoricalOptions ?? []
-  const { name, type: fieldType, metadata } = arrowType.arrowField
-  if (!ArrowDataType.isDictionary(fieldType)) {
-    return options
-  }
-  // The categories carry no pandas column metadata, so only the extension
-  // tag on the column field identifies them as periods or intervals.
-  const categoryType: ArrowType = {
-    type: arrowType.type,
-    arrowField: new Field(name, fieldType.dictionary, true, metadata),
-    pandasType: undefined,
-  }
-  if (!isPeriodType(categoryType) && !isIntervalType(categoryType)) {
+  const categoryType = getFormattableCategoryType(arrowType)
+  if (isNullOrUndefined(categoryType)) {
     return options
   }
   return options.map(option => ({

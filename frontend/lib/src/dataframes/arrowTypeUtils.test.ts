@@ -17,11 +17,14 @@
 import {
   Binary,
   Bool,
+  DateDay,
   Decimal,
+  Dictionary,
   Duration,
   Field,
   Float64,
   Int64,
+  Int8,
   LargeBinary,
   LargeUtf8,
   List,
@@ -55,6 +58,7 @@ import {
   type ArrowType,
   convertVectorToList,
   DataFrameCellType,
+  getFormattableCategoryType,
   getPandasTypeName,
   getTimezone,
   isBooleanType,
@@ -981,6 +985,48 @@ describe("isTimeType", () => {
       expect(isTimeType(arrowType)).toEqual(expected)
     }
   )
+})
+
+describe("getFormattableCategoryType", () => {
+  it.each([
+    ["date", new DateDay(), undefined, true],
+    ["datetime", new Timestamp(TimeUnit.MILLISECOND, "UTC"), undefined, true],
+    ["time", new Time(TimeUnit.MICROSECOND, 64), undefined, true],
+    ["period", new Int64(), "pandas.period", true],
+    ["string", new Utf8(), undefined, false],
+    ["float", new Float64(), undefined, false],
+    ["int", new Int64(), undefined, false],
+  ])(
+    "returns a category type for %s categories: %s",
+    (_name, valueType, extensionName, expected) => {
+      const metadata = new Map<string, string>()
+      if (extensionName !== undefined) {
+        metadata.set("ARROW:extension:name", extensionName)
+      }
+      const categoryType = getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "c",
+          new Dictionary(valueType, new Int8()),
+          true,
+          metadata
+        ),
+        pandasType: undefined,
+      })
+
+      expect(categoryType?.arrowField.type === valueType).toBe(expected)
+    }
+  )
+
+  it("returns undefined for columns that are not dictionary-encoded", () => {
+    expect(
+      getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", new DateDay(), true),
+        pandasType: undefined,
+      })
+    ).toBeUndefined()
+  })
 })
 
 describe("isListType", () => {

@@ -16,7 +16,7 @@
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
-import { Bool, Field, Int8 } from "apache-arrow"
+import { Bool, DateDay, Dictionary, Field, Int8 } from "apache-arrow"
 
 import {
   type ArrowType,
@@ -296,6 +296,29 @@ describe("SelectboxColumn", () => {
       })
     }
   )
+
+  it("labels date categories with the formatted date", () => {
+    const mockColumn = getSelectboxColumn({
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Dictionary(new DateDay(), new Int8())),
+      pandasType: undefined,
+      // ArrowJS reads date categories as epoch milliseconds.
+      categoricalOptions: [
+        1704067200000, 1704153600000,
+      ] as unknown as string[],
+    })
+    const mockCell = mockColumn.getCell(
+      1704153600000,
+      true
+    ) as DropdownCellType
+
+    expect(isErrorCell(mockCell)).toEqual(false)
+    expect(mockCell.data.allowedValues).toEqual([
+      null,
+      { value: "1704067200000", label: "2024-01-01" },
+      { value: "1704153600000", label: "2024-01-02" },
+    ])
+  })
 
   it("keeps unlabeled options for other categorical columns", () => {
     const { contentType } = new Quiver({ data: CATEGORICAL_COLUMN }).getCell(

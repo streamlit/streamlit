@@ -24,7 +24,7 @@ import {
   type TextCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
-import { isString, merge, toString } from "lodash-es"
+import { isPlainObject, isString, merge, toString } from "lodash-es"
 import moment from "moment"
 import "moment-duration-format"
 import "moment-timezone"
@@ -371,11 +371,17 @@ export function toSafeArray(data: unknown): unknown[] {
       return [toSafeString(parsedData)]
     }
 
-    return parsedData.map((value: unknown) =>
-      ["string", "number", "boolean", "null"].includes(typeof value)
-        ? value
-        : toSafeString(value)
-    )
+    return parsedData.map((value: unknown) => {
+      if (["string", "number", "boolean", "null"].includes(typeof value)) {
+        return value
+      }
+      // Dict items (e.g. a list of structs) would otherwise show as
+      // "[object Object]".
+      if (isPlainObject(value)) {
+        return JSON.stringify(value)
+      }
+      return toSafeString(value)
+    })
   } catch {
     return [toSafeString(data)]
   }
