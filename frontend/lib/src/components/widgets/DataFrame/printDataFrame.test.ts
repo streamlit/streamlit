@@ -367,7 +367,7 @@ describe("fillDataFramePrintSlot", () => {
     expect(scale?.contains(table)).toBe(true)
     // An inline ratio would freeze the on-screen column. The stylesheet
     // follows the printed column instead, and zoom is not used.
-    expect(scale).toHaveProperty("style.zoom", "")
+    expect(scale?.getAttribute("style") ?? "").not.toContain("zoom")
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("")
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
       "320px"
@@ -398,7 +398,7 @@ describe("fillDataFramePrintSlot", () => {
 
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("0.25")
     const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
-    expect(scale).toHaveProperty("style.zoom", "")
+    expect(scale?.getAttribute("style") ?? "").not.toContain("zoom")
     frameWidth = 160
     fitDataFramePrintTable(slot)
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("0.5")
@@ -474,7 +474,7 @@ describe("fillDataFramePrintSlot", () => {
     )
     expect(table.style.tableLayout).toBe("fixed")
     expect(table.querySelector("col")?.style.width).toBe("100%")
-    expect(table).toHaveProperty("style.zoom", "")
+    expect(table.getAttribute("style") ?? "").not.toContain("zoom")
     spy.mockRestore()
     supports.mockRestore()
     frame.remove()
