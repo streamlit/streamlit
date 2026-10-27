@@ -419,7 +419,7 @@ def build_openapi_document(
 
 def _widget_state_schema() -> dict[str, Any]:
     return {
-        "type": "object",
+        "type": ["object", "null"],
         "additionalProperties": True,
         "description": (
             "Element keys from the latest `actions` mapped to JSON values, shaped "
@@ -463,11 +463,11 @@ def _widget_state_schema() -> dict[str, Any]:
 def _context_schema() -> dict[str, Any]:
     properties = {
         "timezone": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": "An exact IANA name, such as `Europe/Berlin`.",
         },
         "locale": {
-            "type": "string",
+            "type": ["string", "null"],
             "maxLength": interaction.MAX_LOCALE_LENGTH,
             # Anchored, since a JSON Schema pattern matches anywhere in the
             # text, where the validator matches the whole of it.
@@ -476,7 +476,7 @@ def _context_schema() -> dict[str, Any]:
         },
     }
     return {
-        "type": "object",
+        "type": ["object", "null"],
         "additionalProperties": False,
         "properties": _in_order(interaction.CONTEXT_FIELDS, properties),
         "description": (
@@ -502,14 +502,14 @@ def _request_schema() -> dict[str, Any]:
         },
         "widget_state": _widget_state_schema(),
         "trigger": {
-            "$ref": "#/components/schemas/Trigger",
+            "anyOf": [{"$ref": "#/components/schemas/Trigger"}, {"type": "null"}],
             "description": (
                 "At most one trigger to fire. Omit the field to fire nothing; "
                 "`{}` is malformed."
             ),
         },
         "page": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": (
                 "The `url_path` of a page in `pages`, never a Python path. "
                 "Defaults to the app's default page on creation, the current "
@@ -520,7 +520,7 @@ def _request_schema() -> dict[str, Any]:
             ),
         },
         "query_params": {
-            "type": "object",
+            "type": ["object", "null"],
             "additionalProperties": {"type": "array", "items": {"type": "string"}},
             "description": (
                 "Replaces the URL parameters; omit it to keep them. A parameter "
@@ -546,7 +546,8 @@ def _request_schema() -> dict[str, Any]:
         "properties": _in_order(interaction.REQUEST_FIELDS, properties),
         "description": (
             "Navigation (`page`, `query_params`) is a separate transition and "
-            "cannot be combined with widget changes."
+            "cannot be combined with widget changes. `null` in any field but "
+            "`session_id` is the same as omitting it."
         ),
     }
 

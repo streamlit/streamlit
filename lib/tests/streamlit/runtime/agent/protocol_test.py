@@ -154,6 +154,33 @@ def test_the_documented_locale_pattern_agrees_with_the_validator(
     assert bool(interaction.LANGUAGE_TAG.fullmatch(locale)) is accepted
 
 
+@pytest.mark.parametrize(
+    "request_body",
+    [
+        *({name: None} for name in interaction.REQUEST_FIELDS),
+        *({"context": {name: None}} for name in interaction.CONTEXT_FIELDS),
+    ],
+    ids=json.dumps,
+)
+def test_the_schema_accepts_null_exactly_where_the_validator_does(
+    request_body: dict[str, Any],
+) -> None:
+    """`null` in a request or context field is valid in the schema exactly
+    when the validator accepts it: everywhere as an omitted field, except in
+    `session_id`, where it would silently start a fresh session.
+    """
+    validator = openapi_validation.schema_validator(_document(), "InteractRequest")
+    try:
+        interaction._validate_request_shape(request_body)
+    except errors.AgentRequestError:
+        accepted = False
+    else:
+        accepted = True
+
+    assert validator.is_valid(request_body) is accepted
+    assert accepted is ("session_id" not in request_body)
+
+
 def test_documented_enumerations_match_their_sources() -> None:
     """Each enumeration lists its `Literal`'s values in order, and its
     description says something about every one of them.
