@@ -77,6 +77,12 @@ type EChartsSourceRow = Record<string, EChartsSourceValue>
 /** Converts one decoded Arrow cell of a known column type. */
 type CellConverter = (content: DataType) => EChartsSourceValue
 
+/** A parsed dataset and its rows, cached by name while hydrating one option. */
+interface HydratedDataset {
+  quiver: Quiver
+  rows: EChartsSourceRow[]
+}
+
 /**
  * The largest absolute epoch-millisecond value a `Date` can represent.
  * Larger values would make `toISOString` throw a `RangeError`.
@@ -364,8 +370,9 @@ function getMediaOptions(option: EChartsOptionObject): EChartsOptionObject[] {
 
 /**
  * Returns the option plus its timeline and media variants (the same set as
- * the Python `_iter_option_variants` walker): the option, the `baseOption`,
- * each `options[i]` timeline tick, and then all `media[*].option` overrides.
+ * the Python `_iter_option_variants` walker). The order puts the chart that
+ * renders by default first: the option, the `baseOption`, each `options[i]`
+ * timeline tick, and then all `media[*].option` overrides.
  */
 function getOptionVariants(
   option: EChartsOptionObject
@@ -411,15 +418,18 @@ function getPlaceholderName(source: unknown): string | null {
  *
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
+ * @returns The parsed dataset for the data viewer: the first one the option
+ * uses, preferring the chart that renders by default over timeline ticks and
+ * `media` overrides. `null` when the option uses none.
  * @throws When a placeholder points to a dataset whose bytes are missing or
  * cannot be read, so the chart never renders the placeholder as a row.
  */
 export function hydrateArrowDatasetSources(
   option: EChartsOptionObject,
   datasets: readonly ArrowNamedDataSet.$Properties[] | null | undefined
-): void {
+): Quiver | null {
   if (isNullOrUndefined(datasets) || datasets.length === 0) {
-    return
+    return null
   }
 
   const datasetsByName = new Map<string, ArrowNamedDataSet.$Properties>()
@@ -430,10 +440,10 @@ export function hydrateArrowDatasetSources(
     }
   }
 
-  const rowsByName = new Map<string, EChartsSourceRow[]>()
+  const hydratedByName = new Map<string, HydratedDataset>()
   /** Parses a sent dataset on first use; `undefined` if none has `name`. */
-  const getRows = (name: string): EChartsSourceRow[] | undefined => {
-    const cached = rowsByName.get(name)
+  const hydrate = (name: string): HydratedDataset | undefined => {
+    const cached = hydratedByName.get(name)
     if (cached !== undefined) {
       return cached
     }
@@ -441,11 +451,13 @@ export function hydrateArrowDatasetSources(
     if (dataset === undefined) {
       return undefined
     }
-    const rows = quiverToEChartsRows(parseDataset(dataset))
-    rowsByName.set(name, rows)
-    return rows
+    const quiver = parseDataset(dataset)
+    const entry = { quiver, rows: quiverToEChartsRows(quiver) }
+    hydratedByName.set(name, entry)
+    return entry
   }
 
+  let dataViewData: Quiver | null = null
   for (const variant of getOptionVariants(option)) {
     const { dataset } = variant
     const entries: unknown[] = Array.isArray(dataset) ? dataset : [dataset]
@@ -457,10 +469,12 @@ export function hydrateArrowDatasetSources(
       const name = getPlaceholderName(datasetOption.source)
       // Only names that were sent count. A user-authored one-row source such
       // as `{"name": "Matcha"}` stays untouched.
-      const rows = name === null ? undefined : getRows(name)
-      if (rows !== undefined) {
-        datasetOption.source = rows
+      const hydrated = name === null ? undefined : hydrate(name)
+      if (hydrated !== undefined) {
+        datasetOption.source = hydrated.rows
+        dataViewData ??= hydrated.quiver
       }
     }
   }
+  return dataViewData
 }

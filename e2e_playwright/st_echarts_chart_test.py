@@ -394,8 +394,10 @@ def test_toolbar_actions(app: Page):
 # A negative UTC offset: shifting a date or naive datetime through UTC would
 # move the first category label to the previous day.
 @pytest.mark.browser_context_args(timezone_id="America/New_York")
-def test_arrow_dataset_chart(app: Page, assert_snapshot: ImageCompareFunction):
-    """A DataFrame dataset renders from Arrow with wall-clock date labels."""
+def test_arrow_dataset_chart_and_show_data(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A DataFrame dataset renders from Arrow and toggles to a data table."""
     container = get_element_by_key(app, "c_dataset_arrow")
     chart = container.get_by_test_id("stEChartsChart")
     expect(chart.locator("svg")).to_be_visible()
@@ -408,6 +410,26 @@ def test_arrow_dataset_chart(app: Page, assert_snapshot: ImageCompareFunction):
     expect(axis_labels.filter(has_text=re.compile(r"^2020-01-01$"))).to_be_visible()
     expect(axis_labels.filter(has_text="2019-12-31")).to_have_count(0)
     assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
+
+    chart_handle = chart.element_handle()
+
+    # The hover-revealed toolbar overlaps the neighboring chart, so dispatch
+    # the clicks directly on the buttons (see test_toolbar_actions).
+    container.get_by_role("button", name="Show data").dispatch_event("click")
+    dataframe = container.get_by_test_id("stDataFrame")
+    expect(dataframe).to_be_visible()
+    expect(chart).to_be_hidden()
+
+    dataframe.hover()
+    show_chart_button = dataframe.get_by_role("button", name="Show chart")
+    expect(show_chart_button).to_be_visible()
+    show_chart_button.dispatch_event("click")
+
+    expect(chart.locator("svg")).to_be_visible()
+    expect(container.get_by_test_id("stDataFrame")).to_have_count(0)
+    # The chart was only hidden, so its ECharts instance (and DOM node) survive.
+    assert chart.evaluate("(el, prev) => el === prev", chart_handle)
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 
 @pytest.mark.only_browser("chromium")
