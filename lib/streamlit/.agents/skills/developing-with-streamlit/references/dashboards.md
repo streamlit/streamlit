@@ -51,12 +51,12 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
-Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of `st.columns`:
+Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of `st.columns`. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
 
 ```python
 for start in range(0, len(kpis), 4):
     for col, (label, value, delta) in zip(st.columns(4), kpis[start : start + 4]):
-        col.metric(label, value, delta, border=True)
+        col.metric(label, value, delta, border=True, height="stretch")
 ```
 
 ## Zero deltas
@@ -159,7 +159,7 @@ with col2.container(border=True, height="stretch"):
     orders_body()
 ```
 
-Create each card and its title in the main script, then call the fragment inside the card. The fragment still writes only to its own body, the title stays put while the body loads, and the card can use `height="stretch"` to match its neighbors. A stretch card created inside a fragment does not stretch.
+Create each card and its title in the main script, then call the fragment inside the card. The fragment renders and reruns only its own body, so the title stays put while the body loads. Because the card lives in the main script, it can use `height="stretch"` to match its neighbors; a stretch card created inside a fragment does not stretch.
 
 The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible.
 
