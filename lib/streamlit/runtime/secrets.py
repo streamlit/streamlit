@@ -21,6 +21,7 @@ from copy import deepcopy
 from typing import (
     Any,
     Final,
+    Never,
     NoReturn,
 )
 
@@ -143,11 +144,15 @@ class AttrDict(Mapping[str, Any]):
     def __repr__(self) -> str:
         return repr(self.__nested_secrets__)
 
-    def __setitem__(self, key: str, value: Any) -> NoReturn:
+    # ``Never`` makes writes and deletion a type error. These methods always raise.
+    def __setitem__(self, key: str, value: Never) -> NoReturn:
         raise TypeError("Secrets does not support item assignment.")
 
-    def __setattr__(self, key: str, value: Any) -> NoReturn:
+    def __setattr__(self, key: str, value: Never) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
+
+    def __delitem__(self, key: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item deletion.")
 
     def to_dict(self) -> dict[str, Any]:
         return deepcopy(self.__nested_secrets__)
@@ -163,20 +168,22 @@ class Secrets(Mapping[str, Any]):
     def __init__(self) -> None:
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
-        self._lock = threading.RLock()
-        self._file_watchers_installed = False
+        self._lock: threading.RLock = threading.RLock()
+        self._file_watchers_installed: bool = False
         # Store programmatic secrets separately so they survive file-change reloads
         self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
         # Fires when a `secrets.toml` file has changed.
-        self.file_change_listener = Signal()
+        self.file_change_listener: Signal = Signal()
 
     def load_if_toml_exists(self) -> bool:
-        """Load secrets.toml files from disk if they exists. If none exist,
-        no exception will be raised. (If a file exists but is malformed,
-        an exception *will* be raised.).
+        """Load secrets.toml files from disk if they exist.
 
-        Returns True if a secrets.toml file was successfully parsed, False otherwise.
+        Returns True if a secrets.toml file was successfully parsed. Returns
+        False when no secrets file is present, or when a configured path
+        cannot be loaded (parse error, invalid path, or a directory entry
+        that is not a folder). Callers use this as a boolean availability
+        probe and must not rely on it to raise.
 
         Thread-safe.
         """
@@ -185,7 +192,8 @@ class Secrets(Mapping[str, Any]):
 
             return True
         except StreamlitSecretNotFoundError:
-            # No secrets.toml files exist. That's fine.
+            # Treat missing and unloadable secrets alike; startup logs load
+            # errors separately.
             return False
 
     def _reset(self) -> None:
@@ -200,7 +208,7 @@ class Secrets(Mapping[str, Any]):
 
             for k, v in self._secrets.items():
                 self._maybe_delete_environment_variable(k, v)
-            self._secrets = None
+            self._secrets = None  # ty: ignore[invalid-assignment]
 
     def _parse_toml_file(self, path: str) -> tuple[Mapping[str, Any], bool]:
         """Parse a TOML file and return the secrets as a dictionary."""
@@ -216,11 +224,11 @@ class Secrets(Mapping[str, Any]):
             # the default config for secrets contains two paths. It's likely one of will not have secrets file.
             return {}, False
 
-        import toml
+        import tomllib
 
         try:
-            secrets.update(toml.loads(secrets_file_str))
-        except (TypeError, toml.TomlDecodeError) as ex:
+            secrets.update(tomllib.loads(secrets_file_str))
+        except (TypeError, tomllib.TOMLDecodeError) as ex:
             raise StreamlitSecretNotFoundError(
                 "Error parsing secrets file at {path}: {error}",
                 path=path,
@@ -297,8 +305,10 @@ class Secrets(Mapping[str, Any]):
 
         Raises
         ------
-            StreamlitSecretNotFoundError
-            Raised if secrets.toml doesn't exist.
+        StreamlitSecretNotFoundError
+            Raised when no secrets file exists, or when a configured path
+            cannot be loaded (parse error, invalid path, or a directory
+            entry that is not a folder).
 
         """
         # Avoid taking a lock for the common case where secrets are already
@@ -330,7 +340,7 @@ class Secrets(Mapping[str, Any]):
             for k, v in secrets.items():
                 self._maybe_set_environment_variable(k, v)
 
-            self._secrets = secrets
+            self._secrets = secrets  # ty: ignore[invalid-assignment]
             self._maybe_install_file_watchers()
 
             return self._secrets
@@ -376,7 +386,7 @@ class Secrets(Mapping[str, Any]):
 
         with self._lock:
             # Store programmatic secrets so they survive file-change reloads
-            self._programmatic_secrets = programmatic_secrets
+            self._programmatic_secrets = programmatic_secrets  # ty: ignore[invalid-assignment]
             self._apply_programmatic_secrets(programmatic_secrets)
 
     def _apply_programmatic_secrets(
@@ -407,7 +417,7 @@ class Secrets(Mapping[str, Any]):
             # Promote to os.environ if appropriate
             self._maybe_set_environment_variable(key, value)
 
-        self._secrets = current_secrets
+        self._secrets = current_secrets  # ty: ignore[invalid-assignment]
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
@@ -448,7 +458,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
@@ -456,7 +466,7 @@ class Secrets(Mapping[str, Any]):
 
             # We set file_watchers_installed to True even if the installation attempt
             # failed to avoid repeatedly trying to install it.
-            self._file_watchers_installed = True
+            self._file_watchers_installed = True  # ty: ignore[invalid-assignment]
 
     def _on_secrets_changed(self, changed_file_path: str) -> None:
         with self._lock:
@@ -501,8 +511,15 @@ class Secrets(Mapping[str, Any]):
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def __setattr__(self, key: str, value: Any) -> None:
-        # Allow internal attributes to be set
+    def __setitem__(self, key: str, value: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item assignment.")
+
+    def __delitem__(self, key: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item deletion.")
+
+    def __setattr__(self, key: str, value: Never) -> None:
+        # Secret-name assignment is a type error. The allowlist below still
+        # sets loader attributes at runtime; ty flags those writes.
         if key in {
             "_secrets",
             "_lock",

@@ -180,11 +180,11 @@ function renderSidebarNav(
   }
 ): ReturnType<typeof renderWithContexts> {
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    overrides?.sidebarConfigContext || {}
+    overrides?.sidebarConfigContext ?? {}
   )
 
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<SidebarNav {...getProps(props)} />, {
@@ -207,6 +207,13 @@ describe("SidebarNav", () => {
 
     expect(screen.getByText("streamlit app")).toBeInTheDocument()
     expect(screen.getByText("my other page")).toBeInTheDocument()
+  })
+
+  it("exposes a named navigation landmark", () => {
+    renderSidebarNav()
+
+    const nav = screen.getByRole("navigation", { name: "App pages" })
+    expect(nav).toHaveAttribute("data-testid", "stSidebarNav")
   })
 
   describe("page links", () => {
@@ -604,7 +611,7 @@ describe("SidebarNav", () => {
 
     // isActive prop used to style background color, so check that
     expect(links[0]).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
+    expect(links[1]).toHaveStyle("background-color: rgba(187, 187, 165, 0.25)")
   })
 
   describe("custom visibleItems via sidebarNavVisibleItems", () => {

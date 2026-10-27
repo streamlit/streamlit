@@ -55,7 +55,7 @@ function Audio({
       "preventAutoplay"
     )
 
-    if (!preventAutoplayState) {
+    if (preventAutoplayState !== true) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
@@ -120,7 +120,7 @@ function Audio({
     }
 
     return () => {
-      if (audioNode && endTime > 0) {
+      if (endTime > 0) {
         audioNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -145,9 +145,7 @@ function Audio({
     audioNode.addEventListener("ended", handleAudioEnd)
 
     return () => {
-      if (audioNode) {
-        audioNode.removeEventListener("ended", handleAudioEnd)
-      }
+      audioNode.removeEventListener("ended", handleAudioEnd)
     }
   }, [loop, startTime])
 
@@ -177,6 +175,7 @@ function Audio({
         // Only set an accessible name when the author provided one. Blank input
         // is treated as absent: aria-label=" " computes to an empty accessible
         // name, which is worse than having no aria-label at all.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
         aria-label={alt?.trim() || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}

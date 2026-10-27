@@ -52,6 +52,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
         assert c.default == ""
         assert c.HasField("default")
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -59,6 +60,50 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_area
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.text_area("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_area("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.text_area.id
+            st.text_area("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.text_area.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike max_chars, required cannot make a stored value incompatible, so
+        it is not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_area("the label", key="text_area_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.text_area.id
+            st.text_area("the label", key="text_area_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.text_area.id
+            assert id1 == id2
+
+    def test_required_with_disabled_does_not_raise(self) -> None:
+        """Test that required can be combined with disabled."""
+        st.text_area("the label", disabled=True, required=True)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.disabled
+        assert c.required
 
     def test_value_types(self):
         """Test that it supports different types of values."""
@@ -445,6 +490,14 @@ class TextAreaOnChangeModeTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue(1).new_element.text_area
         assert c.ignore_rerun is True
 
+    def test_on_change_ignore_composes_with_required(self) -> None:
+        """Test that on_change='ignore' and required set both proto fields."""
+        st.text_area("the label", on_change="ignore", required=True)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.ignore_rerun is True
+        assert c.required is True
+
 
 class SomeObj:
     pass
@@ -486,3 +539,27 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.text_area[0].value is None
+
+
+def test_text_area_required_is_exposed_in_app_test() -> None:
+    """Test that AppTest exposes required and still allows an empty value.
+
+    The required check runs in the browser, so AppTest can still set "".
+    """
+
+    def script():
+        import streamlit as st
+
+        st.text_area("the label", required=True)
+
+    at = AppTest.from_function(script).run()
+    text_area = at.text_area[0]
+    assert text_area.required is True
+    assert text_area.value == ""
+
+    at = text_area.input("Foo").run()
+    text_area = at.text_area[0]
+    assert text_area.value == "Foo"
+
+    at = text_area.set_value("").run()
+    assert at.text_area[0].value == ""

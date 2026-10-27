@@ -22,12 +22,11 @@ import { StyledBorderlessIconButton } from "~lib/components/shared/BaseButton/st
 export const StyledAudioInputContainerDiv = styled.div()
 
 export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
+  ({ theme, disabled = false }) => ({
     height: theme.sizes.largestElementHeight,
     width: "100%",
     background: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
-    marginBottom: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
     position: "relative",
@@ -69,7 +68,7 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
 export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
   disabled?: boolean
-}>(({ theme, isPlayingOrRecording, disabled }) => ({
+}>(({ theme, isPlayingOrRecording, disabled = false }) => ({
   margin: theme.spacing.sm,
   fontFamily: theme.fonts.monospace,
   color: disabled

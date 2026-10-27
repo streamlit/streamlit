@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
@@ -36,6 +37,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     get_session_state,
     register_widget,
@@ -79,7 +81,7 @@ class PaginationMixin:
         max_visible_pages: int | None = 7,
         width: Width = "content",
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -139,8 +141,30 @@ class PaginationMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
-        on_change : callable
-            An optional callback invoked when the selected page changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the pagination widget should respond to value changes. This
+            controls whether or not Streamlit reruns the app when the user
+            interacts with the pagination widget. ``on_change`` can be one of
+            the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (clicking a page button or the
+              previous/next arrows).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The pagination widget still updates in the
+              UI. The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -159,6 +183,13 @@ class PaginationMixin:
             written to the URL using the ``key`` parameter as the query
             parameter name. This enables shareable URLs that preserve the
             widget's state. If ``bind`` is set, ``key`` is required.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (clicking a page button or the previous/next
+            arrows). As with widgets inside a form, the URL can show a value
+            that Python hasn't received yet. Python receives the new value on
+            the next rerun, so a page load or share uses the updated URL
+            value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -246,7 +277,7 @@ class PaginationMixin:
         max_visible_pages: int | None,
         width: Width,
         key: Key | None,
-        on_change: WidgetCallback | None,
+        on_change: WidgetCallback | OnChangeMode | None,
         args: WidgetArgs | None,
         kwargs: WidgetKwargs | None,
         disabled: bool,
@@ -256,9 +287,9 @@ class PaginationMixin:
     ) -> int:
 
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         # Validate num_pages
@@ -294,7 +325,7 @@ class PaginationMixin:
                 error_id="pagination-invalid-max-visible-pages",
             )
 
-        check_widget_policies(self.dg, key, on_change, default_value=default)
+        check_widget_policies(self.dg, key, on_change_callback, default_value=default)
 
         element_id = compute_and_register_element_id(
             "pagination",
@@ -321,11 +352,14 @@ class PaginationMixin:
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         serde = PaginationSerde(default=default, num_pages=num_pages)
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -373,6 +407,15 @@ class PaginationMixin:
             proto,
             layout_config=layout_config,
             has_one_shot_effect=value_changed,
+            agent_props=agent_spec.element(
+                "pagination",
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.INTEGER,
+                num_pages=num_pages,
+                disabled=disabled,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
 
         return current_value

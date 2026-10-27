@@ -35,6 +35,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty shortcut displays as nothing
       shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
@@ -52,7 +53,7 @@ const getProps = (
     ...elementProps,
   }),
   disabled: false,
-  // @ts-expect-error
+  // @ts-expect-error - constructor expects a props object, not a callback
   widgetMgr: new WidgetStateManager(sendBackMsg),
   ...widgetProps,
 })

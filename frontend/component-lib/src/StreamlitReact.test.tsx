@@ -142,6 +142,31 @@ describe("StreamlitReact", () => {
     consoleErrorSpy.mockRestore()
   })
 
+  it("shows the component error when the component throws null", () => {
+    class BrokenComponent extends StreamlitComponentBase {
+      override render(): ReactNode {
+        // React forwards the raw thrown value, which is not always an Error.
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- error boundaries receive non-Error throws
+        throw null
+      }
+    }
+
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    const Component = withStreamlitConnection(BrokenComponent)
+    render(<Component />)
+    act(() => {
+      dispatchRenderEvent({})
+    })
+
+    expect(screen.getByText("Component Error")).toBeInTheDocument()
+    expect(screen.getByText("null")).toBeInTheDocument()
+    expect(consoleErrorSpy).toHaveBeenCalled()
+    consoleErrorSpy.mockRestore()
+  })
+
   it("the component should update the frame height initially", () => {
     vi.spyOn(Streamlit, "setFrameHeight")
 

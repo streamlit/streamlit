@@ -197,7 +197,9 @@ function FormattingMenu({
   onCloseMenu,
   children,
 }: FormattingMenuProps): ReactElement | null {
-  const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
+  const formats = Object.hasOwn(COLUMN_KIND_FORMAT_MAPPING, columnKind)
+    ? COLUMN_KIND_FORMAT_MAPPING[columnKind]
+    : []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
     isOpen,

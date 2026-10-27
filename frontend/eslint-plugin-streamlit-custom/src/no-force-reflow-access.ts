@@ -44,8 +44,8 @@ const noForceReflowAccess = createRule<[], MessageIds>({
       noForceReflowVisualViewport:
         "Accessing 'visualViewport.{{property}}' forces layout/reflow and can hurt performance. Consider using ResizeObserver instead.",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     // Properties that force reflow when accessed
     const forceReflowProperties = new Set([
@@ -227,7 +227,7 @@ const noForceReflowAccess = createRule<[], MessageIds>({
 
         // Skip if this is a property definition in an object literal (like { offsetWidth: 100 })
         if (
-          node.parent?.type === AST_NODE_TYPES.Property &&
+          node.parent.type === AST_NODE_TYPES.Property &&
           node.parent.key === node.property
         ) {
           return
@@ -235,7 +235,7 @@ const noForceReflowAccess = createRule<[], MessageIds>({
 
         // Skip if this is an assignment (like obj.offsetWidth = 50)
         if (
-          node.parent?.type === AST_NODE_TYPES.AssignmentExpression &&
+          node.parent.type === AST_NODE_TYPES.AssignmentExpression &&
           node.parent.left === node
         ) {
           return
@@ -244,7 +244,7 @@ const noForceReflowAccess = createRule<[], MessageIds>({
         // Check for visualViewport property access FIRST (higher priority)
         if (
           node.object.type === AST_NODE_TYPES.MemberExpression &&
-          node.object.property?.type === AST_NODE_TYPES.Identifier &&
+          node.object.property.type === AST_NODE_TYPES.Identifier &&
           node.object.property.name === "visualViewport" &&
           visualViewportProperties.has(propertyName)
         ) {

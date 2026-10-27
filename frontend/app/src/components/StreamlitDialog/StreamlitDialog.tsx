@@ -61,6 +61,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <DeployDialog {...dialogProps} />
     case DialogType.DEPLOY_ERROR:
       return <DeployErrorDialog {...dialogProps} />
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- untyped callers can omit the type; render a closed modal instead of the unrecognized-type dialog
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -156,6 +157,7 @@ function ScriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <StreamlitErrorCodeBlock>
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank exception message uses the fallback */}
           {props.exception?.message || "No message"}
         </StreamlitErrorCodeBlock>
       </ModalBody>

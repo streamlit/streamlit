@@ -44,13 +44,13 @@ export function shouldWidthStretch(
 ): boolean {
   // Some elements (e.g. ButtonGroup) need styles applied to the element itself, to support
   // the width configuration.
-  return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+  return widthConfig?.useStretch === true || !!widthConfig?.pixelWidth
 }
 
 export function shouldHeightStretch(
   heightConfig: streamlit.HeightConfig.$Properties | undefined | null
 ): boolean {
-  return !!(heightConfig?.useStretch || heightConfig?.pixelHeight)
+  return heightConfig?.useStretch === true || !!heightConfig?.pixelHeight
 }
 
 const alignmentMap: Record<
@@ -77,5 +77,5 @@ export function getTextAlignmentStyle(
     return undefined
   }
 
-  return alignmentMap[config.alignment] || "left"
+  return alignmentMap[config.alignment] ?? "left"
 }

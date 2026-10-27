@@ -68,7 +68,7 @@ function Video({
       "preventAutoplay"
     )
 
-    if (!preventAutoplayState) {
+    if (preventAutoplayState !== true) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
@@ -78,10 +78,6 @@ function Video({
 
   // Create a stable dependency for checking subtitle source urls
   const subtitleSrcArrString = useMemo(() => {
-    if (!subtitles) {
-      return JSON.stringify([])
-    }
-
     return JSON.stringify(
       subtitles.map(subtitle => endpoints.buildMediaURL(`${subtitle.url}`))
     )
@@ -156,7 +152,7 @@ function Video({
     }
 
     return () => {
-      if (videoNode && endTime > 0) {
+      if (endTime > 0) {
         videoNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -181,9 +177,7 @@ function Video({
     videoNode.addEventListener("ended", handleVideoEnd)
 
     return () => {
-      if (videoNode) {
-        videoNode.removeEventListener("ended", handleVideoEnd)
-      }
+      videoNode.removeEventListener("ended", handleVideoEnd)
     }
   }, [loop, startTime])
 
@@ -229,6 +223,7 @@ function Video({
         // An iframe always needs a title for its accessible name, so the URL
         // stays as the fallback when the author did not provide a description.
         // Blank input must fall back too, or the iframe ends up untitled.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank title uses the url
         title={alt?.trim() || url}
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
@@ -265,6 +260,7 @@ function Video({
       // Only set an accessible name when the author provided one. Blank input
       // is treated as absent: aria-label=" " computes to an empty accessible
       // name, which is worse than having no aria-label at all.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
       aria-label={alt?.trim() || undefined}
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
@@ -272,7 +268,7 @@ function Video({
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles?.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
+      {subtitles.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
         <track
           // TODO: Update to match React best practices
           // eslint-disable-next-line @eslint-react/no-array-index-key

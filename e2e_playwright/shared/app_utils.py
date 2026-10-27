@@ -310,9 +310,9 @@ def select_selectbox_option(
     # Wait for the React component to be fully initialized before interacting
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
-    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
-    # Note: this shifts focus to the first option, so the initially-selected item
-    # will not be highlighted when the dropdown first opens.
+    # ArrowDown is a backup open. The Enter target is already active (the
+    # current value, or the first option when the input is empty), so this
+    # key moves to the next row. The helper then filters and clicks by name.
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
@@ -413,6 +413,9 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         Pass 3 parts for a single-date field, 6 for a range field (start +
         end segments), e.g.
         ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+        Each part must match the rendered segment text exactly (zero-padded
+        months/days and a 4-digit year for current callers), because the
+        helper waits with ``to_have_text(part)`` before the next keystroke.
 
     commit : bool
         If True (default), press Escape after typing to close the popover and
@@ -422,9 +425,37 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     """
     spinbuttons = date_input_field.get_by_role("spinbutton")
     for i, part in enumerate(parts):
-        spinbuttons.nth(i).press_sequentially(part)
+        target = spinbuttons.nth(i)
+        target.press_sequentially(part)
+        # Wait for React Aria to paint the digits before the next segment or
+        # Escape. Otherwise close/blur can run before the last bound exists.
+        expect(target).to_have_text(part)
     if commit:
         date_input_field.page.keyboard.press("Escape")
+
+
+def clear_date_segments(date_input_field: Locator) -> None:
+    """Backspace every segment of a date or datetime field, then press Escape.
+
+    Escape closes the popover and tries to commit the empty field: optional
+    fields commit it, required fields block it, and fields with a non-empty
+    default revert.
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The segmented field container (``stDateInputField`` or
+        ``stDateTimeInputField``).
+    """
+    page = date_input_field.page
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i in range(spinbuttons.count()):
+        spinbuttons.nth(i).click()
+        # Four presses cover the year segment; extra presses are harmless
+        # after a segment is empty.
+        for _ in range(4):
+            page.keyboard.press("Backspace")
+    page.keyboard.press("Escape")
 
 
 def paste_into(locator: Locator, text: str) -> None:

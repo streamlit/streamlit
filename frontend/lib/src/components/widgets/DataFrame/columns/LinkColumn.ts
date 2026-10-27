@@ -70,7 +70,7 @@ export interface LinkColumnParams {
  * an hyperlink / url and allows the user to click on it.
  */
 function LinkColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = (props.columnTypeOptions as LinkColumnParams) || {}
+  const parameters = (props.columnTypeOptions ?? {}) as LinkColumnParams
 
   let validateRegex: RegExp | string | undefined = undefined
 
@@ -137,7 +137,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   const validateInput = (href?: string): boolean => {
     if (isNullOrUndefined(href)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -184,7 +184,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(href), validateRegex)
       }
 
-      if (validate) {
+      if (validate === true) {
         const validationResult = validateInput(href)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will
@@ -204,6 +204,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } else {
           // Use user provided display_text unless it's null, undefined, or an empty string.
           // If it's any of those falsy values, use the href.
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank display text falls back to the href
           displayText = configuredDisplayText || href
         }
       }

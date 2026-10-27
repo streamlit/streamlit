@@ -44,6 +44,10 @@ import {
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import {
+  isRequiredEmptyText,
+  requiredFieldError,
+} from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -80,9 +84,7 @@ import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
   INVALID_TEXT_INPUT_MESSAGE,
-  isRequiredEmptyText,
   passesTextInputValidation,
-  REQUIRED_FIELD_MESSAGE,
 } from "./validation"
 
 export interface Props {
@@ -332,11 +334,13 @@ function TextInput({
   // the displayed error defensively so it's never shown without an active
   // config. The user-error message is derived from the current
   // `element.validateMessage` so it stays in sync when only the message changes.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank validation message uses the generated fallback
+  const customMessage = element.validateMessage || undefined
   const userError = hasUserError
-    ? element.validateMessage ||
+    ? (customMessage ??
       (validateRegex
         ? getInvalidTextInputMessage(validateRegex)
-        : INVALID_TEXT_INPUT_MESSAGE)
+        : INVALID_TEXT_INPUT_MESSAGE))
     : null
   // Gate on the current proto flag and UI value: required is not part of
   // keyed widget identity, so hasRequiredError can survive a rerun that
@@ -344,14 +348,12 @@ function TextInput({
   // drop the stored flag when the mask would hide it, so required off→on
   // or a programmatic fill-then-clear does not resurrect the error
   // without a new user commit/submit.
-  const requiredError =
-    element.required && hasRequiredError && isRequiredEmptyText(uiValue)
-      ? REQUIRED_FIELD_MESSAGE
-      : null
-  if (
-    hasRequiredError &&
-    (!element.required || !isRequiredEmptyText(uiValue))
-  ) {
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isRequiredEmptyText(uiValue)
+  )
+  if (hasRequiredError && requiredError === null) {
     setHasRequiredError(false)
   }
   const validateDisplayed = hasValidationConfig
@@ -556,7 +558,7 @@ function TextInput({
     (e: FocusEvent<HTMLInputElement>): void => {
       // When keyboard Tab moves focus to the password toggle, focus stays
       // within the widget — don't commit yet, the user is still composing.
-      if (elementRef.current?.contains(e.relatedTarget)) {
+      if (elementRef.current?.contains(e.relatedTarget) === true) {
         setFocused(false)
         return
       }
@@ -898,7 +900,7 @@ function updateWidgetMgrState(
  * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
  * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
  */
-const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+const DOM_INPUT_TYPE_BY_PROTO: Partial<Record<number, string>> = {
   [TextInputProto.Type.DEFAULT]: "text",
   [TextInputProto.Type.PASSWORD]: "password",
   [TextInputProto.Type.EMAIL]: "email",

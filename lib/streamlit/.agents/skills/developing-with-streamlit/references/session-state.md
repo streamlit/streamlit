@@ -26,7 +26,7 @@ st.session_state["count"] = 5  # Bracket notation also works
 del st.session_state.count
 ```
 
-**Accessing uninitialized keys raises `KeyError`.** Use `st.session_state.get("key", default)` for safe access.
+**Accessing uninitialized keys raises an error:** `KeyError` for `st.session_state["key"]` and `AttributeError` for `st.session_state.key`. Use `st.session_state.get("key", default)` for safe access.
 
 ## Widget-state association
 
@@ -36,6 +36,8 @@ Every widget with a `key` parameter automatically syncs to session state:
 name = st.text_input("Name", key="user_name")
 # st.session_state.user_name contains the same value as `name`
 ```
+
+By default, a keyed widget's value is dropped when the widget stops being rendered. Use [`persist_state`](#persisting-widget-values-persist_state) to keep it without exposing it in the URL; `bind="query-params"` also preserves the value.
 
 ## Syncing a widget to the URL (shareable links)
 
@@ -74,13 +76,13 @@ Notes:
 - When the value equals the default, the param is dropped from the URL to keep it clean.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitWidgetAlreadyInstantiatedError` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
-- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
+- Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`, `st.menu_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
 - To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
 
 ## Widget input constraints are mostly client-side
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.number_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
 
 For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
 
@@ -107,7 +109,7 @@ By default, a keyed widget's value is lost when the widget stops being rendered 
 st.text_input("Name", key="name", persist_state="session")
 ```
 
-`persist_state` requires a `key` and is available on most widgets that support `bind="query-params"` (not yet on `st.tabs`). When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
+`persist_state` requires a `key` and is available on every widget that supports `bind="query-params"` except `st.tabs` and `st.expander`. When both are set, `bind` takes precedence, so the value lives in the URL and persists across page switches regardless of the `persist_state` scope.
 
 ## Callbacks
 
@@ -125,7 +127,7 @@ Access a widget's value in its own callback via `st.session_state.key`, not the 
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
-`on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets).
+`on_change` can also be `"ignore"` or `"rerun"` instead of a callback on some widgets. `"ignore"` updates the widget without a rerun; see [Skip reruns on individual widgets](performance.md#skip-reruns-on-individual-widgets-advanced).
 
 ## Initialization patterns
 

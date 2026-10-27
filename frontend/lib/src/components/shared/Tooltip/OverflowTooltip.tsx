@@ -48,7 +48,7 @@ function OverflowTooltip({
   const [allowTooltip, setAllowTooltip] = useState(false)
 
   useEffect(() => {
-    const newAllowTooltip = childRef?.current
+    const newAllowTooltip = childRef.current
       ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         childRef.current.offsetWidth < childRef.current.scrollWidth
       : false

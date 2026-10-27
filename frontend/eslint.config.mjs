@@ -347,11 +347,12 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -526,6 +527,17 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
     },
   },
   {
@@ -643,6 +655,49 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
+  // `||` drops 0, "", and false. Keep `||` where a blank string or false
+  // means unset, and where `||` combines booleans. Use `??` where only
+  // null and undefined mean missing, including an explicit 0.
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+    },
+  },
+  // Flags redundant optional chains and always-true checks.
+  // Tests stay off until they are cleaned up.
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
+  // A nullable boolean in a condition treats a missing value like `false`.
+  // Default it, or compare with `=== true`. Negate with `!== true`; the
+  // rule's suggested `=== false` is false for null and undefined. The rule
+  // always reports mixed-type unions (for example `string | number`); disable
+  // those inline with a reason. Other types, including `any`, stay allowed.
+  // The glob covers all of `lib/src`, tests and `vendor/` included; other
+  // packages stay off until they are cleaned up.
+  {
+    files: ["lib/src/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        {
+          allowString: true,
+          allowNumber: true,
+          allowNullableObject: true,
+          allowNullableBoolean: false,
+          allowNullableString: true,
+          allowNullableNumber: true,
+          allowNullableEnum: true,
+          allowAny: true,
+        },
+      ],
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],
@@ -656,6 +711,7 @@ export default defineConfig([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
     "vitest.config.mts",
+    "vitest.jsdom-env.ts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

@@ -411,3 +411,23 @@ reversed_bounds_value = st.slider(
     key="reversed_bounds_slider",
 )
 st.write("Reversed bounds slider value:", reversed_bounds_value)
+
+# Default time slider: 00:00 to time.max in 15-minute steps. time.max is
+# 1 microsecond short of a step, so End must commit 23:59:59.999999 rather
+# than 23:45.
+default_time_slider = st.slider(
+    "Default time slider",
+    value=time(12, 0),
+)
+st.write("Default time slider value:", f"{default_time_slider}")
+
+# Same bounds as a range. End on the upper thumb must reach time.max
+# without moving the lower thumb.
+default_time_range = st.slider(
+    "Default time range slider",
+    value=(time(9, 0), time(17, 0)),
+)
+st.write(
+    "Default time range slider value:",
+    f"{default_time_range[0]} {default_time_range[1]}",
+)

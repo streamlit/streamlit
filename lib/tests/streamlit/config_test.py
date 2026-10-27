@@ -29,6 +29,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config, config_util, env_util
+from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
@@ -67,6 +68,44 @@ class ConfigTest(unittest.TestCase):
 
         config._delete_option("_test.tomlTest")
 
+    def test_max_cache_data_size_default(self) -> None:
+        """The global cache budget is disabled by default."""
+        value = config.get_option("server.maxCacheDataSize")
+        assert value is None
+        assert config_max_cache_data_size_to_bytes(value) is None
+
+    def test_max_cache_data_size_accepts_toml_disable_sentinel(self) -> None:
+        """TOML accepts numeric or string zero to disable the global budget."""
+        for value in ("0", '"0"'):
+            config._update_config_with_toml(
+                f"[server]\nmaxCacheDataSize = {value}", "<test definition>"
+            )
+
+            assert (
+                config_max_cache_data_size_to_bytes(
+                    config.get_option("server.maxCacheDataSize")
+                )
+                is None
+            )
+
+    def test_max_cache_data_size_rejects_unitless_nonzero_toml_integer(
+        self,
+    ) -> None:
+        """A nonzero global budget requires an explicit binary unit."""
+        config._update_config_with_toml(
+            "[server]\nmaxCacheDataSize = 500", "<test definition>"
+        )
+
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
+            config_max_cache_data_size_to_bytes(
+                config.get_option("server.maxCacheDataSize")
+            )
+        with pytest.raises(
+            RuntimeError,
+            match=r"`server\.maxCacheDataSize` requires",
+        ):
+            config._check_conflicts()
+
     def _create_theme_config_options(self):
         """Create a list of the valid config options for the [theme] section."""
         valid_general_config_options = self._create_subsection_config_options("theme")
@@ -103,6 +142,8 @@ class ConfigTest(unittest.TestCase):
             "textColor",
             "baseRadius",
             "buttonRadius",
+            "paddingTop",
+            "paddingBottom",
             "font",
             "headingFont",
             "codeFont",
@@ -559,7 +600,7 @@ class ConfigTest(unittest.TestCase):
             config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
-        """Test that exceptions during toml.loads are caught and logged."""
+        """Test that invalid TOML is logged and leaves the current config unchanged."""
         # Create a dummy default option
         config._create_option(
             "_test.invalidTomlTest",
@@ -797,6 +838,9 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayLastExprIfNoSemicolon",
                 "secrets.files",
                 "server.address",
+                "server.agentMaxSessions",
+                "server.agentSessionTTL",
+                "server.agentWaitTimeout",
                 "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
@@ -804,6 +848,7 @@ class ConfigTest(unittest.TestCase):
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
+                "server.enableAgentApi",
                 "server.enableCORS",
                 "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
@@ -815,6 +860,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
+                "server.maxCacheDataSize",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
                 "server.maxWidgetStateSize",
@@ -1138,6 +1184,20 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
 
+    def test_agent_api_options_are_hidden_with_their_defaults(self) -> None:
+        """The agent API options stay hidden and default to the documented values."""
+        expected_defaults = {
+            "server.enableAgentApi": False,
+            "server.agentWaitTimeout": 30,
+            "server.agentSessionTTL": 900,
+            "server.agentMaxSessions": 100,
+        }
+        for key, default_val in expected_defaults.items():
+            option = config._config_options[key]
+            assert option.visibility == "hidden"
+            assert option.default_val == default_val
+            assert config.get_option(key) == default_val
+
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
         assert config._maybe_convert_to_number("1234.5678") == 1234.5678
@@ -1221,6 +1281,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": None,
             "baseRadius": None,
             "buttonRadius": None,
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
@@ -1356,6 +1418,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#1BD760",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
@@ -1477,6 +1541,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#FFF000",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",

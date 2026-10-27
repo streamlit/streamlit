@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { type RefObject, useState } from "react"
+
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -23,10 +25,14 @@ import {
   FileURLs as FileURLsProto,
 } from "@streamlit/protobuf"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import type {
+  RecordingState,
+  StopResult,
   WaveformController,
   WaveformControllerEvents,
 } from "~lib/components/audio/core/types"
+import { LOG } from "~lib/components/ChatInput/logger"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import {
@@ -65,7 +71,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-  // @ts-expect-error
+  // @ts-expect-error - upload client fixture does not implement FileUploadClient
   uploadClient: {
     uploadFile: vi.fn().mockImplementation(() => {
       return Promise.resolve()
@@ -150,6 +156,29 @@ const getWaveformEvents = (): WaveformControllerEvents => {
     throw new Error("Expected useWaveformController to have been called")
   }
   return lastCall[0].events as WaveformControllerEvents
+}
+
+/** Returns the container ref from the most recent useWaveformController call. */
+const getWaveformContainerRef = (): RefObject<HTMLDivElement> => {
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
+  return lastCall[0].containerRef as RefObject<HTMLDivElement>
+}
+
+/** Controller mock whose start() and cancel() drive the recording state. */
+function useStatefulWaveformControllerMock(): WaveformController {
+  const [state, setState] = useState<RecordingState>("idle")
+  return {
+    ...createMockWaveformController(),
+    state,
+    start: vi.fn(() => {
+      setState("recording")
+      return Promise.resolve()
+    }),
+    cancel: vi.fn(() => setState("idle")),
+  }
 }
 
 describe("ChatInput widget", () => {
@@ -1134,6 +1163,23 @@ describe("ChatInput widget", () => {
       const rootElement = textarea.closest('[data-testid="stChatInput"]')
       expect(rootElement).toBeVisible()
     })
+
+    it.each([
+      { description: "a pixel height", heightConfig: { pixelHeight: 200 } },
+      { description: "stretch height", heightConfig: { useStretch: true } },
+    ])(
+      "mounts the hidden waveform container on first render with $description",
+      ({ heightConfig }) => {
+        render(
+          <ChatInput {...getProps({ acceptAudio: true }, { heightConfig })} />
+        )
+
+        const waveform = screen.getByTestId("stChatInputWaveform")
+        expect(getWaveformContainerRef().current).toBe(waveform)
+        expect(waveform).not.toBeVisible()
+        expect(screen.getByTestId("stChatInputMicButton")).toBeVisible()
+      }
+    )
   })
 
   describe("submit_mode behavior", () => {
@@ -1814,6 +1860,34 @@ describe("ChatInput widget", () => {
     expect(mockController.start).not.toHaveBeenCalled()
   })
 
+  it("skips approval without an error when a pending submit is cancelled", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    let rejectStop: (error: Error) => void = () => {}
+    mockController.stop = vi.fn(
+      () =>
+        new Promise<StopResult>((_resolve, reject) => {
+          rejectStop = reject
+        })
+    )
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputApproveButton"))
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+    await act(async () => {
+      rejectStop(new RecordingCancelledError())
+      await Promise.resolve()
+    })
+
+    expect(mockController.cancel).toHaveBeenCalledTimes(1)
+    expect(mockController.approve).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
   it("cancels an in-progress recording", async () => {
     const user = userEvent.setup()
     const mockController = createRecordingController()
@@ -1825,6 +1899,41 @@ describe("ChatInput widget", () => {
 
     expect(mockController.cancel).toHaveBeenCalledTimes(1)
     expect(mockController.approve).not.toHaveBeenCalled()
+  })
+
+  it("keeps the same waveform node across compact, toolbar, and recording layouts", async () => {
+    const user = userEvent.setup()
+    useWaveformControllerMock.mockImplementation(
+      useStatefulWaveformControllerMock
+    )
+    const props = getProps({ acceptAudio: true })
+    const { rerender } = render(<ChatInput {...props} />)
+
+    const waveform = screen.getByTestId("stChatInputWaveform")
+    expect(getWaveformContainerRef().current).toBe(waveform)
+    expect(waveform).not.toBeVisible()
+
+    const expectWaveformNodeUnchanged = (): void => {
+      expect(screen.getByTestId("stChatInputWaveform")).toBe(waveform)
+      expect(getWaveformContainerRef().current).toBe(waveform)
+    }
+
+    // A configured height switches to the toolbar layout, the same branch an
+    // auto-expanded textarea uses (jsdom can't simulate its scrollHeight).
+    rerender(<ChatInput {...props} heightConfig={{ pixelHeight: 200 }} />)
+    expectWaveformNodeUnchanged()
+    expect(waveform).not.toBeVisible()
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByTestId("stChatInputCancelButton")).toBeVisible()
+    expectWaveformNodeUnchanged()
+    expect(waveform).toBeVisible()
+    expect(screen.queryByTestId("stChatInputTextArea")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+    expect(await screen.findByTestId("stChatInputTextArea")).toBeVisible()
+    expectWaveformNodeUnchanged()
+    expect(waveform).not.toBeVisible()
   })
 
   it.each([
@@ -1856,6 +1965,127 @@ describe("ChatInput widget", () => {
       expect(await screen.findByText(message)).toBeVisible()
     }
   )
+
+  it.each([
+    {
+      description: "shows a generic error",
+      startRecording: () =>
+        Promise.reject(new Error("Record backend not initialized")),
+      message: "Recording failed",
+      absentMessage: "Microphone access denied",
+    },
+    {
+      description: "keeps the permission error the controller reported",
+      startRecording: () => {
+        getWaveformEvents().onPermissionDenied()
+        return Promise.reject(new Error("Microphone permission denied"))
+      },
+      message: "Microphone access denied",
+      absentMessage: "Recording failed",
+    },
+  ])(
+    "$description when start() rejects",
+    async ({ startRecording, message, absentMessage }) => {
+      const user = userEvent.setup()
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      useWaveformControllerMock.mockImplementation(() => ({
+        ...createMockWaveformController(),
+        start: vi.fn(startRecording),
+      }))
+      render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+      await user.click(screen.getByTestId("stChatInputMicButton"))
+
+      await user.hover(screen.getByTestId("stChatInputMicButton"))
+      expect(await screen.findByText(message)).toBeVisible()
+      expect(screen.queryByText(absentMessage)).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stChatInputCancelButton")
+      ).not.toBeInTheDocument()
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Failed to start recording:",
+        expect.any(Error)
+      )
+    }
+  )
+
+  it("replaces an earlier attempt's error when a later start() rejects", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
+    let attempt = 0
+    const startRecording = (): Promise<void> => {
+      attempt += 1
+      if (attempt === 1) {
+        getWaveformEvents().onPermissionDenied()
+        return Promise.reject(new Error("Microphone permission denied"))
+      }
+      // A failure the controller doesn't report through its events
+      return Promise.reject(new Error("Record plugin not initialized"))
+    }
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start: vi.fn(startRecording),
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+    // The mic button remounts when the error tooltip toggles, so re-query it.
+    const getMicButton = (): HTMLElement =>
+      screen.getByTestId("stChatInputMicButton")
+
+    await user.click(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+
+    await user.click(getMicButton())
+    await user.unhover(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+    expect(
+      screen.queryByText("Microphone access denied")
+    ).not.toBeInTheDocument()
+    expect(attempt).toBe(2)
+  })
+
+  it("keeps keyboard focus on the mic button when a retry fails again", async () => {
+    const user = userEvent.setup()
+    const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+    const getHandledStartFailures = (): number =>
+      logErrorSpy.mock.calls.filter(
+        ([message]) => message === "Failed to start recording:"
+      ).length
+    const start = vi.fn(async () => {
+      // Fail asynchronously, like a real getUserMedia() rejection, so any
+      // state update made before start() renders on its own
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      getWaveformEvents().onPermissionDenied()
+      throw new Error("Microphone permission denied")
+    })
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start,
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+    // Retry only once the first failure has moved the button into its error
+    // tooltip, so the identity check below covers the retry alone.
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+    await waitFor(() => expect(getHandledStartFailures()).toBe(1))
+
+    const micButton = screen.getByTestId("stChatInputMicButton")
+    act(() => micButton.focus())
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => expect(getHandledStartFailures()).toBe(2))
+    expect(start).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId("stChatInputMicButton")).toBe(micButton)
+    expect(micButton).toHaveFocus()
+    expect(
+      screen.queryByTestId("stChatInputCancelButton")
+    ).not.toBeInTheDocument()
+  })
 
   it("clears a recording error when the user starts typing", async () => {
     const user = userEvent.setup()

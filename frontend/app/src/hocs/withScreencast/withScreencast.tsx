@@ -72,7 +72,7 @@ function withScreencast<P extends InjectedProps>(
     const [recordAudio, setRecordAudio] = useState(false)
     const [outputBlob, setOutputBlob] = useState<Blob | undefined>(undefined)
     const [currentState, setCurrentState] = useState<Steps>(
-      testOverride || "OFF"
+      testOverride ?? "OFF"
     )
 
     // Toggle audio recording
@@ -94,7 +94,7 @@ function withScreencast<P extends InjectedProps>(
 
       if (currentState === "RECORDING") {
         const recorder = recorderRef.current
-        if (!recorder || recorder.getState() === "inactive") {
+        if (recorder.getState() === "inactive") {
           setCurrentState("OFF")
         } else {
           const blob = await recorder.stop()
@@ -223,6 +223,7 @@ function withScreencast<P extends InjectedProps>(
 
   // Set the display name for easier debugging
   ComponentWithScreencast.displayName = `withScreencast(${
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
     WrappedComponent.displayName || WrappedComponent.name || "Component"
   })`
 

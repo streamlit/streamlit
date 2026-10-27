@@ -45,7 +45,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
   }
 
   const validateInput = (data?: unknown): boolean =>
-    !(isNullOrUndefined(data) && props.isRequired)
+    !(isNullOrUndefined(data) && props.isRequired === true)
 
   return {
     ...props,
@@ -54,7 +54,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/markdown:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
-      if (validate && !validateInput(data)) {
+      if (validate === true && !validateInput(data)) {
         return getErrorCell(toSafeString(data), "Invalid input.")
       }
 
@@ -72,7 +72,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
       } as MarkdownCell
     },
     getCellValue(cell: MarkdownCell): string | null {
-      return cell.data?.value ?? null
+      return cell.data.value ?? null
     },
   }
 }

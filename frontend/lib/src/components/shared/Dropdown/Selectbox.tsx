@@ -71,6 +71,7 @@ import {
   StyledOpenButton,
   StyledPopover,
 } from "./Selectbox.styled"
+import { useSyncComboBoxEnterTargetFocus } from "./useSyncComboBoxEnterTargetFocus"
 
 export interface Props {
   value: string | null | undefined
@@ -94,6 +95,14 @@ type ComboOption = {
 }
 
 const CREATABLE_ID = "__creatable__"
+
+/** Max options without Virtualizer; short lists so setFocusedKey can land. */
+const SELECTBOX_MAX_UNVIRTUALIZED_OPTIONS = 25
+
+/** Live ComboBox state pointer for capture-phase key handlers outside RAC. */
+type ComboBoxStateHandle = NonNullable<
+  React.ContextType<typeof ComboBoxStateContext>
+>
 
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Streamlit's own
@@ -139,17 +148,22 @@ export const getInsertedText = (
 }
 
 /**
- * Null-render component mounted inside <ComboBox> to expose RAC's internal
- * open/close methods via refs. Required because ComboBox v1.x has no controlled
- * isOpen prop; we use menuTrigger="manual" and open explicitly on pointer/key
- * events to prevent auto-open on Tab-focus (which caused spurious reopens after
- * Streamlit reruns).
+ * Null-render component mounted inside <ComboBox> to expose React Aria's
+ * internal open/close methods and to keep focusedKey on the Enter target for
+ * aria-activedescendant while typing (#16841).
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<(() => void) | null>
   closeRef: React.MutableRefObject<(() => void) | null>
-}>(({ openRef, closeRef }) => {
+  stateRef: React.MutableRefObject<ComboBoxStateHandle | null>
+  enterTargetKey: Key | null
+}>(({ openRef, closeRef, stateRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
+
+  // Sync read for keydown. Do not clear in effect cleanup — focus updates
+  // recreate `state` and would null this during capture-phase ArrowDown.
+  stateRef.current = state ?? null
+
   useEffect(() => {
     if (state) {
       openRef.current = () => state.open(null, "manual")
@@ -160,6 +174,9 @@ const DropdownController = memo<{
       closeRef.current = null
     }
   }, [state, openRef, closeRef])
+
+  useSyncComboBoxEnterTargetFocus(enterTargetKey)
+
   return null
 })
 DropdownController.displayName = "DropdownController"
@@ -204,7 +221,7 @@ const Selectbox: FC<Props> = ({
   labelVisibility,
   help,
   placeholder,
-  clearable,
+  clearable = false,
   acceptNewOptions,
   filterMode: filterModeProp,
 }) => {
@@ -273,6 +290,7 @@ const Selectbox: FC<Props> = ({
   // prevents auto-open on Tab-focus (which caused spurious reopens after reruns).
   const openDropdownRef = useRef<(() => void) | null>(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
+  const comboBoxStateRef = useRef<ComboBoxStateHandle | null>(null)
 
   // Always-current mirrors of state values, for use inside stale RAC closures
   // that capture their dependencies at registration time.
@@ -287,10 +305,11 @@ const Selectbox: FC<Props> = ({
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  // Set by handleSelectionChange when RAC's onChange commits a new selection
-  // (arrow-nav + Enter). Checked by handleInputKeyDown to avoid
-  // double-committing.
+  // Set when RAC onChange commits during Enter; bubble handler skips fallthrough.
   const racHandledEnterRef = useRef(false)
+
+  // True only for the current Enter keydown (capture → RAC → bubble).
+  const enterKeyInProgressRef = useRef(false)
 
   // Tracks whether the dropdown is open. RAC can fire deferred ComboBox
   // onChange callbacks after the dropdown closes; those are discarded via
@@ -340,11 +359,29 @@ const Selectbox: FC<Props> = ({
         }
   }, [acceptNewOptions, filterActive, inputValue, selectOptions])
 
+  // Leading Add keeps best-ranked matches visible in a short dropdown.
   const displayOptions = useMemo<ComboOption[]>(
     () =>
-      creatableItem ? [...filteredOptions, creatableItem] : filteredOptions,
+      creatableItem ? [creatableItem, ...filteredOptions] : filteredOptions,
     [filteredOptions, creatableItem]
   )
+
+  const displayOptionsRef = useRef(displayOptions)
+  displayOptionsRef.current = displayOptions
+
+  // Enter / activedescendant target: Add row, exact match, or first match.
+  const enterTargetId = useMemo((): string | null => {
+    if (creatableItem) return CREATABLE_ID
+    const exactMatch = displayOptions.find(
+      o => o.isCreatable !== true && o.value === inputValue
+    )
+    if (exactMatch) return exactMatch.id
+    const first = displayOptions.find(o => o.isCreatable !== true)
+    return first?.id ?? null
+  }, [creatableItem, displayOptions, inputValue])
+
+  const enterTargetIdRef = useRef(enterTargetId)
+  enterTargetIdRef.current = enterTargetId
 
   const virtualizerLayoutOptions = useMemo(
     () => ({
@@ -409,16 +446,6 @@ const Selectbox: FC<Props> = ({
       // guard correctly lets them through.
       if (!isOpenRef.current) return
 
-      // Mark that RAC committed a new selection so handleInputKeyDown can skip
-      // its auto-select and avoid double-committing (arrow-nav + Enter path).
-      if (key !== null) {
-        const currentKey =
-          selectOptions.find(o => o.value === valueRef.current)?.id ?? null
-        if (String(key) !== String(currentKey ?? "")) {
-          racHandledEnterRef.current = true
-        }
-      }
-
       if (key === null) {
         // RAC fires null when the typed text no longer matches the committed
         // item. Only revert display text when the user isn't actively typing.
@@ -429,15 +456,29 @@ const Selectbox: FC<Props> = ({
         return
       }
 
+      // Ignore stale focusedKey left over after filtering.
+      const collection = comboBoxStateRef.current?.collection
+      if (collection && !collection.getItem(key)) {
+        return
+      }
+
+      // Only mark during Enter so open/filter onChange cannot stick the flag.
+      if (enterKeyInProgressRef.current) {
+        racHandledEnterRef.current = true
+      }
+
       const keyStr = String(key)
       const found = selectOptions.find(o => o.id === keyStr)
-      // Read inputValue via ref for creatable items to avoid a stale closure.
       const selected =
         keyStr === CREATABLE_ID
           ? inputValueRef.current
           : (found?.value ?? null)
 
       commitSelection(selected)
+      // CREATABLE_ID is outside localSelectedKey; RAC will not auto-close.
+      if (keyStr === CREATABLE_ID) {
+        closeDropdownRef.current?.()
+      }
     },
     [commitSelection, selectOptions]
   )
@@ -526,12 +567,37 @@ const Selectbox: FC<Props> = ({
       }
       if (e.key === "Enter") {
         wasOpenBeforeEnterRef.current = isOpenRef.current
+        enterKeyInProgressRef.current = true
       }
       if (
         (e.key === "ArrowDown" || e.key === "ArrowUp") &&
         !isOpenRef.current
       ) {
         openDropdownRef.current?.()
+      }
+      // React Aria clears focusedKey on each keystroke. Until sync restores it,
+      // ArrowDown would land on the leading "Add" row, so jump to the first match.
+      if (e.key === "ArrowDown" && isOpenRef.current) {
+        const state = comboBoxStateRef.current
+        const focused = state?.selectionManager.focusedKey
+        if (state && isNullOrUndefined(focused)) {
+          const options = displayOptionsRef.current
+          if (options[0]?.isCreatable === true) {
+            const firstMatch = options.find(o => o.isCreatable !== true)
+            if (firstMatch) {
+              e.preventDefault()
+              e.stopPropagation()
+              state.selectionManager.setFocusedKey(firstMatch.id)
+              return
+            }
+          }
+        }
+      }
+      // Clear isOpenRef before close() so handleSelectionChange drops RAC's
+      // commitValue callback; do not stopPropagation (dialog FocusScope).
+      if (e.key === "Tab" && isOpenRef.current) {
+        isOpenRef.current = false
+        closeDropdownRef.current?.()
       }
       if (e.key === "Escape") {
         // Escape while filtering restores the committed label (see #16004).
@@ -568,39 +634,48 @@ const Selectbox: FC<Props> = ({
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (e.key !== "Enter") return
 
+      enterKeyInProgressRef.current = false
+
       if (racHandledEnterRef.current) {
         racHandledEnterRef.current = false
         return
       }
 
-      if (creatableItem) {
-        commitSelection(inputValue)
+      // Read refs so an Enter in the same tick as the last keystroke uses the
+      // filtered list.
+      const targetId = enterTargetIdRef.current
+      const options = displayOptionsRef.current
+      const target = targetId ? options.find(o => o.id === targetId) : null
+      if (target?.isCreatable === true) {
+        commitSelection(inputValueRef.current)
         closeDropdownRef.current?.()
         return
       }
 
       if (!wasOpenBeforeEnterRef.current) return
 
-      if (displayOptions.length > 0) {
-        const exactMatch = displayOptions.find(
-          o => !o.isCreatable && o.value === inputValue
-        )
-        const target =
-          exactMatch ??
-          (!displayOptions[0].isCreatable ? displayOptions[0] : null)
-        if (target) {
-          commitSelection(target.value)
-          closeDropdownRef.current?.()
-        }
+      if (target) {
+        commitSelection(target.value)
+        closeDropdownRef.current?.()
       }
     },
-    [commitSelection, creatableItem, displayOptions, inputValue]
+    [commitSelection]
   )
 
   const handleClearValue = useCallback((): void => {
     commitSelection(null)
     closeDropdownRef.current?.()
   }, [commitSelection])
+
+  const listBox = (
+    <StyledListBox
+      aria-label={label ?? "Selectbox options"}
+      items={displayOptions}
+      renderEmptyState={() => <StyledEmptyState>No results</StyledEmptyState>}
+    >
+      {renderOption}
+    </StyledListBox>
+  )
 
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
@@ -634,6 +709,8 @@ const Selectbox: FC<Props> = ({
           <DropdownController
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
+            stateRef={comboBoxStateRef}
+            enterTargetKey={enterTargetId}
           />
           <StyledGroup ref={setReference}>
             <StyledInput
@@ -679,20 +756,16 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            <Virtualizer
-              layout={ListLayout}
-              layoutOptions={virtualizerLayoutOptions}
-            >
-              <StyledListBox
-                aria-label={label ?? "Selectbox options"}
-                items={displayOptions}
-                renderEmptyState={() => (
-                  <StyledEmptyState>No results</StyledEmptyState>
-                )}
+            {displayOptions.length > SELECTBOX_MAX_UNVIRTUALIZED_OPTIONS ? (
+              <Virtualizer
+                layout={ListLayout}
+                layoutOptions={virtualizerLayoutOptions}
               >
-                {renderOption}
-              </StyledListBox>
-            </Virtualizer>
+                {listBox}
+              </Virtualizer>
+            ) : (
+              listBox
+            )}
           </StyledPopover>
         </ComboBox>
       </I18nProvider>

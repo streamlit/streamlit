@@ -32,7 +32,7 @@ export interface StyledToolbarWrapperProps {
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ theme, locked, target }) => {
+  ({ theme, locked = false, target }) => {
     const topDistance = getOverlayToolbarTopDistance(theme)
     return {
       padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
@@ -85,14 +85,15 @@ export const StyledToolbarElementContainer = styled.div<{
 }>(({ height, useContainerWidth, topCentered, useContainerHeight }) => ({
   position: "relative",
   height:
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `number | string | undefined`; a 0 or empty height counts as unset and skips the explicit-height branch
     useContainerWidth && height
       ? height
-      : useContainerHeight
-        ? height || "100%"
+      : useContainerHeight === true
+        ? (height ?? "100%")
         : "fit-content",
   maxWidth: "100%",
   width: useContainerWidth ? "100%" : "fit-content",
-  ...(topCentered
+  ...(topCentered === true
     ? {
         display: "flex",
         justifyContent: "center",

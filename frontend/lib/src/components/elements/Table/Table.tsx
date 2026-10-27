@@ -101,8 +101,8 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   const borderMode = props.element.borderMode
 
   // Hide index and header settings from proto
-  const hideIndex = props.element.hideIndex ?? false
-  const hideHeader = props.element.hideHeader ?? false
+  const hideIndex = props.element.hideIndex
+  const hideHeader = props.element.hideHeader
 
   // Calculate visible columns based on hideIndex
   const visibleNumIndexColumns = hideIndex ? 0 : numIndexColumns
@@ -141,6 +141,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // Blank input is treated as absent: aria-label=" " computes to an empty
   // accessible name, which is worse than none. Native <table> already has
   // the table role — do not add role="figure" or role="img".
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -354,14 +355,14 @@ function generateTableCell(
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
 
   let formattedContent =
-    styledCell?.displayContent || formatArrowCell(content, contentType)
+    styledCell?.displayContent ?? formatArrowCell(content, contentType)
   let hasStylerTooltip: boolean = false
 
   const style: React.CSSProperties = {
     textAlign: isNumericType(contentType) ? "right" : "left",
   }
 
-  if (formattedContent?.endsWith(`<span class="pd-t"></span>`)) {
+  if (formattedContent.endsWith(`<span class="pd-t"></span>`)) {
     // This is a bit hacky, but to support the Pandas Styler's tooltip feature,
     // we need to convert the specific HTML element (used for tooltips) from
     // the display value into an actual span element.

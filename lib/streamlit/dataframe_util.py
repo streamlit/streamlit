@@ -77,8 +77,11 @@ _DASK_INDEX: Final = "dask.dataframe.dask_expr._collection.Index"
 _DASK_DATAFRAME_LEGACY: Final = "dask.dataframe.core.DataFrame"
 _DASK_SERIES_LEGACY: Final = "dask.dataframe.core.Series"
 _DASK_INDEX_LEGACY: Final = "dask.dataframe.core.Index"
-_DUCKDB_RELATION: Final = "_duckdb.DuckDBPyRelation"
-_DUCKDB_RELATION_LEGACY: Final = "duckdb.duckdb.DuckDBPyRelation"
+# DuckDB moved DuckDBPyRelation across modules. Keep every path so current
+# and older releases are recognized.
+_DUCKDB_RELATION: Final = "duckdb._relation.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY: Final = "_duckdb.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY_NESTED: Final = "duckdb.duckdb.DuckDBPyRelation"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
@@ -475,7 +478,11 @@ def is_duckdb_relation(obj: object) -> bool:
     https://duckdb.org/docs/api/python/relational_api
     """
 
-    return is_type(obj, _DUCKDB_RELATION) or is_type(obj, _DUCKDB_RELATION_LEGACY)
+    return (
+        is_type(obj, _DUCKDB_RELATION)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY_NESTED)
+    )
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -1152,7 +1159,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return [member.value if isinstance(member, str) else member for member in obj]  # type: ignore
 
     if isinstance(obj, Mapping):
-        return cast("list[V_co]", list(obj.keys()))
+        return cast("list[V_co]", list(obj.keys()))  # ty: ignore[redundant-cast]
 
     if is_list_like(obj) and not is_snowpark_row_list(obj):
         # This also ensures that the sequence is copied to prevent
@@ -1171,7 +1178,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
         return (
             []
             if data_df.empty
-            else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))
+            else cast("list[V_co]", list(data_df.iloc[:, 0].to_list()))  # ty: ignore[redundant-cast]
         )
     except errors.StreamlitAPIException:  # pragma: no cover - defensive
         # Defensive fallback: wrap the object into a list if conversion fails

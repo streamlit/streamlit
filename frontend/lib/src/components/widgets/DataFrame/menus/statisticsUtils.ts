@@ -421,7 +421,7 @@ export function computeTextStatistics(
       if (v === "") {
         empty++
       } else {
-        valueCounts.set(v, (valueCounts.get(v) || 0) + 1)
+        valueCounts.set(v, (valueCounts.get(v) ?? 0) + 1)
         lengths.push(v.length)
         count++
       }
@@ -431,7 +431,7 @@ export function computeTextStatistics(
       typeof v === "boolean"
     ) {
       const str = v.toString()
-      valueCounts.set(str, (valueCounts.get(str) || 0) + 1)
+      valueCounts.set(str, (valueCounts.get(str) ?? 0) + 1)
       lengths.push(str.length)
       count++
     }
@@ -732,6 +732,7 @@ export function formatDatetime(
 ): string {
   const date = new Date(timestamp)
   // Use provided timezone, or default to UTC for consistency
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank timezone is invalid for Intl
   const tz = timezone || "UTC"
   if (isDateOnly) {
     return date.toLocaleDateString(undefined, {
@@ -835,6 +836,7 @@ export function formatTooltipDate(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank timezone is invalid for Intl
   const tz = timezone || "UTC"
   if (includeTime) {
     return date.toLocaleString(undefined, {

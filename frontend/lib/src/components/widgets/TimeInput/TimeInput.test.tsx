@@ -254,25 +254,45 @@ describe("TimeInput widget", () => {
 
   it("preserves pending edit when external value changes before blur", async () => {
     const user = userEvent.setup()
-    const props = getProps({ default: "12:45" })
-    const { rerender } = render(<TimeInput {...props} />)
-
-    // Type a new hour (not committed — deferred to blur)
-    const [hourSegment] = screen.getAllByRole("spinbutton")
-    await user.click(hourSegment)
-    await user.keyboard("1")
-    await user.keyboard("1")
-
-    // Simulate external value change (e.g. fragment rerun)
-    const updatedElement = TimeInputProto.create({
-      ...props.element,
-      default: "10:00",
-      value: "10:00",
+    // jsdom has no layout, so mock a width above the instructions breakpoint.
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
     })
-    rerender(<TimeInput {...props} element={updatedElement} />)
+    try {
+      const props = getProps({ default: "12:45" })
+      const { rerender } = render(<TimeInput {...props} />)
 
-    // Pending edit should be preserved, not overwritten by external update
-    expect(hourSegment).toHaveAttribute("aria-valuenow", "11")
+      // Type a new hour (not committed — deferred to blur)
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.keyboard("1")
+      await user.keyboard("1")
+
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+
+      // setValue is what makes useBasicWidgetState replace the committed value.
+      rerender(
+        <TimeInput
+          {...props}
+          element={TimeInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: "10:00",
+          })}
+        />
+      )
+
+      expect(hourSegment).toHaveAttribute("aria-valuenow", "11")
+      expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    } finally {
+      vi.restoreAllMocks()
+    }
   })
 
   it("snaps minute ArrowUp to next step boundary (on-step value)", async () => {
@@ -1180,6 +1200,29 @@ describe("TimeInput widget", () => {
     expect(minuteSegment).toHaveTextContent("45")
   })
 
+  it("does not write null again when an optional empty field is cleared and blurred", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined, required: false })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("09")
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await user.click(hourSegment)
+    await user.keyboard("{Backspace}{Backspace}")
+    await user.click(minuteSegment)
+    await user.keyboard("{Backspace}{Backspace}")
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+  })
+
   it("clears paste error state when form is cleared", async () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form", default: "12:45" })
@@ -1193,7 +1236,16 @@ describe("TimeInput widget", () => {
     expect(screen.getByTestId("stTimeInputError")).toBeVisible()
     expect(hourSegment).toHaveTextContent("25")
 
-    // Submit form (triggers form clear)
+    // A visible paste error blocks submit, so the form is not cleared yet.
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+    expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+    // Revert the invalid paste, edit, and submit a valid value so
+    // clear_on_submit resets the field and clears the error.
+    await user.keyboard("{ArrowUp}")
+    await user.keyboard("11")
     act(() => {
       props.widgetMgr.submitForm("form", undefined)
     })
@@ -2200,5 +2252,796 @@ describe("on_change='ignore' mode", () => {
     )
     await flushScheduledRerun()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
+
+const createFormWidgetMgr = (): {
+  sendRerunBackMsg: ReturnType<typeof vi.fn>
+  widgetMgr: WidgetStateManager
+} => {
+  const sendRerunBackMsg = vi.fn()
+  return {
+    sendRerunBackMsg,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    }),
+  }
+}
+
+it("does not submit a dirty field while a paste error is visible", async () => {
+  const user = userEvent.setup()
+  const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+  const props = getProps({ formId: "form", default: "12:45" }, { widgetMgr })
+  render(<TimeInput {...props} />)
+
+  const [hourSegment] = screen.getAllByRole("spinbutton")
+  await user.click(hourSegment)
+  await user.keyboard("11")
+  await user.paste("99:99")
+
+  expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+  act(() => {
+    widgetMgr.submitForm("form", undefined)
+  })
+
+  expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+})
+
+describe("required", () => {
+  const getRequiredEmptyProps = (
+    elementProps: Partial<TimeInputProto> = {},
+    widgetProps: Partial<Props> = {}
+  ): Props =>
+    getProps(
+      {
+        default: undefined,
+        required: true,
+        ...elementProps,
+      },
+      widgetProps
+    )
+
+  /** Type 09:30, then clear every segment. */
+  async function fillThenClear(
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<void> {
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("09")
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await clearAllSegments(user)
+  }
+
+  /**
+   * Clear hour and minute. React Aria emits null only once every segment is
+   * cleared: one Backspace deletes a digit, and a second clears the segment.
+   */
+  async function clearAllSegments(
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<void> {
+    const segments = screen.getAllByRole("spinbutton")
+    for (const segment of segments) {
+      await user.click(segment)
+      await user.keyboard("{Backspace}{Backspace}")
+    }
+  }
+
+  it("does not show a required error on initial render", () => {
+    render(<TimeInput {...getRequiredEmptyProps()} />)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  /** Required and invalid state live on the spinbuttons, not the group. */
+  function expectSegmentAttribute(name: string, value: string | null): void {
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments.length).toBeGreaterThan(0)
+    for (const segment of segments) {
+      if (value === null) {
+        expect(segment).not.toHaveAttribute(name)
+      } else {
+        expect(segment).toHaveAttribute(name, value)
+      }
+    }
+    expect(screen.getByRole("group")).not.toHaveAttribute(name)
+  }
+
+  it("sets aria-required only when required is true", () => {
+    const { unmount } = render(<TimeInput {...getRequiredEmptyProps()} />)
+    expectSegmentAttribute("aria-required", "true")
+    expectSegmentAttribute("aria-invalid", null)
+    expect(screen.getByRole("group")).not.toHaveAttribute("aria-required")
+    unmount()
+
+    render(<TimeInput {...getProps({ required: false })} />)
+    expectSegmentAttribute("aria-required", null)
+  })
+
+  it("shows the required marker when the label is visible", () => {
+    render(<TimeInput {...getRequiredEmptyProps()} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+      "(required)"
+    )
+  })
+
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])(
+    "omits the required marker when the label is %s",
+    (_visibility, value) => {
+      render(
+        <TimeInput
+          {...getRequiredEmptyProps({
+            labelVisibility: { value },
+          })}
+        />
+      )
+
+      expect(
+        screen.queryByTestId("stWidgetLabelRequired")
+      ).not.toBeInTheDocument()
+      expectSegmentAttribute("aria-required", "true")
+    }
+  )
+
+  it("shows the required marker when the label is an empty string", () => {
+    render(<TimeInput {...getRequiredEmptyProps({ label: "" })} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+      "(required)"
+    )
+  })
+
+  it.each(["blur", "Enter"] as const)(
+    "blocks empty %s commits outside a form",
+    async commitVia => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TimeInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      await fillThenClear(user)
+      if (commitVia === "blur") {
+        await user.click(document.body)
+      } else {
+        await user.keyboard("{Enter}")
+      }
+
+      expect(setStringValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+      expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+      expectSegmentAttribute("aria-invalid", "true")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent("Error:")
+      expectSegmentAttribute("aria-required", "true")
+      const alertId = screen.getByRole("alert").id
+      for (const segment of screen.getAllByRole("spinbutton")) {
+        expect(segment.getAttribute("aria-describedby")).toContain(alertId)
+      }
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      expect(hourSegment).toHaveTextContent("HH")
+      expect(minuteSegment).toHaveTextContent("mm")
+    }
+  )
+
+  it("does not show a required error on unedited empty blur", async () => {
+    const user = userEvent.setup()
+    render(<TimeInput {...getRequiredEmptyProps()} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.click(document.body)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("treats 00:00 as a non-empty value", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("00")
+    await user.click(minuteSegment)
+    await user.keyboard("00")
+    await user.click(document.body)
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "00:00",
+      expect.anything()
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(hourSegment).toHaveTextContent("00")
+    expect(minuteSegment).toHaveTextContent("00")
+  })
+
+  it("does not empty a field that has a default, even when required", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, default: "12:45" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await clearAllSegments(user)
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    // The first Backspace edits 12 to 1. Clearing the remaining segments is
+    // rejected, so the field snaps back to that time instead of going empty.
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "1")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+  })
+
+  it.each([
+    ["outside a form", {}],
+    ["inside a form", { formId: "form" }],
+  ])("does not render clear button when required %s", (_where, formProps) => {
+    const props = getRequiredEmptyProps({
+      ...formProps,
+      value: "12:45",
+      setValue: true,
+    })
+    render(<TimeInput {...props} />)
+
+    expect(
+      screen.queryByTestId("stTimeInputClearButton")
+    ).not.toBeInTheDocument()
+  })
+
+  it("still shows the clear button when required is false and default is null", () => {
+    const props = getProps({
+      default: undefined,
+      required: false,
+      value: "12:45",
+      setValue: true,
+    })
+    render(<TimeInput {...props} />)
+
+    expect(screen.getByTestId("stTimeInputClearButton")).toBeInTheDocument()
+  })
+
+  it("allows Backspace emptying and blocks it on blur", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("does not show a required error on empty blur inside a form", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      formId: "form",
+      value: "12:45",
+      setValue: true,
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("registers a form validator for required", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+    render(<TimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("runs all form validators so every required field can show an error", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const startProps = getRequiredEmptyProps(
+      { id: "required-start", formId: "form", label: "Start" },
+      { widgetMgr }
+    )
+    const endProps = getRequiredEmptyProps(
+      { id: "required-end", formId: "form", label: "End" },
+      { widgetMgr }
+    )
+    render(
+      <>
+        <TimeInput {...startProps} />
+        <TimeInput {...endProps} />
+      </>
+    )
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    const alerts = screen.getAllByRole("alert")
+    expect(alerts).toHaveLength(2)
+    expect(alerts[0]).toHaveTextContent("This field is required.")
+    expect(alerts[1]).toHaveTextContent("This field is required.")
+    expect(screen.getAllByTestId("stTooltipErrorHoverTarget")).toHaveLength(2)
+  })
+
+  it("does not clear widget values when a required form submit fails", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+    render(<TimeInput {...props} />)
+
+    await fillThenClear(user)
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("deregisters the form submit validator on unmount", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+    const { unmount } = render(<TimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    unmount()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears a leftover required error when required is turned off", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const { rerender } = render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    const updatedElement = TimeInputProto.create({
+      ...props.element,
+      required: false,
+    })
+    rerender(<TimeInput {...props} element={updatedElement} />)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expectSegmentAttribute("aria-invalid", null)
+    expectSegmentAttribute("aria-required", null)
+
+    await user.click(hourSegment)
+    await user.keyboard("{Backspace}")
+    await user.click(document.body)
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+  })
+
+  it("does not resurrect a leftover required error when required is turned back on", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          required: false,
+        })}
+      />
+    )
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+    rerender(<TimeInput {...props} />)
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expectSegmentAttribute("aria-invalid", null)
+  })
+
+  it("clears a leftover required error after a programmatic refill and clear", () => {
+    const props = getRequiredEmptyProps({
+      formId: "form",
+      id: "required-refill",
+    })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "09:30",
+        })}
+      />
+    )
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    expect(hourSegment).toHaveTextContent("09")
+    expect(minuteSegment).toHaveTextContent("30")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expectSegmentAttribute("aria-invalid", null)
+
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: null,
+        })}
+      />
+    )
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expectSegmentAttribute("aria-invalid", null)
+  })
+
+  it("keeps the last accepted ignore pending value when a required empty commit is blocked", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getRequiredEmptyProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("09")
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await user.keyboard("{Enter}")
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(props.element.id, "09:30", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    expect(widgetMgr.getStringValue(props.element)).toBe("09:30")
+
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+    expect(widgetMgr.getStringValue(props.element)).toBe("09:30")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not write null on a blocked empty commit when queryParamKey is set", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({ queryParamKey: "alarm" })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    const registerSpy = vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    expect(registerSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "alarm",
+      "string_value",
+      null,
+      true,
+      undefined
+    )
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("09")
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await user.keyboard("{Enter}")
+    setStringValueSpy.mockClear()
+
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.anything()
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("does not snap back to the stored time after a blocked empty commit", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    // An ordinary rerun does not send setValue, so the empty display stays.
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          value: "12:45",
+          required: true,
+          default: undefined,
+        })}
+      />
+    )
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("restores a dirty empty display when session state sets the same time", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "12:45",
+          required: true,
+          default: undefined,
+        })}
+      />
+    )
+
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "12")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["a different time", "09:30", "09", "30"],
+    ["None", null, "HH", "mm"],
+  ] as const)(
+    "applies session state set to %s over a dirty empty required field",
+    async (_label, nextValue, hourText, minuteText) => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({
+        value: "12:45",
+        setValue: true,
+      })
+      const { rerender } = render(<TimeInput {...props} />)
+
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await clearAllSegments(user)
+      await user.click(document.body)
+
+      expect(hourSegment).toHaveTextContent("HH")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <TimeInput
+          {...props}
+          element={TimeInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: nextValue,
+            required: true,
+            default: undefined,
+          })}
+        />
+      )
+
+      expect(hourSegment).toHaveTextContent(hourText)
+      expect(minuteSegment).toHaveTextContent(minuteText)
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    }
+  )
+
+  it("does not submit a form on Enter after clearing a required field", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const props = getRequiredEmptyProps(
+      { formId: "form", value: "12:45", setValue: true },
+      { widgetMgr }
+    )
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.keyboard("{Enter}")
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("shows an out-of-range paste over a required error and restores it when dismissed", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr } = createFormWidgetMgr()
+    const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+    render(<TimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("25:00")
+
+    expect(hourSegment).toHaveTextContent("25")
+    expect(minuteSegment).toHaveTextContent("00")
+    const pasteAlert = screen.getByRole("alert")
+    expect(pasteAlert).toHaveTextContent("Time is out of range")
+    expect(pasteAlert).not.toHaveTextContent("This field is required.")
+    expectSegmentAttribute("aria-invalid", "true")
+
+    await user.keyboard("{ArrowUp}")
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
   })
 })

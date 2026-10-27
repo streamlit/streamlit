@@ -38,7 +38,7 @@ import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
 import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
-import type { Root as MdastRoot, Text } from "mdast"
+import type { Emphasis, Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -211,13 +211,15 @@ export interface Props {
 }
 
 /**
- * Type for mdast text nodes that carry hast transformation data.
- * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * Inline mdast node that mdast-util-to-hast turns into a specific HTML element
+ * via `data.hName`. This must not be `type: "text"`: mdast-util-find-and-replace
+ * merges adjacent text nodes, which would drop these fields and neighboring copy.
+ * `emphasis` is a phrasing node whose hast handler applies the `data.h*` fields.
  * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
  */
-interface MdastTextWithHastData {
-  type: "text"
-  value: string
+interface MdastInlineHastNode {
+  type: "emphasis"
+  children: Emphasis["children"]
   data: {
     hName: string
     hProperties: Record<string, string>
@@ -312,7 +314,7 @@ interface HeadingActionElements {
 const HeaderActionElements: FC<HeadingActionElements> = ({
   elementId,
   help,
-  hideAnchor,
+  hideAnchor = false,
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
@@ -356,7 +358,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   tag,
   anchor: propsAnchor,
   help,
-  hideAnchor,
+  hideAnchor = false,
   children,
   tagProps,
   icon,
@@ -380,6 +382,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     (node: HTMLElement): void => {
       const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
       const anchor =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank anchor is unset and is generated from the heading text
         propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -615,12 +618,12 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
  * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
-  inline,
+  inline = false,
   className,
   children,
   ...props
 }) => {
-  const match = /language-(\w+)/.exec(className || "")
+  const match = /language-(\w+)/.exec(className ?? "")
   const isStreaming = useContext(StreamingContext)
   const truncate = useContext(TruncateContext)
 
@@ -628,7 +631,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
-  const language = match?.[1] || ""
+  const language = match?.[1] ?? ""
 
   // Truncated text stays inline: fenced blocks must not grow into syntax
   // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
@@ -723,6 +726,7 @@ const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help text falls back to the directive label
     contextHelpText || (typeof children === "string" ? children : "")
 
   return (
@@ -807,9 +811,9 @@ function createRemarkHelpIcon() {
 
       // Handle help icon directive (:help[tooltip content])
       if (nodeName === "help") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "streamlit-help-icon"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         // Pass the children through so CustomHelpIcon can extract the content
         return
       }
@@ -850,18 +854,18 @@ function createRemarkColoringAndSmall(
 
       // Handle shimmer text directive (:shimmer[])
       if (nodeName === "shimmer") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.className = ["stMarkdownShimmer"]
         return
       }
 
       // Handle small text directive (:small[])
       if (nodeName === "small") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
         return
       }
@@ -869,12 +873,12 @@ function createRemarkColoringAndSmall(
       // Handle custom color directive (:color[text]{foreground="...", background="..."})
       if (nodeName === "color" && node.attributes) {
         const { foreground, background } = node.attributes
-        const validForeground = foreground && isValidCssColor(foreground)
-        const validBackground = background && isValidCssColor(background)
+        const validForeground = isValidCssColor(foreground ?? "")
+        const validBackground = isValidCssColor(background ?? "")
 
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
 
         if (validForeground || validBackground) {
           const styles: string[] = []
@@ -921,9 +925,9 @@ function createRemarkColoringAndSmall(
         const bgColor = colorMapping.get(`${color}-background`)
 
         if (textColor && bgColor) {
-          const data = node.data || (node.data = {})
+          const data = (node.data ??= {})
           data.hName = "span"
-          data.hProperties = data.hProperties || {}
+          data.hProperties ??= {}
           data.hProperties.className = ["stMarkdownBadge"]
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
@@ -932,10 +936,10 @@ function createRemarkColoringAndSmall(
 
       // Handle color directives (:color[] or :color-background[])
       if (colorMapping.has(nodeName)) {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         const style = colorMapping.get(nodeName)
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
@@ -986,12 +990,12 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
 function createRemarkMaterialIcons(theme: EmotionTheme) {
   return () => (tree: MdastRoot) => {
     function replace(
-      fullMatch: string,
+      _fullMatch: string,
       iconName: string
-    ): MdastTextWithHastData {
+    ): MdastInlineHastNode {
       return {
-        type: "text",
-        value: fullMatch,
+        type: "emphasis",
+        children: [],
         data: {
           hName: "span",
           hProperties: {
@@ -1025,7 +1029,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     findAndReplace(tree, [
       [
         /:material_(\w+):/g,
-        replace as (fullMatch: string, iconName: string) => Text,
+        replace as (fullMatch: string, iconName: string) => Emphasis,
       ],
     ])
     return tree
@@ -1037,10 +1041,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  */
 function createRemarkStreamlitLogo() {
   return () => (tree: MdastRoot) => {
-    function replaceStreamlit(): MdastTextWithHastData {
+    function replaceStreamlit(): MdastInlineHastNode {
       return {
-        type: "text",
-        value: "",
+        type: "emphasis",
+        children: [],
         data: {
           hName: "img",
           hProperties: {
@@ -1055,7 +1059,9 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
+    findAndReplace(tree, [
+      [/:streamlit:/g, replaceStreamlit as () => Emphasis],
+    ])
     return tree
   }
 }
@@ -1225,7 +1231,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href?.startsWith("#")) {
+  if (href?.startsWith("#") === true) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }
@@ -1235,7 +1241,9 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     <a
       href={href}
       title={title}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank target still opens in a new tab
       target={target || "_blank"}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank rel still sets noopener noreferrer
       rel={rel || "noopener noreferrer"}
       {...omit(rest, "node")}
     >
@@ -1248,12 +1256,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
-  isLabel,
-  disableLinks,
+  isLabel = false,
+  disableLinks = false,
   helpText,
-  unterminatedParsing,
-  hideAnchors,
-  truncate,
+  unterminatedParsing = false,
+  hideAnchors = false,
+  truncate = false,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1431,9 +1439,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   return (
-    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+    <StreamingContext.Provider value={unterminatedParsing}>
       <HelpTextContext.Provider value={helpText}>
-        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+        <HideAnchorsContext.Provider value={hideAnchors}>
           <ErrorBoundary>
             {truncate ? (
               <TruncateContext.Provider value={true}>
@@ -1457,7 +1465,7 @@ const StreamlitMarkdown: FC<Props> = ({
   source,
   allowHTML,
   style,
-  isCaption,
+  isCaption = false,
   isLabel,
   boldLabel,
   disableLinks,
@@ -1465,7 +1473,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   inheritLineHeight,
   helpText,
-  truncate,
+  truncate = false,
   unterminatedParsing,
   hideAnchors,
 }) => {
@@ -1473,7 +1481,7 @@ const StreamlitMarkdown: FC<Props> = ({
 
   return (
     <StyledStreamlitMarkdown
-      isCaption={Boolean(isCaption)}
+      isCaption={isCaption}
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}

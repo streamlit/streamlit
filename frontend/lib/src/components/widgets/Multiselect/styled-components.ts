@@ -108,7 +108,7 @@ export const StyledTagGroup = styled.span({
 
 /** Individual removable tag pill displaying a selected value. */
 export const StyledTag = styled.span<{ $disabled?: boolean; $wrap?: boolean }>(
-  ({ theme, $disabled, $wrap }) => ({
+  ({ theme, $disabled = false, $wrap }) => ({
     display: "inline-flex",
     alignItems: "center",
     // In single-row mode, keep chips at their natural width so the container
@@ -168,7 +168,7 @@ export const StyledTagRemoveButton = styled.button(({ theme }) => ({
 export const StyledFilterInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $typingDisabled?: boolean; $hasValues?: boolean }>(
-  ({ theme, $typingDisabled, $hasValues }) => ({
+  ({ theme, $typingDisabled = false, $hasValues = false }) => ({
     height: theme.sizes.elementHighlightHeight,
     marginBottom: theme.sizes.tagMarginInsideBorder,
     marginTop: theme.spacing.none,
@@ -253,7 +253,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * !important overrides neutralize RAC's imperative inline style writes.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
-  ({ theme, $isInSidebar }) => ({
+  ({ theme, $isInSidebar = false }) => ({
     ...getPopoverContainerStyle(theme),
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
@@ -289,18 +289,6 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
-  // First collection item is the Enter target when nothing is keyboard-focused
-  // or hovered. Hover is tracked separately in Multiselect keydown because it
-  // paints data-hovered without setting RAC focusedKey.
-  // Virtualizer wraps each option in its own [role=presentation], so :first-of-type
-  // would match every row. aria-posinset marks the true first item.
-  // TODO: Drive this highlight from RAC focusedKey / aria-activedescendant instead
-  // of CSS. Wiring state.open("first") is a ComboBox focus-management follow-up
-  // (menuTrigger="manual", type-then-Enter, virtualizer), not a small patch.
-  "&:not(:has([data-focused])):not(:has([data-hovered])) [role='option'][aria-posinset='1'] [data-item-hl]":
-    {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
 }))
 
 export const StyledEmptyState = styled.span(({ theme }) => ({
@@ -344,6 +332,8 @@ export const StyledListBoxItem = styled(ListBoxItem, {
   color: theme.colors.bodyText,
   outline: "none",
   position: "relative",
+  // data-focused also marks the Enter target, because Multiselect syncs
+  // focusedKey to it for aria-activedescendant.
   "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
@@ -351,7 +341,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,
   },
-  ...($isCreatable && {
+  ...($isCreatable === true && {
     "&::before": {
       content: '""',
       position: "absolute",
@@ -363,7 +353,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
       transform: "translateY(-50%)",
     },
   }),
-  ...($isBulkAction && {
+  ...($isBulkAction === true && {
     "&::after": {
       content: '""',
       position: "absolute",

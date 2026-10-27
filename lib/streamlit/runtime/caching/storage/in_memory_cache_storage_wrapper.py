@@ -13,12 +13,15 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import math
 import threading
+import weakref
 from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching.global_cache_budget import get_global_cache_budget
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
@@ -28,9 +31,24 @@ from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
 _LOGGER = get_logger(__name__)
+
+
+def _create_on_remove_callback(
+    storage: InMemoryCacheStorageWrapper,
+) -> Callable[[str, bytes], None]:
+    """Create a removal callback that does not keep its storage alive."""
+    storage_ref = weakref.ref(storage)
+
+    def on_remove(key: str, value: bytes) -> None:
+        # Keep a strong reference for the full callback after the safe dereference.
+        live_storage = storage_ref()
+        if live_storage is not None:
+            live_storage._on_mem_cache_remove(key, value)
+
+    return on_remove
 
 
 class InMemoryCacheStorageWrapper(CacheStorage):
@@ -43,8 +61,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     The in-memory cache is a TTL cache, which means that the entries are
     automatically removed if a given time to live (TTL) has passed.
 
-    The in-memory cache is also an LRU cache, which means that the entries
-    are automatically removed if the cache size exceeds a given maxsize.
+    The in-memory cache uses LRU eviction for a configured entry-count or
+    serialized-byte limit.
 
     If the storage implements its strategy for maxsize, it is recommended
     (but not necessary) that the storage implement the same LRU strategy,
@@ -67,13 +85,25 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
-        self._mem_cache: TTLCache[str, bytes] = TTLCache(
+        self._max_size_bytes = context.max_size_bytes
+        # TTLCache invokes on_remove under _mem_cache_lock. Buffer removals until
+        # the mutation completes, then report them to the global budget in one batch.
+        self._pending_removals: list[tuple[str, int]] = []
+        self._generations: dict[str, int] = {}
+        self._next_generation = 0
+        self._oversized_warning_emitted = False
+        self._mem_cache: TTLCache[str, bytes] = TTLCache[str, bytes](
             maxsize=self.max_entries,
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
+            max_total_size=self._max_size_bytes,
+            getsizeof=None if self._max_size_bytes is None else len,
+            on_remove=_create_on_remove_callback(self),
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
+        self._global_budget = get_global_cache_budget()
+        self._global_storage_id = self._global_budget.register(self)
 
     @property
     def ttl_seconds(self) -> float:
@@ -82,6 +112,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     @property
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
+
+    @property
+    def max_size_bytes(self) -> int | None:
+        return self._max_size_bytes
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -120,6 +154,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._mem_cache_lock:
             self._mem_cache.clear()
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
         self._persist_storage.clear()
 
     def get_stats(
@@ -144,22 +180,122 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def close(self) -> None:
         """Closes the cache storage."""
+        # Keep unregister ordered after the storage lock so a reserved global
+        # victim cannot pass validation while this storage is being dropped.
+        with self._mem_cache_lock:
+            self._global_budget.unregister(self._global_storage_id)
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
-            if key in self._mem_cache:
+            try:
                 entry = bytes(self._mem_cache[key])
-                _LOGGER.debug("Memory cache HIT: %s", key)
-                return entry
+            except KeyError:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheStorageKeyNotFoundError(
+                    "Key not found in mem cache"
+                ) from None
 
-            _LOGGER.debug("Memory cache MISS: %s", key)
-            raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+            generation = self._generations.get(key)
+            if generation is not None and self._global_budget.is_enabled:
+                self._global_budget.record_read(
+                    self._global_storage_id,
+                    key,
+                    generation,
+                )
+            _LOGGER.debug("Memory cache HIT: %s", key)
+            return entry
 
     def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
+        should_warn = False
+        exceeded_limits = []
+        entry_size = len(entry_bytes)
+        candidates = []
         with self._mem_cache_lock:
+            if self._max_size_bytes is not None and entry_size > self._max_size_bytes:
+                exceeded_limits.append(f"max_size ({self._max_size_bytes} bytes)")
+            global_max_bytes = self._global_budget.max_bytes
+            if global_max_bytes is not None and entry_size > global_max_bytes:
+                exceeded_limits.append(
+                    f"server.maxCacheDataSize ({global_max_bytes} bytes)"
+                )
+            if exceeded_limits and not self._oversized_warning_emitted:
+                self._oversized_warning_emitted = True
+                should_warn = True
             self._mem_cache[key] = entry_bytes
+            removals = self._take_pending_removals()
+            if self._global_budget.is_enabled:
+                self._next_generation += 1
+                generation = self._next_generation
+                self._generations[key] = generation
+                candidates = self._global_budget.record_write_and_reserve_victims(
+                    self._global_storage_id,
+                    key,
+                    len(entry_bytes),
+                    generation,
+                    removals,
+                )
+        self._global_budget.evict_candidates(candidates)
+        if should_warn:
+            _LOGGER.warning(
+                "A cached result is larger than the st.cache_data size limit and "
+                "was stored anyway. Function %r produced %s serialized bytes, "
+                "exceeding %s.",
+                self.function_display_name,
+                entry_size,
+                " and ".join(exceeded_limits),
+            )
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.pop(key, None)
+            with contextlib.suppress(KeyError):
+                del self._mem_cache[key]
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
+
+    def _on_mem_cache_remove(self, key: str, _value: bytes) -> None:
+        generation = self._generations.pop(key, None)
+        if generation is not None:
+            self._pending_removals.append((key, generation))
+
+    def _take_pending_removals(self) -> list[tuple[str, int]]:
+        removals = self._pending_removals
+        self._pending_removals = []
+        return removals
+
+    def _report_removals(self, removals: list[tuple[str, int]]) -> None:
+        if removals:
+            self._global_budget.record_removals(self._global_storage_id, removals)
+
+    def _activate_global_budget_entries(self) -> None:
+        """Publish live pre-activation entries while holding their memory lock."""
+        with self._mem_cache_lock:
+            self._mem_cache.expire()
+            self._take_pending_removals()
+            entries: list[tuple[str, int, int]] = []
+            for key, value in self._mem_cache.lru_items():
+                self._next_generation += 1
+                generation = self._next_generation
+                self._generations[key] = generation
+                entries.append((key, len(value), generation))
+            self._global_budget.activate_storage_entries(
+                self._global_storage_id, entries
+            )
+
+    def _evict_from_mem_cache(
+        self,
+        key: str,
+        expected_generation: int,
+    ) -> bool:
+        """Remove a matching in-memory generation without touching disk."""
+        with self._mem_cache_lock:
+            if self._generations.get(key) != expected_generation:
+                return False
+            if not self._global_budget.can_evict_reserved(self._global_storage_id, key):
+                return False
+            is_live = key in self._mem_cache
+            with contextlib.suppress(KeyError):
+                del self._mem_cache[key]
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
+        return is_live

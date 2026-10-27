@@ -84,6 +84,7 @@ function BaseChartColumn(
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` includes a branded `string & {…}`, which the rule reads as an object
     defaultColor = parameters.color
       ? resolveNamedColor(parameters.color, theme)
       : undefined
@@ -243,11 +244,16 @@ function BaseChartColumn(
     getCellValue(
       cell: SparklineCellType | LoadingCell
     ): readonly number[] | null {
-      if (cell.kind === GridCellKind.Loading) {
+      // Empty cells are loading cells. Invalid arrays are error text cells.
+      // Neither stores sparkline values.
+      if (
+        cell.kind !== GridCellKind.Custom ||
+        (cell.data as { kind?: string } | null | undefined)?.kind !==
+          "sparkline-cell"
+      ) {
         return null
       }
-
-      return cell.data?.values === undefined ? null : cell.data?.values
+      return cell.data.values
     },
   }
 }

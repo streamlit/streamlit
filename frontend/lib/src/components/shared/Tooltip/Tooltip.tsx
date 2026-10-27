@@ -25,21 +25,22 @@ import {
   useContext,
   useEffect,
   useId,
-  useMemo,
   useRef,
 } from "react"
 
-import { type Placement as FloatingPlacement, hide } from "@floating-ui/react"
-import { useFocusWithin } from "react-aria"
 import {
-  type ContextValue,
-  type Placement as RAPlacement,
-  type TooltipProps as RATooltipProps,
-  TooltipContext,
-  TooltipTriggerStateContext,
-} from "react-aria-components"
+  type Placement as FloatingPlacement,
+  FloatingPortal,
+  hide,
+} from "@floating-ui/react"
+import { useFocusWithin } from "react-aria"
+// isFocusVisible has no public export. This private path is the module React
+// Aria's FocusScope and tooltip already use, so they share one modality state.
+import { isFocusVisible } from "react-aria/private/interactions/useFocusVisible"
+import { TooltipTriggerStateContext } from "react-aria-components"
 import { useTooltipTriggerState } from "react-stately"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 
 import {
@@ -61,26 +62,6 @@ export enum Placement {
   LEFT_BOTTOM = "leftBottom",
   LEFT = "left",
   LEFT_TOP = "leftTop",
-}
-
-/**
- * Maps Streamlit's Placement enum to React Aria placement strings.
- * Still needed because RAC's <Tooltip> uses placement to set data-placement.
- */
-const REACT_ARIA_PLACEMENT: Record<Placement, RAPlacement> = {
-  [Placement.AUTO]: "top",
-  [Placement.TOP]: "top",
-  [Placement.TOP_LEFT]: "top start",
-  [Placement.TOP_RIGHT]: "top end",
-  [Placement.BOTTOM]: "bottom",
-  [Placement.BOTTOM_LEFT]: "bottom left",
-  [Placement.BOTTOM_RIGHT]: "bottom right",
-  [Placement.LEFT]: "left",
-  [Placement.LEFT_TOP]: "left top",
-  [Placement.LEFT_BOTTOM]: "left bottom",
-  [Placement.RIGHT]: "right",
-  [Placement.RIGHT_TOP]: "right top",
-  [Placement.RIGHT_BOTTOM]: "right bottom",
 }
 
 /** Maps Streamlit's Placement enum to Floating UI placement strings. */
@@ -147,13 +128,17 @@ interface TriggerAreaProps {
  * Hover: onPointerEnter/Leave call state.open(false)/close(false) which use the
  * delay configured on useTooltipTriggerState.
  *
- * Focus: useFocusWithin opens/closes the tooltip immediately when any descendant
- * receives or loses focus (bubbling focusin/focusout under the hood).
+ * Focus: useFocusWithin closes the tooltip when focus leaves the trigger. When
+ * focus enters, it opens the tooltip immediately only if:
+ * - React Aria reports visible focus (keyboard or screen reader, including a
+ *   dialog restoring focus after Escape), or
+ * - a touch tap on the trigger moved focus there.
+ * Like React Aria's useTooltipTrigger, focus from a mouse click, or restored
+ * after a mouse close, leaves the tooltip to hover.
  *
- * onPointerLeave only closes the tooltip if focus is not currently held within
- * the trigger. This prevents a keyboard user's tooltip from dismissing when a
- * mouse passes over and leaves the trigger area while focus is still held,
- * regardless of whether focus or hover came first.
+ * onPointerLeave does not close a tooltip that focus opened. This keeps a
+ * keyboard user's tooltip open when a mouse passes over the trigger, and keeps
+ * a tapped tooltip open when the touch pointer leaves on release.
  */
 function TriggerArea({
   tag: Tag,
@@ -169,7 +154,13 @@ function TriggerArea({
   const state = useContext(TooltipTriggerStateContext)
   const triggerRef = useContext(TriggerRefContext)
   const setTriggerRef = useContext(SetTriggerRefContext)
-  const hasFocusWithinRef = useRef(false)
+  /** True when keyboard, screen reader, or touch focus keeps the tooltip open. */
+  const isHeldOpenByFocusRef = useRef(false)
+  /**
+   * Pointer type of the current press on this trigger. Tells a touch tap's focus
+   * apart from a later focus restore. Cleared on click, pointercancel, and blur.
+   */
+  const pointerDownTypeRef = useRef<string | null>(null)
 
   const mergedRef = useCallback(
     (node: HTMLDivElement | null): void => {
@@ -181,11 +172,17 @@ function TriggerArea({
 
   const { focusWithinProps } = useFocusWithin({
     onFocusWithin() {
-      hasFocusWithinRef.current = true
-      if (!disabled) state?.open(true)
+      // isFocusVisible() is false after a touch tap, so check this trigger's
+      // own pointerdown. React Aria's global pointer type won't do: a tap on a
+      // dialog's close button also sets it.
+      isHeldOpenByFocusRef.current =
+        !disabled &&
+        (isFocusVisible() || pointerDownTypeRef.current === "touch")
+      if (isHeldOpenByFocusRef.current) state?.open(true)
     },
     onBlurWithin() {
-      hasFocusWithinRef.current = false
+      isHeldOpenByFocusRef.current = false
+      pointerDownTypeRef.current = null
       state?.close(true)
     },
   })
@@ -201,11 +198,23 @@ function TriggerArea({
         if (!disabled) state?.open(false)
       }}
       onPointerLeave={() => {
-        if (!hasFocusWithinRef.current) {
+        if (!isHeldOpenByFocusRef.current) {
           state?.close(closeImmediatelyOnPointerLeave)
         }
       }}
+      onPointerDownCapture={e => {
+        // Capture phase, because React Aria press handlers in children stop
+        // pointerdown propagation.
+        pointerDownTypeRef.current = e.pointerType
+      }}
+      onPointerCancelCapture={() => {
+        pointerDownTypeRef.current = null
+      }}
       onClickCapture={() => {
+        // A tap focuses the trigger before its click, so onFocusWithin has
+        // already read the pointer type. A WebKit tap doesn't focus the button,
+        // and this clear stops a later focus restore from counting as that tap.
+        pointerDownTypeRef.current = null
         if (dismissOnClick) {
           state?.close(true)
         }
@@ -221,27 +230,24 @@ function Tooltip({
   content,
   placement,
   children,
-  inline,
+  inline = false,
   style,
   onMouseEnterDelay,
   closeDelay,
-  containerWidth,
-  constrainWidth,
-  error,
+  containerWidth = false,
+  constrainWidth = false,
+  error = false,
   dismissOnClick = false,
   interactive = true,
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
-  // Always-null ref passed to RAC's TooltipContext so its internal
-  // useOverlayPosition has no target and won't fight Floating UI.
-  const nullTriggerRef = useRef<Element | null>(null)
-  const raPlacement = REACT_ARIA_PLACEMENT[placement]
   const tooltipId = useId()
 
   const state = useTooltipTriggerState({
     delay: onMouseEnterDelay ?? 200,
     closeDelay: closeDelay ?? 300,
   })
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `content` is a ReactNode; empty content (null, "", false) disables the tooltip
   const isDisabled = !content
 
   // Stable ref so effects always call close() on the latest state without
@@ -256,10 +262,9 @@ function Tooltip({
     }
   }, [isDisabled])
 
-  // Floating UI provides scroll-tracking via autoUpdate. RAC's <Tooltip> is
-  // kept for its portal, role="tooltip", and aria-hidden management. Its
-  // imperative positioning is overridden via CSS !important (see
-  // styled-components.tsx) and Floating UI's floatingStyles applied via style prop.
+  // Floating UI owns positioning and scroll-tracking. The tooltip is portaled
+  // into the shared overlay host so overflow or transform ancestors cannot
+  // clip it, and so an open dialog does not mark it inert.
   const { floatingStyles, middlewareData, setFloating, setReference } =
     useFloatingOverlay({
       open: state.isOpen,
@@ -292,14 +297,6 @@ function Tooltip({
     [setReference]
   )
 
-  const tooltipContextValue = useMemo(
-    () =>
-      ({
-        triggerRef: nullTriggerRef,
-      }) as ContextValue<RATooltipProps, HTMLDivElement>,
-    [nullTriggerRef]
-  )
-
   // Close the tooltip on Escape without stopping event propagation.
   // React Aria's useTooltipTrigger would register a document capture listener
   // that calls stopPropagation(), preventing other handlers (e.g. textarea
@@ -322,41 +319,49 @@ function Tooltip({
     <TooltipTriggerStateContext.Provider value={state}>
       <TriggerRefContext.Provider value={triggerRef}>
         <SetTriggerRefContext.Provider value={setReferenceRef}>
-          <TooltipContext.Provider value={tooltipContextValue}>
-            <TriggerArea
-              tag={inline ? "span" : "div"}
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: inline ? "flex-end" : "",
-                width: containerWidth ? "100%" : "auto",
-                // Opt-in: cap and allow shrinking so a flex-item trigger
-                // (e.g. badge+help) can ellipsize instead of growing to content.
-                ...(constrainWidth
-                  ? { maxWidth: "100%", minWidth: 0 }
-                  : undefined),
-                ...style,
-              }}
-              testId={
-                error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-              }
-              className={
-                error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-              }
-              ariaDescribedBy={
-                !isDisabled && state.isOpen ? tooltipId : undefined
-              }
-              disabled={isDisabled}
-              dismissOnClick={dismissOnClick}
-              closeImmediatelyOnPointerLeave={closeDelay === 0}
+          <TriggerArea
+            tag={inline ? "span" : "div"}
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: inline ? "flex-end" : "",
+              width: containerWidth ? "100%" : "auto",
+              // Opt-in: cap and allow shrinking so a flex-item trigger
+              // (e.g. badge+help) can ellipsize instead of growing to content.
+              ...(constrainWidth
+                ? { maxWidth: "100%", minWidth: 0 }
+                : undefined),
+              ...style,
+            }}
+            testId={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            className={
+              error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+            }
+            ariaDescribedBy={
+              !isDisabled && state.isOpen ? tooltipId : undefined
+            }
+            disabled={isDisabled}
+            dismissOnClick={dismissOnClick}
+            closeImmediatelyOnPointerLeave={closeDelay === 0}
+          >
+            {children}
+          </TriggerArea>
+          {/*
+            Disable FloatingPortal's tab-order guards. They set tabindex="-1"
+            on portal content whenever focus leaves it, which would strip
+            links in help text out of the tab order.
+          */}
+          {!isDisabled && state.isOpen ? (
+            <FloatingPortal
+              id={FLOATING_OVERLAY_PORTAL_ID}
+              preserveTabOrder={false}
             >
-              {children}
-            </TriggerArea>
-            {!isDisabled ? (
               <StyledTooltip
                 ref={setFloating}
                 id={tooltipId}
-                placement={raPlacement}
+                role="tooltip"
                 style={floatingStyles}
               >
                 <StyledTooltipContentWrapper
@@ -368,16 +373,16 @@ function Tooltip({
                   }
                   onPointerEnter={() => {
                     if (interactive) {
-                      state?.open(true)
+                      state.open(true)
                     }
                   }}
-                  onPointerLeave={() => state?.close(!interactive)}
+                  onPointerLeave={() => state.close(!interactive)}
                 >
                   {content}
                 </StyledTooltipContentWrapper>
               </StyledTooltip>
-            ) : null}
-          </TooltipContext.Provider>
+            </FloatingPortal>
+          ) : null}
         </SetTriggerRefContext.Provider>
       </TriggerRefContext.Provider>
     </TooltipTriggerStateContext.Provider>

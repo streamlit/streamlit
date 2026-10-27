@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from numbers import Integral, Real
 from typing import (
     TYPE_CHECKING,
@@ -30,6 +30,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -117,7 +118,7 @@ SliderReturn: TypeAlias = (
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
 
-UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
 SUPPORTED_TYPES: Final = {
     Integral: SliderProto.INT,
@@ -212,7 +213,7 @@ def _datetime_to_micros(dt: datetime) -> int:
     # as it is in the given datetime object, we just set the tzinfo to UTC and
     # do not do any timezone conversions. Only the backend knows about
     # original timezone and will replace the UTC timestamp in the deserialization.
-    utc_dt = dt.replace(tzinfo=timezone.utc)
+    utc_dt = dt.replace(tzinfo=UTC)
     return _delta_to_micros(utc_dt - UTC_EPOCH)
 
 
@@ -1116,6 +1117,11 @@ class SliderMixin:
             # Empty list, so let's just use the outer bounds
             prepared_value = [min_value, max_value]
 
+        # The effective bounds and step in their own types, for the agent API:
+        # below, dates and times become microseconds, which is the wire format
+        # rather than anything a client could compare a date against.
+        described_bounds = (min_value, max_value, step)
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
@@ -1285,12 +1291,36 @@ class SliderMixin:
             slider_proto.set_value = True
 
         layout_config = create_layout_config(width=width)
+        # Times and datetimes are reported without an offset, which the
+        # standard `time` and `date-time` formats require.
+        value_item = {
+            SliderProto.INT: agent_spec.INTEGER,
+            SliderProto.FLOAT: agent_spec.NUMBER,
+            SliderProto.DATE: agent_spec.DATE,
+        }.get(data_type, agent_spec.STRING)
 
         self.dg._enqueue(
             "slider",
             slider_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "slider",
+                key=element_id,
+                action="value",
+                value_schema=value_item
+                if single_value
+                else agent_spec.range_of(value_item),
+                label=label,
+                min_value=described_bounds[0],
+                max_value=described_bounds[1],
+                step=described_bounds[2],
+                format=format,
+                help=slider_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return cast("SliderReturn", widget_state.value)
 

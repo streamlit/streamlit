@@ -1607,8 +1607,8 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
 
     def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
-        """If the outside container was never written to during a full app run, a
-        fragment-only rerun raises.
+        """A fragment-only rerun raises if the fragment did not write to the
+        outside container during the last full app run.
         """
         outside = st.container()
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
@@ -1616,7 +1616,28 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
 
         with pytest.raises(
             StreamlitInvalidLayoutContextError,
-            match="could not reserve a stable position",
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
+        ):
+            outside.markdown("hi")
+
+    def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
+        """A main-script write does not reserve a wrapper, so a fragment-only
+        rerun still raises.
+        """
+        outside = st.container()
+        outside.empty()
+        self.script_run_ctx.fragment_ids_this_run = ["frag"]
+        _enter_fragment(self)
+
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
         ):
             outside.markdown("hi")
 

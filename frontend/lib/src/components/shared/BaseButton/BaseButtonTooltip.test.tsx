@@ -68,8 +68,8 @@ describe("BaseButtonTooltip", () => {
     })
 
     afterEach(async () => {
-      // Drop focus before unhover: pointer leave does not close while focus is
-      // inside the trigger, and an open tooltip keeps React Aria warmed up.
+      // Drop focus before unhover: pointer leave does not close a tooltip that
+      // keyboard focus opened, and an open tooltip keeps React Aria warmed up.
       act(() => {
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur()

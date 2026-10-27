@@ -312,11 +312,11 @@ export function mergeColumnParameters<T = Record<string, unknown>>(
   userParams: Record<string, unknown> | undefined | null
 ): T {
   if (isNullOrUndefined(defaultParams)) {
-    return (userParams || {}) as T
+    return (userParams ?? {}) as T
   }
 
   if (isNullOrUndefined(userParams)) {
-    return (defaultParams || {}) as T
+    return defaultParams as T
   }
 
   return merge(defaultParams, userParams) as T

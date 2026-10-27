@@ -239,10 +239,6 @@ const RawElementNodeRenderer = (
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 
-  if (!node) {
-    throw new Error("ElementNode not found.")
-  }
-
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
     widthConfig: node.element.widthConfig,
@@ -455,7 +451,8 @@ const RawElementNodeRenderer = (
       // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
       // This is consistent with how useLayoutStyles handles missing config for other elements.
       const isUsingStretch =
-        !node.element.widthConfig || node.element.widthConfig.useStretch
+        !node.element.widthConfig ||
+        node.element.widthConfig.useStretch === true
 
       const config = isUsingStretch
         ? ElementContainerConfig.FULL_WIDTH
@@ -510,8 +507,7 @@ const RawElementNodeRenderer = (
 
     case "metric": {
       const metricProto = node.element.metric as MetricProto
-      const hasChart =
-        metricProto.chartData && metricProto.chartData.length > 0
+      const hasChart = metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}
@@ -584,11 +580,10 @@ const RawElementNodeRenderer = (
       // container. The deprecated internal _skeleton() carries no layout config,
       // so it always renders at the default element height.
       const { heightConfig } = node.element
-      const fillContainerHeight = Boolean(
-        heightConfig?.useStretch ||
-        heightConfig?.pixelHeight ||
-        heightConfig?.remHeight
-      )
+      const fillContainerHeight =
+        heightConfig?.useStretch === true ||
+        !!heightConfig?.pixelHeight ||
+        !!heightConfig?.remHeight
       return (
         <ElementContainer
           node={node}
@@ -687,12 +682,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // Keyed by scriptRunId so the toast remounts on each run; a
-            // still-visible toast at the same position is de-duped in Toast.
+            // Keyed by scriptRunId so the toast remounts on each run, while
+            // msg.toast() updates within a run reach the same instance.
             key={node.scriptRunId}
             element={toastProto}
-            // The delta path is a stable per-position identity used to de-dupe
-            // the toast across the remounts that happen on every rerun.
+            // The delta path is a stable per-position identity. Toast uses it
+            // to keep a still-visible toast with identical content, or replace
+            // it when the content changed.
             toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />
@@ -708,7 +704,8 @@ const RawElementNodeRenderer = (
       // Resizable dataframes measure parent container width for the resize feature.
       // Parent needs defined width (not fit-content) for measurement to work.
       // Only needed in root where resize is enabled; disabled in nested containers.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       const config = needsFullWidth
         ? new ElementContainerConfig({
             minStretchWidth: MinStretchWidth.LARGE,
@@ -738,7 +735,8 @@ const RawElementNodeRenderer = (
       // VegaLite charts with embedded dataframes need a defined parent width
       // (not fit-content) for proper measurement and rendering due to the resize feature.
       // Resize is disabled in nested containers, so this is only necessary in the root container.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
       const needsFlex = isInHorizontalLayout && !node.element.widthConfig
       const config =
@@ -912,21 +910,25 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
       // Height configuration for chat input (same pattern as textArea):
-      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min
+      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min.
+      //   In horizontal layouts, the default layout styles stretch it to the row.
       // - pixel: container allows expansion, inner component handles height
       // - content (default): auto-expand with text
       const heightConfig = node.element.heightConfig
       const chatInputConfig = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: heightConfig?.useStretch
-          ? { height: "100%", flex: "1 1 8rem" }
-          : heightConfig?.pixelHeight
-            ? {
-                height: "auto",
-                overflow: "visible",
-                ...(isInHorizontalLayout ? {} : { flex: "" }),
-              }
-            : undefined,
+        styleOverrides:
+          heightConfig?.useStretch === true
+            ? isInHorizontalLayout
+              ? undefined
+              : { height: "100%", flex: "1 1 8rem" }
+            : heightConfig?.pixelHeight
+              ? {
+                  height: "auto",
+                  overflow: "visible",
+                  ...(isInHorizontalLayout ? {} : { flex: "" }),
+                }
+              : undefined,
       })
 
       return (
@@ -1112,12 +1114,12 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <EChartsChart
-            // An ECharts chart only has an id when the user gave it a key.
-            // An unkeyed chart has none, so it falls back to positional
-            // identity like other elements.
+            // An ECharts chart only has an id when selections are activated or
+            // the user gave it a key. An unkeyed display-only chart has none,
+            // so it falls back to positional identity like other elements.
             key={echartsProto.id || undefined}
             element={echartsProto}
-            {...elementProps}
+            {...widgetProps}
           />
         </ElementContainer>
       )
@@ -1197,12 +1199,16 @@ const RawElementNodeRenderer = (
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
-      // flex with height to be set on the element container.
-      const useStretchHeight = node.element.heightConfig?.useStretch
+      // flex with height to be set on the element container. In horizontal
+      // layouts, the default layout styles stretch a stretch-height text area
+      // to the row.
+      const useStretchHeight = node.element.heightConfig?.useStretch === true
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: useStretchHeight
-          ? { height: "100%", flex: "1 1 8rem" }
+          ? isInHorizontalLayout
+            ? undefined
+            : { height: "100%", flex: "1 1 8rem" }
           : // Content height text area in vertical layout cannot have flex.
             { height: "auto", ...(isInHorizontalLayout ? {} : { flex: "" }) },
       })
@@ -1306,7 +1312,7 @@ const ElementNodeRenderer = (
     useContext(ScriptRunContext)
   const { node } = props
 
-  const elementType = node.element.type || ""
+  const elementType = node.element.type ?? ""
 
   const enable = shouldComponentBeEnabled(elementType, scriptRunState)
   const isStale = isComponentStale(

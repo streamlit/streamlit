@@ -17,12 +17,10 @@
 
 from __future__ import annotations
 
-import datetime
 import itertools
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
-
-from typing_extensions import NotRequired
+from datetime import date, datetime, time, timedelta
+from typing import TYPE_CHECKING, Literal, NotRequired, TypeAlias, TypedDict, overload
 
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import (
@@ -2391,11 +2389,11 @@ def DatetimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     alignment: ContentAlignment | None = None,
-    default: datetime.datetime | None = None,
+    default: datetime | None = None,
     format: str | DateTimeFormat | None = None,
-    min_value: datetime.datetime | None = None,
-    max_value: datetime.datetime | None = None,
-    step: int | float | datetime.timedelta | None = None,
+    min_value: datetime | None = None,
+    max_value: datetime | None = None,
+    step: int | float | timedelta | None = None,
     timezone: str | None = None,
 ) -> ColumnConfig:
     """Configure a datetime column in ``st.dataframe`` or ``st.data_editor``.
@@ -2552,7 +2550,7 @@ def DatetimeColumn(
             format=format,
             min_value=None if min_value is None else min_value.isoformat(),
             max_value=None if max_value is None else max_value.isoformat(),
-            step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
+            step=step.total_seconds() if isinstance(step, timedelta) else step,
             timezone=timezone,
         ),
     )
@@ -2568,11 +2566,11 @@ def TimeColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     alignment: ContentAlignment | None = None,
-    default: datetime.time | None = None,
+    default: time | None = None,
     format: str | Literal["localized", "iso8601"] | None = None,
-    min_value: datetime.time | None = None,
-    max_value: datetime.time | None = None,
-    step: int | float | datetime.timedelta | None = None,
+    min_value: time | None = None,
+    max_value: time | None = None,
+    step: int | float | timedelta | None = None,
 ) -> ColumnConfig:
     """Configure a time column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -2722,7 +2720,7 @@ def TimeColumn(
             format=format,
             min_value=None if min_value is None else min_value.isoformat(),
             max_value=None if max_value is None else max_value.isoformat(),
-            step=step.total_seconds() if isinstance(step, datetime.timedelta) else step,
+            step=step.total_seconds() if isinstance(step, timedelta) else step,
         ),
     )
 
@@ -2737,10 +2735,10 @@ def DateColumn(
     required: bool | None = None,
     pinned: bool | None = None,
     alignment: ContentAlignment | None = None,
-    default: datetime.date | None = None,
+    default: date | None = None,
     format: str | Literal["localized", "distance", "iso8601"] | None = None,
-    min_value: datetime.date | None = None,
-    max_value: datetime.date | None = None,
+    min_value: date | None = None,
+    max_value: date | None = None,
     step: int | None = None,
 ) -> ColumnConfig:
     """Configure a date column in ``st.dataframe`` or ``st.data_editor``.

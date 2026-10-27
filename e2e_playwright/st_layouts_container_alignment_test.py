@@ -12,10 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.shared.app_utils import (
+    click_toggle,
+    get_element_by_key,
+    get_text_area,
+)
+
+# Match theme.sizes.defaultChartHeight (21.875rem) and defaultChartWidth (25rem).
+DEFAULT_CHART_HEIGHT_PX = 350
+DEFAULT_CHART_WIDTH_PX = 400
+# Figure layout.height in the app. Distinct from Plotly's 450px default.
+PLOTLY_FIGURE_HEIGHT_PX = 320
+# Match the dataframe's default height (defaultTableHeight, 25rem).
+DEFAULT_DATAFRAME_HEIGHT_PX = 400
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -36,8 +48,371 @@ CONTAINER_KEYS = [
 ]
 
 
+def _height(locator: Locator) -> int | None:
+    box = locator.bounding_box()
+    return round(box["height"]) if box else None
+
+
+def _expect_chart_drawn(chart: Locator, width_px: int) -> None:
+    """Assert that Vega drew across its box instead of only reserving space."""
+    drawing = chart.locator("canvas, svg").first
+    expect(drawing).to_be_visible()
+    expect(drawing).to_have_css("width", f"{width_px}px")
+
+
 def test_layouts_container_alignment(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for each top-level container in st_layouts_container_alignment.py."""
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
         assert_snapshot(locator, name=f"st_layouts_container_alignment-{key}")
+
+
+def _expect_heights_match(
+    app: Page, tallest: Locator, stretched: list[Locator]
+) -> None:
+    def _heights_match() -> bool:
+        tallest_height = _height(tallest)
+        return bool(tallest_height) and all(
+            _height(locator) == tallest_height for locator in stretched
+        )
+
+    wait_until(app, _heights_match)
+
+
+def test_stretch_height_in_horizontal_container(app: Page):
+    """Stretch-height children grow to the tallest element in their row."""
+    row = get_element_by_key(app, "container-horizontal-stretch-height")
+    tallest = get_element_by_key(app, "stretch-height-tallest")
+    stretch_metric = row.get_by_test_id("stMetric")
+    content_card = get_element_by_key(app, "stretch-height-content-card")
+    expect(stretch_metric).to_be_visible()
+    _expect_heights_match(
+        app, tallest, [get_element_by_key(app, "stretch-height-card"), stretch_metric]
+    )
+
+    # The chart and the dataframe size themselves from their container.
+    data_row = get_element_by_key(app, "container-horizontal-stretch-height-data")
+    chart_and_dataframe = data_row.get_by_test_id("stFullScreenFrame")
+    expect(chart_and_dataframe).to_have_count(2)
+    _expect_heights_match(
+        app,
+        get_element_by_key(app, "stretch-height-data-tallest"),
+        chart_and_dataframe.all(),
+    )
+
+    # A stretch-height text area fills the row and keeps its pixel width.
+    stretch_text_area = get_text_area(app, "Stretch text area")
+    _expect_heights_match(
+        app,
+        get_element_by_key(app, "stretch-height-input-tallest"),
+        [stretch_text_area],
+    )
+    expect(stretch_text_area).to_have_css("width", "200px")
+
+    # Content-height siblings keep their own height.
+    def _content_card_is_shorter() -> bool:
+        content_height = _height(content_card)
+        tallest_height = _height(tallest)
+        return (
+            content_height is not None
+            and tallest_height is not None
+            and content_height < tallest_height
+        )
+
+    wait_until(app, _content_card_is_shorter)
+
+
+def test_stretch_chart_default_height_in_horizontal_container(app: Page):
+    """Stretch charts fall back to their default height and shrink back with the row."""
+    fallback_chart = get_element_by_key(
+        app, "container-horizontal-stretch-chart-fallback"
+    ).get_by_test_id("stVegaLiteChart")
+    # A short sibling doesn't squash the chart to the button height.
+    expect(fallback_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # A content-width chart keeps its default width instead of collapsing.
+    content_width_chart = get_element_by_key(
+        app, "container-horizontal-content-width-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(content_width_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(content_width_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+    _expect_chart_drawn(content_width_chart, DEFAULT_CHART_WIDTH_PX)
+    pixel_height_chart = get_element_by_key(
+        app, "container-horizontal-content-width-pixel-height-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(pixel_height_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(pixel_height_chart).to_have_css("height", "200px")
+    _expect_chart_drawn(pixel_height_chart, DEFAULT_CHART_WIDTH_PX)
+
+    # Plotly falls back to the figure height, and the plot actually draws.
+    plotly_chart = get_element_by_key(
+        app, "container-horizontal-stretch-plotly-fallback"
+    ).get_by_test_id("stPlotlyChart")
+    expect(plotly_chart).to_have_css("height", f"{PLOTLY_FIGURE_HEIGHT_PX}px")
+    expect(plotly_chart.locator("svg.main-svg, canvas").first).to_be_visible()
+
+    shrink_row = get_element_by_key(app, "container-horizontal-stretch-chart-shrink")
+    shrink_card = get_element_by_key(app, "stretch-chart-shrink-card")
+    shrink_chart = shrink_row.get_by_test_id("stVegaLiteChart")
+    _expect_heights_match(app, shrink_card, [shrink_chart])
+
+    click_toggle(app, "Tall card")
+    # The chart returns to its default height instead of keeping the height
+    # of the tall card it rendered at.
+    expect(shrink_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # A vconcat chart has no single-view fallback. It must not reserve the
+    # default chart height or paint over the element below the row.
+    composition_row = get_element_by_key(
+        app, "container-horizontal-stretch-composition"
+    )
+    composition_chart = composition_row.get_by_test_id("stVegaLiteChart")
+    below_composition = get_element_by_key(app, "below-stretch-composition")
+    expect(composition_chart).not_to_have_css("contain", "size")
+
+    def _composition_stays_in_row() -> bool:
+        chart_height = _height(composition_chart)
+        row_box = composition_row.bounding_box()
+        below_box = below_composition.bounding_box()
+        return (
+            chart_height is not None
+            and chart_height < DEFAULT_CHART_HEIGHT_PX
+            and row_box is not None
+            and below_box is not None
+            and below_box["y"] + 1 >= row_box["y"] + row_box["height"]
+        )
+
+    wait_until(app, _composition_stays_in_row)
+    expect(composition_chart.locator("canvas, svg")).to_have_count(0)
+
+
+def _content_fits(locator: Locator) -> bool:
+    """Whether the element's content fits without overflowing it."""
+    # Allow 1px because scrollHeight and clientHeight round fractional heights
+    # differently.
+    return bool(locator.evaluate("el => el.scrollHeight - el.clientHeight <= 1"))
+
+
+def _scrolls(locator: Locator) -> bool:
+    """Whether the element overflows and lets users scroll to the rest."""
+    return not _content_fits(locator) and bool(
+        locator.evaluate(
+            "el => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY)"
+        )
+    )
+
+
+def test_stretch_charts_fit_containers_with_definite_height(app: Page):
+    """Stretch charts shrink to fit their siblings in definite-height containers."""
+    for container in (
+        get_element_by_key(app, "fixed-card-title-and-chart"),
+        get_element_by_key(app, "fixed-row-stretch-kpi-cards"),
+        get_element_by_key(app, "fixed-tabs-title-and-chart").get_by_role("tabpanel"),
+    ):
+        charts = container.get_by_test_id("stVegaLiteChart")
+        expect(charts.first).to_be_visible()
+
+        def _charts_fit(
+            container: Locator = container, charts: Locator = charts
+        ) -> bool:
+            heights = [_height(chart) for chart in charts.all()]
+            return _content_fits(container) and all(
+                height is not None and 0 < height < DEFAULT_CHART_HEIGHT_PX
+                for height in heights
+            )
+
+        # The container must not scroll because of the chart's default height.
+        wait_until(app, _charts_fit)
+
+    # Parameter-binding controls take part of the chart's height instead of
+    # overflowing the container.
+    bindings_card = get_element_by_key(app, "fixed-card-chart-with-bindings")
+    expect(bindings_card.locator("form.vega-bindings")).to_be_visible()
+    wait_until(app, lambda: _content_fits(bindings_card))
+
+
+def test_stretch_dataframe_default_height(app: Page):
+    """Stretch dataframes keep their default height and shrink in fixed-height cards."""
+    plain_dataframe = get_element_by_key(app, "stretch-dataframe-plain").get_by_test_id(
+        "stDataFrame"
+    )
+    expect(plain_dataframe).to_have_css("height", f"{DEFAULT_DATAFRAME_HEIGHT_PX}px")
+
+    # The dataframe card keeps the default height, and the chart card next to
+    # it stretches to match instead of setting the row height.
+    dataframe_card = get_element_by_key(app, "stretch-dataframe-card")
+    chart_card = get_element_by_key(app, "stretch-chart-card")
+    card_dataframe = dataframe_card.get_by_test_id("stDataFrame")
+
+    def _cards_match_at_default_height() -> bool:
+        dataframe_card_height = _height(dataframe_card)
+        return (
+            bool(dataframe_card_height)
+            and _height(chart_card) == dataframe_card_height
+            and (_height(card_dataframe) or 0) >= DEFAULT_DATAFRAME_HEIGHT_PX
+        )
+
+    wait_until(app, _cards_match_at_default_height)
+
+    # In a definite-height card, the dataframe shrinks to fit below the title
+    # instead of claiming its default height and scrolling the card.
+    fixed_card = get_element_by_key(app, "fixed-card-title-and-dataframe")
+    fixed_dataframe = fixed_card.get_by_test_id("stDataFrame")
+
+    def _dataframe_fits() -> bool:
+        height = _height(fixed_dataframe)
+        return (
+            _content_fits(fixed_card)
+            and height is not None
+            and 0 < height < DEFAULT_DATAFRAME_HEIGHT_PX
+        )
+
+    wait_until(app, _dataframe_fits)
+
+
+def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
+    """Stretch containers and forms grow past a fixed-height parent; tabs scroll."""
+    form_parent = get_element_by_key(app, "fixed-parent-stretch-form")
+    for block, parent in (
+        (form_parent.get_by_test_id("stForm"), form_parent),
+        (
+            get_element_by_key(app, "stretch-card-overflow"),
+            get_element_by_key(app, "fixed-row-stretch-card"),
+        ),
+    ):
+        expect(block).to_be_visible()
+
+        def _grows_past_parent(
+            block: Locator = block, parent: Locator = parent
+        ) -> bool:
+            block_height = _height(block)
+            parent_height = _height(parent)
+            return (
+                _content_fits(block)
+                and _scrolls(parent)
+                and block_height is not None
+                and parent_height is not None
+                and block_height > parent_height
+            )
+
+        wait_until(app, _grows_past_parent)
+
+    # A short stretch form and container still fill the fixed parent.
+    for block, parent_key in (
+        (
+            get_element_by_key(app, "fixed-parent-short-stretch-form").get_by_test_id(
+                "stForm"
+            ),
+            "fixed-parent-short-stretch-form",
+        ),
+        (
+            get_element_by_key(app, "short-stretch-card"),
+            "fixed-parent-short-stretch-card",
+        ),
+    ):
+        parent = get_element_by_key(app, parent_key)
+        expect(block).to_be_visible()
+
+        def _fills_parent(block: Locator = block, parent: Locator = parent) -> bool:
+            block_height = _height(block)
+            parent_height = _height(parent)
+            return (
+                _content_fits(parent)
+                and block_height is not None
+                and parent_height is not None
+                and block_height <= parent_height
+                and block_height > parent_height * 0.7
+            )
+
+        wait_until(app, _fills_parent)
+
+    # Stretch tabs stay capped at the parent and scroll inside the panel.
+    tab_parent = get_element_by_key(app, "fixed-parent-stretch-tabs")
+    tab_panel = tab_parent.get_by_role("tabpanel")
+    expect(tab_panel).to_be_visible()
+
+    def _tabs_stay_capped() -> bool:
+        panel_height = _height(tab_panel)
+        parent_height = _height(tab_parent)
+        return (
+            _scrolls(tab_panel)
+            and _content_fits(tab_parent)
+            and panel_height is not None
+            and parent_height is not None
+            and panel_height <= parent_height
+        )
+
+    wait_until(app, _tabs_stay_capped)
+
+    # Stretch code scrolls inside the card instead of growing it. The scroll
+    # container is the inner `pre`; the `stCode` wrapper only fills the card.
+    code_parent = get_element_by_key(app, "fixed-parent-stretch-code")
+    code_card = get_element_by_key(app, "stretch-code-card")
+    code_pre = code_card.get_by_test_id("stCode").locator("pre")
+    expect(code_pre).to_be_visible()
+
+    def _code_scrolls_inside_card() -> bool:
+        card_height = _height(code_card)
+        parent_height = _height(code_parent)
+        return (
+            _content_fits(code_parent)
+            and _scrolls(code_pre)
+            and card_height is not None
+            and parent_height is not None
+            and card_height <= parent_height
+        )
+
+    wait_until(app, _code_scrolls_inside_card)
+
+
+def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):
+    """Graphviz and text areas keep a usable size in stretched horizontal rows."""
+    graphviz = get_element_by_key(
+        app, "container-horizontal-stretch-graphviz"
+    ).get_by_test_id("stGraphVizChart")
+
+    def _graphviz_has_natural_size() -> bool:
+        box = graphviz.bounding_box()
+        svg_box = graphviz.locator("svg").bounding_box()
+        return (
+            box is not None
+            and box["width"] > 100
+            and svg_box is not None
+            and svg_box["height"] > 100
+        )
+
+    wait_until(app, _graphviz_has_natural_size)
+
+    # The field stays as tall as its textarea instead of stretching into an
+    # empty box with the resize handle in the middle.
+    text_area_root = get_text_area(app, "Distribute text area").get_by_test_id(
+        "stTextAreaRootElement"
+    )
+    textarea = text_area_root.locator("textarea")
+
+    def _root_hugs_textarea() -> bool:
+        root_height = _height(text_area_root)
+        textarea_height = _height(textarea)
+        return (
+            root_height is not None
+            and textarea_height is not None
+            and root_height - textarea_height <= 2
+        )
+
+    wait_until(app, _root_hugs_textarea)
+
+
+def test_checkbox_alignment_in_horizontal_container(app: Page):
+    """Bottom-aligned rows use the same 8px checkbox and toggle margin as columns."""
+    bottom_row = get_element_by_key(app, "container-horizontal-bottom-checkboxes")
+    bottom_checkboxes = bottom_row.get_by_test_id("stCheckbox")
+    expect(bottom_checkboxes).to_have_count(2)
+    for index in range(2):
+        expect(bottom_checkboxes.nth(index)).to_have_css("margin-bottom", "8px")
+
+    # The default top alignment must not pick up the margin.
+    top_checkbox = get_element_by_key(
+        app, "container-horizontal-top-checkboxes"
+    ).get_by_test_id("stCheckbox")
+    expect(top_checkbox).to_have_css("margin-bottom", "0px")
+    expect(top_checkbox).to_have_css("margin-top", "0px")

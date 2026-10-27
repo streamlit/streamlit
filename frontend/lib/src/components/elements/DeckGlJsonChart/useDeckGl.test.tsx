@@ -24,6 +24,7 @@ import {
 } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 
 import {
@@ -467,6 +468,79 @@ describe("useDeckGl", () => {
   })
 
   describe("selection sanitization", () => {
+    it("keeps a false update trigger when selection rewrites fill colors", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              // Scalar triggers such as 0 and false must be wrapped before
+              // selection state is added. getFillColor runs first, so 0 must
+              // not be spread as a non-array.
+              updateTriggers: { getFillColor: 0, getLineColor: false },
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { updateTriggers?: Record<string, unknown> }
+      }
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        false,
+        [],
+        false,
+      ])
+    })
+
+    it("skips null layers when selection mode makes layers pickable", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          // pydeck serializes a `None` layer as JSON `null`.
+          layers: [
+            null,
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layers = result.current.deck.layers as Array<{
+        id: string
+        props: { pickable?: boolean }
+      } | null>
+      expect(layers).toHaveLength(2)
+      expect(layers[0]).toBeNull()
+      expect(layers[1]?.id).toBe("points")
+      expect(layers[1]?.props.pickable).toBe(true)
+    })
+
     const getPropsWithArrayData = (
       data: unknown[],
       layerId: string | null = "test-layer"
@@ -861,9 +935,9 @@ describe("useDeckGl", () => {
       const updatedProps = getPropsWithArrayData(updatedData, "object-layer")
       rerender(updatedProps)
 
-      expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
-        updatedData[1]
-      )
+      expect(
+        result.current.data.selection.objects["object-layer"]?.[0]
+      ).toEqual(updatedData[1])
     })
   })
 
@@ -988,6 +1062,60 @@ describe("useDeckGl", () => {
 
       expect(result.current.deck.views).toBeUndefined()
       expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+    })
+  })
+
+  describe("st.map primary fill placeholder", () => {
+    it("resolves getFillColor primary to theme primary with default alpha", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: "primary",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor).toEqual([r, g, b, 160])
+    })
+
+    it("does not rewrite concrete getFillColor arrays", () => {
+      const concrete = [200, 30, 0, 160]
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: concrete,
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      expect(layer.props.getFillColor).toEqual(concrete)
     })
   })
 })

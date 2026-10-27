@@ -67,7 +67,7 @@ const EMPTY_LAYERS: LayersList = []
 
 export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const {
-    disabled,
+    disabled = false,
     disableFullscreenMode,
     element,
     fragmentId,
@@ -83,7 +83,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const isStretchHeight = !!heightConfig?.useStretch
+  const isStretchHeight = heightConfig?.useStretch === true
 
   const {
     createTooltip,
@@ -106,8 +106,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
-    deck.mapProvider === "mapbox" ||
-    (deck?.mapStyle && deck.mapStyle?.includes("mapbox") === true)
+    deck.mapProvider === "mapbox" || deck.mapStyle?.includes("mapbox") === true
   const showBasemap = useMemo(
     () =>
       shouldShowBasemap({
@@ -135,7 +134,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
       const { index, object } = info
 
-      const layerId = `${info.layer?.id || null}`
+      const layerId = `${info.layer?.id ?? null}`
       const currState = selection
       /** true if a user clicked outside of any layer */
       const isResetClick = index === -1
@@ -160,11 +159,11 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
           case DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT: {
             const selectionMap: Map<number, unknown> = new Map(
               ((): [number, unknown][] => {
-                const indices = currState?.selection?.indices?.[layerId] || []
+                const indices = currState.selection.indices[layerId] ?? []
 
                 return indices.map((currIndex, i) => [
                   currIndex,
-                  currState.selection?.objects?.[layerId]?.[i],
+                  currState.selection.objects[layerId]?.[i],
                 ])
               })()
             )
@@ -235,6 +234,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   // Name the chart only when alt is non-blank. Pair aria-label with
   // role="figure" so the name is exposed on this generic div without
   // role="img", which would make the toolbar and Mapbox controls presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -287,6 +287,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
               <>
                 <StaticMap
                   mapStyle={
+                    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null or empty styles from pydeck JSON pass through unchanged
                     deck.mapStyle &&
                     (typeof deck.mapStyle === "string"
                       ? deck.mapStyle

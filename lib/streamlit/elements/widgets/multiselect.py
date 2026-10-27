@@ -27,6 +27,7 @@ from typing import (
 )
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
@@ -174,7 +175,7 @@ class MultiSelectSerde(Generic[T]):
             try:
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
-            except ValueError:  # noqa: PERF203
+            except ValueError:
                 values.append(v)
         return values
 
@@ -894,6 +895,26 @@ class MultiSelectMixin:
             proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                widget_name,
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.list_of(agent_spec.STRING),
+                label=label,
+                # The formatted options a client must send back, not the
+                # author's Python objects.
+                options=formatted_options,
+                help=proto.help or None,
+                # The wire form encodes an explicit empty placeholder as a
+                # single space; report the public empty value.
+                placeholder="" if placeholder == " " else placeholder,
+                max_selections=max_selections,
+                accept_new_options=accept_new_options,
+                filter_mode=filter_mode,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
 
         return current_values

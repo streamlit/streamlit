@@ -35,6 +35,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -42,6 +43,8 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -71,6 +74,7 @@ from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -818,7 +822,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -841,7 +845,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -864,7 +868,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -887,7 +891,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -910,7 +914,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -933,7 +937,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -986,11 +990,13 @@ class DataEditorMixin:
               performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The editor will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. In a fixed-height
+              container, or a stretch container that fills one, the editor
+              keeps a minimum height that displays up to three rows and shrinks
+              to the remaining space when that minimum fits. Otherwise, the
+              editor uses its default height (at most ten rows) and still
+              grows to match a taller sibling.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
 
@@ -1113,8 +1119,30 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
-        on_change : callable
-            An optional callback invoked when this data_editor's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the data editor should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the data editor. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a cell edit (Enter, Tab, or leaving the cell),
+              pastes, adds a row, deletes a row, or clears cell contents.
+              Typing in an open cell editor does not rerun the app until the
+              edit is committed.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits an edit. The data editor still updates in the UI. The
+              new value is available on the next rerun triggered by something
+              else, such as another widget interaction. Ignored commits are
+              held in the browser and are lost if the page is refreshed
+              before that rerun. Inside ``st.form``, this has no effect: the
+              form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1246,9 +1274,9 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         validate_width(width, allow_content=True)
@@ -1262,7 +1290,7 @@ class DataEditorMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -1524,9 +1552,12 @@ class DataEditorMixin:
 
         serde = DataEditorSerde()
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1539,7 +1570,38 @@ class DataEditorMixin:
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            # st.dataframe and st.data_editor share this proto. The schema and
+            # row preview are derived facts about the payload, not command
+            # parameters.
+            agent_props=agent_spec.element(
+                "data_editor",
+                key=proto.id or None,
+                # A browser user can edit the table. This API only reports it.
+                # Kept even when the app locks the editor: unlike a chart
+                # without selections, it is still an editor, and a rejection
+                # should say this API does not accept the edit.
+                support="action_unsupported",
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                num_rows=num_rows,
+                # A bool locks or unlocks the whole editor. False is reported:
+                # omitting it would look like a column list, which is already
+                # applied to column_config and left out here.
+                disabled=disabled if isinstance(disabled, bool) else None,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
+            if agent_spec.is_recording()
+            else None,
+        )
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

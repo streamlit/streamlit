@@ -84,7 +84,7 @@ function Tooltip({
       if (e.key === "Escape") clearTooltip()
     }
     const handlePointerDown = (e: Event): void => {
-      if (refs.floating.current?.contains(e.target as Node)) return
+      if (refs.floating.current?.contains(e.target as Node) === true) return
       clearTooltip()
     }
 

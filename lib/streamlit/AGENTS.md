@@ -68,6 +68,21 @@ Changes to these high-fan-out internals can affect every command, message, sessi
 - **`st.cache_data` and `st.cache_resource`** (`runtime/caching/`): Hits still hash arguments; `st.cache_data` also copies and unpickles results. Be careful with large keys/results, serialization, validation, replayed messages, and lock scope.
 - **Dataframe/Arrow and streaming paths** (`dataframe_util.py`, `elements/arrow.py`, `elements/write.py`): Avoid dataframe conversions and copies, repeated Arrow serialization, per-cell styling work, and many tiny streaming updates that repeatedly rebuild growing payloads.
 
+## Agent API element descriptions
+
+Every `st.*` command that emits an element or container provides an agent description. Build it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills the proto, and pass it as `agent_props=`. The exceptions are listed in the coverage test's `_NOT_DESCRIBED`: a command that delegates to another command, or one that never joins the element tree. That test holds each description to the command's signature. Details are in `elements/lib/agent_spec.py`.
+
+The JSON is stored on `ForwardMsg.metadata.agent_props`. The builders return `None` unless `register_agent_session` marked the session, which the agent API does for each session it creates. To check descriptions end to end, run the app with `--server.enableAgentApi=true` (a hidden option) and `POST {}` to `/_stcore/agent/interact`; the snapshot it returns is built from these descriptions.
+
+- **Public names only:** the first argument is the public command name; each keyword is one of the command's parameter names, never a proto field name or synonym. Pass `key=element_id` for an element with an identity.
+- **Report what changes meaning or use, omit presentation:** pass a value that reads as the public parameter, and `None` for an unset optional parameter, which is dropped. Leave out width, height, gaps, alignment, colors, and other styling.
+- **Choose the value case by case:** use the author's argument or an already processed form of it, whichever reads beside the command's docstring. Dedented and stringified text is fine. Omit a documented default (`unsafe_allow_html` when false, `format=None`, `hide_index=None`); the docstring explains the fallback. Use the processed result when the author's object cannot be reported, such as an iterable already consumed into `column_order`.
+- **Publish nothing the browser does not receive:** a description must not reveal data the page never gets, such as a secret, a field the proto drops, or the unreduced form of a value the browser only receives rounded. A processed parameter value is fine; extra information is not.
+- **Widgets:** pass `action="value"` (or `"trigger"`) and a `value_schema` built from the `agent_spec` constants (`STRING`, `INTEGER`, `DATE`, `list_of`, `range_of`, …). A widget with options reports the `format_func` labels, so its schema is `STRING`. Set `clearable=True` when a later value can be emptied: choosing the current value again, or clearing back to an empty default. Pass `choices` when the values a request may send are not the `options` parameter: `st.tabs` passes its labels, and `st.feedback` passes the indexes because `options` names the set. Agent requests are validated against that description, so a wrong field refuses a legal value: `action` chooses `widget_state` or `trigger`; `value_schema` chooses the JSON type and `maxItems`; `options` or `choices` and `max_selections` choose membership, which `accept_new_options` lifts; `clearable` chooses what `null` does.
+- **Arguments are evaluated in every session, browsers included.** They must never raise for an input the command accepts (never truth-test a sequence parameter: a NumPy array or pandas Series has no truth value), and expensive preparation belongs behind `agent_spec.is_recording()`.
+- **Gaps are explicit:** set `support="browser_required"` when rendering depends on JavaScript the agent API does not run, and `support="action_unsupported"` when a browser user can act on the element and this API only reports that action. A display-only element has no `support` field.
+- **Every parameter is decided:** report it, or list it in the coverage test's `_OMITTED_EVERYWHERE` or `_OMITTED` with the reason. A reported name that is not a parameter goes in `_DERIVED_PROPS`. The test fails until one of these is done.
+
 ## Embedded agent skills
 
 User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
@@ -83,6 +98,10 @@ coverage (95% or higher) of our Python code in `lib/streamlit`.
 - Naming: `my_example_test.py`
 - Anti-regression checks: Where practical, go beyond the happy path by covering a plausible failure mode or edge case (invalid input, boundary condition, absent side effect). Do **not** add assertions that are logically implied by an earlier assertion — e.g., if you assert `x is True`, asserting `x is not False` is a tautology and adds no value. See `lib/tests/AGENTS.md` for detailed guidance and examples.
 - Coverage exclusions: Use `# pragma: no cover` for code that cannot reasonably be tested, such as import fallbacks for optional dependencies, "should never happen" defensive checks, or platform-specific unreachable paths. Include a brief reason, e.g., `# pragma: no cover - optional dep` or `# pragma: no cover - defensive`.
+
+### Public API changes
+
+Cover new public `st.*` commands and new or changed parameters in typing tests (`lib/tests/streamlit/typing/`; see below). When a command can be represented as an element or block, support the same changes in AppTest (`lib/streamlit/testing/v1/`): a typed node, query properties on both `AppTest` and `Block`, interaction methods for widgets, and the new or changed parameter on that node.
 
 ### Typing Tests
 

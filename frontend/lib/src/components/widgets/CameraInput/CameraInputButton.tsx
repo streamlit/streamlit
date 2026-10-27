@@ -45,9 +45,9 @@ function CameraInputButton({
 }: CameraInputButtonProps): ReactElement {
   return (
     <StyledCameraInputBaseButton
-      disabled={disabled || false}
-      onClick={onClick || (() => {})}
-      progress={progress || null}
+      disabled={disabled ?? false}
+      onClick={onClick ?? (() => {})}
+      progress={progress ?? null}
       data-testid="stCameraInputButton"
     >
       {children}

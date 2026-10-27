@@ -17,9 +17,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from numbers import Integral
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     EXPANDABLE_TYPE_TO_PROTO_MAPPING,
     ExpandableType,
@@ -62,7 +63,7 @@ from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.dialog import Dialog, DialogWidth
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -111,6 +112,21 @@ class _TabsSerde:
 
     def deserialize(self, ui_value: str | None) -> str:
         return ui_value if ui_value is not None else self.default_label
+
+
+def _reported_on_change(
+    on_change: Literal["ignore", "rerun"] | WidgetCallback, *, stateful: bool
+) -> Literal["ignore", "rerun"] | None:
+    """The ``on_change`` mode to report, or None when the container is not a widget.
+
+    A callback reruns the script, which is all a client can observe, so it is
+    reported as ``rerun``.
+    """
+    if not stateful:
+        return None
+    if on_change == "ignore":
+        return "ignore"
+    return "rerun"
 
 
 class LayoutsMixin:
@@ -173,8 +189,9 @@ class LayoutsMixin:
               height of its content.
             - ``"stretch"``: The height of the container matches the height of
               its content or the height of the parent container, whichever is
-              larger. If the container is not in a parent container, the height
-              of the container matches the height of its content.
+              larger. In a horizontal container, the parent is the row. If the
+              container is not in a parent container, the height of the
+              container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -242,8 +259,11 @@ class LayoutsMixin:
               fill the height of the container. A standalone element is aligned
               to the top.
 
-              When ``horizontal`` is ``True``, ``"distribute"`` aligns the
-              elements the same as ``"top"``.
+              When ``horizontal`` is ``True``, ``"distribute"`` stretches
+              each element to the height of its row. Elements that fill their
+              space, like bordered containers and bordered metrics, visibly
+              stretch. Other elements keep their height and sit at the top of
+              the row.
 
         gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
@@ -452,8 +472,218 @@ class LayoutsMixin:
         if autoscroll is not None:
             block_proto.autoscroll = autoscroll
 
-        return self.dg._block(block_proto)
+        return self.dg._block(
+            block_proto,
+            agent_props=agent_spec.block(
+                # `border` and `horizontal` are surface styling and layout
+                # direction, neither of which a non-visual client can use.
+                "container",
+                key=key,
+            ),
+        )
 
+    # Type checkers see a fixed-length tuple for literal counts 1-6 and for
+    # width tuples of length 1-6, so they length-check
+    # `left, right = st.columns(2)` and `left, right = st.columns((1, 2))`.
+    # Every other spec, including any list of widths, is a list. Runtime
+    # always returns a list.
+    #
+    # Each literal count is also an int, and each width tuple is also a
+    # sequence, so these overloads overlap the list fallback. The ignores
+    # tell mypy that overlap is intentional.
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[1],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[2],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[3],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[4],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[5],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: Literal[6],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    # Width tuples of length 1-6.
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[int | float, int | float, int | float, int | float, int | float],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(  # type: ignore[overload-overlap]
+        self,
+        spec: tuple[
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+            int | float,
+        ],
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> tuple[
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+        DeltaGenerator,
+    ]: ...
+
+    @overload
+    def columns(
+        self,
+        spec: SpecType,
+        *,
+        gap: Gap | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
+    ) -> list[DeltaGenerator]: ...
+
+    # mypy and ty require the implementation return to be a supertype of
+    # every overload. Sequence covers the tuple overloads and the list
+    # fallback. Callers see the overloads above. Runtime always returns a list.
     @gather_metrics("columns")
     def columns(
         self,
@@ -464,7 +694,7 @@ class LayoutsMixin:
         border: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
-    ) -> list[DeltaGenerator]:
+    ) -> Sequence[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
         Inserts a number of multi-element containers laid out side-by-side and
@@ -541,6 +771,21 @@ class LayoutsMixin:
         list of containers
             A list of container objects.
 
+            Type checkers see a fixed-length tuple in either of these cases:
+
+            - ``spec`` is an integer literal from ``1`` to ``6``, or a
+              variable whose type is still that literal.
+            - ``spec`` is a tuple of 1 to 6 numbers (``int`` or ``float``),
+              or a variable with that fixed-length tuple type.
+
+            Type checkers then report mismatched unpacking, such as
+            ``a, b = st.columns(3)`` or ``a, b = st.columns((1, 2, 3))``.
+            Every other ``spec`` is a list, including a non-literal integer,
+            a list of widths, and a tuple longer than 6 or of unknown length.
+            Streamlit always returns a list, so tuple-only operations are not
+            valid. To annotate a variable or parameter that holds columns from
+            any ``spec``, use ``Sequence[DeltaGenerator]``.
+
         Examples
         --------
         **Example 1: Use context management**
@@ -597,7 +842,7 @@ class LayoutsMixin:
         >>> left, middle, right = st.columns(3, vertical_alignment="bottom")
         >>>
         >>> left.text_input("Write something")
-        >>> middle.button("Click me", use_container_width=True)
+        >>> middle.button("Click me", width="stretch")
         >>> right.checkbox("Check me")
 
         .. output::
@@ -731,9 +976,23 @@ class LayoutsMixin:
         validate_width(width=width)
         block_proto.width_config.CopyFrom(get_width_config(width=width))
 
-        row = self.dg._block(block_proto)
+        # st.columns and st.container both emit a FlexContainer, so the
+        # difference between "a row of columns" and "a horizontal container" is
+        # only knowable here.
+        # `spec` is widths, which is the same stretch-ratio information the
+        # columns themselves leave out.
+        row = self.dg._block(block_proto, agent_props=agent_spec.block("columns"))
         total_weight = sum(weights)
-        return [row._block(column_proto(w / total_weight)) for w in weights]
+        return [
+            # A column's share of the row is a stretch ratio, so it stays out of
+            # the description; what a non-visual client needs from a row of
+            # columns is the grouping, which the nesting already gives it.
+            row._block(
+                column_proto(w / total_weight),
+                agent_props=agent_spec.block("column"),
+            )
+            for w in weights
+        ]
 
     @gather_metrics("tabs")
     def tabs(
@@ -805,9 +1064,10 @@ class LayoutsMixin:
               height of its content.
             - ``"stretch"``: The height of the container matches the height
               of the parent container, and content that overflows scrolls
-              inside the active tab panel. If the container is not in a
-              fixed-height parent, the height of the container matches the
-              height of its content.
+              inside the active tab panel. In a horizontal container, the
+              height of the container matches the height of its row.
+              Otherwise, if the container is not in a fixed-height parent,
+              the height of the container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled inside the active tab panel.
@@ -1180,13 +1440,41 @@ class LayoutsMixin:
             block_proto.id = block_id
 
         tab_cls = get_dg_singleton_instance().tab_container_cls
-        tab_container = self.dg._block(block_proto)
+        tab_container = self.dg._block(
+            block_proto,
+            # Only a stateful tab container is addressable: the tab a client
+            # asks for is a widget value the script reads on the next run.
+            # Otherwise the open tab is browser-local state the server never
+            # learns, so there is nothing to report or set.
+            agent_props=agent_spec.block(
+                "tabs",
+                key=element_id or key,
+                action="value" if is_stateful else None,
+                value_schema=agent_spec.STRING if is_stateful else None,
+                # A request selects a tab by its label. That list is `tabs`,
+                # not an `options` parameter. A stateless container has no
+                # action, so it publishes no membership list.
+                choices=list(tabs) if is_stateful else None,
+                tabs=list(tabs),
+                on_change=_reported_on_change(on_change, stateful=is_stateful),
+            ),
+        )
 
         tab_dgs: list[TabContainer] = []
-        for tab_label in tabs:
+        for index, tab_label in enumerate(tabs):
             tab_dg = cast(
                 "TabContainer",
-                tab_container._block(tab_proto(tab_label), dg_type=tab_cls),
+                tab_container._block(
+                    tab_proto(tab_label),
+                    dg_type=tab_cls,
+                    agent_props=agent_spec.block(
+                        "tab",
+                        label=tab_label,
+                        # The tab a browser shows first. Stateful tabs report the
+                        # open one as the container's `value` instead.
+                        open=None if is_stateful else index == current_tab_index,
+                    ),
+                ),
             )
             if is_stateful:
                 tab_dg.open = tab_label == current_tab_label
@@ -1585,6 +1873,26 @@ class LayoutsMixin:
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().expander_container_cls,
+                # st.expander and st.status share the Expandable proto, so the
+                # command name has to be passed explicitly. Only a stateful
+                # expander is addressable: otherwise whether it is open is
+                # browser-local state the server never learns, and an app that
+                # renders its contents lazily has nothing a client can open.
+                agent_props=agent_spec.block(
+                    "expander",
+                    key=element_id or key,
+                    action="value" if is_stateful else None,
+                    value_schema=agent_spec.BOOLEAN if is_stateful else None,
+                    label=label,
+                    # For a stateful expander only the starting state, which
+                    # `value` reports from then on.
+                    expanded=None if is_stateful else expanded,
+                    icon=icon,
+                    # "compact" and "step" say what the contents are, such as
+                    # reasoning or the stages of a timeline.
+                    type=type,
+                    on_change=_reported_on_change(on_change, stateful=is_stateful),
+                ),
             ),
         )
 
@@ -1983,6 +2291,22 @@ class LayoutsMixin:
             self.dg._block(
                 block_proto=block_proto,
                 dg_type=get_dg_singleton_instance().popover_container_cls,
+                # Addressable only when stateful, for the same reason as
+                # st.expander: otherwise being open is browser-local state.
+                agent_props=agent_spec.block(
+                    "popover",
+                    key=element_id or key,
+                    action="value" if is_stateful else None,
+                    value_schema=agent_spec.BOOLEAN if is_stateful else None,
+                    label=label,
+                    type=type,
+                    help=popover_proto.help or None,
+                    icon=icon,
+                    disabled=disabled,
+                    # A stateful popover reports whether it is open as `value`.
+                    open=None if is_stateful else current_open,
+                    on_change=_reported_on_change(on_change, stateful=is_stateful),
+                ),
             ),
         )
 
@@ -2166,7 +2490,7 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        width: Literal["small", "large", "medium"] = "small",
+        width: DialogWidth = "small",
         position: Literal["left", "center", "right"] = "center",
         dismissible: bool = True,
         icon: str | None = None,

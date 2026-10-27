@@ -208,7 +208,6 @@ try:
     data = load_data(tickers, horizon_map[horizon])
 except yf.exceptions.YFRateLimitError:
     st.warning("YFinance is rate-limiting us :(\nTry again later.")
-    load_data.clear()  # Remove the bad cache entry.
     st.stop()
     raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
@@ -234,14 +233,14 @@ bottom_left_cell = cols[0].container(
 )
 
 with bottom_left_cell:
-    cols = st.columns(2)
-    cols[0].metric(
+    metric_cols = st.columns(2)
+    metric_cols[0].metric(
         "Best stock",
         max_norm_value[1],
         delta=f"{round((max_norm_value[0] - 1) * 100)}%",
         width="content",
     )
-    cols[1].metric(
+    metric_cols[1].metric(
         "Worst stock",
         min_norm_value[1],
         delta=f"{round((min_norm_value[0] - 1) * 100)}%",
@@ -282,7 +281,7 @@ if len(tickers) <= 1:
     st.stop()
 
 NUM_COLS = 4
-cols = st.columns(NUM_COLS)
+chart_cols = st.columns(NUM_COLS)
 
 for i, ticker in enumerate(tickers):
     # Calculate peer average (excluding current stock)
@@ -314,7 +313,7 @@ for i, ticker in enumerate(tickers):
         .properties(title=f"{ticker} vs peer average", height=300)
     )
 
-    cell = cols[(i * 2) % NUM_COLS].container(border=True)
+    cell = chart_cols[(i * 2) % NUM_COLS].container(border=True)
     cell.altair_chart(chart, alt=f"{ticker} versus peer-average price")
 
     # Create Delta chart
@@ -335,7 +334,7 @@ for i, ticker in enumerate(tickers):
         .properties(title=f"{ticker} minus peer average", height=300)
     )
 
-    cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
+    cell = chart_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
     cell.altair_chart(chart, alt=f"{ticker} price gap versus peer average")
 
 st.space("medium")

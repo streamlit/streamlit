@@ -193,7 +193,7 @@ def main() -> int:
     if detection is None:
         print(
             "ERROR: No Python interpreter found.\n"
-            "Install Python 3.10+ (the easiest path is `uv` — see https://docs.astral.sh/uv/),\n"
+            "Install Python 3.11+ (the easiest path is `uv` — see https://docs.astral.sh/uv/),\n"
             "then install Streamlit (pip install streamlit) and re-run.",
             file=sys.stderr,
         )

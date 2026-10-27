@@ -19,7 +19,7 @@ Compile with: `make protobuf`
 ```protobuf
 message ForwardMsg {
   string hash = 1;                    // Unique hash for caching
-  ForwardMsgMetadata metadata = 2;    // Contains delta_path
+  ForwardMsgMetadata metadata = 2;    // delta_path, active_script_hash, agent_props
 
   oneof type {
     NewSession new_session = 4;
@@ -48,6 +48,7 @@ message ForwardMsgMetadata {
   bool cacheable = 1;
   repeated uint32 delta_path = 2;
   string active_script_hash = 4;
+  optional string agent_props = 5;    // JSON command description
   // ... more fields
 }
 ```
@@ -58,6 +59,16 @@ message ForwardMsgMetadata {
 - In MPA v2, page execution runs under page hash context (`run_with_active_hash(page_hash)`)
 - Fragment reruns restore the fragment's initialized active hash for stable element/widget identity
 - Frontend stores this as `activeScriptHash` on render-tree nodes and uses it in page filtering (`FilterMainScriptElementsVisitor`)
+
+## Agent command descriptions
+
+Agent sessions store a command description on `ForwardMsg.metadata.agent_props` for the snapshot described in `specs/2026-08-28-agent-app-interface/product-spec.md`.
+
+`ForwardMsgMetadata.agent_props` is a JSON description of the command that emitted the delta: public command name, parameter-named `props`, and for widgets `action` and `value_schema`. The command builds it with `agent_spec.element(...)` or `agent_spec.block(...)` in the same function that fills its proto. Prop values are encoded in `lib/streamlit/runtime/agent/json_encoding.py`.
+
+`element` and `block` return `None` unless `agent_spec.register_agent_session` has marked the current session. `agent_spec.is_recording()` is that check: a marked session is recording, meaning each command attaches its description. A browser session on the same server is not recording, so its messages carry none.
+
+The field is metadata, so `populate_hash_if_needed` leaves it out of the ForwardMsg hash. A `ref_hash` message copies the source metadata, so a cache hit still carries the description. How to write a description is in `lib/streamlit/AGENTS.md` under "Agent API element descriptions".
 
 ## BackMsg (client to server)
 
@@ -99,6 +110,10 @@ message Delta {
 ```
 
 **Delta path**: Array in metadata like `[0, 2, 3]` specifying tree position.
+
+The frontend (`frontend/lib/src/render-tree/AppRoot.ts`) and the agent snapshot (`lib/streamlit/runtime/agent/tree.py`, `merge_deltas`) both apply these paths. A block of the same type keeps its children; a different block type or dialog identity replaces them. A change to those rules has to land in both places.
+
+The trees still diverge after placement. The frontend merges messages as they arrive and keeps transient nodes. The snapshot merges the settled run, then drops nodes and props that have no semantic value. Do not fold the two mergers into one implementation or require the JSON tree to match the render tree node for node.
 
 ## Element types
 
@@ -200,6 +215,8 @@ ForwardMsgs include `hash` for deduplication:
 4. Frontend retrieves from cache using hash
 
 **Benefit**: Reduces bandwidth for large/unchanged elements.
+
+See [Agent command descriptions](#agent-command-descriptions) for how `agent_props` interacts with hashing.
 
 ## Key design decisions
 

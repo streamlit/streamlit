@@ -33,6 +33,10 @@ import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import {
+  focusNextTabbable,
+  focusPrevTabbable,
+} from "@streamlit/app/src/util/focusTabbable"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
@@ -50,7 +54,6 @@ import {
 } from "@streamlit/lib"
 import { Config, type PageConfig } from "@streamlit/protobuf"
 
-import { focusNextTabbable, focusPrevTabbable } from "./focusTabbable"
 import {
   StyledMainMenuContainer,
   StyledMainMenuPopoverBody,
@@ -428,7 +431,7 @@ function buildCommonItems(
 
   // Report a bug - shown if URL provided and not hidden
   const reportABugUrl = menuItems?.reportABugUrl
-  if (reportABugUrl && !menuItems?.hideReportABug) {
+  if (reportABugUrl && !menuItems.hideReportABug) {
     items.push({
       type: "action",
       key: "report",
@@ -439,7 +442,7 @@ function buildCommonItems(
 
   // Get help - shown if URL provided and not hidden
   const getHelpUrl = menuItems?.getHelpUrl
-  if (getHelpUrl && !menuItems?.hideGetHelp) {
+  if (getHelpUrl && !menuItems.hideGetHelp) {
     items.push({
       type: "action",
       key: "community",
@@ -534,6 +537,7 @@ const MenuItemRow = memo(function MenuItemRow({
       ref={handleRef}
       onClick={handleClick}
       role="menuitem"
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false omits aria-disabled
       aria-disabled={item.disabled || undefined}
       tabIndex={tabIndex}
       isRecording={item.isRecording}

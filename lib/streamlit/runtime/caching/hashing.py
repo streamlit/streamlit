@@ -19,7 +19,6 @@ from __future__ import annotations
 import collections
 import collections.abc
 import dataclasses
-import datetime
 import functools
 import inspect
 import io
@@ -32,6 +31,7 @@ import threading
 import uuid
 import weakref
 from collections.abc import Callable
+from datetime import datetime
 from enum import Enum
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
@@ -459,7 +459,7 @@ class _CacheFuncHasher:
         if isinstance(obj, uuid.UUID):
             return obj.bytes
 
-        if isinstance(obj, datetime.datetime):
+        if isinstance(obj, datetime):
             return obj.isoformat().encode()
 
         if isinstance(obj, (list, tuple)):

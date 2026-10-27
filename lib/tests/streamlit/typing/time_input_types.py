@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from datetime import datetime, time, timedelta
@@ -49,6 +47,11 @@ if TYPE_CHECKING:
     assert_type(time_input("label", step=60), time)
     assert_type(time_input("label", step=timedelta(minutes=15)), time)
     assert_type(time_input("label", disabled=True), time)
+    assert_type(time_input("label", required=True), time)
+    assert_type(time_input("label", required=False), time)
+    assert_type(time_input("label", value=None, required=True), time | None)
+    assert_type(time_input("label", value=time(8, 45), required=True), time)
+    assert_type(time_input("label", disabled=True, required=True), time)
     assert_type(time_input("label", label_visibility="hidden"), time)
     assert_type(time_input("label", help="help"), time)
     assert_type(time_input("label", key="foo"), time)

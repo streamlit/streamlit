@@ -89,13 +89,13 @@ let filterConfigured = false
  * listeners attached outside the shadow root see a retargeted event whose
  * `target` is the shadow host (e.g. a wrapping `div`), not the actual `<input>`
  * element. To correctly detect editable contexts, we inspect the event's
- * composed path where available and fall back to `event.target` for older
- * browsers that do not support composed paths.
+ * composed path where available and fall back to `event.target` when the
+ * composed path is missing or empty (e.g. synthetic events in tests).
  */
 function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
   // Prefer the composed path because it exposes the *actual* event target
   // inside Shadow DOM trees instead of the retargeted shadow host.
-  const composedPath = event.composedPath?.()
+  const composedPath = (event as Partial<KeyboardEvent>).composedPath?.()
   if (composedPath?.length) {
     for (const candidate of composedPath) {
       const element = candidate as HTMLElement | null
@@ -118,8 +118,8 @@ function getEditableEventTarget(event: KeyboardEvent): HTMLElement | null {
     return null
   }
 
-  // Fallback for environments without composedPath: inspect the (possibly
-  // retargeted) event target.
+  // Composed path missing or empty: inspect the (possibly retargeted) event
+  // target.
   const target = event.target as HTMLElement | null
   if (
     target?.tagName &&
@@ -179,7 +179,7 @@ export function ensureHotkeysFilterConfigured(): void {
     }
 
     if (event.shiftKey) {
-      const key = event.key ?? ""
+      const { key } = event
       if (key.length > 1 && !/^[a-z0-9]$/i.test(key)) {
         return true
       }
@@ -433,10 +433,6 @@ export function useRegisterShortcut({
       keyboardEvent: KeyboardEvent,
       _event: HotkeysEvent
     ): void => {
-      if (disabled) {
-        return
-      }
-
       if (shouldBlockShortcutInInput(parsedShortcut, keyboardEvent)) {
         return
       }

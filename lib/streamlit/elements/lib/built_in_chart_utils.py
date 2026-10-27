@@ -261,9 +261,8 @@ def generate_chart(
             )
         )
 
-    # Altair 6.3 annotates these methods with `typing.Self`, which mypy resolves to
-    # `Any` under `python_version = "3.10"`. Assign the results to typed locals so
-    # the returns don't trip mypy's `warn_return_any`.
+    # Altair annotates these methods with `typing.Self`. Assign the results to
+    # typed locals so the returns don't trip mypy's `warn_return_any`.
     if (
         chart_type is ChartType.LINE
         and x_column is not None

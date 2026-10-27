@@ -18,15 +18,24 @@ import {
   type FC,
   memo,
   useCallback,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+
 import type { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
+import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import {
+  isRequiredEmptyText,
+  requiredFieldError,
+} from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -45,9 +54,11 @@ import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextAreaHeight } from "./heightUtils"
 import {
+  StyledErrorIcon,
   StyledTextAreaContainer,
   StyledTextAreaInput,
   StyledTextAreaRoot,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface Props {
@@ -101,6 +112,7 @@ const TextArea: FC<Props> = ({
   outerElement,
 }) => {
   const id = useId()
+  const errorId = `${id}-error`
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -112,6 +124,12 @@ const TextArea: FC<Props> = ({
    * Whether the area is currently focused.
    */
   const [focused, setFocused] = useState(false)
+  /**
+   * Whether the last commit or form submit was blocked because the field was
+   * required and empty. The displayed error is derived from this flag, the
+   * current `required` flag, and the current value.
+   */
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   // Determine if we should use auto-expansion.
   const isAutoHeight = outerElement.heightConfig?.useContent ?? false
@@ -136,6 +154,7 @@ const TextArea: FC<Props> = ({
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
     setDirty(true)
+    setHasRequiredError(false)
   }, [element])
 
   const queryParamBinding = element.queryParamKey
@@ -163,7 +182,38 @@ const TextArea: FC<Props> = ({
     queryParamBinding,
   })
 
+  const { placeholder, formId } = element
+  const inForm = isInForm({ formId })
+
+  // A session_state write replaces an empty edit that `required` blocked.
+  // - The blocked edit keeps `dirty`, so useUpdateUiValue won't repaint it.
+  // - Applied during render because useBasicWidgetState consumes `setValue`
+  //   in an effect, which would paint the old value for one frame.
+  // - Inside a form, it also replaces the staged empty edit, so the next
+  //   submit sends the value the field shows.
+  if (element.setValue && dirty && hasRequiredError) {
+    const incomingValue = getCurrStateFromProto(element)
+    setUiValue(incomingValue)
+    setValueWithSource({ value: incomingValue, fromUser: inForm })
+    setDirty(false)
+    setHasRequiredError(false)
+  }
+
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
+
+  // Drop the stored flag once the error is hidden. `required` is not part of
+  // keyed widget identity, so the flag can outlive a rerun that turns
+  // `required` off or fills the field, and would otherwise reappear when
+  // `required` turns back on or a programmatic write clears the field.
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isRequiredEmptyText(uiValue)
+  )
+  if (hasRequiredError && requiredError === null) {
+    setHasRequiredError(false)
+  }
+  const hasError = Boolean(requiredError)
 
   const theme = useEmotionTheme()
 
@@ -180,9 +230,13 @@ const TextArea: FC<Props> = ({
     // Recalculate height when placeholder or displayed value changes.
     // When isAutoHeight is true, use uiValue to ensure height updates during typing and after blur.
     // When isAutoHeight is false, the effect only needs to run when value changes (less frequent).
+    // The error state adds right padding, which can re-wrap the placeholder.
+    // Keep the array length constant: a keyed widget can switch height modes
+    // without remounting.
     dependencies: [
       element.placeholder,
-      ...(isAutoHeight ? [uiValue] : [value]),
+      isAutoHeight ? uiValue : value,
+      isAutoHeight && hasError,
     ],
   })
 
@@ -201,18 +255,48 @@ const TextArea: FC<Props> = ({
     setValueWithSource({ value: uiValue, fromUser: true })
   }, [uiValue, setValueWithSource])
 
-  const onBlur = useCallback(() => {
-    if (dirty) {
+  /**
+   * Returns whether the current value may be committed or submitted, and
+   * shows the required error when `required` blocks an empty value.
+   */
+  const validateBeforeCommit = useCallback((): boolean => {
+    if (element.required && isRequiredEmptyText(uiValue)) {
+      setHasRequiredError(true)
+      return false
+    }
+    return true
+  }, [element.required, uiValue])
+
+  /**
+   * Commits outside a form unless `required` blocks an empty value. A blocked
+   * commit keeps `dirty`, so the last accepted value (or an unflushed
+   * `on_change="ignore"` value) stays in WidgetStateManager and nothing is
+   * written to the URL. Callers only invoke it while `dirty`.
+   */
+  const tryCommitOutsideForm = useCallback((): void => {
+    if (validateBeforeCommit()) {
       commitWidgetValue()
     }
+  }, [commitWidgetValue, validateBeforeCommit])
+
+  // Inside a form, blur and Ctrl/Cmd+Enter only stage the value; the form
+  // submit validator below enforces `required`.
+  const commitOrStageValue = inForm ? commitWidgetValue : tryCommitOutsideForm
+
+  const onBlur = useCallback(() => {
+    if (dirty) {
+      commitOrStageValue()
+    }
     setFocused(false)
-  }, [dirty, commitWidgetValue])
+  }, [dirty, commitOrStageValue])
 
   const onFocus = useCallback(() => {
     setFocused(true)
   }, [])
 
   const additionalAction = useCallback(() => {
+    // Editing hides a leftover required error until the next commit or submit.
+    setHasRequiredError(false)
     if (isAutoHeight) {
       updateScrollHeight()
     }
@@ -229,17 +313,35 @@ const TextArea: FC<Props> = ({
 
   const onKeyDown = useSubmitFormViaEnterKey(
     element.formId,
-    commitWidgetValue,
+    commitOrStageValue,
     dirty,
     widgetMgr,
     fragmentId,
     true
   )
 
-  const { placeholder, formId } = element
+  // Keystrokes already stage the value into the form (useOnInputChange), so
+  // the submit validator only needs the required check. It reads the latest
+  // render's value: every submit (button click, Ctrl/Cmd+Enter, or another
+  // widget's Enter) runs in an event after that render.
+  const formSubmitValidatorRef = useRef(validateBeforeCommit)
+  formSubmitValidatorRef.current = validateBeforeCommit
+
+  useEffect(() => {
+    if (!inForm || !element.required) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(formId, element.id)
+    }
+  }, [element.id, element.required, formId, inForm, widgetMgr])
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
-  const allowEnterToSubmit = isInForm({ formId })
+  const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(formId)
     : dirty
 
@@ -252,10 +354,12 @@ const TextArea: FC<Props> = ({
       className="stTextArea"
       data-testid="stTextArea"
       ref={elementRef}
+      $isStretchHeight={isStretchHeight}
     >
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -266,7 +370,10 @@ const TextArea: FC<Props> = ({
         )}
       </WidgetLabel>
 
-      <StyledTextAreaRoot data-testid="stTextAreaRootElement">
+      <StyledTextAreaRoot
+        data-testid="stTextAreaRootElement"
+        $hasError={hasError}
+      >
         <StyledTextAreaInput
           ref={isAutoHeight ? textareaRef : undefined}
           value={uiValue ?? ""}
@@ -276,14 +383,37 @@ const TextArea: FC<Props> = ({
           onChange={onChange}
           onKeyDown={onKeyDown}
           aria-label={element.label}
+          aria-required={element.required ? true : undefined}
+          aria-invalid={hasError ? true : undefined}
+          aria-describedby={hasError ? errorId : undefined}
           disabled={disabled}
           id={id}
           rows={3}
           $height={isAutoHeight ? autoExpandHeight : inputHeight}
           $maxHeight={isAutoHeight ? autoExpandMaxHeight : ""}
           $resize={isStretchHeight ? "none" : "vertical"}
+          $hasError={hasError}
         />
+        {requiredError && (
+          <StyledErrorIcon data-testid="stTextAreaErrorIcon">
+            <Tooltip
+              content={requiredError}
+              placement={Placement.TOP_RIGHT}
+              error
+            >
+              <Icon content={ErrorOutline} size="base" />
+            </Tooltip>
+          </StyledErrorIcon>
+        )}
       </StyledTextAreaRoot>
+      {requiredError && (
+        // The error message is shown visually in a tooltip on hover. The
+        // tooltip trigger isn't focusable, so we also expose the message to
+        // assistive tech via a visually hidden, aria-describedby-linked alert.
+        <StyledVisuallyHidden id={errorId} role="alert">
+          {requiredError}
+        </StyledVisuallyHidden>
+      )}
 
       {shouldShowInstructions && (
         <InputInstructions
@@ -291,7 +421,7 @@ const TextArea: FC<Props> = ({
           value={uiValue ?? ""}
           maxLength={element.maxChars}
           type={"multiline"}
-          inForm={isInForm({ formId })}
+          inForm={inForm}
           allowEnterToSubmit={allowEnterToSubmit}
         />
       )}

@@ -86,8 +86,8 @@ const drawMissingPlaceholder = (
         baseFontFull: `${theme.baseFontStyle} ${theme.fontFamily}`,
         markerFontFull: `${theme.markerFontStyle} ${theme.fontFamily}`,
       },
-      // The following props are just added for technical reasons:
-      // @ts-expect-error
+      // drawTextCell only reads rect, ctx, and theme.
+      // @ts-expect-error - {} is not a SpriteManager
       spriteManager: {},
       hyperWrapping: false,
     },
@@ -149,7 +149,7 @@ function useCustomRenderer(
           drawMissingPlaceholder(args as BaseDrawArgs, placeholderToken)
         }
 
-        if (column.isRequired && column.isEditable) {
+        if (column.isRequired === true && column.isEditable) {
           // If the column is configured as required & editable,
           // we draw a red indicator in the top right corner of the cell.
           drawAttentionIndicator(ctx, rect, theme)

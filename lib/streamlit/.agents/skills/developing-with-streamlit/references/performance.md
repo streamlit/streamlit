@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached
-@st.cache_data
+# GOOD: Cache at most the 100 most recently used paths
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -59,10 +59,7 @@ def load_reference_data():
 
 ### Background refresh (serve stale while updating)
 
-By default, when a cached entry's `ttl` expires, the next call blocks while the function
-recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
-and recompute in the background—ideal when slightly stale data is acceptable but latency
-isn't.
+By default, when a cached entry's `ttl` expires, the next call blocks while the function recomputes. Use `refresh_mode="background"` to instead return the expired value immediately and recompute in the background—ideal when slightly stale data is acceptable but latency isn't.
 
 ```python
 @st.cache_data(ttl="5m", refresh_mode="background")
@@ -70,19 +67,9 @@ def get_metrics():
     return api.fetch()
 ```
 
-Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
-combined with `persist`. The function can't use session-specific features (e.g.
-`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
-with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached
-function raises an error at decoration time; use `refresh_mode="foreground"` instead.
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be combined with `persist`. The function can't use session-specific features (e.g. `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached function raises an error at decoration time; use `refresh_mode="foreground"` instead.
 
-By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
-it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
-finite number greater than `1.0` to move that bound: a multiplier of `M`
-hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid
-values warn and fall back to `2.0`. Raising it avoids blocking recomputes after
-idle periods or failed refreshes; lowering it serves fresher data and frees
-memory sooner.
+By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a finite number greater than `1.0` to move that bound: a multiplier of `M` hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid values warn and fall back to `2.0`. Raising it avoids blocking recomputes after idle periods or failed refreshes; lowering it serves fresher data and frees memory sooner.
 
 ```toml
 # .streamlit/config.toml
@@ -90,18 +77,11 @@ memory sooner.
 cacheBackgroundRefreshTTLMultiplier = 4.0
 ```
 
-Background refresh is access-driven: it starts only after a call observes an expired entry,
-so the caller may briefly receive stale data. For advanced cases that need the server to
-initiate background refreshes for specific global cache keys even without user traffic, use
-an `st.App` lifespan task to periodically call the cached function with those arguments. See
-[Scheduled background refresh for specific
-keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+Background refresh is access-driven: it starts only after a call observes an expired entry, so the caller may briefly receive stale data. For advanced cases that need the server to initiate background refreshes for specific global cache keys even without user traffic, use an `st.App` lifespan task to periodically call the cached function with those arguments. See [Scheduled background refresh for specific keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
 
 ### Async functions
 
-`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated
-call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
-script). Streamlit caches the awaited return value, not the coroutine.
+`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit script). Streamlit caches the awaited return value, not the coroutine.
 
 ```python
 import asyncio
@@ -117,35 +97,32 @@ async def load_config():
 config = asyncio.run(load_config())
 ```
 
-Do not cache live async clients or connections bound to the event loop that created
-them — that loop may already be closed on a later rerun, and the object will raise
-`Event loop closed`. Cache results that stay valid across loops, such as API payloads,
-dataframes, and config.
+Do not cache live async clients or connections bound to the event loop that created them — that loop may already be closed on a later rerun, and the object will raise `Event loop closed`. Cache results that stay valid across loops, such as API payloads, dataframes, and config.
 
-### Prevent unbounded cache growth
+### Bound cache growth
 
-**Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
+**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default. Use `ttl` to expire stale results.
+Use `max_entries` when the workload gives a practical entry-count bound. For `st.cache_resource`, this is the available count-based limit.
+For `st.cache_data`, use `max_size` only when the user provides a byte budget or deployment memory constraints and the intended allocation across caches determine a per-cache budget. It limits serialized bytes for one decorated function, not total process memory or RSS. Do not guess it from source dataset size, representative or example values, or arbitrary constants; ask the user when the memory budget is unknown. Combine limits when they address different risks. `max_size` integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
-# BAD: Unbounded cache - memory will grow indefinitely
+# BAD: No growth bound
 @st.cache_data
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with TTL
-@st.cache_data(ttl="1h")
+# GOOD: Bound by age and the app's 1,000-entry cache budget
+@st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with max entries
-@st.cache_data(max_entries=100)
-def get_user_data(user_id):
-    return fetch_user(user_id)
+# GOOD: Enforce the user's 500 MiB allocation (one oversized value is retained)
+@st.cache_data(max_size="500MiB")
+def get_large_report(report_id):
+    return build_report(report_id)
 ```
-
-Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
 
 ## Fragments
 
@@ -176,7 +153,7 @@ live_metrics()
 live_search()
 ```
 
-For auto-refreshing metrics, use `run_every`:
+For auto-refreshing metrics, use `run_every` instead of a `while True` loop or `time.sleep()` followed by `st.rerun()`:
 
 ```python
 @st.fragment(run_every="30s")
@@ -277,6 +254,12 @@ orders()
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
 
+**Where to put controls during a long load.** Put a control in the main script when it must stay responsive while one fragment is much slower than the rest.
+
+- While a full-app run is still in progress, a widget *inside* a fragment waits until that run finishes, including the slow fragments.
+- A main-script widget starts a new full-app run and preempts the in-progress one, so every card refreshes together.
+- Once the app is idle, an in-fragment widget reruns just that fragment; when cards load in a similar time, per-card controls are fine.
+
 Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
 
 ## Forms to batch interactions
@@ -317,25 +300,48 @@ with st.form("invite", border=False):
 - Text inputs where typing triggers expensive operations
 - Any UI where "submit" semantics make sense
 
-**When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
+**When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit. See [Skip reruns on individual widgets](#skip-reruns-on-individual-widgets-advanced) for an alternative.
 
-## Skip reruns on individual widgets
+## Skip reruns on individual widgets (advanced)
 
-Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+With `on_change="ignore"`, most stateful input widgets update in the browser without a rerun. Python receives the new value on the next browser-triggered rerun, such as a button click.
+
+Use it to build dynamic forms that `st.form` can't express: defer inputs that don't change other fields, and let the ones that do rerun normally.
 
 ```python
-threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
-if st.button("Apply"):
-    run_model(threshold)
+country = st.selectbox("Country", countries)  # Reruns to refresh the city options
+city = st.selectbox("City", get_cities(country), on_change="ignore")
+name = st.text_input("Name", on_change="ignore")
+
+if st.button("Save"):
+    save_contact(country, city, name)
 ```
 
-Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+Prefer caching, fragments, and forms first, and only use this where the user doesn't expect an immediate reaction:
 
-Caveats for `on_change="ignore"`:
+- Don't use it on widgets that drive other UI (options, conditional fields, charts). Nothing else reacts, so the app looks broken.
+- Any browser-triggered rerun, even from an unrelated widget, delivers all pending values. Gate the work that uses them behind a button.
+- Pending values are lost on a page refresh unless the widget sets `key` and `bind="query-params"`.
+- It has no effect inside `st.form`. File, camera, and audio inputs still upload immediately; only the rerun is deferred.
 
-- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
-- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
-- `st.file_uploader` and `st.camera_input` still upload the file or photo immediately; only the rerun is deferred.
+## Client-side validation
+
+Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
+
+- `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
+- `st.text_area`: `required` and `max_chars`. `st.chat_input`: `max_chars`.
+- `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
+- `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
+- `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
+- `st.data_editor`: the same kinds of limits via `st.column_config`.
+- `st.file_uploader`: `type` rejects a disallowed file before upload.
+
+```python
+email = st.text_input("Email", type="email", required=True)
+qty = st.number_input("Quantity", min_value=1, max_value=99, step=1)
+```
+
+These checks are a UX guardrail, not a security boundary. See [Widget input constraints are mostly client-side](session-state.md#widget-input-constraints-are-mostly-client-side).
 
 ## Conditional rendering
 
@@ -472,7 +478,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that slot during the initial full-app run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its output inside its own body; it cannot write to containers created outside it.
 
 ## Perceived performance (loading states)
 

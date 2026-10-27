@@ -42,6 +42,10 @@ describe("clampDrawerWidth", () => {
 function createHandleWithPanel(width: number): HTMLDivElement {
   const panel = document.createElement("div")
   const handle = document.createElement("div")
+  // jsdom does not implement pointer capture.
+  handle.setPointerCapture = vi.fn()
+  handle.hasPointerCapture = vi.fn(() => false)
+  handle.releasePointerCapture = vi.fn()
   panel.appendChild(handle)
   vi.spyOn(panel, "getBoundingClientRect").mockReturnValue({
     width,
@@ -68,7 +72,6 @@ function pointerEvent(
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
     currentTarget: handle,
-    hasPointerCapture: () => false,
   } as unknown as PointerEvent<HTMLDivElement>
 }
 
@@ -204,5 +207,32 @@ describe("useDrawerResize", () => {
       false
     )
     addSpy.mockRestore()
+  })
+
+  it("uses a narrow preset until drag, clamps below the sidebar minimum, and restores on double-click", () => {
+    const handle = createHandleWithPanel(100)
+    const { result } = renderHook(
+      () => useDrawerResize({ position: "left", presetWidth: "6.25rem" }),
+      { wrapper: TestAppWrapper }
+    )
+
+    expect(result.current.dialogWidth).toBe("6.25rem")
+
+    act(() => {
+      result.current.resizeHandleProps.onPointerDown(pointerEvent(handle, 100))
+      result.current.resizeHandleProps.onPointerMove(pointerEvent(handle, 0))
+    })
+
+    const minDrawerWidthPx = convertRemToPx(
+      mockTheme.emotion.sizes.minSidebarWidth,
+      mockTheme.emotion.fontSizes.baseFontSize
+    )
+    expect(result.current.dialogWidth).toBe(`${minDrawerWidthPx}px`)
+
+    act(() => {
+      result.current.resizeHandleProps.onDoubleClick()
+    })
+
+    expect(result.current.dialogWidth).toBe("6.25rem")
   })
 })

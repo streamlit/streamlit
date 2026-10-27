@@ -54,7 +54,7 @@ export const useStWidthHeight = ({
     if (shouldUseContainerWidth || isFullScreen) {
       return "100%"
     }
-    return element.width || container.width || widthFallback
+    return element.width ?? container.width ?? widthFallback
   }, [
     container.width,
     element.width,
@@ -64,11 +64,12 @@ export const useStWidthHeight = ({
   ])
 
   const height = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `string | number`; a 0 or empty container height falls back to the element height
     if (isFullScreen && container.height) {
       return container.height
     }
 
-    return element.height || container.height || heightFallback
+    return element.height ?? container.height ?? heightFallback
   }, [isFullScreen, element.height, container.height, heightFallback])
 
   return { width, height }

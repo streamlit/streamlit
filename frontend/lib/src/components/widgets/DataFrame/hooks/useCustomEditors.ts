@@ -45,7 +45,7 @@ function useCustomEditors(): CustomEditorsReturn {
     (cell: GridCell): ProvideEditorCallbackResult<GridCell> => {
       if (
         cell.kind === GridCellKind.Text &&
-        cell.readonly &&
+        cell.readonly === true &&
         isMaybeJson(cell.data)
       ) {
         return {

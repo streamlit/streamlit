@@ -91,8 +91,8 @@ def _parse_subprotocols(
     return selected, xsrf_token, existing_session
 
 
-def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
-    """Extract user info from trusted headers."""
+def gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
+    """Extract user info from the headers named in ``server.trustedUserHeaders``."""
     user_info: dict[str, str | bool | None] = {}
     mapping = config.get_option("server.trustedUserHeaders")
     if not isinstance(mapping, dict):
@@ -104,8 +104,8 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
     return user_info
 
 
-def _is_host_allowed(host: str | None) -> bool:
-    """Check the request Host header against the configured allow-list."""
+def is_host_allowed(host: str | None) -> bool:
+    """Check the request Host header against ``server.allowedHosts``."""
     allowed_hosts: list[str] = config.get_option("server.allowedHosts")
     if not allowed_hosts:
         return True
@@ -168,7 +168,7 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
         - The origin matches the host (same-origin request)
         - The origin is in the allowed origins list (is_url_from_allowed_origins)
     """
-    if not _is_host_allowed(host):
+    if not is_host_allowed(host):
         return False
 
     # If no Origin header is present, allow the connection.
@@ -503,7 +503,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
 
             # Map in any user-configured headers. Note that these override anything
             # coming from the auth cookie.
-            user_info.update(_gather_user_info(websocket.headers))
+            user_info.update(gather_user_info(websocket.headers))
 
             session_id = runtime.connect_session(
                 client=client,

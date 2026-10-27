@@ -211,14 +211,17 @@ function ProgressColumn(
         const isAbove = ratio > 0.5
         if (parameters.color === "auto") {
           progressColor = isAbove
-            ? theme?.colors.greenColor
-            : theme?.colors.redColor
+            ? theme.colors.greenColor
+            : theme.colors.redColor
         } else {
           progressColor = isAbove
-            ? theme?.colors.redColor
-            : theme?.colors.greenColor
+            ? theme.colors.redColor
+            : theme.colors.greenColor
         }
-      } else if (parameters.color) {
+      } else if (
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `ChartColor` includes a branded `string & {…}`, which the rule reads as an object
+        parameters.color
+      ) {
         progressColor = resolveNamedColor(parameters.color, theme)
       }
 
@@ -241,10 +244,16 @@ function ProgressColumn(
       } as RangeCellType
     },
     getCellValue(cell: RangeCellType | LoadingCell): number | null {
-      if (cell.kind === GridCellKind.Loading) {
+      // Empty cells are loading cells. Invalid numbers are error text cells.
+      // Neither stores a progress value.
+      if (
+        cell.kind !== GridCellKind.Custom ||
+        (cell.data as { kind?: string } | null | undefined)?.kind !==
+          "range-cell"
+      ) {
         return null
       }
-      return cell.data?.value === undefined ? null : cell.data?.value
+      return cell.data.value
     },
   }
 }

@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -43,7 +44,6 @@ import {
   NavigationContext,
   SidebarConfigContext,
   useEmotionTheme,
-  useExecuteWhenChanged,
   useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
@@ -129,9 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
-  const [lastInnerWidth, setLastInnerWidth] = useState<number>(
-    innerWidth ?? Infinity
-  )
+  const lastInnerWidthRef = useRef(innerWidth)
 
   // When hovering sidebar header
   const [showSidebarCollapse, setShowSidebarCollapse] =
@@ -167,26 +165,27 @@ const Sidebar: React.FC<SidebarProps> = ({
       _d: NumberSize
     ) => {
       // Use the actual ref width, not the delta, to avoid stale delta values
-      if (ref) {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-        const newWidth = ref.clientWidth || ref.offsetWidth
-        initializeSidebarWidth(newWidth)
-      }
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const newWidth = ref.clientWidth || ref.offsetWidth
+      initializeSidebarWidth(newWidth)
     },
     [initializeSidebarWidth]
   )
 
-  useExecuteWhenChanged(() => {
+  // Collapsing updates the parent's state, so it can't run during render. A
+  // layout effect still collapses the sidebar before paint.
+  useLayoutEffect(() => {
+    const previousInnerWidth = lastInnerWidthRef.current
+    lastInnerWidthRef.current = innerWidth
     // Collapse the sidebar if the window was narrowed and is now mobile-sized
     if (
-      innerWidth < lastInnerWidth &&
+      innerWidth < previousInnerWidth &&
       innerWidth <= mediumBreakpointPx &&
       !isCollapsed
     ) {
       onToggleCollapse(true, false)
     }
-    setLastInnerWidth(innerWidth)
-  }, [innerWidth])
+  }, [innerWidth, mediumBreakpointPx, isCollapsed, onToggleCollapse])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
@@ -296,7 +295,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       // Resizable's types omit these StyledSidebar props (id, isCollapsed,
       // sidebarWidth, windowInnerWidth), but it forwards extra props to the `as`
       // component. The id is the target of the collapse/expand aria-controls.
-      // @ts-expect-error
+      // @ts-expect-error - Resizable types omit StyledSidebar props it still forwards
       id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
@@ -309,7 +308,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         onMouseOut={onMouseOut}
         scrollbarGutterSize={scrollbarGutterSize}
       >
-        <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+        <StyledSidebarHeaderContainer
+          hasPageNavAbove={hasPageNavAbove}
+          data-testid="stSidebarHeader"
+        >
           {renderLogoContent()}
           {/* Unmount while collapsed. The sidebar stays mounted offscreen, so on
               small viewports (where this button stays visible) it would be a
