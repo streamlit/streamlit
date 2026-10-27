@@ -57,6 +57,11 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunner,
     ScriptRunnerEvent,
 )
+from streamlit.runtime.scriptrunner_utils.session_rerun_coordinator import (
+    AcceptDecision,
+    RunGenerationLease,
+    SessionRerunCoordinator,
+)
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
@@ -280,6 +285,11 @@ class AppSession:
         from streamlit.runtime.state import SessionState
 
         self._session_state = SessionState()
+        # Accepted interactions live here, not on the ScriptRunner, so they
+        # survive runner replacement.
+        self._coordinator = SessionRerunCoordinator(
+            widget_has_callback=self._session_state.widget_has_callback
+        )
         self._user_info = user_info
         self._resumable = True
         # Pairs the resume flag with the owner dict. clear_user_info() and
@@ -520,6 +530,7 @@ class AppSession:
             # self._state must not be set to SHUTDOWN_REQUESTED until
             # *after* this is called.
             self.request_script_stop()
+            self._coordinator.close()
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
 
@@ -691,35 +702,47 @@ class AppSession:
         else:
             rerun_data = RerunData()
 
-        if self._scriptrunner is not None:
-            if (
-                bool(config.get_option("runner.fastReruns"))
-                and not rerun_data.fragment_id
-            ):
-                # If fastReruns is enabled and this is *not* a rerun of a fragment,
-                # we don't send rerun requests to our existing ScriptRunner. Instead, we
-                # tell it to shut down. We'll then spin up a new ScriptRunner, below, to
-                # handle the rerun immediately.
-                self._scriptrunner.request_stop()
-                self._scriptrunner = None
-            else:
-                # Either fastReruns is not enabled or this RERUN request is a request to
-                # run a fragment. We send our current ScriptRunner a rerun request, and
-                # if it's accepted, we're done.
-                success = self._scriptrunner.request_rerun(rerun_data)
-                if success:
-                    return
+        # fastReruns decides between ABSORBED (the current runner picks the
+        # request up at its next yield) and SUPERSEDE (a new runner starts now).
+        decision = self._coordinator.accept(
+            rerun_data, fast_reruns=bool(config.get_option("runner.fastReruns"))
+        )
+        if decision.kind in {
+            AcceptDecision.REJECTED_OVERLOAD,
+            AcceptDecision.REJECTED_CLOSED,
+        }:
+            return
+        if decision.kind in {
+            AcceptDecision.ABSORBED,
+            AcceptDecision.ABSORBED_DEFERRED,
+        }:
+            if self._scriptrunner is not None:
+                self._scriptrunner.notify_pending_work()
+            return
+        if decision.kind == AcceptDecision.SUPERSEDE:
+            self._retire_current_runner()
 
-        # If we are here, then either we have no ScriptRunner, or our
-        # current ScriptRunner is shutting down and cannot handle a rerun
-        # request - so we'll create and start a new ScriptRunner.
-        self._create_scriptrunner(rerun_data)
+        if decision.run_generation is None:  # pragma: no cover - defensive
+            raise RuntimeError(f"{decision.kind} must carry a run generation.")
+        self._create_scriptrunner(decision.run_generation)
+
+    def _retire_current_runner(self) -> None:
+        """Stop the current runner without waiting for it to unwind.
+
+        Its run generation has already expired, so any session state writes
+        it attempts while unwinding are dropped.
+        """
+        if self._scriptrunner is not None:
+            self._scriptrunner.request_stop()
+            self._scriptrunner = None
 
     def request_script_stop(self) -> None:
         """Request that the scriptrunner stop execution.
 
-        Does nothing if no scriptrunner exists.
+        Pending interactions are discarded. Does nothing else if no
+        scriptrunner exists.
         """
+        self._coordinator.stop_consumer()
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
 
@@ -755,8 +778,11 @@ class AppSession:
                 return False
             return self._user_info == user_info
 
-    def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
-        """Create and run a new ScriptRunner with the given RerunData."""
+    def _create_scriptrunner(self, run_generation: RunGenerationLease) -> None:
+        """Create and run a new ScriptRunner bound to ``run_generation``.
+
+        The runner claims its first run from the session's rerun mailbox.
+        """
         # Defensive recovery: if the session loop closed mid-session, replace it
         # so the new ScriptRunner gets a working one.
         if self._script_event_loop.is_closed():
@@ -773,20 +799,23 @@ class AppSession:
             session_state=self._session_state,
             uploaded_file_mgr=self._uploaded_file_mgr,
             script_cache=self._script_cache,
-            initial_rerun_data=initial_rerun_data,
+            initial_rerun_data=None,
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
             on_script_error=self._on_script_error,
             local_sources_watcher=self._local_sources_watcher,
             event_loop=self._script_event_loop,
+            coordinator=self._coordinator,
+            run_generation=run_generation,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         try:
             self._scriptrunner.start()
         except Exception:
-            # A runner that never started would still accept rerun requests
-            # when fastReruns is off, and they would never run.
+            # A runner that never started would otherwise remain the
+            # coordinator's consumer, and pending interactions would never run.
+            self._coordinator.consumer_exited(run_generation)
             self._scriptrunner = None
             raise
         # Only once the runner has started, so a runner that fails to start
@@ -1136,9 +1165,16 @@ class AppSession:
                 # released even when best-effort teardown cannot close the loop.
                 self._scriptrunner = None
                 if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-                    # The run chain's messages were all enqueued before this
-                    # event, since every runner event reaches this loop in order.
-                    self._settle_once_delivered()
+                    # A runner that stopped early (for example via st.stop())
+                    # can leave accepted interactions behind; they still run.
+                    run_generation = self._coordinator.restart_if_pending()
+                    if run_generation is not None:
+                        self._create_scriptrunner(run_generation)
+                    else:
+                        # The run chain's messages were all enqueued before
+                        # this event, since every runner event reaches this
+                        # loop in order.
+                        self._settle_once_delivered()
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             if forward_msg is None:  # pragma: no cover - defensive

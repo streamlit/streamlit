@@ -64,6 +64,9 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.scriptrunner_utils.session_rerun_coordinator import (
+    RunGenerationLease,
+)
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.state.query_params import (
     CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
@@ -85,6 +88,11 @@ if TYPE_CHECKING:
 @pytest.fixture
 def del_path(monkeypatch):
     monkeypatch.setenv("PATH", "")
+
+
+def _pending_rerun_data(session: AppSession) -> RerunData:
+    """Return the newest RerunData waiting in the session's rerun mailbox."""
+    return session._coordinator._pending[-1].rerun_data
 
 
 def _create_test_session(
@@ -263,22 +271,29 @@ class AppSessionTest(unittest.TestCase):
         one being created."""
         session = _create_test_session()
         session.request_rerun(None)
-        mock_create_scriptrunner.assert_called_once_with(RerunData())
+
+        mock_create_scriptrunner.assert_called_once()
+        run_generation = mock_create_scriptrunner.call_args[0][0]
+        assert isinstance(run_generation, RunGenerationLease)
+        assert run_generation.is_live()
+        assert _pending_rerun_data(session) == RerunData(batch_seq=1)
 
     @patch_config_options({"runner.fastReruns": False})
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
     def test_rerun_with_active_scriptrunner(self, mock_create_scriptrunner: MagicMock):
-        """If we have an active ScriptRunner, it receives rerun requests."""
+        """An active ScriptRunner claims rerun requests from the mailbox."""
         session = _create_test_session()
+        session._coordinator.start_generation()
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
-        mock_active_scriptrunner.request_rerun = MagicMock(return_value=True)
         session._scriptrunner = mock_active_scriptrunner
 
         session.request_rerun(None)
 
-        # The active ScriptRunner will accept the rerun request...
-        mock_active_scriptrunner.request_rerun.assert_called_once_with(RerunData())
+        # The active ScriptRunner is told about the new work...
+        mock_active_scriptrunner.notify_pending_work.assert_called_once()
+        mock_active_scriptrunner.request_stop.assert_not_called()
+        assert _pending_rerun_data(session) == RerunData(batch_seq=1)
 
         # So _create_scriptrunner should not be called.
         mock_create_scriptrunner.assert_not_called()
@@ -289,18 +304,18 @@ class AppSessionTest(unittest.TestCase):
         """If have a ScriptRunner but it's shutting down and cannot handle
         new rerun requests, we'll create a new ScriptRunner."""
         session = _create_test_session()
+        old_generation = session._coordinator.start_generation()
+        # The runner found no more work and retired as a consumer.
+        assert not session._coordinator.finish_or_continue(old_generation)
 
         mock_stopped_scriptrunner = MagicMock(spec=ScriptRunner)
-        mock_stopped_scriptrunner.request_rerun = MagicMock(return_value=False)
         session._scriptrunner = mock_stopped_scriptrunner
 
         session.request_rerun(None)
 
-        # The stopped ScriptRunner will reject the request...
-        mock_stopped_scriptrunner.request_rerun.assert_called_once_with(RerunData())
-
-        # So we'll create a new ScriptRunner.
-        mock_create_scriptrunner.assert_called_once_with(RerunData())
+        mock_stopped_scriptrunner.notify_pending_work.assert_not_called()
+        mock_create_scriptrunner.assert_called_once()
+        assert mock_create_scriptrunner.call_args[0][0] is not old_generation
 
     @patch_config_options({"runner.fastReruns": True})
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
@@ -309,18 +324,44 @@ class AppSessionTest(unittest.TestCase):
         existing ScriptRunner and immediately create a new one.
         """
         session = _create_test_session()
+        old_generation = session._coordinator.start_generation()
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner
 
         session.request_rerun(None)
 
-        # The active ScriptRunner should be shut down.
-        mock_active_scriptrunner.request_rerun.assert_not_called()
+        # The active ScriptRunner should be shut down and its generation expired.
         mock_active_scriptrunner.request_stop.assert_called_once()
+        assert not old_generation.is_live()
 
-        # And a new ScriptRunner should be created.
+        # And a new ScriptRunner should be created for a new generation.
         mock_create_scriptrunner.assert_called_once()
+        new_generation = mock_create_scriptrunner.call_args[0][0]
+        assert new_generation.is_live()
+        assert new_generation.generation == old_generation.generation + 1
+
+    @patch_config_options({"runner.fastReruns": True})
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_fast_rerun_waits_for_in_flight_commit(
+        self, mock_create_scriptrunner: MagicMock
+    ):
+        """A full-app rerun during a callback batch does not replace the runner."""
+        session = _create_test_session()
+        generation = session._coordinator.start_generation()
+        session._coordinator.accept(RerunData(), fast_reruns=False)
+        claim = session._coordinator.claim(generation)
+        assert claim is not None
+
+        mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_active_scriptrunner
+
+        session.request_rerun(None)
+
+        mock_active_scriptrunner.request_stop.assert_not_called()
+        mock_active_scriptrunner.notify_pending_work.assert_called_once()
+        mock_create_scriptrunner.assert_not_called()
+        assert generation.is_live()
 
     @patch_config_options({"runner.fastReruns": True})
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
@@ -328,6 +369,7 @@ class AppSessionTest(unittest.TestCase):
         self, mock_create_scriptrunner: MagicMock
     ):
         session = _create_test_session()
+        session._coordinator.start_generation()
         fragment_id = "my_fragment_id"
         session._fragment_storage.register(fragment_id, lambda: None)
 
@@ -337,8 +379,9 @@ class AppSessionTest(unittest.TestCase):
         session.request_rerun(ClientState(fragment_id=fragment_id))
 
         # The active ScriptRunner should *not* be shut down or stopped.
-        mock_active_scriptrunner.request_rerun.assert_called_once()
+        mock_active_scriptrunner.notify_pending_work.assert_called_once()
         mock_active_scriptrunner.request_stop.assert_not_called()
+        assert _pending_rerun_data(session).fragment_id_queue == [fragment_id]
 
         # And a new ScriptRunner should *not* be created.
         mock_create_scriptrunner.assert_not_called()
@@ -376,7 +419,8 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         assert session._scriptrunner is None
 
-        session._create_scriptrunner(initial_rerun_data=RerunData())
+        run_generation = session._coordinator.start_generation()
+        session._create_scriptrunner(run_generation)
 
         # Assert that the ScriptRunner constructor was called, including the
         # session-owned event_loop forwarded to the runner.
@@ -386,13 +430,15 @@ class AppSessionTest(unittest.TestCase):
             session_state=session._session_state,
             uploaded_file_mgr=session._uploaded_file_mgr,
             script_cache=session._script_cache,
-            initial_rerun_data=RerunData(),
+            initial_rerun_data=None,
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
             event_loop=session._script_event_loop,
+            coordinator=session._coordinator,
+            run_generation=run_generation,
         )
 
         assert session._scriptrunner is not None
@@ -418,7 +464,7 @@ class AppSessionTest(unittest.TestCase):
             with self.assertLogs(
                 "streamlit.runtime.app_session", level="WARNING"
             ) as logs:
-                session._create_scriptrunner(initial_rerun_data=RerunData())
+                session._create_scriptrunner(session._coordinator.start_generation())
 
             replacement_loop = session._script_event_loop
             assert replacement_loop is not closed_loop
@@ -450,12 +496,12 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         expected_loop = session._script_event_loop
 
-        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._create_scriptrunner(session._coordinator.start_generation())
 
         # Clear the first runner reference so AppSession creates a second one.
         session._scriptrunner = None
 
-        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._create_scriptrunner(session._coordinator.start_generation())
 
         # Both ScriptRunner constructors must have received the same loop object.
         for call in mock_scriptrunner.call_args_list:
@@ -599,7 +645,7 @@ class AppSessionTest(unittest.TestCase):
         current ScriptRunner, we should silently ignore them.
         """
         session = _create_test_session()
-        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._create_scriptrunner(session._coordinator.start_generation())
 
         # Our test AppSession is created with a mock EventLoop, so
         # we pretend that this function is called on that same mock EventLoop.
@@ -628,7 +674,7 @@ class AppSessionTest(unittest.TestCase):
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
     def test_sets_state_to_not_running_on_rerun_event(self):
         session = _create_test_session()
-        session._create_scriptrunner(initial_rerun_data=RerunData())
+        session._create_scriptrunner(session._coordinator.start_generation())
         session._state = AppSessionState.APP_IS_RUNNING
 
         with patch(
@@ -855,7 +901,7 @@ class AppSessionTest(unittest.TestCase):
         session._create_scriptrunner.assert_called_once()
 
         # Get the RerunData that was passed to _create_scriptrunner
-        rerun_data = session._create_scriptrunner.call_args[0][0]
+        rerun_data = _pending_rerun_data(session)
 
         # Verify that context_info was preserved
         assert rerun_data.context_info is not None
@@ -873,7 +919,7 @@ class AppSessionTest(unittest.TestCase):
         session._create_scriptrunner = MagicMock()
         session.request_rerun(client_state)
 
-        rerun_data = session._create_scriptrunner.call_args[0][0]
+        rerun_data = _pending_rerun_data(session)
         assert rerun_data.context_info is None
 
     @parameterized.expand(
@@ -901,7 +947,7 @@ class AppSessionTest(unittest.TestCase):
         session._create_scriptrunner = MagicMock()
         session.request_rerun(client_state)
 
-        rerun_data = session._create_scriptrunner.call_args[0][0]
+        rerun_data = _pending_rerun_data(session)
         assert rerun_data.query_string == ""
 
     def test_context_info_preserved_in_client_state_on_shutdown(self):

@@ -44,15 +44,23 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import (
+    MAILBOX_RERUN_PLACEHOLDER,
     RerunData,
     ScriptRequests,
     ScriptRequestType,
+    coalesce_rerun_data,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     UserInfoType,
     add_script_run_ctx,
     get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner_utils.session_rerun_coordinator import (
+    InteractionCommitLease,
+    RunGenerationLease,
+    SessionRerunCoordinator,
+    merge_carryover_replay,
 )
 from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
@@ -188,13 +196,15 @@ class ScriptRunner:
         session_state: SessionState,
         uploaded_file_mgr: UploadedFileManager,
         script_cache: ScriptCache,
-        initial_rerun_data: RerunData,
+        initial_rerun_data: RerunData | None,
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        coordinator: SessionRerunCoordinator | None = None,
+        run_generation: RunGenerationLease | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -218,7 +228,8 @@ class ScriptRunner:
             A ScriptCache instance.
 
         initial_rerun_data
-            RerunData to initialize this ScriptRunner with.
+            RerunData to initialize this ScriptRunner with, or None when the
+            first run is claimed from ``coordinator``.
 
         user_info
             A dict that contains information about the current user. For now,
@@ -250,11 +261,39 @@ class ScriptRunner:
             never closes it. After this runner emits ``SHUTDOWN``, it no longer
             uses the loop. The caller determines when no other runner is using
             the loop and it is safe to close.
+
+        coordinator
+            The AppSession's rerun mailbox. This runner claims accepted
+            interactions from it. Without one, the runner owns a private
+            coordinator.
+
+        run_generation
+            The generation this runner is bound to. Required with
+            ``coordinator``; once it expires, the runner stops at its next
+            yield point and its session state writes are dropped.
         """
+        session_owned = coordinator is not None
+        if coordinator is None:
+            coordinator = SessionRerunCoordinator(
+                widget_has_callback=session_state.widget_has_callback
+            )
+            run_generation = coordinator.start_generation()
+        elif run_generation is None:
+            raise ValueError("run_generation is required with a coordinator.")
+
+        self._coordinator = coordinator
+        self._run_generation = run_generation
+        # The commit lease held from claiming an interaction until its
+        # callbacks finish. Only accessed on the script thread.
+        self._active_claim: InteractionCommitLease | None = None
+
         self._session_id = session_id
         self._main_script_path = main_script_path
         self._session_state = SafeSessionState(
-            session_state, yield_callback=self._maybe_handle_execution_control_request
+            session_state,
+            yield_callback=self._maybe_handle_execution_control_request,
+            run_generation=run_generation,
+            require_commit_lease=session_owned,
         )
         self._uploaded_file_mgr = uploaded_file_mgr
         self._script_cache = script_cache
@@ -264,8 +303,13 @@ class ScriptRunner:
 
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
-        self._requests = ScriptRequests()
-        self._requests.request_rerun(initial_rerun_data)
+        self._requests = ScriptRequests(
+            has_mailbox_work=lambda: self._coordinator.finish_or_continue(
+                self._run_generation
+            )
+        )
+        if initial_rerun_data is not None:
+            self._requests.request_rerun(initial_rerun_data)
 
         # Emitted synchronously when a ScriptRunnerEvent occurs, usually on the
         # script or fragment-worker thread rather than the thread that created
@@ -326,9 +370,18 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
-        rv = self._requests.request_rerun(rerun_data)
+        if self._requests.is_stopped():
+            return False
+        rv = self._coordinator.accept_for_consumer(rerun_data, self._run_generation)
         self._wake_parallel_join_barrier_if_waiting()
         return rv
+
+    def notify_pending_work(self) -> None:
+        """Tell the runner its coordinator accepted work for it.
+
+        Safe to call from any thread.
+        """
+        self._wake_parallel_join_barrier_if_waiting()
 
     def _wake_parallel_join_barrier_if_waiting(self) -> None:
         """If the script thread is blocked in ParallelFragmentCoordinator.join(), wake it.
@@ -441,6 +494,9 @@ class ScriptRunner:
                     f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
                 )
         finally:
+            if self._active_claim is not None:
+                self._release_claim(committed=False)
+            self._coordinator.consumer_exited(self._run_generation)
             # Keep cleanup nested so loop detachment and exactly one SHUTDOWN
             # dispatch attempt both occur even if an earlier cleanup step
             # fails. Receiver dispatch may itself raise.
@@ -543,6 +599,8 @@ class ScriptRunner:
                 and ctx.parallel_coordinator.should_stop()
             ):
                 raise StopException()
+            if ctx is not None and not self._run_generation.is_live():
+                raise StopException()
             return
 
         if not self._execing:
@@ -563,6 +621,13 @@ class ScriptRunner:
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
+            if not self._run_generation.is_live():
+                # A newer runner superseded this one.
+                raise StopException()
+            # Never preempt an in-flight interaction commit: its callbacks
+            # must finish before the next interaction is installed.
+            if self._active_claim is None and self._coordinator.has_preempting_work():
+                raise RerunException(MAILBOX_RERUN_PLACEHOLDER)
             # No RERUN or STOP request.
             return
 
@@ -607,6 +672,11 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
+            claimed_rerun_data = self._claim_pending_interaction(rerun_data)
+            if claimed_rerun_data is None:
+                return
+            rerun_data = claimed_rerun_data
+
             # asyncio.run() clears the thread's current-loop reference. The
             # persistent loop is reinstated at each subsequent run boundary,
             # but not later within the same run after asyncio.run() returns.
@@ -745,6 +815,10 @@ class ScriptRunner:
             except Exception as ex:
                 # We got a compile error. Send an error event and bail immediately.
                 _LOGGER.exception("Script compilation error", exc_info=ex)
+                if self._active_claim is not None:
+                    # Without a compiled script there is nothing to run the
+                    # callbacks against, so the interaction is consumed.
+                    self._release_claim(committed=True)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
                 with self._join_wake_lock:
                     self._join_wake_coordinator = None
@@ -789,17 +863,12 @@ class ScriptRunner:
                     self._set_execing_flag(),
                 ):
                     # Run callbacks for widgets whose values have changed.
-                    if (
+                    if self._active_claim is not None or (
                         rerun_data.widget_states is not None
                         or rerun_data.replay_trigger_states is not None
                         or rerun_data.replay_trigger_values is not None
                     ):
-                        self._session_state.on_script_will_rerun(
-                            rerun_data.widget_states,
-                            replay_trigger_states=rerun_data.replay_trigger_states,
-                            replay_trigger_values=rerun_data.replay_trigger_values,
-                            is_history_navigation=rerun_data.is_history_navigation,
-                        )
+                        self._apply_interaction(rerun_data)
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished
                         # preserves this run's widget values.  On the normal path a
@@ -808,6 +877,7 @@ class ScriptRunner:
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
+                    self._coordinator.body_started(self._run_generation)
 
                     if fragment_ids_this_run:
                         # Skip queued descendants whose ancestor already ran in
@@ -947,6 +1017,9 @@ class ScriptRunner:
                 premature_stop,
                 uncaught_exception,
             ) = exec_func_with_error_handling(code_to_exec, ctx)
+            if self._active_claim is not None:
+                # The run ended before reaching the commit.
+                self._release_claim(committed=False)
             # setting the session state here triggers a yield-callback call
             # which reads self._requests and checks for rerun data
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
@@ -988,6 +1061,98 @@ class ScriptRunner:
                 rerun_data = rerun_exception_data
             else:
                 break
+
+    def _claim_pending_interaction(self, rerun_data: RerunData) -> RerunData | None:
+        """Claim the next mailbox interaction and fold it into ``rerun_data``.
+
+        On success, ``self._active_claim`` holds the commit lease until
+        ``_apply_interaction`` releases it. Returns None when ``rerun_data`` is
+        only a mailbox placeholder and nothing could be claimed.
+        """
+        if not self._run_generation.is_live():
+            return None
+
+        claim = self._coordinator.claim(self._run_generation)
+        if claim is None:
+            return None if rerun_data.from_mailbox else rerun_data
+
+        self._active_claim = claim
+        claimed_data = claim.record.rerun_data
+        if not rerun_data.from_mailbox:
+            # A derived request (for example st.rerun() from a callback)
+            # belongs to the interaction serviced before this one.
+            claimed_data = coalesce_rerun_data(rerun_data, claimed_data)
+        return merge_carryover_replay(claimed_data, claim)
+
+    def _apply_interaction(self, rerun_data: RerunData) -> None:
+        """Install widget state and dispatch callbacks for ``rerun_data``.
+
+        With a claimed interaction, this is its commit: it runs under the
+        commit lease, which is released once the callbacks finish.
+        """
+        needs_state_update = (
+            rerun_data.widget_states is not None
+            or rerun_data.replay_trigger_states is not None
+            or rerun_data.replay_trigger_values is not None
+        )
+        claim = self._active_claim
+        if claim is None:
+            self._session_state.on_script_will_rerun(
+                rerun_data.widget_states,
+                replay_trigger_states=rerun_data.replay_trigger_states,
+                replay_trigger_values=rerun_data.replay_trigger_values,
+                is_history_navigation=rerun_data.is_history_navigation,
+            )
+            return
+
+        committed = False
+        try:
+            # Honor a pending STOP before changing state, so the interaction
+            # returns to the mailbox unconsumed.
+            self._maybe_handle_execution_control_request()
+            committed = True
+            if needs_state_update:
+                self._session_state.on_script_will_rerun(
+                    rerun_data.widget_states,
+                    replay_trigger_states=rerun_data.replay_trigger_states,
+                    replay_trigger_values=rerun_data.replay_trigger_values,
+                    is_history_navigation=rerun_data.is_history_navigation,
+                    commit_lease=claim,
+                )
+        finally:
+            self._release_claim(
+                committed=committed,
+                rerun_data=rerun_data if committed and needs_state_update else None,
+            )
+
+    def _release_claim(
+        self, *, committed: bool, rerun_data: RerunData | None = None
+    ) -> None:
+        """Release the active commit lease.
+
+        With ``rerun_data``, the triggers it made visible are carried to the
+        next claim until this run's body starts.
+        """
+        claim = self._active_claim
+        if claim is None:
+            return
+        self._active_claim = None
+
+        body_replay_states = body_replay_values = None
+        if rerun_data is not None and self._run_generation.is_live():
+            body_replay_states, body_replay_values = (
+                self._session_state.dispatched_trigger_replay(
+                    rerun_data.widget_states,
+                    rerun_data.replay_trigger_states,
+                    rerun_data.replay_trigger_values,
+                )
+            )
+        self._coordinator.release(
+            claim,
+            committed=committed,
+            body_replay_states=body_replay_states,
+            body_replay_values=body_replay_values,
+        )
 
     def _on_script_finished(
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool

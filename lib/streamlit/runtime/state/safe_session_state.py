@@ -23,6 +23,10 @@ if TYPE_CHECKING:
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
+    from streamlit.runtime.scriptrunner_utils.session_rerun_coordinator import (
+        InteractionCommitLease,
+        RunGenerationLease,
+    )
     from streamlit.runtime.state.common import RegisterWidgetResult, T, WidgetMetadata
     from streamlit.runtime.state.query_params import QueryParams
     from streamlit.runtime.state.session_state import SessionState
@@ -36,13 +40,26 @@ class SafeSessionState:
     When this happens, the existing ScriptRunner will continue executing
     its script until it reaches a yield point - but during this time, it
     must not mutate its SessionState.
+
+    With a ``run_generation`` lease, that rule is enforced: once the lease
+    expires, every mutation is dropped. Script code normally never observes
+    this, because the yield callback raises ``StopException`` first.
     """
 
     _state: SessionState
     _lock: threading.RLock
     _yield_callback: Callable[[], None]
+    _run_generation: RunGenerationLease | None
+    _require_commit_lease: bool
 
-    def __init__(self, state: SessionState, yield_callback: Callable[[], None]) -> None:
+    def __init__(
+        self,
+        state: SessionState,
+        yield_callback: Callable[[], None],
+        *,
+        run_generation: RunGenerationLease | None = None,
+        require_commit_lease: bool = False,
+    ) -> None:
         # Fields must be set using the object's setattr method to avoid
         # infinite recursion from trying to look up the fields we're setting.
         object.__setattr__(self, "_state", state)
@@ -50,11 +67,24 @@ class SafeSessionState:
         #  but `call_callbacks` first needs to be rewritten.
         object.__setattr__(self, "_lock", threading.RLock())
         object.__setattr__(self, "_yield_callback", yield_callback)
+        object.__setattr__(self, "_run_generation", run_generation)
+        object.__setattr__(self, "_require_commit_lease", require_commit_lease)
+
+    def _accepts_writes(self) -> bool:
+        lease = self._run_generation
+        return lease is None or lease.is_live()
+
+    def _raise_if_expired(self) -> None:
+        if not self._accepts_writes():
+            from streamlit.runtime.scriptrunner_utils.exceptions import StopException
+
+            raise StopException()
 
     def register_widget(
         self, metadata: WidgetMetadata[T], user_key: str | None
     ) -> RegisterWidgetResult[T]:
         self._yield_callback()
+        self._raise_if_expired()
         with self._lock:
             return self._state.register_widget(metadata, user_key)
 
@@ -65,8 +95,19 @@ class SafeSessionState:
         replay_trigger_states: WidgetStatesProto | None = None,
         replay_trigger_values: Mapping[str, Any] | None = None,
         is_history_navigation: bool = False,
+        commit_lease: InteractionCommitLease | None = None,
     ) -> None:
         self._yield_callback()
+        self._raise_if_expired()
+        if (
+            self._require_commit_lease
+            and fresh_widget_states is not None
+            and (commit_lease is None or not commit_lease.is_active)
+        ):
+            raise RuntimeError(
+                "Installing fresh widget state requires the active interaction "
+                "commit lease."
+            )
         with self._lock:
             # TODO: rewrite this to copy the callbacks list into a local
             #  variable so that we don't need to hold our lock for the
@@ -79,12 +120,25 @@ class SafeSessionState:
                 is_history_navigation=is_history_navigation,
             )
 
+    def dispatched_trigger_replay(
+        self,
+        fresh_widget_states: WidgetStatesProto | None,
+        replay_trigger_states: WidgetStatesProto | None,
+        replay_trigger_values: Mapping[str, Any] | None,
+    ) -> tuple[WidgetStatesProto | None, Mapping[str, Any] | None]:
+        with self._lock:
+            return self._state.dispatched_trigger_replay(
+                fresh_widget_states, replay_trigger_states, replay_trigger_values
+            )
+
     def on_script_finished(
         self,
         widget_ids_this_run: frozenset[str],
         *,
         remove_stale_widgets: bool = True,
     ) -> None:
+        if not self._accepts_writes():
+            return
         with self._lock:
             self._state.on_script_finished(
                 widget_ids_this_run, remove_stale_widgets=remove_stale_widgets
@@ -108,6 +162,8 @@ class SafeSessionState:
         without triggering the "state value cannot be modified" error.
         """
         self._yield_callback()
+        if not self._accepts_writes():
+            return
         with self._lock:
             self._state.reset_state_value(user_key, value)
 
@@ -124,11 +180,15 @@ class SafeSessionState:
 
     def __setitem__(self, key: str, value: Any) -> None:
         self._yield_callback()
+        if not self._accepts_writes():
+            return
         with self._lock:
             self._state[key] = value
 
     def __delitem__(self, key: str) -> None:
         self._yield_callback()
+        if not self._accepts_writes():
+            return
         with self._lock:
             del self._state[key]
 
