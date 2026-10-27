@@ -29,7 +29,12 @@ from e2e_playwright.shared.dataframe_utils import expect_canvas_to_be_stable
 
 
 def _dataframe_canvas_has_painted_content(dataframe: Locator) -> bool:
-    """Return True when the dataframe canvas has non-blank pixels."""
+    """Return True once the dataframe canvas has a non-white pixel.
+
+    An unpainted or white-cleared Glide canvas must not count as ready.
+    Grid lines and cell text are darker than rgb 250 on the light backgrounds
+    in this file.
+    """
     return bool(
         dataframe.locator("canvas").first.evaluate(
             """(canvas) => {
@@ -42,7 +47,7 @@ def _dataframe_canvas_has_painted_content(dataframe: Locator) -> bool:
                 }
                 const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 for (let i = 0; i < data.length; i += 4) {
-                    // Non-transparent and not nearly white → cells/grid are painted.
+                    // Opaque and not nearly white → cells/grid are painted.
                     if (
                         data[i + 3] > 0 &&
                         (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250)
@@ -57,10 +62,10 @@ def _dataframe_canvas_has_painted_content(dataframe: Locator) -> bool:
 
 
 def _wait_for_theme_app_ready(app: Page) -> None:
-    """Stabilize fonts and dataframe paint before full-page theme snapshots.
+    """Wait until fonts and dataframe cells are painted before a full-page theme snapshot.
 
-    Webkit can screenshot after layout but before Glide paints cell content,
-    producing an empty bordered dataframe frame (~0.12% pixel diff).
+    WebKit can capture the page after layout and before Glide draws cell content,
+    which shows up as an empty bordered dataframe (~0.12% of the screenshot).
     """
     expect_no_skeletons(app, timeout=25000)
     expect_font(app, "Material Symbols Rounded")
@@ -219,7 +224,7 @@ def test_theme_preference_persists_on_reload(
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
 
     _wait_for_theme_app_ready(app)
-    # Slightly looser threshold than other shots in this file: after reload,
-    # webkit/firefox occasionally shift help-icon anti-aliasing by ~1px (~290
-    # mismatched pixels under pixelmatch), just over the 0.0003 budget (~276).
+    # After reload, WebKit and Firefox sometimes shift help-icon anti-aliasing by
+    # about 1px (~290 pixels). That exceeds this file's usual 0.0003 budget
+    # (fewer than 276 mismatched pixels on a 1280x720 screenshot).
     assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0005)
