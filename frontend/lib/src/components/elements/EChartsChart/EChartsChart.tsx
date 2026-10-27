@@ -25,12 +25,7 @@ import {
   useState,
 } from "react"
 
-import {
-  FileDownload,
-  FullscreenExit,
-  InsertChart,
-  TableChart,
-} from "@emotion-icons/material-outlined"
+import { FileDownload } from "@emotion-icons/material-outlined"
 import * as echarts from "echarts"
 import { isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
@@ -44,9 +39,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import type { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -246,13 +239,12 @@ export function EChartsChart({
   // `dataset.source` placeholders, memoized on the spec string. A dataset that
   // cannot be read is reported like an invalid spec, so ECharts never sees a
   // placeholder.
-  const { option, parseError, dataViewData } = useMemo<{
+  const { option, parseError } = useMemo<{
     option: EChartsOptionObject | null
     parseError: string | null
-    dataViewData: Quiver | null
   }>(() => {
     if (!element.spec) {
-      return { option: {}, parseError: null, dataViewData: null }
+      return { option: {}, parseError: null }
     }
     try {
       const parsed: unknown = JSON.parse(element.spec)
@@ -260,21 +252,13 @@ export function EChartsChart({
         return {
           option: null,
           parseError: "The ECharts option must be a JSON object.",
-          dataViewData: null,
         }
       }
       const parsedOption = parsed as EChartsOptionObject
-      const dataViewData = hydrateArrowDatasetSources(
-        parsedOption,
-        element.datasets
-      )
-      return { option: parsedOption, parseError: null, dataViewData }
+      hydrateArrowDatasetSources(parsedOption, element.datasets)
+      return { option: parsedOption, parseError: null }
     } catch (error) {
-      return {
-        option: null,
-        parseError: ensureError(error).message,
-        dataViewData: null,
-      }
+      return { option: null, parseError: ensureError(error).message }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
@@ -607,144 +591,67 @@ export function EChartsChart({
     element.theme,
   ])
 
-  // "Show data" swaps the chart for a read-only table of the dataset that
-  // `hydrateArrowDatasetSources` picks (the default chart's dataset first).
-  // The chart is hidden, not unmounted, so ECharts keeps its zoom, legend, and
-  // timeline state.
-  const [isShowingData, setIsShowingData] = useState(false)
-  const [dataViewHeight, setDataViewHeight] = useState<number | undefined>()
-  // Close the table when a rerun drops its dataset, so the chart shows instead
-  // of an empty element and a later rerun that restores the data doesn't
-  // reopen the table.
-  if (isShowingData && dataViewData === null) {
-    setIsShowingData(false)
-  }
-  const isDataViewOpen = isShowingData && dataViewData !== null
-
-  // The table takes the chart's inline height. The chart measures the screen
-  // in fullscreen and 0 while hidden, so keep the last inline measurement.
-  const inlineHeightRef = useRef<number | undefined>(undefined)
-  useEffect(() => {
-    if (!isFullScreen && height > 0) {
-      inlineHeightRef.current = height
-    }
-  }, [isFullScreen, height])
-
-  const handleShowData = useCallback((): void => {
-    setDataViewHeight(inlineHeightRef.current)
-    setIsShowingData(true)
-  }, [])
-
-  const handleShowChart = useCallback((): void => {
-    setIsShowingData(false)
-  }, [])
-
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const labelContext = element.alt?.trim() || undefined
 
   return (
-    <>
-      {isDataViewOpen && (
-        <ReadOnlyGrid
-          data={dataViewData}
-          height={fullScreenHeight ?? dataViewHeight}
-          alt={labelContext}
-          customToolbarActions={[
-            <ToolbarAction
-              key="show-chart"
-              label="Show chart"
-              icon={InsertChart}
-              onClick={handleShowChart}
-              labelContext={labelContext}
-            />,
-            // The grid hides its own fullscreen controls, so without this the
-            // table would only leave fullscreen through Escape.
-            ...(isFullScreen
-              ? [
-                  <ToolbarAction
-                    key="close-fullscreen"
-                    label="Close fullscreen"
-                    icon={FullscreenExit}
-                    onClick={collapse}
-                    labelContext={labelContext}
-                  />,
-                ]
-              : []),
-          ]}
-        />
-      )}
-      <StyledEChartsChartRoot
-        isStretchHeight={isStretchHeight}
-        isHidden={isDataViewOpen}
-      >
-        <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
-          <StyledToolbarElementContainer
-            height={isFullScreen ? fullScreenHeight : "100%"}
-            useContainerWidth={true}
-            useContainerHeight={true}
+    <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
+      <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
+        <StyledToolbarElementContainer
+          height={isFullScreen ? fullScreenHeight : "100%"}
+          useContainerWidth={true}
+          useContainerHeight={true}
+        >
+          <Toolbar
+            target={StyledToolbarElementContainer}
+            isFullScreen={isFullScreen}
+            onExpand={expand}
+            onCollapse={collapse}
+            disableFullscreenMode={disableFullscreenMode}
+            labelContext={labelContext}
           >
-            <Toolbar
-              target={StyledToolbarElementContainer}
-              isFullScreen={isFullScreen}
-              onExpand={expand}
-              onCollapse={collapse}
-              disableFullscreenMode={disableFullscreenMode}
-              labelContext={labelContext}
-            >
-              {dataViewData !== null && (
-                <ToolbarAction
-                  label="Show data"
-                  icon={TableChart}
-                  onClick={handleShowData}
-                  labelContext={labelContext}
-                />
-              )}
-              {chartInstance !== null && (
-                <ToolbarAction
-                  label={`Download as ${downloadType.toUpperCase()}`}
-                  icon={FileDownload}
-                  onClick={handleDownloadChart}
-                  labelContext={labelContext}
-                />
-              )}
-            </Toolbar>
-            {parseError !== null ? (
-              <StyledEChartsError
-                role="alert"
-                data-testid="stEChartsChartError"
-              >
-                ECharts chart error: {parseError}
-              </StyledEChartsError>
-            ) : (
-              <StyledEChartsChartStack>
-                {/*
-                  No `role` here on purpose. ECharts sets `role="img"` plus a
-                  generated `aria-label` on this same element (`zr.dom`) whenever
-                  `aria.enabled` is on, which is the default. Declaring the role
-                  here too would leave it behind as an image with no accessible
-                  name for users who opt out with `aria: {enabled: false}`.
-                */}
-                <StyledEChartsChartContainer
-                  ref={containerRef}
-                  className="stEChartsChart"
-                  data-testid="stEChartsChart"
-                  aria-busy={!hasRendered && renderError === null}
-                  isDisabled={disabled && element.selectionActivated}
-                />
-                {renderError !== null && (
-                  <StyledEChartsErrorOverlay
-                    role="alert"
-                    data-testid="stEChartsChartError"
-                  >
-                    ECharts chart error: {renderError}
-                  </StyledEChartsErrorOverlay>
-                )}
-              </StyledEChartsChartStack>
+            {chartInstance !== null && (
+              <ToolbarAction
+                label={`Download as ${downloadType.toUpperCase()}`}
+                icon={FileDownload}
+                onClick={handleDownloadChart}
+                labelContext={labelContext}
+              />
             )}
-          </StyledToolbarElementContainer>
-        </StyledEChartsChartFill>
-      </StyledEChartsChartRoot>
-    </>
+          </Toolbar>
+          {parseError !== null ? (
+            <StyledEChartsError role="alert" data-testid="stEChartsChartError">
+              ECharts chart error: {parseError}
+            </StyledEChartsError>
+          ) : (
+            <StyledEChartsChartStack>
+              {/*
+                No `role` here on purpose. ECharts sets `role="img"` plus a
+                generated `aria-label` on this same element (`zr.dom`) whenever
+                `aria.enabled` is on, which is the default. Declaring the role
+                here too would leave it behind as an image with no accessible
+                name for users who opt out with `aria: {enabled: false}`.
+              */}
+              <StyledEChartsChartContainer
+                ref={containerRef}
+                className="stEChartsChart"
+                data-testid="stEChartsChart"
+                aria-busy={!hasRendered && renderError === null}
+                isDisabled={disabled && element.selectionActivated}
+              />
+              {renderError !== null && (
+                <StyledEChartsErrorOverlay
+                  role="alert"
+                  data-testid="stEChartsChartError"
+                >
+                  ECharts chart error: {renderError}
+                </StyledEChartsErrorOverlay>
+              )}
+            </StyledEChartsChartStack>
+          )}
+        </StyledToolbarElementContainer>
+      </StyledEChartsChartFill>
+    </StyledEChartsChartRoot>
   )
 }
 
