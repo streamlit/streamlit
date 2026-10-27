@@ -182,6 +182,11 @@ export interface Props {
   isMobileViewport: boolean
 }
 
+interface FinishedRun {
+  scriptRunId: string
+  fragmentIds: string[]
+}
+
 interface State {
   connectionState: ConnectionState
   elements: AppRoot
@@ -1152,7 +1157,10 @@ export class App extends PureComponent<Props, State> {
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
-          this.handleScriptFinished(status),
+          this.handleScriptFinished(
+            status,
+            this.getFinishedRun(msgProto.metadata as ForwardMsgMetadata)
+          ),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
@@ -2037,10 +2045,35 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Capture identity from a script_finished message before React state updates.
+   *
+   * Message metadata is the source of truth. Fallback to handler-entry state
+   * only for backends that omit run identity, which cannot pin cleanup across
+   * overlapping start/finish messages.
+   */
+  private getFinishedRun(metadata?: ForwardMsgMetadata | null): FinishedRun {
+    const scriptRunId = metadata?.scriptRunId
+    if (!scriptRunId) {
+      return {
+        scriptRunId: this.state.scriptRunId,
+        fragmentIds: this.state.fragmentIdsThisRun,
+      }
+    }
+    return {
+      scriptRunId,
+      fragmentIds: metadata.fragmentIdsThisRun,
+    }
+  }
+
+  /**
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
+   * @param finishedRun identity of the backend execution that finished
    */
-  handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+  handleScriptFinished(
+    status: ForwardMsg.ScriptFinishedStatus,
+    finishedRun: FinishedRun
+  ): void {
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
@@ -2049,7 +2082,7 @@ export class App extends PureComponent<Props, State> {
     // re-enable even when a run ends with a compilation error.
     this.setState(prevState => ({
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
+      scriptRunFinishedFragmentIds: finishedRun.fragmentIds,
     }))
 
     // Clear history replaceState only on a real finish for the latest
@@ -2096,12 +2129,13 @@ export class App extends PureComponent<Props, State> {
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun, elements }) => {
+          ({ elements }) => {
             return {
-              // Apply any pending elements that haven't been applied.
+              // Cleanup is pinned to the run named by the server. React
+              // batching cannot retarget it to a later NewSession.
               elements: elements.clearStaleNodes(
-                scriptRunId,
-                fragmentIdsThisRun
+                finishedRun.scriptRunId,
+                finishedRun.fragmentIds
               ),
             }
           },
@@ -2130,7 +2164,7 @@ export class App extends PureComponent<Props, State> {
       ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge,
-          this.state.fragmentIdsThisRun
+          finishedRun.fragmentIds
         )
       }
     }

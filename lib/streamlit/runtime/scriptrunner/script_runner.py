@@ -43,6 +43,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequests,
@@ -273,9 +274,12 @@ class ScriptRunner:
         # receiver(sender, event=..., **payload); events not listed below carry
         # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
-        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
+        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception, run_descriptor
         # - SHUTDOWN: client_state (None if setup failed before context creation)
-        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages,
+        #   and run_descriptor
+        # - SCRIPT_STOPPED_WITH_SUCCESS, SCRIPT_STOPPED_FOR_RERUN, and
+        #   FRAGMENT_STOPPED_WITH_SUCCESS all include run_descriptor
         self.on_event = Signal()
 
         # Set to true while we're executing. Used by
@@ -711,12 +715,14 @@ class ScriptRunner:
             with self._join_wake_lock:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
+            run_descriptor = RunDescriptor.create(fragment_ids_this_run)
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                run_descriptor=run_descriptor,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -752,6 +758,7 @@ class ScriptRunner:
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
                     exception=ex,
+                    run_descriptor=run_descriptor,
                 )
                 return
 
@@ -978,7 +985,9 @@ class ScriptRunner:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
                     _LOGGER.debug("Failed to create page profile", exc_info=ex)
-            self._on_script_finished(ctx, finished_event, premature_stop)
+            self._on_script_finished(
+                ctx, finished_event, premature_stop, run_descriptor
+            )
 
             # # Use _log_if_error() to make sure we never ever ever stop running the
             # # script without meaning to.
@@ -990,7 +999,11 @@ class ScriptRunner:
                 break
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
@@ -1013,7 +1026,7 @@ class ScriptRunner:
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
         # Skip orphan cleanup when:
         # - The body never ran: this run already cleared session refs and

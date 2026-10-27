@@ -24,7 +24,12 @@ from streamlit import runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import (
+    RerunData,
+    RunDescriptor,
+    ScriptRunner,
+    ScriptRunnerEvent,
+)
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
@@ -206,7 +211,11 @@ class LocalScriptRunner(ScriptRunner):
         return any(e == ScriptRunnerEvent.SHUTDOWN for e in self.events)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         # Do not drop unseen widgets when the script stopped for a rerun
         # (later widgets never registered). Keep this gate in sync with
@@ -222,7 +231,7 @@ class LocalScriptRunner(ScriptRunner):
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
         # Skip orphan cleanup when:
         # - The body never ran (nothing was re-registered, so everything

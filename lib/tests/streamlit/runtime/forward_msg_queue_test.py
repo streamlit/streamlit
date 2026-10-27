@@ -388,6 +388,47 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.clear()
         assert fmq._queue == []
 
+    def test_clear_preserves_script_finished_run_metadata(self):
+        """Rewriting a finish status must keep the original run identity."""
+        fmq = ForwardMsgQueue()
+
+        script_finished_msg = ForwardMsg()
+        script_finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+        script_finished_msg.metadata.script_run_id = "run-a"
+        script_finished_msg.metadata.fragment_ids_this_run.append("frag-a")
+
+        fmq.enqueue(script_finished_msg)
+        fmq.clear(retain_lifecycle_msgs=True)
+
+        assert len(fmq._queue) == 1
+        retained = fmq._queue[0]
+        assert retained.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert retained.metadata.script_run_id == "run-a"
+        assert list(retained.metadata.fragment_ids_this_run) == ["frag-a"]
+
+    def test_fragment_clear_preserves_full_app_finish_metadata(self):
+        """A fragment rerun must not rewrite a successful full-app finish."""
+        fmq = ForwardMsgQueue()
+
+        script_finished_msg = ForwardMsg()
+        script_finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+        script_finished_msg.metadata.script_run_id = "run-full"
+        fmq.enqueue(script_finished_msg)
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-b"])
+
+        retained = fmq._queue[0]
+        assert retained.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+        assert retained.metadata.script_run_id == "run-full"
+        assert list(retained.metadata.fragment_ids_this_run) == []
+
     def test_on_before_enqueue_msg(self):
         count = 0
 

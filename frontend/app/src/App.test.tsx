@@ -3840,6 +3840,146 @@ describe("App", () => {
       ).toHaveBeenCalled()
     })
 
+    it("cleans only the finished run after a later start has updated state", async () => {
+      renderApp(getProps())
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_a",
+        fragmentIdsThisRun: ["frag_a"],
+      })
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "stale nested from A", help: "" },
+          },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      // Enclosing fragment reruns without the nested child; the child stays
+      // in the tree until successful finish cleanup.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_a2",
+        fragmentIdsThisRun: ["frag_a"],
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      // A later unrelated fragment run updates mutable React state first.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_b",
+        fragmentIdsThisRun: ["frag_b"],
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_b",
+        },
+        { deltaPath: [0, 1], activeScriptHash: "page_script_hash" }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "from B", help: "" },
+          },
+          fragmentId: "frag_b",
+        },
+        { deltaPath: [0, 1, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("stale nested from A")).toBeInTheDocument()
+        expect(screen.getByText("from B")).toBeInTheDocument()
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        { scriptRunId: "run_a2", fragmentIdsThisRun: ["frag_a"] }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("stale nested from A")
+        ).not.toBeInTheDocument()
+      })
+      expect(screen.getByText("from B")).toBeInTheDocument()
+
+      const connectionManager = getMockConnectionManager()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).toHaveBeenCalledWith(0, ["frag_a"])
+    })
+
+    it("still skips stale-node cleanup for an interrupted run", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_a",
+        fragmentIdsThisRun: ["frag_a"],
+      })
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "kept during interrupt", help: "" },
+          },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_b",
+        fragmentIdsThisRun: ["frag_b"],
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN,
+        { scriptRunId: "run_a", fragmentIdsThisRun: ["frag_a"] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("kept during interrupt")).toBeInTheDocument()
+      })
+    })
+
     it("will clear stale nodes if finished successfully", async () => {
       renderApp(getProps())
       // Run the script with one new element
@@ -4769,6 +4909,34 @@ describe("App", () => {
       expect(idsAfterStop.length).toBeGreaterThan(0)
       expect(idsAfterStop).not.toContain("fragmentA")
       expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
+    })
+
+    it("does not mutate the render tree on stopAutoRerun", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "evicted fragment content", help: "" },
+          },
+          fragmentId: "fragmentA",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("evicted fragment content")
+        ).toBeInTheDocument()
+      })
+
+      sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+
+      expect(screen.getByText("evicted fragment content")).toBeInTheDocument()
     })
   })
 
