@@ -61,6 +61,18 @@ const textCell = (displayData: string): GridCell => ({
   allowOverlay: false,
 })
 
+/** jsdom's CSS object has no `supports`, which `vi.spyOn` requires. */
+function mockCssSupports(supported: boolean): ReturnType<typeof vi.spyOn> {
+  if (typeof CSS.supports !== "function") {
+    Object.defineProperty(CSS, "supports", {
+      configurable: true,
+      writable: true,
+      value: () => supported,
+    })
+  }
+  return vi.spyOn(CSS, "supports").mockReturnValue(supported)
+}
+
 function mockTableWidth(width: number): ReturnType<typeof vi.spyOn> {
   return vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
@@ -338,7 +350,7 @@ describe("fillDataFramePrintSlot", () => {
   })
 
   it("leaves the font ratio to print CSS when the browser can compute it", () => {
-    const supports = vi.spyOn(CSS, "supports").mockReturnValue(true)
+    const supports = mockCssSupports(true)
     Object.defineProperty(slot, "clientWidth", { value: 80 })
     const spy = mockTableWidth(320)
 
@@ -366,7 +378,7 @@ describe("fillDataFramePrintSlot", () => {
   })
 
   it("records a unitless font ratio when the print CSS ratio is unavailable", () => {
-    const supports = vi.spyOn(CSS, "supports").mockReturnValue(false)
+    const supports = mockCssSupports(false)
     const frame = document.createElement("div")
     frame.className = "stDataFrame"
     let frameWidth = 80
@@ -451,7 +463,7 @@ describe("fillDataFramePrintSlot", () => {
     vi.spyOn(table, "offsetWidth", "get").mockReturnValue(480)
     vi.spyOn(table.rows[0].cells[0], "offsetWidth", "get").mockReturnValue(480)
 
-    const supports = vi.spyOn(CSS, "supports").mockReturnValue(false)
+    const supports = mockCssSupports(false)
     fitDataFramePrintTable(slot)
 
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
