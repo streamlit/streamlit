@@ -1266,6 +1266,7 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             message = str(exc_info.value)
             assert "`st.sidebar`" in message
             assert "`st.bottom`" in message
+            assert "full app run" in message
             assert "later fragment rerun" in message
             assert "if st.button" not in message
             assert "sequential fragment rerun" not in message
@@ -1614,8 +1615,12 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
 
     def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
-        """A fragment-only rerun raises if the fragment did not write to the
-        outside container during the last full app run.
+        """A fragment-only rerun raises when that fragment did not write to the
+        outside container on the last full app run.
+
+        The message is shared with ``parallel=True`` fragments, which cannot
+        reserve that slot, so it also states that outside writes are
+        unsupported for them.
         """
         outside = st.container()
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
@@ -1636,6 +1641,7 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert "`st.sidebar`" in message
         assert "`st.bottom`" in message
         assert "outside_container.empty()" in message
+        assert "inside the fragment function" in message
 
     def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
         """A main-script write does not reserve a wrapper, so a fragment-only
