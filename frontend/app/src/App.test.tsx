@@ -3831,13 +3831,17 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        {
+          scriptRunId: "script_run_id",
+          fragmentIdsThisRun: [],
+        }
       )
 
       const connectionManager = getMockConnectionManager()
       expect(
         connectionManager.incrementMessageCacheRunCount
-      ).toHaveBeenCalled()
+      ).toHaveBeenCalledWith(0, [])
     })
 
     it("cleans only the finished run after a later start has updated state", async () => {
@@ -4017,7 +4021,8 @@ describe("App", () => {
 
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        { scriptRunId: "different_script_run_id" }
       )
 
       await waitFor(() => {
@@ -4105,7 +4110,8 @@ describe("App", () => {
 
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY // use finished_fragment_run_successfully here because in the other test we used the finished_successfully status
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY, // use finished_fragment_run_successfully here because in the other test we used the finished_successfully status
+        { scriptRunId: "different_script_run_id" }
       )
 
       // this message was sent in the new session
@@ -4309,7 +4315,8 @@ describe("App", () => {
       // Trigger cleanup in script finished handler
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        { scriptRunId: "script_run_id" }
       )
 
       // Since no logo is sent in this script run, logo must not be present in the script anymore
@@ -4349,7 +4356,8 @@ describe("App", () => {
       )
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        { scriptRunId: "script_run_id" }
       )
       await waitFor(() => {
         expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
@@ -4362,7 +4370,11 @@ describe("App", () => {
       })
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        {
+          scriptRunId: "script_run_id",
+          fragmentIdsThisRun: ["myFragmentId"],
+        }
       )
       await waitFor(() => {
         expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
@@ -4375,7 +4387,8 @@ describe("App", () => {
       })
       sendForwardMessage(
         "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        { scriptRunId: "different_script_run_id" }
       )
       await waitFor(() => {
         expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
@@ -6783,7 +6796,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // 3. Send scriptFinished
     sendForwardMessage(
       "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+      { scriptRunId: "script_run_id" }
     )
 
     // 4. Assert incrementMessageCacheRunCount was called
@@ -6814,7 +6828,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // Verify that if script finished now, incrementMessageCacheRunCount would be called
     sendForwardMessage(
       "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+      { scriptRunId: "script_run_id" }
     )
     expect(
       connectionManager.incrementMessageCacheRunCount
@@ -6841,7 +6856,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // 4. Send scriptFinished again
     sendForwardMessage(
       "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+      { scriptRunId: "script_run_id" }
     )
 
     // 5. Assert incrementMessageCacheRunCount was NOT called this time
