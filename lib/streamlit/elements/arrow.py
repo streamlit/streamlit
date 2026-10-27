@@ -631,7 +631,6 @@ def _marshall_lazy_dataframe(
     return True
 
 
-@agent_data.builder
 def _lazy_dataframe_data(lazy_data: LazyDataframeProto) -> dict[str, Any] | None:
     """A lazily loaded dataframe's agent ``data``, previewed from its first chunk.
 
@@ -1321,11 +1320,15 @@ class ArrowMixin:
                 key=proto.id or key,
                 # A lazy table has no `arrow_data`, so nothing is served: its
                 # first chunk, served alone, would pass for the whole table.
-                data_block=_lazy_dataframe_data(proto.lazy_data)
-                if lazy_marshalled
-                else agent_data.arrow(
-                    proto.arrow_data.data,
-                    coordinates=self.dg._get_write_delta_path_str(),
+                data_block=(
+                    lambda: (
+                        _lazy_dataframe_data(proto.lazy_data)
+                        if lazy_marshalled
+                        else agent_data.arrow(
+                            proto.arrow_data.data,
+                            coordinates=self.dg._get_write_delta_path_str(),
+                        )
+                    )
                 ),
                 # A browser user can select rows or press a button column. This
                 # API only reports that. A display-only table has nothing to

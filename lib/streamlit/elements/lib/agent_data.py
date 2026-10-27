@@ -15,10 +15,10 @@
 """Build the ``data`` a table, chart, or map reports to the agent API.
 
 A data command builds its ``data`` block while recording, when it emits the
-element, and passes it as ``agent_spec.element(data_block=...)``. The snapshot
-copies it. Each builder is decorated with ``builder``, so a browser session
-never runs it and a builder that raises reports no ``data`` rather than failing
-the command.
+element, by passing a function to ``agent_spec.element(data_block=...)``, such
+as ``lambda: agent_data.arrow(...)``. ``agent_spec`` calls it only while
+recording, so a browser session never runs it, and reports no ``data`` if it
+raises. The snapshot copies the block.
 
 ``arrow`` builds the block for an element whose complete data is one Arrow IPC
 stream from its payload: the schema, the row count, a preview of the first
@@ -40,9 +40,8 @@ can reuse it.
 
 from __future__ import annotations
 
-import functools
 import json
-from typing import TYPE_CHECKING, Any, Final, Literal, ParamSpec, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
 
 from streamlit import config, runtime, util
 from streamlit.elements.lib import agent_spec
@@ -52,14 +51,10 @@ from streamlit.runtime import runtime_util
 from streamlit.runtime.agent import json_encoding
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     import pyarrow as pa
     from google.protobuf.message import Message
 
 _LOGGER: Final = get_logger(__name__)
-
-_P = ParamSpec("_P")
 
 # The registered mime type for the Arrow IPC stream format, which is what
 # Streamlit's Arrow serializer produces. Media storage pins it to no
@@ -84,44 +79,6 @@ UnavailableReason: TypeAlias = Literal[
 ]
 
 
-def builder(
-    build: Callable[_P, dict[str, Any] | None],
-) -> Callable[_P, dict[str, Any] | None]:
-    """Make ``build`` an element's data builder.
-
-    The decorated function returns ``None`` unless this session is recording,
-    so a browser session never runs its body. An exception inside it is logged
-    at debug level and also returns ``None``: an element without ``data`` costs
-    far less than a command that fails in an agent session.
-
-    Parameters
-    ----------
-    build
-        A function that returns an element's ``data`` block, or ``None`` when
-        the element has none.
-
-    Returns
-    -------
-    Callable
-        ``build``, gated on recording and returning ``None`` instead of
-        raising.
-    """
-
-    @functools.wraps(build)
-    def build_while_recording(
-        *args: _P.args, **kwargs: _P.kwargs
-    ) -> dict[str, Any] | None:
-        if not agent_spec.is_recording():
-            return None
-        try:
-            return build(*args, **kwargs)
-        except Exception:
-            _LOGGER.debug("Could not build an element's agent API data.", exc_info=True)
-            return None
-
-    return build_while_recording
-
-
 def unavailable(reason: UnavailableReason) -> dict[str, Any]:
     """A ``data`` block with no preview and nothing serving the data.
 
@@ -138,8 +95,7 @@ def unavailable(reason: UnavailableReason) -> dict[str, Any]:
     return {"complete": False, "unavailable": reason}
 
 
-@builder
-def raw_spec(proto: Message, field: str) -> dict[str, Any] | None:
+def raw_spec(spec_json: str) -> dict[str, Any] | None:
     """The ``data`` of a chart given a specification, reported as given.
 
     Its values are inside the specification, so there is no separate table to
@@ -148,24 +104,19 @@ def raw_spec(proto: Message, field: str) -> dict[str, Any] | None:
 
     Parameters
     ----------
-    proto
-        The chart's proto. The field is read only while recording, since
-        reading a large string field copies it.
-    field
-        The proto field holding the specification's JSON text, such as
-        ``"spec"`` for ``st.echarts_chart`` or ``"json"`` for a Deck.gl chart.
+    spec_json
+        The specification's JSON text, as the chart's proto carries it.
 
     Returns
     -------
     dict[str, Any] | None
-        ``{"spec": ..., "complete": True}``, or ``None`` outside a recording
-        session and for an empty or malformed specification.
+        ``{"spec": ..., "complete": True}``, or ``None`` for an empty or
+        malformed specification.
     """
-    spec = parse_spec(getattr(proto, field))
+    spec = parse_spec(spec_json)
     return None if spec is None else {"spec": spec, "complete": True}
 
 
-@builder
 def arrow(arrow_bytes: bytes, *, coordinates: str) -> dict[str, Any] | None:
     """The ``data`` of an element whose complete data is one Arrow IPC stream.
 
@@ -189,9 +140,8 @@ def arrow(arrow_bytes: bytes, *, coordinates: str) -> dict[str, Any] | None:
     -------
     dict[str, Any] | None
         The summary with a ``url``, or with ``unavailable`` when the stream is
-        not served and the preview is not all of it. ``None`` outside a
-        recording session, for empty bytes, and for a stream that can be
-        neither read nor served.
+        not served and the preview is not all of it. ``None`` for empty
+        bytes, and for a stream that can be neither read nor served.
     """
     if not arrow_bytes:
         return None

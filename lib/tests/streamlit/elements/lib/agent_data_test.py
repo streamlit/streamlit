@@ -22,7 +22,7 @@ import json
 import math
 import re
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pyarrow as pa
@@ -79,10 +79,15 @@ class ArrowDataTest(DeltaGeneratorTestCase):
         assert isinstance(url, str)
         return url
 
-    def test_a_browser_session_builds_nothing(self) -> None:
-        """Without recording there is no block and no second copy of the data."""
-        assert agent_data.arrow(_ARROW, coordinates="[0, 0]") is None
+    def test_a_browser_session_registers_no_copy(self) -> None:
+        """Outside a recording session no copy is stored, even when called
+        directly, as a cache replay does without `agent_spec`'s gate.
+        """
+        data = agent_data.arrow(_ARROW, coordinates="[0, 0]")
+
         assert self._stored() == {}
+        assert data is not None
+        assert "url" not in data
 
     def test_an_agent_session_registers_the_arrow_bytes(self) -> None:
         """The summary is reported beside a URL with no extension that serves the
@@ -218,60 +223,16 @@ class ArrowDataTest(DeltaGeneratorTestCase):
         assert served.content == second
 
 
-def test_a_builder_runs_only_while_recording(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Outside a recording session the builder's body never runs."""
-    calls: list[tuple[str, str]] = []
-
-    @agent_data.builder
-    def build(spec: str, *, coordinates: str) -> dict[str, Any] | None:
-        calls.append((spec, coordinates))
-        return {"complete": True}
-
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
-    assert build("spec", coordinates="[0]") is None
-    assert calls == []
-
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-    assert build("spec", coordinates="[0]") == {"complete": True}
-    assert calls == [("spec", "[0]")]
-
-
-def test_a_builder_that_raises_reports_no_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A bug in a builder becomes no `data`, logged at debug, never a failed command."""
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-
-    @agent_data.builder
-    def broken() -> dict[str, Any] | None:
-        raise ValueError("boom")
-
-    with patch.object(agent_data, "_LOGGER") as logger:
-        assert broken() is None
-
-    logger.debug.assert_called_once()
-    assert logger.debug.call_args.kwargs["exc_info"] is True
-
-
-def test_raw_spec_reports_a_chart_specification_as_given(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """While recording, the parsed specification is complete data. Otherwise
-    the field is never read, since reading a large string field copies it.
-    """
-    proto = MagicMock()
-    proto.json = '{"layers": [{"data": [{"lat": 1.0}]}], "zoom": NaN}'
-
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
-    proto.reset_mock()
-    assert agent_data.raw_spec(proto, "json") is None
-    assert proto.mock_calls == []
-
-    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-    assert agent_data.raw_spec(proto, "json") == {
+def test_raw_spec_reports_a_chart_specification_as_given() -> None:
+    """The parsed specification is complete data; malformed text is none."""
+    assert agent_data.raw_spec(
+        '{"layers": [{"data": [{"lat": 1.0}]}], "zoom": NaN}'
+    ) == {
         "spec": {"layers": [{"data": [{"lat": 1.0}]}], "zoom": None},
         "complete": True,
     }
-    proto.json = "{not json"
-    assert agent_data.raw_spec(proto, "json") is None
+    assert agent_data.raw_spec("{not json") is None
+    assert agent_data.raw_spec("") is None
 
 
 def test_a_replay_reads_tables_and_single_buffer_charts_from_their_payload() -> None:

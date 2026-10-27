@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import math
 from typing import Any
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -142,15 +143,50 @@ def test_block_marks_a_transparent_wrapper() -> None:
 
 
 def test_data_block_sits_beside_props() -> None:
-    """The data block is the top-level `data` the serializer owns, never a prop."""
+    """The built block is the top-level `data` the serializer owns, never a prop.
+    A builder that builds nothing, or none at all, reports no `data`.
+    """
     block = {"complete": True, "url": "/media/abc"}
-    decoded = _recorded("dataframe", data_block=block, placeholder="-")
+    decoded = _recorded("dataframe", data_block=lambda: block, placeholder="-")
 
     assert decoded["data"] == block
     assert decoded["props"] == {"placeholder": "-"}
+    assert "data" not in _recorded("dataframe", data_block=lambda: None)
+    assert "data" not in _recorded("dataframe", data_block=None)
 
-    unset = _recorded("dataframe", data_block=None)
-    assert "data" not in unset
+
+def test_data_block_is_built_only_while_recording(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A browser session never calls the builder, so nothing it reads costs it."""
+    calls: list[str] = []
+
+    def build() -> dict[str, Any]:
+        calls.append("built")
+        return {"complete": True}
+
+    monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
+    assert agent_spec.element("dataframe", data_block=build) is None
+    assert calls == []
+
+    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
+    agent_spec.element("dataframe", data_block=build)
+    assert calls == ["built"]
+
+
+def test_a_data_block_that_raises_reports_no_data() -> None:
+    """A bug in a builder becomes no `data`, logged at debug, never a failed command."""
+
+    def broken() -> dict[str, Any]:
+        raise ValueError("boom")
+
+    with patch.object(agent_spec, "_LOGGER") as logger:
+        decoded = _recorded("dataframe", data_block=broken, placeholder="-")
+
+    assert "data" not in decoded
+    assert decoded["props"] == {"placeholder": "-"}
+    logger.debug.assert_called_once()
+    assert logger.debug.call_args.kwargs["exc_info"] is True
 
 
 def test_decode_returns_an_object_and_ignores_malformed_input() -> None:

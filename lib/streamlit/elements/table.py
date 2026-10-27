@@ -417,12 +417,10 @@ class TableMixin:
             proto,
             layout_config=layout_config,
             # The schema and row preview are derived facts about the payload,
-            # not command parameters. Built only while recording: reading
-            # `arrow_data.data` copies the payload, which a browser session
-            # never needs.
+            # not command parameters.
             agent_props=agent_spec.element(
                 "table",
-                data_block=agent_data.arrow(
+                data_block=lambda: agent_data.arrow(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

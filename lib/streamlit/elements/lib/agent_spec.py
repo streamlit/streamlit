@@ -67,8 +67,8 @@ time.
 
 ``data``, the derived facts about a table, chart, or map (schema, row counts, a
 preview bounded by ``server.agentPreviewRows``, and where the complete data is
-served), is built by the command while recording, with ``agent_data``, and the
-serializer copies it. The preview is therefore fixed when the element is
+served), is built by the command while recording, through a ``data_block``
+function that uses ``agent_data``, and the serializer copies it. The preview is therefore fixed when the element is
 emitted, so a later request can only shrink it.
 
 That split is the same one the agent protocol draws between ``props`` (how the
@@ -79,7 +79,17 @@ derived).
 from __future__ import annotations
 
 import json
-from typing import Any, Final, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
+
+from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+_LOGGER: Final = get_logger(__name__)
+
+# Builds an element's ``data`` while recording. See ``element``'s ``data_block``.
+DataBuilder: TypeAlias = "Callable[[], dict[str, Any] | None]"
 
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
@@ -195,7 +205,7 @@ def _json_description(
     transparent: bool = False,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_block: dict[str, Any] | None = None,
+    data_block: DataBuilder | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -216,10 +226,23 @@ def _json_description(
         description[_CLEARABLE_KEY] = True
     if choices is not None:
         description[_CHOICES_KEY] = choices
-    if data_block is not None:
-        description[_DATA_KEY] = data_block
+    if data_block is not None and (data := _build_data(data_block)) is not None:
+        description[_DATA_KEY] = data
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
+
+
+def _build_data(build: DataBuilder) -> dict[str, Any] | None:
+    """Run a command's data builder, or report no ``data`` if it raises.
+
+    An element without ``data`` costs far less than a command that fails in an
+    agent session where a browser session would have worked.
+    """
+    try:
+        return build()
+    except Exception:
+        _LOGGER.debug("Could not build an element's agent API data.", exc_info=True)
+        return None
 
 
 def element(
@@ -232,7 +255,7 @@ def element(
     support: SupportReason | None = None,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_block: dict[str, Any] | None = None,
+    data_block: DataBuilder | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -267,10 +290,13 @@ def element(
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
     data_block
-        The element's ``data``, built while recording with ``agent_data``,
-        and reported beside ``props`` because it is derived rather than an
-        argument the author passed. Named ``data_block`` because a custom
-        component reports a ``data`` prop.
+        A function that builds the element's ``data``, usually with
+        ``agent_data``, such as ``lambda: agent_data.arrow(...)``. It is called
+        only while recording, so nothing it reads costs a browser session
+        anything, and an exception in it reports no ``data`` instead of
+        failing the command. The result is reported beside ``props`` because
+        it is derived rather than an argument the author passed. Named
+        ``data_block`` because a custom component reports a ``data`` prop.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.

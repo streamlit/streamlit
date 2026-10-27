@@ -435,8 +435,7 @@ def _resolve_content_height(height: Height, figure: Any) -> Height:
     return 450
 
 
-@agent_data.builder
-def _plotly_data(proto: PlotlyChartProto) -> dict[str, Any] | None:
+def _plotly_data(spec_json: str) -> dict[str, Any] | None:
     """A Plotly figure's agent ``data``, whose values live inside its specification.
 
     The theme is dropped, because it is weight without meaning for a non-visual
@@ -451,7 +450,7 @@ def _plotly_data(proto: PlotlyChartProto) -> dict[str, Any] | None:
     the same bytes the app already sends its own client. The figure is
     therefore `complete`, and a client has no `url` to look for.
     """
-    spec = agent_data.parse_spec(proto.spec)
+    spec = agent_data.parse_spec(spec_json)
     if spec is None:
         return None
 
@@ -938,7 +937,7 @@ class PlotlyMixin:
                 agent_props=agent_spec.element(
                     "plotly_chart",
                     key=plotly_chart_proto.id,
-                    data_block=_plotly_data(plotly_chart_proto),
+                    data_block=lambda: _plotly_data(plotly_chart_proto.spec),
                     support="action_unsupported",
                     selection_mode=sorted(
                         _SELECTION_MODE_FROM_PROTO[mode]
@@ -960,7 +959,7 @@ class PlotlyMixin:
             agent_props=agent_spec.element(
                 "plotly_chart",
                 key=key,
-                data_block=_plotly_data(plotly_chart_proto),
+                data_block=lambda: _plotly_data(plotly_chart_proto.spec),
                 alt=plotly_chart_proto.alt or None,
             ),
         )

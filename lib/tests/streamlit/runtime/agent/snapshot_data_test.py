@@ -34,7 +34,6 @@ import streamlit as st
 from streamlit.elements import arrow, deck_gl_json_chart, plotly_chart, vega_charts
 from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.Dataframe_pb2 import LazyDataframe as LazyDataframeProto
-from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime import runtime_util
 from streamlit.testing.v1.util import patch_config_options
 from tests.streamlit.runtime.agent.snapshot_test_case import (
@@ -390,8 +389,7 @@ class SnapshotDataTest(SnapshotCase):
 
     def test_plotly_keeps_template_content(self) -> None:
         """Content a template adds, such as an annotation, stays; the rest is named."""
-        proto = PlotlyChartProto()
-        proto.spec = _bar_figure_spec(
+        spec = _bar_figure_spec(
             template={
                 "data": {"bar": [{"marker": {"color": "red"}}]},
                 "layout": {
@@ -402,7 +400,7 @@ class SnapshotDataTest(SnapshotCase):
             title={"text": "Sales"},
         )
 
-        data = plotly_chart._plotly_data(proto)
+        data = plotly_chart._plotly_data(spec)
 
         assert data is not None
         assert data["spec"]["layout"] == {

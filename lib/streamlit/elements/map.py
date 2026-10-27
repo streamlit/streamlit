@@ -320,7 +320,7 @@ class MapMixin:
                 color=color,
                 zoom=zoom,
                 alt=map_proto.alt or None,
-                data_block=agent_data.raw_spec(map_proto, "json"),
+                data_block=lambda: agent_data.raw_spec(map_proto.json),
             ),
         )
 

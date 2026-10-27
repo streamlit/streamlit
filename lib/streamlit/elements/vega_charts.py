@@ -840,7 +840,6 @@ def _loads_from_url(value: Any) -> bool:
     return False
 
 
-@agent_data.builder
 def _vega_data(proto: VegaLiteChartProto, *, coordinates: str) -> dict[str, Any]:
     """A Vega-Lite chart's agent ``data``: its one table and its specification.
 
@@ -2943,7 +2942,7 @@ class VegaChartsMixin:
             # chart without selections has nothing to withhold, so it is fully
             # supported.
             support="action_unsupported" if selection_mode else None,
-            data_block=_vega_data(
+            data_block=lambda: _vega_data(
                 proto, coordinates=self.dg._get_write_delta_path_str()
             ),
             alt=proto.alt or None,
