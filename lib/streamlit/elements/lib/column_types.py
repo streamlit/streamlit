@@ -605,8 +605,6 @@ def NumberColumn(
         - ``"localized"``: Show the number in the default locale format
           (e.g. "1,234.567"). On timedelta / duration columns, show a
           locale-aware duration instead (e.g. "5 sec", "1 sec, 500 ms").
-          Browsers without ``Intl.DurationFormat`` fall back to the
-          elapsed-time clock (the same display as ``format="compact"``).
         - ``"percent"``: Show the number as a percentage (e.g. "123456.70%").
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
