@@ -905,6 +905,19 @@ describe("formatDurationFromSeconds", () => {
       }
     )
 
+    it.skipIf(!HAS_INTL_DURATION_FORMAT)(
+      "shows a zero duration instead of an empty string",
+      () => {
+        expect(formatDurationFromSeconds(0, "localized")).toEqual("0 sec")
+        // Below the column unit, the value is also a zero duration.
+        expect(formatDurationFromSeconds(0.0004, "localized", 3)).toEqual(
+          "0 sec"
+        )
+        // Other durations do not gain a zero seconds part.
+        expect(formatDurationFromSeconds(7200, "localized")).toEqual("2 hr")
+      }
+    )
+
     it("prefixes a minus for negative durations", () => {
       expect(formatDurationFromSeconds(-7200, "localized")).toMatch(/^-/)
     })

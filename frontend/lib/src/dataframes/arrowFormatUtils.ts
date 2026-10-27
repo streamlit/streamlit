@@ -441,7 +441,10 @@ type DurationFormatter = { format: (duration: DurationParts) => string }
 /** Constructor for `Intl.DurationFormat` when the runtime supports it. */
 type DurationFormatCtor = new (
   locales?: string | readonly string[],
-  options?: { style?: "long" | "short" | "narrow" | "digital" }
+  options?: {
+    style?: "long" | "short" | "narrow" | "digital"
+    secondsDisplay?: "always" | "auto"
+  }
 ) => DurationFormatter
 
 /** Return `Intl.DurationFormat` when the runtime provides it. */
@@ -540,18 +543,30 @@ function toDurationParts(
 
 const durationFormatters = new Map<string, DurationFormatter>()
 
-/** Cached `Intl.DurationFormat` instance for the given locale list. */
+/**
+ * Cached `Intl.DurationFormat` instance for the given locale list.
+ *
+ * `showZeroSeconds` keeps a zero seconds part visible. Use it only for an
+ * all-zero duration: it would also append "0 sec" to other durations.
+ */
 function getDurationFormatter(
   DurationFormat: DurationFormatCtor,
-  locales: string | readonly string[] | undefined
+  locales: string | readonly string[] | undefined,
+  showZeroSeconds: boolean
 ): DurationFormatter {
-  const cacheKey = isNullOrUndefined(locales) ? "" : String(locales)
+  const localesKey = isNullOrUndefined(locales) ? "" : String(locales)
+  const cacheKey = `${localesKey}|${showZeroSeconds}`
   const cached = durationFormatters.get(cacheKey)
   if (cached) {
     return cached
   }
 
-  const formatter = new DurationFormat(locales, { style: "short" })
+  const formatter = new DurationFormat(
+    locales,
+    showZeroSeconds
+      ? { style: "short", secondsDisplay: "always" }
+      : { style: "short" }
+  )
   durationFormatters.set(cacheKey, formatter)
   return formatter
 }
@@ -562,7 +577,13 @@ function formatDurationParts(
   locales: string | readonly string[] | undefined,
   parts: DurationParts
 ): string {
-  return getDurationFormatter(DurationFormat, locales).format(parts)
+  // Intl.DurationFormat hides zero-valued units by default, so an all-zero
+  // duration (only `seconds: 0`, see toDurationParts) would be an empty
+  // string.
+  const isZeroDuration = parts.seconds === 0
+  return getDurationFormatter(DurationFormat, locales, isZeroDuration).format(
+    parts
+  )
 }
 
 /** Exact locale-aware duration, or undefined if `Intl.DurationFormat` is missing. */
