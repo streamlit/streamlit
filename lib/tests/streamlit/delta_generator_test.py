@@ -1635,6 +1635,7 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert "is not supported" in message
         assert "`st.sidebar`" in message
         assert "`st.bottom`" in message
+        assert "outside_container.empty()" in message
 
     def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
         """A main-script write does not reserve a wrapper, so a fragment-only

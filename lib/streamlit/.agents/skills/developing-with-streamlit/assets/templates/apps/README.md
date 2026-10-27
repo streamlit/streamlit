@@ -151,9 +151,10 @@ def metric_card(metric_name: str):
             st.line_chart(data, alt=f"{metric_name} over time")
 ```
 
-Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
-the fragment out of parallel fragments — gate those behind a widget interaction
-instead, where the fragment reruns sequentially.
+Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
+behind a widget interaction instead, where the fragment reruns sequentially.
+A parallel fragment cannot write to containers created outside it, including
+`st.sidebar` and `st.bottom`; keep those writes inside the fragment body.
 
 ### Data Loading with Caching
 

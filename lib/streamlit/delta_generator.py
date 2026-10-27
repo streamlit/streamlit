@@ -571,9 +571,8 @@ class DeltaGenerator(
                     cursor_path, fragment_path
                 ):
                     raise StreamlitInvalidLayoutContextError(
-                        "Writing to containers outside a parallel fragment is not "
-                        "supported. A parallel fragment cannot write to a "
-                        "container created outside it, including `st.sidebar` "
+                        "Writing to a container created outside a parallel "
+                        "fragment is not supported, including `st.sidebar` "
                         "and `st.bottom`, during the initial page load or a "
                         "later fragment rerun.\n\n"
                         "To fix this, move the element inside the fragment body."
@@ -874,8 +873,8 @@ def _get_or_create_outside_wrapper(
             "If this fragment uses `parallel=True`, writing to containers "
             "created outside it is not supported, including `st.sidebar` and "
             "`st.bottom`. Move the element inside the fragment body.\n\n"
-            "If this fragment is sequential, write to the container on every "
-            "full app run (e.g. `outside_container.empty()` or "
+            "Otherwise, write to the container on every full app run "
+            "(e.g. `outside_container.empty()` or "
             "`with outside_container: st.empty()`), then fill it during "
             "fragment reruns."
         )
