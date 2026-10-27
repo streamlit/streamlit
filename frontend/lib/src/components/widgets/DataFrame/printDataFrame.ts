@@ -30,6 +30,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_SCALE_CLASS,
+  DATAFRAME_PRINT_SCALE_VAR,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
 } from "./printClassNames"
@@ -180,7 +181,7 @@ export function isHiddenFromPrint(element: HTMLElement): boolean {
  * the scroll edge are never painted. Printing that canvas cuts them off.
  * This table is the whole frame when every row is already loaded and the
  * frame fits the row cap and the page's cell budget. A longer frame prints
- * the first rows that fit, then a note. Print CSS scales the table down to
+ * the first rows that fit, then a note. Print CSS scales the type down to
  * the page, and a PDF viewer can zoom back in.
  *
  * The width comes from an off-screen copy of the table. `beforeprint` still
@@ -270,24 +271,23 @@ export function fillDataFramePrintSlot(
   // Read it before the table is inserted: a wide table can stretch the frame
   // and the scale would then stay at 1.
   const available = availablePrintWidth(slot)
-  const width = measurePrintWidth(table, measure)
-  if (width > 0) {
-    slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
+  const measured = measurePrintTable(table, measure)
+  if (measured.width > 0) {
+    slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${measured.width}px`)
   }
-  // The scale wrapper is what shrinks. Zoom on the table itself leaves
-  // Chromium's border box at the natural width, so the slot stays wide and
-  // the table paints past the column.
+  // Percentage columns plus a fixed layout let the print rule cap the
+  // table at the column. A px width would stay at the natural size and
+  // paint past the column once the type shrinks.
+  applyPrintColumnWidths(table, measured.columns)
   const scale = document.createElement("div")
   scale.className = DATAFRAME_PRINT_SCALE_CLASS
   scale.append(table)
   slot.replaceChildren(scale)
-  // The note stays outside the zoomed table so it prints at the body size.
+  // The note stays outside the scaled table so it prints at the body size.
   if (numRows > rowsToPrint) {
     slot.append(printNote(rowCapNote(rowsToPrint, cellLimit)))
   }
-  if (width > 0) {
-    applyPrintZoom(scale, available, width)
-  }
+  applyPrintScale(slot, available, measured.width)
 }
 
 /** Parent levels plus the leaf title, matching the grid's group row. */
@@ -301,79 +301,89 @@ function printColumnHeader(column: BaseColumn): string {
 }
 
 /**
- * Lock the table to the width of its columns.
+ * Give each column its share of the table.
  *
- * The zoom divides by this width. A fixed layout with one column per
- * measured cell keeps the border box on that width when the zoom is applied.
+ * The print rule sets the table width to the column when the natural width
+ * is wider. Fixed percentages keep that shrink proportional. A px width
+ * would not shrink with the column.
  */
-function pinPrintTableWidth(
+function applyPrintColumnWidths(
   table: HTMLTableElement,
-  recorded: number
-): number {
-  const row = table.rows[0]
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const laidOut = table.offsetWidth
-  const width = Math.max(laidOut, recorded)
-  if (!(row instanceof HTMLTableRowElement) || width <= 0) {
-    return width
+  columns: readonly number[]
+): void {
+  const sum = columns.reduce((total, cellWidth) => total + cellWidth, 0)
+  if (sum <= 0) {
+    return
   }
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const measured = [...row.cells].map(cell => cell.offsetWidth)
-  const sum = measured.reduce((total, cellWidth) => total + cellWidth, 0)
-  const pinned = sum > 0 ? Math.max(width, sum) : width
-  if (sum > 0) {
-    table.querySelector("colgroup")?.remove()
-    const group = document.createElement("colgroup")
-    for (const cellWidth of measured) {
-      const col = document.createElement("col")
-      col.style.width = `${cellWidth}px`
-      group.append(col)
-    }
-    table.prepend(group)
-    table.style.tableLayout = "fixed"
+  table.querySelector("colgroup")?.remove()
+  const group = document.createElement("colgroup")
+  for (const cellWidth of columns) {
+    const col = document.createElement("col")
+    col.style.width = `${(cellWidth / sum) * 100}%`
+    group.append(col)
   }
-  table.style.width = `${pinned}px`
-  return pinned
+  table.prepend(group)
+  table.style.tableLayout = "fixed"
 }
 
 /**
- * Scale an already built print table to the dataframe's current width.
+ * Measure the print table at its full font size and record any wider columns.
  *
- * `beforeprint` often still uses screen media, so the first scale is the
+ * `beforeprint` often still uses screen media, so the first ratio is the
  * on-screen column. When print media starts, the column is the page width
- * and this runs again.
+ * and this runs again. The font ratio is already applied by then, so this
+ * forces a scale of 1 for the read. Measuring the fitted type would store a
+ * width that the stylesheet scales a second time.
  */
 export function fitDataFramePrintTable(slot: HTMLElement): void {
   const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
   if (!(scale instanceof HTMLElement)) {
     return
   }
+  const table = scale.querySelector("table")
+  if (!(table instanceof HTMLTableElement)) {
+    return
+  }
   const recorded = Number.parseFloat(
     slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)
   )
-  // Read the column before clearing zoom. A full-size table can stretch
-  // the dataframe, and the scale would then stay at 1.
+  // Read the column before the unscaled table can stretch the dataframe.
   const available = availablePrintWidth(slot)
-  let width = Number.isFinite(recorded) ? recorded : 0
-  const table = scale.querySelector("table")
-  if (table instanceof HTMLTableElement) {
-    const previous = scale.style.zoom
-    // The off-screen probe runs while screen media is still active. The
-    // printed table can lay out wider once print CSS and the zoom are
-    // applied, so clear the zoom and measure the table's own columns.
-    // Pin those widths. Otherwise max-content inside the zoomed box grows
-    // past the probe and the table paints past the column.
-    scale.style.zoom = "1"
-    width = pinPrintTableWidth(table, width)
-    if (!Number.isFinite(recorded) || width > recorded) {
-      slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
-    }
-    scale.style.zoom = previous
+  slot.style.setProperty(DATAFRAME_PRINT_SCALE_VAR, "1")
+  table.querySelector("colgroup")?.remove()
+  table.style.width =
+    Number.isFinite(recorded) && recorded > 0 ? `${recorded}px` : "max-content"
+  table.style.tableLayout = "auto"
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  const laidOut = table.offsetWidth
+  const row = table.rows[0]
+  const columns =
+    row instanceof HTMLTableRowElement
+      ? [...row.cells].map(
+          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+          cell => cell.offsetWidth
+        )
+      : []
+  const sum = columns.reduce((total, cellWidth) => total + cellWidth, 0)
+  const width = Math.max(
+    laidOut,
+    Number.isFinite(recorded) ? recorded : 0,
+    sum
+  )
+
+  // Drop the measurement overrides. The print rule caps the table width,
+  // and percentage columns are applied below when the read succeeded.
+  table.style.width = ""
+  table.style.tableLayout = ""
+  slot.style.removeProperty(DATAFRAME_PRINT_SCALE_VAR)
+  if (width > 0 && (!Number.isFinite(recorded) || width > recorded)) {
+    slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
   }
+  applyPrintColumnWidths(table, columns)
   if (width <= 0) {
     return
   }
-  applyPrintZoom(scale, available, width)
+  applyPrintScale(slot, available, width)
 }
 
 /** Width of the visible dataframe, or the slot when it is measured alone. */
@@ -388,6 +398,7 @@ function availablePrintWidth(slot: HTMLElement): number {
 export function clearDataFramePrintSlot(slot: HTMLElement): void {
   slot.replaceChildren()
   slot.style.removeProperty(DATAFRAME_PRINT_WIDTH_VAR)
+  slot.style.removeProperty(DATAFRAME_PRINT_SCALE_VAR)
 }
 
 /** What one printed cell shows. `null` means the row is still being fetched. */
@@ -408,6 +419,12 @@ function printCellContent(cell: GridCell): PrintCellContent | null {
   if (cell.kind === GridCellKind.Loading) {
     // Unloaded lazy rows draw a skeleton. An empty cell has none.
     return cell.skeletonWidth === undefined ? { kind: "text", text: "" } : null
+  }
+
+  if (cell.kind === GridCellKind.Boolean) {
+    // A checkbox has no display text. Print the mark the grid draws, and a
+    // blank for an unchecked or empty cell, instead of `true` / `false`.
+    return { kind: "text", text: cell.data === true ? "\u2713" : "" }
   }
 
   if (cell.kind === GridCellKind.Image && "displayData" in cell) {
@@ -561,10 +578,15 @@ function printDropdownText(record: Record<string, unknown>): string {
   return toSafeString(value)
 }
 
-function measurePrintWidth(
+interface PrintTableMeasurement {
+  width: number
+  columns: number[]
+}
+
+function measurePrintTable(
   table: HTMLTableElement,
   measure: DataFramePrintMeasure
-): number {
+): PrintTableMeasurement {
   const probe = document.createElement("div")
   // Use a definite width. Chromium clamps a shrink-to-fit absolute box to
   // the viewport, which under-measures a wide table.
@@ -585,32 +607,55 @@ function measurePrintWidth(
   const laidOut = probe.querySelector("table")
   // beforeprint still uses screen media, so this copy is the only laid-out
   // table. The print slot itself is display:none and has no width.
-  const width = laidOut instanceof HTMLElement ? getLaidOutWidth(laidOut) : 0
+  const width =
+    laidOut instanceof HTMLTableElement ? getLaidOutWidth(laidOut) : 0
+  const header =
+    laidOut instanceof HTMLTableElement ? laidOut.rows[0] : undefined
+  const columns =
+    header instanceof HTMLTableRowElement
+      ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+        [...header.cells].map(cell => cell.offsetWidth)
+      : []
   probe.remove()
-  return width
+  return { width, columns }
 }
 
-function applyPrintZoom(
-  scale: HTMLElement,
+/**
+ * Whether print CSS can turn the column and table widths into a unitless ratio.
+ *
+ * Browsers that can do this keep the ratio in the stylesheet, where `100cqw`
+ * follows the printed column. An inline scale would freeze the on-screen
+ * column measured during `beforeprint`.
+ */
+function supportsPrintFontRatio(): boolean {
+  return (
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    CSS.supports("font-size", "calc(1px * min(1, tan(atan2(1px, 2px))))")
+  )
+}
+
+function applyPrintScale(
+  slot: HTMLElement,
   available: number,
   width: number
 ): void {
-  // No column width yet. Leave whatever scale is already set.
-  if (available <= 0) {
+  // The stylesheet scales the font from the slot width. Leave that in
+  // charge when the browser can compute it.
+  if (supportsPrintFontRatio()) {
+    slot.style.removeProperty(DATAFRAME_PRINT_SCALE_VAR)
     return
   }
-  // beforeprint records a zoom for the on-screen column. Print layout then
-  // stacks that column to the page width, which is often wider than the
-  // table. The old inline zoom overrides the CSS scale, so clear it and let
-  // the table use its own width.
-  if (width <= available) {
-    scale.style.zoom = ""
+  // No column width yet. Keep whatever ratio was recorded earlier.
+  if (available <= 0 || width <= 0) {
     return
   }
-  // The CSS ratio is the print-layout scale. This inline value covers the
-  // case where that ratio is dropped. It is taken from the visible dataframe,
-  // which has a width while the slot is still display:none.
-  scale.style.zoom = String(available / width)
+  // The visible dataframe has a width while the slot is still display:none.
+  // `min(1, ...)` keeps a table that already fits at its natural size.
+  slot.style.setProperty(
+    DATAFRAME_PRINT_SCALE_VAR,
+    String(Math.min(1, available / width))
+  )
 }
 
 function applyMeasureStyles(
@@ -654,6 +699,7 @@ function renderPrintTable(
   const head = document.createElement("tr")
   for (const header of headers) {
     const cell = document.createElement("th")
+    cell.scope = "col"
     cell.textContent = header
     head.append(cell)
   }
@@ -687,7 +733,7 @@ function renderPrintTable(
 /** The canvas stays, and this says why the table was not expanded. */
 function visiblePartNote(cellLimit: number): string {
   return cellLimit < DATAFRAME_PRINT_CELL_LIMIT
-    ? "Only the visible part of this table is printed because this page already expanded too many cells."
+    ? "Only the on-screen part of this table is printed because other tables on this page were already expanded."
     : "Only the visible part of this table is printed because it is too large to expand."
 }
 
@@ -697,7 +743,7 @@ function rowCapNote(rowsToPrint: number, cellLimit: number): string {
     return `Further rows were not printed. This table is capped at ${DATAFRAME_PRINT_ROW_LIMIT.toLocaleString("en-US")} rows.`
   }
   return cellLimit < DATAFRAME_PRINT_CELL_LIMIT
-    ? "Further rows were not printed because this page already expanded too many cells."
+    ? "Further rows were not printed because other tables on this page were already expanded."
     : "Further rows were not printed because this table is too large to print in full."
 }
 

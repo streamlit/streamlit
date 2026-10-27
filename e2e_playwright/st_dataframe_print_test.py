@@ -24,7 +24,7 @@ _PORTRAIT: ViewportSize = {"width": 1240, "height": 1754}
 
 _ROW_CAP_NOTE = "Further rows were not printed. This table is capped at 1,000 rows."
 _CELL_BUDGET_NOTE = (
-    "Further rows were not printed because this page already expanded too many cells."
+    "Further rows were not printed because other tables on this page were already expanded."
 )
 
 
@@ -69,7 +69,7 @@ def test_print_notes_for_row_cap_and_cell_budget(
     budget_note = cell_budget.locator(".stDataFramePrintNote")
     expect(row_cap_note).to_have_text(_ROW_CAP_NOTE)
     expect(budget_note).to_have_text(_CELL_BUDGET_NOTE)
-    # The note sits under the printed rows, outside the zoomed table.
+    # The note sits under the printed rows, outside the scaled table.
     expect(
         row_cap.locator(".stDataFramePrintScale + .stDataFramePrintNote")
     ).to_have_count(1)

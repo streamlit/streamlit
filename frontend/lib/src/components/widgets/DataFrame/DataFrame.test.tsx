@@ -314,9 +314,13 @@ describe("DataFrame widget", () => {
     // on-screen viewport are not clipped.
     expect(css).toContain(".stDataFramePrintTable")
     expect(css).toContain(".stDataFramePrintScale")
+    // The type scales with the column. Chromium's PDF recorder inserts
+    // gaps inside words when a table is zoomed, so the rule does not use zoom.
+    expect(css).toContain("font-size:calc(")
     expect(css).toContain(
-      "zoom:min(1, tan(atan2(100cqw, var(--st-df-print-width))))"
+      "tan(atan2(100cqw, var(--st-df-print-width, 100cqw)))"
     )
+    expect(css).not.toContain("zoom:")
   })
 
   it("sets role=region and aria-label on the grid host when alt is provided", () => {

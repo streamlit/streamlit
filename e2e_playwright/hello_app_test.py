@@ -302,6 +302,7 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
                     ? scale.parentElement.clientWidth
                     : 0,
                 zoom: scaleStyle.zoom,
+                fontSize: getComputedStyle(table).fontSize,
                 tableWidth: tableBox.width,
                 frameWidth: frameBox.width,
             };
@@ -309,6 +310,7 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
     )
     assert fit["tableInsideFrame"], (
         f"print table is outside the dataframe: zoom={fit['zoom']} "
+        f"fontSize={fit['fontSize']} "
         f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
         f"probeWidth={fit['probeWidth']} slotClientWidth={fit['slotClientWidth']}"
     )

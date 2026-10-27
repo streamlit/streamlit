@@ -1005,8 +1005,9 @@ function DataFrame({
     const onAfterPrint = (): void => {
       clearDataFramePrintSlot(slot)
     }
-    // beforeprint still uses screen media, so the first zoom is the on-screen
-    // column. This fires once the page is actually laid out for print.
+    // beforeprint still uses screen media, so the first measure is the
+    // on-screen column. This fires once the page is actually laid out for
+    // print and the font ratio can follow the printed column.
     const printMedia = window.matchMedia("print")
     const onPrintMedia = (): void => {
       if (printMedia.matches) {

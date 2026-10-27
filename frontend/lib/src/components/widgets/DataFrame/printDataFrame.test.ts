@@ -22,6 +22,7 @@ import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_SCALE_CLASS,
+  DATAFRAME_PRINT_SCALE_VAR,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
 } from "./printClassNames"
@@ -59,6 +60,25 @@ const textCell = (displayData: string): GridCell => ({
   data: displayData,
   allowOverlay: false,
 })
+
+function mockTableWidth(width: number): ReturnType<typeof vi.spyOn> {
+  return vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function box(this: HTMLElement) {
+      const measured = this.tagName === "TABLE" ? width : 0
+      return {
+        x: 0,
+        y: 0,
+        width: measured,
+        height: 0,
+        top: 0,
+        right: measured,
+        bottom: 0,
+        left: 0,
+        toJSON: () => ({}),
+      }
+    })
+}
 
 const measure: DataFramePrintMeasure = {
   fontFamily: "sans-serif",
@@ -235,7 +255,7 @@ describe("fillDataFramePrintSlot", () => {
     expect(slot.textContent).toContain("row-2")
     expect(slot.textContent).not.toContain("row-3")
     expect(slot.querySelector("p")).toHaveTextContent(
-      "Further rows were not printed because this page already expanded too many cells."
+      "Further rows were not printed because other tables on this page were already expanded."
     )
     expect(slot.textContent).not.toContain("visible part")
     expect(budget.remaining).toBe(0)
@@ -283,7 +303,9 @@ describe("fillDataFramePrintSlot", () => {
       budget
     )
     expect(second.querySelector("table")).toBeNull()
-    expect(second.textContent).toContain("already expanded too many cells")
+    expect(second.textContent).toContain(
+      "other tables on this page were already expanded"
+    )
     expect(second.textContent).not.toContain("too large")
     expect(budget.remaining).toBe(1)
     second.remove()
@@ -315,36 +337,10 @@ describe("fillDataFramePrintSlot", () => {
     expect(again).not.toBe(budget)
   })
 
-  it("scales a wide table with a unitless zoom when the slot already has a width", () => {
+  it("leaves the font ratio to print CSS when the browser can compute it", () => {
+    const supports = vi.spyOn(CSS, "supports").mockReturnValue(true)
     Object.defineProperty(slot, "clientWidth", { value: 80 })
-    const spy = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function width(this: HTMLElement) {
-        if (this.tagName === "TABLE") {
-          return {
-            x: 0,
-            y: 0,
-            width: 320,
-            height: 0,
-            top: 0,
-            right: 320,
-            bottom: 0,
-            left: 0,
-            toJSON: () => ({}),
-          }
-        }
-        return {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0,
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-          toJSON: () => ({}),
-        }
-      })
+    const spy = mockTableWidth(320)
 
     fillDataFramePrintSlot(
       slot,
@@ -357,13 +353,20 @@ describe("fillDataFramePrintSlot", () => {
     const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
     const table = slot.querySelector("table")
     expect(scale?.contains(table)).toBe(true)
-    expect(scale).toHaveProperty("style.zoom", "0.25")
-    // Zoom on the table does not shrink Chromium's border box.
+    // An inline ratio would freeze the on-screen column. The stylesheet
+    // follows the printed column instead, and zoom is not used.
+    expect(scale).toHaveProperty("style.zoom", "")
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("")
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
+      "320px"
+    )
     expect(table?.getAttribute("style") ?? "").not.toContain("zoom")
     spy.mockRestore()
+    supports.mockRestore()
   })
 
-  it("scales from the visible dataframe when the print slot has no width", () => {
+  it("records a unitless font ratio when the print CSS ratio is unavailable", () => {
+    const supports = vi.spyOn(CSS, "supports").mockReturnValue(false)
     const frame = document.createElement("div")
     frame.className = "stDataFrame"
     let frameWidth = 80
@@ -371,34 +374,7 @@ describe("fillDataFramePrintSlot", () => {
     Object.defineProperty(slot, "clientWidth", { value: 0 })
     frame.append(slot)
     document.body.append(frame)
-    const spy = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function width(this: HTMLElement) {
-        if (this.tagName === "TABLE") {
-          return {
-            x: 0,
-            y: 0,
-            width: 320,
-            height: 0,
-            top: 0,
-            right: 320,
-            bottom: 0,
-            left: 0,
-            toJSON: () => ({}),
-          }
-        }
-        return {
-          x: 0,
-          y: 0,
-          width: 0,
-          height: 0,
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0,
-          toJSON: () => ({}),
-        }
-      })
+    const spy = mockTableWidth(320)
 
     fillDataFramePrintSlot(
       slot,
@@ -408,17 +384,19 @@ describe("fillDataFramePrintSlot", () => {
       measure
     )
 
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("0.25")
     const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
-    expect(scale).toHaveProperty("style.zoom", "0.25")
+    expect(scale).toHaveProperty("style.zoom", "")
     frameWidth = 160
     fitDataFramePrintTable(slot)
-    expect(scale).toHaveProperty("style.zoom", "0.5")
-    // A stacked print column is wider than the table. The on-screen zoom
-    // has to come off, or the table stays shrunk inside that column.
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("0.5")
+    // A stacked print column is wider than the table. The ratio stays at 1
+    // so the type is not left shrunk to the on-screen column.
     frameWidth = 400
     fitDataFramePrintTable(slot)
-    expect(scale).toHaveProperty("style.zoom", "")
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("1")
     spy.mockRestore()
+    supports.mockRestore()
     frame.remove()
   })
 
@@ -473,16 +451,20 @@ describe("fillDataFramePrintSlot", () => {
     vi.spyOn(table, "offsetWidth", "get").mockReturnValue(480)
     vi.spyOn(table.rows[0].cells[0], "offsetWidth", "get").mockReturnValue(480)
 
+    const supports = vi.spyOn(CSS, "supports").mockReturnValue(false)
     fitDataFramePrintTable(slot)
 
-    const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
     expect(slot.style.getPropertyValue(DATAFRAME_PRINT_WIDTH_VAR)).toBe(
       "480px"
     )
-    expect(scale).toHaveProperty("style.zoom", String(80 / 480))
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe(
+      String(80 / 480)
+    )
     expect(table.style.tableLayout).toBe("fixed")
-    expect(table.querySelector("col")?.style.width).toBe("480px")
+    expect(table.querySelector("col")?.style.width).toBe("100%")
+    expect(table).toHaveProperty("style.zoom", "")
     spy.mockRestore()
+    supports.mockRestore()
     frame.remove()
   })
 
@@ -590,9 +572,29 @@ describe("fillDataFramePrintSlot", () => {
       measure
     )
 
-    expect(slot.querySelector("th")?.textContent).toBe(
-      "East / Sales / Revenue"
+    const header = slot.querySelector("th")
+    expect(header?.textContent).toBe("East / Sales / Revenue")
+    expect(header).toHaveProperty("scope", "col")
+  })
+
+  it("prints a checkbox as a mark or a blank", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("On"), column("Off")],
+      1,
+      ([col]) => ({
+        kind: GridCellKind.Boolean,
+        data: col === 0,
+        allowOverlay: false as const,
+      }),
+      measure
     )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["\u2713", ""])
+    expect(slot.textContent).not.toContain("true")
+    expect(slot.textContent).not.toContain("false")
   })
 
   it("keeps the canvas when a frame has too many images", () => {

@@ -22,10 +22,21 @@ import { printContainRules } from "~lib/components/shared/printContain"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_SCALE_CLASS,
+  DATAFRAME_PRINT_SCALE_VAR,
   DATAFRAME_PRINT_SLOT_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
   DATAFRAME_PRINT_WIDTH_VAR,
 } from "./printClassNames"
+
+/**
+ * Unitless ratio of the print column to the table's natural width.
+ *
+ * An inline `--st-df-print-scale` wins when the browser drops `tan(atan2)`.
+ * Otherwise `100cqw` is the slot, so the type tracks the printed column
+ * without waiting for a `matchMedia` change. `zoom` is not used: Chromium's
+ * PDF recorder inserts gaps inside words when a table is zoomed.
+ */
+const PRINT_FIT_RATIO = `var(${DATAFRAME_PRINT_SCALE_VAR}, min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}, 100cqw)))))`
 
 interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -92,31 +103,27 @@ export const StyledResizableContainer =
           containerType: "inline-size",
         },
         [`& .${DATAFRAME_PRINT_SCALE_CLASS}`]: {
-          // The wrapper is the measured table width, then zoom shrinks that
-          // box. Zoom on the table leaves Chromium's border box unscaled, so
-          // the slot would stay at the natural width and the table would
-          // paint past the column. `100cqw` is the slot, which is the column.
-          width: `var(${DATAFRAME_PRINT_WIDTH_VAR})`,
-          // `zoom` needs a number. Dividing the column width by the table
-          // width inside `calc()` needs typed arithmetic, which older
-          // browsers drop, so the table would print unscaled. `atan2` takes
-          // the two lengths and `tan` turns that angle back into the ratio.
-          // `beforeprint` also sets a unitless inline zoom from the visible
-          // dataframe, and again when print media starts. The slot is
-          // display:none until then, so it has no width of its own.
-          zoom: `min(1, tan(atan2(100cqw, var(${DATAFRAME_PRINT_WIDTH_VAR}))))`,
+          // The wrapper follows the table. Capping both at the column keeps
+          // a wide frame inside the card. The font scale below shrinks the
+          // text to that width.
+          width: `min(100%, var(${DATAFRAME_PRINT_WIDTH_VAR}))`,
+          maxWidth: "100%",
         },
         [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
           borderCollapse: "collapse",
-          // Same length the zoom divides by. The print-media pass records
-          // the laid-out columns here when they are wider than the probe.
-          width: `var(${DATAFRAME_PRINT_WIDTH_VAR})`,
-          // Matches the font measured in buildDataFramePrintMeasure.
+          // Same length the font scale divides by. The print-media pass
+          // records the laid-out columns here when they are wider than the
+          // probe. `min(100%, ...)` keeps the border box in the column.
+          width: `min(100%, var(${DATAFRAME_PRINT_WIDTH_VAR}))`,
+          maxWidth: "100%",
+          // Matches the font measured in buildDataFramePrintMeasure, then
+          // shrinks it by the column-to-table ratio. Padding and images use
+          // the same ratio so a nowrap cell still fits its column.
           fontFamily: theme.genericFonts.bodyFont,
-          fontSize: theme.fontSizes.md,
+          fontSize: `calc(${theme.fontSizes.md} * ${PRINT_FIT_RATIO})`,
           "th, td": {
             whiteSpace: "nowrap",
-            padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+            padding: `calc(${theme.spacing.threeXS} * ${PRINT_FIT_RATIO}) calc(${theme.spacing.sm} * ${PRINT_FIT_RATIO})`,
             // An outline draws the grid without adding to the measured width.
             // `border: none` restores the medium border width, and a collapsed
             // table can keep that width. Zero it so the probe, which sets
@@ -130,17 +137,18 @@ export const StyledResizableContainer =
             fontWeight: theme.fontWeights.semiBold,
           },
           // The same box the off-screen probe measures, so a data URL is
-          // not laid out as a line of text.
+          // not laid out as a line of text. The fit ratio keeps that box
+          // in proportion with the type.
           img: {
-            width: theme.spacing.fourXL,
-            height: theme.spacing.threeXL,
+            width: `calc(${theme.spacing.fourXL} * ${PRINT_FIT_RATIO})`,
+            height: `calc(${theme.spacing.threeXL} * ${PRINT_FIT_RATIO})`,
             objectFit: "contain",
           },
         },
         [`& .${DATAFRAME_PRINT_NOTE_CLASS}`]: {
           margin: 0,
         },
-        // A capped table keeps this note below the zoomed grid, at body size.
+        // A capped table keeps this note below the scaled grid, at body size.
         [`& .${DATAFRAME_PRINT_SCALE_CLASS} + .${DATAFRAME_PRINT_NOTE_CLASS}`]:
           {
             marginTop: theme.spacing.sm,
