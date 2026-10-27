@@ -22,8 +22,56 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import expect_font, expect_no_skeletons
+from e2e_playwright.shared.dataframe_utils import expect_canvas_to_be_stable
+
+
+def _dataframe_canvas_has_painted_content(app: Page) -> bool:
+    """Return True when the first dataframe canvas has non-blank pixels."""
+    return bool(
+        app.evaluate(
+            """() => {
+                const canvas = document.querySelector(
+                    '[data-testid="stDataFrame"] canvas'
+                );
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                    return false;
+                }
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                if (!ctx) {
+                    return false;
+                }
+                const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < data.length; i += 4) {
+                    // Non-transparent and not nearly white → cells/grid are painted.
+                    if (
+                        data[i + 3] > 0 &&
+                        (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250)
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            }"""
+        )
+    )
+
+
+def _wait_for_theme_app_ready(app: Page) -> None:
+    """Stabilize fonts and dataframe paint before full-page theme snapshots.
+
+    Webkit can screenshot after layout but before Glide paints cell content,
+    producing an empty bordered dataframe frame (~0.12% pixel diff).
+    """
+    expect_no_skeletons(app, timeout=25000)
+    expect_font(app, "Material Symbols Rounded")
+    expect_font(app, "Inter")
+    dataframe = app.get_by_test_id("stDataFrame").first
+    expect(dataframe).to_be_visible()
+    expect_canvas_to_be_stable(dataframe)
+    wait_until(app, lambda: _dataframe_canvas_has_painted_content(app), timeout=10000)
 
 
 @pytest.fixture(scope="module")
@@ -92,17 +140,14 @@ def test_auto_theme_with_light_preference(
     is_light_mode = app.evaluate("matchMedia('(prefers-color-scheme: light)').matches")
     assert is_light_mode is True
 
-    # Make sure that all elements are rendered and no skeletons are shown:
-    expect_no_skeletons(app, timeout=25000)
-
+    _wait_for_theme_app_ready(app)
     assert_snapshot(app, name="custom_theme_auto_light", image_threshold=0.0003)
 
 
 @pytest.mark.usefixtures("configure_custom_light_theme")
 def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the custom light theme is rendered correctly."""
-    # Make sure that all elements are rendered and no skeletons are shown:
-    expect_no_skeletons(app, timeout=25000)
+    _wait_for_theme_app_ready(app)
 
     # Change the theme to explicitly be Custom Light Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -112,6 +157,7 @@ def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
     wait_for_app_run(app)
 
+    _wait_for_theme_app_ready(app)
     assert_snapshot(app, name="custom_light_themed_app", image_threshold=0.0003)
 
 
@@ -120,8 +166,7 @@ def test_custom_dark_theme_with_dark_configs(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the custom dark theme is rendered correctly with expected dark configs."""
-    # Make sure that all elements are rendered and no skeletons are shown:
-    expect_no_skeletons(app, timeout=25000)
+    _wait_for_theme_app_ready(app)
 
     # Switch to Custom Dark Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -131,6 +176,7 @@ def test_custom_dark_theme_with_dark_configs(
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
     wait_for_app_run(app)
 
+    _wait_for_theme_app_ready(app)
     assert_snapshot(
         app, name="custom_dark_theme_with_dark_configs", image_threshold=0.0003
     )
@@ -141,8 +187,7 @@ def test_theme_preference_persists_on_reload(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom theme selection persists across full page reload (issue #13280)."""
-    # Make sure that all elements are rendered and no skeletons are shown:
-    expect_no_skeletons(app, timeout=25000)
+    _wait_for_theme_app_ready(app)
 
     # Select "Dark" theme explicitly via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -155,19 +200,14 @@ def test_theme_preference_persists_on_reload(
     expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
     wait_for_app_run(app)
 
+    _wait_for_theme_app_ready(app)
     assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
 
     # Force a full page reload
     app.reload()
 
-    # Wait for the app to fully load again after reload. Theme tester apps
-    # include material icons and a help tooltip; waiting for skeletons and
-    # fonts avoids webkit snapshot flakes from icon anti-aliasing before
-    # fonts have settled (see CI failures at ~0.03% pixel diff).
     wait_for_app_loaded(app)
-    expect_no_skeletons(app, timeout=25000)
-    expect_font(app, "Material Symbols Rounded")
-    expect_font(app, "Inter")
+    _wait_for_theme_app_ready(app)
 
     # Snapshot before opening the menu so focus/hover from the menu cannot
     # affect the full-page screenshot. Slightly looser threshold than the
