@@ -159,7 +159,7 @@ with col2.container(border=True, height="stretch"):
     orders_body()
 ```
 
-Create each card and its title in the main script, then call the fragment inside the card. The fragment renders and reruns only its own body, so the title stays put while the body loads. Because the card lives in the main script, it can use `height="stretch"` to match its neighbors; a stretch card created inside a fragment does not stretch.
+Create each card and its title in the main script, then call the fragment inside the card. The fragment renders and reruns only its own body, so the title stays put while the body loads. Because the card lives in the main script, it can use `height="stretch"` to match its neighbors. A stretch card created inside a fragment does not stretch, because the fragment wraps its output in a plain container.
 
 The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible.
 

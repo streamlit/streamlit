@@ -173,7 +173,7 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns.
 - Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
-- To put a fragment in a stretch card, create the card outside the fragment and call the fragment inside it. The fragment renders into the container it creates at that call, so this works with `parallel=True` too. A `height="stretch"` container created inside a fragment does not stretch.
+- A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
 - In image card grids, crop the images to one aspect ratio before `st.image` (for example, with `PIL.ImageOps.fit`). Otherwise, the content below each image starts at a different offset.
@@ -202,7 +202,7 @@ for col, (plan, features) in zip(st.columns(3), plans.items()):
 **Charts side by side:**
 
 - Default chart heights differ by library: `st.plotly_chart` is taller than Vega-Lite charts (`st.line_chart`, `st.altair_chart`, and similar) and `st.echarts_chart`. Vega-Lite heights also scale with `theme.baseFontSize` and ECharts heights do not, so the two differ under a custom base font size. Give every chart in the row the same integer `height`, or `height="stretch"` on each chart and its card.
-- Altair facet, repeat, and concat charts (including `chart1 | chart2` and `chart1 & chart2`) render empty with `height="stretch"` unless a fixed-height container holds them, and an integer `height` does not resize their views. Keep their default height and size the views in Altair (`.properties(height=...)`). The card around the chart can still use `height="stretch"`.
+- For Altair facet, repeat, and concat charts (including `chart1 | chart2` and `chart1 & chart2`), keep the default `height` and size the views in Altair (`.properties(height=...)`). Streamlit's `height` does not resize their views: with `height="stretch"` they render empty, or get cut off inside a fixed-height container, and with an integer `height` they paint over the next element. The card around the chart can still use `height="stretch"`.
 
 ## Bento layouts and fixed-height regions
 
