@@ -41,7 +41,7 @@ can reuse it.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit import config, runtime, util
 from streamlit.elements.lib import agent_spec
@@ -377,7 +377,29 @@ def _arrow_rows(table: pa.Table, limit: int) -> list[list[Any]]:
     return [
         [json_encoding.to_json_value(cell) for cell in row]
         for row in zip(
-            *(column.to_pylist() for column in table.slice(0, limit).columns),
+            *(_cell_values(column) for column in table.slice(0, limit).columns),
             strict=True,
         )
     ]
+
+
+# pandas extension types whose Arrow storage is not their value: a period is
+# stored as an ordinal of a frequency the type name omits, and an interval as
+# its bounds without the side that is closed.
+_PANDAS_EXTENSIONS_READ_THROUGH_PANDAS: Final = frozenset(
+    {"pandas.period", "pandas.interval"}
+)
+
+
+def _cell_values(column: pa.ChunkedArray) -> list[Any]:
+    """A column's cells as Python values.
+
+    Periods and intervals are read through pandas, so they encode as the text
+    the browser shows, such as ``2024-01`` and ``(0, 1]``.
+    """
+    if (
+        getattr(column.type, "extension_name", None)
+        in _PANDAS_EXTENSIONS_READ_THROUGH_PANDAS
+    ):
+        return cast("list[Any]", column.to_pandas().tolist())
+    return cast("list[Any]", column.to_pylist())

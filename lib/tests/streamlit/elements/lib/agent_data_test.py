@@ -347,6 +347,32 @@ def test_preview_cells_follow_the_encoding_table() -> None:
     ]
 
 
+def test_preview_cells_read_periods_and_intervals_as_the_browser_shows_them() -> None:
+    """A pandas period or interval previews as its text, not its Arrow storage.
+
+    The storage is an ordinal of a frequency the column type does not name, or
+    bounds without the closed side, which a client cannot decode. A missing
+    period stays null.
+    """
+    frame = pd.DataFrame(
+        {
+            "month": pd.PeriodIndex(["2024-01", None, "2024-03"], freq="M"),
+            "bucket": pd.IntervalIndex.from_breaks([0, 1, 2, 3], closed="left"),
+        }
+    )
+
+    summary = agent_data.summarize_arrow(
+        dataframe_util.convert_pandas_df_to_arrow_bytes(frame)
+    )
+
+    assert summary is not None
+    assert summary["preview"]["rows"] == [
+        ["2024-01", "[0, 1)"],
+        [None, "[1, 2)"],
+        ["2024-03", "[2, 3)"],
+    ]
+
+
 def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
     """A table with rows and no columns previews one empty row per row it counts.
 
