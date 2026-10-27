@@ -550,7 +550,7 @@ const durationFormatters = new Map<string, DurationFormatter>()
  * all-zero duration: it would also append "0 sec" to other durations.
  */
 function getDurationFormatter(
-  DurationFormat: DurationFormatCtor,
+  durationFormatCtor: DurationFormatCtor,
   locales: string | readonly string[] | undefined,
   showZeroSeconds: boolean
 ): DurationFormatter {
@@ -561,7 +561,7 @@ function getDurationFormatter(
     return cached
   }
 
-  const formatter = new DurationFormat(
+  const formatter = new durationFormatCtor(
     locales,
     showZeroSeconds
       ? { style: "short", secondsDisplay: "always" }
@@ -573,7 +573,7 @@ function getDurationFormatter(
 
 /** Format duration parts with a cached `Intl.DurationFormat`. */
 function formatDurationParts(
-  DurationFormat: DurationFormatCtor,
+  durationFormatCtor: DurationFormatCtor,
   locales: string | readonly string[] | undefined,
   parts: DurationParts
 ): string {
@@ -581,9 +581,11 @@ function formatDurationParts(
   // duration (only `seconds: 0`, see toDurationParts) would be an empty
   // string.
   const isZeroDuration = parts.seconds === 0
-  return getDurationFormatter(DurationFormat, locales, isZeroDuration).format(
-    parts
-  )
+  return getDurationFormatter(
+    durationFormatCtor,
+    locales,
+    isZeroDuration
+  ).format(parts)
 }
 
 /** Exact locale-aware duration, or undefined if `Intl.DurationFormat` is missing. */
@@ -591,8 +593,8 @@ function formatDurationWithIntl(
   absSeconds: number,
   fractionalSecondDigits: number
 ): string | undefined {
-  const DurationFormat = getDurationFormatCtor()
-  if (!DurationFormat) {
+  const durationFormatCtor = getDurationFormatCtor()
+  if (!durationFormatCtor) {
     return undefined
   }
 
@@ -600,10 +602,10 @@ function formatDurationWithIntl(
   const locales =
     typeof navigator !== "undefined" ? navigator.languages : undefined
   try {
-    return formatDurationParts(DurationFormat, locales, parts)
+    return formatDurationParts(durationFormatCtor, locales, parts)
   } catch (error) {
     if (error instanceof RangeError) {
-      return formatDurationParts(DurationFormat, undefined, parts)
+      return formatDurationParts(durationFormatCtor, undefined, parts)
     }
     return undefined
   }

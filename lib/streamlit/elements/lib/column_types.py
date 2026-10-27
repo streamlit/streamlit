@@ -596,7 +596,7 @@ def NumberColumn(
         the user. This defaults to ``None``. On timedelta / duration columns,
         this is a number of seconds.
 
-    format :  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "duration", or None
+    format : str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "duration", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 

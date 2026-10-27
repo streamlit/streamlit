@@ -186,11 +186,6 @@ class DataEditorUtilTest(unittest.TestCase):
                 pd.Timedelta(hours=2),
             ),
             (
-                float("inf"),
-                ColumnDataKind.TIMEDELTA,
-                None,
-            ),
-            (
                 [1, 2, 3],
                 ColumnDataKind.LIST,
                 [1, 2, 3],
@@ -253,6 +248,12 @@ class DataEditorUtilTest(unittest.TestCase):
         """Test that _parse_value parses the input to the correct type."""
         result = _parse_value(value, column_data_kind)
         assert result == expected
+
+    @parameterized.expand([(float("inf"),), (float("-inf"),), (1e300,)])
+    def test_parse_value_raises_for_out_of_range_timedelta_seconds(self, value: float):
+        """An out-of-range duration raises so callers skip it instead of storing NaT."""
+        with pytest.raises((OverflowError, ValueError)):
+            _parse_value(value, ColumnDataKind.TIMEDELTA)
 
     def test_data_editor_serde_serialize_round_trips(self):
         """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
@@ -468,6 +469,29 @@ class DataEditorUtilTest(unittest.TestCase):
         _apply_row_additions(df, [{"duration": 1.005}], dataframe_schema)
         assert len(df) == 2
         assert df.iat[1, 0] == pd.Timedelta(milliseconds=1005)
+
+    def test_apply_cell_edits_out_of_range_timedelta_keeps_value(self):
+        """An out-of-range duration edit is skipped instead of clearing the cell."""
+        df = pd.DataFrame({"duration": [pd.Timedelta(seconds=5)]})
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 1e300}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=5)
+
+        # A real clear still stores a missing value.
+        _apply_cell_edits(df, {0: {"duration": None}}, dataframe_schema)
+        assert pd.isna(df.iat[0, 0])
+
+    def test_apply_row_additions_out_of_range_timedelta_skips_row(self):
+        """An added row with an out-of-range duration is skipped, later rows are kept."""
+        df = pd.DataFrame({"duration": [pd.Timedelta(seconds=5)]})
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(
+            df, [{"duration": 1e300}, {"duration": 90}], dataframe_schema
+        )
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""

@@ -47,7 +47,7 @@ describe("DataFrame FormattingMenu", () => {
 
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
-    expect(screen.getByText("Duration")).toBeInTheDocument()
+    expect(screen.getByText("Duration")).toBeVisible()
     expect(screen.getByText("Dollar")).toBeInTheDocument()
     expect(screen.getByText("Euro")).toBeInTheDocument()
     expect(screen.getByText("Yen")).toBeInTheDocument()
@@ -86,8 +86,8 @@ describe("DataFrame FormattingMenu", () => {
       </FormattingMenu>
     )
 
-    expect(screen.getByText("Dollar")).toBeInTheDocument()
-    expect(screen.getByText("Compact")).toBeInTheDocument()
+    expect(screen.getByText("Dollar")).toBeVisible()
+    expect(screen.getByText("Compact")).toBeVisible()
     expect(screen.queryByText("Duration")).not.toBeInTheDocument()
   })
 

@@ -76,7 +76,7 @@ import {
   TimeColumn,
 } from "./columns"
 
-/** Column kinds that represent a clock time of day, not an elapsed duration. */
+/** Column kinds that show a point in time (date, time, datetime) rather than an elapsed duration. */
 const CLOCK_COLUMN_KINDS = new Set(["time", "date", "datetime"])
 
 /**

@@ -727,7 +727,7 @@ describe("NumberColumn", () => {
     expect(mockColumn.validateInput!(-9_223_372_037)).toBe(false)
   })
 
-  it("renders non-finite compact duration values as their string form", () => {
+  it("shows an error cell for NaN and the string form for infinite compact durations", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE, {
       format: "compact",
     })

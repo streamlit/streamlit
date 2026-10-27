@@ -316,6 +316,16 @@ def _parse_value(
 
     import pandas as pd
 
+    if column_data_kind == ColumnDataKind.TIMEDELTA and isinstance(value, (int, float)):
+        # Numeric edits arrive as seconds (NumberColumn's stored unit).
+        # pd.Timedelta(int) would treat the number as nanoseconds, and
+        # pd.Timedelta(seconds=float) truncates instead of rounding to the
+        # nearest nanosecond (1.005 would become 1.004999999 s). An
+        # out-of-range value raises (OverflowError or OutOfBoundsTimedelta)
+        # instead of returning None, so callers skip the edit rather than
+        # store NaT.
+        return pd.Timedelta(value, unit="s")
+
     try:
         if column_data_kind == ColumnDataKind.LIST:
             return list(value) if is_list_like(value) else [value]  # ty: ignore[invalid-argument-type]
@@ -353,12 +363,6 @@ def _parse_value(
             return Decimal(str(value))
 
         if column_data_kind == ColumnDataKind.TIMEDELTA:
-            # Numeric edits arrive as seconds (NumberColumn's stored unit).
-            # pd.Timedelta(int) would treat the number as nanoseconds, and
-            # pd.Timedelta(seconds=float) truncates instead of rounding to the
-            # nearest nanosecond (1.005 would become 1.004999999 s).
-            if isinstance(value, (int, float)):
-                return pd.Timedelta(value, unit="s")
             return pd.Timedelta(value)
 
         if column_data_kind in {
@@ -430,10 +434,10 @@ def _apply_cell_edits(
                     df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
                         value, dataframe_schema[col_name]
                     )
-                except (TypeError, ValueError) as ex:
+                except (TypeError, ValueError, OverflowError) as ex:
                     # Widget state comes from the client. Skip edits that
                     # pandas rejects (for example, a duration finer than the
-                    # column unit) instead of crashing the run.
+                    # column unit or out of range) instead of crashing the run.
                     _LOGGER.warning(
                         "Failed to apply edit %r to row %s, column %s. Edit ignored.",
                         value,
@@ -471,9 +475,10 @@ def _assign_row_values(
     """Assign a row via a mapping. Return False if pandas rejects the values.
 
     Using a mapping keeps numpy from coercing nested sequences (for example,
-    lists) into multi-dimensional arrays. The client controls widget state, so
-    a duration finer than the column unit can raise. Skip the row when
-    assignment raises. Leave a silent dtype upcast in place.
+    lists) into multi-dimensional arrays. Widget state comes from the client,
+    so pandas can reject a value (for example, a duration finer than the
+    column unit). Log and skip the row when assignment raises. If pandas
+    widens the timedelta dtype instead of raising, keep that widened column.
     """
     import warnings
 
@@ -544,7 +549,16 @@ def _apply_row_additions(
         index_step = 1
 
     for added_row in added_rows:
-        index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        try:
+            index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        except (TypeError, ValueError, OverflowError) as ex:
+            # Widget state comes from the client. Skip a row with a value
+            # that cannot be parsed (for example, an out-of-range duration).
+            _LOGGER.warning(
+                "Failed to parse added row. Row addition skipped.",
+                exc_info=ex,
+            )
+            continue
 
         if index_value is not None and index_type != "range":
             # Case 1: Non-range index with an explicitly provided index value

@@ -92,8 +92,8 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
   },
 ]
 
-// Progress columns share numeric formats except for duration, which
-// interprets the value as seconds. Compact retains its numeric meaning.
+// ProgressColumn does not support the duration format, so progress columns
+// offer the number formats without it.
 const PROGRESS_FORMATS = NUMBER_FORMATS.filter(
   option => option.format !== "duration"
 )
