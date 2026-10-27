@@ -27,6 +27,7 @@ import {
   List,
   makeVector,
   Null,
+  Struct,
   Time,
   Timestamp,
   TimeUnit,
@@ -1124,6 +1125,31 @@ describe("isPeriodType", () => {
       expect(isPeriodType(arrowType)).toEqual(expected)
     }
   )
+
+  it.each([
+    ["pandas.period", new Int64(), true],
+    ["period", new Int64(), true],
+    ["pandas.interval", new Int64(), false],
+    ["pandas.period", new Utf8(), false],
+  ])(
+    "classifies extension %s on %s without pandas metadata as period: %s",
+    (extensionName, arrowType, expected) => {
+      // A `pyarrow.Table` column or the values of a dictionary-encoded column
+      // carry no pandas column metadata, so only the Arrow extension name
+      // identifies them as periods.
+      const type: ArrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          arrowType,
+          true,
+          new Map([["ARROW:extension:name", extensionName]])
+        ),
+        pandasType: undefined,
+      }
+      expect(isPeriodType(type)).toBe(expected)
+    }
+  )
 })
 
 describe("isBytesType", () => {
@@ -1311,6 +1337,35 @@ describe("isIntervalType", () => {
     "interprets %s as interval type: %s",
     (arrowType: ArrowType | undefined, expected: boolean) => {
       expect(isIntervalType(arrowType)).toEqual(expected)
+    }
+  )
+
+  const intervalStruct = new Struct([
+    new Field("left", new Int64(), true),
+    new Field("right", new Int64(), true),
+  ])
+
+  it.each([
+    ["pandas.interval", intervalStruct, true],
+    ["interval", intervalStruct, true],
+    ["pandas.period", intervalStruct, false],
+    ["pandas.interval", new Int64(), false],
+  ])(
+    "classifies extension %s on %s without pandas metadata as interval: %s",
+    (extensionName, arrowType, expected) => {
+      // The values of a `pd.cut` categorical carry no pandas column metadata,
+      // so only the Arrow extension name identifies them as intervals.
+      const type: ArrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          arrowType,
+          true,
+          new Map([["ARROW:extension:name", extensionName]])
+        ),
+        pandasType: undefined,
+      }
+      expect(isIntervalType(type)).toBe(expected)
     }
   )
 })

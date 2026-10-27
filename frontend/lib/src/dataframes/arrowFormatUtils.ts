@@ -417,9 +417,8 @@ function formatDuration(duration: number | bigint, field?: Field): string {
 function formatDecimal(value: Uint32Array, field?: Field): string {
   const scale = getArrowScale(field)
 
-  // Format Uint32Array to a numerical string and pad it with zeros
-  // So that it is exactly the length of the scale.
-  let numString = util.bigNumToString(new util.BN(value)).padStart(scale, "0")
+  // Format Uint32Array to a numerical string.
+  let numString = util.bigNumToString(new util.BN(value))
 
   // ArrowJS 13 correctly adds a minus sign for negative numbers.
   // but it doesn't handle th fractional part yet. So we can just return
@@ -437,6 +436,9 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
     sign = "-"
     numString = numString.slice(1)
   }
+  // Pad the digits (without the sign) with zeros so that they are at least
+  // as long as the scale, e.g. 5 with scale 3 is 0.005.
+  numString = numString.padStart(scale, "0")
   // Extract the whole number part. If the number is < 1, it doesn't
   // have a whole number part, so we'll use "0" instead.
   // E.g for 123450 with scale 3, we'll get "123" as the whole part.

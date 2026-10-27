@@ -44,6 +44,7 @@ import { INTERVAL_FLOAT64 } from "~lib/mocks/arrow/types/intervalFloat64"
 import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
 import { INTERVAL_UINT64 } from "~lib/mocks/arrow/types/intervalUint64"
 import { PERIOD } from "~lib/mocks/arrow/types/period"
+import { PERIOD_EXTENSION } from "~lib/mocks/arrow/types/periodExtension"
 import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
@@ -321,6 +322,16 @@ describe("format", () => {
     })
   })
 
+  it("period from a pyarrow.Table without pandas metadata", () => {
+    // Only the `pandas.period` extension tag marks the column as a period.
+    const q = new Quiver({ data: PERIOD_EXTENSION })
+    const { content, contentType } = q.getCell(0, 0)
+
+    expect(contentType.pandasType).toBeUndefined()
+    expect(format(content, contentType)).toEqual("2020-01")
+    expect(format(content, contentType)).not.toEqual(String(content))
+  })
+
   it("list[unicode]", () => {
     expect(
       format(vectorFromArray(["foo", "bar", "baz"]), {
@@ -387,6 +398,40 @@ describe("format", () => {
     }
     expect(format(value, arrowType)).toEqual("42")
   })
+
+  it.each([
+    { unscaled: 5, scale: 2, expected: "0.05" },
+    { unscaled: -5, scale: 2, expected: "-0.05" },
+    { unscaled: -5, scale: 3, expected: "-0.005" },
+    { unscaled: -12, scale: 3, expected: "-0.012" },
+    { unscaled: -12345, scale: 2, expected: "-123.45" },
+  ])(
+    "decimal $unscaled with scale $scale formats as $expected",
+    ({ unscaled, scale, expected }) => {
+      const decimalType = new Decimal(scale, 10)
+      const builder = new DecimalBuilder({
+        type: decimalType,
+        nullValues: null,
+      })
+      // Little-endian 128-bit two's complement words.
+      const fill = unscaled < 0 ? 0xffffffff : 0
+      builder.append(new Uint32Array([unscaled >>> 0, fill, fill, fill]))
+      const value = builder.finish().toVector().get(0)
+      const arrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", decimalType, true),
+        pandasType: {
+          field_name: "c",
+          name: "c",
+          pandas_type: "decimal",
+          numpy_type: "object",
+          metadata: null,
+        },
+      }
+
+      expect(format(value, arrowType)).toEqual(expected)
+    }
+  )
 
   it("list JSON coerces bigint with Number() for serialization", () => {
     expect(

@@ -281,9 +281,13 @@ export function isPeriodType(type?: ArrowType): boolean {
   if (isNullOrUndefined(type)) {
     return false
   }
+  // pandas tags its period extension "pandas.period". The tag is the only
+  // marker when no pandas column metadata applies (for example, a
+  // `pyarrow.Table` column or the values of a dictionary-encoded column).
+  const extensionName = type.arrowField.metadata.get("ARROW:extension:name")
   return (
     (ArrowDataType.isInt(type.arrowField.type) &&
-      type.arrowField.metadata.get("ARROW:extension:name") === "period") ||
+      (extensionName === "period" || extensionName === "pandas.period")) ||
     (getPandasTypeName(type)?.startsWith("period") ?? false)
   )
 }
@@ -398,11 +402,14 @@ export function isIntervalType(type?: ArrowType): boolean {
   if (isNullOrUndefined(type)) {
     return false
   }
-  // ArrowDataType.isInterval checks for a different (unsupported) type and not related
-  // to the pandas interval extension type.
+  // ArrowDataType.isInterval checks Arrow's own interval type, which is unrelated to
+  // the pandas interval extension. pandas tags that extension "pandas.interval"; the
+  // tag is the only marker when no pandas column metadata applies (for example, the
+  // categories of a `pd.cut` column).
+  const extensionName = type.arrowField.metadata.get("ARROW:extension:name")
   return (
     (ArrowDataType.isStruct(type.arrowField.type) &&
-      type.arrowField.metadata.get("ARROW:extension:name") === "interval") ||
+      (extensionName === "interval" || extensionName === "pandas.interval")) ||
     (getPandasTypeName(type)?.startsWith("interval") ?? false)
   )
 }

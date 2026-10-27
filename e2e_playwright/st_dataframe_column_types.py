@@ -18,6 +18,7 @@ import numpy as np
 
 import streamlit as st
 from shared.data_mocks import (
+    ARROW_EXTENSION_TYPES_TABLE,
     BASE_TYPES_DF,
     DATETIME_TYPES_DF,
     INTERVAL_TYPES_DF,
@@ -56,3 +57,6 @@ st.dataframe(PERIOD_TYPES_DF, width="stretch", hide_index=True)
 
 st.subheader("Unsupported types (string fallback)")
 st.dataframe(UNSUPPORTED_TYPES_DF, width="stretch", hide_index=True)
+
+st.subheader("Arrow extension types (pyarrow.Table)")
+st.dataframe(ARROW_EXTENSION_TYPES_TABLE, width="stretch", hide_index=True)
