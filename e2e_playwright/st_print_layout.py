@@ -46,3 +46,12 @@ with st.container(horizontal_alignment="center", key="centered"):
 
 with st.container(height=120, vertical_alignment="center", key="vertically_centered"):
     st.markdown("Vertically centered")
+
+with st.container(key="chart_row"):
+    chart_column, second_column = st.columns(2)
+    with chart_column:
+        st.bar_chart(pd.DataFrame({"value": [1, 3, 2]}), height=160)
+    with second_column:
+        st.markdown("Second chart column")
+
+st.markdown("After the chart row")

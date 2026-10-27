@@ -26,6 +26,7 @@ import { render } from "~lib/test_util"
 import {
   PRINT_CARD_CLASS,
   StyledColumn,
+  StyledElementContainer,
   StyledFlexContainerBlock,
   StyledLayoutWrapper,
 } from "./styled-components"
@@ -69,6 +70,10 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toContain("data-testid")
     expect(css).toContain(">.stColumn")
     expect(css).toContain("display:block")
+    // A stacked column has no definite height, so its height:100% content
+    // block would stay a flex column and collapse in Chrome print.
+    expect(css).toContain(".stVerticalBlock{display:block")
+    expect(css).toContain("margin-bottom:1rem")
   })
 
   it("lets a dataframe's card break across a page so its header can repeat", () => {
@@ -117,7 +122,8 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
     expect(gapped).toContain("margin-bottom:16px")
-    // Balloons, snow, and the cache spinner are gone before a print.
+    // Balloons and snow are display:none in print, and the cache spinner
+    // has no height, so the gap margin does not exclude them.
     expect(gapped).not.toContain(":not(:has(.stBalloons))")
     expect(gapped).not.toContain(":not(:has(.stSnow))")
     expect(gapped).not.toContain(":not(:has(> .stCacheSpinner))")
@@ -171,6 +177,38 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
     expect(aligned).not.toContain("display:block")
     expect(aligned).not.toContain("margin-bottom")
+  })
+})
+
+describe("StyledElementContainer print layout", () => {
+  it("hides a balloons or snow container so the print gap leaves no blank strip", () => {
+    const balloons = cssAddedBy(() =>
+      render(
+        createElement(StyledElementContainer, {
+          isStale: false,
+          width: "100%",
+          height: "auto",
+          elementType: "balloons",
+          overflow: "visible",
+        })
+      )
+    )
+    expect(balloons).toContain("margin-bottom:-1rem")
+    expect(balloons).toContain("@media print")
+    expect(balloons).toContain("display:none")
+
+    const text = cssAddedBy(() =>
+      render(
+        createElement(StyledElementContainer, {
+          isStale: false,
+          width: "100%",
+          height: "auto",
+          elementType: "markdown",
+          overflow: "visible",
+        })
+      )
+    )
+    expect(text).not.toContain("display:none")
   })
 })
 

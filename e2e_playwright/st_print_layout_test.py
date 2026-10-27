@@ -121,6 +121,31 @@ def test_print_stacks_columns_and_fits_the_dataframe(
     assert vertical_style["display"] == "flex"
     assert vertical_style["justifyContent"] == "center"
 
+    chart_row = get_element_by_key(app, "chart_row")
+    chart = chart_row.get_by_test_id("stVegaLiteChart")
+    after_chart = app.get_by_text("After the chart row", exact=True)
+    expect(chart).to_be_visible()
+    expect(after_chart).to_be_visible()
+
+    def chart_stays_above_the_heading() -> None:
+        chart_box = chart.bounding_box()
+        after_box = after_chart.bounding_box()
+        content = (
+            chart_row.get_by_test_id("stColumn")
+            .first.get_by_test_id("stVerticalBlock")
+            .first
+        )
+        display = content.evaluate("element => getComputedStyle(element).display")
+        assert chart_box is not None
+        assert after_box is not None
+        # The column content block is height 100%. Once the column stacks,
+        # that percentage is auto, so the block has to leave flex or the
+        # chart paints over the heading.
+        assert display == "block"
+        assert chart_box["y"] + chart_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, chart_stays_above_the_heading)
+
     assert_snapshot(app, name="st_print_layout-stacked_columns")
 
     app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")

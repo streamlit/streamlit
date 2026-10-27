@@ -744,7 +744,7 @@ function renderPrintTable(
 /** The canvas stays, and this says why the table was not expanded. */
 function visiblePartNote(cellLimit: number): string {
   return cellLimit < DATAFRAME_PRINT_CELL_LIMIT
-    ? "Only the on-screen part of this table is printed because other tables on this page were already expanded."
+    ? "Only the visible part of this table is printed because other tables on this page were already expanded."
     : "Only the visible part of this table is printed because it is too large to expand."
 }
 

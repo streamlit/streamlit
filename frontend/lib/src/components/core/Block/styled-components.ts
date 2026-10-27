@@ -78,8 +78,9 @@ const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stCo
  *
  * A page link only trims the flex gap, by xs above and below. Print replaces
  * the gap with margin, so the trim stays in that margin. The next link's own
- * negative margin-top then collapses with it. Balloons, snow, and the cache
- * spinner are gone before a print, so they are not excluded here.
+ * negative margin-top then collapses with it. Balloons and snow containers
+ * are `display: none` in print, and a cache spinner has no height, so this
+ * margin does not exclude them.
  */
 function printBlockGapMargins(
   gapWidth: string | undefined,
@@ -186,6 +187,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     "@media print": {
       overflow: "visible",
+      ...(GLOBAL_ELEMENTS.has(elementType)
+        ? {
+            // The particle overlay is already hidden. This container still
+            // sits in the vertical block, and the print gap margin would
+            // otherwise beat its negative margin and leave a blank strip.
+            // A display:none box has no margin.
+            display: "none",
+          }
+        : {}),
       // A fixed-height dataframe keeps that height on its container. The
       // print table is taller than the on-screen grid, and a fallback note
       // sits under the canvas, so the container grows with that content
@@ -446,6 +456,17 @@ export const StyledFlexContainerBlock =
                         marginBottom: gapWidth,
                       },
                     }),
+                  // The column's content block is height 100%. A stacked
+                  // column has no definite height, so that percentage is
+                  // auto and a flex column collapses in Chrome print. A
+                  // chart then paints over the next heading. Block layout
+                  // keeps the column content gap (small) as margin. An
+                  // unstacked column is not matched, so a 100% block in a
+                  // sized parent stays flex.
+                  "> .stVerticalBlock": {
+                    display: "block",
+                    ...printBlockGapMargins(theme.spacing.lg, theme),
+                  },
                 },
               },
             }

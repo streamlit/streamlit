@@ -384,7 +384,7 @@ function Metric({
   const contentWidth = Boolean(widthConfig?.useContent)
 
   useEffect(() => {
-    const onBeforePrint = (): void => {
+    const handleBeforePrint = (): void => {
       if (!valueRef.current) {
         return
       }
@@ -396,17 +396,17 @@ function Metric({
     // beforeprint still uses screen media. This records the printed column
     // once print layout has replaced it.
     const printMedia = window.matchMedia("print")
-    const onPrintMedia = (): void => {
+    const handlePrintMedia = (): void => {
       if (printMedia.matches && contentWidth && valueRef.current) {
         recordMetricAvailableWidth(valueRef.current)
       }
     }
 
-    window.addEventListener("beforeprint", onBeforePrint)
-    printMedia.addEventListener("change", onPrintMedia)
+    window.addEventListener("beforeprint", handleBeforePrint)
+    printMedia.addEventListener("change", handlePrintMedia)
     return () => {
-      window.removeEventListener("beforeprint", onBeforePrint)
-      printMedia.removeEventListener("change", onPrintMedia)
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      printMedia.removeEventListener("change", handlePrintMedia)
     }
   }, [contentWidth])
 

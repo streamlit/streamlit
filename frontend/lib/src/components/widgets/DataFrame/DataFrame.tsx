@@ -979,7 +979,7 @@ function DataFrame({
       return
     }
 
-    const onBeforePrint = (event: Event): void => {
+    const handleBeforePrint = (event: Event): void => {
       // The slot is display:none on screen, so visibility is read from the
       // dataframe. A closed tab, a collapsed expander, or any other hidden
       // ancestor stays mounted. A print table there would still match
@@ -1002,26 +1002,26 @@ function DataFrame({
         dataFramePrintBudget(event)
       )
     }
-    const onAfterPrint = (): void => {
+    const handleAfterPrint = (): void => {
       clearDataFramePrintSlot(slot)
     }
     // beforeprint still uses screen media, so the first measure is the
     // on-screen column. This fires once the page is actually laid out for
     // print and the font ratio can follow the printed column.
     const printMedia = window.matchMedia("print")
-    const onPrintMedia = (): void => {
+    const handlePrintMedia = (): void => {
       if (printMedia.matches) {
         fitDataFramePrintTable(slot)
       }
     }
 
-    window.addEventListener("beforeprint", onBeforePrint)
-    window.addEventListener("afterprint", onAfterPrint)
-    printMedia.addEventListener("change", onPrintMedia)
+    window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
+    printMedia.addEventListener("change", handlePrintMedia)
     return () => {
-      window.removeEventListener("beforeprint", onBeforePrint)
-      window.removeEventListener("afterprint", onAfterPrint)
-      printMedia.removeEventListener("change", onPrintMedia)
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
+      printMedia.removeEventListener("change", handlePrintMedia)
     }
   }, [columns, getPrintCellContent, isEmptyTable, numRows, printMeasure])
 
