@@ -20,6 +20,7 @@ import {
   DateDay,
   Decimal,
   DecimalBuilder,
+  Duration,
   Field,
   Float64,
   Int64,
@@ -51,10 +52,10 @@ import {
   convertTimestampToSeconds,
   convertTimeToDate,
   format,
-  formatDurationClockFromSeconds,
   formatDurationFromSeconds,
-  formatLocalizedDurationFromSeconds,
   formatPeriodFromFreq,
+  getDurationFractionalSecondDigits,
+  isValidDurationSeconds,
 } from "./arrowFormatUtils"
 import { DataFrameCellType } from "./arrowTypeUtils"
 
@@ -689,43 +690,138 @@ describe("convertTimeToDate", () => {
   })
 })
 
+const HAS_INTL_DURATION_FORMAT =
+  typeof (Intl as { DurationFormat?: unknown }).DurationFormat === "function"
+
 describe("formatDurationFromSeconds", () => {
-  it("humanizes a positive duration", () => {
-    expect(formatDurationFromSeconds(5)).toEqual("a few seconds")
-    expect(formatDurationFromSeconds(7200)).toMatch(/hour/i)
+  it.each(["duration", "compact", "localized"] as const)(
+    "returns the string form of non-finite values for %s",
+    format => {
+      expect(formatDurationFromSeconds(Number.POSITIVE_INFINITY, format)).toBe(
+        "Infinity"
+      )
+      expect(formatDurationFromSeconds(Number.NaN, format)).toBe("NaN")
+    }
+  )
+
+  describe("duration format", () => {
+    it("humanizes a positive duration by default", () => {
+      expect(formatDurationFromSeconds(5)).toEqual("a few seconds")
+      expect(formatDurationFromSeconds(7200, "duration")).toMatch(/hour/i)
+    })
+
+    it("prefixes a minus for negative durations", () => {
+      expect(formatDurationFromSeconds(-7200)).toMatch(/^-/)
+    })
   })
 
-  it("prefixes a minus for negative durations", () => {
-    expect(formatDurationFromSeconds(-7200)).toMatch(/^-/)
+  describe("compact format", () => {
+    it("formats a duration as an elapsed-time clock", () => {
+      expect(formatDurationFromSeconds(5, "compact")).toEqual("00:00:05")
+      expect(formatDurationFromSeconds(14 * 24 * 60 * 60, "compact")).toEqual(
+        "336:00:00"
+      )
+      expect(formatDurationFromSeconds(-7200, "compact")).toEqual("-02:00:00")
+    })
+
+    it("includes fractional seconds up to the requested precision", () => {
+      expect(formatDurationFromSeconds(1.5, "compact", 3)).toEqual(
+        "00:00:01.5"
+      )
+      expect(formatDurationFromSeconds(1.00025, "compact", 6)).toEqual(
+        "00:00:01.00025"
+      )
+      expect(formatDurationFromSeconds(0.000000125, "compact", 9)).toEqual(
+        "00:00:00.000000125"
+      )
+      expect(formatDurationFromSeconds(-0.5, "compact", 3)).toEqual(
+        "-00:00:00.5"
+      )
+    })
+
+    it("omits fractional seconds for whole values", () => {
+      expect(formatDurationFromSeconds(1, "compact", 9)).toEqual("00:00:01")
+    })
+
+    it("does not round unsupported fractions into whole seconds", () => {
+      expect(formatDurationFromSeconds(1.5, "compact", 0)).toEqual("00:00:01")
+    })
+  })
+
+  describe("localized format", () => {
+    it.skipIf(!HAS_INTL_DURATION_FORMAT)(
+      "formats an exact locale duration using short units",
+      () => {
+        expect(formatDurationFromSeconds(5, "localized")).toEqual("5 sec")
+        expect(formatDurationFromSeconds(7200, "localized")).toEqual("2 hr")
+        expect(formatDurationFromSeconds(1.5, "localized", 3)).toEqual(
+          "1 sec, 500 ms"
+        )
+        expect(formatDurationFromSeconds(0.00025, "localized", 6)).toEqual(
+          "250 μs"
+        )
+        expect(formatDurationFromSeconds(0.000000125, "localized", 9)).toEqual(
+          "125 ns"
+        )
+      }
+    )
+
+    it("prefixes a minus for negative durations", () => {
+      expect(formatDurationFromSeconds(-7200, "localized")).toMatch(/^-/)
+    })
+
+    it("falls back to the elapsed-time clock when Intl.DurationFormat is missing", () => {
+      const intlObject = Intl as unknown as { DurationFormat?: unknown }
+      const original = intlObject.DurationFormat
+      intlObject.DurationFormat = undefined
+      try {
+        expect(formatDurationFromSeconds(5, "localized")).toEqual("00:00:05")
+        expect(formatDurationFromSeconds(-7200, "localized")).toEqual(
+          "-02:00:00"
+        )
+        expect(formatDurationFromSeconds(1.5, "localized", 3)).toEqual(
+          "00:00:01.5"
+        )
+      } finally {
+        intlObject.DurationFormat = original
+      }
+    })
   })
 })
 
-describe("formatDurationClockFromSeconds", () => {
-  it("formats a duration as an elapsed-time clock", () => {
-    expect(formatDurationClockFromSeconds(5)).toEqual("00:00:05")
-    expect(formatDurationClockFromSeconds(14 * 24 * 60 * 60)).toEqual(
-      "336:00:00"
-    )
-    expect(formatDurationClockFromSeconds(-7200)).toEqual("-02:00:00")
+describe("getDurationFractionalSecondDigits", () => {
+  it.each([
+    [TimeUnit.SECOND, 0],
+    [TimeUnit.MILLISECOND, 3],
+    [TimeUnit.MICROSECOND, 6],
+    [TimeUnit.NANOSECOND, 9],
+  ])("returns the second decimals for unit %s", (unit, expected) => {
+    const field = new Field("duration", new Duration(unit), true)
+    expect(getDurationFractionalSecondDigits(field)).toBe(expected)
   })
 
-  it("includes fractional seconds up to the requested precision", () => {
-    expect(formatDurationClockFromSeconds(1.5, 3)).toEqual("00:00:01.5")
-    expect(formatDurationClockFromSeconds(1.00025, 6)).toEqual(
-      "00:00:01.00025"
-    )
-    expect(formatDurationClockFromSeconds(0.000000125, 9)).toEqual(
-      "00:00:00.000000125"
-    )
-    expect(formatDurationClockFromSeconds(-0.5, 3)).toEqual("-00:00:00.5")
+  it("reads a field without a unit as nanoseconds", () => {
+    expect(getDurationFractionalSecondDigits(undefined)).toBe(9)
+  })
+})
+
+describe("isValidDurationSeconds", () => {
+  it("accepts values the unit can represent", () => {
+    expect(isValidDurationSeconds(90, 0)).toBe(true)
+    expect(isValidDurationSeconds(1.5, 3)).toBe(true)
+    expect(isValidDurationSeconds(-0.000000125, 9)).toBe(true)
   })
 
-  it("omits fractional seconds for whole values", () => {
-    expect(formatDurationClockFromSeconds(1, 9)).toEqual("00:00:01")
+  it("rejects values finer than the unit", () => {
+    expect(isValidDurationSeconds(90.5, 0)).toBe(false)
+    expect(isValidDurationSeconds(1.0005, 3)).toBe(false)
   })
 
-  it("does not round unsupported fractions into whole seconds", () => {
-    expect(formatDurationClockFromSeconds(1.5, 0)).toEqual("00:00:01")
+  it("rejects values outside the pandas Timedelta range", () => {
+    const maxSeconds = 2 ** 63 / 1e9
+    expect(isValidDurationSeconds(maxSeconds, 0)).toBe(false)
+    expect(isValidDurationSeconds(-maxSeconds, 0)).toBe(false)
+    expect(isValidDurationSeconds(Number.POSITIVE_INFINITY, 9)).toBe(false)
   })
 })
 
@@ -751,42 +847,5 @@ describe("convertTimestampToSeconds", () => {
         TimeUnit.NANOSECOND
       )
     ).toBe(-(200 * 24 * 60 * 60 + 0.25))
-  })
-})
-
-const HAS_INTL_DURATION_FORMAT =
-  typeof (Intl as { DurationFormat?: unknown }).DurationFormat === "function"
-
-describe("formatLocalizedDurationFromSeconds", () => {
-  it.skipIf(!HAS_INTL_DURATION_FORMAT)(
-    "formats an exact locale duration using short units",
-    () => {
-      expect(formatLocalizedDurationFromSeconds(5)).toEqual("5 sec")
-      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("2 hr")
-      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual(
-        "1 sec, 500 ms"
-      )
-      expect(formatLocalizedDurationFromSeconds(0.00025, 6)).toEqual("250 μs")
-      expect(formatLocalizedDurationFromSeconds(0.000000125, 9)).toEqual(
-        "125 ns"
-      )
-    }
-  )
-
-  it("prefixes a minus for negative durations", () => {
-    expect(formatLocalizedDurationFromSeconds(-7200)).toMatch(/^-/)
-  })
-
-  it("falls back to the elapsed-time clock when Intl.DurationFormat is missing", () => {
-    const intlObject = Intl as unknown as { DurationFormat?: unknown }
-    const original = intlObject.DurationFormat
-    intlObject.DurationFormat = undefined
-    try {
-      expect(formatLocalizedDurationFromSeconds(5)).toEqual("00:00:05")
-      expect(formatLocalizedDurationFromSeconds(7200)).toEqual("02:00:00")
-      expect(formatLocalizedDurationFromSeconds(1.5, 3)).toEqual("00:00:01.5")
-    } finally {
-      intlObject.DurationFormat = original
-    }
   })
 })

@@ -384,6 +384,49 @@ function formatDatetime(date: number | Date, field?: Field): string {
   return datetime.format("YYYY-MM-DD HH:mm:ss")
 }
 
+// Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
+const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
+
+/**
+ * Number of decimal second places represented by a duration field's unit.
+ * Without a unit, the field is read as nanoseconds (the pandas default).
+ */
+export function getDurationFractionalSecondDigits(field?: Field): number {
+  switch (getArrowTimeUnit(field, TimeUnit.NANOSECOND)) {
+    case TimeUnit.SECOND:
+      return 0
+    case TimeUnit.MILLISECOND:
+      return 3
+    case TimeUnit.MICROSECOND:
+      return 6
+    case TimeUnit.NANOSECOND:
+    default:
+      return 9
+  }
+}
+
+/**
+ * True when a second count fits a pandas Timedelta and the duration unit
+ * (given as its number of fractional second digits) can represent it.
+ */
+export function isValidDurationSeconds(
+  seconds: number,
+  fractionalSecondDigits: number
+): boolean {
+  if (Math.abs(seconds) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
+    return false
+  }
+
+  const scale = 10 ** fractionalSecondDigits
+  const scaledSeconds = seconds * scale
+  if (!Number.isFinite(scaledSeconds)) {
+    return false
+  }
+  // A second count is representable only if scaling it to integer ticks and
+  // back is lossless, so a value finer than the column's unit is rejected.
+  return Math.round(scaledSeconds) / scale === seconds
+}
+
 /** Calendar units passed to `Intl.DurationFormat`. */
 type DurationParts = {
   days?: number
@@ -547,42 +590,16 @@ function formatDurationWithIntl(
   }
 }
 
-/**
- * Formats a duration that is already expressed in seconds.
- *
- * Uses moment's approximate humanize (e.g. "a few seconds", "a day",
- * "3 months"). Negative values keep a leading minus.
- */
-export function formatDurationFromSeconds(seconds: number): string {
-  if (!Number.isFinite(seconds)) {
-    return String(seconds)
-  }
-
-  const formatted = moment.duration(Math.abs(seconds), "seconds").humanize()
-  return seconds < 0 ? `-${formatted}` : formatted
-}
-
-/**
- * Formats a duration in seconds as an elapsed-time clock.
- *
- * Hours are not wrapped at 24 so multi-day values stay a single elapsed-time
- * reading (e.g. `336:00:00` for 14 days). Fractional seconds are included
- * when present (e.g. `00:00:01.5`).
- */
-export function formatDurationClockFromSeconds(
-  seconds: number,
-  fractionalSecondDigits = 9
+/** Format non-negative seconds as an elapsed-time clock (e.g. `00:00:01.5`). */
+function formatDurationClock(
+  absSeconds: number,
+  fractionalSecondDigits: number
 ): string {
-  if (!Number.isFinite(seconds)) {
-    return String(seconds)
-  }
-
-  const sign = seconds < 0 ? "-" : ""
   const {
     wholeSeconds,
     fractionalTicks,
     fractionalSecondDigits: digits,
-  } = splitDurationSeconds(Math.abs(seconds), fractionalSecondDigits)
+  } = splitDurationSeconds(absSeconds, fractionalSecondDigits)
   const hours = Math.floor(wholeSeconds / 3600)
   const minutes = Math.floor((wholeSeconds % 3600) / 60)
   const remainingSeconds = wholeSeconds % 60
@@ -590,30 +607,50 @@ export function formatDurationClockFromSeconds(
   const fractionalPart = fractionalTicks
     ? `.${String(fractionalTicks).padStart(digits, "0").replace(/0+$/, "")}`
     : ""
-  return `${sign}${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}${fractionalPart}`
+  return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}${fractionalPart}`
 }
 
 /**
- * Formats a duration in seconds with `Intl.DurationFormat` when available.
- *
- * This is exact and locale-aware (e.g. "5 sec", "1 sec, 500 ms") rather than
- * approximate. Falls back to {@link formatDurationClockFromSeconds} when
- * `Intl.DurationFormat` is missing.
+ * Duration displays for a value in seconds, named after the `NumberColumn`
+ * formats that select them.
  */
-export function formatLocalizedDurationFromSeconds(
+export type DurationFormat = "duration" | "compact" | "localized"
+
+/**
+ * Formats a duration that is already expressed in seconds.
+ *
+ * - `duration`: approximate humanized duration (e.g. "a few seconds",
+ *   "a day", "3 months").
+ * - `compact`: elapsed-time clock. Hours are not wrapped at 24, so multi-day
+ *   values stay a single reading (e.g. `336:00:00` for 14 days).
+ * - `localized`: exact, locale-aware duration from `Intl.DurationFormat`
+ *   (e.g. "5 sec", "1 sec, 500 ms"), or the `compact` clock in runtimes
+ *   without that API.
+ *
+ * `compact` and `localized` include sub-second parts up to
+ * `fractionalSecondDigits`. Negative values keep a leading minus.
+ */
+export function formatDurationFromSeconds(
   seconds: number,
+  format: DurationFormat = "duration",
   fractionalSecondDigits = 9
 ): string {
   if (!Number.isFinite(seconds)) {
     return String(seconds)
   }
 
-  const abs = Math.abs(seconds)
-  const formatted = formatDurationWithIntl(abs, fractionalSecondDigits)
-  if (formatted) {
-    return seconds < 0 ? `-${formatted}` : formatted
+  const absSeconds = Math.abs(seconds)
+  let formatted: string
+  if (format === "compact") {
+    formatted = formatDurationClock(absSeconds, fractionalSecondDigits)
+  } else if (format === "localized") {
+    formatted =
+      formatDurationWithIntl(absSeconds, fractionalSecondDigits) ??
+      formatDurationClock(absSeconds, fractionalSecondDigits)
+  } else {
+    formatted = moment.duration(absSeconds, "seconds").humanize()
   }
-  return formatDurationClockFromSeconds(seconds, fractionalSecondDigits)
+  return seconds < 0 ? `-${formatted}` : formatted
 }
 
 /**

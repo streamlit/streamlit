@@ -19,14 +19,13 @@ import {
   GridCellKind,
   type NumberCell,
 } from "@glideapps/glide-data-grid"
-import { TimeUnit } from "apache-arrow"
 
 import {
+  type DurationFormat,
   format as formatArrowCell,
-  formatDurationClockFromSeconds,
   formatDurationFromSeconds,
-  formatLocalizedDurationFromSeconds,
-  getArrowTimeUnit,
+  getDurationFractionalSecondDigits,
+  isValidDurationSeconds,
 } from "~lib/dataframes/arrowFormatUtils"
 import {
   isDurationType,
@@ -48,37 +47,27 @@ import {
   truncateDecimals,
 } from "./utils"
 
-// Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
-const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
-
-/** Number of decimal second places represented by an Arrow duration unit. */
-function getDurationFractionalSecondDigits(unit?: TimeUnit): number {
-  switch (unit) {
-    case TimeUnit.SECOND:
-      return 0
-    case TimeUnit.MILLISECOND:
-      return 3
-    case TimeUnit.MICROSECOND:
-      return 6
-    case TimeUnit.NANOSECOND:
-    default:
-      return 9
+/**
+ * The duration display selected by a column's format, if any. `duration`
+ * works on any number column. On timedelta columns, the automatic format
+ * also humanizes, and `compact` / `localized` switch to their duration
+ * displays.
+ */
+function getDurationFormat(
+  format: string | undefined,
+  isDuration: boolean
+): DurationFormat | undefined {
+  if (format === "duration") {
+    return "duration"
   }
-}
-
-/** True when a second count can be represented by the Arrow duration unit. */
-function hasDurationPrecision(
-  seconds: number,
-  fractionalSecondDigits: number
-): boolean {
-  const scale = 10 ** fractionalSecondDigits
-  const scaledSeconds = seconds * scale
-  if (!Number.isFinite(scaledSeconds)) {
-    return false
+  if (!isDuration) {
+    return undefined
   }
-  // A second count is representable only if scaling it to integer ticks and
-  // back is lossless, so a value finer than the column's unit is rejected.
-  return Math.round(scaledSeconds) / scale === seconds
+  // The "Automatic" menu entry sends an empty format string.
+  if (!format) {
+    return "duration"
+  }
+  return format === "compact" || format === "localized" ? format : undefined
 }
 
 export interface NumberColumnParams {
@@ -126,7 +115,7 @@ export interface NumberColumnParams {
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const isDuration = isDurationType(props.arrowType)
   const durationFractionalSecondDigits = getDurationFractionalSecondDigits(
-    getArrowTimeUnit(props.arrowType.arrowField, TimeUnit.NANOSECOND)
+    props.arrowType.arrowField
   )
   const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
@@ -140,12 +129,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   )
 
-  const useDurationClock = isDuration && parameters.format === "compact"
-  const useDurationLocalized = isDuration && parameters.format === "localized"
-  // The "Automatic" menu entry sends an empty format string, so a duration
-  // column with no explicit format falls back to the humanized display.
-  const useDurationHumanize =
-    parameters.format === "duration" || (isDuration && !parameters.format)
+  const durationFormat = getDurationFormat(parameters.format, isDuration)
 
   // Period columns without a custom format use Arrow's period formatter.
   const useArrowFormatting =
@@ -167,7 +151,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     allowOverlay: true,
     contentAlign:
       props.contentAlignment ??
-      (useArrowFormatting || useDurationHumanize ? "left" : "right"),
+      (useArrowFormatting || durationFormat === "duration" ? "left" : "right"),
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
     allowNegative,
@@ -217,13 +201,9 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
     // Duration checks run after clamping so a corrected max_value that is
     // finer than the column unit (e.g. 90.5s on timedelta64[s]) is rejected.
-    if (isDuration && Math.abs(cellData) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
-      return false
-    }
-
     if (
       isDuration &&
-      !hasDurationPrecision(cellData, durationFractionalSecondDigits)
+      !isValidDurationSeconds(cellData, durationFractionalSecondDigits)
     ) {
       return false
     }
@@ -281,18 +261,12 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
 
         try {
-          if (useDurationClock) {
-            displayData = formatDurationClockFromSeconds(
+          if (durationFormat) {
+            displayData = formatDurationFromSeconds(
               cellData,
+              durationFormat,
               durationFractionalSecondDigits
             )
-          } else if (useDurationLocalized) {
-            displayData = formatLocalizedDurationFromSeconds(
-              cellData,
-              durationFractionalSecondDigits
-            )
-          } else if (useDurationHumanize) {
-            displayData = formatDurationFromSeconds(cellData)
           } else if (useArrowFormatting) {
             displayData = formatArrowCell(cellData, props.arrowType)
           } else {
