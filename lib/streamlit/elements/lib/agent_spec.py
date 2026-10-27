@@ -295,8 +295,7 @@ def element(
         only while recording, so nothing it reads costs a browser session
         anything, and an exception in it reports no ``data`` instead of
         failing the command. The result is reported beside ``props`` because
-        it is derived rather than an argument the author passed. Not named
-        ``data``, because a custom component reports a ``data`` prop.
+        it is derived rather than an argument the author passed.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
