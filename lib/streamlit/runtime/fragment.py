@@ -20,6 +20,7 @@ import threading
 from abc import abstractmethod
 from collections.abc import Callable, Container, Iterator, Sequence
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum, auto
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -596,6 +597,36 @@ def _reset_outside_wrappers(
             wrapper_cursor.reset()
 
 
+@dataclass(frozen=True, slots=True)
+class _FragmentIdentity:
+    """Definition and call-site IDs for one fragment invocation.
+
+    ``definition_id`` is shared by every call site and is what duplicate-key
+    detection compares. ``fragment_id`` is unique per delta path.
+    """
+
+    definition_id: str
+    fragment_id: str
+
+
+def _make_fragment_identity(
+    func: Callable[..., Any],
+    *,
+    delta_path: str,
+    additional_hash_info: str,
+) -> _FragmentIdentity:
+    """Build the definition ID and call-site ID from one ``{module}.{qualname}`` token."""
+    # Keep additional_hash_info after delta_path so fragment IDs stay
+    # byte-identical to earlier releases. Hashing definition_id + delta_path
+    # would change dialog fragment IDs, the fragment_id stored on widget
+    # metadata, and run_every auto-rerun targets.
+    definition_token = f"{func.__module__}.{get_object_name(func)}"
+    return _FragmentIdentity(
+        definition_id=f"{definition_token}{additional_hash_info}",
+        fragment_id=calc_hash(f"{definition_token}{delta_path}{additional_hash_info}"),
+    )
+
+
 def _fragment(
     func: F | None = None,
     *,
@@ -652,18 +683,17 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_hash(
-            f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
+        identity = _make_fragment_identity(
+            non_optional_func,
+            delta_path=dg_stack_snapshot[-1]._get_delta_path_str(),
+            additional_hash_info=additional_hash_info,
         )
+        fragment_id = identity.fragment_id
 
-        fragment_definition_id: str | None = None
-        if key is not None:
-            fragment_definition_id = (
-                f"{non_optional_func.__module__}."
-                f"{get_object_name(non_optional_func)}{additional_hash_info}"
-            )
-            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
+        if key is not None and not ctx.shared.register_fragment_user_key(
+            key, identity.definition_id
+        ):
+            raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.

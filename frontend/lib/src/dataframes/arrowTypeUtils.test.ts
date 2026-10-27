@@ -17,11 +17,14 @@
 import {
   Binary,
   Bool,
+  DateDay,
   Decimal,
+  Dictionary,
   Duration,
   Field,
   Float64,
   Int64,
+  Int8,
   LargeBinary,
   LargeUtf8,
   List,
@@ -55,6 +58,7 @@ import {
   type ArrowType,
   convertVectorToList,
   DataFrameCellType,
+  getFormattableCategoryType,
   getPandasTypeName,
   getTimezone,
   isBooleanType,
@@ -981,6 +985,63 @@ describe("isTimeType", () => {
       expect(isTimeType(arrowType)).toEqual(expected)
     }
   )
+})
+
+describe("getFormattableCategoryType", () => {
+  it.each([
+    ["date", true, new DateDay(), undefined],
+    ["datetime", true, new Timestamp(TimeUnit.MILLISECOND, "UTC"), undefined],
+    ["time", true, new Time(TimeUnit.MICROSECOND, 64), undefined],
+    ["period", true, new Int64(), "pandas.period"],
+    ["string", false, new Utf8(), undefined],
+    ["float", false, new Float64(), undefined],
+    ["int", false, new Int64(), undefined],
+  ])(
+    "%s categories are formattable: %s",
+    (_name, expected, valueType, extensionName) => {
+      const metadata = new Map<string, string>()
+      if (extensionName !== undefined) {
+        metadata.set("ARROW:extension:name", extensionName)
+      }
+      const categoryType = getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "c",
+          new Dictionary(valueType, new Int8()),
+          true,
+          metadata
+        ),
+        pandasType: undefined,
+      })
+
+      expect(categoryType?.arrowField.type === valueType).toBe(expected)
+    }
+  )
+
+  it("returns undefined for columns that are not dictionary-encoded", () => {
+    expect(
+      getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", new DateDay(), true),
+        pandasType: undefined,
+      })
+    ).toBeUndefined()
+  })
+
+  it("returns the cached category type for the same column type", () => {
+    const columnType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Dictionary(new DateDay(), new Int8())),
+      pandasType: undefined,
+    }
+    const categoryType = getFormattableCategoryType(columnType)
+
+    expect(categoryType).toBeDefined()
+    expect(getFormattableCategoryType(columnType)).toBe(categoryType)
+    expect(getFormattableCategoryType({ ...columnType })).not.toBe(
+      categoryType
+    )
+  })
 })
 
 describe("isListType", () => {
