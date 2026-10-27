@@ -20,8 +20,10 @@ on:
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
-  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-5-medium,grok-4.7-xhigh' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-high,claude-opus-5-5-high,gemini-3.8-flash-high,grok-4.7-xhigh"
+  # One reviewer per company (OpenAI, Google, xAI, Anthropic). The last model
+  # reviews and then judges, so that run is paid twice.
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-luna-xhigh,gemini-4-argon-medium,grok-4.7-medium,claude-opus-5-5-high' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-terra-xhigh,gemini-4-argon-medium,grok-4.7-xhigh,claude-opus-5-5-high"
 
 jobs:
   # Job 1: Parse model list and check for API key
