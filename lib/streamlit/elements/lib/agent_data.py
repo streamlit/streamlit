@@ -401,5 +401,7 @@ def _cell_values(column: pa.ChunkedArray) -> list[Any]:
         getattr(column.type, "extension_name", None)
         in _PANDAS_EXTENSIONS_READ_THROUGH_PANDAS
     ):
-        return cast("list[Any]", column.to_pandas().tolist())
+        # Through the pandas dtype rather than `column.to_pandas()`, which
+        # returns the storage on older pyarrow.
+        return list(column.type.to_pandas_dtype().__from_arrow__(column))
     return cast("list[Any]", column.to_pylist())
