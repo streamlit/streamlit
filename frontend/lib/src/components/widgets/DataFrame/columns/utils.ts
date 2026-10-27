@@ -376,9 +376,12 @@ export function toSafeArray(data: unknown): unknown[] {
         return value
       }
       // Dict items (e.g. a list of structs) would otherwise show as
-      // "[object Object]".
+      // "[object Object]". Arrow adds every key of the list's structs to each
+      // item, so drop the null values like `st.table` does.
       if (isPlainObject(value)) {
-        return JSON.stringify(value)
+        return JSON.stringify(value, (_key, item: unknown) =>
+          item === null ? undefined : item
+        )
       }
       return toSafeString(value)
     })

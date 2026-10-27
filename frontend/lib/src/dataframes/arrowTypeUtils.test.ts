@@ -989,16 +989,16 @@ describe("isTimeType", () => {
 
 describe("getFormattableCategoryType", () => {
   it.each([
-    ["date", new DateDay(), undefined, true],
-    ["datetime", new Timestamp(TimeUnit.MILLISECOND, "UTC"), undefined, true],
-    ["time", new Time(TimeUnit.MICROSECOND, 64), undefined, true],
-    ["period", new Int64(), "pandas.period", true],
-    ["string", new Utf8(), undefined, false],
-    ["float", new Float64(), undefined, false],
-    ["int", new Int64(), undefined, false],
+    ["date", true, new DateDay(), undefined],
+    ["datetime", true, new Timestamp(TimeUnit.MILLISECOND, "UTC"), undefined],
+    ["time", true, new Time(TimeUnit.MICROSECOND, 64), undefined],
+    ["period", true, new Int64(), "pandas.period"],
+    ["string", false, new Utf8(), undefined],
+    ["float", false, new Float64(), undefined],
+    ["int", false, new Int64(), undefined],
   ])(
-    "returns a category type for %s categories: %s",
-    (_name, valueType, extensionName, expected) => {
+    "%s categories are formattable: %s",
+    (_name, expected, valueType, extensionName) => {
       const metadata = new Map<string, string>()
       if (extensionName !== undefined) {
         metadata.set("ARROW:extension:name", extensionName)
@@ -1026,6 +1026,21 @@ describe("getFormattableCategoryType", () => {
         pandasType: undefined,
       })
     ).toBeUndefined()
+  })
+
+  it("returns the cached category type for the same column type", () => {
+    const columnType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Dictionary(new DateDay(), new Int8())),
+      pandasType: undefined,
+    }
+    const categoryType = getFormattableCategoryType(columnType)
+
+    expect(categoryType).toBeDefined()
+    expect(getFormattableCategoryType(columnType)).toBe(categoryType)
+    expect(getFormattableCategoryType({ ...columnType })).not.toBe(
+      categoryType
+    )
   })
 })
 
