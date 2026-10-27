@@ -17,7 +17,12 @@
 import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
-import { isBooleanType } from "~lib/dataframes/arrowTypeUtils"
+import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
+import {
+  type ArrowType,
+  getFormattableCategoryType,
+  isBooleanType,
+} from "~lib/dataframes/arrowTypeUtils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -66,6 +71,30 @@ export const prepareOptions = (
     })
 }
 
+/**
+ * Returns the default options of a categorical column.
+ *
+ * Period, interval, date, datetime, and time categories get a formatted label,
+ * e.g. `(0, 1]` instead of `{"left": 0, "right": 1}`. The option value stays
+ * the raw category, so it still matches the cell values.
+ *
+ * @param arrowType The arrow type of the categorical column.
+ * @returns The categorical options.
+ */
+function getCategoricalOptions(
+  arrowType: ArrowType
+): (string | SelectOption)[] {
+  const options = arrowType.categoricalOptions ?? []
+  const categoryType = getFormattableCategoryType(arrowType)
+  if (isNullOrUndefined(categoryType)) {
+    return options
+  }
+  return options.map(option => ({
+    value: option,
+    label: formatArrowCell(option, categoryType),
+  }))
+}
+
 export interface SelectboxColumnParams {
   /**
    * A list of options available in the selectbox.
@@ -89,7 +118,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     {
       options: isBooleanType(props.arrowType)
         ? [true, false]
-        : (props.arrowType.categoricalOptions ?? []),
+        : getCategoricalOptions(props.arrowType),
     },
     // User parameters:
     props.columnTypeOptions
