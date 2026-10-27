@@ -22,7 +22,7 @@ import json
 import math
 import re
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pyarrow as pa
@@ -249,6 +249,29 @@ def test_a_builder_that_raises_reports_no_data(monkeypatch: pytest.MonkeyPatch) 
 
     logger.debug.assert_called_once()
     assert logger.debug.call_args.kwargs["exc_info"] is True
+
+
+def test_raw_spec_reports_a_chart_specification_as_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """While recording, the parsed specification is complete data. Otherwise
+    the field is never read, since reading a large string field copies it.
+    """
+    proto = MagicMock()
+    proto.json = '{"layers": [{"data": [{"lat": 1.0}]}], "zoom": NaN}'
+
+    monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
+    proto.reset_mock()
+    assert agent_data.raw_spec(proto, "json") is None
+    assert proto.mock_calls == []
+
+    monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
+    assert agent_data.raw_spec(proto, "json") == {
+        "spec": {"layers": [{"data": [{"lat": 1.0}]}], "zoom": None},
+        "complete": True,
+    }
+    proto.json = "{not json"
+    assert agent_data.raw_spec(proto, "json") is None
 
 
 def test_a_replay_reads_tables_and_single_buffer_charts_from_their_payload() -> None:

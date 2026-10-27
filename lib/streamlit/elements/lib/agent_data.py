@@ -139,6 +139,33 @@ def unavailable(reason: UnavailableReason) -> dict[str, Any]:
 
 
 @builder
+def raw_spec(proto: Message, field: str) -> dict[str, Any] | None:
+    """The ``data`` of a chart given a specification, reported as given.
+
+    Its values are inside the specification, so there is no separate table to
+    fetch, and it is ``complete``: a client already has everything, so it does
+    not go looking for a ``url``.
+
+    Parameters
+    ----------
+    proto
+        The chart's proto. The field is read only while recording, since
+        reading a large string field copies it.
+    field
+        The proto field holding the specification's JSON text, such as
+        ``"spec"`` for ``st.echarts_chart`` or ``"json"`` for a Deck.gl chart.
+
+    Returns
+    -------
+    dict[str, Any] | None
+        ``{"spec": ..., "complete": True}``, or ``None`` outside a recording
+        session and for an empty or malformed specification.
+    """
+    spec = parse_spec(getattr(proto, field))
+    return None if spec is None else {"spec": spec, "complete": True}
+
+
+@builder
 def arrow(arrow_bytes: bytes, *, coordinates: str) -> dict[str, Any] | None:
     """The ``data`` of an element whose complete data is one Arrow IPC stream.
 

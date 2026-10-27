@@ -30,7 +30,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1351,6 +1351,7 @@ class EChartsMixin:
             # it is "rerun".
             on_select="rerun" if is_selection_activated else None,
             alt=echarts_chart_proto.alt or None,
+            data_block=agent_data.raw_spec(echarts_chart_proto, "spec"),
         )
 
         if not is_selection_activated:

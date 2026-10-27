@@ -25,9 +25,8 @@ command while recording (see ``elements/lib/agent_data.py``) and copied from
 its description, so its preview is bounded by ``server.agentPreviewRows`` when
 the element is emitted. This walk only checks that the block resolves:
 ``complete``, or a ``url`` serving the rest, or ``unavailable`` saying why
-nothing does. Two cases are read from the payload instead: an ECharts or
-Deck.gl specification, reported as given, and the Arrow data of an element
-replayed without a description. A command's parameters stay in ``props``.
+nothing does. Only a table replayed without a description is summarized from
+its payload. A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
@@ -567,34 +566,12 @@ def _data_block(
 def _payload_data(
     proto_field: str, payload: Any, *, described: bool
 ) -> dict[str, Any] | None:
-    """Read `data` from the payload when the description has no block.
+    """Summarize an undescribed table's payload, which built no `data` block.
 
-    Deck.gl and ECharts are read here even when the command described itself,
-    because the description does not store a second copy of the specification.
-    ``described`` skips the Arrow fallback: a command that described itself and
-    built no block reports no table. A table replayed from a cache a browser
-    filled is summarized from its payload instead.
-
-    ``payload`` is typed loosely because each branch narrows it to a different
-    proto by way of ``proto_field``.
+    A command that described itself and built no block has no data to report.
+    ``payload`` is typed loosely because the table protos share `arrow_data`.
     """
-    if payload is None:
-        return None
-
-    if proto_field in {"echarts_chart", "deck_gl_json_chart"}:
-        # Reported as given, so it is read from the payload rather than copied
-        # into the description, which would carry a second copy of a
-        # potentially large option or map. `st.map` and `st.pydeck_chart`
-        # share the Deck.gl proto, which carries its specification as `json`.
-        spec = agent_data.parse_spec(
-            payload.json if proto_field == "deck_gl_json_chart" else payload.spec
-        )
-        # The values are inside the specification, so there is no separate
-        # table to fetch. Saying so is the point: `complete` means a client
-        # already has everything, so it does not go looking for a `url`.
-        return None if spec is None else {"spec": spec, "complete": True}
-
-    if described or proto_field not in {"dataframe", "table"}:
+    if payload is None or described or proto_field not in {"dataframe", "table"}:
         return None
     # A table replayed from a cache a browser filled built no `data` and
     # registered no copy, so its payload is summarized and nothing serves the
