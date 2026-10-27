@@ -601,6 +601,8 @@ def NumberColumn(
         This can be one of the following values:
 
         - ``None`` (default): Streamlit infers the formatting from the data.
+          On timedelta / duration columns, this shows a humanized duration
+          (like ``"duration"``).
         - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
         - ``"localized"``: Show the number in the default locale format
           (e.g. "1,234.567"). On timedelta / duration columns, show a

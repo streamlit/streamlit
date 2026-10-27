@@ -22,9 +22,12 @@ import {
   toSafeDate,
   toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
-import { convertTimestampToSeconds } from "~lib/dataframes/arrowFormatUtils"
-import { type ArrowType, isDurationType } from "~lib/dataframes/arrowTypeUtils"
-import type { Quiver } from "~lib/dataframes/Quiver"
+import {
+  convertTimestampToSeconds,
+  getArrowTimeUnit,
+} from "~lib/dataframes/arrowFormatUtils"
+import { isDurationType } from "~lib/dataframes/arrowTypeUtils"
+import type { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("DataFrameStatistics")
@@ -199,11 +202,7 @@ export function supportsStatistics(columnKind: string): boolean {
  * numeric statistics use the same conversion.
  */
 function toStatisticsValue(
-  cell: {
-    content: unknown
-    contentType?: ArrowType
-    field?: { type?: { unit?: TimeUnit } }
-  },
+  cell: Pick<DataFrameCell, "content" | "contentType" | "field">,
   convertDurationToSeconds: boolean
 ): unknown {
   // Only numeric stats use the NumberColumn second-count. Other kinds
@@ -215,7 +214,7 @@ function toStatisticsValue(
   ) {
     return convertTimestampToSeconds(
       cell.content,
-      cell.field?.type?.unit ?? TimeUnit.NANOSECOND
+      getArrowTimeUnit(cell.field, TimeUnit.NANOSECOND)
     )
   }
   return cell.content
@@ -666,9 +665,10 @@ export function computeStatistics(
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
 
-  // Duration ticks are seconds only for numeric columns. Text/date/datetime
-  // on a timedelta have no meaningful stats view. The check reads the column
-  // type metadata instead of a cell, so malformed cell data cannot throw here.
+  // Numeric stats for a timedelta column use seconds, matching NumberColumn.
+  // Text, date, and datetime columns on a timedelta have no stats view.
+  // Read column type metadata instead of a cell, so malformed cell data
+  // cannot throw here.
   if (
     statsType !== "numeric" &&
     isDurationType(data.columnTypes[columnIndex])

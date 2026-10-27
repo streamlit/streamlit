@@ -666,6 +666,8 @@ describe("NumberColumn", () => {
     [TimeUnit.MICROSECOND, "timedelta64[us]", 90.0000005, false],
     [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000005, true],
     [TimeUnit.NANOSECOND, "timedelta64[ns]", 90.0000000005, false],
+    // 105 days + 123 ns: past 2^53 ns, so the float second count is inexact.
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", 9_072_000.000_000_123, true],
   ])(
     "validates %s duration precision for %p seconds",
     (unit, numpyType, seconds, expected) => {
@@ -691,14 +693,19 @@ describe("NumberColumn", () => {
     expect(mockColumn.validateInput!(90)).toBe(true)
   })
 
-  it("rejects a max_value correction that is finer than the duration unit", () => {
-    const mockColumn = getNumberColumn(
-      getDurationArrowType(TimeUnit.SECOND, "timedelta64[s]"),
-      { max_value: 90.5 }
-    )
-    expect(mockColumn.validateInput!(100)).toBe(false)
-    expect(mockColumn.validateInput!(90)).toBe(true)
-  })
+  it.each([
+    [TimeUnit.SECOND, "timedelta64[s]", 0],
+    [TimeUnit.MILLISECOND, "timedelta64[ms]", undefined],
+    [TimeUnit.NANOSECOND, "timedelta64[ns]", undefined],
+  ])(
+    "limits editor decimals for %s durations to what the unit stores",
+    (unit, numpyType, expectedFixedDecimals) => {
+      const mockColumn = getNumberColumn(getDurationArrowType(unit, numpyType))
+      const cell = mockColumn.getCell(90) as NumberCell
+      expect(cell.fixedDecimals).toEqual(expectedFixedDecimals)
+      expect(cell.displayData).toEqual("2 minutes")
+    }
+  )
 
   it("rejects duration edits outside the pandas Timedelta range", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)

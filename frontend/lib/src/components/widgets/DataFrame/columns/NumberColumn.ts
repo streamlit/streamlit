@@ -120,8 +120,13 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
   const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
     {
-      // Set step to 1 for integer types
-      step: isIntegerType(props.arrowType) ? 1 : undefined,
+      // Set step to 1 for integer types and second-unit durations, which
+      // cannot store fractional seconds.
+      step:
+        isIntegerType(props.arrowType) ||
+        (isDuration && durationFractionalSecondDigits === 0)
+          ? 1
+          : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: isUnsignedIntegerType(props.arrowType) ? 0 : undefined,
     },

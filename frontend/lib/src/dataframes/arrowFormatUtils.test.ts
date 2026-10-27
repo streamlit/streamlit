@@ -815,7 +815,25 @@ describe("isValidDurationSeconds", () => {
   it("rejects values finer than the unit", () => {
     expect(isValidDurationSeconds(90.5, 0)).toBe(false)
     expect(isValidDurationSeconds(1.0005, 3)).toBe(false)
+    expect(isValidDurationSeconds(90.0000000005, 9)).toBe(false)
   })
+
+  it.each([
+    ["105 days + 123 ns", 105, 123],
+    ["-105 days - 123 ns", -105, -123],
+    ["104 days + 999999999 ns", 104, 999_999_999],
+    ["200 days + 1 ns", 200, 1],
+  ])(
+    "accepts the second count converted from a %s tick",
+    (_label, days, nanoseconds) => {
+      // Past 2^53 ns (about 104 days), the float second count cannot round-trip
+      // to the exact tick, but it still represents a valid duration.
+      const ticks =
+        BigInt(days * 86_400) * BigInt(1_000_000_000) + BigInt(nanoseconds)
+      const seconds = convertTimestampToSeconds(ticks, TimeUnit.NANOSECOND)
+      expect(isValidDurationSeconds(seconds, 9)).toBe(true)
+    }
+  )
 
   it("rejects values outside the pandas Timedelta range", () => {
     const maxSeconds = 2 ** 63 / 1e9

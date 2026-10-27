@@ -354,9 +354,11 @@ def _parse_value(
 
         if column_data_kind == ColumnDataKind.TIMEDELTA:
             # Numeric edits arrive as seconds (NumberColumn's stored unit).
-            # pd.Timedelta(int) would treat the number as nanoseconds.
+            # pd.Timedelta(int) would treat the number as nanoseconds, and
+            # pd.Timedelta(seconds=float) truncates instead of rounding to the
+            # nearest nanosecond (1.005 would become 1.004999999 s).
             if isinstance(value, (int, float)):
-                return pd.Timedelta(seconds=value)
+                return pd.Timedelta(value, unit="s")
             return pd.Timedelta(value)
 
         if column_data_kind in {
@@ -429,13 +431,13 @@ def _apply_cell_edits(
                         value, dataframe_schema[col_name]
                     )
                 except (TypeError, ValueError) as ex:
-                    # Widget state is client-controlled. Ignore assignment
-                    # failures for any dtype so a crafted BackMsg cannot crash
-                    # the run. Duration columns are the usual trigger (pandas
-                    # 2+ raises on a value finer than the unit); older pandas
-                    # may accept or upcast instead, which is OK.
+                    # Widget state comes from the client. Skip edits that
+                    # pandas rejects (for example, a duration finer than the
+                    # column unit) instead of crashing the run.
                     _LOGGER.warning(
-                        "Failed to apply edit to column %s. Edit ignored.",
+                        "Failed to apply edit %r to row %s, column %s. Edit ignored.",
+                        value,
+                        row_pos,
                         col_name,
                         exc_info=ex,
                     )
@@ -468,10 +470,10 @@ def _assign_row_values(
 ) -> bool:
     """Assign a row via a mapping. Return False if pandas rejects the values.
 
-    Using a mapping avoids numpy coercing nested sequences (e.g. lists) into
-    multi-dimensional arrays. Widget state is client-controlled: a duration
-    finer than the column unit can raise or silently upcast. Catch the raise
-    so we don't crash; we don't try to undo an upcast.
+    Using a mapping keeps numpy from coercing nested sequences (for example,
+    lists) into multi-dimensional arrays. The client controls widget state, so
+    a duration finer than the column unit can raise. Skip the row when
+    assignment raises. Leave a silent dtype upcast in place.
     """
     import warnings
 

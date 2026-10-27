@@ -422,9 +422,12 @@ export function isValidDurationSeconds(
   if (!Number.isFinite(scaledSeconds)) {
     return false
   }
-  // A second count is representable only if scaling it to integer ticks and
-  // back is lossless, so a value finer than the column's unit is rejected.
-  return Math.round(scaledSeconds) / scale === seconds
+  // A second count is representable if it scales to a whole number of ticks.
+  // Converting ticks to float seconds and back adds up to about one ulp of
+  // error (for example, nanosecond ticks past 2^53), so allow two ulps of
+  // slack. A larger remainder means the value is finer than the column's unit.
+  const tickRemainder = Math.abs(scaledSeconds - Math.round(scaledSeconds))
+  return tickRemainder <= Math.abs(scaledSeconds) * Number.EPSILON * 2
 }
 
 /** Calendar units passed to `Intl.DurationFormat`. */

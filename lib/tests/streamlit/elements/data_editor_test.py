@@ -169,6 +169,13 @@ class DataEditorUtilTest(unittest.TestCase):
                 pd.Timedelta(seconds=1.5),
             ),
             (
+                # Rounds to the nearest nanosecond instead of truncating
+                # 1.005 s to 1.004999999 s.
+                1.005,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(milliseconds=1005),
+            ),
+            (
                 -7200,
                 ColumnDataKind.TIMEDELTA,
                 pd.Timedelta(hours=-2),
@@ -438,6 +445,29 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[1, 0] == pd.Timedelta(seconds=90)
         # pandas 2+ may skip 90.5s; older pandas may accept or upcast it.
         _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
+
+    @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
+    def test_apply_cell_edits_fractional_seconds_on_timedelta(self, dtype: str):
+        """A fractional second edit that the column unit can store is applied exactly."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype=dtype)}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 1.005}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(milliseconds=1005)
+
+    @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
+    def test_apply_row_additions_fractional_seconds_on_timedelta(self, dtype: str):
+        """A fractional second row value that the column unit can store is added exactly."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype=dtype)}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(df, [{"duration": 1.005}], dataframe_schema)
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(milliseconds=1005)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
