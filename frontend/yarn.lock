@@ -3654,7 +3654,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^4.1.2"
     protobufjs: "npm:^8.8.1"
-    query-string: "npm:^9.5.1"
+    query-string: "npm:^10.0.0"
     re-resizable: "npm:^6.11.2"
     react-aria: "npm:^3.53.1"
     react-aria-components: "npm:^1.22.1"
@@ -7255,13 +7255,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decode-uri-component@npm:^0.5.0":
-  version: 0.5.0
-  resolution: "decode-uri-component@npm:0.5.0"
-  checksum: 10c0/b913bb2ec3a83b4c96d961dcd7808c538f2f69f9a8581ab1bfbbb3d48c90e36779cc4580334198315d4c17f9c32d88ae4467c96582419a70b5f35df2c5a05cb1
-  languageName: node
-  linkType: hard
-
 "deep-is@npm:^0.1.3":
   version: 0.1.4
   resolution: "deep-is@npm:0.1.4"
@@ -8400,10 +8393,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"filter-obj@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "filter-obj@npm:5.1.0"
-  checksum: 10c0/716e8ad2bc352e206556b3e5695b3cdff8aab80c53ea4b00c96315bbf467b987df3640575100aef8b84e812cf5ea4251db4cd672bbe33b1e78afea88400c67dd
+"filter-obj@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "filter-obj@npm:6.1.0"
+  checksum: 10c0/bd190c7a7dbb6ccba36b3f73efe7fc6c899310518c9e4fdfef7772c1d3432030abf65de4a01f979ade08d52b137cb4fb79243824745cd05ee806548382b39f0d
   languageName: node
   linkType: hard
 
@@ -12862,14 +12855,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.5.1":
-  version: 9.5.1
-  resolution: "query-string@npm:9.5.1"
+"query-string@npm:^10.0.0":
+  version: 10.0.0
+  resolution: "query-string@npm:10.0.0"
   dependencies:
-    decode-uri-component: "npm:^0.5.0"
-    filter-obj: "npm:^5.1.0"
-    split-on-first: "npm:^3.0.0"
-  checksum: 10c0/3f10428fa3d966e096d89b2794c4ee34b59de6b6281d5c367edeb25b105b61484389bee9b3fc5e037ce91a61c105dadea33e8f1123770e7f77a10c87d29b4e6c
+    filter-obj: "npm:^6.1.0"
+    split-on-first: "npm:^4.0.0"
+  checksum: 10c0/0cf6181f841510be1edabd6678ee1d752f047203a6672ee05a368a29b56f8698bec6a37f2937607d98fab55ebc882ccdfabfde26410dd8a57c0e1687991f2ece
   languageName: node
   linkType: hard
 
@@ -14022,10 +14014,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"split-on-first@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "split-on-first@npm:3.0.0"
-  checksum: 10c0/a1262eae12b68de235e1a08e011bf5b42c42621985ddf807e6221fb1e2b3304824913ae7019f18436b96b8fab8aef5f1ad80dedd2385317fdc51b521c3882cd0
+"split-on-first@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "split-on-first@npm:4.0.0"
+  checksum: 10c0/c586c242e12762e56ec7bcb13231b13c18ff5c986fb48403dd31a315f0105d96ca496afe0bd0ccb10af1045afd57317e24c3c663c43dda9163b8ef6457e173a9
   languageName: node
   linkType: hard
 
