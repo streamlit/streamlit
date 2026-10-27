@@ -43,7 +43,7 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
-    row = app.get_by_test_id("stHorizontalBlock")
+    row = app.get_by_test_id("stHorizontalBlock").filter(has_text="Plain column")
 
     def columns_are_stacked() -> None:
         # Retry until the print-media reflow has stacked the columns.
