@@ -1260,8 +1260,15 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             with pytest.raises(
                 StreamlitInvalidLayoutContextError,
                 match="outside a parallel fragment",
-            ):
+            ) as exc_info:
                 outside_dg._enqueue("text", TextProto())
+
+            message = str(exc_info.value)
+            assert "`st.sidebar`" in message
+            assert "`st.bottom`" in message
+            assert "later fragment rerun" in message
+            assert "if st.button" not in message
+            assert "sequential fragment rerun" not in message
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
@@ -1620,8 +1627,14 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
                 "the fragment did not write to that container during the last full "
                 "app run"
             ),
-        ):
+        ) as exc_info:
             outside.markdown("hi")
+
+        message = str(exc_info.value)
+        assert "`parallel=True`" in message
+        assert "is not supported" in message
+        assert "`st.sidebar`" in message
+        assert "`st.bottom`" in message
 
     def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
         """A main-script write does not reserve a wrapper, so a fragment-only

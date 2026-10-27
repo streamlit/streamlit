@@ -874,7 +874,9 @@ def fragment(
     writing fragment, not the full app.
 
     To populate an outside container from a fragment, the container must first
-    receive at least one write during the initial full app run.
+    receive at least one write during the initial full app run. Parallel
+    fragments (``parallel=True``) cannot write to outside containers at all,
+    including ``st.sidebar`` and ``st.bottom``.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
@@ -916,10 +918,14 @@ def fragment(
 
         During the initial parallel run, some Streamlit commands are
         restricted because they are not safe to call from concurrent
-        threads. These include ``st.dialog``, ``st.switch_page``, and
-        writing to containers created outside the fragment. These
-        commands work normally during sequential fragment reruns
+        threads. These include ``st.dialog`` and ``st.switch_page``.
+        Those commands work normally during sequential fragment reruns
         (e.g., after a widget interaction).
+
+        Writing to containers created outside the fragment, including
+        ``st.sidebar`` and ``st.bottom``, is not supported in a
+        parallel fragment on the initial parallel run or a later
+        fragment rerun.
 
         .. warning::
 
