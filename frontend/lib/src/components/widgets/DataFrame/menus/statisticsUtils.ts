@@ -667,12 +667,13 @@ export function computeStatistics(
   if (!statsType) return null
 
   // Duration ticks are seconds only for numeric columns. Text/date/datetime
-  // on a timedelta have no meaningful stats view.
-  if (statsType !== "numeric" && data.dimensions.numDataRows > 0) {
-    const firstCell = data.getCell(0, columnIndex)
-    if (isDurationType(firstCell.contentType)) {
-      return null
-    }
+  // on a timedelta have no meaningful stats view. The check reads the column
+  // type metadata instead of a cell, so malformed cell data cannot throw here.
+  if (
+    statsType !== "numeric" &&
+    isDurationType(data.columnTypes[columnIndex])
+  ) {
+    return null
   }
 
   const result = extractColumnValues(

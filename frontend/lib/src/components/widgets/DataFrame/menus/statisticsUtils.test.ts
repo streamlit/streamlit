@@ -45,8 +45,9 @@ import {
 } from "./statisticsUtils"
 
 /**
- * Builds a minimal Quiver-like mock for `computeStatistics`, which only relies
- * on `dimensions.numDataRows` and `getCell(row, col)`.
+ * Builds a minimal single-column Quiver-like mock for `computeStatistics`,
+ * which only relies on `dimensions.numDataRows`, `columnTypes`, and
+ * `getCell(row, col)`.
  */
 function makeMockQuiver(
   contentFn: (row: number) => unknown,
@@ -56,6 +57,7 @@ function makeMockQuiver(
 ): Quiver {
   return {
     dimensions: { numDataRows },
+    columnTypes: [cellMeta?.contentType],
     getCell: (row: number) => {
       if (throwOnGetCell) {
         throw new Error("malformed Arrow buffer")
@@ -499,10 +501,14 @@ describe("statisticsUtils", () => {
       expect(stats?.count).toBe(10)
     })
 
-    it("returns null when cell extraction fails", () => {
-      const data = makeMockQuiver(row => row, 5, true)
-      expect(computeStatistics("number", data, 0)).toBeNull()
-    })
+    it.each(["number", "text", "datetime", "checkbox"])(
+      "returns null when cell extraction fails for %s columns",
+      kind => {
+        const data = makeMockQuiver(row => row, 5, true)
+        expect(() => computeStatistics(kind, data, 0)).not.toThrow()
+        expect(computeStatistics(kind, data, 0)).toBeNull()
+      }
+    )
 
     it.each([
       [
@@ -542,6 +548,18 @@ describe("statisticsUtils", () => {
 
       expect(computeStatistics("text", data, 0)).toBeNull()
       expect(computeStatistics("datetime", data, 0)).toBeNull()
+      expect(computeStatistics("number", data, 0)?.type).toBe("numeric")
+    })
+
+    it("skips duration stats on non-numeric kinds without reading cells", () => {
+      const contentType = durationArrowType(TimeUnit.NANOSECOND)
+      const data = makeMockQuiver(row => row, 3, true, {
+        contentType,
+        field: contentType.arrowField,
+      })
+
+      expect(() => computeStatistics("text", data, 0)).not.toThrow()
+      expect(computeStatistics("text", data, 0)).toBeNull()
     })
   })
 
