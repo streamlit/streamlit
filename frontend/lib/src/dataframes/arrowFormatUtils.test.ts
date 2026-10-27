@@ -240,6 +240,67 @@ describe("format", () => {
     expect(format(cell4.content, cell4.contentType)).toEqual("-0.1")
   })
 
+  it.each([
+    {
+      bitWidth: 256,
+      unscaled: "-3864734299516908213",
+      scale: 20,
+      expected: "-0.03864734299516908213",
+    },
+    {
+      bitWidth: 256,
+      unscaled: "111111111111111111111100000000000000000000",
+      scale: 20,
+      expected: "1111111111111111111111",
+    },
+    {
+      bitWidth: 256,
+      unscaled: "150000000000000000000",
+      scale: 20,
+      expected: "1.5",
+    },
+    {
+      bitWidth: 256,
+      unscaled: "-111111111111111111111150000000000000000000",
+      scale: 20,
+      expected: "-1111111111111111111111.5",
+    },
+    {
+      bitWidth: 128,
+      unscaled: "-12345678901234567890123456789",
+      scale: 2,
+      expected: "-123456789012345678901234567.89",
+    },
+  ])(
+    "decimal$bitWidth $unscaled with scale $scale formats as $expected",
+    ({ bitWidth, unscaled, scale, expected }) => {
+      const precision = bitWidth === 256 ? 76 : 38
+      const decimalType = new Decimal(scale, precision, bitWidth)
+      const wordCount = bitWidth / 32
+      // Little-endian two's complement 32-bit words.
+      let rest = BigInt.asUintN(bitWidth, BigInt(unscaled))
+      const words = new Uint32Array(wordCount)
+      for (let i = 0; i < wordCount; i++) {
+        words[i] = Number(rest & BigInt(0xffffffff))
+        rest >>= BigInt(32)
+      }
+      const builder = new DecimalBuilder({
+        type: decimalType,
+        nullValues: null,
+      })
+      builder.append(words)
+      const value = builder.finish().toVector().get(0)
+      const arrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", decimalType, true),
+        pandasType: undefined,
+      }
+
+      expect(value?.length).toEqual(wordCount)
+      expect(format(value, arrowType)).toEqual(expected)
+    }
+  )
+
   it("timedelta", () => {
     const mockElement = { data: TIMEDELTA }
     const q = new Quiver(mockElement)
