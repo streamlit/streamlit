@@ -18,7 +18,7 @@ exclude-newer-span = "PT24H"
 [manifest]
 overrides = [
     { name = "pandas", specifier = ">=3.0.0,<4" },
-    { name = "pyarrow", marker = "python_full_version < '3.15'", specifier = ">=10.0.1,<24,!=25.0.0" },
+    { name = "pyarrow", marker = "python_full_version < '3.15'", specifier = ">=12.0.0,<24,!=25.0.0" },
     { name = "pyarrow", marker = "python_full_version >= '3.15'", specifier = ">=26,<27" },
 ]
 
@@ -4298,7 +4298,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=9.2.0,<14" },
     { name = "plotly", marker = "extra == 'charts'", specifier = ">=4.0.0" },
     { name = "protobuf", specifier = ">=5.26.1,<8" },
-    { name = "pyarrow", specifier = ">=10.0.1,!=25.0.0,<27" },
+    { name = "pyarrow", specifier = ">=12.0.0,!=25.0.0,<27" },
     { name = "pydeck", specifier = ">=0.8.0b4,<1" },
     { name = "python-multipart", specifier = ">=0.0.10,<1" },
     { name = "requests", specifier = ">=2.27,<3" },

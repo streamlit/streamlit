@@ -58,7 +58,7 @@ override-dependencies = [
   # the pandas extra would otherwise lock 23.0.1. E2E runs on 3.15, so
   # regenerate st.table snapshots on this interpreter: PyArrow 26 prints
   # list-of-dict keys in insertion order, and Python <3.15 (PyArrow 23) does not.
-  "pyarrow>=10.0.1,!=25.0.0,<24; python_version < '3.15'",
+  "pyarrow>=12.0.0,!=25.0.0,<24; python_version < '3.15'",
   "pyarrow>=26,<27; python_version >= '3.15'",
 ]
 
