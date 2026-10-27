@@ -94,7 +94,7 @@ describe("PlotlyChart CustomTheme", () => {
       expect(result).not.toContain("#000021")
     })
 
-    it("replaces GO specific colors for streamlit theme", () => {
+    it("replaces graph-object colors for the streamlit theme", () => {
       // #000032 is INCREASING
       const spec = JSON.stringify({ color: "#000032" })
       const result = replaceTemporaryColors(spec, theme, "streamlit")
@@ -104,10 +104,11 @@ describe("PlotlyChart CustomTheme", () => {
     })
 
     it("maps graph-object placeholders to Plotly defaults when theme is empty", () => {
-      // #000036 is GRAY_70 (Sankey textfont / waterfall connector in the
-      // process-wide streamlit template). Dark app theme would resolve this to
-      // a near-white gray via getGray70 — unreadable on Plotly's white paper.
-      // #000034 is TOTAL (waterfall totals); plotly.js supplyDefaults use #4499FF.
+      // A dark app theme must not leak into theme=None placeholders; they should
+      // resolve to Plotly defaults that stay readable on white paper:
+      // - #000036 GRAY_70 (Sankey text) -> #2a3f5f
+      // - #000038 BG_COLOR (table cells) -> #EBF0F8
+      // - #000034 TOTAL (waterfall totals) -> #4499FF
       const darkAppTheme = {
         ...theme,
         colors: {
@@ -408,14 +409,15 @@ describe("PlotlyChart CustomTheme", () => {
   })
 
   describe("applyTheming with theme=None", () => {
+    const themeWithLightText = {
+      ...theme,
+      colors: {
+        ...theme.colors,
+        bodyText: "#fafafa",
+      },
+    }
+
     it("leaves unset font and backgrounds unset", () => {
-      const themeWithLightText = {
-        ...theme,
-        colors: {
-          ...theme.colors,
-          bodyText: "#fafafa",
-        },
-      }
       const figure = {
         data: [{}],
         layout: {},
@@ -430,14 +432,7 @@ describe("PlotlyChart CustomTheme", () => {
       expect(layout.plot_bgcolor).toBeUndefined()
     })
 
-    it("preserves an explicit layout.font", () => {
-      const themeWithLightText = {
-        ...theme,
-        colors: {
-          ...theme.colors,
-          bodyText: "#fafafa",
-        },
-      }
+    it("preserves explicit layout font and backgrounds", () => {
       const figure = {
         data: [{}],
         layout: {

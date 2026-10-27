@@ -369,9 +369,11 @@ function replaceDivergingColors(
 }
 
 /**
- * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
- * we use this method to specifically replace these graph properties.
- * */
+ * Replaces stand-in colors on graph-object template traces (candlestick,
+ * waterfall, Sankey, table). `Template.layout` does not reach those traces.
+ * When `elementTheme` is `"streamlit"`, the app theme supplies the colors.
+ * Otherwise Plotly's light-theme colors are used.
+ */
 function replaceGOSpecificColors(
   spec: string,
   theme: EmotionTheme,
@@ -402,9 +404,9 @@ function replaceGOSpecificColors(
     spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
     spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
   } else {
-    // Plotly defaults (readable on Plotly's white paper / light plot bg).
-    // Candlestick increasing/decreasing and waterfall totals match plotly.js
-    // supplyDefaults; table and font colors match the "plotly" layout template.
+    // Plotly light-theme colors, so theme=None stays readable on white paper.
+    // - Candlestick increasing/decreasing and waterfall totals: plotly.js supplyDefaults.
+    // - Table fills, lines, and font colors: the built-in "plotly" template.
     spec = spec.replaceAll(INCREASING, "#3D9970")
     spec = spec.replaceAll(DECREASING, "#FF4136")
     spec = spec.replaceAll(TOTAL, "#4499FF")

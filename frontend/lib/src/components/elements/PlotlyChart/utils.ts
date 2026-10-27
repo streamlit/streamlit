@@ -193,8 +193,9 @@ export function parseBoxSelection(
  * Apply theming to the Plotly figure.
  *
  * @param plotlyFigure The Plotly figure to apply theming to
- * @param chartTheme `"streamlit"` applies Streamlit layout defaults. `""`
- *   (`theme=None`) leaves fonts and backgrounds on the figure.
+ * @param chartTheme `"streamlit"` applies Streamlit layout defaults. Any other
+ *   value, including `""` (`theme=None`), leaves layout fonts and backgrounds
+ *   as authored. Both paths still resolve template color stand-ins.
  * @param theme The current theme of the app
  * @returns The Plotly figure with theming applied
  */
@@ -206,8 +207,6 @@ export function applyTheming(
   const spec = JSON.parse(
     replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
   ) as Record<string, unknown>
-  // theme=None arrives as "". Leave the figure's fonts and backgrounds
-  // unchanged so Plotly's defaults stay in place.
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
   }
