@@ -19,13 +19,7 @@
  * a human-readable format.
  */
 
-import {
-  type Field,
-  Struct,
-  type StructRow,
-  TimeUnit,
-  util,
-} from "apache-arrow"
+import { type Field, Struct, type StructRow, TimeUnit } from "apache-arrow"
 import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
@@ -37,6 +31,7 @@ import {
   type ArrowType,
   DataFrameCellType,
   type DataType,
+  getFormattableCategoryType,
   isDatetimeType,
   isDateType,
   isDecimalType,
@@ -676,12 +671,28 @@ function formatDuration(duration: number | bigint, field?: Field): string {
 }
 
 /**
+ * Converts the raw words of an Arrow decimal to its unscaled integer.
+ *
+ * @param words The value as little-endian two's complement 32-bit words:
+ * 4 words for decimal128 and 8 words for decimal256.
+ * @returns The signed unscaled integer, e.g. -5 for -0.05 with scale 2.
+ */
+function decimalWordsToBigInt(words: Uint32Array): bigint {
+  let unscaled = BigInt(0)
+  for (let i = words.length - 1; i >= 0; i--) {
+    unscaled = (unscaled << BigInt(32)) | BigInt(words[i])
+  }
+  return BigInt.asIntN(words.length * 32, unscaled)
+}
+
+/**
  * Formats a decimal value with a given scale to a string.
  *
  * This code is partly based on: https://github.com/apache/arrow/issues/35745
  *
- * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
- * This is tracked here:
+ * ArrowJS has no decimal formatting of its own, and its `util.bigNumToString`
+ * returns wrong digits for decimal256 values. So the raw words are converted
+ * with a native BigInt instead. Related ArrowJS issues:
  * https://github.com/apache/arrow/issues/37920
  * https://github.com/apache/arrow/issues/28804
  * https://github.com/apache/arrow/issues/35745
@@ -689,14 +700,9 @@ function formatDuration(duration: number | bigint, field?: Field): string {
 function formatDecimal(value: Uint32Array, field?: Field): string {
   const scale = getArrowScale(field)
 
-  // Format Uint32Array to a numerical string and pad it with zeros
-  // So that it is exactly the length of the scale.
-  let numString = util.bigNumToString(new util.BN(value)).padStart(scale, "0")
-
-  // ArrowJS 13 correctly adds a minus sign for negative numbers.
-  // but it doesn't handle th fractional part yet. So we can just return
-  // the value if scale === 0, but we need to do some additional processing
-  // for the fractional part if scale > 0.
+  // Format the unscaled integer to a numerical string. Negative numbers
+  // start with a minus sign.
+  let numString = decimalWordsToBigInt(value).toString()
 
   if (scale === 0) {
     return numString
@@ -709,6 +715,9 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
     sign = "-"
     numString = numString.slice(1)
   }
+  // Pad the digits (without the sign) with zeros so that they are at least
+  // as long as the scale, e.g. 5 with scale 3 is 0.005.
+  numString = numString.padStart(scale, "0")
   // Extract the whole number part. If the number is < 1, it doesn't
   // have a whole number part, so we'll use "0" instead.
   // E.g for 123450 with scale 3, we'll get "123" as the whole part.
@@ -915,6 +924,13 @@ export function format(x: DataType, type: ArrowType): string {
       return ""
     }
 
+    // Categorical cells hold the category value, e.g. an epoch timestamp for
+    // a date category, so format them with the category type.
+    const categoryType = getFormattableCategoryType(type)
+    if (notNullOrUndefined(categoryType)) {
+      return format(x, categoryType)
+    }
+
     if (isStringType(type)) {
       return String(x)
     }
@@ -924,7 +940,8 @@ export function format(x: DataType, type: ArrowType): string {
       return formatDate(x as Date | number)
     }
 
-    if (typeof x === "bigint" && isTimeType(type)) {
+    // time64 values are bigints, time32 values are numbers.
+    if ((typeof x === "bigint" || typeof x === "number") && isTimeType(type)) {
       return formatTime(Number(x), type.arrowField)
     }
 
