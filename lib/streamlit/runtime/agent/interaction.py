@@ -304,16 +304,20 @@ class AgentSessionClient(SessionClient):
 # timed-out click collects its run rather than firing the click again.
 _ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
 
-# Every field an `interact` request may carry.
-_REQUEST_FIELDS: Final = frozenset({"session_id", *_ACTION_FIELDS})
+# Every field an `interact` request may carry, and the fields of its `trigger`
+# and `context`. The OpenAPI document lists the same names in this order, so a
+# field the validator accepts is always documented.
+REQUEST_FIELDS: Final = ("session_id", *_ACTION_FIELDS)
+TRIGGER_FIELDS: Final = ("key", "value")
+CONTEXT_FIELDS: Final = ("timezone", "locale")
 
 # Generous for a BCP 47 tag with extensions, which is what a browser reports.
-_MAX_LOCALE_LENGTH: Final = 64
+MAX_LOCALE_LENGTH: Final = 64
 
 # The shape of a BCP 47 language tag: a language, then hyphenated subtags, as
 # in "de-DE" or "zh-Hans-CN". Not a POSIX locale such as "en_US.UTF-8", which a
 # browser never reports and a locale library would refuse.
-_LANGUAGE_TAG: Final = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
+LANGUAGE_TAG: Final = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
 
 
 @functools.cache
@@ -1165,11 +1169,19 @@ class _ParsedRequest(NamedTuple):
 def _validate_request_shape(request: dict[str, Any]) -> _ParsedRequest:
     """Refuse a malformed request before anything is allocated or run."""
     _refuse_invalid_text(request)
-    unknown = set(request) - _REQUEST_FIELDS
+    unknown = set(request).difference(REQUEST_FIELDS)
     if unknown:
         raise AgentRequestError(
             "invalid_request",
             f"Unknown request fields: {', '.join(sorted(unknown))}.",
+        )
+    # Present means continue, so even `null` is refused: a client that lost its
+    # handle must not silently start over in a fresh session. Checked before
+    # the writes, whose refusal would otherwise call this a creating call.
+    if "session_id" in request and not isinstance(request["session_id"], str):
+        raise AgentRequestError(
+            "invalid_request",
+            "`session_id` must be a string. Omit it to create a session.",
         )
     _refuse_malformed_writes(request)
 
@@ -1179,9 +1191,6 @@ def _validate_request_shape(request: dict[str, Any]) -> _ParsedRequest:
         raise AgentRequestError("invalid_request", "`page` must be a string.")
     query_params = request.get("query_params")
     query_string = None if query_params is None else _encode_query_params(query_params)
-    session_id = request.get("session_id")
-    if session_id is not None and not isinstance(session_id, str):
-        raise AgentRequestError("invalid_request", "`session_id` must be a string.")
     context = request.get("context")
     return _ParsedRequest(
         context=None if context is None else _parse_context(context),
@@ -1209,7 +1218,7 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
                 "`trigger` must be an object with a `key`, and at most one may "
                 "be sent.",
             )
-        if extra := set(trigger) - {"key", "value"}:
+        if extra := set(trigger).difference(TRIGGER_FIELDS):
             raise AgentRequestError(
                 "invalid_request",
                 f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
@@ -1278,7 +1287,9 @@ def _resolve_page(
             or [
                 {
                     "url_path": info.get("url_pathname", ""),
-                    **({"title": info["page_name"]} if info.get("page_name") else {}),
+                    # Always present, as in the snapshot's `pages`, which the
+                    # OpenAPI document's `Page` requires it of.
+                    "title": info.get("page_name", ""),
                     **({"icon": info["icon"]} if info.get("icon") else {}),
                 }
                 for info in pages.values()
@@ -1403,12 +1414,13 @@ def _parse_context(context: Any) -> ContextInfo:
     """
     if not isinstance(context, dict):
         raise AgentRequestError("invalid_request", "`context` must be an object.")
-    unknown = set(context) - {"timezone", "locale"}
+    unknown = set(context).difference(CONTEXT_FIELDS)
     if unknown:
+        supported = ", ".join(f"`{name}`" for name in CONTEXT_FIELDS)
         raise AgentRequestError(
             "invalid_request",
             f"Unknown `context` fields: {', '.join(sorted(unknown))}. Supported: "
-            "`timezone`, `locale`.",
+            f"{supported}.",
         )
 
     info = ContextInfo()
@@ -1436,8 +1448,8 @@ def _parse_context(context: Any) -> ContextInfo:
     if locale is not None:
         if (
             not isinstance(locale, str)
-            or len(locale) > _MAX_LOCALE_LENGTH
-            or not _LANGUAGE_TAG.fullmatch(locale)
+            or len(locale) > MAX_LOCALE_LENGTH
+            or not LANGUAGE_TAG.fullmatch(locale)
         ):
             raise AgentRequestError(
                 "invalid_request",

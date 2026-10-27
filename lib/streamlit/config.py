@@ -1284,18 +1284,21 @@ _create_option(
     description="""
         Enable the agent API, which lets a non-browser client drive the app
         over HTTP at `/_stcore/agent/interact`.
+        `/_stcore/agent/openapi.json` describes the protocol, and reports
+        whether the API is on.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets
         no more access than the app gives a browser. Requests from web pages
         are refused unless their origin is in `server.corsAllowedOrigins`.
         Identity comes from `server.trustedUserHeaders`; without it, agent
-        sessions are anonymous.
+        sessions are anonymous. A proxy that strips client-supplied identity
+        headers must also strip them from requests to `/_stcore/agent/`, not
+        only from the WebSocket.
 
         Note: This is an experimental feature. The API and its options are
         subject to change.
     """,
-    visibility="hidden",
     default_val=False,
     type_=bool,
 )
@@ -1308,9 +1311,9 @@ _create_option(
 
         This bounds the wait, not the run: the app keeps running, and a retry
         of the same request waits for it instead of starting it over. Keep it
-        below the request timeout of the clients you expect.
+        below the request timeout of the clients you expect. It must be a
+        whole number greater than zero.
     """,
-    visibility="hidden",
     default_val=30,
     type_=int,
 )
@@ -1321,9 +1324,9 @@ _create_option(
         TTL in seconds for idle agent API sessions.
 
         An agent session is reclaimed after this much time without an
-        interaction, so clients do not have to close sessions explicitly.
+        interaction, so clients do not have to close sessions explicitly. It
+        must be a whole number greater than zero.
     """,
-    visibility="hidden",
     default_val=900,
     type_=int,
 )
@@ -1336,9 +1339,9 @@ _create_option(
         An agent session outlives the request that created it, so this bounds
         what a loop of creating calls can hold in memory. When the limit is
         reached, sessions idle past `server.agentSessionTTL` are reclaimed
-        first, and new sessions are then refused.
+        first, and new sessions are then refused. It must be a whole number
+        greater than zero; there is no unlimited setting.
     """,
-    visibility="hidden",
     default_val=100,
     type_=int,
 )
@@ -3514,6 +3517,35 @@ def _check_metrics_user_attributes() -> None:
         )
 
 
+# The agent API's limits, with the smallest whole number each accepts. At zero,
+# every request would time out, every session would be reclaimed at once, or
+# none could be created; a preview of zero rows is only a smaller response.
+_AGENT_API_LIMIT_MINIMUMS: Final = {
+    "server.agentWaitTimeout": 1,
+    "server.agentSessionTTL": 1,
+    "server.agentMaxSessions": 1,
+    "server.agentPreviewRows": 0,
+}
+
+
+def _check_agent_api_limits() -> None:
+    """Validate the agent API's limits at config-load time.
+
+    Each must be a whole number no smaller than its minimum. Checked whether or
+    not the API is on, so a bad value is reported when it is set rather than
+    when the API is turned on.
+    """
+    for name, minimum in _AGENT_API_LIMIT_MINIMUMS.items():
+        value = get_option(name)
+        # `bool` is a subclass of `int`, so a TOML `true` would pass as 1.
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            expected = "greater than zero" if minimum else "zero or greater"
+            raise RuntimeError(
+                f"Invalid value for config option {name}: {value!r}. It must be "
+                f"a whole number {expected}."
+            )
+
+
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -3579,3 +3611,5 @@ on_config_parsed(_parse_trusted_user_headers, lock=True)
 # Reject reserved label names in server.unsafeMetricsUserAttributes. No lock needed
 # since this only reads the config, it does not mutate it.
 on_config_parsed(_check_metrics_user_attributes)
+# Refuse agent API limits the API cannot work with. Read-only, so no lock.
+on_config_parsed(_check_agent_api_limits)

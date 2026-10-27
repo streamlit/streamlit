@@ -1662,6 +1662,23 @@ async def test_setting_a_bound_widget_drops_its_parameter(
 
 
 @pytest.mark.anyio
+async def test_a_bound_parameter_its_widget_cannot_take_is_dropped(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A parameter that is not one of its widget's options leaves the widget
+    as it was and is gone from `query_params`, as the protocol describes.
+    """
+    async with _running_app(tmp_path, options, _NAVIGATION_SCRIPT) as app:
+        first = await app.call({"query_params": {"region": ["APAC"]}})
+        moved = await app.call(
+            {"session_id": first["session_id"], "query_params": {"region": ["Mars"]}}
+        )
+
+    assert _keyed(moved, "region")["value"] == "APAC"
+    assert "region" not in moved["query_params"]
+
+
+@pytest.mark.anyio
 async def test_a_timed_out_click_is_collected_not_fired_twice(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:

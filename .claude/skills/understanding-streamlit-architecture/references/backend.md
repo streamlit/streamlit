@@ -189,7 +189,8 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
-- `/_stcore/agent/interact`: Agent API (POST only; off unless the hidden `server.enableAgentApi` is set)
+- `/_stcore/agent/interact`: Agent API (POST only; off unless `server.enableAgentApi` is set)
+- `/_stcore/agent/openapi.json`: The agent API's OpenAPI document (GET; answers with the API on or off, and says which)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -201,7 +202,7 @@ Browser connects -> Runtime.connect_session()
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
 
-**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies.
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies. `GET /_stcore/agent/openapi.json` serves the OpenAPI document `runtime/agent/protocol.py` builds from the error catalog and the request validator; with the API off, it only reports that. Every response from either route carries `Link: <openapi.json>; rel="service-desc"`, and the app's `index.html` links the document too.
 
 ## Key abstractions
 

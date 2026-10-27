@@ -12,27 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The agent API route.
+"""The agent API routes.
 
 ``POST /_stcore/agent/interact`` drives the app for a client without a
-browser. It is always registered, so a request with the API off, or with any
-other method, is answered here instead of falling through to the app's HTML.
-When ``server.enableAgentApi`` is on, it is served wherever the app is, to any
-caller the app would serve: the WebSocket's Host allow-list applies, and the
-same trusted identity headers are mapped into ``st.user``.
+browser, and ``GET /_stcore/agent/openapi.json`` describes how, so a caller
+that found the app can learn the protocol without being handed documentation.
+Both are always registered, so a request with the API off, or with any other
+method, is answered here instead of falling through to the app's HTML. With
+the API off, the document only reports that. Every response from either route
+carries a `Link` header to it.
+
+When ``server.enableAgentApi`` is on, the interact route is served wherever
+the app is, to any caller the app would serve: the WebSocket's Host allow-list
+applies, and the same trusted identity headers are mapped into ``st.user``.
 """
 
 from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import json
 from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime import runtime_util
-from streamlit.runtime.agent import errors, interaction, snapshot
+from streamlit.runtime.agent import errors, interaction, protocol, snapshot
 from streamlit.web.server import server_util
 from streamlit.web.server.starlette import starlette_websocket
 from streamlit.web.server.starlette.starlette_routes import (
@@ -41,7 +47,7 @@ from streamlit.web.server.starlette.starlette_routes import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
     from starlette.requests import Request
     from starlette.responses import Response
@@ -57,6 +63,16 @@ _LOGGER: Final = get_logger(__name__)
 _T = TypeVar("_T")
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
+_ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/openapi.json"
+
+# Every method a route registers, so none falls through to the static files
+# mount. Starlette adds HEAD to GET.
+_ROUTE_METHODS: Final = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+
+# Points a caller at the protocol's description from every response, errors
+# most of all (RFC 8631). Relative to the request, like every URL here: the
+# document sits beside the route that answered.
+_SERVICE_DESC_LINK: Final = '<openapi.json>; rel="service-desc"'
 
 # Where media URLs start, relative to the app's root: media storage, and the
 # app's own static files, which a media element may name directly.
@@ -111,6 +127,35 @@ def _encode_snapshot(document: dict[str, Any]) -> bytes:
         document, paths=_MEDIA_PATHS, prefix=_APP_ROOT_FROM_ROUTE
     )
     return _render_json(document)
+
+
+def _server_url(schema_path: str) -> str:
+    """The OpenAPI document's server, relative to the document's own URL.
+
+    The documented paths include ``server.baseUrlPath``, so the server climbs
+    one ``..`` per directory of ``schema_path``, the document's served path,
+    back to where those paths start. An empty segment between two slashes
+    counts, as it does when a URL is resolved.
+    """
+    return "/".join([".."] * (schema_path.count("/") - 1))
+
+
+def _with_service_desc_link(
+    answer: Callable[[Request], Awaitable[Response]],
+) -> Callable[[Request], Awaitable[Response]]:
+    """Wrap a route's endpoint so every response it gives links the description.
+
+    Set here rather than where each response is built, so no branch, such as a
+    405 or a disconnect, can leave it out.
+    """
+
+    @functools.wraps(answer)
+    async def endpoint(request: Request) -> Response:
+        response = await answer(request)
+        response.headers["Link"] = _SERVICE_DESC_LINK
+        return response
+
+    return endpoint
 
 
 def _refused_host(request: Request) -> bool:
@@ -267,23 +312,26 @@ async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
 
 
 def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
-    """Create the agent API route.
+    """Create the agent API routes.
 
-    Registered even when the API is off, because an unregistered path falls
-    through to the single-page-app handler, which answers with the app's HTML
-    and a 200.
+    Both are registered even when the API is off. The app's HTML links to the
+    schema path, and an unregistered path falls through to the single-page-app
+    handler, which answers with the app's HTML and a 200, so following the link
+    would read as success. Answered here instead, the link is never a dead end,
+    and turning the API on needs no change to any cached HTML.
 
     Parameters
     ----------
     runtime : Runtime
         The runtime agent sessions run in.
     base_url : str or None
-        The ``server.baseUrlPath`` the route is served under.
+        The ``server.baseUrlPath`` the routes are served under.
 
     Returns
     -------
     list[BaseRoute]
-        The route for ``_stcore/agent/interact``.
+        The routes for ``_stcore/agent/interact`` and
+        ``_stcore/agent/openapi.json``.
     """
     from starlette.requests import ClientDisconnect
     from starlette.responses import JSONResponse, Response
@@ -293,6 +341,22 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
     enabled = bool(config.get_option("server.enableAgentApi"))
     registry = interaction.AgentSessionRegistry(runtime) if enabled else None
+    interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
+    schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
+
+    # Built on the first request rather than here, so an app nobody asks pays
+    # nothing for it, and then kept: it changes only with `enabled`, which is
+    # read once above, and with a release.
+    @functools.cache
+    def schema_body() -> bytes:
+        return _render_json(
+            protocol.build_openapi_document(
+                interact_path=interact_path,
+                schema_path=schema_path,
+                server_url=_server_url(schema_path),
+                enabled=enabled,
+            )
+        )
 
     def error_response(
         code: errors.AgentErrorCode,
@@ -354,7 +418,29 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             )
         return Response(body, media_type="application/json")
 
-    async def interact_endpoint(request: Request) -> Response:
+    async def answer_schema(request: Request) -> Response:  # noqa: RUF029 - endpoints are async
+        """Serve the OpenAPI document, whether or not the API is on.
+
+        It is documentation rather than access, so none of the interact
+        route's checks apply, as none apply to the app's own HTML. A caller
+        that followed the app's link is better told what this is and whether
+        it is on than refused without a reason.
+        """
+        if request.method not in {"GET", "HEAD"}:
+            # Registered for every method, as the interact route is, so the
+            # static files mount never answers here with its own 405, which
+            # carries no `Link` and exists only where the app serves its
+            # frontend.
+            return Response(status_code=405, headers={"Allow": "GET, HEAD"})
+        return Response(
+            schema_body(),
+            media_type="application/json",
+            # Revalidated, since the document changes when the API is turned
+            # on and with each release.
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    async def answer_interact(request: Request) -> Response:
         if request.method != "POST":
             # Registered for every method so every other one is refused here.
             # Otherwise the static files mount would answer: a GET or HEAD
@@ -398,8 +484,13 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
     return [
         Route(
-            make_url_path(base_url or "", _ROUTE_AGENT_INTERACT),
-            interact_endpoint,
-            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        )
+            interact_path,
+            _with_service_desc_link(answer_interact),
+            methods=_ROUTE_METHODS,
+        ),
+        Route(
+            schema_path,
+            _with_service_desc_link(answer_schema),
+            methods=_ROUTE_METHODS,
+        ),
     ]

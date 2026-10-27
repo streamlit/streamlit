@@ -324,6 +324,15 @@ A button inside `st.dialog` is on the tree after the opener is clicked and `.run
 
 With the default `on_change="ignore"`, popover contents are already on the tree. Interact with inner widgets as if they were in the main script. Content guarded by `.open` is absent while closed, and that guard exists only when the popover tracks state (`on_change="rerun"` or a callback). If that popover also has a key, set `at.session_state[key] = True` before `.run()`. Otherwise use Playwright.
 
+## Checking a running app without a browser
+
+With the app started with `--server.enableAgentApi=true`, a `POST {}` to `/_stcore/agent/interact` runs it and returns what it renders as JSON, including widget values and the actions available next. `GET /_stcore/agent/openapi.json` describes the protocol. Use it to confirm what a running app shows after a change; keep AppTest for automated tests.
+
+```bash
+streamlit run app.py --server.headless=true --server.enableAgentApi=true &
+curl -s -X POST http://localhost:8501/_stcore/agent/interact -d '{}'
+```
+
 ## References
 
 - [AppTest API](https://docs.streamlit.io/develop/api-reference/app-testing/st.testing.v1.apptest)
