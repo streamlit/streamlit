@@ -172,8 +172,11 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns.
+- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
+- To put a fragment in a stretch card, create the card outside the fragment and call the fragment inside it. The fragment still writes only to its own body, so this works with `parallel=True` too. A `height="stretch"` container created inside a fragment does not stretch.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
+- In image card grids, crop the images to one aspect ratio before `st.image` (for example, with `PIL.ImageOps.fit`). Otherwise, the content below each image starts at a different offset.
 
 ```python
 # Equal-height KPI cards with mixed content
@@ -194,6 +197,43 @@ for col, (plan, features) in zip(st.columns(3), plans.items()):
             st.markdown(f":material/check: {feature}")
         st.space("stretch")
         st.button("Choose", key=f"choose_{plan}", width="stretch")
+```
+
+**Charts side by side:**
+
+- Default chart heights differ by library: `st.plotly_chart` is taller than Vega-Lite charts (`st.line_chart`, `st.altair_chart`, and similar) and `st.echarts_chart`. Give every chart in the row the same integer `height`, or `height="stretch"` on each chart and its card.
+- Altair facet, repeat, and concat charts render empty with `height="stretch"` unless a fixed-height container holds them, and an integer `height` does not resize their views. Keep their default height and size the views in Altair (`.properties(height=...)`). The card around the chart can still use `height="stretch"`.
+
+## Bento layouts and fixed-height regions
+
+A bento puts a tall card next to a column of smaller cards:
+
+- For stacked metrics or text cards, pass `height="stretch"` to each. They split the tall card's height evenly.
+- Stacked charts are different: without a fixed-height parent, each stretch chart keeps its default height, so the stack outgrows the tall card. Give the charts pixel heights that add up, or use a fixed-height region.
+
+For a region with an exact height, use `st.container(height=N, horizontal=True)` with stretch cards and stretch elements inside. The cards fill the region exactly, and stretch charts and dataframes shrink to fit their card. Give a side column a pixel `width`. `st.columns` does not pass a fixed height down: inside `st.container(height=N)`, stretch cards in columns keep their default heights and the content scrolls.
+
+```python
+# Bento: three metrics share the chart card's height
+chart_col, kpi_col = st.columns([2, 1])
+with chart_col.container(border=True):
+    st.subheader("Revenue")
+    st.line_chart(revenue, height=360)
+with kpi_col:
+    st.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
+    st.metric("Users", "762k", "+12%", border=True, height="stretch")
+    st.metric("Orders", "1.4k", "+5%", border=True, height="stretch")
+
+# Fixed-height region: the cards fill exactly 480px
+with st.container(height=480, horizontal=True, border=False):
+    with st.container(border=True, height="stretch"):
+        st.markdown("**Revenue**")
+        st.line_chart(revenue, height="stretch")
+    with st.container(width=320, height="stretch"):
+        with st.container(border=True, height="stretch"):
+            st.bar_chart(by_region, height="stretch")
+        with st.container(border=True, height="stretch"):
+            st.dataframe(orders, height="stretch")
 ```
 
 ## Bordered containers
@@ -322,7 +362,7 @@ st.space(50)  # Custom pixels
 
 ## Width and height
 
-Control element sizing (for equal-height cards, see "Aligning elements side by side" above):
+Control element sizing (for equal-height cards, see "Aligning elements side by side" above; for exact regions, see "Bento layouts and fixed-height regions"):
 
 ```python
 # Shrink to content size
