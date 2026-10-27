@@ -438,8 +438,8 @@ def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
     """Remove pandas index fields so only data columns reach the chart.
 
     A table built with ``pyarrow.Table.from_pandas`` can store the dataframe
-    index as real fields. The pandas metadata is rewritten rather than dropped:
-    the browser reads pandas-only type tags (for example, for period columns)
+    index as real fields. Rewrites the pandas metadata rather than dropping it.
+    The browser reads pandas-only type tags (for example, for period columns)
     from it, and fails to parse metadata that names index fields the table no
     longer has.
     """
@@ -513,11 +513,12 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
     # Check before converting: PyArrow raises a bare ValueError for exact
     # duplicates, which would otherwise surface as a conversion error.
     _ensure_unique_dataset_labels(labels)
-    if isinstance(df.columns, pd.MultiIndex):
-        # PyArrow would name each field after its stringified levels
-        # (`"('1', '2')"` for `(1, 2)`). Flatten to `str(column)` (`"(1, 2)"`),
-        # the name apps write in `encode` and `dimensions`. The shallow copy
-        # leaves the caller's dataframe unchanged.
+    if any(isinstance(column, (tuple, bytes)) for column in df.columns):
+        # PyArrow names tuple labels (MultiIndex or tuple-valued headers) after
+        # their stringified levels (`"('1', '2')"` for `(1, 2)`) and decodes
+        # bytes labels. Use `str(column)` (`"(1, 2)"`) instead, the name apps
+        # write in `encode` and `dimensions`. The shallow copy leaves the
+        # caller's dataframe unchanged.
         df = df.copy(deep=False)
         df.columns = pd.Index(labels)
     return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=False)
@@ -1016,8 +1017,11 @@ class EChartsMixin:
             ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
             its rows to ECharts and preserves the column order through
             ``dataset.dimensions`` when you haven't set it. Datetimes arrive as
-            ISO-8601 strings, dates as ``YYYY-MM-DD`` strings, and durations as
-            milliseconds. Missing values become ``null``. The dataframe index
+            ISO-8601 strings: naive values keep the wall-clock time with no
+            timezone suffix, and timezone-aware values use a ``Z`` suffix.
+            Dates arrive as ``YYYY-MM-DD``, times of day as ``HH:mm:ss`` (with
+            milliseconds when set), and durations as milliseconds. Missing
+            values become ``null``. The dataframe index
             isn't included. To plot the index, reset it into a column first
             (``df.reset_index()``).
 
@@ -1224,11 +1228,12 @@ class EChartsMixin:
         **Example 3: Zoom slider, toolbox, and legend**
 
         In-chart controls such as ``dataZoom`` and ``toolbox`` are configured
-        in the spec. Streamlit's hover toolbar (download, fullscreen) is
-        separate from ECharts' ``toolbox``: omit ``saveAsImage`` if you only
-        want Streamlit's download, or set ``toolbox.left`` so the two don't
-        stack in the top-right corner. Place ``legend`` at the top so it
-        doesn't share the footer with a bottom ``dataZoom`` slider.
+        in the spec. Streamlit's hover toolbar (Show data for dataframe-backed
+        charts, download, and fullscreen) is separate from ECharts'
+        ``toolbox``: omit ``saveAsImage`` if you only want Streamlit's
+        download, or set ``toolbox.left`` so the two don't stack in the
+        top-right corner. Place ``legend`` at the top so it doesn't share the
+        footer with a bottom ``dataZoom`` slider.
 
         With an inside ``dataZoom``, the wheel scrolls the page until the
         pointer has rested on the chart, then it zooms or pans. Pinch, or the

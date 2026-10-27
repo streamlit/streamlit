@@ -334,8 +334,8 @@ function parseDataset(dataset: ArrowNamedDataSet.$Properties): Quiver {
     throw new Error("The data for an ECharts dataset.source is missing.")
   }
   try {
-    // Arrow JS reads bytes without a schema message as an empty table instead
-    // of throwing, so check for the schema first.
+    // Reject a stream with no schema before parsing. Arrow JS otherwise
+    // treats those bytes as an empty table.
     const reader = RecordBatchReader.from(bytes).open()
     if ((reader.schema as Schema | undefined) === undefined) {
       throw new Error("The Arrow stream has no schema.")
