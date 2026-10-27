@@ -3844,6 +3844,40 @@ describe("App", () => {
       ).toHaveBeenCalledWith(0, [])
     })
 
+    it("will not increment cache count for a previous run's finish followed by the next NewSession before React commits", () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        scriptRunId: "run_a",
+      })
+      const connectionManager = getMockConnectionManager()
+
+      // Requesting a rerun marks finishes until the next NewSession as stale.
+      getStoredValue<WidgetStateManager>(
+        WidgetStateManager
+      ).sendUpdateWidgetsMessage(undefined)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+      // A single act() keeps React from committing between the two messages,
+      // so setState callbacks only run after the next NewSession arrived.
+      act(() => {
+        const finishedMsg = new ForwardMsg({
+          scriptFinished:
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+          metadata: { scriptRunId: "run_a", fragmentIdsThisRun: [] },
+        })
+        const newSessionMsg = new ForwardMsg({
+          newSession: { ...cloneDeep(NEW_SESSION_JSON), scriptRunId: "run_b" },
+        })
+        getMockConnectionManagerProp("onMessage")(finishedMsg)
+        getMockConnectionManagerProp("onMessage")(newSessionMsg)
+      })
+
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
+    })
+
     it("cleans only the finished run after a later start has updated state", async () => {
       renderApp(getProps())
       sendForwardMessage("sessionStatusChanged", {

@@ -2138,29 +2138,31 @@ export class App extends PureComponent<Props, State> {
           }),
           () => {
             this.removeInactiveWidgetState()
-            // Tell the ConnectionManager to increment the message cache run
-            // count. This will result in expired ForwardMsgs being removed from
-            // the cache. We expect the sessionInfo to be populated at this point,
-            // but we have observed race conditions tied to a rerun occurring
-            // before a NewSession message is processed. This issue should not
-            // disrupt users and is not a critical need for the message cache
-            if (
-              this.connectionManager !== null &&
-              this.sessionInfo.isSet &&
-              // We only increment the message cache run count if we have received
-              // a NewSession message after the latest rerun request. This is done
-              // to ignore finished messages from previous script runs, which would
-              // cause issues with deleting cached messages that are needed for the
-              // current script run.
-              this.hasReceivedNewSession
-            ) {
-              this.connectionManager.incrementMessageCacheRunCount(
-                this.sessionInfo.current.maxCachedMessageAge,
-                finishedRun.fragmentIds
-              )
-            }
           }
         )
+
+        // Tell the ConnectionManager to increment the message cache run
+        // count. This will result in expired ForwardMsgs being removed from
+        // the cache. We expect the sessionInfo to be populated at this point,
+        // but we have observed race conditions tied to a rerun occurring
+        // before a NewSession message is processed. This issue should not
+        // disrupt users and is not a critical need for the message cache
+        if (
+          this.connectionManager !== null &&
+          this.sessionInfo.isSet &&
+          // We only increment the message cache run count if we have received
+          // a NewSession message after the latest rerun request. This is done
+          // to ignore finished messages from previous script runs, which would
+          // cause issues with deleting cached messages that are needed for the
+          // current script run. Read the flag now, not in a setState callback:
+          // a later NewSession can set it before React commits.
+          this.hasReceivedNewSession
+        ) {
+          this.connectionManager.incrementMessageCacheRunCount(
+            this.sessionInfo.current.maxCachedMessageAge,
+            finishedRun.fragmentIds
+          )
+        }
       }
     }
   }
