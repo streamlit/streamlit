@@ -59,7 +59,9 @@ def app_server_extra_args() -> list[str]:
 
 @pytest.fixture
 def app_page(app_target: AppTarget) -> Page:
-    """The page, once the app has loaded the way a viewer opens it."""
+    """Return the page after the app has loaded, so its context holds the
+    host's login cookie.
+    """
     return app_target.page
 
 
@@ -82,7 +84,7 @@ def _interact(
 
 
 def _describe(response: APIResponse) -> str:
-    """Return what shows who answered a request, for a failed check.
+    """Return the headers and body that show who answered a failed request.
 
     A redirect sets `Location`. The route's own 405 sends `Allow: POST`, so a
     405 without it came from a proxy in front of the app.
@@ -366,8 +368,10 @@ def test_refuses_web_pages_and_ignores_client_identity(
         "origin_not_allowed",
     )
     for method in ["GET", "PUT"]:
-        response = app_page.request.fetch(_interact_url(app_base_url), method=method)
-        assert response.status == 405, f"{method}: {response.status}"
+        response = app_page.request.fetch(
+            _interact_url(app_base_url), method=method, max_redirects=0
+        )
+        assert response.status == 405, f"{method}: {_describe(response)}"
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
