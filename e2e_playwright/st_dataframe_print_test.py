@@ -23,9 +23,7 @@ from e2e_playwright.shared.app_utils import get_element_by_key
 _PORTRAIT: ViewportSize = {"width": 1240, "height": 1754}
 
 _ROW_CAP_NOTE = "Further rows were not printed. This table is capped at 1,000 rows."
-_CELL_BUDGET_NOTE = (
-    "Further rows were not printed because other tables on this page were already expanded."
-)
+_CELL_BUDGET_NOTE = "Further rows were not printed because other tables on this page were already expanded."
 
 
 @pytest.mark.only_browser("chromium")
