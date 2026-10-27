@@ -20,8 +20,13 @@ Each command already described itself when it emitted its element (see
 ``value`` from ``widget_values``, because proto defaults stop being accurate
 after the first interaction.
 
-``data``, the derived facts about a dataframe or chart, is not attached yet.
-A command's parameters stay in ``props``.
+``data``, the derived facts about a table, chart, or map, is built by the
+command while recording (see ``elements/lib/agent_data.py``) and copied from
+its description, so its preview is bounded by ``server.agentPreviewRows`` when
+the element is emitted. This walk only checks that the block resolves:
+``complete``, or a ``url`` serving the rest, or ``unavailable`` saying why
+nothing does. Only a table replayed without a description is summarized from
+its payload. A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
+from streamlit.elements.lib import agent_data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -325,6 +331,12 @@ class _SnapshotBuilder:
             )
             _attach_value(result, action, value, description.get("value_schema"))
 
+        data = _data_block(
+            proto_field, payload, description, described=bool(node.description)
+        )
+        if data:
+            result["data"] = data
+
         form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
@@ -515,6 +527,61 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     return description.get("type") == "text_input" and props.get("type") == "password"
 
 
+def _data_block(
+    proto_field: str,
+    payload: Any,
+    description: dict[str, Any],
+    *,
+    described: bool,
+) -> dict[str, Any] | None:
+    """The `data` an element carries, resolved so `complete` always has an answer.
+
+    Either the preview is everything (`complete: true`), or `url` serves all of
+    it, or `unavailable` says why nothing does. A `url` never comes with an
+    `unavailable` reason. A data command builds its block while recording, so
+    it is copied from the description and only checked here. ``described`` is
+    whether the command described itself.
+    """
+    built = description.get("data")
+    data = (
+        dict(built)
+        if isinstance(built, dict)
+        else _payload_data(proto_field, payload, described=described)
+    )
+    if not data:
+        return None
+
+    if data.get("complete") is not True or "unavailable" in data:
+        data["complete"] = False
+    if "unavailable" in data or not isinstance(data.get("url"), str):
+        data.pop("url", None)
+    if data["complete"] is False and "url" not in data and "unavailable" not in data:
+        # Builders set their own `unavailable` reason. This fallback only stops a
+        # block that set none from looking complete or servable, using the reason
+        # `agent_data.arrow` gives for a copy it did not register.
+        data.update(agent_data.unavailable("too_large_to_serve"))
+    return data
+
+
+def _payload_data(
+    proto_field: str, payload: Any, *, described: bool
+) -> dict[str, Any] | None:
+    """Summarize an undescribed table's payload, which built no `data` block.
+
+    A command that described itself and built no block has no data to report.
+    ``payload`` is typed loosely because the table protos share `arrow_data`.
+    """
+    if payload is None or described or proto_field not in {"dataframe", "table"}:
+        return None
+    # A table replayed from a cache a browser filled built no `data` and
+    # registered no copy, so its payload is summarized and nothing serves the
+    # rest.
+    data = agent_data.summarize_arrow(payload.arrow_data.data)
+    if data is not None and data["complete"] is False:
+        data.update(agent_data.unavailable("undescribed"))
+    return data
+
+
 def build_snapshot(
     *,
     session_id: str,
@@ -601,9 +668,9 @@ def rebase_media_urls(
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
     is a 404 or a login redirect.
 
-    Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
-    under one of ``paths``, so an external link an app displays is never
-    rewritten.
+    Only ``data.url`` and the ``url``, ``src``, and ``avatar`` props are
+    touched, and only values under one of ``paths``, so an external link an app
+    displays is never rewritten.
 
     Parameters
     ----------
@@ -627,6 +694,9 @@ def rebase_media_urls(
         return value
 
     def walk(node: dict[str, Any]) -> None:
+        data = node.get("data")
+        if isinstance(data, dict) and "url" in data:
+            data["url"] = rebase(data["url"])
         props = node.get("props")
         if isinstance(props, dict):
             for name in ("url", "src", "avatar"):

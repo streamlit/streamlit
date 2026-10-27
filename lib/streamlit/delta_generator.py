@@ -528,6 +528,29 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
+    def _get_write_delta_path_str(self) -> str:
+        """Return the delta path where this DeltaGenerator's next element is written.
+
+        Unlike ``_get_delta_path_str``, this follows a fragment's write to a
+        container declared outside it into the wrapper block ``_enqueue``
+        redirects it to. The outside container's own cursor advances only once
+        for that wrapper, so it would give every such element the same path.
+        """
+        dg = self._active_dg
+        ctx = get_script_run_ctx()
+        if ctx is not None:
+            ts = ThreadState.get()
+            if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
+                wrapper = ctx.fragment_storage.get_outside_wrapper(
+                    ts.fragment_id, dg._id
+                )
+                if wrapper is None:
+                    # `_enqueue` creates the wrapper at this cursor's position,
+                    # and the element becomes its first child.
+                    return str([*cast("Cursor", dg._cursor).delta_path, 0])
+                dg = wrapper.delta_generator
+        return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
+
     def _enqueue(
         self,
         delta_type: str,
