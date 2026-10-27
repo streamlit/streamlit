@@ -205,7 +205,11 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
 
         try {
-          if (useArrowFormatting) {
+          if (!Number.isFinite(cellData)) {
+            // ±Infinity (NaN is handled above). formatNumber would return an
+            // empty string, so show it as st.table does.
+            displayData = String(cellData)
+          } else if (useArrowFormatting) {
             // Use arrow formatting for some selected types (see above)
             displayData = formatArrowCell(cellData, props.arrowType)
           } else {
