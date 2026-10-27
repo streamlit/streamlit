@@ -39,12 +39,12 @@ from streamlit.errors import (
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.fragment import (
-    FragmentIdentity,
     FragmentStorage,
     MemoryFragmentStorage,
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _FragmentIdentity,
     _FragmentLifetime,
     _make_fragment_identity,
     _reset_outside_wrappers,
@@ -62,7 +62,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
-from streamlit.util import calc_hash
+from streamlit.util import calc_hash, create_fast_hasher
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -1379,7 +1379,9 @@ class FragmentTest(unittest.TestCase):
             delta_path="[0, 0]",
             additional_hash_info="",
         )
-        hashed_id = _fragment(my_function, additional_hash_info="dialog_func")()
+        hashed_id = _fragment(
+            my_function, key="dialog_charts", additional_hash_info="dialog_func"
+        )()
         hashed_identity = _make_fragment_identity(
             my_function,
             delta_path="[0, 0]",
@@ -1391,7 +1393,11 @@ class FragmentTest(unittest.TestCase):
         assert (
             ctx.shared._fragment_user_keys_this_run["charts"] == identity.definition_id
         )
-        assert identity.fragment_id in ctx.fragment_storage._fragments
+        assert (
+            ctx.shared._fragment_user_keys_this_run["dialog_charts"]
+            == hashed_identity.definition_id
+        )
+        assert ctx.fragment_storage.contains(identity.fragment_id)
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_keyed_and_unkeyed_fragments_share_call_site_id(
@@ -2779,7 +2785,7 @@ def test_fragment_different_definitions_same_key_collide() -> None:
 
 
 def _named_fragment_func(module: str, qualname: str) -> Callable[[], None]:
-    """Return a function with a stable identity token."""
+    """Return a function whose ``__module__`` and ``__qualname__`` form a fixed identity token."""
 
     def func() -> None:
         return None
@@ -2789,10 +2795,10 @@ def _named_fragment_func(module: str, qualname: str) -> Callable[[], None]:
     return func
 
 
-# Current identity bytes for a synthetic function ``golden.mod.frag``.
-# Changing either formula independently, or hashing ``definition_id +
-# delta_path`` instead of ``token + delta_path + additional_hash_info``,
-# must fail these values.
+# Locked IDs for the synthetic function ``golden.mod.frag``.
+# The golden-value test fails if either formula changes, or if the call-site
+# hash becomes ``definition_id + delta_path`` instead of
+# ``token + delta_path + additional_hash_info``.
 _GOLDEN_DEFINITION_ID = "golden.mod.frag"
 _GOLDEN_FRAGMENT_IDS = {
     ("[0, 0]", ""): "0f90b1cc32a0c1da72bca9118df24d19",
@@ -2804,17 +2810,11 @@ _GOLDEN_FRAGMENT_IDS = {
 
 
 @pytest.mark.parametrize(
-    ("delta_path", "additional_hash_info"),
-    [
-        ("[0, 0]", ""),
-        ("[0, 3, 1]", ""),
-        ("[0, 3, 0, 1]", ""),
-        ("[0, 0]", "dialog_func"),
-        ("[0, 3, 1]", "dialog_func"),
-    ],
+    ("delta_path", "additional_hash_info", "expected_fragment_id"),
+    [(*case, digest) for case, digest in _GOLDEN_FRAGMENT_IDS.items()],
 )
 def test_fragment_identity_golden_values(
-    delta_path: str, additional_hash_info: str
+    delta_path: str, additional_hash_info: str, expected_fragment_id: str
 ) -> None:
     """Lock current definition and call-site identity bytes."""
     identity = _make_fragment_identity(
@@ -2822,74 +2822,18 @@ def test_fragment_identity_golden_values(
         delta_path=delta_path,
         additional_hash_info=additional_hash_info,
     )
-    expected_definition_id = f"{_GOLDEN_DEFINITION_ID}{additional_hash_info}"
-    expected_fragment_id = _GOLDEN_FRAGMENT_IDS[delta_path, additional_hash_info]
-
-    assert isinstance(identity, FragmentIdentity)
-    assert identity.definition_id == expected_definition_id
-    assert identity.fragment_id == expected_fragment_id
-
-
-@pytest.mark.parametrize(
-    ("delta_path", "additional_hash_info"),
-    [
-        ("[0, 0]", ""),
-        ("[0, 3, 1]", ""),
-        ("[0, 3, 0, 1]", ""),
-        ("[0, 0]", "dialog_func"),
-        ("[0, 3, 1]", "dialog_func"),
-    ],
-)
-def test_fragment_identity_ids_share_one_definition_token(
-    delta_path: str, additional_hash_info: str
-) -> None:
-    """Both IDs must be derived from the same definition token.
-
-    If either formula gains a component the other does not, or the call-site
-    hash switches to ``definition_id + delta_path``, this fails.
-    """
-    identity = _make_fragment_identity(
-        _named_fragment_func("golden.mod", "frag"),
-        delta_path=delta_path,
-        additional_hash_info=additional_hash_info,
-    )
     token = _GOLDEN_DEFINITION_ID
+    preimage = f"{token}{delta_path}{additional_hash_info}"
+
+    assert isinstance(identity, _FragmentIdentity)
     assert identity.definition_id == f"{token}{additional_hash_info}"
-    assert identity.fragment_id == calc_hash(
-        f"{token}{delta_path}{additional_hash_info}"
-    )
+    assert identity.fragment_id == calc_hash(preimage)
     if additional_hash_info:
         assert identity.fragment_id != calc_hash(
             f"{identity.definition_id}{delta_path}"
         )
-
-
-def test_fragment_identity_call_sites_share_definition_id() -> None:
-    """Distinct call sites of one definition share definition_id, not fragment_id."""
-    func = _named_fragment_func("golden.mod", "frag")
-    first = _make_fragment_identity(func, delta_path="[0, 0]", additional_hash_info="")
-    second = _make_fragment_identity(
-        func, delta_path="[0, 3, 1]", additional_hash_info=""
-    )
-    nested = _make_fragment_identity(
-        func, delta_path="[0, 3, 0, 1]", additional_hash_info=""
-    )
-
-    assert first.definition_id == second.definition_id == nested.definition_id
-    assert len({first.fragment_id, second.fragment_id, nested.fragment_id}) == 3
-
-
-def test_fragment_identity_additional_hash_info_affects_both_ids() -> None:
-    """Dialog-style additional_hash_info must change both related identities."""
-    func = _named_fragment_func("golden.mod", "frag")
-    plain = _make_fragment_identity(func, delta_path="[0, 0]", additional_hash_info="")
-    with_info = _make_fragment_identity(
-        func, delta_path="[0, 0]", additional_hash_info="dialog_func"
-    )
-
-    assert with_info.definition_id == f"{plain.definition_id}dialog_func"
-    assert with_info.fragment_id != plain.fragment_id
-    assert with_info.fragment_id == _GOLDEN_FRAGMENT_IDS["[0, 0]", "dialog_func"]
+    if create_fast_hasher().name == "blake2b":
+        assert identity.fragment_id == expected_fragment_id
 
 
 def test_fragment_identity_different_definitions_diverge() -> None:

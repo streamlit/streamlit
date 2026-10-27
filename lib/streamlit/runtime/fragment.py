@@ -597,9 +597,13 @@ def _reset_outside_wrappers(
             wrapper_cursor.reset()
 
 
-@dataclass(frozen=True)
-class FragmentIdentity:
-    """Stable identities for one fragment definition and call site."""
+@dataclass(frozen=True, slots=True)
+class _FragmentIdentity:
+    """Definition and call-site IDs for one fragment invocation.
+
+    ``definition_id`` is shared by every call site and is what duplicate-key
+    detection compares. ``fragment_id`` is unique per delta path.
+    """
 
     definition_id: str
     fragment_id: str
@@ -610,14 +614,14 @@ def _make_fragment_identity(
     *,
     delta_path: str,
     additional_hash_info: str,
-) -> FragmentIdentity:
-    """Build related fragment identities from one canonical definition token."""
-    # Call-site IDs hash ``{token}{delta_path}{additional_hash_info}`` rather
-    # than ``{definition_id}{delta_path}``. Swapping that order would change
-    # existing fragment, widget, and auto-rerun identities whenever
-    # additional_hash_info is non-empty.
+) -> _FragmentIdentity:
+    """Build the definition ID and call-site ID from one ``{module}.{qualname}`` token."""
+    # Keep additional_hash_info after delta_path so fragment IDs stay
+    # byte-identical to earlier releases. Hashing definition_id + delta_path
+    # would change dialog fragment IDs, the fragment_id stored on widget
+    # metadata, and run_every auto-rerun targets.
     definition_token = f"{func.__module__}.{get_object_name(func)}"
-    return FragmentIdentity(
+    return _FragmentIdentity(
         definition_id=f"{definition_token}{additional_hash_info}",
         fragment_id=calc_hash(f"{definition_token}{delta_path}{additional_hash_info}"),
     )
