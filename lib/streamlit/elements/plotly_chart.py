@@ -937,7 +937,7 @@ class PlotlyMixin:
                 agent_props=agent_spec.element(
                     "plotly_chart",
                     key=plotly_chart_proto.id,
-                    data_block=lambda: _plotly_data(plotly_chart_proto.spec),
+                    data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
                     support="action_unsupported",
                     selection_mode=sorted(
                         _SELECTION_MODE_FROM_PROTO[mode]
@@ -959,7 +959,7 @@ class PlotlyMixin:
             agent_props=agent_spec.element(
                 "plotly_chart",
                 key=key,
-                data_block=lambda: _plotly_data(plotly_chart_proto.spec),
+                data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
                 alt=plotly_chart_proto.alt or None,
             ),
         )

@@ -67,7 +67,7 @@ time.
 
 ``data``, the derived facts about a table, chart, or map (schema, row counts, a
 preview bounded by ``server.agentPreviewRows``, and where the complete data is
-served), is built by the command while recording, through a ``data_block``
+served), is built by the command while recording, through a ``data_builder``
 function that uses ``agent_data``, and the serializer copies it. The preview is therefore fixed when the element is
 emitted, so a later request can only shrink it.
 
@@ -88,7 +88,7 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
-# Builds an element's ``data`` while recording. See ``element``'s ``data_block``.
+# Builds an element's ``data`` while recording. See ``element``'s ``data_builder``.
 DataBuilder: TypeAlias = "Callable[[], dict[str, Any] | None]"
 
 # What a client may do with an element on the next interaction. ``value`` means
@@ -205,7 +205,7 @@ def _json_description(
     transparent: bool = False,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_block: DataBuilder | None = None,
+    data_builder: DataBuilder | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -226,7 +226,7 @@ def _json_description(
         description[_CLEARABLE_KEY] = True
     if choices is not None:
         description[_CHOICES_KEY] = choices
-    if data_block is not None and (data := _build_data(data_block)) is not None:
+    if data_builder is not None and (data := _build_data(data_builder)) is not None:
         description[_DATA_KEY] = data
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
@@ -255,7 +255,7 @@ def element(
     support: SupportReason | None = None,
     clearable: bool = False,
     choices: list[Any] | None = None,
-    data_block: DataBuilder | None = None,
+    data_builder: DataBuilder | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -289,14 +289,14 @@ def element(
     choices
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
-    data_block
+    data_builder
         A function that builds the element's ``data``, usually with
         ``agent_data``, such as ``lambda: agent_data.arrow(...)``. It is called
         only while recording, so nothing it reads costs a browser session
         anything, and an exception in it reports no ``data`` instead of
         failing the command. The result is reported beside ``props`` because
-        it is derived rather than an argument the author passed. Named
-        ``data_block`` because a custom component reports a ``data`` prop.
+        it is derived rather than an argument the author passed. Not named
+        ``data``, because a custom component reports a ``data`` prop.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -313,7 +313,7 @@ def element(
         value_schema=value_schema,
         clearable=clearable,
         choices=choices,
-        data_block=data_block,
+        data_builder=data_builder,
     )
 
 

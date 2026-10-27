@@ -15,7 +15,7 @@
 """Build the ``data`` a table, chart, or map reports to the agent API.
 
 A data command builds its ``data`` block while recording, when it emits the
-element, by passing a function to ``agent_spec.element(data_block=...)``, such
+element, by passing a function to ``agent_spec.element(data_builder=...)``, such
 as ``lambda: agent_data.arrow(...)``. ``agent_spec`` calls it only while
 recording, so a browser session never runs it, and reports no ``data`` if it
 raises. The snapshot copies the block.

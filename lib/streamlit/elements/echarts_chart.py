@@ -1351,7 +1351,7 @@ class EChartsMixin:
             # it is "rerun".
             on_select="rerun" if is_selection_activated else None,
             alt=echarts_chart_proto.alt or None,
-            data_block=lambda: agent_data.raw_spec(echarts_chart_proto.spec),
+            data_builder=lambda: agent_data.raw_spec(echarts_chart_proto.spec),
         )
 
         if not is_selection_activated:

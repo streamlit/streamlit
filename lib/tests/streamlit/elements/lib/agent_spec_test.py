@@ -142,20 +142,20 @@ def test_block_marks_a_transparent_wrapper() -> None:
     assert decoded["props"] == {}
 
 
-def test_data_block_sits_beside_props() -> None:
+def test_built_data_sits_beside_props() -> None:
     """The built block is the top-level `data` the serializer owns, never a prop.
     A builder that builds nothing, or none at all, reports no `data`.
     """
     block = {"complete": True, "url": "/media/abc"}
-    decoded = _recorded("dataframe", data_block=lambda: block, placeholder="-")
+    decoded = _recorded("dataframe", data_builder=lambda: block, placeholder="-")
 
     assert decoded["data"] == block
     assert decoded["props"] == {"placeholder": "-"}
-    assert "data" not in _recorded("dataframe", data_block=lambda: None)
-    assert "data" not in _recorded("dataframe", data_block=None)
+    assert "data" not in _recorded("dataframe", data_builder=lambda: None)
+    assert "data" not in _recorded("dataframe", data_builder=None)
 
 
-def test_data_block_is_built_only_while_recording(
+def test_data_builder_runs_only_while_recording(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A browser session never calls the builder, so nothing it reads costs it."""
@@ -166,22 +166,22 @@ def test_data_block_is_built_only_while_recording(
         return {"complete": True}
 
     monkeypatch.setattr(agent_spec, "is_recording", lambda: False)
-    assert agent_spec.element("dataframe", data_block=build) is None
+    assert agent_spec.element("dataframe", data_builder=build) is None
     assert calls == []
 
     monkeypatch.setattr(agent_spec, "is_recording", lambda: True)
-    agent_spec.element("dataframe", data_block=build)
+    agent_spec.element("dataframe", data_builder=build)
     assert calls == ["built"]
 
 
-def test_a_data_block_that_raises_reports_no_data() -> None:
+def test_a_data_builder_that_raises_reports_no_data() -> None:
     """A bug in a builder becomes no `data`, logged at debug, never a failed command."""
 
     def broken() -> dict[str, Any]:
         raise ValueError("boom")
 
     with patch.object(agent_spec, "_LOGGER") as logger:
-        decoded = _recorded("dataframe", data_block=broken, placeholder="-")
+        decoded = _recorded("dataframe", data_builder=broken, placeholder="-")
 
     assert "data" not in decoded
     assert decoded["props"] == {"placeholder": "-"}

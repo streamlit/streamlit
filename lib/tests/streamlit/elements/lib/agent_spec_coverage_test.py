@@ -64,7 +64,7 @@ _RESERVED_KEYWORDS = frozenset(
         "transparent",
         "clearable",
         "choices",
-        "data_block",
+        "data_builder",
     }
 )
 

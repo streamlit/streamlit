@@ -420,7 +420,7 @@ class TableMixin:
             # not command parameters.
             agent_props=agent_spec.element(
                 "table",
-                data_block=lambda: agent_data.arrow(
+                data_builder=lambda: agent_data.arrow(
                     proto.arrow_data.data,
                     coordinates=self.dg._get_write_delta_path_str(),
                 ),

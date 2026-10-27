@@ -1320,7 +1320,7 @@ class ArrowMixin:
                 key=proto.id or key,
                 # A lazy table has no `arrow_data`, so nothing is served: its
                 # first chunk, served alone, would pass for the whole table.
-                data_block=(
+                data_builder=(
                     lambda: (
                         _lazy_dataframe_data(proto.lazy_data)
                         if lazy_marshalled

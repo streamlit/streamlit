@@ -683,7 +683,7 @@ class PydeckMixin:
                     # A callback reaches the server too, so it is "rerun".
                     on_select="rerun",
                     alt=pydeck_proto.alt or None,
-                    data_block=lambda: agent_data.raw_spec(pydeck_proto.json),
+                    data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
                 ),
             )
 
@@ -697,7 +697,7 @@ class PydeckMixin:
                 "pydeck_chart",
                 key=key,
                 alt=pydeck_proto.alt or None,
-                data_block=lambda: agent_data.raw_spec(pydeck_proto.json),
+                data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
             ),
         )
 
