@@ -456,11 +456,24 @@ describe("fillDataFramePrintSlot", () => {
       measure
     )
     const table = slot.querySelector("table")
+    const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
     expect(table).not.toBeNull()
-    if (!(table instanceof HTMLTableElement)) {
+    expect(scale).toBeInstanceOf(HTMLElement)
+    if (
+      !(table instanceof HTMLTableElement) ||
+      !(scale instanceof HTMLElement)
+    ) {
       throw new Error("print table missing")
     }
-    vi.spyOn(table, "offsetWidth", "get").mockReturnValue(480)
+    vi.spyOn(table, "offsetWidth", "get").mockImplementation(() => {
+      // The print rule caps the table at the column. The read has to lift
+      // that cap, or a wider layout is stored as the column width.
+      expect(table.style.maxWidth).toBe("none")
+      expect(table.style.width).toBe("max-content")
+      expect(scale.style.maxWidth).toBe("none")
+      expect(scale.style.width).toBe("max-content")
+      return 480
+    })
     vi.spyOn(table.rows[0].cells[0], "offsetWidth", "get").mockReturnValue(480)
 
     const supports = mockCssSupports(false)
@@ -473,6 +486,8 @@ describe("fillDataFramePrintSlot", () => {
       String(80 / 480)
     )
     expect(table.style.tableLayout).toBe("fixed")
+    expect(table.style.maxWidth).toBe("")
+    expect(scale.style.maxWidth).toBe("")
     expect(table.querySelector("col")?.style.width).toBe("100%")
     expect(table.getAttribute("style") ?? "").not.toContain("zoom")
     spy.mockRestore()

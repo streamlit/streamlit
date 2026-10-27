@@ -334,6 +334,10 @@ function applyPrintColumnWidths(
  * and this runs again. The font ratio is already applied by then, so this
  * forces a scale of 1 for the read. Measuring the fitted type would store a
  * width that the stylesheet scales a second time.
+ *
+ * The print rule caps the table at the column. That cap is lifted for this
+ * read. Leaving it on stores the column width, and the font ratio stays too
+ * large when the probe measured the table too narrow.
  */
 export function fitDataFramePrintTable(slot: HTMLElement): void {
   const scale = slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)
@@ -350,9 +354,13 @@ export function fitDataFramePrintTable(slot: HTMLElement): void {
   // Read the column before the unscaled table can stretch the dataframe.
   const available = availablePrintWidth(slot)
   slot.style.setProperty(DATAFRAME_PRINT_SCALE_VAR, "1")
+  // Inline max-width wins over the print rule's `max-width: 100%`, so a
+  // table wider than the column can report that width.
+  scale.style.maxWidth = "none"
+  scale.style.width = "max-content"
+  table.style.maxWidth = "none"
   table.querySelector("colgroup")?.remove()
-  table.style.width =
-    Number.isFinite(recorded) && recorded > 0 ? `${recorded}px` : "max-content"
+  table.style.width = "max-content"
   table.style.tableLayout = "auto"
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
   const laidOut = table.offsetWidth
@@ -374,7 +382,10 @@ export function fitDataFramePrintTable(slot: HTMLElement): void {
   // Drop the measurement overrides. The print rule caps the table width,
   // and percentage columns are applied below when the read succeeded.
   table.style.width = ""
+  table.style.maxWidth = ""
   table.style.tableLayout = ""
+  scale.style.width = ""
+  scale.style.maxWidth = ""
   slot.style.removeProperty(DATAFRAME_PRINT_SCALE_VAR)
   if (width > 0 && (!Number.isFinite(recorded) || width > recorded)) {
     slot.style.setProperty(DATAFRAME_PRINT_WIDTH_VAR, `${width}px`)
