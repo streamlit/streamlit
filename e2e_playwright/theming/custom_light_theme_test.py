@@ -16,7 +16,7 @@
 import os
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -28,18 +28,15 @@ from e2e_playwright.shared.app_utils import expect_font, expect_no_skeletons
 from e2e_playwright.shared.dataframe_utils import expect_canvas_to_be_stable
 
 
-def _dataframe_canvas_has_painted_content(app: Page) -> bool:
-    """Return True when the first dataframe canvas has non-blank pixels."""
+def _dataframe_canvas_has_painted_content(dataframe: Locator) -> bool:
+    """Return True when the dataframe canvas has non-blank pixels."""
     return bool(
-        app.evaluate(
-            """() => {
-                const canvas = document.querySelector(
-                    '[data-testid="stDataFrame"] canvas'
-                );
+        dataframe.locator("canvas").first.evaluate(
+            """(canvas) => {
                 if (!canvas || canvas.width === 0 || canvas.height === 0) {
                     return false;
                 }
-                const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                const ctx = canvas.getContext("2d");
                 if (!ctx) {
                     return false;
                 }
@@ -71,7 +68,9 @@ def _wait_for_theme_app_ready(app: Page) -> None:
     dataframe = app.get_by_test_id("stDataFrame").first
     expect(dataframe).to_be_visible()
     expect_canvas_to_be_stable(dataframe)
-    wait_until(app, lambda: _dataframe_canvas_has_painted_content(app), timeout=10000)
+    wait_until(
+        app, lambda: _dataframe_canvas_has_painted_content(dataframe), timeout=10000
+    )
 
 
 @pytest.fixture(scope="module")
@@ -147,7 +146,7 @@ def test_auto_theme_with_light_preference(
 @pytest.mark.usefixtures("configure_custom_light_theme")
 def test_custom_light_theme(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the custom light theme is rendered correctly."""
-    _wait_for_theme_app_ready(app)
+    expect_no_skeletons(app, timeout=25000)
 
     # Change the theme to explicitly be Custom Light Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -166,7 +165,7 @@ def test_custom_dark_theme_with_dark_configs(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the custom dark theme is rendered correctly with expected dark configs."""
-    _wait_for_theme_app_ready(app)
+    expect_no_skeletons(app, timeout=25000)
 
     # Switch to Custom Dark Theme via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -187,7 +186,7 @@ def test_theme_preference_persists_on_reload(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom theme selection persists across full page reload (issue #13280)."""
-    _wait_for_theme_app_ready(app)
+    expect_no_skeletons(app, timeout=25000)
 
     # Select "Dark" theme explicitly via the main menu:
     app.get_by_test_id("stMainMenu").click()
@@ -207,17 +206,20 @@ def test_theme_preference_persists_on_reload(
     app.reload()
 
     wait_for_app_loaded(app)
-    _wait_for_theme_app_ready(app)
+    expect_no_skeletons(app, timeout=25000)
 
-    # Snapshot before opening the menu so focus/hover from the menu cannot
-    # affect the full-page screenshot. Slightly looser threshold than the
-    # pre-reload snapshot: after reload, webkit/firefox occasionally shift
-    # help-icon anti-aliasing by ~1px (~290 pixels / 0.03%), which is just
-    # over the 0.0003 budget used elsewhere in this file.
-    assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0005)
-
-    # Verify the stored theme preference itself persisted in the menu.
+    # Verify the stored theme preference itself persisted in the menu, then
+    # close it before snapshotting so the header focus state matches the
+    # committed baselines (and the pre-reload shot above).
     app.get_by_test_id("stMainMenu").click()
     menu = app.get_by_role("menu", name="Main menu")
     dark_radio = menu.get_by_role("menuitemradio", name="Dark")
     expect(dark_radio).to_have_attribute("aria-checked", "true")
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMainMenuPopover")).not_to_be_visible()
+
+    _wait_for_theme_app_ready(app)
+    # Slightly looser threshold than other shots in this file: after reload,
+    # webkit/firefox occasionally shift help-icon anti-aliasing by ~1px (~290
+    # mismatched pixels under pixelmatch), just over the 0.0003 budget (~276).
+    assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0005)
