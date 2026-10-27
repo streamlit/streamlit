@@ -1048,7 +1048,7 @@ back to a browser rather than mistake it for missing content:
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the preview is the first `server.agentPreviewRows` rows of the loaded chunk.                                            |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable: too_large_to_serve` instead of a `url`. See [Limits and configuration](#limits-and-configuration).              |
 | Chart data that is not one table                                           | A layered or concatenated Altair chart over several dataframes, or a Vega-Lite specification that loads data from a URL, reports its `spec` with `data.unavailable` (`multiple_datasets` or `external_url`) and serves none of the data, rather than part of it claimed as `complete`. |
-| Sources Streamlit collects only part of                                    | A table, chart, or map over a Snowpark, PySpark, Dask, or Modin DataFrame, a DuckDB relation, a database cursor, or another unevaluated source gets only its first 10,000 rows, or 100 in `st.table`, in the browser and in `data` alike. `data` reports those rows as the whole source: its `row_count`, `complete`, and `url` cover only them, and the "Showing only … rows" caption, a separate element, is the only sign of the cut. Reporting the cut in `data` is a follow-up. |
+| Sources Streamlit collects only part of                                    | A table, chart, or map over a Snowpark, PySpark, Dask, or Modin DataFrame, a DuckDB relation, a database cursor, or another unevaluated source gets only its first 10,000 rows, or 100 in `st.table`, in the browser and in `data` alike. `data` reports those rows as the whole source: its `row_count`, `complete`, and `url` cover only them, and the "Showing only … rows" caption, a separate element, is the only sign of the cut. Lazily loading these sources, and reporting the cut where they still get one, are follow-ups. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
@@ -1415,7 +1415,12 @@ Smaller potential follow-ups and alternatives considered:
   as media rather than as the custom component it renders through; letting `get_data`
   read the files of the last few results rather than only the latest; an HTTP route for
   `get_data`, for HTTP clients without an Arrow reader that need rows beyond the
-  preview; and keeping only summaries in the session's message buffer.
+  preview; keeping only summaries in the session's message buffer; and lazily loading
+  unevaluated sources in `st.dataframe` instead of collecting their first 10,000 rows
+  ([#17707](https://github.com/streamlit/streamlit/issues/17707)), so `data` reports
+  the source's true row count with `unavailable: "lazy_loading"`, as for any lazy table,
+  while `st.table`, charts, and `st.map`, which would still cut the source, report the
+  cut with a new reason such as `truncated_source`.
 - **Sessions:** starting an agent session from a browser session's state, from widget
   values the page carries
   ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also
