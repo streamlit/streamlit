@@ -578,9 +578,8 @@ function formatDurationParts(
   parts: DurationParts
 ): string {
   // Intl.DurationFormat hides zero-valued units by default, so an all-zero
-  // duration (only `seconds: 0`, see toDurationParts) would be an empty
-  // string.
-  const isZeroDuration = parts.seconds === 0
+  // duration would be an empty string.
+  const isZeroDuration = Object.values(parts).every(value => value === 0)
   return getDurationFormatter(
     durationFormatCtor,
     locales,

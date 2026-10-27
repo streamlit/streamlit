@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import (
@@ -321,9 +322,12 @@ def _parse_value(
         # pd.Timedelta(int) would treat the number as nanoseconds, and
         # pd.Timedelta(seconds=float) truncates instead of rounding to the
         # nearest nanosecond (1.005 would become 1.004999999 s). An
-        # out-of-range value raises (OverflowError or OutOfBoundsTimedelta)
-        # instead of returning None, so callers skip the edit rather than
-        # store NaT.
+        # out-of-range or non-finite value raises (OverflowError,
+        # OutOfBoundsTimedelta, or ValueError) instead of returning None, so
+        # callers skip the edit rather than store NaT.
+        if not math.isfinite(value):
+            # pd.Timedelta(nan, unit="s") returns NaT instead of raising.
+            raise ValueError("Duration seconds must be finite.")
         return pd.Timedelta(value, unit="s")
 
     try:
@@ -418,33 +422,35 @@ def _apply_cell_edits(
     for row_id, row_changes in edited_rows.items():
         row_pos = int(row_id)
         for col_name, value in row_changes.items():
-            if col_name == INDEX_IDENTIFIER:
-                # The edited cell is part of the index
-                # TODO(lukasmasuch): To support multi-index in the future:
-                # use a tuple of values here instead of a single value
-                old_idx_value = df.index[row_pos]
-                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
-                df.rename(
-                    index={old_idx_value: new_idx_value},
-                    inplace=True,  # noqa: PD002
-                )
-            else:
-                col_pos = df.columns.get_loc(col_name)
-                try:
+            try:
+                if col_name == INDEX_IDENTIFIER:
+                    # The edited cell is part of the index
+                    # TODO(lukasmasuch): To support multi-index in the future:
+                    # use a tuple of values here instead of a single value
+                    old_idx_value = df.index[row_pos]
+                    new_idx_value = _parse_value(
+                        value, dataframe_schema[INDEX_IDENTIFIER]
+                    )
+                    df.rename(
+                        index={old_idx_value: new_idx_value},
+                        inplace=True,  # noqa: PD002
+                    )
+                else:
+                    col_pos = df.columns.get_loc(col_name)
                     df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
                         value, dataframe_schema[col_name]
                     )
-                except (TypeError, ValueError, OverflowError) as ex:
-                    # Widget state comes from the client. Skip edits that
-                    # pandas rejects (for example, a duration finer than the
-                    # column unit or out of range) instead of crashing the run.
-                    _LOGGER.warning(
-                        "Failed to apply edit %r to row %s, column %s. Edit ignored.",
-                        value,
-                        row_pos,
-                        col_name,
-                        exc_info=ex,
-                    )
+            except (TypeError, ValueError, OverflowError) as ex:
+                # Widget state comes from the client. Skip edits that pandas
+                # rejects (for example, a duration finer than the column unit
+                # or out of range) instead of crashing the run.
+                _LOGGER.warning(
+                    "Failed to apply edit %r to row %s, column %s. Edit ignored.",
+                    value,
+                    row_pos,
+                    col_name,
+                    exc_info=ex,
+                )
 
 
 def _parse_added_row(
@@ -495,7 +501,7 @@ def _assign_row_values(
                 category=FutureWarning,
             )
             df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
-    except (TypeError, ValueError) as ex:
+    except (TypeError, ValueError, OverflowError) as ex:
         _LOGGER.warning(
             "Failed to add row. Row addition skipped.",
             exc_info=ex,

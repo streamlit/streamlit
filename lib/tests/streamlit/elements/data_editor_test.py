@@ -249,7 +249,9 @@ class DataEditorUtilTest(unittest.TestCase):
         result = _parse_value(value, column_data_kind)
         assert result == expected
 
-    @parameterized.expand([(float("inf"),), (float("-inf"),), (1e300,)])
+    @parameterized.expand(
+        [(float("inf"),), (float("-inf"),), (float("nan"),), (1e300,)]
+    )
     def test_parse_value_raises_for_out_of_range_timedelta_seconds(self, value: float):
         """An out-of-range duration raises so callers skip it instead of storing NaT."""
         with pytest.raises((OverflowError, ValueError)):
@@ -433,6 +435,8 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[0, 0] == pd.Timedelta(seconds=90)
         # pandas 2+ may ignore 90.5s; older pandas may accept or upcast it.
         _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
+        # Either way, the cell is never cleared.
+        assert not pd.isna(df.iat[0, 0])
 
     def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
         """A finer-than-dtype duration row add must not crash the app."""
@@ -446,6 +450,8 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[1, 0] == pd.Timedelta(seconds=90)
         # pandas 2+ may skip 90.5s; older pandas may accept or upcast it.
         _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
+        # Either way, no added value is stored as NaT.
+        assert not df["duration"].isna().any()
 
     @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
     def test_apply_cell_edits_fractional_seconds_on_timedelta(self, dtype: str):
@@ -477,10 +483,29 @@ class DataEditorUtilTest(unittest.TestCase):
 
         _apply_cell_edits(df, {0: {"duration": 1e300}}, dataframe_schema)
         assert df.iat[0, 0] == pd.Timedelta(seconds=5)
+        _apply_cell_edits(df, {0: {"duration": float("nan")}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=5)
 
         # A real clear still stores a missing value.
         _apply_cell_edits(df, {0: {"duration": None}}, dataframe_schema)
         assert pd.isna(df.iat[0, 0])
+
+    def test_apply_cell_edits_skips_index_edit_that_fails_to_parse(self):
+        """An index edit whose value cannot be parsed is skipped, not raised."""
+        df = pd.DataFrame(
+            {"col": [1, 2]},
+            index=pd.TimedeltaIndex([pd.Timedelta(seconds=1), pd.Timedelta(seconds=2)]),
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(
+            df,
+            {0: {INDEX_IDENTIFIER: 1e300, "col": 10}},
+            dataframe_schema,
+        )
+        assert df.index[0] == pd.Timedelta(seconds=1)
+        # Other edits in the same row still apply.
+        assert df.iat[0, 0] == 10
 
     def test_apply_row_additions_out_of_range_timedelta_skips_row(self):
         """An added row with an out-of-range duration is skipped, later rows are kept."""
