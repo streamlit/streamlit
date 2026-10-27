@@ -59,8 +59,8 @@ def app_server_extra_args() -> list[str]:
 
 @pytest.fixture
 def app_page(app_target: AppTarget) -> Page:
-    """Return the page after the app has loaded, so its context holds the
-    host's login cookie.
+    """Return the page after the app has loaded, so its context holds any
+    login cookie the host sets.
     """
     return app_target.page
 
@@ -76,8 +76,8 @@ def _interact(
     *,
     headers: dict[str, str] | None = None,
 ) -> APIResponse:
-    # Following a redirect would resend the POST as a GET without its body,
-    # which the route refuses with a 405 that hides the redirect.
+    # A login redirect can turn the POST into a GET without its body, which
+    # the route refuses with a 405 that hides the redirect.
     return page.request.post(
         _interact_url(app_base_url), data=body, headers=headers, max_redirects=0
     )
