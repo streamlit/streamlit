@@ -200,8 +200,9 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     try:
         rows = _arrow_rows(table, limit)
     except Exception:
-        # A column pyarrow cannot convert to Python values. The schema and
-        # size still describe the table, and the empty preview is incomplete.
+        # A column neither Python nor Arrow's text cast can represent, such as
+        # a timestamp in a time zone neither knows. The schema and size still
+        # describe the table, and the empty preview is incomplete.
         _LOGGER.debug("Could not preview an Arrow payload.", exc_info=True)
         rows = None
 
@@ -370,6 +371,11 @@ def _arrow_rows(table: pa.Table, limit: int) -> list[list[Any]]:
 
     By position rather than by name, so a table with two columns of the same
     name keeps both.
+
+    Cells are read from Arrow and encoded by ``json_encoding``, the encoding
+    widget values and props use, rather than through a pandas DataFrame: pandas
+    turns an integer column with nulls into floats, which loses digits past
+    2**53, and its JSON writer drops a timestamp's offset and writes out bytes.
     """
     if table.num_columns == 0:
         # Zipping no columns yields no rows, but the table still has them.
@@ -395,7 +401,8 @@ def _cell_values(column: pa.ChunkedArray) -> list[Any]:
     """A column's cells as Python values.
 
     Periods and intervals are read through pandas, so they encode as the text
-    the browser shows, such as ``2024-01`` and ``(0, 1]``.
+    the browser shows, such as ``2024-01`` and ``(0, 1]``. A column whose
+    values Python cannot hold reads as Arrow's text for them.
     """
     if (
         getattr(column.type, "extension_name", None)
@@ -404,4 +411,13 @@ def _cell_values(column: pa.ChunkedArray) -> list[Any]:
         # Through the pandas dtype rather than `column.to_pandas()`, which
         # returns the storage on older pyarrow.
         return list(column.type.to_pandas_dtype().__from_arrow__(column))
-    return cast("list[Any]", column.to_pylist())
+    try:
+        return cast("list[Any]", column.to_pylist())
+    except Exception:
+        # Values Python cannot hold, such as a date past year 9999 or a
+        # duration beyond a C int. Arrow's text for them still reads
+        # correctly, where null would claim the cells are missing, and only
+        # this column loses its encoding instead of every column its preview.
+        import pyarrow as pa
+
+        return cast("list[Any]", column.cast(pa.string()).to_pylist())

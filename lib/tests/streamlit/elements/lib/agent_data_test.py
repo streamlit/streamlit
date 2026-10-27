@@ -373,6 +373,29 @@ def test_preview_cells_read_periods_and_intervals_as_the_browser_shows_them() ->
     ]
 
 
+def test_preview_cells_python_cannot_hold_read_as_arrows_text() -> None:
+    """A column Python cannot convert previews as Arrow's text for its values.
+
+    The other columns keep their encoding, and the preview stays complete.
+    """
+    table = pa.table(
+        {
+            "n": pa.array([2**53 + 1, None], pa.int64()),
+            # Day 2932897 is 10000-01-01, a year past what Python's `date` holds.
+            "far": pa.array([2932897, None], pa.date32()),
+        }
+    )
+
+    summary = agent_data.summarize_arrow(_arrow(table))
+
+    assert summary is not None
+    assert summary["complete"] is True
+    assert summary["preview"]["rows"] == [
+        [9007199254740993, "10000-01-01"],
+        [None, None],
+    ]
+
+
 def test_summarize_arrow_previews_the_rows_of_a_table_without_columns() -> None:
     """A table with rows and no columns previews one empty row per row it counts.
 
@@ -410,12 +433,14 @@ def test_summarize_arrow_previews_no_rows_for_a_limit_of_zero_or_less(
 
 
 def test_summarize_arrow_keeps_the_schema_when_its_preview_fails() -> None:
-    """A column pyarrow cannot convert leaves the schema and size, marked incomplete."""
-    with patch.object(agent_data, "_arrow_rows", side_effect=NotImplementedError):
-        summary = agent_data.summarize_arrow(_arrow(pa.table({"n": [1, 2]})))
+    """A column not even Arrow can cast to text leaves the schema and size, incomplete."""
+    unknown_zone = pa.timestamp("s", tz="Not/AZone")
+    table = pa.table({"at": pa.array([0, None], unknown_zone)})
+
+    summary = agent_data.summarize_arrow(_arrow(table))
 
     assert summary is not None
-    assert summary["columns"] == [{"name": "n", "type": "int64"}]
+    assert summary["columns"] == [{"name": "at", "type": str(unknown_zone)}]
     assert summary["row_count"] == 2
     assert summary["complete"] is False
     assert summary["preview"]["rows"] == []
