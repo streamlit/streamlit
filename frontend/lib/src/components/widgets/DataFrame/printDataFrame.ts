@@ -62,13 +62,23 @@ interface DataFramePrintMeasureTheme {
 }
 
 /**
- * Largest frame that is expanded into a table during `beforeprint`.
+ * Most cells one print expands into tables.
  *
  * The handler runs on the main thread before the print preview. Past this
- * many cells the table's DOM and the browser's print layout stall the tab,
- * so the on-screen canvas is left in place.
+ * many cells the table's DOM and the browser's print layout stall the tab.
+ * Every dataframe on the page shares the budget. A frame that cannot fit one
+ * more row keeps the on-screen canvas. A wide frame that can fit a shorter
+ * prefix prints that prefix instead.
  */
 export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
+
+/**
+ * Most rows one dataframe expands into a print table.
+ *
+ * A longer frame prints this prefix and a note that further rows were left
+ * out. The cell budget can stop the prefix sooner.
+ */
+export const DATAFRAME_PRINT_ROW_LIMIT = 1_000
 
 /**
  * Most images one print table will request.
@@ -169,8 +179,9 @@ export function isHiddenFromPrint(element: HTMLElement): boolean {
  * The on-screen grid is a canvas of the viewport, so columns that sit past
  * the scroll edge are never painted. Printing that canvas cuts them off.
  * This table is the whole frame when every row is already loaded and the
- * frame is small enough to lay out during `beforeprint`. Print CSS scales it
- * down to the page, and a PDF viewer can zoom back in.
+ * frame fits the row cap and the page's cell budget. A longer frame prints
+ * the first rows that fit, then a note. Print CSS scales the table down to
+ * the page, and a PDF viewer can zoom back in.
  *
  * The width comes from an off-screen copy of the table. `beforeprint` still
  * uses screen media, so the print font and padding are not applied to the
@@ -195,19 +206,23 @@ export function fillDataFramePrintSlot(
     return
   }
 
-  const cellCount = numRows * printable.length
+  const columnCount = printable.length
   const cellLimit = budget?.remaining ?? DATAFRAME_PRINT_CELL_LIMIT
-  if (cellCount > cellLimit) {
-    // A frame past the per-page cap is too large on its own. A smaller
-    // frame hits this only after earlier tables have used the shared budget.
-    setPrintNote(
-      slot,
-      cellCount > DATAFRAME_PRINT_CELL_LIMIT
-        ? "Only the visible part of this table is printed because it is too large to expand."
-        : "Only the visible part of this table is printed because this page already expanded too many cells."
-    )
+  // The row cap is the product limit. The cell budget can stop earlier when
+  // the table is wide or earlier frames have already spent the page.
+  const rowsToPrint = Math.min(
+    numRows,
+    DATAFRAME_PRINT_ROW_LIMIT,
+    Math.floor(cellLimit / columnCount)
+  )
+  if (rowsToPrint <= 0) {
+    // Not one row fits. Keep the canvas. A full page budget means this
+    // frame is too large on its own. A smaller budget means earlier tables
+    // already spent it.
+    setPrintNote(slot, visiblePartNote(cellLimit))
     return
   }
+  const cellCount = rowsToPrint * columnCount
   if (budget) {
     budget.remaining -= cellCount
   }
@@ -215,7 +230,7 @@ export function fillDataFramePrintSlot(
   const headers = printable.map(({ column }) => printColumnHeader(column))
   const rows: PrintCellContent[][] = []
   let imageCount = 0
-  for (let row = 0; row < numRows; row++) {
+  for (let row = 0; row < rowsToPrint; row++) {
     const cells: PrintCellContent[] = []
     for (const { index } of printable) {
       const content = printCellContent(getCellContent([index, row]))
@@ -266,6 +281,10 @@ export function fillDataFramePrintSlot(
   scale.className = DATAFRAME_PRINT_SCALE_CLASS
   scale.append(table)
   slot.replaceChildren(scale)
+  // The note stays outside the zoomed table so it prints at the body size.
+  if (numRows > rowsToPrint) {
+    slot.append(printNote(rowCapNote(rowsToPrint, cellLimit)))
+  }
   if (width > 0) {
     applyPrintZoom(scale, available, width)
   }
@@ -665,9 +684,30 @@ function renderPrintTable(
   return table
 }
 
-function setPrintNote(slot: HTMLElement, message: string): void {
+/** The canvas stays, and this says why the table was not expanded. */
+function visiblePartNote(cellLimit: number): string {
+  return cellLimit < DATAFRAME_PRINT_CELL_LIMIT
+    ? "Only the visible part of this table is printed because this page already expanded too many cells."
+    : "Only the visible part of this table is printed because it is too large to expand."
+}
+
+/** Shown under a printed prefix. The row cap and the cell budget use different reasons. */
+function rowCapNote(rowsToPrint: number, cellLimit: number): string {
+  if (rowsToPrint === DATAFRAME_PRINT_ROW_LIMIT) {
+    return `Further rows were not printed. This table is capped at ${DATAFRAME_PRINT_ROW_LIMIT.toLocaleString("en-US")} rows.`
+  }
+  return cellLimit < DATAFRAME_PRINT_CELL_LIMIT
+    ? "Further rows were not printed because this page already expanded too many cells."
+    : "Further rows were not printed because this table is too large to print in full."
+}
+
+function printNote(message: string): HTMLParagraphElement {
   const note = document.createElement("p")
   note.className = DATAFRAME_PRINT_NOTE_CLASS
   note.textContent = message
-  slot.replaceChildren(note)
+  return note
+}
+
+function setPrintNote(slot: HTMLElement, message: string): void {
+  slot.replaceChildren(printNote(message))
 }

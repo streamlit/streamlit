@@ -30,6 +30,7 @@ import {
   clearDataFramePrintSlot,
   DATAFRAME_PRINT_CELL_LIMIT,
   DATAFRAME_PRINT_IMAGE_LIMIT,
+  DATAFRAME_PRINT_ROW_LIMIT,
   dataFramePrintBudget,
   type DataFramePrintMeasure,
   fillDataFramePrintSlot,
@@ -171,17 +172,89 @@ describe("fillDataFramePrintSlot", () => {
     expect(slot.textContent).not.toContain("on-screen grid")
   })
 
-  it("keeps the canvas when the frame is too large to expand", () => {
+  it("keeps the canvas when one row does not fit in the cell budget", () => {
     fillDataFramePrintSlot(
       slot,
-      [column("Name")],
-      DATAFRAME_PRINT_CELL_LIMIT + 1,
+      Array.from({ length: DATAFRAME_PRINT_CELL_LIMIT + 1 }, () =>
+        column("Name")
+      ),
+      1,
       () => textCell("Ada"),
       measure
     )
 
     expect(slot.querySelector("table")).toBeNull()
-    expect(slot.textContent).toContain("too large")
+    expect(slot.textContent).toContain(
+      "Only the visible part of this table is printed because it is too large to expand."
+    )
+    expect(slot.textContent).not.toContain("Further rows")
+  })
+
+  it("prints the first 1000 rows and a note when the frame is longer", () => {
+    const budget = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      DATAFRAME_PRINT_ROW_LIMIT + 1,
+      ([, row]) => textCell(`row-${row}`),
+      measure,
+      budget
+    )
+
+    const bodyRows = slot.querySelectorAll("tbody tr")
+    expect(bodyRows).toHaveLength(DATAFRAME_PRINT_ROW_LIMIT)
+    expect(bodyRows[DATAFRAME_PRINT_ROW_LIMIT - 1]).toHaveTextContent(
+      `row-${DATAFRAME_PRINT_ROW_LIMIT - 1}`
+    )
+    expect(slot.textContent).not.toContain(`row-${DATAFRAME_PRINT_ROW_LIMIT}`)
+    const note = slot.querySelector("p")
+    expect(note).toHaveClass(DATAFRAME_PRINT_NOTE_CLASS)
+    expect(note).toHaveTextContent(
+      "Further rows were not printed. This table is capped at 1,000 rows."
+    )
+    expect(
+      slot.querySelector(`.${DATAFRAME_PRINT_SCALE_CLASS}`)?.nextElementSibling
+    ).toBe(note)
+    expect(budget.remaining).toBe(
+      DATAFRAME_PRINT_CELL_LIMIT - DATAFRAME_PRINT_ROW_LIMIT
+    )
+  })
+
+  it("prints a shorter prefix when the page cell budget runs out", () => {
+    const budget = { remaining: 3 }
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      5,
+      ([, row]) => textCell(`row-${row}`),
+      measure,
+      budget
+    )
+
+    expect(slot.querySelectorAll("tbody tr")).toHaveLength(3)
+    expect(slot.textContent).toContain("row-2")
+    expect(slot.textContent).not.toContain("row-3")
+    expect(slot.querySelector("p")).toHaveTextContent(
+      "Further rows were not printed because this page already expanded too many cells."
+    )
+    expect(slot.textContent).not.toContain("visible part")
+    expect(budget.remaining).toBe(0)
+  })
+
+  it("does not cap a table that fits the row limit and the cell budget", () => {
+    const budget = { remaining: 10 }
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      3,
+      ([, row]) => textCell(`row-${row}`),
+      measure,
+      budget
+    )
+
+    expect(slot.querySelectorAll("tbody tr")).toHaveLength(3)
+    expect(slot.querySelector("p")).toBeNull()
+    expect(budget.remaining).toBe(7)
   })
 
   it("shares one print budget across frames and gives it back if a row is loading", () => {

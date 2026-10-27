@@ -965,8 +965,9 @@ function DataFrame({
 
   // The canvas grid only paints the viewport. Before the browser snapshots
   // the page, replace it with a table of the loaded cells so print can scale
-  // the frame onto the page. Frames that are still loading or too large to
-  // lay out here keep the canvas.
+  // the frame onto the page. A frame prints at most 1,000 rows. Frames that
+  // are still loading, have too many images, or cannot fit a single row
+  // keep the canvas.
   const theme = useEmotionTheme()
   const printMeasure = useMemo(
     () => buildDataFramePrintMeasure(theme),

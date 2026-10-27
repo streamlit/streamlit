@@ -140,6 +140,11 @@ export const StyledResizableContainer =
         [`& .${DATAFRAME_PRINT_NOTE_CLASS}`]: {
           margin: 0,
         },
+        // A capped table keeps this note below the zoomed grid, at body size.
+        [`& .${DATAFRAME_PRINT_SCALE_CLASS} + .${DATAFRAME_PRINT_NOTE_CLASS}`]:
+          {
+            marginTop: theme.spacing.sm,
+          },
         // The canvas only painted the on-screen viewport. The print table
         // is the full frame, so the canvas would clip columns beside it.
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stDataFrameResizable, &:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stElementToolbar`]:
