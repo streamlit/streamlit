@@ -153,8 +153,8 @@ def metric_card(metric_name: str):
 
 Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
 behind a widget interaction instead, where the fragment reruns sequentially.
-A parallel fragment cannot write to containers created outside it, including
-`st.sidebar` and `st.bottom`; keep those writes inside the fragment body.
+A parallel fragment cannot write to `st.sidebar`, `st.bottom`, or other
+containers created outside it, even from inside the fragment function.
 
 ### Data Loading with Caching
 
