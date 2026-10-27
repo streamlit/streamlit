@@ -902,10 +902,22 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             )
         user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
 
-        # Build the actual caller's rights token.
-        params["token"] = f"{login_token}.{user_token}"
+        params["token"] = cls._build_callers_rights_token(login_token, user_token)
 
         return params
+
+    @staticmethod
+    def _build_callers_rights_token(login_token: str, user_token: str) -> str:
+        """Returns the OAuth token that authenticates as the calling user.
+
+        Snowpark Container Services mounts a JWT service token, and its caller's
+        rights login expects ``<service token>.<user token>``. Snowflake's serverless
+        compute mounts an opaque service token (no dots) instead, and its user token
+        header is already a complete caller's rights token, so it is used alone.
+        """
+        if "." in login_token.strip():
+            return f"{login_token}.{user_token}"
+        return user_token
 
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]

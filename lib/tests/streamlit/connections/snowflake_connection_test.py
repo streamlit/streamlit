@@ -530,7 +530,7 @@ class TestSnowflakeCallersRightsConnection:
         def fake_getenv(key: str) -> str:
             return fake_env_values.get(key)
 
-        fake_file_token = "ondisk_secret"
+        fake_file_token = "ondisk.service.jwt"
         fake_header_token = "header_secret"
         fake_headers = {SNOWPARK_USER_TOKEN_HEADER_NAME: fake_header_token}
 
@@ -554,7 +554,7 @@ class TestSnowflakeCallersRightsConnection:
             "host": "account.snowf.com",
             "database": "my_database",
             "schema": "streamlit_schema",
-            "token": "ondisk_secret.header_secret",
+            "token": "ondisk.service.jwt.header_secret",
         }
 
     @pytest.mark.require_integration
@@ -721,6 +721,26 @@ class TestSnowflakeCallersRightsConnectionUnit:
             str(token_path),
         ):
             assert SnowflakeCallersRightsConnection._read_token_file() == "login-token"
+
+    @pytest.mark.parametrize(
+        ("login_token", "expected"),
+        [
+            # Snowpark Container Services: a JWT service token is combined with the
+            # user token.
+            ("service.jwt.token", "service.jwt.token.user-token"),
+            # Serverless: an opaque service token means the user token is complete.
+            ("opaque-service-token", "user-token"),
+            ("opaque-service-token\n", "user-token"),
+        ],
+    )
+    def test_build_callers_rights_token(self, login_token: str, expected: str) -> None:
+        """The caller's rights token matches the service token's runtime."""
+        assert (
+            SnowflakeCallersRightsConnection._build_callers_rights_token(
+                login_token, "user-token"
+            )
+            == expected
+        )
 
     def test_connect_merges_generated_params_with_kwargs(self) -> None:
         """``_connect`` sets qmark paramstyle and lets kwargs override generated params."""
