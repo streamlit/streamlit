@@ -597,11 +597,18 @@ would add configuration without reducing exposure: anyone who can call `interact
 HTTP can wrap it in MCP themselves, which is the workaround this replaces. One switch
 also keeps the parent spec's path to on-by-default a single decision.
 
-**The snapshot as text, not also as `structuredContent`.** Every client reads text. A
-client that shows both puts the snapshot in the model's context twice, doubling the
-cost of every result. `structuredContent` pays off with an
-`outputSchema` a client validates against, and the snapshot's element tree is
-deliberately an open object, so there is little to validate.
+**Results as text, not also as `structuredContent`.** Every client reads text, and MCP
+says a tool that returns `structuredContent` SHOULD repeat it as JSON text for older
+clients, so it would add a second copy rather than replace the text. A client that
+passes both to the model pays for every result twice. The model reads JSON in a text
+block just as well, so only code that consumes results gains, mostly through an
+`outputSchema` it validates against. `interact` has little to validate: the snapshot's
+element tree is deliberately an open object, and a call returns a snapshot, a
+`wait_timed_out` document, or an error body. `get_data` has a fixed page shape a schema
+could check, which would help agent frameworks that turn `outputSchema` into typed
+results, but a full page sent twice is about 80,000 characters, past the 50,000 at which
+Claude Code moves a result into a file if it counts both copies. Adding them to
+`get_data` later changes nothing a client that reads text sees.
 
 **`session_id` as an argument, not the MCP session.** Tying the app session to MCP's
 `Mcp-Session-Id` would spare the model from carrying `session_id`, but it would break
@@ -643,7 +650,7 @@ exactly as the result shows it.
   a long run, logging, `listChanged`, sampling, and elicitation. A slow run returns
   `wait_timed_out`, as over HTTP.
 - **MCP resources and prompts.**
-- **More from `get_data`:** CSV output and choosing columns. Queries over a table on the
+- **More from `get_data`:** CSV output, choosing columns, and `structuredContent` with an `outputSchema` (see [Other decisions](#other-decisions)). Queries over a table on the
   server, files from older results, and an HTTP route for `get_data` are already among
   the parent spec's smaller follow-ups.
 - **A stdio transport or a bridge package.**
