@@ -43,5 +43,8 @@ describe("index.html", () => {
     // Spelled out, since many HTML-to-text extractors drop link targets.
     expect(text).toContain(AGENT_API_DESCRIPTION)
     expect(noscript?.innerHTML).toContain(`href="./${AGENT_API_DESCRIPTION}"`)
+    // The one operation is named too, so a reader can start without first
+    // fetching the description.
+    expect(text).toContain("POST _stcore/agent/interact")
   })
 })
