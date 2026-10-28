@@ -236,7 +236,7 @@ The agent API drives the app over HTTP without a browser. It returns the finishe
    ```bash
    streamlit run [path/to/app.py] --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
    ```
-   Pass these flags on the command line; don't add `enableAgentApi` to `.streamlit/config.toml`, where it would turn the API on wherever the app is deployed. If the app's config sets `server.baseUrlPath`, `server.allowedHosts`, or `server.fileWatcherType = "none"`, add the overrides from `references/testing.md`. Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
+   Pass these flags on the command line; don't add `enableAgentApi` to `.streamlit/config.toml`, where it would turn the API on wherever the app is deployed. Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
 2. **Load** the app and check that `status` is `"ready"`:
    ```bash
    curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
