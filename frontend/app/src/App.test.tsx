@@ -4181,6 +4181,88 @@ describe("App", () => {
         expect(getApp().state.scriptRunFinishedFragmentIds).toEqual(["frag_a"])
       })
 
+      it("keeps a dropped nested fragment's content until its own rerun cleans it up", async () => {
+        renderApp(getProps())
+        const sendBlock = (fragmentId: string, deltaPath: number[]): void =>
+          sendForwardMessage(
+            "delta",
+            {
+              type: "addBlock",
+              addBlock: { vertical: {}, allowEmpty: true },
+              fragmentId,
+            },
+            { deltaPath, activeScriptHash: "page_script_hash" }
+          )
+        const sendText = (
+          body: string,
+          fragmentId: string,
+          deltaPath: number[]
+        ): void =>
+          sendForwardMessage(
+            "delta",
+            {
+              type: "newElement",
+              newElement: { type: "text", text: { body, help: "" } },
+              fragmentId,
+            },
+            { deltaPath, activeScriptHash: "page_script_hash" }
+          )
+        const finishFragmentRun = (
+          scriptRunId: string,
+          fragmentIdsThisRun: string[],
+          droppedFragmentIds: string[] = []
+        ): void =>
+          sendForwardMessage(
+            "scriptFinished",
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+            { scriptRunId, fragmentIdsThisRun, droppedFragmentIds }
+          )
+
+        // Parent fragment P renders nested fragment N and a sibling.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          scriptRunId: "run_1",
+          fragmentIdsThisRun: ["frag_p"],
+        })
+        sendForwardMessage("navigation", NAVIGATION_JSON)
+        sendBlock("frag_p", [0, 0])
+        sendBlock("frag_n", [0, 0, 0])
+        sendText("N content", "frag_n", [0, 0, 0, 0])
+        sendText("N stale", "frag_n", [0, 0, 0, 1])
+        sendText("P stale", "frag_p", [0, 0, 1])
+        finishFragmentRun("run_1", ["frag_p"])
+
+        // P and N rerun together, and the server drops N's output because N
+        // is about to rerun on its own.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          scriptRunId: "run_2",
+          fragmentIdsThisRun: ["frag_p", "frag_n"],
+        })
+        sendBlock("frag_p", [0, 0])
+        finishFragmentRun("run_2", ["frag_p", "frag_n"], ["frag_n"])
+
+        await waitFor(() => {
+          expect(screen.queryByText("P stale")).not.toBeInTheDocument()
+        })
+        expect(screen.getByText("N content")).toBeVisible()
+        expect(screen.getByText("N stale")).toBeVisible()
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          scriptRunId: "run_3",
+          fragmentIdsThisRun: ["frag_n"],
+        })
+        sendBlock("frag_n", [0, 0, 0])
+        sendText("N content", "frag_n", [0, 0, 0, 0])
+        finishFragmentRun("run_3", ["frag_n"])
+
+        await waitFor(() => {
+          expect(screen.queryByText("N stale")).not.toBeInTheDocument()
+        })
+        expect(screen.getByText("N content")).toBeVisible()
+      })
+
       it("skips cleanup and cache aging when every fragment's output was dropped", async () => {
         const getApp = renderAppWithRef()
         await renderStaleFragments(["frag_a"], [])

@@ -186,6 +186,8 @@ interface FinishedRun {
   scriptRunId: string
   /** Fragment roots selected for the run. Empty means a full-app run. */
   fragmentIds: string[]
+  /** Fragments whose output the server dropped before delivery. */
+  droppedFragmentIds: ReadonlySet<string>
   /**
    * Fragment roots whose stale nodes this finish clears: the run's fragments
    * minus those whose output the server dropped before delivery. Empty means
@@ -2070,6 +2072,7 @@ export class App extends PureComponent<Props, State> {
     return {
       scriptRunId,
       fragmentIds,
+      droppedFragmentIds,
       // An empty list would mean a full-app run, so it must not come from
       // dropping every fragment of a fragment run.
       cleanupFragmentIds:
@@ -2155,7 +2158,8 @@ export class App extends PureComponent<Props, State> {
             // batching cannot retarget it to a later NewSession.
             elements: elements.clearStaleNodes(
               finishedRun.scriptRunId,
-              cleanupFragmentIds
+              cleanupFragmentIds,
+              finishedRun.droppedFragmentIds
             ),
           }),
           () => {
