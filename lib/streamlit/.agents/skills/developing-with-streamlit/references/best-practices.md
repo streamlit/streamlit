@@ -93,7 +93,7 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 ## Custom components
 
-Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Most community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
+When a native Streamlit command covers the behavior, use it instead of a third-party package or a new custom component. Most community packages are not maintained by Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
 
 Common replacements are `@st.fragment(run_every=...)` for `streamlit-autorefresh`, `st.dataframe` or `st.data_editor` for `streamlit-aggrid`, and `st.map` or `st.pydeck_chart` for `streamlit-folium`. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
 

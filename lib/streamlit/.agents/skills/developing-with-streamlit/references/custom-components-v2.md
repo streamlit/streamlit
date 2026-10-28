@@ -5,7 +5,7 @@ Use Streamlit Custom Components v2 (CCv2) when core Streamlit doesn’t have the
 
 ## Prefer a native command first
 
-Stop if a native Streamlit command already covers the behavior; see the mapping in [third-party-components.md](third-party-components.md). Suggest upgrading when the native command is newer than the app's installed Streamlit. Do not build a component to reimplement a native command.
+Before building a component, check the mapping in [third-party-components.md](third-party-components.md) and use the native command if one covers the behavior. If that command is newer than the app's installed Streamlit, suggest upgrading.
 
 Use CCv2 only for UI Streamlit does not provide (for example drag-and-drop or canvas drawing).
 
