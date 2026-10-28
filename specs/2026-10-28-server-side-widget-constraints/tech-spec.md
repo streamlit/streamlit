@@ -175,12 +175,15 @@ class NumberInputSerde:
     data_type: int
     min_value: Number
     max_value: Number
+    required: bool
 
     def validate(
         self, ui_value: Number | None, *, previous: Any = None
     ) -> Violation | None:
         if ui_value is None:
-            return None
+            # A cleared input (an unset value oneof). Only changes reach validate,
+            # so this refuses clearing a filled required widget (item 5).
+            return Violation("empty_required") if self.required else None
         if self.data_type == NumberInputProto.FLOAT and not math.isfinite(ui_value):
             return Violation("malformed")
         return widget_checks.within(ui_value, self.min_value, self.max_value)
@@ -257,12 +260,18 @@ two points:
 
 - **When a run registers a widget,** the widget is added. A run in progress, including
   one later interrupted, already sent that element to the browser.
-- **Where `_remove_stale_widgets` runs,** the set is replaced. This happens in
+- **Where `_remove_stale_widgets` runs,** the set is pruned: it keeps only the IDs that
+  are also in the active set, and it never adds one. This happens in
   `on_script_finished` with `remove_stale_widgets=True`, and uses the same rule that
   scopes states to `fragment_ids_this_run`. After a fragment run, only that fragment's
-  widgets are replaced.
+  widgets are pruned.
+  - Pruning rather than replacing matters on a page transition. There,
+    `script_runner.py` calls `on_script_finished` with IDs taken from the client's
+    `rerun_data.widget_states`, before `on_script_will_rerun` runs the check. Replacing
+    the set with those IDs would let a forged ID into `rendered_ids` just before the
+    check. Only registration adds an ID.
   - When a run's widget list is incomplete (`remove_stale_widgets=False`: the body never
-    ran, or `st.rerun()` interrupted it), the set is not replaced, exactly as states are
+    ran, or `st.rerun()` interrupted it), the set is not pruned, exactly as states are
     not pruned.
 
 Metadata itself stays, because `persist_state` and page-scoped values need it.
@@ -329,7 +338,9 @@ exist only for this purpose. Once every serde has a validator:
   `formatted_options` is read only by the URL membership check in `_seed_widget_from_url`,
   which moves to `validate`. `pills`, `segmented_control`, and `select_slider` already
   send labels over `string_array_value`, and `_auto_correct_url_if_needed` writes a
-  corrected value back with `metadata.serializer`, so no other role is left.
+  corrected value back with `metadata.serializer`, so no other role is left. `st.tabs`
+  also passes `formatted_options`, so `_TabsSerde` gains the tab labels and a `validate`
+  in item 2.
 - **`clearable` stays.** It is not a validation fact. It says what an empty parameter
   means: an empty value, or no value at all.
 
@@ -546,7 +557,9 @@ regression in the unchanged case.
 ## Open questions
 
 1. Should items 3 and 7, the ones with race risk, ship behind a hidden
-   `server.enforceWidgetConstraints` kill switch for one release?
+   `server.enforceWidgetConstraints` kill switch for one release? Item 1 is a candidate
+   too: it adds the unchanged-value comparison and the wire-type check to every rerun of
+   every session, so a false positive there would silently drop legitimate input.
 2. `st.data_editor` has no `set_value` channel for edit state. A refused edit stays in the
    browser's cumulative payload, so every later payload repeats it and is refused too,
    later legal edits included, until the editor remounts. A correct browser can hit this

@@ -76,6 +76,7 @@ browser enforces, what the server does with a client value that violates it as o
 | `pills`, `segmented_control` | `required` in single mode | Cannot deselect | pass: the callback fires with `None` | 5 |
 | `feedback` | Index range, or `""` to clear | Fixed icons; clicking the selected face again sends `""` | deser: reset; a non-numeric value raises | 1, 2 |
 | `menu_button` | `options` | Closed list | done: an unknown option is no click | — |
+| `tabs` | Tab labels | Closed list | late reset: an unknown label reaches `on_change`, then the widget code replaces it with the default | 2 |
 | `checkbox`, `toggle` | Boolean | — | Truthiness of any field: `"false"` becomes `True` | 1 |
 | Buttons, `form_submit_button` | Trigger field | — | Any truthy field fires: `string_value "x"` returns `"x"` and runs `on_click` | 1 |
 

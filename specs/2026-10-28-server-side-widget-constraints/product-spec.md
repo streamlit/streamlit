@@ -113,7 +113,9 @@ own, provided each reports the violation and lets the caller decide."
      it sends nothing.
 3. **One rule set, defined by each widget, with each caller deciding what a violation
    means.** Each widget states what it accepts inside its own implementation, beside how
-   it reads its value (see the [tech spec](tech-spec.md#where-constraints-live-in-each-widgets-serde)).
+   it reads its value. That place is the widget's serde: the per-widget object, such as
+   `NumberInputSerde`, that already holds `serialize` and `deserialize` (see the
+   [tech spec](tech-spec.md#where-constraints-live-in-each-widgets-serde)).
    The check reports a violation; it does not act on it.
    - A browser session drops the value, as in (2).
    - The agent API refuses the whole request with `invalid_value` before anything runs,
@@ -158,6 +160,7 @@ so a correct client never notices it, apart from the cases in
 **Option 4: Raise in the app, or close the connection** (as for a malformed `BackMsg`,
 [#16392](https://github.com/streamlit/streamlit/pull/16392))
 
+- Pros: loud. A forged message never passes unnoticed.
 - Cons: the attacker controls when the error appears. Benign sync races would show users
   errors or disconnect them.
 
@@ -210,7 +213,7 @@ across the plan rather than saved for a final PR.
 | --- | --- | --- | --- | --- | --- |
 | **v1** | | | | | |
 | 1 | **Boundary check and protocol integrity.** Check at the boundary; refuse a wrong wire type or a value the widget cannot read; move the `disabled` decision there. | High: crashes, stuck sessions, both `disabled` holes, a button returning a string | High: replaces `_check_readable`; the shared check exists | M | Low–Med |
-| 2 | **Closed option sets.** `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, `feedback`; `max_selections`; duplicates | High: the most-assumed constraint | Med: deletes `_validate_options` and `max_items`; `max_selections` refused instead of raised | S | Low |
+| 2 | **Closed option sets.** `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, `feedback`, `tabs`; `max_selections`; duplicates | High: the most-assumed constraint | Med: deletes `_validate_options` and `max_items`; `max_selections` refused instead of raised | S | Low |
 | 3 | **Rendered-widget gate.** Values and triggers only for widgets the page renders now | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
 | 4 | **Bounds, shapes, formats, length.** `number_input`, `slider`, `select_slider` and `date_input` ranges, `datetime_input`, `time_input`, `color_picker`, `pagination`, `max_chars` on text and chat inputs | Low–Med: mostly coerced today; reversed and over-long ranges pass | High: silent reset or truncation becomes `invalid_value` naming the bound | S | Low |
 | 5 | **`required`, per field.** A required widget cannot change to empty | Med | High: closes "required not enforced" | S | Low |
