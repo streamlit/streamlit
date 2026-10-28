@@ -106,9 +106,11 @@ which clients keep apart by the name the user gave each server. A successful
 running Streamlit version, the same version the OpenAPI document describes. It reports
 no app title: as the parent spec explains for the snapshot, Streamlit has no reliable
 source for one until authored app titles land in its follow-up #2, after which the
-title can join `serverInfo` ([Follow-ups](#follow-ups)). While the API is off, `initialize` is the `-32600` error
-and returns no `serverInfo`; the disabled discovery document still omits that version,
-as the parent spec requires.
+title can join `serverInfo` ([Follow-ups](#follow-ups)).
+
+While the API is off, `initialize` gets the `400` described in
+[Protocol surface](#protocol-surface) and returns no `serverInfo`. The disabled
+discovery document still omits the Streamlit version, as the parent spec requires.
 
 Which clients can reach which apps:
 
@@ -202,16 +204,18 @@ get_data(session_id, url, offset=0, limit=500)
 ```
 
 `session_id` and `url` are required. Omitting `session_id` does not create a session:
-`get_data` runs no app code, and a create would be a second way to start a run. A
-missing `session_id` or `url` is `invalid_request`, the parent's code for a malformed
-request. An unknown, expired, or identity-mismatched `session_id` is `unknown_session`,
-and that message does not tell the model to omit `session_id` and start one.
+`get_data` runs no app code, and a create would be a second way to start a run. The
+arguments follow `interact`'s request rules: a call without `arguments` is handled as
+`{}`, and a missing `session_id` or `url`, one that is not a string, or an unknown
+field is `invalid_request`, the parent's code for a malformed request. An unknown,
+expired, or identity-mismatched `session_id` is `unknown_session`, and that message
+does not tell the model to omit `session_id` and start one.
 
 Reads a media file the app still stores:
 
 - **Input:** a media-file id, bare or as a result's relative URL. The
-  server never fetches the argument or joins it to a path; **Scope** below says how it
-  reads the id.
+  server never fetches the argument or joins it to a path; **Reading the argument**
+  below says how it reads the id.
 - **`offset` and `limit` apply only to tables.** On every other file the server ignores
   both, including invalid values and the defaults a client sends, so `limit: 0` on an
   image is not an error. On a table, both must be integers, `offset` at least 0 and
@@ -219,24 +223,28 @@ Reads a media file the app still stores:
   negative value, or a `limit` below 1 is `invalid_request`. An `offset` past the last
   row returns an empty page: `columns`, `row_count`, `offset`, `rows: []`, and
   `next_offset: null`.
-- **Tables** are media files with the Arrow stream MIME type,
-  `application/vnd.apache.arrow.stream`, the type the server registers a snapshot
-  `data` object's Arrow with: a dataframe, `st.table`, `st.data_editor`, or a chart
-  that serves Arrow. They come back as JSON rows in the stream's column order, the shape
-  of `data.preview`, with `row_count` and the `next_offset` of the following page,
-  `null` on the last. Cell values use the snapshot's JSON encoding, the parent spec's
-  value table, the same encoding as `data.preview`. The snapshot reads `columns` and the
-  preview from the same stream by position, so a page matches them. The type is the one
-  the server registered, not one guessed from the bytes or an extension, so a dataframe
-  never comes back as base64, and decoding with the snapshot's encoder rather than
-  JSON-encoding Arrow scalars directly keeps pages in step with `data.preview` on dates,
-  NaN, decimals, and `bytes`. Every other file comes back as **Other files** below
-  describes, including one of that type that does not decode as an Arrow stream, such
-  as a file an app offers through `st.download_button` with that type. The preview holds
-  the first rows, so a model starts at the length of `data.preview.rows`, not at
-  `data.row_count`, which counts the whole table. A call with `offset: 100` and
-  `limit: 2` returns that page as JSON text in the tool result, not as
-  `structuredContent`:
+- **Tables** come back as JSON rows in the stream's column order, the shape of
+  `data.preview`, with `row_count` and the `next_offset` of the following page, `null`
+  on the last.
+  - **Detection:** a table is a media file with the Arrow stream MIME type,
+    `application/vnd.apache.arrow.stream`, the type the server registers a snapshot
+    `data` object's Arrow with: a dataframe, `st.table`, `st.data_editor`, or a chart
+    that serves Arrow. It is the type the server registered, not one guessed from the
+    bytes or an extension, so a dataframe never comes back as base64.
+  - **Encoding:** cell values use the snapshot's JSON encoding, the parent spec's value
+    table, the same encoding as `data.preview`. The snapshot reads `columns` and the
+    preview from the same stream by position, so a page matches them. Decoding with
+    the snapshot's encoder rather than JSON-encoding Arrow scalars directly keeps pages
+    in step with `data.preview` on dates, NaN, decimals, and `bytes`.
+  - **Starting offset:** the preview holds the first rows, so a model starts at the
+    length of `data.preview.rows`, not at `data.row_count`, which counts the whole
+    table.
+  - **Bytes that do not decode:** a file of that type that does not decode as an Arrow
+    stream, such as one an app offers through `st.download_button` with that type,
+    comes back as **Other files** below describes.
+
+  A call with `offset: 100` and `limit: 2` returns that page as JSON text in the tool
+  result, not as `structuredContent`:
 
   ```json
   {
@@ -257,16 +265,24 @@ Reads a media file the app still stores:
   [Limits and result size](#limits-and-result-size), where 500 rows of 33 columns would
   be about 400 KB. A shorter page loses nothing: `next_offset` is the first row not
   returned, `offset` plus the rows on the page, never `offset + limit`.
-- **Other files** come back as themselves, typed by MIME type: images and audio as MCP
-  image and audio content, and text and JSON as text. v1 returns text and JSON whole,
-  up to the 5 MB cap, though a file that size is far past the client limits in
-  [Limits and result size](#limits-and-result-size). Paging them like tables is a
-  [follow-up](#follow-ups).
-  Anything else, such as a PDF, is an embedded resource: `type: "resource"` with `uri`
-  (the media URL as the result shows it), `mimeType`, and a base64 `blob`. The server
-  still advertises tools only. MCP says a server that returns embedded resources SHOULD
-  implement the `resources` capability; this one does not, and `resources/list` stays
-  out of scope. The block is only a tool-result content item.
+- **Other files** come back as themselves. The MIME type the file was stored with picks
+  the content type, ignoring parameters such as `charset`, as the content-type check
+  does:
+  - `image/*` is MCP image content and `audio/*` is audio content: a base64 `data` and
+    the file's `mimeType`.
+  - `text/*` and `application/json` are text content. v1 returns them whole, up to the
+    5 MB cap, though a file that size is far past the client limits in
+    [Limits and result size](#limits-and-result-size). Paging them like tables is a
+    [follow-up](#follow-ups). MCP text must be Unicode, so a file whose bytes are not
+    valid UTF-8 comes back as an embedded resource instead.
+  - Anything else, such as a PDF, is an embedded resource, whose `uri`, `mimeType`, and
+    base64 `blob` sit on a nested `resource` object:
+    `{"type": "resource", "resource": {"uri": "urn:streamlit:media:<id>", "mimeType": "application/pdf", "blob": "<base64>"}}`.
+    MCP requires an absolute URI there, and the app cannot always know its public URL,
+    so the `uri` names the file and is never fetched. The server still advertises tools
+    only. MCP says a server that returns embedded resources SHOULD implement the
+    `resources` capability; this one does not, and `resources/list` stays out of scope.
+    The block is only a tool-result content item.
 - **Size:** at most 5 MB of encoded JSON-RPC response. Image, audio, and
   embedded-resource payloads are base64, about four-thirds of the file, so a binary
   file is refused when that encoded response would pass 5 MB, not when the raw file
@@ -274,34 +290,41 @@ Reads a media file the app still stores:
   the same way, with `result_too_large` rather than truncated, so no cell value is
   silently cut.
 - **Scope:** any media file the app still stores, the files the `/media` route serves to
-  whoever holds their URL, for a caller whose `session_id` passes the identity check. A
-  file lasts as long as media storage keeps it. A full rerun drops its session's
-  references when it starts, and the end of any session's run deletes every file no
-  session references, so a file the next run does not re-create is gone once that run
-  ends, and can be gone sooner. Ids are content hashes, so a table a rerun renders
-  unchanged keeps its id. This is the parent spec's fetch-now rule. The server loads the
-  argument from the media file manager as an id: bare, or the last path segment of a
-  relative media URL with its extension, if any, removed.
-  `MemoryMediaFileStorage.get_url` appends the MIME type's extension when there is one,
-  so `../../media/<id>.png` and a bare `<id>` name the same image. A table's URL has
-  none: `../../media/<id>`. The server does not HTTP-fetch the argument or join it to a
-  filesystem path: an absolute URL would be a server-side request, and behind a
-  prefix-stripping proxy the process cannot fetch the URL the client resolved. An
-  argument that names no stored file is `unknown_file`, with one of two messages, so the
-  model's next step is right:
-  - **Not a media file the app stores**, such as an absolute URL the model resolved, or
-    an id whose file a later run replaced or a run in progress has not re-created yet:
-    pass `url` exactly as the latest result shows it, collecting a run in progress
-    first.
-  - **A URL the result shows that is not a media file:** do not call `get_data` for it
-    again, since the same argument fails the same way. `st.image`, `st.audio`, and
-    `st.video` show an external `http`/`https` URL, a `data:` URL, or a relative static
-    URL unchanged, so those are not media-file ids.
+  whoever holds their URL, for a caller whose `session_id` passes the identity check.
+- **Lifetime:** a file stays until media storage drops it. A full rerun drops its
+  session's references when it starts. The cleanup at the end of any session's run
+  deletes the files no session references, except that a download button's file is
+  only marked the first time and deleted at the next cleanup. So a file the next run
+  does not re-create is usually gone once that run ends, and can be gone sooner. Ids
+  are content hashes, so a table a rerun renders unchanged keeps its id. This is the
+  parent spec's fetch-now rule.
 
-  Both tool descriptions say a result's files last until a later run replaces them, so
-  a model reads the data it needs before its next `interact` call. While a run is in
-  flight, or after `wait_timed_out`, the previous result's files usually stay readable
-  until that run ends, but can go sooner, when another session's run ends.
+  Both tool descriptions tell the model to read a result's files before its next
+  `interact` call, because a later run can replace them. While a run is in flight,
+  including after `wait_timed_out`, the previous result's files usually stay readable
+  until that run ends. They can disappear sooner, whenever another session's run ends.
+- **Reading the argument:** the server does not HTTP-fetch the argument or join it to a
+  filesystem path: an absolute URL would be a server-side request, and behind a
+  prefix-stripping proxy the process cannot fetch the URL the client resolved. It
+  reads the argument by its shape alone. Media URLs end in the file's extension where
+  its type has one, such as `../../media/<id>.png`, and a table's has none:
+  `../../media/<id>`.
+  - **A bare id, or a relative URL whose path ends in `media/<id>`:** the server looks
+    up that id, with one extension removed if there is one, in the media file manager.
+    So `../../media/<id>.png` and a bare `<id>` name the same image.
+  - **An absolute URL whose path ends in `media/<id>`,** such as one the model resolved
+    against the URL it connected to, with or without the Community Cloud prefix: the
+    server does not read it.
+  - **Anything else**, such as an external `http` or `https` URL, a `data:` URL, or a
+    relative static URL: not a media file. `st.image`, `st.audio`, and `st.video` show
+    those unchanged.
+- **`unknown_file`** is the error for an argument that reads no stored file. Its
+  message depends on the argument's shape, so the model's next step is right:
+  - **The first two shapes**, such as an absolute URL the model resolved, or an id
+    whose file a later run replaced or a run in progress has not re-created yet: pass
+    `url` exactly as the latest result shows it, collecting a run in progress first.
+  - **Anything else:** it is not a media file, so do not call `get_data` for it again,
+    since the same argument fails the same way.
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
   `idempotentHint: true`, and `openWorldHint: false`. It runs no app code, so a client
   that confirms writes can call it without asking.
@@ -311,8 +334,8 @@ codes, listed in the OpenAPI error catalog as MCP-only, with no HTTP status, sin
 HTTP route returns them. An HTTP `get_data`, one of the parent spec's smaller
 follow-ups, would reuse the same three codes and give them statuses.
 `read_unsupported` means the session's media store cannot return bytes. `unknown_file`
-means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing
-`session_id` or `url`, reuses the parent's `invalid_request`.
+means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing or
+malformed argument, reuses the parent's `invalid_request`.
 
 ### Explaining the protocol to the model
 
@@ -428,13 +451,12 @@ Every outcome at the HTTP level:
 | A request, answered                             | `200`                    | A JSON-RPC result or error                                                                           |
 | A notification or a response                    | `202`                    | None                                                                                                 |
 | `GET`, `DELETE`, or any other method            | `405`, with `Allow: POST` | None. A `GET` would open a stream for messages the server sends on its own, and this server sends none. |
-| The API is off                                  | `400`                    | `-32600` with `id: null`, with `not_available` in the message, naming `server.enableAgentApi`, on every method and notification, including `initialize` and `server/discover` |
+| The API is off                                  | `400`                    | `-32600` with `id: null`, with `not_available` in the message, naming `server.enableAgentApi`, for every JSON-RPC method and notification sent by `POST`, including `initialize` and `server/discover` |
 | A disallowed Host or `Origin`                   | `403`                    | `-32600`, with `host_not_allowed` or `origin_not_allowed` in the message                             |
 | An `Origin` without `Content-Type: application/json` | `400`               | `-32600`, with `invalid_request` in the message, asking for `Content-Type: application/json`         |
 | A body over `server.maxWidgetStateSize`         | `413`                    | `-32600`, with `request_too_large` in the message                                                    |
 | A body that is not JSON                         | `400`                    | `-32700`                                                                                             |
 | An unsupported `MCP-Protocol-Version` header    | `400`                    | `-32600`, echoing the request's `id`. `server/discover` uses this status and code too; see above.   |
-| No `MCP-Protocol-Version` header                | `200`                    | Handled as `2025-11-25`                                                                              |
 | A batch                                         | `200`                    | `-32600`                                                                                             |
 | An unknown tool, or `arguments` not an object   | `200`                    | `-32602`                                                                                             |
 
@@ -537,11 +559,14 @@ lines including the tool descriptions. Beyond the endpoint itself:
   artifact with record batches, a stream, or a bounded decoded cache, so a repeated
   500-row page does not decode a file up to the inherited 200 MB limit from the start
   each time. Stopping the row-to-JSON conversion once a page is full does not, by
-  itself, bound that cost.
-- The byte read on `MediaFileStorage` is optional. Hosts inject that protocol through
-  `RuntimeConfig.media_file_storage`. The protocol has no byte read today, and
-  `get_file` exists only on `MemoryMediaFileStorage`, which serves bytes through it. A
-  store that does not implement the read returns `read_unsupported`.
+  itself, bound that cost. Decoding and JSON encoding run off the event loop, as the
+  agent routes already parse requests with `asyncio.to_thread`. A per-server cap on
+  reads decoding at once makes parallel calls wait their turn rather than each decode a
+  large file, and the concurrency performance test checks that bound.
+- Reading a file back is optional for a media store. Hosts can plug in their own store
+  through `RuntimeConfig.media_file_storage`, and the storage interface has no read
+  today: only the built-in in-memory store can return a file's bytes. On a store that
+  cannot, `get_data` returns `read_unsupported`.
 - Route-level unit tests, a conformance test against the official MCP SDK clients as a
   dev-only dependency, performance coverage for repeated pages and concurrent
   `get_data` calls, and a check that a hosted-style client sends no `Origin`. The route
