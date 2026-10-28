@@ -220,7 +220,8 @@ export interface DataFramePrintOptions {
 }
 
 /**
- * Build a table of every visible cell and remember how wide it is.
+ * Build a print table of every non-hidden column (up to the row cap and page
+ * cell budget) and record its natural width.
  *
  * The on-screen grid is a canvas of the viewport, so columns that sit past
  * the scroll edge are never painted. Printing that canvas cuts them off.

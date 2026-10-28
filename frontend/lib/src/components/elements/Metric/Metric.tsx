@@ -65,9 +65,10 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
 /**
  * Record the value's width at the card's font size.
  *
- * Print layout narrows the card after `beforeprint`. The print rule divides
- * the card by this width, so the figure scales down only when the card is
- * the narrower of the two.
+ * Print layout narrows the card after `beforeprint`. Print CSS divides the
+ * available width by this length and shrinks the figure only when that slot
+ * is narrower. A stretch metric uses the card (100cqi); a content-width
+ * metric uses the width from `recordMetricAvailableWidth`.
  *
  * The on-screen markdown is ellipsized, so its box is the clipped width. A
  * clone of that markdown is measured unconstrained. The clone keeps bold and
@@ -77,9 +78,11 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  * longhands.
  */
 function recordMetricValueWidth(value: HTMLElement): void {
+  // A recorded width scales the probe's font in print, so it is cleared
+  // before measuring.
+  value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
   const source = value.querySelector(".stMarkdownEllipsis")
   if (!(source instanceof HTMLElement) || source.textContent === "") {
-    value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
     return
   }
 

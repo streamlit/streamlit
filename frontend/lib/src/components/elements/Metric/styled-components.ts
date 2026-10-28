@@ -87,8 +87,9 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
             // paragraph inherits this size.
             "& .stMetricValue .stMarkdownEllipsis": {
               // The variable is the figure's width at 1em, recorded in
-              // beforeprint. `atan2` divides the print column by that width
-              // without typed arithmetic. A wide card stays at 1em.
+              // beforeprint. CSS cannot divide one length by another in
+              // calc(), so tan(atan2(a, b)) gives the unitless ratio a / b.
+              // A card wider than the figure stays at 1em.
               fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
             },
           }),

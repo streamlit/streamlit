@@ -65,9 +65,10 @@ const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, .stDataFrame, .stTable, .
 const VISIBLE_PRINT_STACK_TRIGGER = `${PRINT_STACK_TRIGGER}:not([data-st-inactive] *):not(details:not([open]) *)`
 
 /**
- * Matches a column that is itself a card, or holds one. A row of compact
- * widgets (metrics, buttons) matches neither and stays side by side instead
- * of lengthening the printed page.
+ * Matches a column that is itself a card, or holds one. A bordered column is
+ * a card, so a row of bordered metrics stacks. A row of compact widgets
+ * (metrics, buttons) without borders matches neither and stays side by side
+ * instead of lengthening the printed page.
  */
 const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${VISIBLE_PRINT_STACK_TRIGGER}`
 

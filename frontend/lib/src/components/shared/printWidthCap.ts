@@ -26,14 +26,14 @@ import type { CSSObject } from "@emotion/styled"
  * up into the card above. `overflow` other than `visible` also makes Chrome's
  * print layout overlap the following flex items.
  */
-export const printContainRules = {
+export const printWidthCapRules = {
   maxWidth: "100%",
   minWidth: 0,
   overflow: "visible",
 }
 
-export const printContainStyles: CSSObject = {
-  "@media print": printContainRules,
+export const printWidthCapStyles: CSSObject = {
+  "@media print": printWidthCapRules,
 }
 
 /**
@@ -41,7 +41,7 @@ export const printContainStyles: CSSObject = {
  * Leaving the height in place keeps the graphic's box from collapsing onto
  * the next element.
  */
-export const printMediaFitStyles: CSSObject = {
+export const printGraphicFitStyles: CSSObject = {
   "@media print": {
     // Inline SVGs paint outside the line box when printing. A block box
     // keeps the chart's height in the flow so it does not cover the next

@@ -17,9 +17,9 @@
 import styled from "@emotion/styled"
 
 import {
-  printContainStyles,
-  printMediaFitStyles,
-} from "~lib/components/shared/printContain"
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
 
 /**
  * Outermost chart chrome. Stretch height uses the content-size floor so
@@ -68,8 +68,8 @@ export const StyledEChartsChartContainer = styled.div<{
   ...(isDisabled ? { pointerEvents: "none" as const } : {}),
   // ECharts sizes its canvas from the on-screen box. Keep that canvas inside
   // the column when the printed page is narrower.
-  ...printContainStyles,
-  "& canvas, & svg": printMediaFitStyles,
+  ...printWidthCapStyles,
+  "& canvas, & svg": printGraphicFitStyles,
 }))
 
 /** Stacks the chart and an in-place render-error overlay at the same size. */

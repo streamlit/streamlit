@@ -17,7 +17,7 @@
 import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
-import { printContainRules } from "~lib/components/shared/printContain"
+import { printWidthCapRules } from "~lib/components/shared/printWidthCap"
 
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
@@ -81,7 +81,7 @@ export const StyledResizableContainer =
         // The grid locks the on-screen pixel width. Cap the container so a
         // narrower page does not spill it. The canvas keeps its fixed or
         // content width when no print table is built.
-        ...printContainRules,
+        ...printWidthCapRules,
         [`&:has(.${DATAFRAME_PRINT_NOTE_CLASS}), &:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]:
           {
             // A note or a print table sits under the canvas, not beside it.
