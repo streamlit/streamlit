@@ -119,8 +119,9 @@ Which clients can reach which apps:
 | Behind an authenticating proxy | Clients that can send the proxy's credentials as headers, which most desktop clients let a user configure. Hosted clients expect MCP's OAuth flow instead.                       |
 | Behind `st.login`              | Any client that can reach it, but signed out, as over HTTP. Agent sign-in is the parent spec's follow-up #10.                                                                    |
 
-How much of ChatGPT's current connector policy belongs in that table is
-[open](#open-questions).
+The table stays broad because hosted clients' connector policies change often. Which
+ChatGPT plans and modes use custom connectors, and with which tools, is in
+[Creating custom MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-creating-custom-mcp-apps-in-chatgpt).
 
 ### The tools
 
@@ -254,7 +255,9 @@ Reads a media file the session's latest result references:
   returned, `offset` plus the rows on the page, never `offset + limit`.
 - **Other files** come back as themselves, typed by MIME type: images and audio as MCP
   image and audio content, and text and JSON as text. v1 returns text and JSON whole,
-  up to the 5 MB cap. Paging them later, like tables, is [open](#open-questions).
+  up to the 5 MB cap, though a file that size is far past the client limits in
+  [Limits and result size](#limits-and-result-size). Paging them like tables is
+  [out of scope](#out-of-scope).
   Anything else, such as a PDF, is an embedded resource: `type: "resource"` with `uri`
   (the media URL as the result shows it), `mimeType`, and a base64 `blob`. The server
   still advertises tools only. MCP says a server that returns embedded resources SHOULD
@@ -439,8 +442,9 @@ Nothing new beyond the parent spec's rules, applied to one more route:
   `Authorization`, and `Proxy-Authorization`, which matters here because MCP clients
   send their bearer tokens in `Authorization`. One interaction in flight per session
   applies to `interact`, and `server.agentMaxSessions` applies as over HTTP. `get_data`
-  reuses `unknown_session` and the identity check; whether it also takes `interact`'s
-  in-flight lock is [open](#open-questions).
+  reuses `unknown_session` and the identity check but not `interact`'s in-flight lock:
+  it runs no app code, MCP clients often call tools in parallel, and a parallel read
+  refused with `session_busy` is one a model may not retry.
 - **`Origin` is validated against DNS rebinding, as the MCP transport requires.** A
   request carrying an `Origin` not listed in `server.corsAllowedOrigins` gets `403`.
   Browsers send `Origin` on every `POST`, and MCP clients that run outside a browser
@@ -510,8 +514,8 @@ widgets, or a Plotly chart. The outliers are not: a 10,000-option selectbox adds
 150 KB depending on its labels, the 100-row preview of a wide table about 340 KB, a
 page of twelve Plotly figures about 500 KB, and a long Markdown document reported
 twice, once in a collapsed expander, can pass a chat client's limit on its own. The fix
-is the parent spec's follow-up #9, compact responses; see
-[Open questions](#open-questions).
+is the parent spec's follow-up #9, compact responses, which this ships without; see
+[Out of scope](#out-of-scope).
 
 ### Rollout
 
@@ -628,8 +632,13 @@ exactly as the result shows it.
 
 - **Agent sign-in for `st.login` apps** through MCP's OAuth authorization flow. This is
   the parent spec's follow-up #10, and the main gap for hosted clients and private apps.
-- **Compact responses**, the parent spec's follow-up #9. See
-  [Open questions](#open-questions).
+  Hosted clients expect OAuth, while the agent API accepts trusted headers, and
+  follow-up #10 proposes accepting a token from the provider `st.login` is configured
+  with. This endpoint would be its first consumer, and the point where switching to the
+  MCP SDK pays off.
+- **Compact responses**, the parent spec's follow-up #9. This ships without them and
+  documents the limit in [Limits and result size](#limits-and-result-size), since local
+  coding agents and most apps are unaffected.
 - **A read that does not execute**, the parent spec's follow-up #4. As an MCP tool it
   would also let `get_data` serve a result's files again after the model lost that
   result from its context.
@@ -650,9 +659,11 @@ exactly as the result shows it.
   a long run, logging, `listChanged`, sampling, and elicitation. A slow run returns
   `wait_timed_out`, as over HTTP.
 - **MCP resources and prompts.**
-- **More from `get_data`:** CSV output, choosing columns, and `structuredContent` with an `outputSchema` (see [Other decisions](#other-decisions)). Queries over a table on the
-  server, files from older results, and an HTTP route for `get_data` are already among
-  the parent spec's smaller follow-ups.
+- **More from `get_data`:** paging text and JSON files, CSV output, choosing columns,
+  and `structuredContent` with an `outputSchema` (see
+  [Other decisions](#other-decisions)). Queries over a table on the server, files from
+  older results, and an HTTP route for `get_data` are already among the parent spec's
+  smaller follow-ups.
 - **A stdio transport or a bridge package.**
 - **Clients that run inside a web page.** They would need CORS headers for their
   origin, which no agent route sends.
@@ -661,48 +672,12 @@ exactly as the result shows it.
 
 ## Open questions
 
-1. **Does this ship with compact responses?** A tool result over a client's limit is lost
-   to the model entirely, so the largest outliers — big option lists, long Markdown, and
-   large figures — hurt more through MCP than over HTTP. Proposal: aim for the same
-   release as the parent spec's follow-up #9, and if that slips, ship this anyway and
-   document the limit, since local coding agents and most apps are unaffected.
-2. **How does a signed-in app authenticate an MCP client?** Hosted clients expect OAuth,
-   and the agent API has trusted headers. The parent spec's follow-up #10 proposes
-   accepting a token from the provider `st.login` is configured with. The MCP endpoint
-   would be its first consumer, and where switching to the SDK would pay off.
-3. **Should Community Cloud route the agent paths on an app's public URL?** Today the URL
-   to paste is `https://<app>.streamlit.app/~/+/_stcore/agent/mcp`, and the unprefixed
-   path redirects to the platform's login page. That works but is hard to discover. The
-   platform change the parent spec already asks for, so that discovery works on the
-   public URL, would fix this too.
-4. **Should a later revision page text and JSON?** v1 returns them whole, up to the
-   5 MB encoded-response cap, while a table page stays within 40,000 characters. A text
-   file at the 5 MB cap is on the order of a million tokens, far past the client
-   limits in [Limits and result size](#limits-and-result-size). Paging those files by
-   character offset, with the same `offset` and `next_offset`, or refusing them past the
-   table budget with `result_too_large`, would change the v1 contract. Images stay whole
-   or are refused: a cut-off image is useless.
-5. **Which result does `get_data` read while `interact` is in flight, or after
+1. **Which result does `get_data` read while `interact` is in flight, or after
    `wait_timed_out`?** The next `interact` replaces the latest result, and a timeout
    returns the `202` document, not a snapshot. If that response drops the files from the
    previous result, a model paging a table loses the remaining pages until the run is
    collected. Proposal: keep serving the previous completed snapshot until a new one
    exists.
-6. **How much of ChatGPT's custom-connector policy belongs in the reachability table?**
-   The table says a public app is reachable from custom connectors in the Claude and
-   ChatGPT apps. OpenAI's current docs allow arbitrary tools, including writes, for
-   custom MCP apps on Business, Enterprise, and Edu (beta). Company knowledge still
-   includes only apps that expose `search` and `fetch`, deep research uses read and
-   fetch tools only, agent mode does not use custom apps, and Pro is more limited and
-   still uses developer mode. That policy changes often. The table can stay as broad as
-   it is, or name these limits.
-   [Creating custom MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-creating-custom-mcp-apps-in-chatgpt).
-7. **Does `get_data` take the one-in-flight lock?** One interaction in flight per
-   session applies as over HTTP, and `get_data` runs no app code. MCP clients often
-   issue tool calls in parallel. Sharing `interact`'s lock makes a parallel read return
-   `session_busy`, which a model may not retry. An `offset` past `row_count` is an
-   empty page with `next_offset: null`, and a read reuses `unknown_session` and the
-   identity check.
 
 ## Checklist
 
