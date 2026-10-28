@@ -29,7 +29,7 @@ import {
 import {
   type ArrowNamedDataSet,
   EChartsChart as EChartsChartProto,
-  type streamlit,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -1303,6 +1303,35 @@ describe("EChartsChart", () => {
 
       expect(screen.getByTestId("stDataFrame")).toBeVisible()
       expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("keeps the measured inline height for a stretch-height table", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 450
+      // Decode a wire message like the real element receives, so the unset
+      // `pixelHeight` oneof member keeps its generated default.
+      const heightConfig = streamlit.HeightConfig.decode(
+        streamlit.HeightConfig.encode({ useStretch: true }).finish()
+      )
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      // The hidden chart measures 0 once the table shows.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+
+      expect(gridPropsHolder.last?.height).toBe(450)
     })
 
     it("offers Close fullscreen in the table only while fullscreen", async () => {
