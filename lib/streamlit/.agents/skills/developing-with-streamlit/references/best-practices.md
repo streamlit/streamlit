@@ -106,7 +106,7 @@ Prefer a native Streamlit command over a third-party component, or a new custom 
 | `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible spec |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)` |
 
-`st.dataframe` sorts, searches, edits, and formats columns. Search highlights matching cells and does not hide other rows, and it is unavailable when rows load lazily (automatic for large data; pass `lazy=False` when search is required). Use `streamlit-aggrid` only for per-column filter menus, row grouping, or custom cell renderers. Use `streamlit-pivot-table` for pivot tables. Use `streamlit-folium` only for a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide. Put `live=True` inputs in a `@st.fragment` so typing does not rerun the whole app (see [Performance](#performance)). For cookies, see [server-asgi.md](server-asgi.md).
+`st.dataframe` sorts, searches, and formats columns. Use `st.data_editor` for editing. Search highlights matching cells and does not hide other rows, and it is unavailable when rows load lazily (automatic for large data; pass `lazy=False` when search is required). Use `streamlit-aggrid` only for per-column filter menus, row grouping, or custom cell renderers. Use `streamlit-pivot-table` for pivot tables. Use `streamlit-folium` only for a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide. Put `live=True` inputs in a `@st.fragment` so typing does not rerun the whole app (see [Performance](#performance)). For cookies, see [server-asgi.md](server-asgi.md).
 
 ## Layout
 
