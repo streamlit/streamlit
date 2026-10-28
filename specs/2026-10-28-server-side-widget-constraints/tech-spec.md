@@ -89,10 +89,14 @@ def _drop_invalid_client_values(self, states: WidgetStatesProto) -> frozenset[st
         if result.violation is None or result.violation.kind == "ambiguous_option":
             # The Value that _widget_changed reads, so nothing is deserialized twice.
             self._new_widget_state.cache_value(state, result.value)
+            continue
+        if result.partial is not None:
+            # A data editor keeps its payload minus the violating entries (item 6).
+            self._new_widget_state.cache_value(state, result.partial)
         else:
             self._new_widget_state.drop(state.id)  # previous value stays in _old_state
             rejected.add(state.id)
-            _log_violation(state.id, result.violation)  # never logs the value
+        _log_violation(state.id, result.violation)  # never logs the value
     return frozenset(rejected)
 ```
 
@@ -120,6 +124,8 @@ deserialized value once step 2 has read it:
    is stored. Coercion that maps a forged value onto the stored one changes nothing,
    because the deserialized value is what the widget would hold. Most entries end here:
    the browser resends its whole widget map on every rerun. A trigger is always a change.
+   - The agent API compares wire values instead, so a coerced value still reaches the
+     validator. See [Agent API integration](#agent-api-integration).
 4. **The widget is rendered** (`not_rendered`). See the
    [rendered-widget gate](#rendered-widget-gate).
 5. **It is not disabled** (`disabled`).
@@ -170,6 +176,8 @@ class CheckResult(NamedTuple):
     violation: Violation | None
     # The deserialized value, once readable. Cached as the widget's Value.
     value: Any = None
+    # A data editor payload without its violating entries (item 6).
+    partial: Any = None
 ```
 
 | `kind` | Reported by | Browser session | Agent API code |
@@ -295,7 +303,10 @@ accept it.
 **The previous value.** Check 3 already passes unchanged values, so a validator sees only
 changes and almost never needs the previous value. The data editor is the exception: its
 payload is cumulative, so `DataEditorSerde.validate` uses the `previous` keyword to check
-only new or changed entries. Every other serde ignores it.
+only new or changed entries. `previous` is the deserialized `_old_state` value, so
+`check_client_value` also passes check 2's deserialized payload as `value`. Both then
+have integer row keys, and the JSON is parsed once. Every other serde ignores both
+keywords.
 
 URL seeding reuses `validate` as well. See
 [Other value sources](#other-value-sources-url-binding-and-session-state).
@@ -326,9 +337,9 @@ The set changes at two points:
     the set with those IDs would let a forged ID into `rendered_ids` just before the
     check. Only registration adds an ID.
   - The page-change message itself is therefore checked against the previous page's
-    widgets: no run has covered them since the browser showed them. A trigger for one of them
-    passes, as it would have one message earlier, so a client gains nothing. The new
-    page's first completed run prunes them.
+    widgets: no run has covered them since the browser showed them. A trigger for one of
+    them passes, as it would have one message earlier, so a client gains nothing. The
+    new page's first completed run prunes them.
   - When a run's widget list is incomplete (`remove_stale_widgets=False`: the body never
     ran, or `st.rerun()` interrupted it), the set is not pruned, exactly as states are
     not pruned.
@@ -369,15 +380,17 @@ Each rejected ID in `_rejected_client_values` that is in `rendered_ids` stays pe
 same condition as `disabled_value_discarded` today, so the widget's proto carries
 `set_value` and the browser shows the server's value. A violation found at registration,
 for a widget this session never registered, sets it the same way. Item 4 also sets it
-when a deserializer coerces a client value, which closes gap (d).
+when a deserializer coerces a client value, which closes gap (d). One case stays open: a
+value that the deserializer coerces onto the stored one passes check 3, so no `set_value`
+is sent. A correct browser sends such a value only in the sync race, when a
+server-initiated rerun changed the bounds first.
 
 A fragment run does not register widgets outside the fragment, yet it still receives the
 browser's whole widget map. So a value refused for such a widget is corrected at the next
 run that covers it, usually the next full run. Until then the browser resends it and the
-check refuses it again. Only a benign
-race needs this, because a correct browser's value is refused only when a rerun changed
-the widget first. The pending set is pruned together with `rendered_ids`, so it is
-bounded by the rendered widgets.
+check refuses it again. Only a benign race needs this, because a correct browser's value
+is refused only when a rerun changed the widget first. The pending set is pruned together
+with `rendered_ids`, so it is bounded by the rendered widgets.
 
 Trigger widgets need no re-sync: a trigger resets anyway. `st.data_editor` has no channel
 to re-sync edits, so item 6 drops only the refused entries.
@@ -514,11 +527,15 @@ the stored payload are checked. Edits accepted earlier, for example to a column 
 since, are kept as they are today.
 
 On a violation, only the violating entries are dropped and the rest is accepted:
-`validate` lists them in the violation's detail, and the boundary stores the payload
-without them. The editor has no `set_value` channel, so refused entries stay visible in
-the browser until the editor remounts or the user undoes them. The browser keeps resending
-them, and they are refused each time, but nothing locks up: later legal edits still land.
-The agent API refuses the request, as for any violation.
+`validate` lists them in the violation's detail, and `check_client_value` returns the
+payload without them as `CheckResult.partial`, which the boundary caches. A dropped entry
+keeps its previous accepted value: a refused change to a cell edited earlier keeps the
+earlier edit instead of falling back to the source data.
+
+The editor has no `set_value` channel, so refused entries stay visible in the browser
+until the editor remounts or the user undoes them. The browser keeps resending them, and
+they are refused each time, but nothing locks up: later legal edits still land. The agent
+API refuses the request, as for any violation.
 
 Out-of-range or negative row indices and unknown columns become violations instead of
 raising. Added rows are applied in one `concat`, not row by row: today about 2 ms per
@@ -569,6 +586,14 @@ fragments and `run_every` fragments need tests.
 runtime will see. After encoding, it calls `widget_checks.check_client_value` with the
 session's metadata and stored values, maps the `Violation` to its code and message, and
 refuses the request. This runs while no run can start, so there is no race.
+
+A request carries only the widgets it addresses, so the agent API can afford the stricter
+form of check 3. A written value counts as unchanged only if its wire value equals the
+stored value serialized. Otherwise the validator runs, so `20` sent to a `number_input`
+with `max_value=10` that holds its default `5` is refused with `invalid_value`, instead
+of being coerced to `5` and reported as success. A mismatch that only differs in form,
+such as `int_value` against `double_value`, just runs the validator, which accepts a
+legal value. A `null` sent to an empty widget still matches, so item 5's no-op holds.
 
 The snapshot-based addressing checks stay first, so the existing error codes win where
 they apply. Each item deletes the agent's own copy of its constraint, as listed in the
