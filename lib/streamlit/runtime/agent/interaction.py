@@ -1175,9 +1175,10 @@ def _validate_request_shape(request: dict[str, Any]) -> _ParsedRequest:
             "invalid_request",
             f"Unknown request fields: {', '.join(sorted(unknown))}.",
         )
-    # Present means continue, so even `null` is refused: a client that lost its
-    # handle must not silently start over in a fresh session. Checked before
-    # the writes, whose refusal would otherwise call this a creating call.
+    # Any `session_id`, even `null`, means continue: a client that lost its
+    # handle must not silently get a fresh session. Checked before
+    # `_refuse_malformed_writes`, which treats a `null` `session_id` as a
+    # creating call.
     if "session_id" in request and not isinstance(request["session_id"], str):
         raise AgentRequestError(
             "invalid_request",
@@ -1287,8 +1288,8 @@ def _resolve_page(
             or [
                 {
                     "url_path": info.get("url_pathname", ""),
-                    # Always present, as in the snapshot's `pages`, which the
-                    # OpenAPI document's `Page` requires it of.
+                    # Always set, even when empty: the OpenAPI `Page` schema
+                    # requires `title`, as in the snapshot's `pages`.
                     "title": info.get("page_name", ""),
                     **({"icon": info["icon"]} if info.get("icon") else {}),
                 }

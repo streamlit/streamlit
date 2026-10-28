@@ -20,7 +20,7 @@ import path from "path"
 /** Where the agent API describes itself, relative to the app's root. */
 const AGENT_API_DESCRIPTION = "_stcore/agent/openapi.json"
 
-// Render a copy of index.html file to test
+// Load index.html into JSDOM for assertions.
 const HTML = fs.readFileSync(path.resolve(__dirname, "../index.html"), "utf8")
 document.documentElement.innerHTML = HTML
 

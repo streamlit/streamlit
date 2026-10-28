@@ -30,12 +30,18 @@ snapshot is the schema for anything instance-specific.
 The prose is written for a model to read, since that is who follows the link
 an app's HTML carries. Every ``enum`` and every list of fields comes from the
 definitions the route and the validator use, so the document cannot disagree
-with them: the error codes and their statuses from ``errors.ERROR_CATALOG``; the request,
-trigger, and context fields and the locale's limits from ``interaction``; the
-``support``, ``kind``, ``unavailable``, and ``status`` values from their
-``Literal`` types; the schema version; and the query-string limits. A field or
-value without prose here, or prose for one that is gone, fails every build of
-the document.
+with them:
+
+- error codes and their statuses: ``errors.ERROR_CATALOG``
+- request, trigger, and context fields, and the locale's limits:
+  ``interaction``
+- ``support``, ``kind``, ``unavailable``, and ``status`` values: their
+  ``Literal`` types
+- the schema version: ``snapshot.SCHEMA_VERSION``
+- the query-string limits: ``streamlit.runtime.state.query_params``
+
+A field or value without prose here, or prose for one that is gone, fails
+every build of the document.
 """
 
 from __future__ import annotations
@@ -263,13 +269,13 @@ def _in_order(names: tuple[_K, ...], entries: Mapping[_K, _V]) -> dict[_K, _V]:
 
     Raises
     ------
-    KeyError
+    ValueError
         When a name has no entry or an entry has no name, so a field or value
         without prose, or prose left for one that is gone, fails every build
         of the document.
     """
     if set(names) != set(entries):
-        raise KeyError(f"Documented {sorted(entries)}, but defined {sorted(names)}.")
+        raise ValueError(f"Documented {sorted(entries)}, but defined {sorted(names)}.")
     return {name: entries[name] for name in names}
 
 
@@ -343,10 +349,9 @@ def build_openapi_document(
         "summary": "Send client state, run the app, read the result.",
     }
     if enabled:
-        # Omitted when the API is off: a disabled document is the one agent API
-        # response an app that never opted in serves, and a precise version
-        # helps someone matching it against advisories more than a client that
-        # cannot call anything.
+        # Omitted when the API is off, so an app that never opted in does not
+        # advertise its exact version: that helps someone matching advisories
+        # more than it helps a client that cannot call anything.
         info["x-streamlit-version"] = version.STREAMLIT_VERSION_STRING
         interact |= {
             "description": _INTERACT_DESCRIPTION,

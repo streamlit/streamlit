@@ -216,7 +216,7 @@ def test_prose_must_cover_exactly_the_defined_values(prose: dict[str, str]) -> N
     """A value without prose, or prose for a value that is not defined, stops
     the document from being built.
     """
-    with pytest.raises(KeyError, match="Documented"):
+    with pytest.raises(ValueError, match="Documented"):
         protocol._bullets(get_args(agent_spec.ActionKind), prose)
 
 

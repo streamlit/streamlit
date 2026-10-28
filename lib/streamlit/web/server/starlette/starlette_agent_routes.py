@@ -129,7 +129,7 @@ def _encode_snapshot(document: dict[str, Any]) -> bytes:
     return _render_json(document)
 
 
-def _server_url(schema_path: str) -> str:
+def _relative_server_url(schema_path: str) -> str:
     """The OpenAPI document's server, relative to the document's own URL.
 
     The documented paths include ``server.baseUrlPath``, so the server climbs
@@ -344,16 +344,16 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
     schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
 
-    # Built on the first request rather than here, so an app nobody asks pays
-    # nothing for it, and then kept: it changes only with `enabled`, which is
-    # read once above, and with a release.
+    # Built on the first request so an app that never serves it pays nothing,
+    # then cached: it depends only on `enabled`, read once above, and on the
+    # installed release.
     @functools.cache
     def schema_body() -> bytes:
         return _render_json(
             protocol.build_openapi_document(
                 interact_path=interact_path,
                 schema_path=schema_path,
-                server_url=_server_url(schema_path),
+                server_url=_relative_server_url(schema_path),
                 enabled=enabled,
             )
         )

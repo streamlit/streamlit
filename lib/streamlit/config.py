@@ -3517,9 +3517,11 @@ def _check_metrics_user_attributes() -> None:
         )
 
 
-# The agent API's limits, with the smallest whole number each accepts. At zero,
-# every request would time out, every session would be reclaimed at once, or
-# none could be created; a preview of zero rows is only a smaller response.
+# The smallest whole number each agent API limit accepts. At zero:
+# - `agentWaitTimeout`: every request would time out.
+# - `agentSessionTTL`: every session would be reclaimed at once.
+# - `agentMaxSessions`: no session could be created.
+# `agentPreviewRows` may be zero; that only shrinks the response.
 _AGENT_API_LIMIT_MINIMUMS: Final = {
     "server.agentWaitTimeout": 1,
     "server.agentSessionTTL": 1,
