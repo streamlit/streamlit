@@ -1437,9 +1437,11 @@ Smaller potential follow-ups and alternatives considered:
 - **Testing:** layout facts such as `st.columns` weights, for a coding agent checking its
   own layout, which an e2e testing API would likely serve better than the snapshot.
 - **Operations:** usage metrics, which need a channel of their own because Streamlit's
-  usage stats are reported by the browser and an agent session has none; and an audit
-  log of interactions without content: a digest of the session handle, the request
-  fields used, the outcome, and the latency, never the handle, labels, values, or data.
+  usage stats are reported by the browser and an agent session has none (proposed in
+  [Agent API usage metrics](../2026-10-28-agent-api-usage-metrics/tech-spec.md)); and
+  an audit log of interactions without content: a digest of the session handle, the
+  request fields used, the outcome, and the latency, never the handle, labels, values,
+  or data.
 
 ## Beyond the app surface
 
