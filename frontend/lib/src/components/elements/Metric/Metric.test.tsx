@@ -334,6 +334,40 @@ describe("Metric element", () => {
     expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
   })
 
+  it("fits a bordered content-width metric inside the card's border and padding", () => {
+    const { container } = render(
+      <Metric
+        {...getProps({ body: "$48.6M", showBorder: true })}
+        widthConfig={new streamlit.WidthConfig({ useContent: true })}
+      />
+    )
+    const value = screen.getByTestId("stMetricValue")
+    const card = screen.getByTestId("stMetric")
+    const content = value.parentElement as HTMLElement
+    // jsdom cannot resolve the theme's calc() padding, so set plain lengths.
+    content.style.padding = "0 14px"
+    card.style.borderLeft = "1px solid"
+    card.style.borderRight = "1px solid"
+
+    Object.defineProperty(container, "clientWidth", {
+      value: 120,
+      configurable: true,
+    })
+    const closest = vi
+      .spyOn(Element.prototype, "closest")
+      .mockImplementation(selector =>
+        selector === ".stElementContainer" ? container : null
+      )
+    window.dispatchEvent(new Event("beforeprint"))
+    closest.mockRestore()
+
+    // 120px slot minus 2 * 14px padding and 2 * 1px border.
+    expect(value.style.getPropertyValue("--st-metric-available")).toBe("90px")
+    expect(value.style.getPropertyValue("--st-metric-available")).not.toBe(
+      "120px"
+    )
+  })
+
   it("refits a content-width metric on print media only after beforeprint", () => {
     const listeners: (() => void)[] = []
     const matchMedia = vi
