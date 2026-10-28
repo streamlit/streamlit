@@ -712,7 +712,7 @@ const Selectbox: FC<Props> = ({
             stateRef={comboBoxStateRef}
             enterTargetKey={enterTargetId}
           />
-          <StyledGroup ref={setReference}>
+          <StyledGroup ref={setReference} $isDisabled={selectDisabled}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}

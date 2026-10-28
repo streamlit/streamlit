@@ -47,7 +47,9 @@ function getRightInset(theme: EmotionTheme): string {
  * focused) to switch border colour to `primary`, mirroring the focus ring
  * on other Streamlit input widgets.
  */
-export const StyledGroup = styled(Group)(({ theme }) => ({
+export const StyledGroup = styled(Group, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{ $isDisabled: boolean }>(({ theme, $isDisabled }) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "stretch",
@@ -66,6 +68,12 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
   boxSizing: "border-box",
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.secondaryBg,
+  transition: "background-color 150ms ease",
+  ...(!$isDisabled && {
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+  }),
   "&[data-focus-within]": {
     borderColor: getBorderColor(theme.colors, true),
   },

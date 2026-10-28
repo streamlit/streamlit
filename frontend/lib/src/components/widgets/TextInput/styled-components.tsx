@@ -45,10 +45,11 @@ interface StyledInputRootProps {
   $isFocused: boolean
   $hasIcon: boolean
   $hasError: boolean
+  $isDisabled: boolean
 }
 
 export const StyledInputRoot = styled.div<StyledInputRootProps>(
-  ({ theme, $isFocused, $hasIcon, $hasError }) => ({
+  ({ theme, $isFocused, $hasIcon, $hasError, $isDisabled }) => ({
     display: "flex",
     alignItems: "center",
     height: theme.sizes.minElementHeight,
@@ -64,8 +65,14 @@ export const StyledInputRoot = styled.div<StyledInputRootProps>(
     paddingLeft: $hasIcon ? theme.spacing.sm : 0,
     overflow: "hidden",
     transitionDuration: "200ms",
-    transitionProperty: "border",
+    transitionProperty: "border, background-color",
     transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+    ...(!$isDisabled &&
+      !$hasError && {
+        "&:hover": {
+          backgroundColor: theme.colors.darkenedBgMix15,
+        },
+      }),
     // Show the focused border whenever any descendant (input or password toggle)
     // has keyboard focus — handles the case where Tab moves focus to the toggle.
     "&:focus-within": {

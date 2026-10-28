@@ -1081,7 +1081,10 @@ function ChatInput({
       ref={elementRef}
       isStretchHeight={isStretchHeight}
     >
-      <StyledChatInput isStretchHeight={isStretchHeight}>
+      <StyledChatInput
+        isStretchHeight={isStretchHeight}
+        $isDisabled={disabled || isDisabledDuringRun}
+      >
         {/* Dropzone overlay - shown when dragging files over */}
         {showDropzone && (
           <ChatFileUploadDropzone

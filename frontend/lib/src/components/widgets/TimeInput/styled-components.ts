@@ -49,6 +49,10 @@ export const StyledTimeInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
+  transition: "background-color 150ms ease",
+  "&:hover:not([data-disabled]):not([data-has-error])": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,

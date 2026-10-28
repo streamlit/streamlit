@@ -896,6 +896,7 @@ const Multiselect: FC<Props> = props => {
           <StyledTrigger
             ref={setReference}
             $maxHeight={maxHeight}
+            $isDisabled={disabled}
             onClick={handleContainerClick}
           >
             <StyledTagsContainer

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
-import { toHex } from "color2k"
+import { darken, toHex } from "color2k"
 
 import {
   getSecondaryIconButtonColorStyles,
@@ -30,30 +30,37 @@ export const StyledChatInputContainer = styled.div<{
   ...(isStretchHeight && { height: "100%" }),
 }))
 
-export const StyledChatInput = styled.div<{ isStretchHeight?: boolean }>(
-  ({ theme, isStretchHeight = false }) => ({
-    backgroundColor: theme.colors.secondaryBg,
-    border: `${theme.sizes.borderWidth} solid`,
-    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "stretch",
-    flex: 1,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-    paddingLeft: theme.spacing.lg,
-    paddingRight: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    borderRadius: theme.radii.default,
-    boxSizing: "border-box",
-    ...(isStretchHeight && { height: "100%" }),
-
-    ":focus-within": {
-      borderColor: theme.colors.primary,
+export const StyledChatInput = styled.div<{
+  isStretchHeight?: boolean
+  $isDisabled?: boolean
+}>(({ theme, isStretchHeight = false, $isDisabled = false }) => ({
+  backgroundColor: theme.colors.secondaryBg,
+  transition: "background-color 150ms ease",
+  ...(!$isDisabled && {
+    "&:hover": {
+      backgroundColor: theme.colors.darkenedBgMix15,
     },
-  })
-)
+  }),
+  border: `${theme.sizes.borderWidth} solid`,
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  flex: 1,
+  paddingTop: theme.spacing.md,
+  paddingBottom: theme.spacing.md,
+  paddingLeft: theme.spacing.lg,
+  paddingRight: theme.spacing.lg,
+  gap: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  boxSizing: "border-box",
+  ...(isStretchHeight && { height: "100%" }),
+
+  ":focus-within": {
+    borderColor: theme.colors.primary,
+  },
+}))
 
 // Files area - wrapping container for file chips above the input row
 export const StyledFilesArea = styled.div(({ theme }) => ({
@@ -182,7 +189,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         "&:hover": {
           backgroundColor: disabled
             ? theme.colors.darkenedBgMix15
-            : theme.colors.primary,
+            : darken(theme.colors.primary, 0.15),
         },
       }
     }

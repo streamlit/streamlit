@@ -583,6 +583,7 @@ const NumberInput: React.FC<Props> = ({
         <StyledInputContainer
           $isFocused={isFocused}
           $hasError={!!displayedError}
+          $isDisabled={disabled}
           data-testid="stNumberInputContainer"
         >
           {element.icon && (
