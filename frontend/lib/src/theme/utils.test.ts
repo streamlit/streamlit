@@ -5014,6 +5014,24 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.widgetBorderColor).toBe("purple")
     })
 
+    it("aligns unset sidebar codeTextColor with sidebar textColor when both sections set text", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        textColor: "#005500",
+        sidebar: { textColor: "#2F2D2B" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Stock sidebar surfaces still apply; code text follows the sidebar body
+      // color rather than the main area's resolved codeTextColor.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe("#2F2D2B")
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        sidebarTheme.emotion.colors.bodyText
+      )
+      expect(sidebarTheme.emotion.colors.codeTextColor).not.toBe(
+        mainTheme.emotion.colors.codeTextColor
+      )
+    })
+
     it("uses stock sidebar surfaces for preset light and dark themes", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)

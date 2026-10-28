@@ -2022,13 +2022,17 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
       }
     }
 
-    // Inherit the main theme's resolved code text (body-aligned, or green when
-    // main derived) so the stock sidebar surface pair does not flip unset code
-    // text onto greenTextColor via shouldDeriveUnsetChrome.
+    // Keep unset code text body-aligned for the stock sidebar surface pair
+    // (those surfaces differ from the main base and would otherwise derive
+    // greenTextColor). Prefer the sidebar's own textColor when set; otherwise
+    // inherit the main theme's resolved code text.
+    const codeTextStockVal =
+      firstConfiguredColor(sidebarThemeInput?.textColor) ??
+      activeTheme.emotion.colors.codeTextColor
     const codeTextFallback = stockChromeMergeFallback(
       sidebarThemeInput?.codeTextColor,
       mainThemeInput?.codeTextColor,
-      activeTheme.emotion.colors.codeTextColor
+      codeTextStockVal
     )
     if (codeTextFallback !== undefined) {
       stockChromeFallbacks.codeTextColor = codeTextFallback
