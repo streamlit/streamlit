@@ -16,7 +16,7 @@
 
 import type { CSSProperties } from "react"
 
-import styled from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
@@ -25,6 +25,12 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
+import {
+  PRINT_CHART_CARD_SELECTOR,
+  PRINT_CHART_SELECTOR,
+  PRINT_VISIBLE_FILTER,
+  printKeepTogetherRules,
+} from "~lib/components/shared/printPageBreak"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -35,6 +41,61 @@ import { assertNever } from "~lib/util/assertNever"
  * stay covered if their inner React Aria composition changes.
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
+
+/**
+ * Marks a bordered card (`st.container(border=True)` or a bordered column)
+ * so print can keep a row of cards on one page. A border is drawn with an
+ * emotion style, which has no stable selector of its own.
+ */
+export const PRINT_CARD_CLASS = "stPrintCard"
+
+/**
+ * Content that makes a printed column row stack into one column: a
+ * dataframe, a static table, or a chart. These keep a width measured on
+ * screen and would overflow a narrower printed column. These are the
+ * elements' own classes. Test IDs are not used as selectors.
+ *
+ * A border alone does not stack the row. Metrics shrink their text to fit,
+ * and text wraps, so a row of bordered metric cards stays side by side. An
+ * image is `max-width: 100%` and shrinks into the column too.
+ */
+const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR})`
+
+/** Matches a column that holds a dataframe, table, or chart on the printed page. */
+const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+
+/**
+ * Bottom margins that replace flex `gap` once a vertical block prints as a
+ * block box. `gap` does not apply there. Margin stays outside the child, so
+ * border-box padding does not eat into a fixed height.
+ *
+ * A page link only trims the flex gap, by xs above and below. Print replaces
+ * the gap with margin, so the trim stays in that margin. The next link's own
+ * negative margin-top then collapses with it. A cache spinner's zero-height
+ * container cancels its gap with -lg, so its print margin is the gap minus
+ * lg. Balloons and snow containers are `display: none` in print, so this
+ * margin does not exclude them.
+ */
+function printBlockGapMargins(
+  gapWidth: string | undefined,
+  theme: EmotionTheme
+): CSSObject {
+  if (gapWidth === undefined || gapWidth === theme.spacing.none) {
+    return {}
+  }
+  return {
+    "& > :not(:last-child):not(:has(> .stPageLink)):not(:has(> .stCacheSpinner))":
+      {
+        marginBottom: gapWidth,
+      },
+    "& > :not(:last-child):has(> .stPageLink)": {
+      marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
+    },
+    "& > :not(:last-child):has(> .stCacheSpinner)": {
+      marginBottom: `calc(${gapWidth} - ${theme.spacing.lg})`,
+    },
+  }
+}
 
 function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
@@ -124,6 +185,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
 
     "@media print": {
       overflow: "visible",
+      ...(GLOBAL_ELEMENTS.has(elementType)
+        ? {
+            // The particle overlay is already hidden. This container still
+            // sits in the vertical block, and the print gap margin would
+            // otherwise beat its negative margin and leave a blank strip.
+            // A display:none box has no margin.
+            display: "none",
+          }
+        : {}),
     },
 
     ":has(> .stCacheSpinner)": {
@@ -233,6 +303,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
+      // Print stacking for columns is set by the parent row.
     }
   }
 )
@@ -301,6 +372,13 @@ export interface StyledFlexContainerBlockProps {
   overflowX?: React.CSSProperties["overflowX"]
 }
 
+/** True for any configured height except auto. Print keeps flex for these so stretch children share the height. */
+function hasNonAutoHeight(
+  height: React.CSSProperties["height"] | undefined
+): boolean {
+  return height !== undefined && height !== "auto"
+}
+
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
     ({
@@ -319,6 +397,87 @@ export const StyledFlexContainerBlock =
       let gapWidth
       if (gap !== undefined) {
         gapWidth = translateGapWidth(gap, theme)
+      }
+      const crossAxis = getAlignItems(align)
+      // Print switches a vertical block to display:block, because Chrome's
+      // print layout drops the height of a content-height flex column and a
+      // chart then paints over the next heading. It keeps flex when:
+      // - it centers or end-aligns its children horizontally (block has no
+      //   equivalent), or
+      // - it has any set height other than auto (stretch children rely on
+      //   flex to share it instead of each taking 100%).
+      // Vertical alignment only moves content inside a set height. A
+      // content-height column has no free space to distribute, so that
+      // alignment alone does not keep flex.
+      const keepsPrintFlexForAlignment =
+        direction === Direction.VERTICAL &&
+        (crossAxis === "center" || crossAxis === "end")
+      const keepsPrintFlexForHeight =
+        direction === Direction.VERTICAL && hasNonAutoHeight(height)
+      const keepsPrintFlex =
+        keepsPrintFlexForAlignment || keepsPrintFlexForHeight
+      // Print rules:
+      // - A column row that holds a chart, dataframe, or table stacks into
+      //   full-width columns. Other rows stay side by side.
+      // - Other vertical blocks switch to block layout unless they keep flex
+      //   (see above).
+      // - A bordered card or column that holds a chart avoids page breaks,
+      //   and so does a side-by-side row of bordered columns.
+      const printRules: CSSObject = {
+        ...(direction === Direction.HORIZONTAL
+          ? {
+              [`> .stColumn.${PRINT_CARD_CLASS}`]: {
+                [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+              },
+              // A row of bordered cards that stays side by side prints like
+              // one card, so a page break does not cut every card at once.
+              [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_SELECTOR}))`]:
+                printKeepTogetherRules,
+              [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
+                display: "block",
+                "> .stColumn": {
+                  display: "block",
+                  float: "none",
+                  clear: "both",
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                  ...(gapWidth &&
+                    gapWidth !== theme.spacing.none && {
+                      "&:not(:last-of-type)": {
+                        marginBottom: gapWidth,
+                      },
+                    }),
+                  // The column's content block is height 100%. A stacked
+                  // column has no definite height, so that percentage is
+                  // auto and a flex column collapses in Chrome print. A
+                  // chart then paints over the next heading. Block layout
+                  // keeps the column content gap (the small gap
+                  // ContainerContentsWrapper always sets) as margin. An
+                  // unstacked column is not matched, so a 100% block in a
+                  // sized parent stays flex.
+                  "> .stVerticalBlock": {
+                    display: "block",
+                    ...printBlockGapMargins(
+                      translateGapWidth(
+                        { gapSize: streamlit.GapSize.SMALL },
+                        theme
+                      ),
+                      theme
+                    ),
+                  },
+                },
+              },
+            }
+          : keepsPrintFlex
+            ? {}
+            : {
+                display: "block",
+                ...printBlockGapMargins(gapWidth, theme),
+              }),
+        ...(border && {
+          [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+        }),
       }
 
       return {
@@ -379,6 +538,7 @@ export const StyledFlexContainerBlock =
               [STEP_CONNECTOR_BOTTOM_VAR]: `-${gapWidth}`,
             },
           }),
+        "@media print": printRules,
       }
     }
   )
@@ -420,5 +580,13 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     alignSelf,
     minHeight,
     maxHeight,
+    "@media print": {
+      // See StyledFlexContainerBlock: flex height collapses when printing.
+      // Fixed and stretch-height wrappers keep flex so their child retains
+      // its allocated height.
+      ...((height === undefined || height === "auto") && {
+        display: "block",
+      }),
+    },
   })
 )

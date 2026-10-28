@@ -159,6 +159,8 @@ describe("Sidebar Component", () => {
         expect(sidebar).toHaveAttribute("id", "stSidebar")
         expect(sidebar).toHaveAttribute("aria-label", "Sidebar")
         expect(sidebar).toHaveAttribute("data-collapsed", expectedCollapsed)
+        // A collapsed sidebar carries the shared "not printed" marker.
+        expect(sidebar.hasAttribute("data-st-inactive")).toBe(isCollapsed)
         expect(sidebar).not.toHaveAttribute("aria-expanded")
       }
     )

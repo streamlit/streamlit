@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
+
 interface StyledPlotlyChartContainerProps {
   /**
    * Whether the container is size-contained, so the rendered plot can't feed
@@ -39,5 +44,15 @@ export const StyledPlotlyChartContainer =
         containIntrinsicHeight:
           fallbackHeight === undefined ? "none" : `${fallbackHeight}px`,
       }),
+      // Plotly writes a pixel width from the on-screen layout. Cap it so a
+      // narrower printed page does not spill the plot out of its column.
+      ...printWidthCapStyles,
+      "& .js-plotly-plot, & .svg-container": {
+        "@media print": {
+          width: "100% !important",
+          maxWidth: "100% !important",
+        },
+      },
+      "& .main-svg": printGraphicFitStyles,
     })
   )
