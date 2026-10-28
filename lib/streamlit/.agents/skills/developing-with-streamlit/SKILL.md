@@ -236,12 +236,12 @@ The agent API drives the app over HTTP without a browser. It returns the finishe
    ```bash
    streamlit run [path/to/app.py] --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
    ```
-   Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
+   Pass these flags on the command line; don't add `enableAgentApi` to `.streamlit/config.toml`, where it would turn the API on wherever the app is deployed. If the app's config sets `server.baseUrlPath`, `server.allowedHosts`, or `server.fileWatcherType = "none"`, add the overrides from `references/testing.md`. Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
 2. **Load** the app and check that `status` is `"ready"`:
    ```bash
    curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
    ```
-3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. Edits apply without a restart.
+3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. A script edit applies on the session's next request, without a restart.
 4. **Check the console output** after each request. Streamlit logs warnings and tracebacks there that the snapshot doesn't show, such as deprecations and ignored parameters. Fix or report anything new.
 5. **Stop** the instance when you're done.
 
@@ -283,7 +283,7 @@ For purely visual changes (theme, CSS, spacing), this only confirms that the app
 
 ## Stopping Points
 
-- **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers
+- **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers.
 - **Step 5**: Ask before starting the Streamlit app for the user
 
 ## Resources

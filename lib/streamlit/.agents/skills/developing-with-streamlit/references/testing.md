@@ -21,6 +21,8 @@ Start the app headless in the background, bound to localhost. Pass the flag on t
 streamlit run app.py --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
 ```
 
+If the app's config sets `server.baseUrlPath`, `server.allowedHosts`, or `server.fileWatcherType = "none"`, also pass `--server.baseUrlPath=`, `--server.allowedHosts=127.0.0.1`, or `--server.fileWatcherType=auto`. Otherwise the URLs below return 404 or `host_not_allowed`, or script edits don't apply until a restart.
+
 Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, Streamlit exits; pick another port and use it below. Keep the server running while you work: a script edit applies on the session's next request, with no restart. Stop it when you're done.
 
 **Watch the server's console output.** Keep it where you can read it (the background process's output, or a log file outside the project) and check it after every request, not only on errors. Streamlit logs warnings and tracebacks there that the snapshot does not show, such as deprecations and ignored parameters. Treat a new warning or traceback as something to fix or report.
@@ -62,10 +64,10 @@ Request fields:
 - `widget_state`: element keys to values, as in `st.session_state`. The element's `value_schema` and `props` (`options`, bounds) give the legal values; unmentioned widgets keep theirs.
 - `trigger`: `{"key": "..."}` clicks one button per request. `st.chat_input` also takes `"value"`. For an `st.form`, send its fields in `widget_state` and its submit button in `trigger` in the same request.
 - `page`: a `url_path` from the snapshot's `pages`, to switch pages.
-- `query_params`: for example `{"region": ["Europe"]}`. It is also accepted on the creating call.
+- `query_params`: for example `{"region": ["Europe"]}`.
 - Only `session_id`: reruns the app.
 
-`widget_state` and `trigger` need a `session_id`, so send `{}` first, and they can't share a request with `page` or `query_params`. `actions` lists the keys you can use now. Elements without `key=` get generated keys (`$$ID-...`) that change when the code does; add `key=` to anything you want to drive.
+`page` and `query_params` are also accepted on the creating call. `widget_state` and `trigger` need a `session_id`, so send `{}` first. They can't share a request with `page` or `query_params`. `actions` lists the keys you can use now. Elements without `key=` get generated keys (`$$ID-...`) that change when the code does; add `key=` to anything you want to drive.
 
 Reading the result:
 

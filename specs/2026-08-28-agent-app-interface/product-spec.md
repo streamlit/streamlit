@@ -1061,11 +1061,11 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. All agent API options are public. The defaults are
-what v1 ships, and operators can tune the bounds. The wait timeout bounds how long one request waits, not how long the run may
-take, so it sits below clients' own timeouts rather than growing to fit the slowest app.
-The preview size's default is meant to be right; the setting is there for operators and
-tests rather than for tuning per app.
+Every bound v1 applies, in one place. All agent API options are public, so operators
+can tune them; the defaults are what v1 ships. The wait timeout bounds how long one
+request waits, not how long the run may take, so it sits below clients' own timeouts
+rather than growing to fit the slowest app. The preview size's default is meant to be
+right; the setting is there for operators and tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |

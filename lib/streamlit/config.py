@@ -1310,9 +1310,11 @@ _create_option(
         finish running, including any reruns it triggers, before returning
         `wait_timed_out`.
 
-        This bounds the wait, not the run: the app keeps running, and a client
-        that retries the same request collects that run instead of starting a
-        new one. Keep it below the request timeout of the clients you expect.
+        This bounds the wait, not the run: the app keeps running. A request
+        with only that response's `session_id` waits for the same run instead
+        of starting another. Repeating a creating call, which has no
+        `session_id`, starts a new session and runs the app again. Keep this
+        below the request timeout of the clients you expect.
 
         Note: This is part of the experimental agent API. See
         `server.enableAgentApi`.
@@ -1343,9 +1345,9 @@ _create_option(
         Maximum number of agent API sessions the server holds at once.
 
         Each session stays in memory after the request that created it, so
-        this limit bounds what a client that keeps creating sessions can hold.
-        At the limit, Streamlit first closes sessions idle longer than
-        `server.agentSessionTTL`, then refuses new ones with
+        this limit caps the memory a client can use by creating sessions
+        repeatedly. At the limit, Streamlit first closes sessions idle longer
+        than `server.agentSessionTTL`, then refuses new ones with
         `too_many_sessions`.
 
         Note: This is part of the experimental agent API. See
