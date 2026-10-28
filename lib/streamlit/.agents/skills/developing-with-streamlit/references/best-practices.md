@@ -93,7 +93,7 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 ## Custom components
 
-Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Most community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. `streamlit-bokeh` and `streamlit-pivot-table` are maintained by Streamlit. Use one only for behavior Streamlit does not provide. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
+Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Most community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
 
 | Instead of | Use |
 | --- | --- |
@@ -105,6 +105,7 @@ Prefer a native Streamlit command over a third-party component, or a new custom 
 | `streamlit-searchbox` | `st.selectbox` to pick from a known list; `st.text_input(..., type="search", live=True)` to filter results rendered below it |
 | `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible spec |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)` |
+| `streamlit-bokeh` | A Vega-based chart, or `st.echarts_chart` when the spec is already ECharts |
 
 `st.dataframe` sorts, searches, and formats columns. Use `st.data_editor` for editing. Search highlights matching cells and does not hide other rows, and it is unavailable when rows load lazily (automatic for large data; pass `lazy=False` when search is required). Use `streamlit-aggrid` only for per-column filter menus, row grouping, or custom cell renderers. Use `streamlit-pivot-table` for pivot tables. Use `streamlit-folium` only for a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide. Put `live=True` inputs in a `@st.fragment` so typing does not rerun the whole app (see [Performance](#performance)). For cookies, see [server-asgi.md](server-asgi.md).
 
@@ -340,7 +341,7 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` for a JSON-compatible Apache ECharts option or a `pyecharts` chart. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
+Prefer Vega-based charts over pyplot, Plotly, and `streamlit-bokeh`. Use `st.echarts_chart` for a JSON-compatible Apache ECharts option or a `pyecharts` chart. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
 
 ```python
 # GOOD: Native charts for common cases

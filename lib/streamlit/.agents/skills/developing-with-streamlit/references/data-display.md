@@ -43,7 +43,7 @@ st.table(summary, alt="Quarterly KPI summary")
 
 ## Native charts first
 
-Prefer Streamlit's native charts for simple cases.
+Prefer Streamlit's native charts for simple cases. Prefer a Vega-based chart, or `st.echarts_chart` when the spec is already ECharts, over `streamlit-bokeh`.
 
 ```python
 st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")

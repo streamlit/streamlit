@@ -4,7 +4,7 @@ Third-party custom components are community Python libraries that add UI Streaml
 
 ## Prefer a native equivalent
 
-Most community components are not maintained by Streamlit. `streamlit-bokeh` and `streamlit-pivot-table` are maintained by Streamlit. Community packages can break on Streamlit upgrades and often miss theming, accessibility, and performance work that ships in core. Do not add one, and do not build a custom component, to recreate a native command.
+Most community components are not maintained by Streamlit. They can break on Streamlit upgrades and often miss theming, accessibility, and performance work that ships in core. Do not add one, and do not build a custom component, to recreate a native command.
 
 | Instead of | Use |
 | --- | --- |
@@ -16,6 +16,7 @@ Most community components are not maintained by Streamlit. `streamlit-bokeh` and
 | `streamlit-searchbox` | `st.selectbox` (it filters a known list as you type) to pick one option; `st.text_input(..., type="search", live=True)` to filter results rendered below it. Put the text input in a `@st.fragment` when the rest of the page should stay put. |
 | `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. Prefer a Vega-based chart unless the spec is already ECharts. See [data-display.md](data-display.md). |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)`, inside a `@st.fragment` when the rest of the page should stay put. |
+| `streamlit-bokeh` | A Vega-based chart (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.bar_chart`, `st.scatter_chart`, or `st.vega_lite_chart`), or `st.echarts_chart` when the spec is already ECharts. Prefer Vega-based charts. |
 
 Use the package only when the native command does not cover the behavior:
 
@@ -45,29 +46,9 @@ Then import according to the component's documentation. The import name often di
 
 ## Components with no native equivalent
 
-### streamlit-bokeh
-
-Official replacement for `st.bokeh_chart` (removed from Streamlit API). Maintained by Streamlit.
-
-- **Repo:** https://github.com/streamlit/streamlit-bokeh
-- **Docs:** https://pypi.org/project/streamlit-bokeh/
-
-```bash
-uv add streamlit-bokeh
-```
-
-```python
-from bokeh.plotting import figure
-from streamlit_bokeh import streamlit_bokeh
-
-p = figure(title="Simple Line", x_axis_label="x", y_axis_label="y")
-p.line([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], line_width=2)
-streamlit_bokeh(p)
-```
-
 ### streamlit-pivot-table
 
-Interactive pivot tables with drag-and-drop dimensions, aggregation, and drill-down. Maintained by Streamlit.
+Interactive pivot tables with drag-and-drop dimensions, aggregation, and drill-down.
 
 - **Repo:** https://github.com/streamlit/streamlit-pivot-table
 - **Docs:** https://pypi.org/project/streamlit-pivot/
