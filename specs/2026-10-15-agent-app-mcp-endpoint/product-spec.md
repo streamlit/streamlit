@@ -110,7 +110,7 @@ no app title: as the parent spec explains for the snapshot, Streamlit has no rel
 source for one until authored app titles land in its follow-up #2, after which the
 title can join `serverInfo` ([Follow-ups](#follow-ups)).
 
-While the API is off, `initialize` gets the `400` described in
+While the API is off, the server answers `initialize` with the `400` in
 [Protocol surface](#protocol-surface) and returns no `serverInfo`. The disabled
 discovery document still omits the Streamlit version, as the parent spec requires.
 
@@ -210,11 +210,15 @@ get_data(session_id, url, offset=0, limit=500)
 
 `session_id` and `url` are required. Omitting `session_id` does not create a session:
 `get_data` runs no app code, and a create would be a second way to start a run. The
-arguments follow `interact`'s request rules: a call without `arguments` is handled as
-`{}`, and a missing `session_id` or `url`, one that is not a string, or an unknown
-field is `invalid_request`, the parent's code for a malformed request. An unknown,
-expired, or identity-mismatched `session_id` is `unknown_session`, and that message
-does not tell the model to omit `session_id` and start one.
+arguments follow `interact`'s request rules:
+
+- A call without `arguments` is handled as `{}`.
+- A missing `session_id` or `url`, one that is not a string, or an unknown field is
+  `invalid_request`, the parent's code for a malformed request.
+- An unknown, expired, or identity-mismatched `session_id` is `unknown_session`. Unlike
+  the HTTP route's message, it does not say to omit `session_id`: it says `get_data`
+  cannot start a session, and `interact` without `session_id` starts one whose result
+  lists the files to read.
 
 Reads a media file the app still stores:
 
@@ -223,11 +227,10 @@ Reads a media file the app still stores:
   below says how it reads the id.
 - **`offset` and `limit` apply only to tables.** On every other file the server ignores
   both, including invalid values and the defaults a client sends, so `limit: 0` on an
-  image is not an error. On a table, both must be integers, `offset` at least 0 and
-  `limit` at least 1, and a JSON boolean counts as a non-integer. A non-integer, a
-  negative value, or a `limit` below 1 is `invalid_request`. An `offset` past the last
-  row returns an empty page: `columns`, `row_count`, `offset`, `rows: []`, and
-  `next_offset: null`.
+  image is not an error. On a table, both must be integers, not booleans, with `offset`
+  at least 0 and `limit` at least 1; any other value is `invalid_request`. An `offset`
+  past the last row returns an empty page: `columns`, `row_count`, `offset`,
+  `rows: []`, and `next_offset: null`.
 - **Tables** come back as JSON rows in the stream's column order, the shape of
   `data.preview`, with `row_count` and the `next_offset` of the following page, `null`
   on the last.
@@ -275,10 +278,12 @@ Reads a media file the app still stores:
   the content type, compared without regard to case and ignoring parameters such as
   `charset`, as the content-type check does:
   - `image/png`, `image/jpeg`, `image/gif`, and `image/webp` are MCP image content, the
-    types Anthropic's and OpenAI's vision inputs accept, and `audio/*` is audio
-    content: a base64 `data` and the file's `mimeType`. Other image types, such as a
-    BMP or TIFF that `st.image` stored from a path, are embedded resources, because one
-    image block a model API rejects can fail the whole turn in some clients.
+    types Anthropic's and OpenAI's vision inputs accept. `audio/wav` and `audio/mpeg`,
+    also as `audio/x-wav` and `audio/mp3`, are audio content, the formats OpenAI's
+    audio input accepts. Both carry a base64 `data` and the file's `mimeType`. Other
+    image and audio types, such as a BMP or TIFF that `st.image` stored from a path or
+    an `audio/ogg` file, are embedded resources, because one image or audio block a
+    model API rejects can fail the whole turn in some clients.
   - `text/*`, `application/json`, and `image/svg+xml`, which is XML text, are text
     content. v1 returns them whole, up to the 5 MB cap, though a file that size is far
     past the client limits in [Limits and result size](#limits-and-result-size).
@@ -301,13 +306,14 @@ Reads a media file the app still stores:
 - **Scope:** any media file the app still stores, which are the same files the `/media`
   route serves to anyone with the URL. The caller's `session_id` must pass the identity
   check.
-- **Lifetime:** a file stays until media storage drops it. A full rerun drops its
-  session's references when it starts. The cleanup at the end of any session's run
-  deletes the files no session references, except that a download button's file is
-  only marked the first time and deleted at the next cleanup. So a file the next run
-  does not re-create is usually gone once that run ends, and can be gone sooner. Ids
-  are content hashes, so a table a rerun renders unchanged keeps its id. This is the
-  parent spec's fetch-now rule.
+- **Lifetime:** a file stays until media storage drops it, the parent spec's fetch-now
+  rule. Ids are content hashes, so a table a rerun renders unchanged keeps its id.
+  - A full rerun drops its session's references when it starts.
+  - The cleanup at the end of any session's run deletes the files no session
+    references. A download button's file is only marked at the first cleanup and
+    deleted at the next.
+  - So a file the next run does not re-create is usually gone once that run ends, and
+    another session's cleanup can delete it sooner.
 
   Both tool descriptions tell the model to read a result's files before its next
   `interact` call, because a later run can replace them. While a run is in flight,
@@ -316,25 +322,27 @@ Reads a media file the app still stores:
 - **Reading the argument:** the server does not HTTP-fetch the argument or join it to a
   filesystem path: an absolute URL would be a server-side request, and behind a
   prefix-stripping proxy the process cannot fetch the URL the client resolved. It
-  reads the argument by its shape alone. Media URLs end in the file's extension where
-  its type has one, such as `../../media/<id>.png`, and a table's has none:
+  reads the argument by its shape alone. A media-file id is the hex digest the built-in
+  media store names a file by. Media URLs end in that id plus the file's extension
+  where its type has one, such as `../../media/<id>.png`, and a table's has none:
   `../../media/<id>`.
-  - **A bare id, or a URL, relative or absolute, whose path ends in `media/<id>`:** the
-    server looks up that id, with one extension removed if there is one, in the media
-    file manager. So `../../media/<id>.png`, the absolute URL a model resolved from it
-    with or without the Community Cloud prefix, and a bare `<id>` name the same image.
-    Only the path's last segment is read, so an absolute URL adds no exposure: the id
-    is what grants access either way.
-  - **Anything else**, such as an external `http` or `https` URL, a `data:` URL, or a
-    relative static URL: not a media file. `st.image`, `st.audio`, and `st.video` show
-    those unchanged.
+  - **A media-file id with at most one extension, bare or as the last segment of a URL,
+    relative or absolute, whose path ends in `media/<id>`:** the server looks up that
+    id, without the extension, in the media file manager. So `../../media/<id>.png`,
+    the absolute URL a model resolved from it with or without the Community Cloud
+    prefix, and a bare `<id>` name the same image. Only the path's last segment is
+    read, so an absolute URL adds no exposure: the id is what grants access either way.
+  - **Anything else** is not a media file: a file name such as `logo.png`, an external
+    URL whose last segment is not a media-file id, such as
+    `https://cdn.example.com/media/hero.png`, a `data:` URL, or a relative static URL.
+    `st.image`, `st.audio`, and `st.video` show those unchanged.
 - **`unknown_file`** is the error for an argument that reads no stored file. Its
   message depends on the argument's shape, so the model's next step is right:
-  - **A bare id or a media URL** that reads no stored file, such as one whose file a
-    later run replaced or a run in progress has not re-created yet: pass `url` as the
-    latest result shows it. If a run is still in progress, call
-    `interact` with only `session_id` to collect it first. Do not call `interact` just
-    to re-create a file.
+  - **A media-file id or a media URL** that reads no stored file, such as one whose
+    file a later run replaced or a run in progress has not re-created yet: pass `url`
+    as the latest result shows it. If a run is still in progress, call `interact` with
+    only `session_id` to collect it first. Do not call `interact` just to re-create a
+    file.
   - **Anything else:** it is not a media file, so do not call `get_data` for it again,
     since the same argument fails the same way.
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
@@ -351,8 +359,8 @@ would reuse the same three codes and give them statuses.
 means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing or
 malformed argument, reuses the parent's `invalid_request`.
 
-A refused read is a tool result, as a refused interaction is: `isError: true`, with the
-parent's error body in `content[0].text`. That holds for `unknown_file`,
+A refused read is a tool result, as a refused interaction is: `isError: true`, with an
+error body of the parent's shape in `content[0].text`. That holds for `unknown_file`,
 `result_too_large`, `read_unsupported`, `invalid_request`, and `unknown_session`, so
 clients that hide protocol errors from the model still show it the next step. The
 `result_too_large` message says the file, or the table row at `offset`, is past the cap,
@@ -490,21 +498,26 @@ Nothing new beyond the parent spec's rules, applied to one more route:
 - **The parent spec's checks apply, in the order above.** The Host allow-list, the
   bounded body, strict JSON, and reading no cookie all work as over HTTP. Trusted
   identity headers map into `st.user`, and a session answers only the identity that
-  created it, for `get_data` too. `st.context.headers` are the request's minus `Cookie`,
+  created it. `get_data` also needs a `session_id` its caller's identity created,
+  though the files it reads are not limited to that session's, as **Scope** under
+  [`get_data`](#get_data) says. `st.context.headers` are the request's minus `Cookie`,
   `Authorization`, and `Proxy-Authorization`, which matters here because MCP clients
   send their bearer tokens in `Authorization`. One interaction in flight per session
   applies to `interact`, and `server.agentMaxSessions` applies as over HTTP. `get_data`
   reuses `unknown_session` and the identity check but not `interact`'s in-flight lock:
   it runs no app code, MCP clients often call tools in parallel, and a parallel read
-  refused with `session_busy` is one a model may not retry.
+  refused with `session_busy` is one a model may not retry. A read that passes the
+  check counts as use of the session, as a request does over HTTP, so it restarts the
+  `server.agentSessionTTL` idle timer: a model paging a large table with `get_data`
+  alone does not lose the session midway.
 - **`Origin` is validated against DNS rebinding, as the MCP transport requires.** A
   request carrying an `Origin` not listed in `server.corsAllowedOrigins` gets `403`.
   Browsers send `Origin` on every `POST`, and MCP clients that run outside a browser
   send none, so this refuses rebound and cross-site pages without turning away a
-  desktop client. Use case 2 assumes the same of hosted connectors, such as Claude.ai
-  and ChatGPT custom connectors: they send no `Origin`. That is an assumption. A local
-  conformance test cannot show what a provider's servers send, so it is checked by hand
-  against the real connectors before shipping. The same check covers OAuth discovery:
+  desktop client. Use case 2 assumes that hosted connectors, such as Claude.ai and
+  ChatGPT custom connectors, also send no `Origin`. A local conformance test cannot
+  show what a provider's servers send, so this is verified by hand against the live
+  connectors before shipping. The same check covers OAuth discovery:
   an app answers `/.well-known/oauth-protected-resource` with its HTML page and a
   `200`, and a connector that probes it must still connect without sign-in. The
   official TypeScript client does not
@@ -533,8 +546,8 @@ is far easier than writing an HTTP client, so an app with the API on will see mo
 traffic. That makes the parent spec's gates on default-on — rate limits, per-caller
 quotas, and compact responses — more pressing, but not different. MCP requires servers
 to rate-limit tool calls. In v1 that is the deployment's job, as for the HTTP API: the
-deployment docs say its rate limits must cover this route too, and the per-server
-decode cap in [Rollout](#rollout) bounds what parallel `get_data` calls cost.
+deployment docs say its rate limits must cover this route too, and a `get_data` page
+costs what its page budget allows, however large the file ([Rollout](#rollout)).
 
 ### Discovery and URLs
 
@@ -546,9 +559,10 @@ The parent spec's discovery points at the MCP endpoint too:
 - Every response from the route carries `Link: <openapi.json>; rel="service-desc"`, as
   the other agent routes' responses do. Relative to `_stcore/agent/mcp`, it names the
   document beside it.
-- The `<noscript>` text in `index.html` gains one sentence, stated as a fact like the
-  rest: the same protocol is also an MCP server at `_stcore/agent/mcp` under the app's
-  root URL.
+- The `<noscript>` text in `index.html` names the MCP server, stated as a fact like the
+  rest. Its sentence on the protocol's one operation calls `POST _stcore/agent/interact`
+  the one HTTP operation, and a new sentence says the same protocol is also an MCP
+  server at `_stcore/agent/mcp` under the app's root URL.
 
 **URLs in a result are relative to the MCP endpoint**, the rule the HTTP API uses for
 its own responses. A table's `data.url` is `../../media/<id>`, and other media URLs keep
@@ -586,21 +600,21 @@ is the parent spec's follow-up #9, compact responses, which this ships without; 
 It lands as one PR after the agent API's v1 stack, behind the same setting, about 650
 lines including the tool descriptions. Beyond the endpoint itself:
 
-- `get_data` reads files through the media file manager. A page reads its Arrow
-  artifact with record batches, a stream, or a bounded decoded cache, so a repeated
-  500-row page does not decode a file up to the inherited 200 MB limit from the start
-  each time. Stopping the row-to-JSON conversion once a page is full does not, by
-  itself, bound that cost. Decoding and JSON encoding run off the event loop, as the
-  agent routes already parse requests with `asyncio.to_thread`. A per-server cap on
-  reads decoding at once makes parallel calls wait their turn rather than each decode a
-  large file, and the concurrency performance test checks that bound.
+- `get_data` reads files through the media file manager. A page's cost scales with the
+  page, not the file: the stored Arrow is an uncompressed IPC stream, which reads
+  without copying, as the snapshot preview already reads it, so a page slices out its
+  rows and JSON-encodes only those. Reading and encoding run off the event loop, as the
+  agent routes already parse requests with `asyncio.to_thread`. The performance tests
+  check repeated pages and concurrent calls on a table near the inherited 200 MB
+  limit; a decoded cache or a cap on reads at once comes in only if they call for one.
 - The route is wired like the other two agent routes: `_stcore/agent/mcp` joins the
   reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
   and its endpoint is wrapped so every response carries the `Link` header.
 - Reading a file back is optional for a media store. Hosts can plug in their own store
   through `RuntimeConfig.media_file_storage`, and the storage interface has no read
   today: only the built-in in-memory store can return a file's bytes. On a store that
-  cannot, `get_data` returns `read_unsupported`.
+  cannot, `get_data` returns `read_unsupported` for any `url`, so an id in that store's
+  own format is never called "not a media file".
 - Route-level unit tests, a conformance test against the official MCP SDK clients as a
   dev-only dependency, performance coverage for repeated pages and concurrent
   `get_data` calls, and a check that a hosted-style client sends no `Origin`. The route
@@ -700,8 +714,9 @@ the result shows it, or resolved.
 
 ## Follow-ups
 
-Each of these is additive to the v1 contract. They are numbered for reference rather
-than ranked, and name the parent spec's follow-up where one builds on it.
+Each of these is additive to the v1 contract except follow-up 5, which changes what
+`get_data` returns for a large text or JSON file. They are numbered for reference
+rather than ranked, and name the parent spec's follow-up where one builds on it.
 
 1. **App title and description in `serverInfo`.** Once `st.App` has the static
    `app_title` and `app_description` of the parent spec's follow-up #2, `initialize`
@@ -766,7 +781,7 @@ and most apps are unaffected.
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
-| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and one sentence in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                           |
+| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
 | Metrics collected          | Not in v1, as in the parent spec. Streamlit's usage stats are reported by the browser, which an agent session does not have. When agent usage metrics land (the parent's operations follow-up), they should also record the transport (`mcp` or HTTP) and the negotiated protocol version. `clientInfo.name` arrives only on `initialize`, so it is not a per-call field in the revisions this server speaks. |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is no broader than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                   |
