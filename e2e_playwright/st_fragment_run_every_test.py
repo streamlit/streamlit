@@ -53,6 +53,7 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
 
     click_checkbox(app, "Show nested auto fragment")
     expect(nested_fragment).not_to_be_attached()
+    expect(app.get_by_text("after nested")).to_have_count(1)
 
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
@@ -69,4 +70,21 @@ def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
 
     click_checkbox(app, "Show nested auto fragment")
     expect(get_element_by_key(app, "nested_auto_fragment")).to_be_visible()
+    expect(app.get_by_text("after nested")).to_have_count(1)
     expect(app.get_by_test_id("stException")).to_have_count(0)
+
+
+def test_nested_fragment_run_every_hide_survives_repeated_toggles(app: Page):
+    """Repeated hide/show must not leave stale nested content (issue #16708)."""
+    expect(get_element_by_key(app, "nested_auto_fragment")).to_be_visible()
+
+    for _ in range(5):
+        click_checkbox(app, "Show nested auto fragment")
+        expect(get_element_by_key(app, "nested_auto_fragment")).not_to_be_attached()
+        expect(app.get_by_text("after nested")).to_have_count(1)
+        expect(app.get_by_test_id("stException")).to_have_count(0)
+
+        click_checkbox(app, "Show nested auto fragment")
+        expect(get_element_by_key(app, "nested_auto_fragment")).to_be_visible()
+        expect(app.get_by_text("after nested")).to_have_count(1)
+        expect(app.get_by_test_id("stException")).to_have_count(0)
