@@ -37,11 +37,16 @@ from __future__ import annotations
 import time
 from collections import OrderedDict
 from collections.abc import Callable, ItemsView, Iterator, MutableMapping, ValuesView
-from typing import Final, TypeVar, overload
+from typing import Final, Literal, TypeAlias, TypeVar, overload
 
 K = TypeVar("K")
 V = TypeVar("V")
 _T = TypeVar("_T")
+
+# Why the cache removed entries on its own: "ttl" for expired entries,
+# "max_entries" and "max_size" for capacity evictions on write.
+TTLCacheEvictionReason: TypeAlias = Literal["ttl", "max_entries", "max_size"]
+OnEvict: TypeAlias = Callable[[TTLCacheEvictionReason, int], None]
 
 # Sentinel used to detect whether a default was passed to pop().
 _MISSING: Final = object()
@@ -58,6 +63,7 @@ class TTLCache(MutableMapping[K, V]):
         max_total_size: float | None = None,
         getsizeof: Callable[[V], int] | None = None,
         on_remove: Callable[[K, V], None] | None = None,
+        on_evict: OnEvict | None = None,
     ) -> None:
         """Create a new TTLCache.
 
@@ -78,6 +84,13 @@ class TTLCache(MutableMapping[K, V]):
             be provided together with ``max_total_size``.
         on_remove : Callable[[K, V], None] | None
             Callback invoked whenever an entry is removed.
+        on_evict : OnEvict | None
+            Callback invoked with a reason and an entry count when the cache
+            removes entries on its own: expired entries when they are reaped,
+            and least-recently-used entries evicted on write to stay within
+            ``maxsize`` or ``max_total_size``. Entries removed explicitly
+            (``del``, ``pop``, ``popitem``, ``clear``) are not reported, but
+            expired entries reaped during those calls are.
         """
         if (max_total_size is None) != (getsizeof is None):
             raise ValueError("max_total_size and getsizeof must be provided together")
@@ -85,6 +98,7 @@ class TTLCache(MutableMapping[K, V]):
         self._max_total_size = max_total_size
         self._getsizeof = getsizeof
         self._on_remove = on_remove
+        self._on_evict = on_evict
         self._curr_total_size = 0
         self._sizes: dict[K, int] | None = (
             {} if self._max_total_size is not None else None
@@ -181,17 +195,23 @@ class TTLCache(MutableMapping[K, V]):
         if key in self._data:
             self._remove(key)
         # Stop evicting when the cache is empty so one oversized value is retained.
-        while self._data and (
-            len(self._data) + 1 > self._maxsize
-            or (
+        while self._data:
+            reason: TTLCacheEvictionReason
+            if len(self._data) + 1 > self._maxsize:
+                reason = "max_entries"
+            elif (
                 size is not None
                 and self._max_total_size is not None
                 and self._curr_total_size + size > self._max_total_size
-            )
-        ):
+            ):
+                reason = "max_size"
+            else:
+                break
             # Dispatch through popitem() so subclasses such as TTLCleanupCache
             # can run their release hooks for automatic capacity evictions.
             self.popitem()
+            if self._on_evict is not None:
+                self._on_evict(reason, 1)
         self._data[key] = value
         if self._sizes is not None and size is not None:
             self._sizes[key] = size
@@ -309,6 +329,8 @@ class TTLCache(MutableMapping[K, V]):
         for key in expired_keys:
             value = self._remove(key)
             removed.append((key, value))
+        if removed and self._on_evict is not None:
+            self._on_evict("ttl", len(removed))
         return removed
 
     def clear(self) -> None:

@@ -51,7 +51,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_background_refresh
+from streamlit.runtime.caching import cache_background_refresh, cache_metrics
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
@@ -720,6 +720,9 @@ class CachedFunc(Generic[P, R]):
     def __init__(self, info: CachedFuncInfo[P, R]) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
+        self._metrics = cache_metrics.get_cache_metrics().get_function_metrics(
+            info.cache_type, info.display_name
+        )
 
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
@@ -777,13 +780,18 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
+        # Each call counts as exactly one lookup, decided by this first read. The
+        # re-read under the compute lock belongs to the same call, so a caller that
+        # waits for another caller's computation still counts as a miss.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:
             # Hard miss (never computed or past the hard-eviction bound): fall through
             # to a blocking foreground compute below.
-            pass
+            self._metrics.record_miss()
         else:
+            # A stale value served during a background refresh is still a hit.
+            self._metrics.record_hit()
             if read.is_stale:
                 # Background mode, stale grace window: return the stale value now and
                 # kick off a single deduplicated background refresh (no spinner).
@@ -869,10 +877,16 @@ class CachedFunc(Generic[P, R]):
                 pass
 
             # We acquired the lock before any other thread. Compute the value!
-            with self._info.cached_message_replay_ctx.calling_cached_function(
-                self._info.func
-            ):
-                computed_value = self._info.func(*func_args, **func_kwargs)
+            compute_start = time.perf_counter()
+            try:
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func
+                ):
+                    computed_value = self._info.func(*func_args, **func_kwargs)
+            finally:
+                self._metrics.record_compute_duration(
+                    time.perf_counter() - compute_start
+                )
 
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, computed_value
@@ -969,12 +983,14 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
+        # As in the sync path, this first read alone decides the call's lookup result.
         try:
             cached_result = cache.read_result(value_key)
         except CacheKeyNotFoundError:
             # Hard miss: fall through to the awaiting compute below.
-            pass
+            self._metrics.record_miss()
         else:
+            self._metrics.record_hit()
             return self._handle_cache_hit(cached_result)
 
         is_nested_cache_function = in_cached_function.get()
@@ -1036,14 +1052,20 @@ class CachedFunc(Generic[P, R]):
                     raise RuntimeError(
                         "Async computation owner has no invalidation token"
                     )
-                with self._info.cached_message_replay_ctx.calling_cached_function(
-                    self._info.func
-                ):
-                    # `is_async` guarantees the call returns a coroutine; cast so the
-                    # type checker allows awaiting it (the wrapper's `R` is the coroutine
-                    # type for an `async def`, not the awaited value type).
-                    computed_value = await cast(
-                        "Any", self._info.func(*func_args, **func_kwargs)
+                compute_start = time.perf_counter()
+                try:
+                    with self._info.cached_message_replay_ctx.calling_cached_function(
+                        self._info.func
+                    ):
+                        # `is_async` guarantees the call returns a coroutine; cast so
+                        # the type checker allows awaiting it (the wrapper's `R` is the
+                        # coroutine type for an `async def`, not the awaited value type).
+                        computed_value = await cast(
+                            "Any", self._info.func(*func_args, **func_kwargs)
+                        )
+                finally:
+                    self._metrics.record_compute_duration(
+                        time.perf_counter() - compute_start
                     )
 
                 return self._store_computed_value(
