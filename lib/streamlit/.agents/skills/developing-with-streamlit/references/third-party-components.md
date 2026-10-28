@@ -14,9 +14,9 @@ Most community components are not maintained by Streamlit. They can break on Str
 | `streamlit-option-menu` | `st.navigation` when the menu switches app sections; `st.segmented_control` when it switches views within one page. |
 | `extra-streamlit-components` (`CookieManager`) | `st.context.cookies` to read the initial request. `st.App` middleware can set a cookie on an HTTP response, not after a widget interaction. See [server-asgi.md](server-asgi.md). |
 | `streamlit-searchbox` | `st.selectbox` (it filters a known list as you type) to pick one option; `st.text_input(..., type="search", live=True)` to filter results rendered below it. Put the text input in a `@st.fragment` when the rest of the page should stay put. |
-| `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. Prefer a Vega-based chart unless the spec is already ECharts. See [data-display.md](data-display.md). |
+| `streamlit-echarts` | `st.echarts_chart` or a Vega-based chart, whichever fits the chart. Use `st.echarts_chart` for an existing JSON-compatible option, JSON string, or `pyecharts` chart. See [data-display.md](data-display.md). |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)`, inside a `@st.fragment` when the rest of the page should stay put. |
-| `streamlit-bokeh` | A Vega-based chart (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.bar_chart`, `st.scatter_chart`, or `st.vega_lite_chart`), or `st.echarts_chart` when the spec is already ECharts. Prefer Vega-based charts. |
+| `streamlit-bokeh` | A Vega-based chart (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.bar_chart`, `st.scatter_chart`, or `st.vega_lite_chart`) or `st.echarts_chart`, whichever fits the chart. |
 
 Use the package only when the native command does not cover the behavior:
 

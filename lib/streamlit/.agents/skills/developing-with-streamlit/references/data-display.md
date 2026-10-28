@@ -43,7 +43,7 @@ st.table(summary, alt="Quarterly KPI summary")
 
 ## Native charts first
 
-Prefer Streamlit's native charts for simple cases. Prefer a Vega-based chart, or `st.echarts_chart` when the spec is already ECharts, over `streamlit-bokeh`.
+Prefer Streamlit's native charts for simple cases. Use a Vega-based chart or `st.echarts_chart`, whichever fits the chart, instead of `streamlit-bokeh`.
 
 ```python
 st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
@@ -99,7 +99,7 @@ st.altair_chart(chart, alt="Revenue by region over time")
 
 ## Apache ECharts
 
-Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for a JSON-compatible spec. Prefer Vega-based charts unless the spec is already ECharts-native.
+Use a Vega-based chart or `st.echarts_chart`, whichever fits the chart. Render an existing JSON-compatible ECharts option, JSON string, or `pyecharts` chart with `st.echarts_chart` instead of a third-party component.
 
 Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported. Keep `streamlit-echarts` for those spec features. See [third-party-components.md](third-party-components.md).
 
