@@ -1762,6 +1762,51 @@ def goto_app(page: Page, url: str) -> None:
     wait_for_app_loaded(page)
 
 
+def flush_print_media_change(page: Page) -> None:
+    """Deliver the ``matchMedia("print")`` change queued by ``emulate_media``.
+
+    ``emulate_media`` fires ``change`` on the ``MediaQueryList`` objects the
+    page already holds, on the next task. Calling ``matchMedia("print")``
+    again returns a different object, so a ``change`` event dispatched on it
+    never reaches those listeners. Yielding one task delivers the queued event.
+
+    Parameters
+    ----------
+    page : Page
+        The page that emulates print media.
+    """
+    page.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+
+
+def start_browser_print(page: Page) -> None:
+    """Enter print the way a browser does: ``beforeprint``, then print media.
+
+    A browser fires ``beforeprint`` while screen media is still active and
+    switches to print afterwards. Print colors are forced, as in a PDF.
+
+    Parameters
+    ----------
+    page : Page
+        The page to print.
+    """
+    page.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    page.emulate_media(media="print", forced_colors="active")
+    flush_print_media_change(page)
+
+
+def end_browser_print(page: Page) -> None:
+    """Fire ``afterprint`` and restore screen media.
+
+    Parameters
+    ----------
+    page : Page
+        The page that was printed.
+    """
+    page.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    page.emulate_media(media="screen", forced_colors="none")
+    flush_print_media_change(page)
+
+
 def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
     """Get a metric element with the given label.
 

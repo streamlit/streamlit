@@ -266,6 +266,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       data-testid="stSidebar"
       aria-label="Sidebar"
       data-collapsed={isCollapsed ? "true" : "false"}
+      // Marks a collapsed sidebar as unprinted, so print layout ignores its
+      // charts and dataframes. Closed tabs use the same marker.
+      data-st-inactive={isCollapsed ? "" : undefined}
       enable={{
         top: false,
         right: true,

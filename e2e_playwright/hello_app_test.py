@@ -18,10 +18,11 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
 )
+from e2e_playwright.shared.app_utils import flush_print_media_change
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
-def navigate_to_page(app: Page, index: int):
+def navigate_to_page(app: Page, index: int) -> None:
     app.get_by_test_id("stSidebarNav").locator("a").nth(index).click()
     wait_for_app_run(app)
     # Move the mouse to the top left corner to prevent any weird hover effects
@@ -100,7 +101,7 @@ def test_mapping_demo_page(app: Page) -> None:
     # assert_snapshot(app, name="hello_app-mapping_demo_page")  # noqa: ERA001
 
 
-def _load_dataframe_demo_page(app: Page):
+def _load_dataframe_demo_page(app: Page) -> None:
     """Load the dataframe demo page and wait until all elements are visible."""
     navigate_to_page(app, 1)
     check_page_title(app, "DataFrame demo")
@@ -124,21 +125,17 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 # printing candidate.
 
 
-def _evaluate_match_media_print(app: Page):
-    app.evaluate("matchMedia('print').matches")
-
-
 # DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
 # Use higher pixels to avoid mobile media queries to trigger but keep the ratio
 portrait_width_px = 1240
 portrait_height_px = 1754
 
 
-def _set_portrait_dimensions(app: Page):
+def _set_portrait_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_width_px, "height": portrait_height_px})
 
 
-def _set_landscape_dimensions(app: Page):
+def _set_landscape_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
 
 
@@ -153,7 +150,7 @@ def test_app_print_mode_portrait_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-    _evaluate_match_media_print(app)
+    flush_print_media_change(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
@@ -183,7 +180,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _evaluate_match_media_print(app)
+    flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
 
@@ -199,7 +196,7 @@ def test_app_print_mode_landscape_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
-    _evaluate_match_media_print(app)
+    flush_print_media_change(app)
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
@@ -228,7 +225,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _evaluate_match_media_print(app)
+    flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 

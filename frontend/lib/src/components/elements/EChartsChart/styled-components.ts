@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
+
 /**
  * Outermost chart chrome. Stretch height uses the content-size floor so
  * `height: 100%` does not collapse to 0 outside a sized parent.
@@ -61,6 +66,10 @@ export const StyledEChartsChartContainer = styled.div<{
   // snapshot after re-enable. Display-only charts keep pointer events for
   // tooltips, dataZoom, and toolbox.
   ...(isDisabled ? { pointerEvents: "none" as const } : {}),
+  // ECharts sizes its canvas from the on-screen box. Keep that canvas inside
+  // the column when the printed page is narrower.
+  ...printWidthCapStyles,
+  "& canvas, & svg": printGraphicFitStyles,
 }))
 
 /** Stacks the chart and an in-place render-error overlay at the same size. */
