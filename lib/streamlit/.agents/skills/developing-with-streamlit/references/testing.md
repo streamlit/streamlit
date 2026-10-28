@@ -21,9 +21,13 @@ Start the app headless in the background, bound to localhost. Pass the flag on t
 streamlit run app.py --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
 ```
 
-If the app's config sets `server.baseUrlPath`, `server.allowedHosts`, or `server.fileWatcherType = "none"`, also pass `--server.baseUrlPath=`, `--server.allowedHosts=127.0.0.1`, or `--server.fileWatcherType=auto`. Otherwise the URLs below return 404 or `host_not_allowed`, or script edits don't apply until a restart.
+If the app's config sets any of these, add the matching override to the same command, or the URLs below return 404 or `host_not_allowed`, or script edits don't apply until a restart:
 
-Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, Streamlit exits; pick another port and use it below. Keep the server running while you work: a script edit applies on the session's next request, with no restart. Stop it when you're done.
+- `server.baseUrlPath`: `--server.baseUrlPath=`
+- `server.allowedHosts`: `--server.allowedHosts=127.0.0.1`
+- `server.fileWatcherType = "none"`: `--server.fileWatcherType=auto`
+
+Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. On Windows, use `curl.exe` with double-quoted, escaped JSON, or send the requests from a short Python script. If the port is taken, Streamlit exits; pick another port and use it below. Keep the server running while you work: a script edit applies on the session's next request, with no restart. Stop it when you're done.
 
 **Watch the server's console output.** Keep it where you can read it (the background process's output, or a log file outside the project) and check it after every request, not only on errors. Streamlit logs warnings and tracebacks there that the snapshot does not show, such as deprecations and ignored parameters. Treat a new warning or traceback as something to fix or report.
 
@@ -67,14 +71,14 @@ Request fields:
 - `query_params`: for example `{"region": ["Europe"]}`.
 - Only `session_id`: reruns the app.
 
-`page` and `query_params` are also accepted on the creating call. `widget_state` and `trigger` need a `session_id`, so send `{}` first. They can't share a request with `page` or `query_params`. `actions` lists the keys you can use now. Elements without `key=` get generated keys (`$$ID-...`) that change when the code does; add `key=` to anything you want to drive.
+`page` and `query_params` are also accepted on the first request, the one without a `session_id`. `widget_state` and `trigger` need a `session_id`, so send `{}` first, and don't combine them with `page` or `query_params`. `actions` lists the keys you can use now. Elements without `key=` get generated keys (`$$ID-...`) that change when the code does; add `key=` to anything you want to drive.
 
 Reading the result:
 
-- `status: "error"`: the app raised. The tree holds an `exception` element whose `props` carry `type`, `message`, and, unless `client.showErrorDetails` hides it, `stack_trace`. Fix the code and send only `session_id` to rerun.
+- `status: "error"`: the app raised. The tree holds an `exception` element whose `props` include `type`, `message`, and `stack_trace`, except where `client.showErrorDetails` redacts them. The server console still has the full traceback. Fix the code and send only `session_id` to rerun.
 - A 4xx with `error.code` (`invalid_value`, `unknown_key`, `missing_form_submit`, …): the request was refused and nothing ran. `error.message` says why.
 - `unknown_session`: the session idled out or the server restarted. Send `{}`.
-- `202` with `wait_timed_out`: the run is still going, for example on a slow first data load. Send only `session_id` to wait for it.
+- `202` with `wait_timed_out`: the run is still going, for example on a slow first data load. Send only the `session_id` from the `202` body to keep waiting. Resending `{}` starts another session and runs the app again.
 
 Limits:
 

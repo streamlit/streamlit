@@ -1310,11 +1310,12 @@ _create_option(
         finish running, including any reruns it triggers, before returning
         `wait_timed_out`.
 
-        This bounds the wait, not the run: the app keeps running. A request
-        with only that response's `session_id` waits for the same run instead
-        of starting another. Repeating a creating call, which has no
-        `session_id`, starts a new session and runs the app again. Keep this
-        below the request timeout of the clients you expect.
+        This bounds the wait, not the run: the app keeps running. To keep
+        waiting, send only the `session_id` from the `wait_timed_out`
+        response; that request waits for the same run instead of starting
+        another. Resending a request without a `session_id` starts a new
+        session and runs the app again. Keep this below the request timeout
+        of the clients you expect.
 
         Note: This is part of the experimental agent API. See
         `server.enableAgentApi`.
