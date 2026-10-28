@@ -235,10 +235,8 @@ changes and almost never needs the previous value. The data editor is the except
 payload is cumulative, so `DataEditorSerde.validate` uses the `previous` keyword to check
 only new or changed entries. Every other serde ignores it.
 
-**URL seeding** uses the same `validate` wherever its rule is the same, in place of the
-`formatted_options`, `max_array_length`, and `clearable` comparisons it makes today. It
-keeps its sanitize-and-correct behavior, because a URL has no previous value to fall back
-to.
+URL seeding reuses `validate` as well. See
+[Other value sources](#other-value-sources-url-binding-and-session-state).
 
 ### Rendered-widget gate
 
@@ -292,6 +290,83 @@ value. Item 4 also sets it when a deserializer coerces a client value, which clo
 
 Trigger widgets need no re-sync: a trigger resets anyway. `st.data_editor` has no channel
 to re-sync edits (see [Open questions](#open-questions)).
+
+### Other value sources: URL binding and session state
+
+A widget's value can come from three places. The serde's `validate` is the one definition
+of what the widget accepts, and each source applies its own policy to a violation:
+
+| Source | Trusted? | Policy on a violation | In this spec |
+| --- | --- | --- | --- |
+| Client `WidgetStates` | No | Drop it as never sent; the agent API refuses the request | Yes |
+| A bound widget's URL parameter | No: the client sends the query string in `ClientState` | Repair it, then validate it, then clear or correct the parameter | A refactor onto `validate`, below |
+| Programmatic `st.session_state` writes | Yes: it is app code | Mixed today | Follow-up, below |
+
+**URL binding: a behavior-preserving refactor after item 4.** `_seed_widget_from_url`
+already validates the query string. It does so with comparisons on metadata fields that
+exist only for this purpose. Once every serde has a validator:
+
+- **Membership and bounds come from `validate`.** The URL path still repairs array
+  parameters, but the violation details drive the repair:
+  - drop items reported as `not_an_option`
+  - deduplicate after `duplicate_items`
+  - truncate to the `max_items` that `too_many_items` reports
+- **Two metadata fields go away.** `max_array_length` and `allow_url_duplicates` leave
+  `WidgetMetadata`, because the serde already holds both facts: `max_selections`, and
+  whether a range may repeat a value.
+- **`formatted_options` keeps one role.** Its membership role moves to `validate`. Its
+  other role remains: writing a corrected value of an index-based widget (`pills`,
+  `segmented_control`, `select_slider`) back to the URL as a label. `register_widget`
+  already marks it temporary until those serdes use string wire values.
+- **`clearable` stays.** It is not a validation fact. It says what an empty parameter
+  means: an empty value, or no value at all.
+
+This is a pure refactor. The query-param unit tests and `st_query_params_test.py` /
+`st_query_params_history_test.py` cover it. It should be its own PR, so a regression is
+easy to bisect.
+
+**The URL is a second client channel, and it deliberately has fewer rules.** A bound
+widget's parameter gets the same *value* rules, through the same serde. It does not get
+the *structural* rules, and that is by design: an author who binds a widget is accepting
+that a shared link can set it. Concretely:
+
+- URL seeding still applies to a `disabled` bound widget. #16209 exempted this on
+  purpose.
+- On load, a URL can set a form field without a submit.
+
+Binding's priority rules limit when the URL applies at all: on initial load and on
+browser back/forward navigation. Otherwise session state and user interaction win. If
+the boundary check drops a client value for a bound widget, seeding can run in the same
+rerun only under those rules. Its value then passes the same `validate`, so the URL
+cannot be used to get around the drop. The security docs should spell this out; whether
+`disabled` should also block seeding is open question 5.
+
+**Programmatic writes: a follow-up, not part of this spec.** App code is trusted, so a
+programmatic value raises no security question. It also does not affect agents: the
+browser and the agent API echo it back unchanged, and unchanged values pass check 1. But
+today an out-of-constraint write has four different outcomes, depending on the widget:
+
+- **Reset to the default:** an unknown option, or a number or date out of range.
+- **A clean error:** more than `max_selections`, or a slider above `max_value`.
+- **Accepted unchecked:** text past `max_chars`, a failed `validate`, or the color
+  `"red"`.
+- **A raw `TypeError`:** `"abc"` for a number input, `123` for a text input, or `"yes"`
+  for a checkbox.
+
+With `validate` on every serde, registration can decide all four in one place. The
+follow-up should:
+
+- Turn each raw `TypeError` into a `streamlit.errors` exception that names the widget and
+  the expected type. This is a pure improvement.
+- Keep resetting values made stale by options or bounds that changed since an earlier
+  run. That is reconciliation, not an author mistake.
+- Decide whether an explicit write that violates a constraint raises, following the "fail
+  fast" API principle, or resets. Apps may rely on today's resets, such as
+  `st.session_state.choice = None` to reset a selectbox, so raising needs a deprecation
+  path.
+
+That last decision changes API behavior, so it belongs in its own spec or papercut,
+together with open question 3 on `AppTest.set_value`.
 
 ### Per-item notes
 
@@ -459,3 +534,6 @@ regression in the unchanged case.
    the way the agent API does, instead of letting the run drop it silently?
 4. Should a rejection count be surfaced anywhere beyond logs, for operators watching for
    forged traffic?
+5. Should `disabled` also block URL seeding of a bound widget? Today #16209 exempts it on
+   purpose, so a shared link can set a filter the app shows as disabled. Blocking it would
+   make `disabled` absolute, at the cost of links that set such filters.

@@ -119,8 +119,12 @@ own, provided each reports the violation and lets the caller decide."
    - The agent API refuses the whole request with `invalid_value` before anything runs,
      naming the constraint.
    - `AppTest` could raise at `set_value` time; that is a follow-up.
-4. **Only client input is checked.** Programmatic `st.session_state` writes, URL
-   parameters (already validated), and widget defaults keep their current rules.
+4. **Only client input is refused.** A bound widget's URL parameter is client input too.
+   It already gets value checks, and those move onto the same per-widget definition. It
+   keeps its own repair-and-correct policy, and it deliberately skips the structural rules,
+   because an author who binds a widget accepts that a link can set it. Programmatic
+   `st.session_state` writes and widget defaults keep their current rules. Making
+   programmatic writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
 
 There is no new parameter and no config option. The check refuses only what the shipped
 frontend never sends, so a correct client never notices it.
@@ -242,6 +246,11 @@ Why this order:
 - **Item 8 unblocks agent selections** and is small.
 - **Item 9 is cheap in code but subtle,** because of the fragment lifecycle.
 - **Items 10–12 are large or belong to other tracks.**
+- **A URL-binding refactor follows item 4,** as its own behavior-preserving PR. The query
+  parameter path then reuses each widget's validator, and two metadata fields that exist
+  only for it go away (see the
+  [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)). It does
+  not change what a URL can set.
 
 ### Agent interaction API
 
@@ -345,8 +354,14 @@ noted below.
   chosen by the client. Item 11 hardens what can be checked.
 - **`st.chat_input` `submit_mode`, and dialogs the browser dismissed** with
   `on_dismiss="ignore"`. These are browser state the server does not know.
-- **Consistent errors for programmatic `st.session_state` writes,** several of which raise
-  a raw `TypeError` today. That is a separate papercut.
+- **Consistent handling of programmatic `st.session_state` writes.** App code is trusted,
+  so this is not a security fix. It does not affect agents either, because an echoed value
+  is unchanged and passes. But an out-of-constraint write has four outcomes today,
+  depending on the widget: it is reset, it raises a clean error, it is accepted unchecked,
+  or it raises a raw `TypeError`. The per-widget validators make one rule possible.
+  Turning the raw `TypeError`s into clear errors is a safe papercut. Deciding whether an
+  explicit invalid write should raise or reset changes API behavior, so it needs its own
+  spec (see the [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)).
 - **Request rate limits.** See the agent spec's default-on gates.
 
 ## Checklist
