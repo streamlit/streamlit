@@ -99,9 +99,9 @@ st.altair_chart(chart, alt="Revenue by region over time")
 
 ## Apache ECharts
 
-Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for this. Prefer Vega-based charts unless the spec is already ECharts-native.
+Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for a JSON-compatible spec. Prefer Vega-based charts unless the spec is already ECharts-native.
 
-Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
+Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported. Keep `streamlit-echarts` for those spec features. See [third-party-components.md](third-party-components.md).
 
 ```python
 st.echarts_chart(
@@ -262,13 +262,13 @@ st.dataframe(
 
 | Widget           | Use When                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, search, row selection       |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
 | `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
-Prefer `st.dataframe` and `st.data_editor` with `column_config` over `streamlit-aggrid`. Use aggrid only for row grouping, pivoting, or custom cell renderers that `column_config` cannot express.
+Prefer `st.dataframe` and `st.data_editor` with `column_config` over `streamlit-aggrid` for sorting, search, editing, and formatting. Search highlights matching cells and does not hide other rows. Use aggrid only for per-column filter menus, row grouping, pivoting, or custom cell renderers that `column_config` cannot express, unless the app filters with separate widgets.
 
 ## Description and key-value lists
 

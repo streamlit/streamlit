@@ -24,7 +24,7 @@ Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and 
 
 Use `st.App` for:
 - Custom REST or webhook endpoints alongside a Streamlit app
-- HTTP middleware for security headers, request logging, authentication, CORS, or setting cookies
+- HTTP middleware for security headers, request logging, authentication, CORS, or setting cookies on the HTTP response
 - Startup/shutdown work through ASGI lifespan hooks
 - Mounting FastAPI, Starlette, or another ASGI app beside Streamlit
 - Mounting Streamlit inside a parent ASGI app
@@ -188,7 +188,7 @@ app = st.App(
 
 User middleware runs before Streamlit's internal middleware on requests and after it on responses.
 
-To set a cookie, call `response.set_cookie(...)` on the middleware response. The script reads cookies with `st.context.cookies`, which is read-only and reflects the initial request. There is no script command that sets a cookie. Do not add `extra-streamlit-components` CookieManager for this.
+To set a cookie decided on the HTTP request (for example, on page load), call `response.set_cookie(...)` on the middleware response, and choose `httponly`, `secure`, and `samesite` deliberately; Starlette's defaults are not safe for session cookies. Middleware does not run on script reruns, so it cannot set a cookie in response to a widget interaction. The script reads cookies with `st.context.cookies`, which is read-only and reflects the initial request. Use a cookie component only when the script must set a cookie after the page loads; for sign-in, prefer `st.login`. See [third-party-components.md](third-party-components.md).
 
 ## Lifespan hooks
 

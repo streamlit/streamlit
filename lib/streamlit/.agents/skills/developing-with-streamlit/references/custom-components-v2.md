@@ -5,18 +5,9 @@ Use Streamlit Custom Components v2 (CCv2) when core Streamlit doesn’t have the
 
 ## Prefer a native command first
 
-Stop if a native Streamlit command already covers the behavior. Do not build a component to reimplement it. Suggest upgrading when the native command is newer than the app's installed Streamlit.
+Stop if a native Streamlit command already covers the behavior; see the mapping in [third-party-components.md](third-party-components.md). Suggest upgrading when the native command is newer than the app's installed Streamlit. Do not build a component to reimplement a native command.
 
-- Timed refresh: `@st.fragment(run_every=...)` instead of `streamlit-autorefresh` (`st_autorefresh`)
-- Tables: `st.dataframe` / `st.data_editor` with `column_config` instead of `streamlit-aggrid`, unless you need grouping, pivoting, or custom cell renderers
-- Maps: `st.map` or `st.pydeck_chart` instead of `streamlit-folium` (`st_folium`), unless you need a Folium map or Leaflet behavior those commands lack
-- App sections: `st.navigation` instead of `streamlit-option-menu`. For a menu that only changes the current page, use `st.segmented_control`
-- Cookies: read with `st.context.cookies`; set request-level cookies with `st.App` middleware instead of `extra-streamlit-components` CookieManager. See [server-asgi.md](server-asgi.md)
-- Search: `st.text_input(..., type="search", live=True)` instead of `streamlit-searchbox`
-- Live text: `st.text_input(..., live=True)` instead of `streamlit-keyup` (`st_keyup`)
-- ECharts: `st.echarts_chart` instead of `streamlit-echarts`
-
-The same mapping, with the cases that still need a package, is in [third-party-components.md](third-party-components.md). Use CCv2 only for UI Streamlit does not provide (for example drag-and-drop or canvas drawing).
+Use CCv2 only for UI Streamlit does not provide (for example drag-and-drop or canvas drawing).
 
 ## CRITICAL: CCv2 only — NEVER use v1 APIs for new components
 
