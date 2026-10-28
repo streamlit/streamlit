@@ -106,7 +106,7 @@ which clients keep apart by the name the user gave each server. A successful
 running Streamlit version, the same version the OpenAPI document describes. It reports
 no app title: as the parent spec explains for the snapshot, Streamlit has no reliable
 source for one until authored app titles land in its follow-up #2, after which the
-title can join `serverInfo`. While the API is off, `initialize` is the `-32600` error
+title can join `serverInfo` ([Follow-ups](#follow-ups)). While the API is off, `initialize` is the `-32600` error
 and returns no `serverInfo`; the disabled discovery document still omits that version,
 as the parent spec requires.
 
@@ -193,7 +193,7 @@ id from, and the parent spec says a retry that drops it starts another session.
 
 **Annotations:** `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: false`,
 and `openWorldHint: true`. Any action can write, as the parent spec requires. Letting an
-author declare otherwise is [out of scope](#out-of-scope).
+author declare otherwise is a [follow-up](#follow-ups).
 
 #### `get_data`
 
@@ -207,9 +207,9 @@ missing `session_id` or `url` is `invalid_request`, the parent's code for a malf
 request. An unknown, expired, or identity-mismatched `session_id` is `unknown_session`,
 and that message does not tell the model to omit `session_id` and start one.
 
-Reads a media file the session's latest result references:
+Reads a media file the app still stores:
 
-- **Input:** a media-file id from that result, bare or as the result's relative URL. The
+- **Input:** a media-file id, bare or as a result's relative URL. The
   server never fetches the argument or joins it to a path; **Scope** below says how it
   reads the id.
 - **`offset` and `limit` apply only to tables.** On every other file the server ignores
@@ -219,16 +219,20 @@ Reads a media file the session's latest result references:
   negative value, or a `limit` below 1 is `invalid_request`. An `offset` past the last
   row returns an empty page: `columns`, `row_count`, `offset`, `rows: []`, and
   `next_offset: null`.
-- **Tables** are any media-file id a snapshot `data` object references, such as the
-  Arrow of a dataframe, `st.table`, `st.data_editor`, or a chart that serves Arrow. They
-  come back as JSON rows in that element's `columns` order, the shape of `data.preview`,
-  with `row_count` and the `next_offset` of the following page, `null` on the last.
-  Cell values use the snapshot's JSON encoding, the parent spec's value table, the same
-  encoding as `data.preview`. The server knows an id is a table because a snapshot
-  `data` object references it, not from its MIME type. Detecting tables by MIME type,
-  or JSON-encoding Arrow scalars directly, would return a dataframe as base64 or
-  disagree with `data.preview` on dates, NaN, decimals, and `bytes`. Every other id on
-  the latest result comes back as **Other files** below describes. The preview holds
+- **Tables** are media files with the Arrow stream MIME type,
+  `application/vnd.apache.arrow.stream`, the type the server registers a snapshot
+  `data` object's Arrow with: a dataframe, `st.table`, `st.data_editor`, or a chart
+  that serves Arrow. They come back as JSON rows in the stream's column order, the shape
+  of `data.preview`, with `row_count` and the `next_offset` of the following page,
+  `null` on the last. Cell values use the snapshot's JSON encoding, the parent spec's
+  value table, the same encoding as `data.preview`. The snapshot reads `columns` and the
+  preview from the same stream by position, so a page matches them. The type is the one
+  the server registered, not one guessed from the bytes or an extension, so a dataframe
+  never comes back as base64, and decoding with the snapshot's encoder rather than
+  JSON-encoding Arrow scalars directly keeps pages in step with `data.preview` on dates,
+  NaN, decimals, and `bytes`. Every other file comes back as **Other files** below
+  describes, including one of that type that does not decode as an Arrow stream, such
+  as a file an app offers through `st.download_button` with that type. The preview holds
   the first rows, so a model starts at the length of `data.preview.rows`, not at
   `data.row_count`, which counts the whole table. A call with `offset: 100` and
   `limit: 2` returns that page as JSON text in the tool result, not as
@@ -256,8 +260,8 @@ Reads a media file the session's latest result references:
 - **Other files** come back as themselves, typed by MIME type: images and audio as MCP
   image and audio content, and text and JSON as text. v1 returns text and JSON whole,
   up to the 5 MB cap, though a file that size is far past the client limits in
-  [Limits and result size](#limits-and-result-size). Paging them like tables is
-  [out of scope](#out-of-scope).
+  [Limits and result size](#limits-and-result-size). Paging them like tables is a
+  [follow-up](#follow-ups).
   Anything else, such as a PDF, is an embedded resource: `type: "resource"` with `uri`
   (the media URL as the result shows it), `mimeType`, and a base64 `blob`. The server
   still advertises tools only. MCP says a server that returns embedded resources SHOULD
@@ -269,8 +273,13 @@ Reads a media file the session's latest result references:
   reaches 5 MB. A cut-off image is useless. A single table row past the cap is refused
   the same way, with `result_too_large` rather than truncated, so no cell value is
   silently cut.
-- **Scope:** only media files the session's latest result references, which keeps the
-  parent spec's fetch-now rule and the session's identity binding. The server loads the
+- **Scope:** any media file the app still stores, the files the `/media` route serves to
+  whoever holds their URL, for a caller whose `session_id` passes the identity check. A
+  file lasts as long as media storage keeps it. A full rerun drops its session's
+  references when it starts, and the end of any session's run deletes every file no
+  session references, so a file the next run does not re-create is gone once that run
+  ends, and can be gone sooner. Ids are content hashes, so a table a rerun renders
+  unchanged keeps its id. This is the parent spec's fetch-now rule. The server loads the
   argument from the media file manager as an id: bare, or the last path segment of a
   relative media URL with its extension, if any, removed.
   `MemoryMediaFileStorage.get_url` appends the MIME type's extension when there is one,
@@ -278,20 +287,21 @@ Reads a media file the session's latest result references:
   none: `../../media/<id>`. The server does not HTTP-fetch the argument or join it to a
   filesystem path: an absolute URL would be a server-side request, and behind a
   prefix-stripping proxy the process cannot fetch the URL the client resolved. An
-  argument that names no such file is `unknown_file`, with one of two messages, so the
+  argument that names no stored file is `unknown_file`, with one of two messages, so the
   model's next step is right:
-  - **Not a media file of the latest result**, such as an absolute URL the model
-    resolved, or an id from an older result: pass `url` exactly as the latest result
-    shows it.
-  - **A URL the result shows that the app does not store**, or a file it no longer
-    stores: do not call `get_data` for it again, since the same argument fails the same
-    way. `st.image`, `st.audio`, and `st.video` show an external `http`/`https` URL, a
-    `data:` URL, or a relative static URL unchanged, so those are not media-file ids.
+  - **Not a media file the app stores**, such as an absolute URL the model resolved, or
+    an id whose file a later run replaced or a run in progress has not re-created yet:
+    pass `url` exactly as the latest result shows it, collecting a run in progress
+    first.
+  - **A URL the result shows that is not a media file:** do not call `get_data` for it
+    again, since the same argument fails the same way. `st.image`, `st.audio`, and
+    `st.video` show an external `http`/`https` URL, a `data:` URL, or a relative static
+    URL unchanged, so those are not media-file ids.
 
-  Both tool descriptions say `get_data` reads only the latest result, so a model reads
-  the data it needs before its next `interact` call replaces the result. Which result
-  that is while `interact` is in flight, or after `wait_timed_out`, is
-  [open](#open-questions).
+  Both tool descriptions say a result's files last until a later run replaces them, so
+  a model reads the data it needs before its next `interact` call. While a run is in
+  flight, or after `wait_timed_out`, the previous result's files usually stay readable
+  until that run ends, but can go sooner, when another session's run ends.
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
   `idempotentHint: true`, and `openWorldHint: false`. It runs no app code, so a client
   that confirms writes can call it without asking.
@@ -468,9 +478,10 @@ Nothing new beyond the parent spec's rules, applied to one more route:
   `application/json` anyway.
 - **`interact` is never annotated read-only**, so clients that confirm writes keep doing
   so. `get_data` is, because it runs no app code.
-- **`get_data` is narrower than the `/media` route,** which serves any live file to
-  whoever holds its URL: it serves only media-file ids the caller's own session's
-  latest result references.
+- **`get_data` is no broader than the `/media` route,** which serves any live file to
+  whoever holds its URL: it serves the same files, only to a caller whose `session_id`
+  passes the identity check, and never runs a deferred `st.download_button` callable,
+  which only the browser protocol triggers.
 
 What is new is practicality, as in the parent spec: pasting a URL into a chat assistant
 is far easier than writing an HTTP client, so an app with the API on will see more agent
@@ -502,7 +513,7 @@ The parent spec's limits apply unchanged. The endpoint adds or emphasizes these:
 | --------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------ |
 | Rows per `get_data` page                | 500, or fewer so the JSON text in `content[0].text` stays within 40,000 characters               | The `limit` argument     |
 | One `get_data` response                 | 5 MB of encoded JSON-RPC response, then `result_too_large`. Base64 content counts toward it.    | Fixed                    |
-| Files `get_data` can read               | Media-file ids the session's latest result references                                           | Fixed                    |
+| Files `get_data` can read               | Media files the app still stores, until media storage evicts them                                | Fixed                    |
 | How long one tool call waits for a run  | 30 s, then `wait_timed_out`: below the 60 seconds MCP clients built on the official TypeScript SDK wait by default | `server.agentWaitTimeout` |
 | `interact` result size                  | No cap                                                                                           | Parent follow-up #9      |
 
@@ -515,7 +526,7 @@ widgets, or a Plotly chart. The outliers are not: a 10,000-option selectbox adds
 page of twelve Plotly figures about 500 KB, and a long Markdown document reported
 twice, once in a collapsed expander, can pass a chat client's limit on its own. The fix
 is the parent spec's follow-up #9, compact responses, which this ships without; see
-[Out of scope](#out-of-scope).
+[Follow-ups](#follow-ups).
 
 ### Rollout
 
@@ -628,56 +639,66 @@ always know its public URL, as above, and a chat client's sandbox still could no
 or parse the Arrow. A read-only tool works in every client, and it accepts the URL
 exactly as the result shows it.
 
+## Follow-ups
+
+Each of these is additive to the v1 contract. They are numbered for reference rather
+than ranked, and name the parent spec's follow-up where one builds on it.
+
+1. **App title and description in `serverInfo`.** Once `st.App` has the static
+   `app_title` and `app_description` of the parent spec's follow-up #2, `initialize`
+   reports them as `serverInfo.title` and `serverInfo.description`, which clients can
+   show when a user adds the server. Both are static, so reporting them runs no app
+   code. They amend the rule that the tool metadata is never app-authored: they are the
+   author's own text, never app content.
+2. **An author's declaration that the app's actions are read-only.** For an app whose
+   widgets only filter and read, a setting could give `interact` `readOnlyHint: true`,
+   `destructiveHint: false`, and `idempotentHint: true`, keeping `openWorldHint: true`, so
+   clients that confirm writes stop asking before each call. Annotations describe a whole
+   tool, so one setting per app is as fine-grained as they go, and it needs one setting
+   rather than one per hint, because MCP applies `destructiveHint` and `idempotentHint`
+   only when `readOnlyHint` is false. It would amend the parent spec's rule that no action
+   is annotated safe: the author makes the claim, not Streamlit. Nothing enforces it, so
+   an app that later gains a write keeps the label, and the name must not suggest a
+   sandbox. MCP also lets clients ignore annotations from servers they do not trust.
+   Whether it belongs in `config.toml` or in app code is open, because whether actions
+   write is a property of the app, not of its deployment.
+3. **Agent sign-in through MCP's OAuth authorization flow**, for `st.login` apps, on top
+   of the parent spec's follow-up #10. It is the main gap for hosted clients and
+   private apps: hosted clients expect OAuth, while the agent API accepts trusted
+   headers, and follow-up #10 proposes accepting a token from the provider `st.login` is
+   configured with. This endpoint would be its first consumer, and the point where
+   switching to the MCP SDK pays off.
+4. **A read that does not execute**, the parent spec's follow-up #4, as a tool. It
+   would also let a model that lost a result from its context find that result's files
+   for `get_data` again.
+5. **Paging text and JSON files.** v1 returns them whole, up to the 5 MB cap. Paging
+   them by character offset, with the same `offset` and `next_offset` as tables, or
+   refusing them past the table budget with `result_too_large`, changes what a call
+   returns for a large file. Images stay whole or are refused: a cut-off image is
+   useless.
+6. **More from `get_data`:** CSV output, choosing columns, and `structuredContent` with
+   an `outputSchema` (see [Other decisions](#other-decisions)). Queries over a table on
+   the server and an HTTP route for `get_data` are already among the parent spec's
+   smaller follow-ups. Its item on reading the last few results' files is covered while
+   media storage keeps them.
+7. **The `2026-07-28` revision**, once ChatGPT or the Claude apps default to it.
+8. **A machine-readable MCP server descriptor**, such as a `.well-known` document, once
+   MCP settles on one.
+
+Compact responses, the parent spec's follow-up #9, need nothing MCP-specific, since the
+endpoint returns what `interact` returns. This ships without them and documents the
+limit in [Limits and result size](#limits-and-result-size), since local coding agents
+and most apps are unaffected.
+
 ## Out of scope
 
-- **Agent sign-in for `st.login` apps** through MCP's OAuth authorization flow. This is
-  the parent spec's follow-up #10, and the main gap for hosted clients and private apps.
-  Hosted clients expect OAuth, while the agent API accepts trusted headers, and
-  follow-up #10 proposes accepting a token from the provider `st.login` is configured
-  with. This endpoint would be its first consumer, and the point where switching to the
-  MCP SDK pays off.
-- **Compact responses**, the parent spec's follow-up #9. This ships without them and
-  documents the limit in [Limits and result size](#limits-and-result-size), since local
-  coding agents and most apps are unaffected.
-- **A read that does not execute**, the parent spec's follow-up #4. As an MCP tool it
-  would also let `get_data` serve a result's files again after the model lost that
-  result from its context.
-- **An author's declaration that the app's actions are read-only.** For an app whose
-  widgets only filter and read, a setting could give `interact` `readOnlyHint: true`,
-  `destructiveHint: false`, and `idempotentHint: true`, keeping `openWorldHint: true`, so
-  clients that confirm writes stop asking before each call. Annotations describe a whole
-  tool, so one setting per app is as fine-grained as they go, and it needs one setting
-  rather than one per hint, because MCP applies `destructiveHint` and `idempotentHint`
-  only when `readOnlyHint` is false. It would amend the parent spec's rule that no action
-  is annotated safe: the author makes the claim, not Streamlit. Nothing enforces it, so
-  an app that later gains a write keeps the label, and the name must not suggest a
-  sandbox. MCP also lets clients ignore annotations from servers they do not trust.
-  Whether it belongs in `config.toml` or in app code is open, because whether actions
-  write is a property of the app, not of its deployment.
-- **The `2026-07-28` revision**, until ChatGPT or the Claude apps default to it.
 - **Streaming and messages the server sends on its own:** progress notifications during
   a long run, logging, `listChanged`, sampling, and elicitation. A slow run returns
   `wait_timed_out`, as over HTTP.
 - **MCP resources and prompts.**
-- **More from `get_data`:** paging text and JSON files, CSV output, choosing columns,
-  and `structuredContent` with an `outputSchema` (see
-  [Other decisions](#other-decisions)). Queries over a table on the server, files from
-  older results, and an HTTP route for `get_data` are already among the parent spec's
-  smaller follow-ups.
 - **A stdio transport or a bridge package.**
 - **Clients that run inside a web page.** They would need CORS headers for their
   origin, which no agent route sends.
-- **A machine-readable MCP server descriptor**, such as a `.well-known` document, while
-  MCP settles on one.
-
-## Open questions
-
-1. **Which result does `get_data` read while `interact` is in flight, or after
-   `wait_timed_out`?** The next `interact` replaces the latest result, and a timeout
-   returns the `202` document, not a snapshot. If that response drops the files from the
-   previous result, a model paging a table loses the remaining pages until the run is
-   collected. Proposal: keep serving the previous completed snapshot until a new one
-   exists.
 
 ## Checklist
 
@@ -687,6 +708,6 @@ exactly as the result shows it.
 | No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and one sentence in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
 | Metrics collected          | Not in v1, as in the parent spec. Streamlit's usage stats are reported by the browser, which an agent session does not have. When agent usage metrics land (the parent's operations follow-up), they should also record the transport (`mcp` or HTTP) and the negotiated protocol version. `clientInfo.name` arrives only on `initialize`, so it is not a per-call field in the revisions this server speaks. |
-| Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is narrower than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                     |
+| Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is no broader than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                   |
 | Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
