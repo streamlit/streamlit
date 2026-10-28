@@ -29,6 +29,7 @@ import {
 import {
   type ArrowNamedDataSet,
   EChartsChart as EChartsChartProto,
+  type streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -198,11 +199,13 @@ describe("EChartsChart", () => {
     isFullScreen = false,
     disabled = false,
     collapse,
+    heightConfig,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
     disabled?: boolean
     collapse?: () => void
+    heightConfig?: streamlit.HeightConfig.$Properties
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
@@ -221,6 +224,7 @@ describe("EChartsChart", () => {
           element={element}
           widgetMgr={widgetMgr}
           disabled={disabled}
+          heightConfig={heightConfig}
         />
       </ElementFullscreenContext.Provider>
     )
@@ -1271,6 +1275,33 @@ describe("EChartsChart", () => {
       dimensionsHolder.height = 0
       rerender(<Wrapper element={createDatasetElement()} />)
 
+      expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("resizes the open table when a rerun changes the pixel height", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 500
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 500 }}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(500)
+
+      // The hidden chart measures 0, so only the layout config knows the new
+      // slot height.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 300 }}
+        />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
       expect(gridPropsHolder.last?.height).toBe(300)
     })
 

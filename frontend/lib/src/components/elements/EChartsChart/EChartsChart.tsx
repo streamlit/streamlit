@@ -621,8 +621,12 @@ export function EChartsChart({
   }
   const isDataViewOpen = isShowingData && dataViewData !== null
 
-  // The table takes the chart's inline height. The chart measures the screen
-  // in fullscreen and 0 while hidden, so keep the last inline measurement.
+  // The table takes the chart's inline height. A pixel height (which
+  // "content" also resolves to) comes from the layout config, so a rerun that
+  // changes it resizes the open table. A stretch height has to be measured,
+  // but the chart measures the screen in fullscreen and 0 while hidden, so
+  // keep the last inline measurement.
+  const pixelHeight = heightConfig?.pixelHeight ?? undefined
   const inlineHeightRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (!isFullScreen && height > 0) {
@@ -647,7 +651,7 @@ export function EChartsChart({
       {isDataViewOpen && (
         <ReadOnlyGrid
           data={dataViewData}
-          height={fullScreenHeight ?? dataViewHeight}
+          height={fullScreenHeight ?? pixelHeight ?? dataViewHeight}
           alt={labelContext}
           customToolbarActions={[
             <ToolbarAction
