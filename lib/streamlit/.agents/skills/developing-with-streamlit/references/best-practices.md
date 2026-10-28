@@ -341,7 +341,7 @@ if details.open:
 
 ## Data and charts
 
-Use a Vega-based chart or `st.echarts_chart`, whichever fits the chart. Prefer either over pyplot, Plotly, and `streamlit-bokeh`. Render an existing JSON-compatible ECharts option or `pyecharts` chart with `st.echarts_chart`. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
+Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
 
 ```python
 # GOOD: Native charts for common cases
