@@ -33,13 +33,39 @@
 
     <title>Streamlit</title>
 
+    <!--
+      Machine-readable pointer to the agent API's own description, per RFC 8631.
+      Always present: the endpoint answers whether or not the API is enabled, so
+      following this link reports which, and enabling it needs no HTML change.
+      Relative, like the static assets, so it resolves under a base URL path or
+      a hosting prefix.
+    -->
+    <link rel="service-desc" href="./_stcore/agent/openapi.json" />
+
     <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
     <script>
       window.prerenderReady = false
     </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <p>You need to enable JavaScript to run this app.</p>
+      <p>
+        Reading this without a browser? A Streamlit app can also offer its
+        contents and interactions as JSON over HTTP, the recommended way for AI
+        agents and other programs to use it without a browser. This page is an
+        empty shell until JavaScript renders the app's content into it.
+      </p>
+      <p>
+        The protocol is described at
+        <a href="./_stcore/agent/openapi.json">_stcore/agent/openapi.json</a>
+        under the app's root URL, not under a page's URL. That document also
+        says whether this app offers it. The protocol has one operation,
+        <code>POST _stcore/agent/interact</code>: a JSON body of
+        <code>{}</code> starts a session and returns the app's contents as
+        JSON.
+      </p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
