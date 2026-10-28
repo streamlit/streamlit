@@ -270,7 +270,7 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page. For live updates of one section, use `run_every` instead of looping the script or adding `streamlit-autorefresh`. A whole-page timer still needs `streamlit-autorefresh`; see [third-party-components.md](third-party-components.md).
+Use fragments for independent sections that can rerun separately from the page. For a timer, refresh that section with `@st.fragment(run_every=...)` instead of looping the script or adding `streamlit-autorefresh`.
 
 ```python
 # BAD: Blocks the script in an endless loop

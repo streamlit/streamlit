@@ -20,7 +20,6 @@ Most community components are not maintained by Streamlit. They can break on Str
 
 Use the package only when the native command does not cover the behavior:
 
-- **Whole-page refresh** — keep `streamlit-autorefresh` when the whole page must rerun on a timer; `@st.fragment(run_every=...)` reruns only its own section. Do not emulate a page timer by calling `st.rerun()` inside a `run_every` fragment: the fragment body also runs on every full-app run, so the app reruns in a loop.
 - **AgGrid** — per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. `st.dataframe` search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source; pass `lazy=False` when search is required). When hiding non-matching rows is enough, filter in Python with separate widgets. For pivot tables, use `streamlit-pivot-table`.
 - **Folium** — a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide.
 - **Cookies** — `st.context.cookies` is read-only and reflects the initial request. `st.App` middleware can set cookies on HTTP responses, not after a widget interaction. Use a cookie component only when the script must read or change cookies after the page loads; for sign-in, prefer `st.login`.
