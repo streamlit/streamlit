@@ -851,13 +851,17 @@ describe("convertDurationToMilliseconds", () => {
     [BigInt(-2), TimeUnit.SECOND, -2000],
     // Without a field, the value is read as nanoseconds (the pandas default).
     [1_500_000, undefined, 1.5],
-    // Unsafe bigints keep whole-millisecond precision via bigint division.
-    [unsafeNanoseconds, TimeUnit.NANOSECOND, 10_368_000_123],
-    [-unsafeNanoseconds, TimeUnit.NANOSECOND, -10_368_000_123],
+    // Divided straight to milliseconds: going through seconds would give
+    // 20.987638999999998.
+    [20_987_639, TimeUnit.NANOSECOND, 20.987639],
+    // Unsafe bigints are divided as bigints and keep the sub-millisecond
+    // remainder.
+    [unsafeNanoseconds, TimeUnit.NANOSECOND, 10_368_000_123 + 0.456789],
+    [-unsafeNanoseconds, TimeUnit.NANOSECOND, -(10_368_000_123 + 0.456789)],
     [
       BigInt(Number.MAX_SAFE_INTEGER) * BigInt(10) + BigInt(7),
       TimeUnit.MICROSECOND,
-      90_071_992_547_409,
+      90_071_992_547_409 + 0.917,
     ],
   ])(
     "converts duration %s with unit %s to %s ms",

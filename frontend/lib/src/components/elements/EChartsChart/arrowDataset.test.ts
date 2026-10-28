@@ -540,11 +540,11 @@ describe("quiverToEChartsRows", () => {
     {
       name: "Duration nanoseconds",
       column: {
-        // 1.5ms keeps its fraction; above MAX_SAFE_INTEGER keeps whole ms.
+        // Sub-millisecond fractions are kept, also above MAX_SAFE_INTEGER.
         values: [BigInt(1_500_000), maxSafe * BigInt(2), null],
         type: new Duration(TimeUnit.NANOSECOND),
       },
-      expected: [1.5, 18_014_398_509, null],
+      expected: [1.5, 18_014_398_509 + 0.481982, null],
     },
     {
       name: "Null",

@@ -264,21 +264,25 @@ export function convertTimestampToSeconds(
     return Number(timestamp)
   }
 
-  // Do the calculation based on bigints if the value is a
-  // bigint outside JavaScript's safe integer range. Recombine
-  // the integer quotient with the remainder so sub-second
-  // precision is kept after the ticks overflow that range.
-  if (
-    typeof timestamp === "bigint" &&
-    !Number.isSafeInteger(Number(timestamp))
-  ) {
-    const unitAdjustmentBigInt = BigInt(unitAdjustment)
-    const wholeUnits = timestamp / unitAdjustmentBigInt
-    const remainder = timestamp % unitAdjustmentBigInt
-    return Number(wholeUnits) + Number(remainder) / unitAdjustment
+  return divideTicks(timestamp, unitAdjustment)
+}
+
+/**
+ * Divides an Arrow tick count by the number of ticks per target unit.
+ *
+ * Bigints outside JavaScript's safe integer range are divided as bigints, and
+ * the integer quotient is recombined with the remainder, so the fractional
+ * part is kept after the ticks overflow that range.
+ */
+function divideTicks(ticks: number | bigint, ticksPerUnit: number): number {
+  if (typeof ticks === "bigint" && !Number.isSafeInteger(Number(ticks))) {
+    const ticksPerUnitBigInt = BigInt(ticksPerUnit)
+    const wholeUnits = ticks / ticksPerUnitBigInt
+    const remainder = ticks % ticksPerUnitBigInt
+    return Number(wholeUnits) + Number(remainder) / ticksPerUnit
   }
 
-  return Number(timestamp) / unitAdjustment
+  return Number(ticks) / ticksPerUnit
 }
 
 /**
@@ -309,10 +313,12 @@ export function convertTimeToDate(
  * Converts a duration (timedelta) value to milliseconds based on the unit
  * information in the field.
  *
- * Sub-millisecond fractions are kept while the raw count is a safe integer.
- * Nanosecond and microsecond counts above `Number.MAX_SAFE_INTEGER` are
- * divided as bigints first, so whole milliseconds survive. Millisecond and
- * second counts are converted with `Number()` directly.
+ * Nanosecond and microsecond counts are divided directly into milliseconds
+ * (rather than via `convertTimestampToSeconds(...) * 1000`, which adds float
+ * noise such as `20.987638999999998`). Like `convertTimestampToSeconds`,
+ * bigints outside the safe integer range keep their sub-millisecond
+ * remainder. Millisecond and second counts are converted with `Number()`
+ * directly.
  *
  * @param duration The duration value in the field's unit.
  * @param field The field containing the unit information. Without one, the
@@ -324,18 +330,12 @@ export function convertDurationToMilliseconds(
   field?: Field
 ): number {
   const unit = getArrowTimeUnit(field, TimeUnit.NANOSECOND)
-  const isUnsafeBigint =
-    typeof duration === "bigint" && !Number.isSafeInteger(Number(duration))
 
   if (unit === TimeUnit.NANOSECOND) {
-    return isUnsafeBigint
-      ? Number(duration / BigInt(1_000_000))
-      : Number(duration) / 1e6
+    return divideTicks(duration, 1_000_000)
   }
   if (unit === TimeUnit.MICROSECOND) {
-    return isUnsafeBigint
-      ? Number(duration / BigInt(1_000))
-      : Number(duration) / 1e3
+    return divideTicks(duration, 1_000)
   }
   if (unit === TimeUnit.MILLISECOND) {
     return Number(duration)
