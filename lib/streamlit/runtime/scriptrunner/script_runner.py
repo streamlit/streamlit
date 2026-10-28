@@ -334,6 +334,18 @@ class ScriptRunner:
         self._wake_parallel_join_barrier_if_waiting()
         return rv
 
+    @property
+    def has_finished_running(self) -> bool:
+        """True once the script thread has emitted its last run's events and
+        will not run the script again.
+
+        A stop request alone does not make this true, since the script may
+        still be running until it reaches an interrupt point.
+
+        Safe to call from any thread.
+        """
+        return self._requests.has_finished_running
+
     def _wake_parallel_join_barrier_if_waiting(self) -> None:
         """If the script thread is blocked in ParallelFragmentCoordinator.join(), wake it.
 
@@ -1027,6 +1039,10 @@ class ScriptRunner:
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event, run_descriptor=run_descriptor)
+        if event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN:
+            # The cleanup below can take a while (e.g. gc.collect), and a
+            # replaced runner's finish is only delivered once this is recorded.
+            self._requests.on_script_run_completed()
 
         # Skip orphan cleanup when:
         # - The body never ran: this run already cleared session refs and

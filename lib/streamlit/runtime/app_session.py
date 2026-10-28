@@ -265,6 +265,10 @@ class AppSession:
         self._run_on_save = config.get_option("server.runOnSave")
 
         self._scriptrunner: ScriptRunner | None = None
+        # A runner that completed its last run and stopped, then was replaced
+        # before this loop handled that run's events. Those events describe a
+        # completed run, so they are still delivered to the client.
+        self._retiring_scriptrunner: ScriptRunner | None = None
         # Set while the session is settled: no run chain is going, and every
         # message the last one produced has been sent to the client. The agent
         # API answers a request only then, because nothing in the message
@@ -717,6 +721,11 @@ class AppSession:
                 success = self._scriptrunner.request_rerun(rerun_data)
                 if success:
                     return
+                # A runner stopped mid-run (e.g. by request_script_stop) can
+                # still emit events after the replacement starts, so only a
+                # runner whose last run completed keeps delivering events.
+                if self._scriptrunner.has_finished_running:
+                    self._retiring_scriptrunner = self._scriptrunner
 
         # If we are here, then either we have no ScriptRunner, or our
         # current ScriptRunner is shutting down and cannot handle a rerun
@@ -1048,7 +1057,15 @@ class AppSession:
                 "This should never happen."
             )
 
-        if sender is not self._scriptrunner:
+        if sender is not None and sender is self._retiring_scriptrunner:
+            if event == ScriptRunnerEvent.SHUTDOWN:
+                # The replacement runner owns session teardown and settling.
+                self._retiring_scriptrunner = None
+                return
+            # The retiring runner emitted its run's events before it stopped,
+            # so they reach this loop ahead of the replacement's events and
+            # handling them normally keeps the message stream in run order.
+        elif sender is not self._scriptrunner:
             # This event was sent by a non-current ScriptRunner; ignore it.
             # This can happen after sppinng up a new ScriptRunner (to handle a
             # rerun request, for example) while another ScriptRunner is still

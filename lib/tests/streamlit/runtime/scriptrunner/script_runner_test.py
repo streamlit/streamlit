@@ -1700,6 +1700,41 @@ class ScriptRunnerTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            (ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS, True),
+            (ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS, True),
+            (ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN, False),
+        ]
+    )
+    def test_stopped_runner_finishes_running_before_post_run_cleanup(
+        self, event: ScriptRunnerEvent, expected_finished: bool
+    ) -> None:
+        """A stopped runner reports that it finished running as soon as a
+        completed run's terminal event is emitted, before post-run cleanup.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_stop()
+        finished_during_gc: list[bool] = []
+
+        with (
+            testutil.patch_config_options({"runner.postScriptGC": True}),
+            patch.object(
+                script_runner_module.gc,
+                "collect",
+                side_effect=lambda *_: finished_during_gc.append(
+                    scriptrunner.has_finished_running
+                ),
+            ),
+        ):
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                event,
+                premature_stop=False,
+            )
+
+        assert finished_during_gc == [expected_finished]
+
+    @parameterized.expand(
+        [
             (ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,),
             (ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,),
         ]
