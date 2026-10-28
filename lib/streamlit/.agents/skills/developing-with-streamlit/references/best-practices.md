@@ -93,21 +93,9 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 ## Custom components
 
-Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Most community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
+Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Most community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
 
-| Instead of | Use |
-| --- | --- |
-| `streamlit-autorefresh` (`st_autorefresh`) | `@st.fragment(run_every=...)` on the section that should refresh. That reruns only the fragment |
-| `streamlit-aggrid` | `st.dataframe` or `st.data_editor` with `column_config` for sorting, search, editing, and formatting |
-| `streamlit-folium` (`st_folium`) | `st.map` for points, or `st.pydeck_chart` for deck.gl maps |
-| `streamlit-option-menu` | `st.navigation` when the menu switches app sections; `st.segmented_control` when it switches views within one page |
-| `extra-streamlit-components` (`CookieManager`) | `st.context.cookies` to read. `st.App` middleware sets a cookie on the HTTP response, not after a widget interaction |
-| `streamlit-searchbox` | `st.selectbox` to pick from a known list; `st.text_input(..., type="search", live=True)` to filter results rendered below it |
-| `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible spec |
-| `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)` |
-| `streamlit-bokeh` | A Vega-based chart or `st.echarts_chart`, whichever fits the chart |
-
-`st.dataframe` sorts, searches, and formats columns. Use `st.data_editor` for editing. Use `streamlit-aggrid` only for per-column filter menus, row grouping, or custom cell renderers. Use `streamlit-pivot-table` for pivot tables. Use `streamlit-folium` only for a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide. Put `live=True` inputs in a `@st.fragment` so typing does not rerun the whole app (see [Performance](#performance)). For cookies, see [server-asgi.md](server-asgi.md).
+Common replacements are `@st.fragment(run_every=...)` for `streamlit-autorefresh`, `st.dataframe` or `st.data_editor` for `streamlit-aggrid`, and `st.map` or `st.pydeck_chart` for `streamlit-folium`. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
 
 ## Layout
 
