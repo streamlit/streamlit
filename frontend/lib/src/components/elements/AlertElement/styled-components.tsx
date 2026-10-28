@@ -19,7 +19,7 @@ import styled from "@emotion/styled"
 import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
 
 export const StyledAlertContent = styled.div<{ $hasTitle?: boolean }>(
-  ({ theme, $hasTitle }) => ({
+  ({ theme, $hasTitle = false }) => ({
     display: "flex",
     // Vertical layout when there's a title, horizontal when there's not
     flexDirection: $hasTitle ? "column" : "row",

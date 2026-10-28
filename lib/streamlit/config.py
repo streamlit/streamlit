@@ -27,7 +27,7 @@ from collections import OrderedDict
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from streamlit import config_util, development, env_util, file_util, util
+from streamlit import byte_util, config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 from streamlit.signal_util import Signal
@@ -626,8 +626,11 @@ _create_option(
         - "viewer"    : Hide the developer options, including the rerun, clear
                         cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
-                        Streamlit Community Cloud) or through st.set_page_config.
-                        If there are no options left, hide the menu.
+                        Streamlit Community Cloud) or through
+                        st.set_page_config. If there are no such options,
+                        hide the menu. When the menu is shown and there is
+                        more than one theme to choose from, it also includes
+                        the theme selector.
     """,
     default_val="auto",
     type_=str,
@@ -954,6 +957,25 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.maxCacheDataSize",
+    description="""
+        Maximum combined serialized size of all in-memory @st.cache_data entries
+        across functions and sessions. This limit counts serialized bytes, not
+        process RSS, and does not apply to st.cache_resource.
+        Use a binary-unit string such as "2gb" or "500mb" (units are powers of
+        1024). Leave unset (the default), or set to bare TOML 0 or the string
+        "0", to disable the limit.
+        When the total exceeds the limit, Streamlit evicts the least-recently-used
+        in-memory entries; persisted disk entries are not deleted. A single value
+        larger than the limit is still cached. Budget enforcement runs when entries
+        are inserted and can reduce throughput when many sessions populate caches
+        concurrently. Streamlit reads this value when the server starts.
+    """,
+    default_val=None,
+    type_=str,
+)
+
 
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
@@ -1258,6 +1280,87 @@ _create_option(
 )
 
 _create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/interact`.
+
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous.
+
+        Note: This is an experimental feature. The API and its options are
+        subject to change.
+    """,
+    visibility="hidden",
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentWaitTimeout",
+    description="""
+        Maximum number of seconds an agent API request waits for the app's run
+        chain to settle before returning `wait_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running, and a retry
+        of the same request waits for it instead of starting it over. Keep it
+        below the request timeout of the clients you expect.
+    """,
+    visibility="hidden",
+    default_val=30,
+    type_=int,
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        An agent session is reclaimed after this much time without an
+        interaction, so clients do not have to close sessions explicitly.
+    """,
+    visibility="hidden",
+    default_val=900,
+    type_=int,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        An agent session outlives the request that created it, so this bounds
+        what a loop of creating calls can hold in memory. When the limit is
+        reached, sessions idle past `server.agentSessionTTL` are reclaimed
+        first, and new sessions are then refused.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows an agent API response includes inline, as the
+        `data.preview` of each element whose data is serialized as Arrow:
+        `st.dataframe`, `st.data_editor`, `st.table`, and Vega-Lite charts
+        (`st.altair_chart`, `st.vega_lite_chart`, and built-in charts such as
+        `st.line_chart`).
+
+        An element with more rows is reported as incomplete. Its full data is
+        at `data.url`, unless `data.unavailable` says why it cannot be served.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
     "server.trustedUserHeaders",
     description="""
         HTTP headers to embed in st.user.
@@ -1504,6 +1607,8 @@ _create_theme_options(
     ],
     description="""
         Primary accent color.
+
+        Defaults to #c53948 for the light theme and #cf4250 for the dark theme.
     """,
 )
 
@@ -1519,6 +1624,12 @@ _create_theme_options(
     ],
     description="""
         Background color of the app.
+
+        Defaults to #ffffff for the light theme and #171614 for the dark theme.
+        When a sidebar section doesn't set this, the sidebar uses #f8f8f7
+        (light) or #21201d (dark) if backgroundColor and
+        secondaryBackgroundColor both still match their defaults. Otherwise,
+        the sidebar uses the app's secondaryBackgroundColor.
     """,
 )
 
@@ -1534,6 +1645,12 @@ _create_theme_options(
     ],
     description="""
         Background color used for most interactive widgets.
+
+        Defaults to #f8f8f7 for the light theme and #2d2b27 for the dark theme.
+        When a sidebar section doesn't set this, the sidebar uses #f1f0ee
+        (light) or #2d2b27 (dark) if backgroundColor and
+        secondaryBackgroundColor both still match their defaults. Otherwise,
+        the sidebar uses the app's backgroundColor.
     """,
 )
 
@@ -1549,6 +1666,8 @@ _create_theme_options(
     ],
     description="""
         Color used for almost all text.
+
+        Defaults to #2f2d2b for the light theme and #edebe8 for the dark theme.
     """,
 )
 
@@ -3208,6 +3327,15 @@ def _check_conflicts() -> None:
     from streamlit.logger import get_logger
 
     logger: Final = get_logger(__name__)
+
+    # Validate this option at config-load time so an invalid value is reported as a
+    # config error instead of failing later during Runtime construction.
+    try:
+        byte_util.config_max_cache_data_size_to_bytes(
+            get_option("server.maxCacheDataSize")
+        )
+    except StreamlitAPIException as exc:
+        raise RuntimeError(str(exc)) from exc
 
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):

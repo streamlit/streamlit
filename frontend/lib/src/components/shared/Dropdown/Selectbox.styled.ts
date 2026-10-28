@@ -82,7 +82,7 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $placeholderColor?: string; $typingDisabled?: boolean }>(
-  ({ theme, $placeholderColor, $typingDisabled }) => ({
+  ({ theme, $placeholderColor, $typingDisabled = false }) => ({
     flexGrow: 1,
     flexShrink: 1,
     minWidth: theme.spacing.threeXS,
@@ -154,7 +154,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
-  ({ theme, $isInSidebar }) => ({
+  ({ theme, $isInSidebar = false }) => ({
     ...getPopoverContainerStyle(theme),
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
@@ -231,7 +231,7 @@ interface StyledListBoxItemProps {
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledListBoxItemProps>(({ theme, $isCreatable }) => ({
+})<StyledListBoxItemProps>(({ theme, $isCreatable = false }) => ({
   display: "flex",
   alignItems: "center",
   height: theme.sizes.dropdownItemHeight,

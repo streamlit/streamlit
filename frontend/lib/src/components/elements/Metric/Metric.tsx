@@ -326,7 +326,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     icon,
   } = element
 
-  const hasChartData = Boolean(chartData?.length)
+  const hasChartData = chartData.length > 0
   // Re-attach ResizeObserver when the chart container remounts. Otherwise an
   // empty-to-data transition keeps width at the -1 fallback and vega-embed never runs.
   const { width: chartWidth, elementRef: chartContainerRef } =
@@ -363,7 +363,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   useEffect(() => {
     if (
-      !chartData?.length ||
+      chartData.length === 0 ||
       !chartRef.current ||
       // Having a chart width <= 0 causes issues with vega-embed:
       chartWidth <= 0

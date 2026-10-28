@@ -2,9 +2,7 @@
 
 Configure themes in `.streamlit/config.toml`. When several apps share a brand, point each app's `theme.base` at one shared file (or URL) and override per app. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
 
-Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
-
-Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars.
+Use `streamlit config show` for the full option list and descriptions. Do not invent option names. Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars.
 
 - TOML edits apply on the next rerun.
 - `fontFaces` additions and updates apply on the next rerun. After you remove the last `fontFaces` entry, refresh the page so old `@font-face` rules clear.
@@ -12,13 +10,13 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 
 ## Choose a config shape
 
-| Goal | Use |
-|------|-----|
-| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
-| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) |
-| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) |
-| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
-| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
+| Goal | Use | Start from |
+|------|-----|------------|
+| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` | Adapt a template into the shared file |
+| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) | `shadcn` (light) or `vscode` (dark) |
+| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) | `shadcn-dual` |
+| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` — full contrast set, not only `backgroundColor` | `shadcn-dual` |
+| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) | `dense-dashboard` |
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
@@ -28,6 +26,19 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See the `shadcn-dual` template
 3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
 4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
+
+## Cheat sheet: common customization intents
+
+Map common polish and brand requests to config keys. For mode and layout choices, use **Choose a config shape** above.
+
+| Intent | Put in `config.toml` | Start from |
+|--------|----------------------|------------|
+| Brand accent (buttons, links) | `primaryColor`, usually also `linkColor` | Any template; retint primary |
+| Page / panel surfaces | `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `borderColor` | `shadcn` / `shadcn-dual` |
+| Chart / dataframe brand | `chartCategoricalColors`; sequential/diverging must be exactly 10 colors; `dataframe*` | `dense-dashboard` |
+| Fonts, radii, widget borders | `font` / `headingFont` / `codeFont`, `baseRadius`, `showWidgetBorder` | Most templates |
+
+Prefer these over CSS. Full detail below; inventory via `streamlit config show`.
 
 ## Valid theme sections
 
@@ -58,9 +69,7 @@ All other theme keys may be set in any of the six sections:
 
 ### Source precedence (highest wins)
 
-Source precedence follows `cli.md`: CLI flags > env vars > script, project, then global `config.toml` > defaults.
-
-Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme.
+Source precedence follows `cli.md`: CLI flags > env vars > script, project, then global `config.toml` > defaults. Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme.
 
 ### CLI and env naming
 
@@ -78,15 +87,18 @@ Prefer TOML for arrays (chart palettes, heading sizes). Use flags/env for tempor
 
 ### Section merge order
 
-When `theme.base` is `"light"` / `"dark"`, Streamlit starts from that built-in theme. When `theme.base` is a **file/URL**, that file’s options are loaded first (if the file sets `base`, it must be `"light"` or `"dark"`, not another file; omitted `base` defaults to `"light"`).
-
-When `[theme.light]` or `[theme.dark]` is set, each variant starts from its matching built-in theme, and `[theme] base` is ignored for that choice. Color and other keys on `[theme]` still apply to both variants.
+When `theme.base` is `"light"` / `"dark"`, Streamlit starts from that built-in theme. When `theme.base` is a **file/URL**, that file’s options are loaded first (if the file sets `base`, it must be `"light"` or `"dark"`, not another file; omitted `base` defaults to `"light"`). When `[theme.light]` or `[theme.dark]` is set, each variant starts from its matching built-in theme, and `[theme] base` is ignored for that choice. Color and other keys on `[theme]` still apply to both variants.
 
 Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
 Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
-Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Leave both unset to keep that swap. Set both explicitly only when the sidebar should use the main pairing or another custom pair.
+Unset sidebar surfaces depend on whether the resolved main backgrounds still match the built-in light/dark pair:
+
+- **Main backgrounds still match the built-in pair:** the sidebar uses light `#F8F8F7` / `#F1F0EE` or dark `#21201D` / `#2D2B27` (background / secondary background).
+- **Either resolved main surface differs from that built-in pair:** unset sidebar background uses the main secondary background, and unset sidebar secondary uses the main background.
+
+Set both sidebar surfaces explicitly when the sidebar should use another custom pair.
 
 **Sidebar headings:**
 
@@ -159,12 +171,13 @@ Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`
 - Semantic `*Color` / `*BackgroundColor` / `*TextColor`
 - `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors))
 - `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`
-- `baseRadius`, `buttonRadius`, `showWidgetBorder`; `showSidebarBorder` (`[theme]`-only)
-- Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
+- `baseRadius`, `buttonRadius`, `showWidgetBorder`, and `[theme]`-only `showSidebarBorder`
+- Google Fonts URL syntax in `font`, `headingFont`, or `codeFont`
+- Self-hosted fonts via `[[theme.fontFaces]]` and `[server] enableStaticServing = true`
 - `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
-- Shared `theme.base` file/URL for multi-app brand inheritance
-- Dual light/dark sections and sidebars when those shapes fit the goal
-- `paddingTop` / `paddingBottom` (main and sidebar — prefer over `.block-container` CSS)
+- A shared `theme.base` file/URL for multi-app brand inheritance
+- Dual light/dark sections and sidebars when those shapes fit
+- `paddingTop` / `paddingBottom` on main and sidebar (prefer over `.block-container` CSS)
 
 ## Color configuration
 
@@ -203,7 +216,7 @@ greenTextColor = "#116329"
 
 ### Chart colors
 
-Set chart colors in any of the six sections. An unset main section inherits `[theme]`; an unset sidebar inherits the resolved main palette for that appearance (so a palette on `[theme.dark]` appears in an unset dark sidebar). Categorical and sequential palettes apply to Plotly, Altair, Vega-Lite, and ECharts. Diverging palettes apply to Plotly, Altair, and Vega-Lite (ECharts does not read `chartDivergingColors`). Sequential and diverging lists must be exactly 10 colors.
+Set chart colors in any of the six sections. An unset main section inherits `[theme]`; an unset sidebar inherits the resolved main palette for that appearance (so a palette on `[theme.dark]` appears in an unset dark sidebar). Categorical and sequential palettes apply to Plotly, Altair, Vega-Lite, and ECharts. Diverging palettes apply to Plotly, Altair, and Vega-Lite (ECharts does not read `chartDivergingColors`). Sequential and diverging lists must be exactly 10 colors. Default `st.map` markers use `primaryColor` at partial opacity, not these palettes; pass `color` on `st.map` to override.
 
 ```toml
 [theme]
@@ -332,7 +345,7 @@ linkColor = "#38bdf8"
 showWidgetBorder = true
 ```
 
-Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds swap main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
+Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use Streamlit's default sidebar colors when the main backgrounds still match the built-in pair; otherwise they swap the main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
 
 When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
 
@@ -452,11 +465,11 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose a single- or dual-mode template based on whether users should control appearance; use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Picker defaults and dual vs locked guidance live in `assets/templates/themes/README.md` — use dual mode only when the settings appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Dual-mode + sidebars when users should toggle appearance |
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Default dual-mode + sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |

@@ -38,6 +38,7 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
+    described_column_config,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -85,8 +86,8 @@ SHARED_DATA_KIND_TEST_CASES = [
     (
         pd.Series(
             [
-                pd.Timestamp("2000-01-01", tz="US/Central"),
-                pd.Timestamp("2000-01-02", tz="US/Central"),
+                pd.Timestamp("2000-01-01", tz="America/Chicago"),
+                pd.Timestamp("2000-01-02", tz="America/Chicago"),
             ]
         ),
         ColumnDataKind.DATETIME,
@@ -611,3 +612,38 @@ class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
         widget_id = proto.button_click_widgets["actions"]
         assert widget_id
         assert widget_id in self.script_run_ctx.shared.widget_ids_this_run
+
+
+def test_described_column_config_drops_presentation_and_keeps_index_meaning() -> None:
+    """The agent view keeps column meaning, including the index, and drops layout."""
+    described = described_column_config(
+        {
+            "notes": {
+                "label": "Notes",
+                "width": 100,
+                "alignment": "left",
+                "pinned": True,
+                "hidden": False,
+            },
+            INDEX_IDENTIFIER: {
+                "label": "Month",
+                "type": "date",
+                "format": "MMM YYYY",
+                "width": 20,
+                "hidden": False,
+            },
+            "secret": {"hidden": True},
+            "width_only": {"width": 40},
+        }
+    )
+
+    assert described == {
+        "notes": {"label": "Notes", "hidden": False},
+        INDEX_IDENTIFIER: {"label": "Month", "type": "date", "format": "MMM YYYY"},
+        "secret": {"hidden": True},
+    }
+    assert (
+        described_column_config({INDEX_IDENTIFIER: {"width": 1, "hidden": True}})
+        is None
+    )
+    assert described_column_config("unchanged") == "unchanged"

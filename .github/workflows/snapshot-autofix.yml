@@ -1,89 +1,355 @@
-# Snapshot autofix workflow - updates E2E test snapshots when Playwright tests fail
-# Triggered by adding the 'update-snapshots' label to a PR
+# Updates E2E snapshots after Playwright fails, when the PR has `update-snapshots`.
+#
+# Two ways in, one update:
+# - `workflow_run` runs after Playwright E2E Tests finishes. A PR created with
+#   the label (Dependabot applies it up front, and that does not emit
+#   `labeled`) keeps the label until this fires. The update runs only when the
+#   `playwright-e2e-tests` job failed.
+# - `labeled` covers adding the label after that run already finished. If
+#   Playwright is still queued or running, the label stays and `workflow_run`
+#   does the update when the run completes.
+#
+# `opened` is not a trigger: Playwright has not run yet, so `workflow_run`
+# handles labels applied at creation.
+#
+# The label is one-shot. The first finished Playwright run consumes it:
+# snapshot mismatches open a snapshot PR, and a pass or a failure with no
+# snapshot updates just removes the label. A cancelled run leaves it for the
+# replacement run. The `workflow_run` listener runs from the default branch;
+# `labeled` uses the workflow file on the pull request.
 name: Snapshot Autofix
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [labeled]
+  workflow_run:
+    # Keep this name in sync with .github/workflows/playwright.yml.
+    workflows: ["Playwright E2E Tests"]
+    types: [completed]
+
+permissions:
+  contents: read
 
 jobs:
-  snapshot-autofix:
-    if: contains(github.event.pull_request.labels.*.name, 'update-snapshots')
+  decide:
+    # Success removes the label. Failure updates snapshots, or removes the label
+    # when the artifact has no snapshot mismatches. Cancelled runs are ignored.
+    # `labeled` still runs so a label added after a finished run is handled immediately.
+    if: >-
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'success')
+      ) || (
+        github.event_name == 'pull_request' &&
+        github.event.action == 'labeled' &&
+        github.event.label.name == 'update-snapshots'
+      )
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 10
+    outputs:
+      action: ${{ steps.decide.outputs.action }}
+      pr_number: ${{ steps.decide.outputs.pr_number }}
+      head_sha: ${{ steps.decide.outputs.head_sha }}
+      head_ref: ${{ steps.decide.outputs.head_ref }}
+      playwright_run_id: ${{ steps.decide.outputs.playwright_run_id }}
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
       actions: read
-
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-snapshot-autofix
-      cancel-in-progress: true
-
-    defaults:
-      run:
-        shell: bash
-
+      contents: read
+      pull-requests: read
     steps:
-      - name: Checkout Streamlit code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.head_ref }}
-          persist-credentials: true
-          submodules: "recursive"
-          fetch-depth: 2
-
-      - name: Remove 'update-snapshots' label to prevent re-triggers
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr edit ${{ github.event.pull_request.number }} --remove-label "update-snapshots"
-
-      - name: Setup Python automation environment
-        uses: ./.github/actions/setup_automation
-
-      - name: Run update_e2e_snapshots.py
-        id: update-snapshots
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Run the existing script with the token
-          # The script will wait for Playwright to complete, download artifacts, and merge snapshots
-          if uv run --no-sync python scripts/update_e2e_snapshots.py --token "$GITHUB_TOKEN"; then
-            echo "script_status=success" >> $GITHUB_OUTPUT
-          else
-            echo "script_status=failed" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Comment on PR when snapshot update fails
-        if: steps.update-snapshots.outputs.script_status == 'failed'
+      - name: Decide whether to update snapshots
+        id: decide
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = context.payload.pull_request.number;
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const body = [
-              "⚠️ **Snapshot Autofix Failed**",
-              "",
-              "The snapshot autofix workflow could not update snapshots. This can happen if:",
-              "- The Playwright E2E tests passed (no snapshot mismatches to fix)",
-              "- No Playwright workflow run was found for the current commit",
-              "- The snapshot artifacts could not be downloaded",
-              "",
-              `Please check the [workflow run logs](${runUrl}) for details.`,
-              "",
-              "If you need to update snapshots manually, you can:",
-              "1. Download the snapshot artifacts from the failed Playwright workflow run",
-              "2. Extract them to `e2e_playwright/__snapshots__/`",
-              "3. Commit and push the changes",
-              "",
-              "You can re-run this workflow by removing and re-adding the `update-snapshots` label."
-            ].join("\n");
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const sameRepo = `${owner}/${repo}`;
+            // Job id in .github/workflows/playwright.yml. The display name matches
+            // it because that job does not set `name:`.
+            const playwrightJobName = "playwright-e2e-tests";
 
+            core.setOutput("action", "skip");
+            core.setOutput("pr_number", "");
+            core.setOutput("head_sha", "");
+            core.setOutput("head_ref", "");
+            core.setOutput("playwright_run_id", "");
+
+            function hasUpdateLabel(pr) {
+              return (pr.labels || []).some((label) => label.name === "update-snapshots");
+            }
+
+            function isFork(pr) {
+              const fullName = pr.head && pr.head.repo && pr.head.repo.full_name;
+              return fullName !== sameRepo;
+            }
+
+            function skipFork() {
+              core.notice(
+                "Snapshot autofix skipped for a fork PR. The workflow token cannot push snapshot commits to a fork."
+              );
+            }
+
+            async function testJobConclusion(runId) {
+              const { data } = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id: runId,
+                filter: "latest",
+                per_page: 100,
+              });
+              const job = data.jobs.find((candidate) => candidate.name === playwrightJobName);
+              if (!job) {
+                const names = data.jobs.map((candidate) => candidate.name).join(", ");
+                core.warning(`No ${playwrightJobName} job on run ${runId}. Jobs: ${names}`);
+                return null;
+              }
+              core.info(
+                `${playwrightJobName} on run ${runId}: status=${job.status} conclusion=${job.conclusion}`
+              );
+              return job.conclusion;
+            }
+
+            function armClear(pr) {
+              core.setOutput("action", "clear-label");
+              core.setOutput("pr_number", String(pr.number));
+              core.setOutput("head_sha", pr.head.sha);
+              core.info(
+                `Removing update-snapshots from #${pr.number}; Playwright passed for ${pr.head.sha}.`
+              );
+            }
+
+            function armUpdate(pr, runId) {
+              if (isFork(pr)) {
+                skipFork();
+                return;
+              }
+              core.setOutput("action", "update");
+              core.setOutput("pr_number", String(pr.number));
+              core.setOutput("head_sha", pr.head.sha);
+              core.setOutput("head_ref", pr.head.ref);
+              core.setOutput("playwright_run_id", String(runId));
+              core.info(
+                `Updating snapshots for #${pr.number} at ${pr.head.sha} from Playwright run ${runId}.`
+              );
+            }
+
+            async function findOpenPullRequest(headSha, headBranch) {
+              const { data: associated } =
+                await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner,
+                  repo,
+                  commit_sha: headSha,
+                });
+              const openAtSha = associated.filter(
+                (candidate) => candidate.state === "open" && candidate.head.sha === headSha
+              );
+              const byBranch = openAtSha.find((candidate) => candidate.head.ref === headBranch);
+              if (byBranch) {
+                return byBranch;
+              }
+              if (openAtSha.length === 1) {
+                return openAtSha[0];
+              }
+
+              // The commit association API can lag. `head` is `user:branch`;
+              // octokit encodes slashes in Dependabot branch names.
+              const { data: listed } = await github.rest.pulls.list({
+                owner,
+                repo,
+                state: "open",
+                head: `${owner}:${headBranch}`,
+                per_page: 10,
+              });
+              return listed.find((candidate) => candidate.head.sha === headSha) || null;
+            }
+
+            async function pullRequestForWorkflowRun(workflowRun) {
+              // workflow_run.pull_requests has no labels. Load the triggering
+              // pull request by number so two open PRs that share a head
+              // branch and commit cannot update the wrong one.
+              const linked = Array.isArray(workflowRun.pull_requests)
+                ? workflowRun.pull_requests
+                : [];
+              for (const candidate of linked) {
+                if (!candidate || typeof candidate.number !== "number") {
+                  continue;
+                }
+                try {
+                  const { data } = await github.rest.pulls.get({
+                    owner,
+                    repo,
+                    pull_number: candidate.number,
+                  });
+                  if (
+                    data.state === "open" &&
+                    data.head &&
+                    data.head.sha === workflowRun.head_sha &&
+                    data.head.ref === workflowRun.head_branch
+                  ) {
+                    return data;
+                  }
+                } catch (error) {
+                  core.warning(
+                    `Could not load pull request #${candidate.number}: ${error.message}`
+                  );
+                }
+              }
+              return findOpenPullRequest(workflowRun.head_sha, workflowRun.head_branch);
+            }
+
+            if (context.eventName === "workflow_run") {
+              const workflowRun = context.payload.workflow_run;
+              const headRepo = workflowRun.head_repository && workflowRun.head_repository.full_name;
+              const forkRun = Boolean(headRepo && headRepo !== sameRepo);
+
+              const pr = await pullRequestForWorkflowRun(workflowRun);
+              if (!pr) {
+                core.info(
+                  `No open pull request at ${workflowRun.head_branch}@${workflowRun.head_sha}.`
+                );
+                return;
+              }
+              if (!hasUpdateLabel(pr)) {
+                core.info(`#${pr.number} does not have update-snapshots.`);
+                return;
+              }
+              if (workflowRun.conclusion === "success") {
+                armClear(pr);
+                return;
+              }
+              if (forkRun) {
+                skipFork();
+                return;
+              }
+              const conclusion = await testJobConclusion(workflowRun.id);
+              if (conclusion === "failure") {
+                armUpdate(pr, workflowRun.id);
+                return;
+              }
+              if (conclusion === "success") {
+                armClear(pr);
+                return;
+              }
+              core.info(
+                `Playwright job conclusion is ${conclusion}. Leaving update-snapshots for a completed run.`
+              );
+              return;
+            }
+
+            const pr = context.payload.pull_request;
+            if (isFork(pr)) {
+              skipFork();
+              return;
+            }
+
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: "playwright.yml",
+              head_sha: pr.head.sha,
+              event: "pull_request",
+              per_page: 5,
+            });
+            const run = data.workflow_runs[0];
+            if (!run || run.status !== "completed") {
+              core.info(
+                "Playwright has not finished for this commit. Leaving update-snapshots in place until it does."
+              );
+              return;
+            }
+            const conclusion = await testJobConclusion(run.id);
+            if (conclusion === "failure") {
+              armUpdate(pr, run.id);
+              return;
+            }
+            if (conclusion === "success") {
+              core.setOutput("action", "note-success");
+              core.setOutput("pr_number", String(pr.number));
+              core.setOutput("head_sha", pr.head.sha);
+              core.info("Playwright passed. Removing update-snapshots.");
+              return;
+            }
+            core.info(
+              `Latest Playwright job conclusion is ${conclusion}. Leaving update-snapshots in place.`
+            );
+
+  clear-label:
+    needs: decide
+    if: needs.decide.result == 'success' && needs.decide.outputs.action == 'clear-label'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Remove update-snapshots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This job does not check out the repo, so gh cannot infer it from a git remote.
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved. Leaving update-snapshots for the current commit."
+            exit 0
+          fi
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if ! printf '%s\n' "$labels" | grep -Fxq "update-snapshots"; then
+            echo "update-snapshots is already gone."
+            exit 0
+          fi
+          gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
+
+  note-passed:
+    needs: decide
+    if: needs.decide.result == 'success' && needs.decide.outputs.action == 'note-success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Comment that snapshots were not updated
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            const sha = process.env.HEAD_SHA;
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            if (pullRequest.head.sha !== sha) {
+              core.info("PR head moved. Leaving update-snapshots for the current commit.");
+              return;
+            }
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                name: "update-snapshots",
+              });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+            }
+            const body = [
+              `Playwright E2E tests passed for \`${sha}\`, so there are no snapshot mismatches to update.`,
+              "",
+              "Removed the `update-snapshots` label.",
+            ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -91,65 +357,257 @@ jobs:
               body,
             });
 
-      - name: Count updated snapshots
-        if: steps.update-snapshots.outputs.script_status == 'success'
-        id: count-snapshots
-        run: |
-          # Count files that were modified
-          snapshot_count=$(git status --porcelain e2e_playwright/__snapshots__ | wc -l)
-          echo "snapshot_count=$snapshot_count" >> $GITHUB_OUTPUT
-          if [[ "$snapshot_count" -gt 0 ]]; then
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
-          fi
+  update:
+    needs: decide
+    if: needs.decide.result == 'success' && needs.decide.outputs.action == 'update'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+      issues: write
+    # The label event and the Playwright completion event can both decide to
+    # update the same commit. Queue the second; it exits once the label is gone.
+    concurrency:
+      group: snapshot-autofix-${{ needs.decide.outputs.pr_number }}-${{ needs.decide.outputs.head_sha }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # github.sha is the workflow file's commit: the default branch for
+      # workflow_run, and the PR merge commit for labeled. Either way it matches
+      # this workflow, and workflow_run never executes the PR's copy of the script.
+      - name: Checkout updater
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
 
-      - name: Check for changes
-        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true'
-        id: git-check
-        run: |
-          git add e2e_playwright/__snapshots__
-          git status --porcelain
-          echo "changes=$(if git diff --staged --quiet; then echo false; else echo true; fi)" >> $GITHUB_OUTPUT
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
-      - name: Commit changes to new branch
-        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          git config user.email "core+streamlitbot-github@streamlit.io"
-          git config user.name "Streamlit Bot"
-          fix_branch="snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}"
-          git checkout -b "$fix_branch"
-          git add e2e_playwright/__snapshots__
-          git commit -m "Update E2E test snapshots"
-          git push --set-upstream origin "$fix_branch"
+      - name: Checkout pull request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.decide.outputs.head_sha }}
+          persist-credentials: true
+          fetch-depth: 1
+          path: pr-head
+          token: ${{ github.token }}
 
-      - name: Create PR with snapshot updates
-        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Check that this commit can be updated
+        id: precheck
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_REF: ${{ github.head_ref }}
-          PR_BODY: |
-            ## Describe your changes
-
-            Automated snapshot updates for #${{ github.event.pull_request.number }} created via the snapshot autofix CI workflow.
-
-            This workflow was triggered by adding the `update-snapshots` label to a PR after Playwright E2E tests failed with snapshot mismatches.
-
-            **Updated snapshots:** ${{ steps.count-snapshots.outputs.snapshot_count }} file(s)
-
-            ⚠️ **Please review the snapshot changes carefully** - they could mask visual bugs if accepted blindly.
-
-            This PR targets a feature branch and can be merged without review approval.
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+          PLAYWRIGHT_RUN_ID: ${{ needs.decide.outputs.playwright_run_id }}
         run: |
-          gh pr create \
-            --head "snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
+          set -euo pipefail
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Unexpected pull request number: $PR_NUMBER"
+            exit 1
+          fi
+          if ! [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Unexpected head SHA: $HEAD_SHA"
+            exit 1
+          fi
+          if ! [[ "$PLAYWRIGHT_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "Unexpected Playwright run id: $PLAYWRIGHT_RUN_ID"
+            exit 1
+          fi
+
+          if [[ "$(gh pr view "$PR_NUMBER" --json isCrossRepository --jq .isCrossRepository)" == "true" ]]; then
+            echo "Fork PR; not pushing snapshots."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if ! printf '%s\n' "$labels" | grep -Fxq "update-snapshots"; then
+            echo "update-snapshots was already consumed."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head is $current_sha, not $HEAD_SHA. Leaving the label for the current commit."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The label stays until a later step actually commits snapshot files.
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Download snapshot updates
+        id: download
+        if: steps.precheck.outputs.proceed == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLAYWRIGHT_RUN_ID: ${{ needs.decide.outputs.playwright_run_id }}
+          REPO_ROOT: ${{ github.workspace }}/pr-head
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/snapshot-update.log"
+          set +e
+          uv run --no-sync python scripts/update_e2e_snapshots.py \
+            --token "$GITHUB_TOKEN" \
+            --run-id "$PLAYWRIGHT_RUN_ID" \
+            --repo-root "$REPO_ROOT" >"$log" 2>&1
+          status=$?
+          set -e
+          cat "$log"
+          # The script prints this marker and exits 10 when the run has no
+          # snapshot updates, including a missing results artifact. Any other
+          # non-zero status is a real failure, including uv's own exit code 2.
+          if [[ "$status" -eq 10 ]] && grep -q 'SNAPSHOT_RESULT=no-snapshot-updates' "$log"; then
+            echo "No snapshot updates in the Playwright artifact."
+            echo "has_snapshots=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$status" -ne 0 ]]; then
+            exit "$status"
+          fi
+          echo "has_snapshots=true" >> "$GITHUB_OUTPUT"
+
+      - name: Remove update-snapshots when there is nothing to commit
+        if: steps.precheck.outputs.proceed == 'true' && steps.download.outputs.has_snapshots == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved. Leaving update-snapshots for the current commit."
+            exit 0
+          fi
+          labels="$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')"
+          if printf '%s\n' "$labels" | grep -Fxq "update-snapshots"; then
+            gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
+          fi
+
+      - name: Comment when a labeled run has no snapshot updates
+        if: >-
+          steps.precheck.outputs.proceed == 'true' &&
+          steps.download.outputs.has_snapshots == 'false' &&
+          github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            const sha = process.env.HEAD_SHA;
+            const body = [
+              `Playwright E2E tests failed for \`${sha}\`, but the results have no snapshot updates.`,
+              "",
+              "Removed the `update-snapshots` label.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });
+
+      - name: Open a pull request with the snapshot updates
+        id: publish
+        if: steps.precheck.outputs.proceed == 'true' && steps.download.outputs.has_snapshots == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.decide.outputs.head_sha }}
+          HEAD_REF: ${{ needs.decide.outputs.head_ref }}
+          FIX_BRANCH: snapshots/${{ needs.decide.outputs.pr_number }}-${{ github.run_id }}-${{ github.run_attempt }}
+          REPO_ROOT: ${{ github.workspace }}/pr-head
+        run: |
+          set -euo pipefail
+          cd "$REPO_ROOT"
+
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved while snapshots were downloading. Leaving update-snapshots in place."
+            exit 0
+          fi
+
+          git config user.email "core+streamlitbot-github@streamlit.io"
+          git config user.name "Streamlit Bot"
+          git add e2e_playwright/__snapshots__
+          if git diff --staged --quiet; then
+            echo "Snapshot files already match. Removing update-snapshots."
+            gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"
+            exit 0
+          fi
+
+          snapshot_count="$(git diff --staged --name-only | wc -l | tr -d ' ')"
+          # Leave the label in place until the snapshot PR exists. Removing it
+          # earlier, then adding it back after a push failure, would emit
+          # `labeled` and run this workflow again.
+          git checkout -b "$FIX_BRANCH"
+          git commit -m "Update E2E test snapshots"
+          git push --set-upstream origin "$FIX_BRANCH"
+
+          {
+            echo "## Describe your changes"
+            echo
+            echo "Automated snapshot updates for #${PR_NUMBER} created via the snapshot autofix CI workflow."
+            echo
+            echo "Playwright E2E tests failed for \`${HEAD_SHA}\` and this pull request had the \`update-snapshots\` label."
+            echo
+            echo "**Updated snapshots:** ${snapshot_count} file(s)"
+            echo
+            echo "Please review the snapshot changes carefully. They can mask visual bugs if accepted blindly."
+            echo
+            echo "This PR targets a feature branch and can be merged without review approval."
+            echo
+            echo "This pull request is closed automatically once #${PR_NUMBER} is merged or closed, or once its branch is deleted."
+          } > "$RUNNER_TEMP/snapshot-pr-body.md"
+
+          snapshot_pr_url="$(gh pr create \
+            --head "$FIX_BRANCH" \
             --base "$HEAD_REF" \
-            --title "[snapshots] Update E2E snapshots for #${{ github.event.pull_request.number }}" \
-            --body "$PR_BODY"
+            --title "[snapshots] Update E2E snapshots for #${PR_NUMBER}" \
+            --body-file "$RUNNER_TEMP/snapshot-pr-body.md")"
+          # A newer commit can land while this job pushes. The snapshot branch
+          # was cut from HEAD_SHA, so do not disarm the label for that newer commit.
+          current_sha="$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid)"
+          if [[ "$current_sha" != "$HEAD_SHA" ]]; then
+            echo "PR head moved to $current_sha. Closing the snapshot PR and leaving update-snapshots in place."
+            gh pr close "$snapshot_pr_url" --comment "The pull request branch moved while snapshots were published, so this update does not apply. \`update-snapshots\` stays on the original pull request."
+            exit 0
+          fi
+          if ! gh pr edit "$PR_NUMBER" --remove-label "update-snapshots"; then
+            echo "::warning::Snapshot PR was opened, but update-snapshots could not be removed."
+          fi
 
-      - name: Show notices for fork PRs
-        if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          notice_title="Snapshot autofix skipped for fork PR"
-          notice_body="This PR originates from a fork. GitHub Actions tokens are read-only for forked PRs, so snapshot autofix cannot push changes automatically. Please download the snapshot artifacts from the Playwright workflow run and update them manually."
-          echo "::notice title=${notice_title}::${notice_body}"
+      - name: Comment on the pull request when the update fails
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ needs.decide.outputs.pr_number }}
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              "⚠️ **Snapshot autofix failed**",
+              "",
+              "Playwright E2E tests failed on a pull request with the `update-snapshots` label, but the snapshot update did not finish.",
+              "",
+              `Details are in the [workflow run](${runUrl}).`,
+              "",
+              "The label stays only when this update itself fails. Re-run Playwright, or remove and re-add `update-snapshots`, to try again.",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body,
+            });

@@ -33,7 +33,9 @@ type VegaLiteSpec = Record<string, unknown>
 
 /** A single VegaLite selection/binding parameter within spec.params. */
 interface VegaLiteParam {
+  /** Parsed from the user's spec JSON, so it can be `null`. */
   select?:
+    | null
     | string
     | {
         type?: string
@@ -266,6 +268,7 @@ const generateSpec = (
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
 
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- title may be a string, array, object, or null; a missing or empty title is left unchanged
   if (spec.title) {
     const title =
       typeof spec.title === "string" ? { text: spec.title } : spec.title

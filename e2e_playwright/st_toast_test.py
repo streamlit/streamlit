@@ -12,11 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import click_button, expect_font, reset_hovering
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    expect_font,
+    get_button,
+    reset_hovering,
+)
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 # Startup script emits two default-duration emoji toasts used by rendering tests.
@@ -199,6 +210,34 @@ def test_toast_persists_through_rerun(app: Page):
     # It still auto-hides after its (default 4s) duration rather than lingering.
     # Extra slack beyond 4s covers post-rerun mount + exit animation.
     expect(toast).not_to_be_visible(timeout=7000)
+
+
+def test_toast_updates_in_place(app: Page):
+    """Test that msg.toast() updates the existing toast in place (#17522)."""
+    breakfast_toast = app.get_by_test_id("stToast").filter(
+        has_text=re.compile(r"Gathering ingredients|Cooking|Ready!")
+    )
+    # The locator must resolve to one toast, so this also detects stacked
+    # updates.
+    toast_text = breakfast_toast.get_by_test_id("stToastText")
+
+    # Don't wait for the run so the intermediate updates can be observed.
+    get_button(app, "Cook breakfast").click()
+    expect(toast_text).to_have_text("Gathering ingredients...")
+    expect(toast_text).to_have_text("Cooking...")
+    expect(breakfast_toast).to_contain_text("🥞Ready!")
+    wait_for_app_run(app)
+    # Each update replaced the toast instead of stacking a new one.
+    expect(breakfast_toast).to_have_count(1)
+
+    # Clicking again while "Ready!" is still visible restarts the sequence in
+    # the same toast instead of being swallowed.
+    get_button(app, "Cook breakfast").click()
+    expect(toast_text).to_have_text("Gathering ingredients...")
+    expect(breakfast_toast).to_have_count(1)
+    wait_for_app_run(app)
+    expect(breakfast_toast).to_contain_text("🥞Ready!")
+    expect(breakfast_toast).to_have_count(1)
 
 
 @pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel height flakiness

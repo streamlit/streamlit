@@ -94,6 +94,14 @@ if TYPE_CHECKING:
     assert_type(text_area("Enter text", value=None, disabled=True), str | None)
 
     # =====================================================================
+    # Test required parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_area("Enter text", required=True), str)
+    assert_type(text_area("Enter text", required=False), str)
+    assert_type(text_area("Enter text", value=None, required=True), str | None)
+
+    # =====================================================================
     # Test label_visibility parameter (keyword-only)
     # =====================================================================
 
@@ -169,6 +177,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Type something...",
             disabled=False,
+            required=True,
             label_visibility="visible",
             width="stretch",
             bind="query-params",
@@ -193,6 +202,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Description",
             disabled=False,
+            required=True,
             label_visibility="visible",
             width=400,
             bind="query-params",

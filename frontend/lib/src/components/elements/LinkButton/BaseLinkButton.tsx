@@ -54,7 +54,7 @@ const BaseLinkButton = forwardRef<
       target={target}
       rel={rel}
       onClick={onClick}
-      tabIndex={disabled ? -1 : 0}
+      tabIndex={disabled === true ? -1 : 0}
       data-testid={`stBaseLinkButton-${kind}`}
     >
       {children}

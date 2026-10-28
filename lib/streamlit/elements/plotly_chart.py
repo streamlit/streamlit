@@ -32,6 +32,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -53,6 +54,7 @@ from streamlit.elements.lib.utils import (
 from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
+from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -91,8 +93,18 @@ FigureOrData: TypeAlias = Union[
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
 _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODE_FROM_PROTO: Final[dict[int, SelectionMode]] = {
+    PlotlyChartProto.SelectionMode.POINTS: "points",
+    PlotlyChartProto.SelectionMode.BOX: "box",
+    PlotlyChartProto.SelectionMode.LASSO: "lasso",
+}
 
 _LOGGER: Final = get_logger(__name__)
+
+# What a Plotly template can add to a figure's content rather than its styling,
+# such as a "DRAFT" annotation. Kept when the agent API drops the rest of the
+# template.
+_TEMPLATE_CONTENT: Final = ("annotations", "shapes", "images")
 
 
 class PlotlySelectionState(ReadOnlyAttributeDictionary):
@@ -421,6 +433,100 @@ def _resolve_content_height(height: Height, figure: Any) -> Height:
 
     # Default to 450 pixels (plotly.js default) when no height is specified
     return 450
+
+
+def _plotly_data(spec_json: str) -> dict[str, Any] | None:
+    """A Plotly figure's agent ``data``, whose values live inside its specification.
+
+    The theme is dropped, because it is weight without meaning for a non-visual
+    client: Plotly's `layout.template` is about nine tenths of a small figure.
+    Dropping it is named in `spec_omitted`, so a client can tell a trimmed
+    figure from one the app never configured. A template can also carry
+    content, such as a "DRAFT" annotation, and that is kept.
+
+    Nothing beyond the template is dropped, at any size: the specification
+    holds the figure's values, so trimming further would remove the only part
+    worth reading, and a large figure is large because it plots a lot of data,
+    the same bytes the app already sends its own client. The figure is
+    therefore `complete`, and a client has no `url` to look for.
+    """
+    spec = agent_data.parse_spec(spec_json)
+    if spec is None:
+        return None
+
+    data: dict[str, Any] = {}
+
+    layout = spec.get("layout") if isinstance(spec, dict) else None
+    if isinstance(layout, dict) and "template" in layout:
+        template = layout["template"]
+        template_layout = template.get("layout") if isinstance(template, dict) else None
+        if not isinstance(template_layout, dict):
+            template_layout = {}
+        content = {
+            name: template_layout[name]
+            for name in _TEMPLATE_CONTENT
+            if template_layout.get(name)
+        }
+        trimmed_layout = {
+            name: value for name, value in layout.items() if name != "template"
+        }
+        if content:
+            trimmed_layout["template"] = {"layout": content}
+            data["spec_omitted"] = [
+                f"layout.template.{name}" for name in template if name != "layout"
+            ] + [
+                f"layout.template.layout.{name}"
+                for name in template_layout
+                if name not in content
+            ]
+        else:
+            data["spec_omitted"] = ["layout.template"]
+        spec = {**spec, "layout": trimmed_layout}
+
+    data["spec"] = _expand_typed_arrays(spec)
+    data["complete"] = True
+    return data
+
+
+def _expand_typed_arrays(value: Any) -> Any:
+    """Expand Plotly's base64 typed arrays into lists of numbers, at any depth.
+
+    Plotly writes a NumPy array as `{"dtype": "f8", "bdata": "<base64>"}`,
+    which a browser decodes and a language model cannot read. Those arrays are
+    the values that make a figure `complete`, so they are reported as numbers,
+    at the cost of a longer specification.
+    """
+    if isinstance(value, list):
+        return [_expand_typed_arrays(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if (
+        isinstance(value.get("bdata"), str)
+        and isinstance(value.get("dtype"), str)
+        and set(value) <= {"bdata", "dtype", "shape"}
+    ):
+        try:
+            return _decode_typed_array(value)
+        except Exception:
+            _LOGGER.debug("Could not decode a Plotly typed array.", exc_info=True)
+            return value
+    return {name: _expand_typed_arrays(item) for name, item in value.items()}
+
+
+def _decode_typed_array(value: dict[str, Any]) -> Any:
+    """Decode a Plotly base64 typed array (``bdata``) into JSON-compatible values."""
+    import base64
+
+    import numpy as np
+
+    # Plotly.js reads these buffers as little-endian.
+    dtype = np.dtype(value["dtype"]).newbyteorder("<")
+    array = np.frombuffer(base64.b64decode(value["bdata"]), dtype=dtype)
+    if shape := value.get("shape"):
+        dims = shape if isinstance(shape, list) else str(shape).split(",")
+        array = array.reshape([int(dim) for dim in dims])
+    # Through the JSON encoding, so a NaN in a float array becomes null.
+    return json_encoding.to_json_value(array.tolist())
 
 
 class PlotlyMixin:
@@ -825,13 +931,37 @@ class PlotlyMixin:
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
             self.dg._enqueue(
-                "plotly_chart", plotly_chart_proto, layout_config=layout_config
+                "plotly_chart",
+                plotly_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "plotly_chart",
+                    key=plotly_chart_proto.id,
+                    data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
+                    support="action_unsupported",
+                    selection_mode=sorted(
+                        _SELECTION_MODE_FROM_PROTO[mode]
+                        for mode in plotly_chart_proto.selection_mode
+                    )
+                    or None,
+                    # A callback reaches the server too, so it is "rerun".
+                    on_select="rerun",
+                    alt=plotly_chart_proto.alt or None,
+                ),
             )
             return widget_state.value
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
-            "plotly_chart", plotly_chart_proto, layout_config=layout_config
+            "plotly_chart",
+            plotly_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "plotly_chart",
+                key=key,
+                data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
+                alt=plotly_chart_proto.alt or None,
+            ),
         )
 
     @property

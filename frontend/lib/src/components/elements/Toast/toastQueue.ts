@@ -21,11 +21,15 @@ export interface StreamlitToastContent {
   body: string
   icon?: string
   /**
-   * Stable identity of the toast within the element tree (its delta path). Set
-   * by the `Toast` component and used to de-dupe the same toast across the
-   * component remounts that happen on every rerun, so an unconditionally
-   * re-emitted toast does not stack up. Optional because it is only relevant to
-   * that de-dupe path, not to rendering an individual toast.
+   * Stable identity of the toast within the element tree (its delta path). The
+   * `Toast` component sets it to reconcile new content with a visible toast at
+   * the same position:
+   * - Identical content keeps the toast, so an unconditionally re-emitted
+   *   toast does not stack up.
+   * - Changed content replaces the toast, so `msg.toast()` updates it.
+   *
+   * Optional because only that reconciliation uses it, not rendering an
+   * individual toast.
    */
   toastId?: string
 }

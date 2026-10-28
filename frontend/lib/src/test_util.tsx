@@ -190,12 +190,15 @@ export function mockWindowLocation(hostname: string): void {
   const hasScheme = /^https?:\/\//.test(hostname)
   const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
 
-  // @ts-expect-error - partial Location is not assignable to string & Location
-  window.location = {
+  const mockLocation: Partial<Location> = {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,
     origin,
+    // App reads location.search while building its initial query params.
+    search: "",
   }
+  // @ts-expect-error - partial Location is not assignable to string & Location
+  window.location = mockLocation
 }
 
 /**

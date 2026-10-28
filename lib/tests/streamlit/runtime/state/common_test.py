@@ -12,10 +12,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 import pytest
 
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
-from streamlit.runtime.state.common import validate_on_change_mode
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.common import (
+    unpack_widget_state_value,
+    validate_on_change_mode,
+)
+
+
+def _widget_state(**fields: Any) -> WidgetState:
+    state = WidgetState(id="w")
+    for name, value in fields.items():
+        target = getattr(state, name, None)
+        if hasattr(target, "data"):
+            if isinstance(value, list):
+                target.data.extend(value)
+            else:
+                target.data = value
+        else:
+            setattr(state, name, value)
+    return state
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        ({}, None),
+        ({"bool_value": True}, True),
+        ({"int_value": 7}, 7),
+        ({"string_value": "a"}, "a"),
+        ({"double_array_value": [0.5, 1.5]}, [0.5, 1.5]),
+        ({"string_array_value": ["a", "b"]}, ["a", "b"]),
+        ({"string_trigger_value": "December"}, "December"),
+        ({"json_value": '{"a": [1, null]}'}, {"a": [1, None]}),
+    ],
+)
+def test_unpack_widget_state_value(fields: dict[str, Any], expected: Any) -> None:
+    """The deserializer gets plain data: array and trigger messages unwrapped,
+    JSON parsed, and None for a cleared value.
+    """
+    unpacked = unpack_widget_state_value(_widget_state(**fields))
+    if isinstance(expected, list):
+        # A repeated proto field compares equal only to another one.
+        unpacked = list(unpacked)
+
+    assert unpacked == expected
+
+
+def test_unpack_widget_state_value_keeps_a_chat_input_message() -> None:
+    """`st.chat_input`'s deserializer reads the message itself, uploads included."""
+    state = WidgetState(id="w")
+    state.chat_input_value.data = "hi"
+
+    unpacked = unpack_widget_state_value(state)
+
+    assert unpacked == state.chat_input_value
+    assert unpacked.data == "hi"
 
 
 def test_validate_on_change_mode_returns_callback() -> None:

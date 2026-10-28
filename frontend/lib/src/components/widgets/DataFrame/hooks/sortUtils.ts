@@ -60,7 +60,7 @@ export function getNextColumnSort(
   current: ActiveColumnSort | undefined,
   columnId: string,
   direction?: "asc" | "desc" | "auto",
-  autoReset?: boolean
+  autoReset = false
 ): ActiveColumnSort | undefined {
   let nextDirection: "asc" | "desc" | undefined
   if (direction === "auto") {

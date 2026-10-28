@@ -50,6 +50,8 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
+
 ## Canonical Patterns
 
 When creating new templates or adapting existing ones, follow these patterns for consistency.
@@ -149,14 +151,21 @@ def metric_card(metric_name: str):
             st.line_chart(data, alt=f"{metric_name} over time")
 ```
 
-Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
-the fragment out of parallel fragments — gate those behind a widget interaction
-instead, where the fragment reruns sequentially.
+Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
+behind a widget interaction instead, where the fragment reruns sequentially.
+A parallel fragment cannot write to `st.sidebar`, `st.bottom`, or other
+containers created outside it, even from inside the fragment function.
 
 ### Data Loading with Caching
 
-Cache the expensive load and bound it with a `ttl` (and/or `max_entries`) so the
-cache stays fresh and doesn't grow without limit. Use a custom spinner message
+Cache the expensive load. Use a `ttl` to keep data fresh and `max_entries` when
+the workload gives a practical entry-count bound. For `st.cache_data`, use
+`max_size` only when the user provides a byte budget or deployment memory
+constraints and the intended allocation across caches determine a per-cache
+budget. It limits serialized bytes for one decorated function, not total process
+memory. Don't guess it from source dataset size, representative or example
+values, or arbitrary constants; ask the user when the memory budget is unknown.
+Combine limits when they address different risks. Use a custom spinner message
 for loaders that run directly in the page. Use `show_spinner=False` only when a
 surrounding loading UI, such as `st.skeleton`, already provides feedback:
 
@@ -172,8 +181,7 @@ def load_metric_data() -> pd.DataFrame:
 ```
 
 Guidelines: real-time data → `ttl="1m"`; metrics/reports → `ttl="5m"`–`"15m"`;
-reference data → `ttl="1h"` or more; static data → no TTL. Use `max_entries` for
-parameterized loaders so per-argument entries stay bounded.
+reference data → `ttl="1h"` or more; static data → no TTL.
 
 ## Dependencies
 

@@ -30,11 +30,14 @@ st.markdown(
 
 ```toml
 # GOOD: Configure theme tokens in .streamlit/config.toml
+# Locked look: colors on [theme]. For light/dark, padding, or theme.base, see "Choose a config shape" in theme.md; for palettes and fonts, see its cheat sheet.
 [theme]
 primaryColor = "#ff4b4b"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"
 textColor = "#262730"
+baseRadius = "0.5rem"
+showWidgetBorder = true
 ```
 
 Prefer Material Symbols icons over emojis in UI labels, and use sentence casing.
@@ -207,8 +210,8 @@ orders = load_filtered_orders(region)
 ```
 
 ```python
-# GOOD: Cache the expensive source load with a practical bound
-@st.cache_data(ttl="15m", max_entries=20)
+# GOOD: Cache the expensive source load with a freshness bound
+@st.cache_data(ttl="15m")
 def load_orders() -> pd.DataFrame:
     return fetch_orders()
 

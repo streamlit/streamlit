@@ -35,7 +35,7 @@ import { FloatingPortal } from "@floating-ui/react"
 import {
   focusNextTabbable,
   focusPrevTabbable,
-} from "@streamlit/app/src/components/MainMenu/focusTabbable"
+} from "@streamlit/app/src/util/focusTabbable"
 import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,

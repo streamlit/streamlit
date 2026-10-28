@@ -207,3 +207,35 @@ st.write("Ignore datetime value:", ignore_datetime)
 # value, and then reruns the app in a single click.
 if st.sidebar.button("Apply ignore datetime", key="apply_ignore_datetime"):
     st.write("Applied ignore datetime value:", ignore_datetime)
+
+st.markdown("Required datetime inputs:")
+
+with st.form("required_datetime_input_form", clear_on_submit=True):
+    st.datetime_input(
+        "Required datetime",
+        value=None,
+        key="required_datetime",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button(
+        "Submit required datetime input form"
+    )
+
+st.write("required form submitted:", required_form_submitted)
+st.write("required datetime:", st.session_state.get("required_datetime"))
+
+required_standalone = st.datetime_input(
+    "Required standalone datetime",
+    value=None,
+    key="required_standalone_datetime",
+    required=True,
+)
+st.write("required standalone datetime:", required_standalone)
+
+st.datetime_input(
+    "Required hidden datetime",
+    value=None,
+    key="required_hidden_datetime",
+    required=True,
+    label_visibility="hidden",
+)

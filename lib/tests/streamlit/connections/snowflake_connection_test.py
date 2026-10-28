@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 import threading
@@ -26,11 +27,15 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
 import streamlit as st
-from streamlit.connections import SnowflakeCallersRightsConnection, SnowflakeConnection
+from streamlit.connections import (
+    SnowflakeCallersRightsConnection,
+    SnowflakeConnection,
+    snowflake_connection,
+)
 from streamlit.connections import retry_util as snowflake_retry_util
 from streamlit.connections.snowflake_connection import SNOWPARK_USER_TOKEN_HEADER_NAME
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from streamlit.runtime.secrets import AttrDict
 from tests.testutil import (
     create_mock_script_run_ctx,
@@ -39,7 +44,7 @@ from tests.testutil import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterator
+    from collections.abc import Callable, Generator, Iterator
     from pathlib import Path
 
 
@@ -559,6 +564,7 @@ class TestSnowflakeCallersRightsConnection:
         fake_params = {"account": "from_env", "token": "its_a_token"}
 
         with (
+            script_run_ctx_and_cleared_cache(),
             patch("snowflake.connector") as mock_connector,
             patch.object(
                 SnowflakeCallersRightsConnection, "_get_connection_params"
@@ -696,6 +702,12 @@ class TestSnowflakeConnectInSis:
 class TestSnowflakeCallersRightsConnectionUnit:
     """Caller's-rights helpers that do not require the Snowflake extra."""
 
+    @pytest.fixture(autouse=True)
+    def _script_run_ctx(self) -> Iterator[None]:
+        """Attach a script-run context and clear cache_data."""
+        with script_run_ctx_and_cleared_cache():
+            yield
+
     def test_scope_is_session(self) -> None:
         """Caller's-rights connections are session-scoped."""
         assert SnowflakeCallersRightsConnection.scope() == "session"
@@ -736,3 +748,242 @@ class TestSnowflakeCallersRightsConnectionUnit:
             account="account_override", token="its_a_token", some_kwarg="some_value"
         )
         assert conn._instance == "callers-conn"
+
+
+def _set_current_session_id(session_id: str) -> None:
+    """Make the current thread's script-run context report ``session_id``."""
+    ctx = get_script_run_ctx()
+    assert ctx is not None
+    ctx.session_id = session_id
+
+
+class TestSnowflakeCallersRightsConnectionSessionBinding:
+    """Caller's-rights connections are bound to the session that created them."""
+
+    @pytest.fixture(autouse=True)
+    def mock_connect(self) -> Iterator[MagicMock]:
+        """Attach a script-run context, clear cache_data, and mock ``_connect``."""
+        with (
+            script_run_ctx_and_cleared_cache(),
+            patch.object(
+                SnowflakeCallersRightsConnection, "_connect", MagicMock()
+            ) as mock_connect,
+        ):
+            yield mock_connect
+
+    def test_creation_outside_session_raises(self, mock_connect: MagicMock) -> None:
+        """Creating a connection without a script-run context raises before connecting."""
+        result: list[StreamlitAPIException] = []
+
+        def create_connection() -> None:
+            try:
+                SnowflakeCallersRightsConnection("snowflake-callers-rights")
+            except StreamlitAPIException as e:
+                result.append(e)
+
+        thread = threading.Thread(target=create_connection)
+        thread.start()
+        thread.join()
+
+        assert len(result) == 1
+        assert result[0].error_id == "snowflake-callers-rights-outside-session"
+        mock_connect.assert_not_called()
+
+    def test_owner_session_can_use_connection(self) -> None:
+        """The creating session can use the cursor, raw connection, and query."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        conn._instance.cursor.return_value.fetch_pandas_all.return_value = "df"
+
+        assert conn.raw_connection is conn._instance
+        assert conn.query("SELECT 1;") == "df"
+
+    @pytest.mark.parametrize(
+        "use_connection",
+        [
+            pytest.param(lambda conn: conn.cursor(), id="cursor"),
+            pytest.param(lambda conn: conn.raw_connection, id="raw_connection"),
+            pytest.param(lambda conn: conn.query("SELECT 1;"), id="cached_query"),
+        ],
+    )
+    def test_other_session_cannot_use_connection(
+        self, use_connection: Callable[[SnowflakeCallersRightsConnection], object]
+    ) -> None:
+        """Another session can't reach the connection, even through a cached query."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        mock_cursor = conn._instance.cursor.return_value
+        mock_cursor.fetch_pandas_all.return_value = "owner's data"
+        conn.query("SELECT 1;")
+
+        _set_current_session_id("other_session_id")
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            use_connection(conn)
+
+        assert (
+            exc_info.value.error_id == "snowflake-callers-rights-shared-across-sessions"
+        )
+        mock_cursor.execute.assert_called_once()
+
+    def test_other_session_cannot_reconnect_after_reset(
+        self, mock_connect: MagicMock
+    ) -> None:
+        """A reset connection is not reopened with another session's user token."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        conn.reset()
+
+        _set_current_session_id("other_session_id")
+        with pytest.raises(StreamlitAPIException):
+            conn.cursor()
+
+        mock_connect.assert_called_once()
+
+    def test_query_results_are_session_scoped(self) -> None:
+        """Caller's-rights query results use a session-scoped cache."""
+        conn = SnowflakeCallersRightsConnection("snowflake-callers-rights")
+        conn._instance.cursor.return_value.fetch_pandas_all.return_value = "df"
+        with patch(
+            "streamlit.connections.snowflake_connection.cache_data",
+            wraps=snowflake_connection.cache_data,
+        ) as wrapped_cache_data:
+            conn.query("SELECT 1;")
+
+        assert wrapped_cache_data.call_args.kwargs["scope"] == "session"
+
+    def test_owner_session_shared_through_global_cache_raises(self) -> None:
+        """A connection leaked through a global ``st.cache_resource`` is not reusable."""
+
+        @st.cache_resource
+        def get_connection() -> SnowflakeCallersRightsConnection:
+            return st.connection("snowflake-callers-rights")
+
+        try:
+            get_connection().cursor()
+
+            _set_current_session_id("other_session_id")
+            with pytest.raises(StreamlitAPIException):
+                get_connection().cursor()
+        finally:
+            st.cache_resource.clear()
+
+    @pytest.mark.parametrize(
+        "module_source",
+        [
+            pytest.param(
+                '_caller_conn = st.connection("snowflake-callers-rights")\n',
+                id="module_level_connection",
+            ),
+            pytest.param(
+                '_cursor = st.connection("snowflake-callers-rights").cursor()\n',
+                id="module_level_cursor",
+            ),
+        ],
+    )
+    def test_creation_during_module_import_raises(
+        self,
+        module_source: str,
+        mock_connect: MagicMock,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Creating a connection at the top level of an imported module raises."""
+        (tmp_path / "rcr_helpers.py").write_text(
+            "import streamlit as st\n" + module_source, encoding="utf-8"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_helpers", raising=False)
+
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                importlib.import_module("rcr_helpers")
+        finally:
+            sys.modules.pop("rcr_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+        mock_connect.assert_not_called()
+
+    def test_cached_connection_during_module_import_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A cached connection isn't handed out while a module is being imported.
+
+        Apps create the connection at the top of the script, so a helper module that
+        calls ``st.connection`` at import time usually hits the session's cache.
+        """
+        st.connection("snowflake-callers-rights")
+        (tmp_path / "rcr_cached_helpers.py").write_text(
+            "import streamlit as st\n"
+            '_cursor = st.connection("snowflake-callers-rights").cursor()\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_cached_helpers", raising=False)
+
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                importlib.import_module("rcr_cached_helpers")
+        finally:
+            sys.modules.pop("rcr_cached_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+
+    def test_creation_during_lazy_import_raises(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A module imported inside a function still runs its top level only once."""
+        (tmp_path / "rcr_lazy_helpers.py").write_text(
+            "import streamlit as st\n"
+            '_caller_conn = st.connection("snowflake-callers-rights")\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_lazy_helpers", raising=False)
+
+        def load_helpers() -> None:
+            import rcr_lazy_helpers  # noqa: F401
+
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                load_helpers()
+        finally:
+            sys.modules.pop("rcr_lazy_helpers", None)
+            st.cache_resource.clear()
+
+        assert exc_info.value.error_id == "snowflake-callers-rights-during-import"
+
+    def test_function_in_imported_module_can_create_connection(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A function defined in an imported module creates connections when called."""
+        (tmp_path / "rcr_function_helpers.py").write_text(
+            "import streamlit as st\n"
+            "def get_caller_conn():\n"
+            '    return st.connection("snowflake-callers-rights")\n',
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.delitem(sys.modules, "rcr_function_helpers", raising=False)
+
+        try:
+            helpers = importlib.import_module("rcr_function_helpers")
+            conn = helpers.get_caller_conn()
+            assert isinstance(conn, SnowflakeCallersRightsConnection)
+        finally:
+            sys.modules.pop("rcr_function_helpers", None)
+            st.cache_resource.clear()
+
+    def test_creation_in_exec_script_is_allowed(self) -> None:
+        """Code run with ``exec``, as Streamlit runs app scripts, isn't an import."""
+        namespace: dict[str, object] = {"st": st}
+        exec(
+            compile(
+                'conn = st.connection("snowflake-callers-rights")',
+                "streamlit_app.py",
+                "exec",
+            ),
+            namespace,
+        )
+        try:
+            assert isinstance(namespace["conn"], SnowflakeCallersRightsConnection)
+        finally:
+            st.cache_resource.clear()

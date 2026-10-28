@@ -14,7 +14,30 @@
  * limitations under the License.
  */
 
-import { getContextualFillColor, type SerializedColorArray } from "./colors"
+import {
+  getContextualFillColor,
+  MAP_DEFAULT_MARKER_ALPHA,
+  MAP_PRIMARY_FILL_PLACEHOLDER,
+  resolveMapPrimaryFillColor,
+  type SerializedColorArray,
+} from "./colors"
+
+describe("#resolveMapPrimaryFillColor", () => {
+  it("resolves the primary placeholder to theme primary RGB with map default alpha", () => {
+    expect(
+      resolveMapPrimaryFillColor(MAP_PRIMARY_FILL_PLACEHOLDER, "#ff4b4b")
+    ).toEqual([255, 75, 75, MAP_DEFAULT_MARKER_ALPHA])
+  })
+
+  it("leaves concrete RGBA arrays unchanged", () => {
+    const fill = [200, 30, 0, 160]
+    expect(resolveMapPrimaryFillColor(fill, "#ff4b4b")).toBe(fill)
+  })
+
+  it("leaves column accessors unchanged", () => {
+    expect(resolveMapPrimaryFillColor("@@=color", "#ff4b4b")).toBe("@@=color")
+  })
+})
 
 describe("#getContextualFillColor", () => {
   const object = { count: 10 }
