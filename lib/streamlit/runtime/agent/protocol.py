@@ -857,9 +857,10 @@ def _element_data_schema() -> dict[str, Any]:
                     "of the request that returned this snapshot, like every media "
                     "URL in it: resolve it with `urljoin`, not against the origin. "
                     "Fetch it as often as you need while the element is still "
-                    "rendered. Once a later run no longer renders the element, or "
-                    "the session has expired, it answers `404`, so take it from the "
-                    "latest snapshot and never store or share it."
+                    "rendered. It is a temporary link: once a later run drops the "
+                    "element or the session expires, it can answer `404` at any "
+                    "time, so take it from the latest snapshot and never store or "
+                    "share it."
                 ),
             },
             "unavailable": {
