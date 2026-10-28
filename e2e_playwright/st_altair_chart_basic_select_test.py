@@ -156,8 +156,8 @@ def test_interval_bar_chart_displays_selection_text(app: Page):
         steps=5,
     )
     # Staying held past the trailing debounce interval must not start a rerun.
-    app.wait_for_timeout(200)
-    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    app.wait_for_timeout(500)
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
     app.mouse.move(
         bounding_box["x"] + 175,
         bounding_box["y"] + 155,

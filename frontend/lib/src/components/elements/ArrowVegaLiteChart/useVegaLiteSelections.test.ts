@@ -329,7 +329,8 @@ describe("useVegaLiteSelections", () => {
       pointerId = 1,
       buttons = 0,
       button = 0,
-      isPrimary = true
+      isPrimary = true,
+      relatedTarget: EventTarget | null = null
     ): void => {
       act(() => {
         const event = new Event(eventType, { bubbles: true })
@@ -342,7 +343,9 @@ describe("useVegaLiteSelections", () => {
           Object.defineProperty(event, "buttons", { value: buttons })
           Object.defineProperty(event, "button", { value: button })
           Object.defineProperty(event, "isPrimary", { value: isPrimary })
-          Object.defineProperty(event, "relatedTarget", { value: null })
+          Object.defineProperty(event, "relatedTarget", {
+            value: relatedTarget,
+          })
         }
         eventTarget.dispatchEvent(event)
       })
@@ -563,6 +566,30 @@ describe("useVegaLiteSelections", () => {
       expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 2] } } }])
     })
 
+    it("holds pending debounced values when a pointer gesture starts", async () => {
+      const { container, fire } = setup({
+        selectionMode: ["hover", "brush"],
+      })
+      fire("hover", { value: "pending" })
+
+      dispatch(container, "pointerdown")
+      advanceTimers(DEBOUNCE_TIME_MS)
+      fire("brush", { x: [0, 2] })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([
+        {
+          selection: {
+            hover: { value: "pending" },
+            brush: { x: [0, 2] },
+          },
+        },
+      ])
+    })
+
     it("uses an asynchronous release signal as the final value", async () => {
       const { container, fire, mockVegaView } = setup()
       dispatch(container, "pointerdown")
@@ -593,6 +620,36 @@ describe("useVegaLiteSelections", () => {
       dispatch(outside, "pointerup")
       await flushAsyncWork()
 
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
+      outside.remove()
+    })
+
+    it("flushes when the active pointer leaves the document", async () => {
+      const { container, fire } = setup()
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [1, 4] })
+
+      dispatch(window, "pointerout")
+      await flushAsyncWork()
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
+    })
+
+    it("keeps holding when the pointer moves onto other page content", async () => {
+      const { container, fire, mockVegaView } = setup()
+      const outside = document.createElement("div")
+      document.body.appendChild(outside)
+      dispatch(container, "pointerdown")
+      fire("sel", { x: [1, 4] })
+
+      dispatch(container, "pointerout", 1, 0, 0, true, outside)
+      await flushAsyncWork()
+
+      expect(mockVegaView.runAsync).not.toHaveBeenCalled()
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      dispatch(window, "pointerup")
+      await flushAsyncWork()
       expect(sentStates()).toEqual([{ selection: { sel: { x: [1, 4] } } }])
       outside.remove()
     })

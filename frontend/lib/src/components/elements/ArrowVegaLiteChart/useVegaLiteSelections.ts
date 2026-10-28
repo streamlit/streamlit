@@ -28,7 +28,9 @@ import type { VegaLiteChartElement } from "./arrowUtils"
 /** Delay for continuous selection changes such as hover and wheel zoom. */
 const DEBOUNCE_TIME_MS = 150
 
+/** Events whose selection changes send immediately in the same task. */
 const DISCRETE_INPUT_EVENTS = ["click", "dblclick", "keydown", "keyup"]
+/** Events that end the discrete-input window or resume a held drag. */
 const CONTINUOUS_INPUT_EVENTS = ["pointermove", "wheel"]
 
 /** This is the state that is sent to the backend
@@ -120,12 +122,29 @@ export const useVegaLiteSelections = (
         discreteInputResetTimerId = setTimeout(clearDiscreteInput, 0)
       }
 
+      const clearDebouncedSelection = (name: string): void => {
+        const debouncedSelection = debouncedSelections.get(name)
+        if (debouncedSelection) {
+          clearTimeout(debouncedSelection.timerId)
+          debouncedSelections.delete(name)
+        }
+      }
+
+      const holdDebouncedSelections = (): void => {
+        debouncedSelections.forEach((debouncedSelection, name) => {
+          clearTimeout(debouncedSelection.timerId)
+          heldSelections.set(name, debouncedSelection.value)
+        })
+        debouncedSelections.clear()
+      }
+
       const startPointerGesture = (event: PointerEvent): void => {
         // Ignore additional pointers while the initiating pointer is held. A
         // new gesture may start while the previous release is still settling.
         if (isPointerDown && pendingPointerReleaseGestureId === null) {
           return
         }
+        holdDebouncedSelections()
         clearDiscreteInput()
         pointerGestureId += 1
         activePointerId = event.pointerId
@@ -151,6 +170,10 @@ export const useVegaLiteSelections = (
         startPointerGesture(event)
       }
 
+      /**
+       * Resumes a drag that re-enters the chart with the primary button held;
+       * otherwise ends the click/key window so hover and wheel changes debounce.
+       */
       const handleContinuousInput = (event: Event): void => {
         if (event.type === "pointermove") {
           const pointerEvent = event as PointerEvent
@@ -169,14 +192,6 @@ export const useVegaLiteSelections = (
         }
         if (!isPointerDown) {
           clearDiscreteInput()
-        }
-      }
-
-      const clearDebouncedSelection = (name: string): void => {
-        const debouncedSelection = debouncedSelections.get(name)
-        if (debouncedSelection) {
-          clearTimeout(debouncedSelection.timerId)
-          debouncedSelections.delete(name)
         }
       }
 
@@ -296,8 +311,8 @@ export const useVegaLiteSelections = (
         releasedGestureId: number
       ): Promise<void> => {
         try {
-          // Vega serializes this run behind queued dataflow work, so final
-          // gesture signals remain held until they finish.
+          // Wait for Vega to process the release so its final signal values are
+          // held and sent in one update.
           await vegaView.runAsync()
         } catch (error) {
           LOG.warn("Failed to finish Vega pointer gesture processing", error)
@@ -330,6 +345,8 @@ export const useVegaLiteSelections = (
       }
 
       const handlePointerOut = (event: PointerEvent): void => {
+        // A null relatedTarget means the pointer left the document, where the
+        // window may not receive the eventual pointerup.
         if (
           event.relatedTarget !== null ||
           event.pointerId !== activePointerId
@@ -378,6 +395,7 @@ export const useVegaLiteSelections = (
       // Window-level listeners catch releases after a drag leaves the chart.
       window.addEventListener("pointerup", handlePointerRelease)
       window.addEventListener("pointercancel", handlePointerRelease)
+      window.addEventListener("pointerout", handlePointerOut)
       window.addEventListener("blur", handleWindowBlur)
 
       // Add listeners for all selection events. Find out more here:
@@ -388,6 +406,9 @@ export const useVegaLiteSelections = (
             return
           }
           clearDebouncedSelection(name)
+          // Forms stage every change immediately. Otherwise, pointer gestures
+          // send their latest values on release, clicks and keys send in the
+          // same task, and hover, wheel, and bindings use a trailing debounce.
           if (isValidFormId(formId)) {
             sendSelection(name, value)
           } else if (isPointerDown) {
@@ -419,6 +440,7 @@ export const useVegaLiteSelections = (
         )
         window.removeEventListener("pointerup", handlePointerRelease)
         window.removeEventListener("pointercancel", handlePointerRelease)
+        window.removeEventListener("pointerout", handlePointerOut)
         window.removeEventListener("blur", handleWindowBlur)
         signalListeners.forEach((listener, param) => {
           vegaView.removeSignalListener(param, listener)
