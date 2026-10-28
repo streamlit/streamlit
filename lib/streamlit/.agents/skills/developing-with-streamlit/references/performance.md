@@ -347,15 +347,15 @@ These checks are a UX guardrail, not a security boundary. See [Widget input cons
 
 **This is critical and often missed.**
 
-Without dynamic open state, `st.tabs`, `st.expander`, and `st.popover` still run hidden, collapsed, or closed content on every rerun; caching does not skip that work. Set `on_change="rerun"` to make each container's `.open` meaningful, then render its body only when `.open` is `True` to skip hidden work. `st.segmented_control` or `st.toggle` with an `if` are alternatives.
+By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, opt into dynamic open state and guard that work as shown below.
 
 ### Tabs with expensive content
 
-With the default `on_change="ignore"`, every tab body runs and each tab's `.open` is `None`.
+`st.tabs` renders ALL tab content on every rerun, even hidden tabs. Two fixes:
 
 **Preferred: Dynamic tabs with `on_change="rerun"`**
 
-Keep the tabs UX. Setting `on_change="rerun"` makes each tab's `.open` property return `True` for the selected tab and `False` otherwise, so you can guard expensive work.
+Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
 ```python
 # BAD: Heavy content loads even when tab not visible
@@ -388,11 +388,11 @@ elif view == "Heavy":
 
 ### Expanders with expensive content
 
-With the default `on_change="ignore"`, the expander body runs when collapsed and `.open` is `None`.
+`st.expander` renders content even when collapsed. Two fixes:
 
 **Preferred: Dynamic expander with `on_change="rerun"`**
 
-With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work.
+With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
 
 ```python
 # BAD: Expander content always loads
