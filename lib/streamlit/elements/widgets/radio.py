@@ -561,9 +561,9 @@ class RadioMixin:
             on_change,
             supported_modes=("rerun", "ignore"),
         )
-        # Check for a string first, so any other `type` value, such as a list
-        # or a NumPy array, raises StreamlitValueError instead of failing in
-        # the dict lookup.
+        # Every invalid `type` raises StreamlitValueError, including a list or a
+        # NumPy array. Non-strings are rejected before the dict lookup, which
+        # would raise TypeError for an unhashable value.
         if not isinstance(radio_type, str) or radio_type not in _RADIO_TYPE_TO_PROTO:
             raise StreamlitValueError("type", [repr(t) for t in _RADIO_TYPE_TO_PROTO])
 

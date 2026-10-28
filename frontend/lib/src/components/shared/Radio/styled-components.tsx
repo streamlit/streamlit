@@ -196,8 +196,10 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
  * - Fills its `StyledRadioCardField`, which the group stretches to the row's
  *   height, so cards in a row share the same height. Content stays
  *   top-aligned.
- * - Padding includes the border, so the circle sits about the same distance
- *   from the top and left edges.
+ * - Padding subtracts the border width, so border plus padding equals the
+ *   `md` (vertical) and `lg` (horizontal) spacing tokens. With the title's
+ *   line height above it, the circle sits about as far from the top edge as
+ *   from the left edge.
  * - Hover and focus tint only unselected cards, because pressing an already
  *   selected card does nothing.
  * - Selected cards get a primary border and a light primary tint, like
