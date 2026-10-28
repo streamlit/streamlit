@@ -1386,9 +1386,8 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
       lightTheme.emotion.colors.dataframeHeaderBackgroundColor
     )
-    expect(theme.colors.codeTextColor).toBe(
-      lightTheme.emotion.colors.codeTextColor
-    )
+    // Unset code text follows body text; borders/fills stay on stock chrome.
+    expect(theme.colors.codeTextColor).toBe(theme.colors.bodyText)
     // Header text still tracks the configured body text via fadedText60.
     expect(theme.colors.dataframeHeaderTextColor).toBe(
       theme.colors.fadedText60
@@ -1420,7 +1419,7 @@ describe("createEmotionTheme", () => {
       lightTheme.emotion.colors.borderColor
     )
     expect(theme.emotion.colors.codeTextColor).toBe(
-      lightTheme.emotion.colors.codeTextColor
+      theme.emotion.colors.bodyText
     )
   })
 
@@ -4989,6 +4988,32 @@ describe("Sidebar theme creation", () => {
       )
     })
 
+    it("derives sidebar chrome when only sidebar primaryColor differs from stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: { primaryColor: "#7c3aed" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockChrome.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        sidebarTheme.emotion.colors.greenTextColor
+      )
+    })
+
+    it("inherits a valid main borderColor when the sidebar borderColor is invalid", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "purple",
+        sidebar: { borderColor: "not-a-color" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.widgetBorderColor).toBe("purple")
+    })
+
     it("uses stock sidebar surfaces for preset light and dark themes", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)
@@ -5100,7 +5125,7 @@ describe("Sidebar theme creation", () => {
         stockLight.codeBackgroundColor
       )
       expect(lightSidebarTheme.emotion.colors.codeTextColor).toBe(
-        stockLight.codeTextColor
+        lightSidebarTheme.emotion.colors.bodyText
       )
 
       expect(darkSidebarTheme.emotion.colors.borderColor).toBe(
@@ -5119,7 +5144,7 @@ describe("Sidebar theme creation", () => {
         stockDark.codeBackgroundColor
       )
       expect(darkSidebarTheme.emotion.colors.codeTextColor).toBe(
-        stockDark.codeTextColor
+        darkSidebarTheme.emotion.colors.bodyText
       )
     })
 
@@ -5206,9 +5231,6 @@ describe("Sidebar theme creation", () => {
       // light stock chrome.
       expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
         sidebarTheme.emotion.colors.greenTextColor
-      )
-      expect(sidebarTheme.emotion.colors.codeTextColor).not.toBe(
-        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].codeTextColor
       )
       expect(
         sidebarTheme.emotion.colors.dataframeHeaderBackgroundColor

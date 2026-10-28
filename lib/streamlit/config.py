@@ -2183,10 +2183,10 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        If this isn't set, Streamlit uses the theme's default code text color
-        (the same as body text). If `backgroundColor`,
-        `secondaryBackgroundColor`, or `primaryColor` differs from the base
-        theme, Streamlit uses the resolved `greenTextColor` instead.
+        If this isn't set, Streamlit uses the resolved body text color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme, Streamlit uses the resolved
+        `greenTextColor` instead.
     """,
 )
 
@@ -2744,8 +2744,8 @@ _create_theme_options(
         Whether to show a vertical separator between the sidebar and the main
         content area.
 
-        If this is unset or true, Streamlit shows the separator. Set it to
-        false to hide it.
+        If this is unset or `true`, Streamlit shows the separator. Set it to
+        `false` to hide it.
     """,
     type_=bool,
 )

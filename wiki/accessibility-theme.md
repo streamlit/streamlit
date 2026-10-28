@@ -126,7 +126,7 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 | Control border (`borderColor`) | Fail (~1.4) | Fail (~2.0) | Library blocks | Opaque stock `#DCD8D4` / `#4A4742`. Includes unchecked checkbox/radio strokes and default widget outlines (`showWidgetBorder` on) |
 | Soft focus ring (`focusRing`) | Fail (~1.9) | Fail (~2.2) | Library blocks | Sole focus indicator on many controls |
 | Soft muted focus ring (`focusRingMuted`) | Fail (~1.5) | Fail (~1.8) | Library blocks | Header icon buttons, main menu, sidebar nav, skills nudge. `focusRingSubtle` is defined in `getShadows.ts` and unused (unscored on purpose) |
-| Primary as control on default sidebar | Pass (~4.88) | Pass (~3.06) | Library meets | Sidebar bg defaults to `secondaryBackgroundColor` (`#F8F8F7` / `#2D2B27`) |
+| Primary as control on default sidebar | Pass (~4.88) | Pass (~3.53) | Library meets | Sidebar page background is `#F8F8F7` / `#21201D` (Pass ~4.88 / ~3.53) |
 | Input boundary with `showWidgetBorder = false` | Fail (~1.12) | Fail (~1.27) | Library blocks | Opt-out: resting outline is `secondaryBg` on page (`getBorderColor`). Default (flag unset/true) uses `borderColor` (row above) |
 | Enabled close icon (`fadedText40`) | Fail (~2.2) | Pass (~3.7) | Library blocks | `StyledCloseButton` (toast) and `StyledSkillsNudgeClose` on toast / nudge card (`bgColor`) |
 | Muted icon stroke (`fadedText60`) | Pass (~3.5–3.7) | Pass (~6.1–7.0) | Library meets | Header, toolbar, and link/help icons that use this token only (page ~3.69, secondary ~3.56). [#16149](https://github.com/streamlit/streamlit/issues/16149) is **not** a default 1.4.11 fail for this token |

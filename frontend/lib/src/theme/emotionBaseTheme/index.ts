@@ -35,8 +35,8 @@ import genericColors from "./themeColors"
 
 // Create colors (includes derived colors)
 const baseColors = createEmotionColors(genericColors)
-// Built-in themes paint widget borders. createEmotionTheme removes
-// widgetBorderColor only when showWidgetBorder is false.
+// Built-in themes draw widget borders; createEmotionTheme removes this when
+// showWidgetBorder = false.
 const colors = {
   ...baseColors,
   widgetBorderColor: baseColors.borderColor,

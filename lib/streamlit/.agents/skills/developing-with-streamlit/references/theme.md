@@ -192,12 +192,12 @@ secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
 textColor = "#1F2328"              # Body text
 
 linkColor = "#0969da"              # Defaults to blueTextColor
-codeTextColor = "#1F2328"          # Built-in default matches body text
+codeTextColor = "#1F2328"          # Unset follows body text; greenTextColor when surfaces/primary differ
 codeBackgroundColor = "#f6f8fa"    # Built-in default; custom surfaces re-derive if unset
 borderColor = "#d0d7de"
 ```
 
-Built-in light/dark use fixed border, code, and dataframe colors. If you change backgroundColor, secondaryBackgroundColor, or primaryColor, unset borderColor, codeBackgroundColor, dataframeHeaderBackgroundColor, and codeTextColor (→ greenTextColor) derive from your colors instead.
+Built-in themes use fixed border, code, and dataframe colors; changing only textColor, fonts, or radii keeps borders/fills (code text still follows body text). If backgroundColor, secondaryBackgroundColor, or primaryColor differs, unset border, code, and dataframe colors derive from your palette, and unset codeTextColor follows greenTextColor.
 
 Choose a `primaryColor` dark enough for white primary-button text.
 
