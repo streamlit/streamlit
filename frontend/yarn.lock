@@ -2354,9 +2354,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.41":
-  version: 1.31.41
-  resolution: "@microlink/react-json-view@npm:1.31.41"
+"@microlink/react-json-view@npm:^1.31.42":
+  version: 1.31.42
+  resolution: "@microlink/react-json-view@npm:1.31.42"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2364,7 +2364,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/8dc80be3b2d9ee5144b7088ad6b48f70a625aa6eba9f0170e873fb2fda4491b1673e643a22f62500adf1a9b08b2fa1beed9633fc93c4390dc42b6ee0926eaa63
+  checksum: 10c0/248275f7086bbc2fe3411a1ee5b8ad4408d44bfe33ff3452274568d3d7c641defdb3ff37102492a116da90197ab5c5ab8f7b82dca61ed2e83cbd5ecb58f8a56b
   languageName: node
   linkType: hard
 
@@ -3515,7 +3515,7 @@ __metadata:
     color2k: "npm:^2.0.2"
     hoist-non-react-statics: "npm:^3.3.2"
     iframe-resizer: "npm:4.3.11"
-    immer: "npm:^11.2.7"
+    immer: "npm:^11.2.9"
     jsdom: "npm:24.1.3"
     lighthouse: "npm:^13.5.0"
     lodash-es: "npm:^4.18.1"
@@ -3601,7 +3601,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.41"
+    "@microlink/react-json-view": "npm:^1.31.42"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3636,7 +3636,7 @@ __metadata:
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
     hotkeys-js: "npm:^4.0.8"
-    immer: "npm:^11.2.7"
+    immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
     lodash: "npm:^4.17.21"
@@ -9355,10 +9355,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"immer@npm:^11.2.7":
-  version: 11.2.7
-  resolution: "immer@npm:11.2.7"
-  checksum: 10c0/732fa47df64054075e48e14cc4a027c3d53a7ef41768fddd11970d5ebf528f11a5952dc36a402e9dde72e97e26a3c7cf3bac8cb6ba209d37bb178dc6637bbbe1
+"immer@npm:^11.2.9":
+  version: 11.2.9
+  resolution: "immer@npm:11.2.9"
+  checksum: 10c0/fe64b10033aba3f89f778f0a28835c31f9ce28283f0b9a85245de3885442aea20ea8cf6bda7bca57f8159ff2c566ada6d9da9285461e120fe1587d335d648551
   languageName: node
   linkType: hard
 
