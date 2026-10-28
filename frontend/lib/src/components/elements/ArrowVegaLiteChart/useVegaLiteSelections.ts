@@ -133,35 +133,41 @@ export const useVegaLiteSelections = (
         pendingPointerReleaseGestureId = null
       }
 
-      const handlePointerDown = (event: PointerEvent): void => {
+      const isChartPointerEvent = (event: PointerEvent): boolean => {
         const target = event.target
-        if (
-          event.button !== 0 ||
-          event.isPrimary === false ||
-          !(target instanceof Element) ||
-          target.closest(".vega-bindings, select, input, textarea, button") !==
-            null ||
-          target.closest("canvas, svg") === null
-        ) {
+        return (
+          event.isPrimary !== false &&
+          target instanceof Element &&
+          target.closest(".vega-bindings, select, input, textarea, button") ===
+            null &&
+          target.closest("canvas, svg") !== null
+        )
+      }
+
+      const handlePointerDown = (event: PointerEvent): void => {
+        if (event.button !== 0 || !isChartPointerEvent(event)) {
           return
         }
         startPointerGesture(event)
       }
 
       const handleContinuousInput = (event: Event): void => {
-        if (
-          event.type === "pointermove" &&
-          !isPointerDown &&
-          (event as PointerEvent).buttons !== 0
-        ) {
-          startPointerGesture(event as PointerEvent)
-        } else if (
-          event.type === "pointermove" &&
-          pendingPointerReleaseGestureId !== null &&
-          (event as PointerEvent).buttons !== 0
-        ) {
-          startPointerGesture(event as PointerEvent)
-        } else if (!isPointerDown) {
+        if (event.type === "pointermove") {
+          const pointerEvent = event as PointerEvent
+          const canStartGesture =
+            !isPointerDown ||
+            (pendingPointerReleaseGestureId !== null &&
+              pointerEvent.pointerId === activePointerId)
+          if (
+            canStartGesture &&
+            (pointerEvent.buttons & 1) !== 0 &&
+            isChartPointerEvent(pointerEvent)
+          ) {
+            startPointerGesture(pointerEvent)
+            return
+          }
+        }
+        if (!isPointerDown) {
           clearDiscreteInput()
         }
       }

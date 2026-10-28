@@ -520,6 +520,22 @@ describe("useVegaLiteSelections", () => {
       ])
     })
 
+    it("does not hold pointermove signals from Vega binding controls", () => {
+      const { container, fire } = setup()
+      const range = document.createElement("input")
+      range.type = "range"
+      container.appendChild(range)
+
+      dispatch(range, "pointermove", 1, 1)
+      fire("sel", { value: "binding" })
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      advanceTimers(DEBOUNCE_TIME_MS)
+      expect(sentStates()).toEqual([
+        { selection: { sel: { value: "binding" } } },
+      ])
+    })
+
     it("does not hold signals from a secondary-button press", () => {
       const { container, fire } = setup()
 
@@ -692,6 +708,29 @@ describe("useVegaLiteSelections", () => {
       dispatch(window, "pointerup", 1)
       await flushAsyncWork()
       expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 2] } } }])
+    })
+
+    it("does not let another pointer resume a settling gesture", async () => {
+      const { container, fire, mockVegaView } = setup()
+      let resolveRelease: ((view: VegaView) => void) | undefined
+      mockVegaView.runAsync.mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveRelease = resolve
+          })
+      )
+
+      dispatch(container, "pointerdown", 1)
+      fire("sel", { x: [0, 1] })
+      dispatch(window, "pointerup", 1)
+      dispatch(container, "pointermove", 2, 1)
+
+      await act(async () => {
+        resolveRelease?.(mockVegaView)
+        await Promise.resolve()
+      })
+
+      expect(sentStates()).toEqual([{ selection: { sel: { x: [0, 1] } } }])
     })
 
     it("does not let an older release finish a newer gesture", async () => {
