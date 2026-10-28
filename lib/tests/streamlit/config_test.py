@@ -1201,44 +1201,6 @@ class ConfigTest(unittest.TestCase):
             assert option.visibility == visibility, key
             assert option.default_val == default_val
             assert config.get_option(key) == default_val
-        # The defaults themselves pass the check that refuses unusable limits.
-        config._check_agent_api_limits()
-
-    @parameterized.expand(
-        [
-            ("zero_timeout", "server.agentWaitTimeout", 0, "greater than zero"),
-            ("negative_ttl", "server.agentSessionTTL", -1, "greater than zero"),
-            ("zero_sessions", "server.agentMaxSessions", 0, "greater than zero"),
-            ("fractional_timeout", "server.agentWaitTimeout", 2.5, "whole number"),
-            ("boolean_sessions", "server.agentMaxSessions", True, "whole number"),
-            ("text_ttl", "server.agentSessionTTL", "900", "whole number"),
-            ("negative_preview", "server.agentPreviewRows", -1, "zero or greater"),
-        ]
-    )
-    def test_check_agent_api_limits_refuses_unusable_values(
-        self, _name: str, key: str, value: object, reason: str
-    ) -> None:
-        """A limit the agent API cannot work with is a config error, naming
-        the option and what it takes.
-        """
-        config._set_option(key, value, "test")
-
-        with pytest.raises(RuntimeError, match=rf"{key}: .*{reason}"):
-            config._check_agent_api_limits()
-
-    def test_check_agent_api_limits_accepts_the_smallest_values(self) -> None:
-        """One is the smallest timeout, TTL, and session cap, and a preview may
-        hold no rows.
-        """
-        for key in (
-            "server.agentWaitTimeout",
-            "server.agentSessionTTL",
-            "server.agentMaxSessions",
-        ):
-            config._set_option(key, 1, "test")
-        config._set_option("server.agentPreviewRows", 0, "test")
-
-        config._check_agent_api_limits()
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234

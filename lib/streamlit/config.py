@@ -1311,8 +1311,7 @@ _create_option(
 
         This bounds the wait, not the run: the app keeps running, and a retry
         of the same request waits for it instead of starting it over. Keep it
-        below the request timeout of the clients you expect. It must be a
-        whole number greater than zero.
+        below the request timeout of the clients you expect.
     """,
     default_val=30,
     type_=int,
@@ -1324,8 +1323,7 @@ _create_option(
         TTL in seconds for idle agent API sessions.
 
         An agent session is reclaimed after this much time without an
-        interaction, so clients do not have to close sessions explicitly. It
-        must be a whole number greater than zero.
+        interaction, so clients do not have to close sessions explicitly.
     """,
     default_val=900,
     type_=int,
@@ -1339,8 +1337,7 @@ _create_option(
         An agent session outlives the request that created it, so this bounds
         what a loop of creating calls can hold in memory. When the limit is
         reached, sessions idle past `server.agentSessionTTL` are reclaimed
-        first, and new sessions are then refused. It must be a whole number
-        greater than zero; there is no unlimited setting.
+        first, and new sessions are then refused.
     """,
     default_val=100,
     type_=int,
@@ -3517,37 +3514,6 @@ def _check_metrics_user_attributes() -> None:
         )
 
 
-# The smallest whole number each agent API limit accepts. At zero:
-# - `agentWaitTimeout`: every request would time out.
-# - `agentSessionTTL`: every session would be reclaimed at once.
-# - `agentMaxSessions`: no session could be created.
-# `agentPreviewRows` may be zero; that only shrinks the response.
-_AGENT_API_LIMIT_MINIMUMS: Final = {
-    "server.agentWaitTimeout": 1,
-    "server.agentSessionTTL": 1,
-    "server.agentMaxSessions": 1,
-    "server.agentPreviewRows": 0,
-}
-
-
-def _check_agent_api_limits() -> None:
-    """Validate the agent API's limits at config-load time.
-
-    Each must be a whole number no smaller than its minimum. Checked whether or
-    not the API is on, so a bad value is reported when it is set rather than
-    when the API is turned on.
-    """
-    for name, minimum in _AGENT_API_LIMIT_MINIMUMS.items():
-        value = get_option(name)
-        # `bool` is a subclass of `int`, so a TOML `true` would pass as 1.
-        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
-            expected = "greater than zero" if minimum else "zero or greater"
-            raise RuntimeError(
-                f"Invalid value for config option {name}: {value!r}. It must be "
-                f"a whole number {expected}."
-            )
-
-
 def on_config_parsed(
     func: Callable[[], None], force_connect: bool = False, lock: bool = False
 ) -> Callable[[], None]:
@@ -3613,5 +3579,3 @@ on_config_parsed(_parse_trusted_user_headers, lock=True)
 # Reject reserved label names in server.unsafeMetricsUserAttributes. No lock needed
 # since this only reads the config, it does not mutate it.
 on_config_parsed(_check_metrics_user_attributes)
-# Refuse agent API limits the API cannot work with. Read-only, so no lock.
-on_config_parsed(_check_agent_api_limits)
