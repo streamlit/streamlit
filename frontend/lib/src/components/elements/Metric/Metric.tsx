@@ -126,6 +126,10 @@ function recordMetricValueWidth(value: HTMLElement): void {
  * A content-width slot is sized around the value. The recorded width is
  * cleared first so the slot is read around the unscaled figure, not one
  * already shrunk to the narrower screen slot.
+ *
+ * A bordered card's border and padding sit between the slot and the value,
+ * so they are subtracted. The value can overflow a narrow slot, so its own
+ * width is not a reliable measure of that inset.
  */
 function recordMetricAvailableWidth(value: HTMLElement): void {
   const elementContainer = value.closest(".stElementContainer")
@@ -138,7 +142,19 @@ function recordMetricAvailableWidth(value: HTMLElement): void {
   }
   value.style.removeProperty(METRIC_AVAILABLE_VAR)
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const available = box.clientWidth
+  let available = box.clientWidth
+  for (
+    let element: HTMLElement | null = value.parentElement;
+    element && element !== box && box.contains(element);
+    element = element.parentElement
+  ) {
+    const style = getComputedStyle(element)
+    available -=
+      (Number.parseFloat(style.paddingLeft) || 0) +
+      (Number.parseFloat(style.paddingRight) || 0) +
+      (Number.parseFloat(style.borderLeftWidth) || 0) +
+      (Number.parseFloat(style.borderRightWidth) || 0)
+  }
   if (available > 0) {
     value.style.setProperty(METRIC_AVAILABLE_VAR, `${available}px`)
   }

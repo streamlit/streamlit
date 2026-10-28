@@ -108,6 +108,41 @@ def test_print_stacks_chart_rows_without_overlap(
     assert vertical_style["display"] == "flex"
     assert vertical_style["justifyContent"] == "center"
 
+    # A stretch-height container in a fixed-height parent still fills it, so
+    # its vertical alignment has free space to center in.
+    stretch_centered = get_element_by_key(app, "stretch_centered")
+    stretch_style = stretch_centered.evaluate(
+        """element => {
+            const style = getComputedStyle(element)
+            return {
+                display: style.display,
+                wrapperDisplay: getComputedStyle(element.parentElement).display,
+            }
+        }"""
+    )
+    assert stretch_style["display"] == "flex"
+    assert stretch_style["wrapperDisplay"] == "flex"
+    stretch_box = stretch_centered.bounding_box()
+    text_box = stretch_centered.get_by_text("Stretch centered").bounding_box()
+    assert stretch_box is not None
+    assert text_box is not None
+    assert stretch_box["height"] > 2 * text_box["height"]
+
+    # An expander's content block is height 100% of a content-height parent.
+    # It prints as a block, so its chart does not cover the next element.
+    expander_chart = app.get_by_test_id("stExpander").get_by_test_id("stVegaLiteChart")
+    after_expander = app.get_by_text("After the expander chart", exact=True)
+    expect(expander_chart).to_be_visible()
+
+    def expander_chart_does_not_overlap() -> None:
+        chart_box = expander_chart.bounding_box()
+        after_box = after_expander.bounding_box()
+        assert chart_box is not None
+        assert after_box is not None
+        assert chart_box["y"] + chart_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, expander_chart_does_not_overlap)
+
     # A centered container keeps flex even when it holds a chart. The chart
     # stays inside the container without covering the next element.
     centered_chart = get_element_by_key(app, "centered_chart")

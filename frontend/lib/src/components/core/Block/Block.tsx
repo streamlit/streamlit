@@ -182,12 +182,24 @@ export const ContainerContentsWrapper = (
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
   const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
+  const isColumn = notNullOrUndefined(props.node.deltaBlock.column)
+  const heightContextProps = getHeightContextProps(
+    props.heightConfig ?? props.node.deltaBlock.heightConfig
+  )
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
     gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
+    // A column's 100% resolves against its row, which stretches it. Other
+    // wrappers (forms, expanders, chat messages) resolve 100% to auto
+    // unless they have a definite height themselves.
+    hasDefiniteHeight:
+      isColumn ||
+      heightContextProps.hasFixedHeight ||
+      (heightContextProps.hasStretchHeight &&
+        parentContext?.hasDefiniteHeight === true),
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
     justify: notNullOrUndefined(columnAlignment)
@@ -204,10 +216,8 @@ export const ContainerContentsWrapper = (
       // from parentContext. Nested providers that use this wrapper (form, expander,
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
       // resets the same way because FlexBoxContainer omits this prop.
-      isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
-      {...getHeightContextProps(
-        props.heightConfig ?? props.node.deltaBlock.heightConfig
-      )}
+      isDirectlyInColumn={isColumn}
+      {...heightContextProps}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -273,6 +283,12 @@ export const FlexBoxContainer = (
       props.node.deltaBlock.heightConfig?.useStretch === true
         ? "auto"
         : layout_styles.height,
+    // A stretch block fills a definite-height parent through flex, so print
+    // keeps flex for it despite the auto height.
+    hasDefiniteHeight:
+      props.node.deltaBlock.heightConfig?.useStretch === true
+        ? parentContext?.hasDefiniteHeight === true
+        : undefined,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -612,6 +628,9 @@ export const BlockNodeRenderer = (
         )}
         {...styles}
         {...stretchWrapperStyles}
+        keepsPrintFlex={
+          isStretchHeight && flexContext?.hasDefiniteHeight === true
+        }
       >
         {containerElement}
       </StyledLayoutWrapper>
