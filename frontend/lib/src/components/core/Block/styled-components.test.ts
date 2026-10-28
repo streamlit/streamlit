@@ -188,6 +188,35 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).not.toContain("margin-bottom")
   })
 
+  it("keeps flex for a percentage height only when it is definite", () => {
+    // A form, expander, or chat message passes height 100%, which resolves
+    // to auto in a content-height parent.
+    const contentSized = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "100%",
+          gap: { pixelGap: 18 },
+        })
+      )
+    )
+    expect(contentSized).toMatch(/@media print\{[^}]*display:block/)
+
+    const definite = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "100%",
+          hasDefiniteHeight: true,
+          gap: { pixelGap: 19 },
+        })
+      )
+    )
+    expect(definite).not.toContain("display:block")
+  })
+
   it("uses block layout for a content-height container that only aligns vertically", () => {
     const css = cssAddedBy(() =>
       render(
@@ -271,5 +300,17 @@ describe("StyledLayoutWrapper print layout", () => {
       render(createElement(StyledLayoutWrapper, { height: "auto" }))
     )
     expect(contentHeight).toMatch(/@media print\{[^}]*display:block/)
+
+    const stretchInDefiniteParent = cssAddedBy(() =>
+      render(
+        createElement(StyledLayoutWrapper, {
+          height: "auto",
+          flex: "0 1 100%",
+          keepsPrintFlex: true,
+        })
+      )
+    )
+    expect(stretchInDefiniteParent).toContain("flex:0 1 100%")
+    expect(stretchInDefiniteParent).not.toContain("display:block")
   })
 })

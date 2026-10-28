@@ -518,6 +518,62 @@ describe("FlexBoxContainer layout props", () => {
     expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
   })
 
+  describe("print layout", () => {
+    /** The top-level declarations of an element's emotion `@media print` rule. */
+    const printDeclarations = (element: HTMLElement): string => {
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+      return [...element.classList]
+        .filter(className => className.startsWith("css-"))
+        .map(
+          className =>
+            new RegExp(`@media print\\{\\.${className}\\{([^}]*)\\}`).exec(
+              css
+            )?.[1] ?? ""
+        )
+        .join(";")
+    }
+
+    const stretchChild = (): BlockNode =>
+      makeVerticalBlock([], {
+        heightConfig: { useStretch: true },
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        },
+      })
+
+    it("keeps flex for a stretch-height container in a fixed-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([stretchChild()], {
+            heightConfig: { pixelHeight: 400 },
+            flexContainer: {
+              direction: BlockProto.FlexContainer.Direction.VERTICAL,
+            },
+          })
+        )
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).not.toContain("display:block")
+      expect(printDeclarations(innerBlock)).not.toContain("display:block")
+    })
+
+    it("uses block layout for a stretch-height container in a content-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(makeVerticalBlock([stretchChild()]))
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).toContain("display:block")
+      expect(printDeclarations(innerBlock)).toContain("display:block")
+    })
+  })
+
   it("does not apply the stretch overrides to a content-height container", () => {
     const contentChild = makeVerticalBlock([], {
       heightConfig: { useContent: true },
