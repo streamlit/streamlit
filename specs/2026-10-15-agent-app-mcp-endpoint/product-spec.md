@@ -11,8 +11,8 @@ An app that serves the [agent API](../2026-08-28-agent-app-interface/product-spe
 also serves it as a remote MCP server at `/_stcore/agent/mcp`, so a person can add the
 app to Claude, ChatGPT, Cursor, VS Code, or Claude Code by pasting one URL. The server
 has two fixed tools: `interact`, the agent API's one operation with the same request and
-the same snapshot, and `get_data`, which reads the tables and files a result references
-for clients that cannot fetch a URL. It is one more route on the Streamlit server, under
+the same snapshot, and `get_data`, which reads tables and other media files the app
+still stores for clients that cannot fetch a URL. It is one more route on the Streamlit server, under
 the same `server.enableAgentApi` setting and security rules, with no new dependencies.
 This is follow-up #6 of the agent API spec.
 
@@ -229,8 +229,9 @@ Reads a media file the app still stores:
   - **Detection:** a table is a media file with the Arrow stream MIME type,
     `application/vnd.apache.arrow.stream`, the type the server registers a snapshot
     `data` object's Arrow with: a dataframe, `st.table`, `st.data_editor`, or a chart
-    that serves Arrow. It is the type the server registered, not one guessed from the
-    bytes or an extension, so a dataframe never comes back as base64.
+    that serves Arrow. It is the type the server registered, compared without regard
+    to case, not one guessed from the bytes or an extension, so a dataframe never
+    comes back as base64.
   - **Encoding:** cell values use the snapshot's JSON encoding, the parent spec's value
     table, the same encoding as `data.preview`. The snapshot reads `columns` and the
     preview from the same stream by position, so a page matches them. Decoding with
@@ -266,15 +267,18 @@ Reads a media file the app still stores:
   be about 400 KB. A shorter page loses nothing: `next_offset` is the first row not
   returned, `offset` plus the rows on the page, never `offset + limit`.
 - **Other files** come back as themselves. The MIME type the file was stored with picks
-  the content type, ignoring parameters such as `charset`, as the content-type check
-  does:
-  - `image/*` is MCP image content and `audio/*` is audio content: a base64 `data` and
-    the file's `mimeType`.
-  - `text/*` and `application/json` are text content. v1 returns them whole, up to the
-    5 MB cap, though a file that size is far past the client limits in
-    [Limits and result size](#limits-and-result-size). Paging them like tables is a
-    [follow-up](#follow-ups). MCP text must be Unicode, so a file whose bytes are not
-    valid UTF-8 comes back as an embedded resource instead.
+  the content type, compared without regard to case and ignoring parameters such as
+  `charset`, as the content-type check does:
+  - `image/png`, `image/jpeg`, `image/gif`, and `image/webp` are MCP image content, the
+    types Anthropic's and OpenAI's vision inputs accept, and `audio/*` is audio
+    content: a base64 `data` and the file's `mimeType`. Other image types, such as a
+    BMP or TIFF that `st.image` stored from a path, are embedded resources, because one
+    image block a model API rejects can fail the whole turn in some clients.
+  - `text/*`, `application/json`, and `image/svg+xml`, which is XML text, are text
+    content. v1 returns them whole, up to the 5 MB cap, though a file that size is far
+    past the client limits in [Limits and result size](#limits-and-result-size).
+    Paging them like tables is a [follow-up](#follow-ups). MCP text must be Unicode, so
+    a file whose bytes are not valid UTF-8 comes back as an embedded resource instead.
   - Anything else, such as a PDF, is an embedded resource, whose `uri`, `mimeType`, and
     base64 `blob` sit on a nested `resource` object:
     `{"type": "resource", "resource": {"uri": "urn:streamlit:media:<id>", "mimeType": "application/pdf", "blob": "<base64>"}}`.
@@ -289,8 +293,9 @@ Reads a media file the app still stores:
   reaches 5 MB. A cut-off image is useless. A single table row past the cap is refused
   the same way, with `result_too_large` rather than truncated, so no cell value is
   silently cut.
-- **Scope:** any media file the app still stores, the files the `/media` route serves to
-  whoever holds their URL, for a caller whose `session_id` passes the identity check.
+- **Scope:** any media file the app still stores, which are the same files the `/media`
+  route serves to anyone with the URL. The caller's `session_id` must pass the identity
+  check.
 - **Lifetime:** a file stays until media storage drops it. A full rerun drops its
   session's references when it starts. The cleanup at the end of any session's run
   deletes the files no session references, except that a download button's file is
@@ -320,9 +325,12 @@ Reads a media file the app still stores:
     those unchanged.
 - **`unknown_file`** is the error for an argument that reads no stored file. Its
   message depends on the argument's shape, so the model's next step is right:
-  - **The first two shapes**, such as an absolute URL the model resolved, or an id
-    whose file a later run replaced or a run in progress has not re-created yet: pass
-    `url` exactly as the latest result shows it, collecting a run in progress first.
+  - **A bare id or a media URL, relative or absolute,** that reads no stored file, such
+    as an absolute URL the model resolved, or an id whose file a later run replaced or
+    a run in progress has not re-created yet: pass `url` exactly as the latest result
+    shows it, a relative URL or a bare id. If a run is still in progress, call
+    `interact` with only `session_id` to collect it first. Do not call `interact` just
+    to re-create a file.
   - **Anything else:** it is not a media file, so do not call `get_data` for it again,
     since the same argument fails the same way.
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
@@ -336,6 +344,16 @@ follow-ups, would reuse the same three codes and give them statuses.
 `read_unsupported` means the session's media store cannot return bytes. `unknown_file`
 means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing or
 malformed argument, reuses the parent's `invalid_request`.
+
+A refused read is a tool result, as a refused interaction is: `isError: true`, with the
+parent's error body in `content[0].text`. That holds for `unknown_file`,
+`result_too_large`, `read_unsupported`, `invalid_request`, and `unknown_session`, so
+clients that hide protocol errors from the model still show it the next step. The
+`result_too_large` message says the file, or the table row at `offset`, is past the cap,
+so neither a retry nor a smaller `limit` helps: the character budget already keeps a
+page of several rows far below it. On a table, the model can skip that row by reading
+on from the next offset. The `read_unsupported` message says this app's media store
+cannot return files, so no retry helps.
 
 ### Explaining the protocol to the model
 
@@ -394,9 +412,9 @@ session.
 - **Notifications**, such as `notifications/initialized`, and responses get
   `202 Accepted` with no body.
 - **Protocol versions:** `2025-11-25` and `2025-06-18`, the `initialize`-handshake
-  revisions the common clients support. A client asking for another gets the newest of
-  these, which it accepts or disconnects over, as negotiation in those revisions
-  prescribes.
+  revisions the common clients support. A client that asks for another revision gets
+  `2025-11-25` back, and then either continues with it or disconnects, as those
+  revisions' negotiation rules prescribe.
 - **`2026-07-28` comes later.** In v1, a `2026-07-28` probe gets HTTP `400` with
   `-32600`, echoing the request's `id`, which makes the client fall back to
   `initialize`.
@@ -484,7 +502,10 @@ Nothing new beyond the parent spec's rules, applied to one more route:
   desktop client. Use case 2 assumes the same of hosted connectors, such as Claude.ai
   and ChatGPT custom connectors: they send no `Origin`. That is an assumption. A local
   conformance test cannot show what a provider's servers send, so it is checked by hand
-  against the real connectors before shipping. The official TypeScript client does not
+  against the real connectors before shipping. The same check covers OAuth discovery:
+  an app answers `/.well-known/oauth-protected-resource` with its HTML page and a
+  `200`, and a connector that probes it must still connect without sign-in. The
+  official TypeScript client does not
   fall back from HTTP `403`, so a hosted client that does send `Origin` fails as a
   generic connection error. The fix is to list that origin in
   `server.corsAllowedOrigins`; MCP clients already send `application/json`, so the
@@ -508,7 +529,10 @@ Nothing new beyond the parent spec's rules, applied to one more route:
 What is new is practicality, as in the parent spec: pasting a URL into a chat assistant
 is far easier than writing an HTTP client, so an app with the API on will see more agent
 traffic. That makes the parent spec's gates on default-on — rate limits, per-caller
-quotas, and compact responses — more pressing, but not different.
+quotas, and compact responses — more pressing, but not different. MCP requires servers
+to rate-limit tool calls. In v1 that is the deployment's job, as for the HTTP API: the
+deployment docs say its rate limits must cover this route too, and the per-server
+decode cap in [Rollout](#rollout) bounds what parallel `get_data` calls cost.
 
 ### Discovery and URLs
 
@@ -700,7 +724,9 @@ than ranked, and name the parent spec's follow-up where one builds on it.
    them by character offset, with the same `offset` and `next_offset` as tables, or
    refusing them past the table budget with `result_too_large`, changes what a call
    returns for a large file. Images stay whole or are refused: a cut-off image is
-   useless.
+   useless. Compact responses, the parent spec's follow-up #9, depend on this item:
+   they move oversized text into media storage for `get_data` to read, and a whole
+   file comes back at the size the snapshot avoided.
 6. **More from `get_data`:** CSV output, choosing columns, and `structuredContent` with
    an `outputSchema` (see [Other decisions](#other-decisions)). Queries over a table on
    the server and an HTTP route for `get_data` are already among the parent spec's
