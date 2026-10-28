@@ -554,7 +554,7 @@ class TestSnowflakeCallersRightsConnection:
             "host": "account.snowf.com",
             "database": "my_database",
             "schema": "streamlit_schema",
-            "token": "ondisk.service.jwt.header_secret",
+            "token": f"{fake_file_token}.{fake_header_token}",
         }
 
     @pytest.mark.require_integration
@@ -723,21 +723,27 @@ class TestSnowflakeCallersRightsConnectionUnit:
             assert SnowflakeCallersRightsConnection._read_token_file() == "login-token"
 
     @pytest.mark.parametrize(
-        ("login_token", "expected"),
+        ("login_token", "user_token", "expected"),
         [
-            # Snowpark Container Services: a JWT service token is combined with the
-            # user token.
-            ("service.jwt.token", "service.jwt.token.user-token"),
+            # Snowpark Container Services: a dotted service token is combined with
+            # the user token.
+            ("service.jwt.token", "user-token", "service.jwt.token.user-token"),
+            # Surrounding whitespace is dropped before the tokens are combined.
+            ("service.jwt.token\n", "user-token", "service.jwt.token.user-token"),
             # Serverless: an opaque service token means the user token is complete.
-            ("opaque-service-token", "user-token"),
-            ("opaque-service-token\n", "user-token"),
+            ("opaque-service-token", "user-token", "user-token"),
+            ("opaque-service-token\n", "user-token", "user-token"),
+            # A complete serverless user token may itself contain dots.
+            ("opaque-service-token", "header.payload.sig", "header.payload.sig"),
         ],
     )
-    def test_build_callers_rights_token(self, login_token: str, expected: str) -> None:
-        """The caller's rights token matches the service token's runtime."""
+    def test_build_callers_rights_token(
+        self, login_token: str, user_token: str, expected: str
+    ) -> None:
+        """A dotted service token is joined to the user token; an opaque one is not."""
         assert (
             SnowflakeCallersRightsConnection._build_callers_rights_token(
-                login_token, "user-token"
+                login_token, user_token
             )
             == expected
         )

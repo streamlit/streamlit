@@ -380,8 +380,9 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
     for local development.
 
-    When an app is running in Snowpark Container Services and has caller's rights
-    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
+    When an app is running in Snowpark Container Services or on Snowflake serverless
+    compute (``compute_resource: SERVERLESS``) and has caller's rights enabled,
+    ``st.connection("snowflake-callers-rights")`` connects automatically
     using the current user's identity tokens. This is a session-scoped connection
     to ensure that the identity stays tied to the active user. A caller's rights
     connection can only be used by the session that created it, and its
@@ -603,7 +604,8 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
     You can use ``"snowflake-callers-rights"`` type connections in any
     environment running on Snowpark Container Services, including Streamlit in
-    Snowflake on containers and any self-managed caller's rights Service.
+    Snowflake on containers and any self-managed caller's rights Service. They
+    also work on Snowflake serverless compute (``compute_resource: SERVERLESS``).
 
     This will use the Snowpark-provided account, host, database, and schema to connect.
     Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
@@ -737,8 +739,8 @@ def _is_module_being_imported() -> bool:
 class SnowflakeCallersRightsConnection(SnowflakeConnection):
     """A caller's rights connection to Snowflake using the Snowflake Connector for Python.
 
-    This will only work when running on Snowpark Container Services or another
-    compatible platform.
+    This will only work when running on Snowpark Container Services, Snowflake
+    serverless compute, or another compatible platform.
 
     See ``BaseSnowflakeConnection`` for complete docs.
     """
@@ -910,12 +912,24 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
     def _build_callers_rights_token(login_token: str, user_token: str) -> str:
         """Returns the OAuth token that authenticates as the calling user.
 
-        Snowpark Container Services mounts a JWT service token, and its caller's
-        rights login expects ``<service token>.<user token>``. Snowflake's serverless
-        compute mounts an opaque service token (no dots) instead, and its user token
-        header is already a complete caller's rights token, so it is used alone.
+        The mounted service token selects the format:
+
+        - Contains ``.``: Snowpark Container Services expects
+          ``<service token>.<user token>``.
+        - No ``.``: Snowflake serverless compute mounts an opaque service token, and
+          its user token header is already a complete caller's rights token, so the
+          header is used alone.
+
+        Whitespace around the service token, such as a trailing newline in the token
+        file, is ignored.
         """
-        if "." in login_token.strip():
+        # Snowflake documents neither token's format, and no environment variable
+        # distinguishes serverless compute from Snowpark Container Services, so the
+        # service token's shape is the only available signal. The opaque, dotless
+        # serverless token and its complete header token were observed on a live
+        # serverless deployment.
+        login_token = login_token.strip()
+        if "." in login_token:
             return f"{login_token}.{user_token}"
         return user_token
 
