@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, ViewportSize, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    end_browser_print,
+    get_element_by_key,
+    start_browser_print,
+)
 
 # Same A4 ratio as the hello-app print tests, wide enough that columns would
 # sit side by side on screen. Print CSS is what stacks them.
@@ -23,23 +27,18 @@ _PORTRAIT: ViewportSize = {"width": 1240, "height": 1754}
 
 
 def test_print_stacks_columns_and_fits_the_dataframe(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
+    app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """Every column uses the full page width, and the print table stays in its card."""
-    app = themed_app
+    """Every column uses the full page width, and the print table stays in its card.
 
+    Print forces colors, so a dark theme would snapshot the same pixels.
+    """
     expect(app.get_by_text("Plain column")).to_be_visible()
     expect(app.get_by_text("Bordered column")).to_be_visible()
 
-    # A browser fires beforeprint while screen media is still active, then
-    # switches to print. emulate_media fires the matchMedia change on the
-    # next task, which refits the table to the printed column. A fresh
-    # matchMedia("print") is a different object, so dispatching change on
-    # it would not reach that listener.
+    # The print-media change refits the table to the printed column.
     app.set_viewport_size(_PORTRAIT)
-    app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
-    app.emulate_media(media="print", forced_colors="active")
-    app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+    start_browser_print(app)
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
@@ -98,8 +97,9 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     wait_until(app, table_fits_the_card)
 
-    # A centered or end-aligned container keeps flex. display:block would
-    # drop align-items and justify-content and print the content at the start.
+    # A horizontally centered container keeps flex, because display:block
+    # would drop align-items. A fixed-height container keeps flex, so its
+    # vertical alignment still has free space to center in.
     centered = get_element_by_key(app, "centered")
     expect(centered).to_be_visible()
     centered_style = centered.evaluate(
@@ -146,7 +146,9 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     wait_until(app, chart_stays_above_the_heading)
 
-    assert_snapshot(app, name="st_print_layout-stacked_columns")
+    # The geometry checks above cover the whole page. The snapshot keeps to
+    # the stacked chart row.
+    assert_snapshot(chart_row, name="print_layout-stacked_chart_row")
 
-    app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    end_browser_print(app)
     expect(table).to_have_count(0)

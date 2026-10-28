@@ -17,11 +17,17 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
+    wait_until,
+)
+from e2e_playwright.shared.app_utils import (
+    end_browser_print,
+    flush_print_media_change,
+    start_browser_print,
 )
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
-def navigate_to_page(app: Page, index: int):
+def navigate_to_page(app: Page, index: int) -> None:
     app.get_by_test_id("stSidebarNav").locator("a").nth(index).click()
     wait_for_app_run(app)
     # Move the mouse to the top left corner to prevent any weird hover effects
@@ -100,7 +106,7 @@ def test_mapping_demo_page(app: Page) -> None:
     # assert_snapshot(app, name="hello_app-mapping_demo_page")  # noqa: ERA001
 
 
-def _load_dataframe_demo_page(app: Page):
+def _load_dataframe_demo_page(app: Page) -> None:
     """Load the dataframe demo page and wait until all elements are visible."""
     navigate_to_page(app, 1)
     check_page_title(app, "DataFrame demo")
@@ -124,29 +130,17 @@ def test_dataframe_demo_page(app: Page, assert_snapshot: ImageCompareFunction) -
 # printing candidate.
 
 
-def _flush_print_media_change(app: Page):
-    """Let the dataframe refit once print media is active.
-
-    ``emulate_media`` fires ``change`` on the ``MediaQueryList`` objects the
-    page already holds, on the next task. Calling ``matchMedia("print")``
-    again returns a different object, so a ``change`` event dispatched on
-    it never reaches those listeners. Yielding one task delivers the event
-    ``emulate_media`` already queued.
-    """
-    app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
-
-
 # DIN A4 paper is 21cm x 29.7cm which is 595px x 842px in 72dpi;
 # Use higher pixels to avoid mobile media queries to trigger but keep the ratio
 portrait_width_px = 1240
 portrait_height_px = 1754
 
 
-def _set_portrait_dimensions(app: Page):
+def _set_portrait_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_width_px, "height": portrait_height_px})
 
 
-def _set_landscape_dimensions(app: Page):
+def _set_landscape_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
 
 
@@ -161,7 +155,7 @@ def test_app_print_mode_portrait_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-    _flush_print_media_change(app)
+    flush_print_media_change(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
@@ -191,7 +185,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _flush_print_media_change(app)
+    flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
 
@@ -207,7 +201,7 @@ def test_app_print_mode_landscape_with_sidebar_open(
     _load_dataframe_demo_page(app)
     app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
-    _flush_print_media_change(app)
+    flush_print_media_change(app)
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
@@ -236,7 +230,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     expect(sidebar_element).not_to_be_visible()
 
     app.emulate_media(media="print", forced_colors="active")
-    _flush_print_media_change(app)
+    flush_print_media_change(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 
@@ -255,9 +249,7 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
 
     _load_dataframe_demo_page(app)
     _set_portrait_dimensions(app)
-    app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
-    app.emulate_media(media="print", forced_colors="active")
-    _flush_print_media_change(app)
+    start_browser_print(app)
     table = app.locator(".stDataFramePrintTable")
     expect(table).to_be_visible()
     expect(table).to_contain_text("China")
@@ -269,8 +261,10 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
     expect(headers.nth(5)).to_be_visible()
     expect(app.locator(".stDataFrameResizable")).to_be_hidden()
 
-    fit = app.evaluate(
-        """() => {
+    def print_layout_fits() -> None:
+        # Retry until the print-media refit and the sidebar reflow settle.
+        fit = app.evaluate(
+            """() => {
             const table = document.querySelector(".stDataFramePrintTable");
             const scale = table.closest(".stDataFramePrintScale");
             const frame = table.closest("[data-testid='stDataFrame']");
@@ -301,26 +295,27 @@ def test_print_mode_fits_dataframe_sidebar_and_chart(
                 slotClientWidth: scale.parentElement
                     ? scale.parentElement.clientWidth
                     : 0,
-                zoom: scaleStyle.zoom,
                 fontSize: getComputedStyle(table).fontSize,
                 tableWidth: tableBox.width,
                 frameWidth: frameBox.width,
             };
         }"""
-    )
-    assert fit["tableInsideFrame"], (
-        f"print table is outside the dataframe: zoom={fit['zoom']} "
-        f"fontSize={fit['fontSize']} "
-        f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
-        f"probeWidth={fit['probeWidth']} slotClientWidth={fit['slotClientWidth']}"
-    )
-    assert fit["chartInsideMain"]
-    assert fit["sidebarBesideMain"]
-    assert fit["sidebarIsMinWidth"]
+        )
+        assert fit["tableInsideFrame"], (
+            f"print table is outside the dataframe: fontSize={fit['fontSize']} "
+            f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
+            f"probeWidth={fit['probeWidth']} "
+            f"slotClientWidth={fit['slotClientWidth']}"
+        )
+        assert fit["chartInsideMain"]
+        assert fit["sidebarBesideMain"]
+        assert fit["sidebarIsMinWidth"]
+
+    wait_until(app, print_layout_fits)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-beforeprint")
 
-    app.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    end_browser_print(app)
     expect(table).to_have_count(0)
     expect(app.locator(".stDataFrameResizable")).to_be_visible()
 

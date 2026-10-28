@@ -16,7 +16,7 @@ import pytest
 from playwright.sync_api import Page, ViewportSize, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.app_utils import get_element_by_key, start_browser_print
 
 # Same A4 ratio as the other print tests. Wide enough to stay off the mobile
 # layout, short of a full printed page.
@@ -42,13 +42,8 @@ def test_print_notes_for_row_cap_and_cell_budget(
     expect(row_cap).to_be_visible()
     expect(cell_budget).to_be_visible()
 
-    # A browser fires beforeprint while screen media is still active, then
-    # switches to print. emulate_media delivers the matchMedia change on the
-    # next task.
     app.set_viewport_size(_PORTRAIT)
-    app.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
-    app.emulate_media(media="print", forced_colors="active")
-    app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+    start_browser_print(app)
 
     row_cap_table = row_cap.locator(".stDataFramePrintTable")
     budget_table = cell_budget.locator(".stDataFramePrintTable")
