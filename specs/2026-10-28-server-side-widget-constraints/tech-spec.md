@@ -108,6 +108,9 @@ applies these checks in order and returns the first violation:
 5. **The widget's own validator** (`metadata.validator`, the serde's `validate`, see
    below). This covers the widget's
    options, bounds, shapes, lengths, and whether an empty value is allowed.
+   - `ambiguous_option` does not end the sequence. The check still runs step 6 and
+     returns `ambiguous_option` only for a readable value, so a browser session that
+     accepts it never skips the readability check.
 6. **The deserializer can read it** (`unreadable`). Run in a `try`, once. The result is
    cached as the `Value` that `_widget_changed` would otherwise compute, so the value is
    not deserialized twice.
@@ -184,7 +187,11 @@ class NumberInputSerde:
             # A cleared input (an unset value oneof). Only changes reach validate,
             # so this refuses clearing a filled required widget (item 5).
             return Violation("empty_required") if self.required else None
-        if self.data_type == NumberInputProto.FLOAT and not math.isfinite(ui_value):
+        # Every type: int_value and double_value are interchangeable (check 4), so
+        # an INT input can receive NaN, inf, or 2.5, and NaN fails no comparison.
+        if not math.isfinite(ui_value):
+            return Violation("malformed")
+        if self.data_type == NumberInputProto.INT and not float(ui_value).is_integer():
             return Violation("malformed")
         return widget_checks.within(ui_value, self.min_value, self.max_value)
 
