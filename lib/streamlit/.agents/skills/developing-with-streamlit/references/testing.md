@@ -25,6 +25,8 @@ Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the po
 
 **Watch the server's console output.** Keep it where you can read it (the background process's output, or a log file outside the project) and check it after every request, not only on errors. Streamlit logs warnings and tracebacks there that the snapshot does not show, such as deprecations and ignored parameters. Treat a new warning or traceback as something to fix or report.
 
+**Read the protocol description once per session.** `curl -s http://127.0.0.1:8765/_stcore/agent/openapi.json` returns the OpenAPI document that the running Streamlit version generates from its own code: every request field, the snapshot schema, and every error code with what to do about it. This page is a quick start; where they differ, the document is right. If its `info.x-streamlit-agent-api` is `"disabled"`, the server was started without `--server.enableAgentApi=true`.
+
 An empty request creates a session, runs the app, and returns its snapshot. For the filtered-dataframe app in *Worked example* near the end of this file (response abridged):
 
 ```bash
@@ -53,7 +55,7 @@ curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact \
   -d '{"session_id": "s_4998...", "widget_state": {"status": "Active"}}'
 ```
 
-Snapshots can be large. Pipe the response through `jq` or a short Python script and print only what you need, such as `status`, `actions`, and the elements you changed.
+Read the whole snapshot by default, since a change can break parts of the page you didn't touch. Only when a response is too large to read, for example with large chart specs, filter it with `jq` or a short Python script. Keep `status`, `actions`, every `exception` element, and the elements you changed.
 
 Request fields:
 
@@ -71,8 +73,6 @@ Reading the result:
 - A 4xx with `error.code` (`invalid_value`, `unknown_key`, `missing_form_submit`, …): the request was refused and nothing ran. `error.message` says why.
 - `unknown_session`: the session idled out or the server restarted. Send `{}`.
 - `202` with `wait_timed_out`: the run is still going, for example on a slow first data load. Send only `session_id` to wait for it.
-
-`GET http://127.0.0.1:8765/_stcore/agent/openapi.json` describes the whole protocol, including every error code.
 
 Limits:
 

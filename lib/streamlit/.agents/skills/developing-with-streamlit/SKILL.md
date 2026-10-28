@@ -230,7 +230,7 @@ For **performance optimization**, read:
 
 **Goal:** Confirm the edited app runs and behaves as intended in the real Streamlit runtime before you report the task as done.
 
-The agent API drives the app over HTTP without a browser. It returns the finished page as JSON, with elements named after `st.*` commands and widgets you set by key. For request fields, errors, and limits, read "Check a running app with the agent API" in `references/testing.md`.
+The agent API drives the app over HTTP without a browser. It returns the finished page as JSON, with elements named after `st.*` commands and widgets you set by key. For the workflow and limits, read "Check a running app with the agent API" in `references/testing.md`. For every request field, response field, and error code, fetch the running app's `/_stcore/agent/openapi.json` once.
 
 1. **Start** a headless instance in the background, bound to localhost and separate from any app the user is running. Keep its console output where you can read it:
    ```bash
