@@ -1185,20 +1185,18 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
 
-    def test_agent_api_options_have_their_visibility_and_defaults(self) -> None:
-        """The agent API's switch and session limits are documented, and the
-        preview size stays hidden; all default to the documented values.
-        """
-        expected = {
-            "server.enableAgentApi": ("visible", False),
-            "server.agentWaitTimeout": ("visible", 30),
-            "server.agentSessionTTL": ("visible", 900),
-            "server.agentMaxSessions": ("visible", 100),
-            "server.agentPreviewRows": ("hidden", 100),
+    def test_agent_api_options_are_hidden_with_their_defaults(self) -> None:
+        """The agent API options stay hidden and default to the documented values."""
+        expected_defaults = {
+            "server.enableAgentApi": False,
+            "server.agentWaitTimeout": 30,
+            "server.agentSessionTTL": 900,
+            "server.agentMaxSessions": 100,
+            "server.agentPreviewRows": 100,
         }
-        for key, (visibility, default_val) in expected.items():
+        for key, default_val in expected_defaults.items():
             option = config._config_options[key]
-            assert option.visibility == visibility, key
+            assert option.visibility == "hidden"
             assert option.default_val == default_val
             assert config.get_option(key) == default_val
 
