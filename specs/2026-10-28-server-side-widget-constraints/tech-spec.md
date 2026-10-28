@@ -593,7 +593,10 @@ stored value serialized. Otherwise the validator runs, so `20` sent to a `number
 with `max_value=10` that holds its default `5` is refused with `invalid_value`, instead
 of being coerced to `5` and reported as success. A mismatch that only differs in form,
 such as `int_value` against `double_value`, just runs the validator, which accepts a
-legal value. A `null` sent to an empty widget still matches, so item 5's no-op holds.
+legal value. Empty forms are normalized before the comparison: a missing value field and
+an empty array both mean empty. So a `null` sent to an empty widget still matches, even
+for a `required` `st.pills` whose stored `None` serializes as `[]`, and item 5's no-op
+holds.
 
 The snapshot-based addressing checks stay first, so the existing error codes win where
 they apply. Each item deletes the agent's own copy of its constraint, as listed in the
