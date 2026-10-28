@@ -1369,6 +1369,128 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         assert finished_msgs[0].metadata.script_run_id == "run-a"
         assert list(finished_msgs[0].metadata.fragment_ids_this_run) == ["frag-a"]
 
+    async def test_replaced_runner_delivers_its_completed_run(self):
+        """A runner that completed its run before its events were processed
+        still delivers that run, ahead of the replacement runner's run.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        retiring_runner = MagicMock(spec=ScriptRunner)
+        retiring_runner.request_rerun = MagicMock(return_value=False)
+        retiring_runner.has_finished_running = True
+        replacement_runner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = retiring_runner
+
+        run_a = RunDescriptor(script_run_id="run-a", fragment_ids_this_run=("frag-a",))
+        run_b = RunDescriptor(script_run_id="run-b", fragment_ids_this_run=("frag-b",))
+        delta_a = ForwardMsg()
+        delta_a.delta.new_element.markdown.body = "after nested"
+        delta_a.delta.fragment_id = "frag-a"
+        delta_a.metadata.delta_path[:] = [0, 1, 1]
+
+        # The retiring runner finished run A, but none of its events have been
+        # processed on the event loop yet.
+        session._on_scriptrunner_event(
+            sender=retiring_runner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["frag-a"],
+            run_descriptor=run_a,
+        )
+        session._on_scriptrunner_event(
+            sender=retiring_runner,
+            event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=delta_a,
+        )
+        session._on_scriptrunner_event(
+            sender=retiring_runner,
+            event=ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            run_descriptor=run_a,
+        )
+
+        def create_replacement(_rerun_data: RerunData) -> None:
+            session._scriptrunner = replacement_runner
+            session._on_scriptrunner_event(
+                sender=replacement_runner,
+                event=ScriptRunnerEvent.SCRIPT_STARTED,
+                page_script_hash="",
+                fragment_ids_this_run=["frag-b"],
+                run_descriptor=run_b,
+            )
+
+        with (
+            patch_config_options({"runner.fastReruns": False}),
+            patch.object(
+                session, "_create_scriptrunner", side_effect=create_replacement
+            ),
+        ):
+            session.request_rerun(None)
+        session._on_scriptrunner_event(
+            sender=retiring_runner, event=ScriptRunnerEvent.SHUTDOWN
+        )
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        assert [
+            m.new_session.script_run_id
+            for m in sent_messages
+            if m.WhichOneof("type") == "new_session"
+        ] == ["run-a", "run-b"]
+        assert delta_a in sent_messages
+        finishes = [
+            m for m in sent_messages if m.WhichOneof("type") == "script_finished"
+        ]
+        assert [(m.metadata.script_run_id, m.script_finished) for m in finishes] == [
+            ("run-a", ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
+        ]
+        assert session._scriptrunner is replacement_runner
+        assert session._retiring_scriptrunner is None
+
+    async def test_replaced_runner_stopped_mid_run_is_ignored(self):
+        """A runner stopped before its run completed can emit events after the
+        replacement started, so its events are ignored.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        stopped_runner = MagicMock(spec=ScriptRunner)
+        stopped_runner.request_rerun = MagicMock(return_value=False)
+        stopped_runner.has_finished_running = False
+        replacement_runner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = stopped_runner
+
+        def create_replacement(_rerun_data: RerunData) -> None:
+            session._scriptrunner = replacement_runner
+
+        with (
+            patch_config_options({"runner.fastReruns": False}),
+            patch.object(
+                session, "_create_scriptrunner", side_effect=create_replacement
+            ),
+        ):
+            session.request_rerun(None)
+        session._on_scriptrunner_event(
+            sender=stopped_runner,
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            run_descriptor=RunDescriptor.create(),
+        )
+        await asyncio.sleep(0)
+
+        assert session._retiring_scriptrunner is None
+        assert len(session._browser_queue) == 0
+
+    async def test_events_from_stopped_unrelated_runner_are_ignored(self):
+        """Only the runner replaced by request_rerun keeps delivering events."""
+        session = _create_test_session(asyncio.get_running_loop())
+        session._scriptrunner = MagicMock(spec=ScriptRunner)
+        stale_runner = MagicMock(spec=ScriptRunner)
+
+        session._on_scriptrunner_event(
+            sender=stale_runner,
+            event=ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            run_descriptor=RunDescriptor.create(["frag-a"]),
+        )
+        await asyncio.sleep(0)
+
+        assert len(session._browser_queue) == 0
+
     async def test_adjacent_runs_keep_distinct_matching_descriptors(self):
         """Back-to-back runs enqueue matching start/finish identity per run."""
         session = _create_test_session(asyncio.get_running_loop())

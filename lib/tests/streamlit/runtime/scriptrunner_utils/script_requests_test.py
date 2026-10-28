@@ -96,6 +96,36 @@ class ScriptRequestsTest(unittest.TestCase):
             reqs.request_stop()
             assert reqs._state == ScriptRequestType.STOP
 
+    def test_has_finished_running_requires_stop_after_a_completed_run(self):
+        """A stop request alone does not mean the last run has completed."""
+        reqs = ScriptRequests()
+        assert reqs.on_scriptrunner_ready().type == ScriptRequestType.STOP
+        assert reqs.has_finished_running
+
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+        assert reqs.on_scriptrunner_ready().type == ScriptRequestType.RERUN
+        reqs.request_stop()
+        assert not reqs.has_finished_running
+
+        reqs.on_script_run_completed()
+        assert reqs.has_finished_running
+
+    def test_has_finished_running_is_false_until_stopped(self):
+        """A completed run that may still be followed by a rerun has not
+        finished running, and a picked-up rerun starts a new run.
+        """
+        reqs = ScriptRequests()
+        reqs.request_rerun(RerunData())
+        assert reqs.on_scriptrunner_ready().type == ScriptRequestType.RERUN
+        reqs.on_script_run_completed()
+        assert not reqs.has_finished_running
+
+        reqs.request_rerun(RerunData())
+        assert reqs.on_scriptrunner_ready().type == ScriptRequestType.RERUN
+        reqs.request_stop()
+        assert not reqs.has_finished_running
+
     def test_rerun_while_stopped(self):
         """Requesting a rerun while STOPPED will return False."""
         reqs = ScriptRequests()
