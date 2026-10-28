@@ -68,7 +68,7 @@ const LogoComponent = ({
 
   // Find the home page (the default page) and check if this is a multi-page app
   const homePage = useMemo(
-    () => appPages.find(page => page.isDefault),
+    () => appPages.find(page => page.isDefault === true),
     [appPages]
   )
   const isMultiPageApp = appPages.length > 1
