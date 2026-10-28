@@ -25,10 +25,11 @@ import {
 interface StyledInputContainerProps {
   $isFocused: boolean
   $hasError: boolean
+  $isDisabled: boolean
 }
 
 export const StyledInputContainer = styled.div<StyledInputContainerProps>(
-  ({ theme, $isFocused, $hasError }) => ({
+  ({ theme, $isFocused, $hasError, $isDisabled }) => ({
     display: "flex",
     flexDirection: "row",
     flexWrap: "nowrap",
@@ -43,8 +44,14 @@ export const StyledInputContainer = styled.div<StyledInputContainerProps>(
       ? theme.colors.redBackgroundColor
       : theme.colors.secondaryBg,
     transitionDuration: "200ms",
-    transitionProperty: "border",
+    transitionProperty: "border, background-color",
     transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+    ...(!$isDisabled &&
+      !$hasError && {
+        "&:hover": {
+          backgroundColor: theme.colors.darkenedBgMix15,
+        },
+      }),
     borderRadius: theme.radii.default,
     overflow: "hidden",
   })

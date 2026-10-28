@@ -78,6 +78,10 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
   overflow: "hidden",
+  transition: "background-color 150ms ease",
+  "&:hover:not([data-disabled]):not([data-has-error])": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,

@@ -373,6 +373,7 @@ const TextArea: FC<Props> = ({
       <StyledTextAreaRoot
         data-testid="stTextAreaRootElement"
         $hasError={hasError}
+        $isDisabled={disabled}
       >
         <StyledTextAreaInput
           ref={isAutoHeight ? textareaRef : undefined}

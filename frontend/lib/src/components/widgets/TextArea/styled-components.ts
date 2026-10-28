@@ -33,26 +33,32 @@ export const StyledTextAreaContainer = styled.div<{
   position: "relative",
 }))
 
-export const StyledTextAreaRoot = styled.div<{ $hasError: boolean }>(
-  ({ theme, $hasError }) => ({
-    // Anchors the absolutely positioned required-error icon.
-    position: "relative",
-    border: `${theme.sizes.borderWidth} solid`,
-    borderColor: $hasError
-      ? theme.colors.redTextColor
-      : (theme.colors.widgetBorderColor ?? theme.colors.secondaryBg),
-    borderRadius: theme.radii.default,
-    backgroundColor: $hasError
-      ? theme.colors.redBackgroundColor
-      : theme.colors.secondaryBg,
-    flexGrow: 1,
-    "&:focus-within": {
-      borderColor: $hasError
-        ? theme.colors.redTextColor
-        : theme.colors.primary,
-    },
-  })
-)
+export const StyledTextAreaRoot = styled.div<{
+  $hasError: boolean
+  $isDisabled: boolean
+}>(({ theme, $hasError, $isDisabled }) => ({
+  // Anchors the absolutely positioned required-error icon.
+  position: "relative",
+  border: `${theme.sizes.borderWidth} solid`,
+  borderColor: $hasError
+    ? theme.colors.redTextColor
+    : (theme.colors.widgetBorderColor ?? theme.colors.secondaryBg),
+  borderRadius: theme.radii.default,
+  backgroundColor: $hasError
+    ? theme.colors.redBackgroundColor
+    : theme.colors.secondaryBg,
+  flexGrow: 1,
+  transition: "background-color 150ms ease",
+  ...(!$isDisabled &&
+    !$hasError && {
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix15,
+      },
+    }),
+  "&:focus-within": {
+    borderColor: $hasError ? theme.colors.redTextColor : theme.colors.primary,
+  },
+}))
 
 export const StyledTextAreaInput = styled.textarea<{
   $height: string

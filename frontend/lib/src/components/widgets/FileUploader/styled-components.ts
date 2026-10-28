@@ -38,6 +38,13 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     alignItems: "flex-start",
     padding: theme.spacing.md,
     backgroundColor: theme.colors.secondaryBg,
+    transition: "background-color 150ms ease",
+    ...(!isDisabled &&
+      !isDragActive && {
+        "&:hover": {
+          backgroundColor: theme.colors.darkenedBgMix15,
+        },
+      }),
     borderRadius: theme.radii.default,
     border: theme.colors.widgetBorderColor
       ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`

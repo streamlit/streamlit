@@ -752,6 +752,7 @@ function TextInput({
           $isFocused={focused}
           $hasIcon={!!icon}
           $hasError={Boolean(displayedError)}
+          $isDisabled={disabled}
         >
           {icon && (
             <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>

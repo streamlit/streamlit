@@ -46,26 +46,34 @@ function getRightInset(theme: EmotionTheme): string {
  */
 export const StyledTrigger = styled(Group, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $maxHeight: string }>(({ theme, $maxHeight }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "stretch",
-  width: "100%",
-  minHeight: theme.sizes.minElementHeight,
-  maxHeight: $maxHeight,
-  borderLeftWidth: theme.sizes.borderWidth,
-  borderRightWidth: theme.sizes.borderWidth,
-  borderTopWidth: theme.sizes.borderWidth,
-  borderBottomWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: getBorderColor(theme.colors, false),
-  boxSizing: "border-box",
-  borderRadius: theme.radii.default,
-  backgroundColor: theme.colors.secondaryBg,
-  "&[data-focus-within]": {
-    borderColor: getBorderColor(theme.colors, true),
-  },
-}))
+})<{ $maxHeight: string; $isDisabled: boolean }>(
+  ({ theme, $maxHeight, $isDisabled }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "stretch",
+    width: "100%",
+    minHeight: theme.sizes.minElementHeight,
+    maxHeight: $maxHeight,
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderColor: getBorderColor(theme.colors, false),
+    boxSizing: "border-box",
+    borderRadius: theme.radii.default,
+    backgroundColor: theme.colors.secondaryBg,
+    transition: "background-color 150ms ease",
+    ...(!$isDisabled && {
+      "&:hover": {
+        backgroundColor: theme.colors.darkenedBgMix15,
+      },
+    }),
+    "&[data-focus-within]": {
+      borderColor: getBorderColor(theme.colors, true),
+    },
+  })
+)
 
 /**
  * Scrollable area inside the trigger that holds tags + the filter input.

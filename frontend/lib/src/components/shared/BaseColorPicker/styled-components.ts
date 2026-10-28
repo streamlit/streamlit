@@ -121,6 +121,12 @@ export const StyledColorBlock = styled.div<StyledColorBlockProps>(
     borderStyle: "solid",
     cursor: "pointer",
     lineHeight: theme.lineHeights.base,
+    transition: "box-shadow 150ms ease",
+    ...(!disabled && {
+      "&:hover": {
+        boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.bodyText}`,
+      },
+    }),
     "&:focus": {
       outline: "none",
     },
