@@ -183,13 +183,12 @@ see a tool failure and correct itself, so an agent API error becomes a result wi
 `isError: true` whose `content[0].text` is the HTTP error body unchanged: `error` with
 its `code`, `message`, and any detail fields, such as the available `pages` for
 `unknown_page`, and `session_id` when the parent body includes it. MCP tool results have
-no separate `code` field. `not_on_page` tells the model to find the element again in the latest snapshot.
-Two outcomes are not failures and stay `isError: false`: an app that raised, which returns a
-real snapshot with `status: "error"` as over HTTP, and `wait_timed_out`, whose
-`content[0].text` is the full HTTP `202` document, including `session_id`, and not a
-snapshot. The message tells the model to call again with only `session_id` to collect
-the run. A creating call has no earlier snapshot to recover the id from, and the parent
-spec says a retry that drops it starts another session.
+no separate `code` field. Two outcomes are not failures and stay `isError: false`: an
+app that raised, which returns a real snapshot with `status: "error"` as over HTTP, and
+`wait_timed_out`, whose `content[0].text` is the full HTTP `202` document, including
+`session_id`, and not a snapshot. The message tells the model to call again with only
+`session_id` to collect the run. A creating call has no earlier snapshot to recover the
+id from, and the parent spec says a retry that drops it starts another session.
 
 **Annotations:** `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: false`,
 and `openWorldHint: true`. Any action can write, as the parent spec requires. Letting an
@@ -219,17 +218,20 @@ Reads a media file the session's latest result references:
   negative value, or a `limit` below 1 is `invalid_request`. An `offset` past the last
   row returns an empty page: `columns`, `row_count`, `offset`, `rows: []`, and
   `next_offset: null`.
-- **Tables** are the media-file ids a snapshot `data` object references: a dataframe's
-  or a chart's table. They come back as JSON rows in that element's `columns` order,
-  the shape of `data.preview`, with `row_count` and the `next_offset` of the following
-  page, `null` on the last. Cell values use the snapshot's JSON encoding, the parent
-  spec's value table, the same encoding as `data.preview`. Every other id on the latest
-  result is returned by MIME type, as the file bullet below describes. Guessing from
-  the MIME type, or JSON-encoding Arrow scalars directly, would return a dataframe as
-  base64 or disagree with `data.preview` on dates, NaN, decimals, and `bytes`. The
-  preview holds the first rows, so a model starts at the preview's row count. A call with
-  `offset: 100` and `limit: 2` returns that page as JSON text in the tool result, not
-  as `structuredContent`:
+- **Tables** are any media-file id a snapshot `data` object references, such as the
+  Arrow of a dataframe, `st.table`, `st.data_editor`, or a chart that serves Arrow. They
+  come back as JSON rows in that element's `columns` order, the shape of `data.preview`,
+  with `row_count` and the `next_offset` of the following page, `null` on the last.
+  Cell values use the snapshot's JSON encoding, the parent spec's value table, the same
+  encoding as `data.preview`. The server knows an id is a table because a snapshot
+  `data` object references it, not from its MIME type. Detecting tables by MIME type,
+  or JSON-encoding Arrow scalars directly, would return a dataframe as base64 or
+  disagree with `data.preview` on dates, NaN, decimals, and `bytes`. Every other id on
+  the latest result comes back as **Other files** below describes. The preview holds
+  the first rows, so a model starts at the length of `data.preview.rows`, not at
+  `data.row_count`, which counts the whole table. A call with `offset: 100` and
+  `limit: 2` returns that page as JSON text in the tool result, not as
+  `structuredContent`:
 
   ```json
   {
@@ -292,10 +294,12 @@ Reads a media file the session's latest result references:
   that confirms writes can call it without asking.
 
 `unknown_file`, `result_too_large`, and `read_unsupported` are the only new error
-codes, listed in the OpenAPI error catalog as MCP-only. `read_unsupported` means the
-session's media store cannot return bytes. `unknown_file` means the id is wrong or the
-file is gone. A bad `offset` or `limit`, or a missing `session_id` or `url`, reuses
-the parent's `invalid_request`.
+codes, listed in the OpenAPI error catalog as MCP-only, with no HTTP status, since no
+HTTP route returns them. An HTTP `get_data`, one of the parent spec's smaller
+follow-ups, would reuse the same three codes and give them statuses.
+`read_unsupported` means the session's media store cannot return bytes. `unknown_file`
+means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing
+`session_id` or `url`, reuses the parent's `invalid_request`.
 
 ### Explaining the protocol to the model
 
@@ -323,9 +327,10 @@ model needs:
 - `actions` lists what can be done now. Before sending a value, read the element's
   `value_schema` for its shape and its `props` for the legal values.
 - `data.complete: false` with a `data.url` means there is more: read it with
-  `get_data`, starting at the preview's row count, before the next `interact` call
-  replaces the result. Pass `url` exactly as the result shows it, a relative URL or a
-  bare id. Do not resolve it: a resolved absolute URL is `unknown_file`.
+  `get_data`, starting at the length of `data.preview.rows`, before the next
+  `interact` call replaces the result. Pass `url` exactly as the result shows it, a
+  relative URL or a bare id. Do not resolve it: a resolved absolute URL is
+  `unknown_file`.
   `complete: false` with `unavailable` (`lazy_loading`, `too_large_to_serve`,
   `external_url`, `multiple_datasets`, `undescribed`) has no file. Do not call
   `get_data` for it, and do not page a lazy chunk as if it were the rest of the table.
@@ -365,8 +370,13 @@ session.
     handshake unless the probe is an authorization failure.
   - Its transport falls back to `initialize` on HTTP `400` when the body is not a
     recognized modern error — an unsupported version, a missing capability, or a
-    header mismatch — and `-32600` is not one of those. It does not fall back from
-    HTTP `403`.
+    header mismatch — and `-32600` is not one of those. The official TypeScript
+    client also falls back on a header mismatch (`-32020`) or a missing capability
+    (`-32021`). It does not fall back on HTTP `401`, `403`, or `5xx`, or on `-32022`
+    whose `data.supported` lists a modern revision, so answering with `-32022` and
+    `2026-07-28` would lose the fallback.
+  - `server/discover` gets this `400` with `-32600` whatever `MCP-Protocol-Version` it
+    carries, including none or `2025-11-25`, so every probe falls back the same way.
   - An unsupported `MCP-Protocol-Version` on a method this server implements is the
     same HTTP `400` with `-32600`.
   - Adding the revision once ChatGPT or the Claude apps default to it stays contained,
@@ -385,9 +395,18 @@ a web page's content type (`400`), then enablement (`400`), then body size (`413
 parsing. Host and `Origin` run before enablement, so a rebound page does not learn
 whether the API is on. `POST /_stcore/agent/interact` checks enablement first today;
 the implementation moves that check after its Host, `Origin`, and content-type checks,
-so both routes refuse a request in the same order. A disabled API is `400` here, not
-the HTTP route's `403`, because the official TypeScript client reads `403` as an
-authorization failure: it neither falls back to `initialize` nor shows the message.
+so both routes refuse a request in the same order. The one change a caller of that
+route can see: with the API off, a disallowed Host or `Origin` gets
+`host_not_allowed` or `origin_not_allowed` instead of `not_available`. A disabled API
+is `400` here, not the HTTP route's `403`, because the official TypeScript client reads
+`403` as an authorization failure: it neither falls back to `initialize` nor shows the
+message.
+
+A content type counts as JSON when its media type is `application/json`, whatever its
+parameters, so `application/json; charset=utf-8` passes. Every refusal before parsing
+answers with `id: null`, as JSON-RPC prescribes when the request's `id` cannot be read,
+and it applies to notifications too: while the API is off, `notifications/initialized`
+gets the `400`, not `202`.
 
 Every outcome at the HTTP level:
 
@@ -396,7 +415,7 @@ Every outcome at the HTTP level:
 | A request, answered                             | `200`                    | A JSON-RPC result or error                                                                           |
 | A notification or a response                    | `202`                    | None                                                                                                 |
 | `GET`, `DELETE`, or any other method            | `405`, with `Allow: POST` | None. A `GET` would open a stream for messages the server sends on its own, and this server sends none. |
-| The API is off                                  | `400`                    | `-32600`, with `not_available` in the message, naming `server.enableAgentApi`, on every method including `initialize` and `server/discover` |
+| The API is off                                  | `400`                    | `-32600` with `id: null`, with `not_available` in the message, naming `server.enableAgentApi`, on every method and notification, including `initialize` and `server/discover` |
 | A disallowed Host or `Origin`                   | `403`                    | `-32600`, with `host_not_allowed` or `origin_not_allowed` in the message                             |
 | An `Origin` without `Content-Type: application/json` | `400`               | `-32600`, with `invalid_request` in the message, asking for `Content-Type: application/json`         |
 | A body over `server.maxWidgetStateSize`         | `413`                    | `-32600`, with `request_too_large` in the message                                                    |
@@ -427,10 +446,13 @@ Nothing new beyond the parent spec's rules, applied to one more route:
   Browsers send `Origin` on every `POST`, and MCP clients that run outside a browser
   send none, so this refuses rebound and cross-site pages without turning away a
   desktop client. Use case 2 assumes the same of hosted connectors, such as Claude.ai
-  and ChatGPT custom connectors: they send no `Origin`. That is an assumption, and the
-  conformance test covers it. The official TypeScript client does not fall back from
-  HTTP `403`, so a hosted client that does send `Origin` fails as a generic connection
-  error.
+  and ChatGPT custom connectors: they send no `Origin`. That is an assumption. A local
+  conformance test cannot show what a provider's servers send, so it is checked by hand
+  against the real connectors before shipping. The official TypeScript client does not
+  fall back from HTTP `403`, so a hosted client that does send `Origin` fails as a
+  generic connection error. The fix is to list that origin in
+  `server.corsAllowedOrigins`; MCP clients already send `application/json`, so the
+  request then passes the content-type rule too.
 - **A web page's request must be JSON**, as on the HTTP route. A request with an allowed
   `Origin` and any other `Content-Type`, such as `text/plain`, a form encoding, or none,
   is one a browser sends without a CORS preflight, so a page on a listed origin could
@@ -510,7 +532,10 @@ lines including the tool descriptions. Beyond the endpoint itself:
   `get_data` calls, and a check that a hosted-style client sends no `Origin`. The route
   tests cover at least a page's non-JSON request, version negotiation and the
   `2026-07-28` probe's fallback, `get_data` on another identity's session, and
-  `next_offset` after a page the character budget cut short.
+  `next_offset` after a page the character budget cut short. A unit test holds the
+  hand-written tool descriptions to the definitions, so every error code and
+  `unavailable` reason they name exists, as the agent API's coverage test does for
+  element descriptions.
 
 ## Key design decisions
 
@@ -644,8 +669,8 @@ exactly as the result shows it.
    platform change the parent spec already asks for, so that discovery works on the
    public URL, would fix this too.
 4. **Should a later revision page text and JSON?** v1 returns them whole, up to the
-   5 MB encoded-response cap, while a table page stays within the character budget in
-   **Page size** under [`get_data`](#get_data). A text file at the 5 MB cap is on the order of a million tokens, far past the client
+   5 MB encoded-response cap, while a table page stays within 40,000 characters. A text
+   file at the 5 MB cap is on the order of a million tokens, far past the client
    limits in [Limits and result size](#limits-and-result-size). Paging those files by
    character offset, with the same `offset` and `next_offset`, or refusing them past the
    table budget with `result_too_large`, would change the v1 contract. Images stay whole
