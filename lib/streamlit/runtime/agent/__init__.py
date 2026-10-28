@@ -23,5 +23,6 @@ value in the form a request can send back. ``widget_writes`` checks a request's
 widget writes against the last snapshot and encodes them as the browser would.
 ``interaction`` runs an agent session on a real ``AppSession`` and answers each
 request with its snapshot, and ``errors`` lists the codes the API answers a
-refused request with.
+refused request with. ``protocol`` builds the OpenAPI document served at
+``/_stcore/agent/openapi.json``.
 """
