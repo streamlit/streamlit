@@ -268,6 +268,8 @@ st.dataframe(
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
+Prefer `st.dataframe` and `st.data_editor` with `column_config` over `streamlit-aggrid`. Use aggrid only for row grouping, pivoting, or custom cell renderers that `column_config` cannot express.
+
 ## Description and key-value lists
 
 `st.table` is a great fit for description lists and compact key-value summaries. Pass a mapping of keys to **scalar** values: keys become the row index (shown by default), and Streamlit auto-hides the generated `value` header. A dict of lists is treated as a columnar table instead (headers shown).

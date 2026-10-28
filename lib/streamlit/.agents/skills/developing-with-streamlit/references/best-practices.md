@@ -8,6 +8,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 
 - [Styling and copy](#styling-and-copy)
 - [HTML and iframes](#html-and-iframes)
+- [Custom components](#custom-components)
 - [Layout](#layout)
 - [Navigation and pages](#navigation-and-pages)
 - [Performance](#performance)
@@ -89,6 +90,25 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 - Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
+
+## Custom components
+
+Prefer a native Streamlit command over a third-party component, or a new custom component, whenever the native command covers the behavior. Community packages are not maintained with Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
+
+| Instead of | Use |
+| --- | --- |
+| `streamlit-autorefresh` (`st_autorefresh`) | `@st.fragment(run_every=...)` on the section that should refresh |
+| `streamlit-aggrid` | `st.dataframe` or `st.data_editor` with `column_config` |
+| `streamlit-folium` (`st_folium`) | `st.map` for points, or `st.pydeck_chart` for deck.gl maps |
+| `streamlit-option-menu` | `st.navigation` when the menu switches app sections. On one page, `st.segmented_control` |
+| `extra-streamlit-components` (`CookieManager`) | `st.context.cookies` to read; `st.App` middleware to set request-level cookies |
+| `streamlit-searchbox` | `st.text_input(..., type="search", live=True)` |
+| `streamlit-echarts` | `st.echarts_chart` |
+| `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)` |
+
+`st.dataframe` already sorts, filters, and formats columns. Use `streamlit-aggrid` only for row grouping, pivoting, or custom cell renderers that `column_config` cannot express. Use `streamlit-folium` only for a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide. Put `live=True` inputs in a `@st.fragment` so typing does not rerun the whole app (see [Performance](#performance)).
+
+`st.context.cookies` is read-only and reflects cookies from the initial request. There is no script command that sets a cookie; add a `Set-Cookie` header from `st.App` middleware. See [server-asgi.md](server-asgi.md) and [third-party-components.md](third-party-components.md).
 
 ## Layout
 
@@ -251,7 +271,7 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script.
+Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script or adding `streamlit-autorefresh`.
 
 ```python
 # BAD: Blocks the script in an endless loop
