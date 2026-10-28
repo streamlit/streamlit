@@ -126,8 +126,10 @@ own, provided each reports the violation and lets the caller decide."
    `st.session_state` writes and widget defaults keep their current rules. Making
    programmatic writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
 
-There is no new parameter and no config option. The check refuses only what the shipped
-frontend never sends, so a correct client never notices it.
+There is no new parameter and no public config option (see the tech spec's open question
+1 on a hidden kill switch). The check refuses only what the shipped frontend never sends,
+so a correct client never notices it, apart from the cases in
+[Behavior changes](#behavior-changes).
 
 #### How to handle a violation in a browser session
 
@@ -150,8 +152,8 @@ frontend never sends, so a correct client never notices it.
 - Pros: atomic, like the agent API.
 - Cons: the browser sends its whole widget map on every rerun. One stale widget would
   discard the user's legitimate change to another, and the browser has no channel to
-  explain why. Forms are the exception: a submit is atomic, so item 7 rejects a form's
-  submit as a whole.
+  explain why. Forms are the exception: a submit is atomic, so the form-submit rule (item
+  7 in the [plan](#ranked-delivery-plan)) rejects a form's submit as a whole.
 
 **Option 4: Raise in the app, or close the connection** (as for a malformed `BackMsg`,
 [#16392](https://github.com/streamlit/streamlit/pull/16392))
@@ -173,9 +175,9 @@ from a client satisfies all of the following:
 - It does not empty a `required` widget. `required` limits what a user can submit, not
   what the widget holds: an untouched required widget still reads as empty (`None`, `""`,
   or `[]`), exactly as in the browser, so an app still has to handle that case. Outside a
-  form, a client can never clear it. Inside a form, item 7 adds the browser's stricter
-  rule: a submit is refused while any rendered required field of that form is empty,
-  touched or not.
+  form, a client can never clear it. Inside a form, the form-submit rule (item 7 in the
+  [plan](#ranked-delivery-plan), v1.x) adds the browser's stricter rule: a submit is
+  refused while any rendered required field of that form is empty, touched or not.
 
 Later items add form submission, data editor policies, selections, and fragments (see
 the plan below).
@@ -311,8 +313,10 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. None affects a correct browser outside the races
-noted below.
+Each change follows from the contract. A correct browser is unaffected except in two
+cases. A click that races a rerun which hides or retargets the widget is dropped. A
+button that disables itself in `on_click` returns `True` for that run, because the click
+was legal when it was made. The other changes affect only forged values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.

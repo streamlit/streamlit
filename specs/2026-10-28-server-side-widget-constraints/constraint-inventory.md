@@ -74,7 +74,7 @@ browser enforces, what the server does with a client value that violates it as o
 | `select_slider` | `options`, range | Index mapped to a label | deser: an unknown label falls back to the default; a reversed range is sorted | 2 |
 | `pills`, `segmented_control` | `options` | Closed list | deser in single mode; unknown values dropped in multi mode | 2 |
 | `pills`, `segmented_control` | `required` in single mode | Cannot deselect | pass: the callback fires with `None` | 5 |
-| `feedback` | Index range | Fixed icons | deser: reset; a non-numeric value raises | 1, 2 |
+| `feedback` | Index range, or `""` to clear | Fixed icons; clicking the selected face again sends `""` | deser: reset; a non-numeric value raises | 1, 2 |
 | `menu_button` | `options` | Closed list | done: an unknown option is no click | — |
 | `checkbox`, `toggle` | Boolean | — | Truthiness of any field: `"false"` becomes `True` | 1 |
 | Buttons, `form_submit_button` | Trigger field | — | Any truthy field fires: `string_value "x"` returns `"x"` and runs `on_click` | 1 |

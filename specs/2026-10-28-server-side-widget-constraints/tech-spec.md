@@ -78,7 +78,8 @@ def _drop_invalid_client_values(self, states: WidgetStatesProto) -> frozenset[st
             previous=self._old_state_serialized(state.id),
             is_rendered=state.id in self._new_widget_state.rendered_ids,
         )
-        if violation is not None:
+        # A browser sends a shared format_func label as is; only the agent API refuses it.
+        if violation is not None and violation.kind != "ambiguous_option":
             self._new_widget_state.drop(state.id)  # previous value stays in _old_state
             rejected.add(state.id)
             _log_violation(state.id, violation)  # never logs the value
@@ -112,7 +113,10 @@ applies these checks in order and returns the first violation:
    not deserialized twice.
 
 Replayed trigger states (`replay_trigger_states`) are server-held and were checked when
-they first arrived, so they skip the check.
+they first arrived, so they skip the check. That holds only if replay capture skips the
+rejected entries: it reads the raw message (`_current_interaction_widget_states`), so it
+filters out the IDs in `_rejected_client_values`. Otherwise a rejected trigger sent beside
+a legal callback that requests a targeted rerun would come back unchecked in the next run.
 
 ### Violations
 
@@ -120,24 +124,28 @@ they first arrived, so they skip the check.
 class Violation(NamedTuple):
     kind: ViolationKind
     # Facts a caller can explain the refusal with, such as the options or the
-    # bounds. Never the value that was sent, which may be a password.
-    detail: Mapping[str, Any] = {}
+    # bounds. Never the value that was sent, which may be a password. Read-only,
+    # so the shared default can't collect keys from one violation to the next.
+    detail: Mapping[str, Any] = MappingProxyType({})
 ```
 
-| `kind` | Raised by | Browser session | Agent API code |
+| `kind` | Reported by | Browser session | Agent API code |
 | --- | --- | --- | --- |
 | `not_rendered` | gate | drop, debug log | `not_on_page` (the snapshot check usually answers first) |
 | `disabled` | gate | drop | `disabled_widget` |
 | `wrong_type`, `unreadable` | integrity | drop, warning | `invalid_value` |
 | `not_an_option`, `too_many_items`, `duplicate_items` | options | drop | `invalid_value`, with the options listed |
-| `ambiguous_option` | options | **accepted**: the browser resolves a shared label itself | `invalid_value`, as today |
+| `ambiguous_option` | options | **accepted**: duplicate `format_func` labels are legal, the browser sends the shared label, and `create_mappings` resolves it to the last option with that label, as today | `invalid_value`, as today |
 | `out_of_range`, `bad_shape`, `malformed`, `too_long` | bounds, shapes, length | drop | `invalid_value`, with the bound |
 | `empty_required` | `required` | drop | `invalid_value` |
 | `form_not_submitted`, `form_invalid` | forms (item 7) | drop the form's changes | `missing_form_submit`, `invalid_value` |
 
 A rejection is logged at debug level when a correct browser can cause it
 (`not_rendered`, and option or bound violations, which a sync race can produce). It is
-logged at warning level otherwise, once per widget per session.
+logged at warning level otherwise, once per widget per session. That dedup set only holds
+IDs that passed the rendered gate (check 2), because every warning-level kind comes after
+it. Unknown or forged IDs fail `not_rendered` first and are not retained, so the set is
+bounded by the rendered widgets, not by what a client sends.
 
 ### Where constraints live: in each widget's serde
 
@@ -227,8 +235,12 @@ functions that return a `Violation` with its details:
 - `iso_date`, `iso_time`, `hex_color`
 - `text_length(text, max_chars)`, `is_empty(value)`
 
-An options serde builds its label `frozenset` lazily with a `cached_property`, so a
-browser session whose widgets never change pays nothing.
+An options serde builds its label counts (a `Counter`) lazily with a `cached_property`, so
+a browser session whose widgets never change pays nothing. Counts rather than a set,
+because `ambiguous_option` needs to know when a label is shared, as
+`widget_writes._validate_options` does today. `one_of` and `items_of` report
+`ambiguous_option` only when the value has no other violation, so a browser session can
+accept it.
 
 **The previous value.** Check 1 already passes unchanged values, so a validator sees only
 changes and almost never needs the previous value. The data editor is the exception: its
@@ -311,13 +323,13 @@ exist only for this purpose. Once every serde has a validator:
   - drop items reported as `not_an_option`
   - deduplicate after `duplicate_items`
   - truncate to the `max_items` that `too_many_items` reports
-- **Two metadata fields go away.** `max_array_length` and `allow_url_duplicates` leave
-  `WidgetMetadata`, because the serde already holds both facts: `max_selections`, and
-  whether a range may repeat a value.
-- **`formatted_options` keeps one role.** Its membership role moves to `validate`. Its
-  other role remains: writing a corrected value of an index-based widget (`pills`,
-  `segmented_control`, `select_slider`) back to the URL as a label. `register_widget`
-  already marks it temporary until those serdes use string wire values.
+- **Three metadata fields go away.** `max_array_length`, `allow_url_duplicates`, and
+  `formatted_options` leave `WidgetMetadata`, because the serde already holds all three
+  facts: `max_selections`, whether a range may repeat a value, and the labels.
+  `formatted_options` is read only by the URL membership check in `_seed_widget_from_url`,
+  which moves to `validate`. `pills`, `segmented_control`, and `select_slider` already
+  send labels over `string_array_value`, and `_auto_correct_url_if_needed` writes a
+  corrected value back with `metadata.serializer`, so no other role is left.
 - **`clearable` stays.** It is not a validation fact. It says what an empty parameter
   means: an empty value, or no value at all.
 
@@ -382,7 +394,9 @@ Items 1–3 are covered above.
 - `color_picker`: `#rgb` or `#rrggbb` checked with `fullmatch`, which also fixes `$`
   matching before a trailing newline.
 - `pagination`: an integer in `1..num_pages`.
-- `feedback`: an index in range.
+- `feedback`: `""` or an index in range (`"0"` to `"n-1"`). The browser sends `""` when
+  the user clicks the selected face again to clear it, and `FeedbackSerde` reads it as
+  `None`.
 - `max_chars`: compared as `len(text)` in code points. The browser counts UTF-16 code
   units, and that count is never smaller, so nothing a browser accepts is refused.
 - The deserializers keep coercing, for URL and programmatic values.
@@ -411,7 +425,8 @@ and its `validate` checks the payload against it:
 Positional keys (`_pos:N`, or integer column keys) are resolved to the names the payload
 uses. The payload is cumulative, so only entries that are **new or changed** relative to
 the stored payload are checked. Edits accepted earlier, for example to a column disabled
-since, are kept as they are today, so the editor never locks up.
+since, are kept as they are today, so disabling a column never locks the editor. A
+refused new edit can lock it (see open question 2).
 
 On a violation, the previous edit state is kept. Out-of-range or negative row indices and
 unknown columns become violations instead of raising. Added rows are applied in one
@@ -442,15 +457,17 @@ checks mode and bounds, but only for programmatic selections. The dataframe sele
 serde's `validate` calls it for client values. A `ButtonColumn` click is checked for `row < num_rows`.
 
 **Item 9: fragments.** `AppSession.request_rerun` accepts a `fragment_id` only if the
-fragment was registered by the last run that covered it. Stale fragments are also cleared
-when a run ends with `st.stop()` or an exception (`script_runner.py:925-936`). Dialog
+fragment was registered by the last run that covered it. Item 9 also clears stale
+fragments when a run ends with `st.stop()` or an exception. Today that path re-raises
+before `FragmentStorage.clear()` and skips it (`script_runner.py:925-936`). Dialog
 fragments and `run_every` fragments need tests.
 
 **Items 10–12** need their own designs:
 - **Data editor cells (10)** must mirror each column type's browser semantics. Some clamp,
   some reject, and some truncate. The rule is to refuse only what the browser can never
-  produce. A `NumberColumn` above `max_value` is clamped in the browser, so the server
-  refuses it.
+  produce. The browser clamps a `NumberColumn` value above `max_value` and never sends the
+  original number, so the server refuses a cell that is still above `max_value`. It does
+  not clamp on the server.
 - **Uploads (11)** live on the HTTP path. A per-widget `max_upload_size` must use the
   browser's larger unit: it computes MB as ×1024 on Windows and ×1000 elsewhere.
 - **Chart selections (12)** are specific to each library.
@@ -486,7 +503,10 @@ regression in the unchanged case.
 
 - **Unit tests** for every helper, both accept and refuse, including the edges the
   [inventory](constraint-inventory.md) lists: UTF-16 against code points, the whitespace
-  set, partial date ranges, and lossless numeric fields.
+  set, partial date ranges, and lossless numeric fields. Accept cases include every
+  sentinel the shipped frontend sends, such as the `st.feedback` clear `""` and a shared
+  `format_func` label, because the browser parity run only catches an over-strict
+  validator when some e2e app happens to send that value.
 - **Per widget**, forged `WidgetStates` through `AppTest._run(widget_state=...)`. Assert
   that the callback did not fire, the previous value was kept, and `set_value` was sent.
   Also assert that an unchanged default passes.
@@ -527,9 +547,12 @@ regression in the unchanged case.
 
 1. Should items 3 and 7, the ones with race risk, ship behind a hidden
    `server.enforceWidgetConstraints` kill switch for one release?
-2. `st.data_editor` has no `set_value` channel for edit state. Is it enough that a correct
-   browser cannot hit an edit refusal, apart from a cumulative edit to a column disabled
-   since, which is accepted? Or should an editor whose edits were refused be remounted?
+2. `st.data_editor` has no `set_value` channel for edit state. A refused edit stays in the
+   browser's cumulative payload, so every later payload repeats it and is refused too,
+   later legal edits included, until the editor remounts. A correct browser can hit this
+   in the sync race above, when a server-initiated rerun disables a column or shrinks the
+   row count before the edit arrives. Should the check drop only the violating entries,
+   or should an editor whose edits were refused be remounted?
 3. Should `AppTest.set_value` raise for a violating value, reporting through the same check
    the way the agent API does, instead of letting the run drop it silently?
 4. Should a rejection count be surfaced anywhere beyond logs, for operators watching for
