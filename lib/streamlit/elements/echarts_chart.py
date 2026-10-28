@@ -427,9 +427,9 @@ def _ensure_unique_dataset_labels(labels: list[str]) -> None:
     """
     if len(labels) != len(set(labels)):
         raise StreamlitAPIException(
-            "The provided ECharts dataset has duplicate column labels after "
-            'converting them to strings (for example both `1` and `"1"`). '
-            "Rename the columns so each label is unique.",
+            "The provided ECharts dataset has duplicate column labels. Labels "
+            'are compared as strings, so `1` and `"1"` also collide. Rename '
+            "the columns so each label is unique.",
             error_id="echarts-dataset-duplicate-columns",
         )
 
@@ -514,11 +514,10 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
     # duplicates, which would otherwise surface as a conversion error.
     _ensure_unique_dataset_labels(labels)
     if any(isinstance(column, (tuple, bytes)) for column in df.columns):
-        # PyArrow names tuple labels (MultiIndex or tuple-valued headers) after
-        # their stringified levels (`"('1', '2')"` for `(1, 2)`) and decodes
-        # bytes labels. Use `str(column)` (`"(1, 2)"`) instead, the name apps
-        # write in `encode` and `dimensions`. The shallow copy leaves the
-        # caller's dataframe unchanged.
+        # Keep `str(column)` names such as `"(1, 2)"`, which apps write in
+        # `encode` and `dimensions`. PyArrow would name tuple labels (MultiIndex
+        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels. The
+        # shallow copy leaves the caller's dataframe unchanged.
         df = df.copy(deep=False)
         df.columns = pd.Index(labels)
     return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=False)
@@ -537,6 +536,9 @@ def _convert_single_dataset(
     if source is None or not dataframe_util.is_dataframe_like(source):
         return
 
+    # Dataframe and PyArrow conversions raise plain TypeError and ValueError
+    # for unsupported values. The duplicate-label StreamlitAPIException is not
+    # caught, so it reaches the app unchanged.
     conversion_errors: tuple[type[BaseException], ...] = (
         StreamlitDataframeConversionError,
         *dataframe_util.get_arrow_conversion_errors(),
@@ -929,13 +931,13 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
 def _echarts_data(
     proto: EChartsChartProto, *, coordinates: str
 ) -> dict[str, Any] | None:
-    """An ECharts chart's agent ``data``: its one table and its option.
+    """Build the agent ``data`` block for an ECharts chart.
 
-    A dataframe ``dataset.source`` travels as a named Arrow dataset, and the
-    option keeps only its ``{"name": <hash>}`` placeholder, so a chart over one
-    table is summarized and served like a dataframe. Several tables are not
-    one table, so none of them is served. Without a dataset, the option holds
-    all of the chart's data.
+    - No Arrow dataset: the option holds all values, so it is reported as
+      complete.
+    - One dataset: the table is summarized and served like a dataframe, with
+      the option (holding its ``{"name": <hash>}`` placeholder) under ``spec``.
+    - Several datasets: no single table describes the chart, so none is served.
     """
     datasets = proto.datasets
     if not datasets:
@@ -945,8 +947,9 @@ def _echarts_data(
     if len(datasets) > 1:
         data = agent_data.unavailable("multiple_datasets")
     else:
-        # No block means the buffer could be neither read nor registered, and
-        # an Arrow copy is only left unregistered above the size bound.
+        # agent_data.arrow returns None only when the bytes can neither be
+        # summarized nor served. In a recording session, only
+        # server.maxMessageSize prevents serving.
         data = agent_data.arrow(
             datasets[0].data.data, coordinates=coordinates
         ) or agent_data.unavailable("too_large_to_serve")
@@ -1051,12 +1054,17 @@ class EChartsMixin:
             (``df.reset_index()``). Cell values are converted as follows:
 
             - Naive datetimes: ISO-8601 strings without a timezone suffix.
-            - Timezone-aware datetimes: ISO-8601 strings with a ``Z`` suffix.
+            - Timezone-aware datetimes: ISO-8601 strings in UTC with a ``Z``
+              suffix. A value at 05:00 in ``America/New_York`` becomes
+              ``2020-01-01T10:00:00.000Z``.
             - Dates: ``YYYY-MM-DD``.
             - Times of day: ``HH:mm:ss``, with milliseconds when set.
             - Durations: milliseconds.
             - Decimals: numbers.
             - Periods and intervals: labels such as ``2020-01`` and ``(0, 1]``.
+            - Lists: arrays.
+            - Structs, bytes, mixed-type columns, and other objects: the text
+              ``st.dataframe`` shows.
             - Missing values and non-finite floats: ``null``.
 
         width : "stretch", "content", or int

@@ -307,8 +307,9 @@ export function convertTimeToDate(
  * information in the field.
  *
  * Sub-millisecond fractions are kept while the raw count is a safe integer.
- * Larger bigint counts use bigint division, so they keep whole-millisecond
- * precision instead of losing the low digits in a float conversion.
+ * Nanosecond and microsecond counts above `Number.MAX_SAFE_INTEGER` are
+ * divided as bigints first, so whole milliseconds survive. Millisecond and
+ * second counts are converted with `Number()` directly.
  *
  * @param duration The duration value in the field's unit.
  * @param field The field containing the unit information. Without one, the

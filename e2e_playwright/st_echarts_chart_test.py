@@ -391,8 +391,8 @@ def test_toolbar_actions(app: Page):
     expect(close_button).not_to_be_visible()
 
 
-# A negative UTC offset: shifting a date or naive datetime through UTC would
-# move the first category label to the previous day.
+# A negative UTC offset: shifting a date through UTC would move the first
+# category label to the previous day.
 @pytest.mark.browser_context_args(timezone_id="America/New_York")
 def test_arrow_dataset_chart(app: Page, assert_snapshot: ImageCompareFunction):
     """A DataFrame dataset renders from Arrow with wall-clock date labels."""

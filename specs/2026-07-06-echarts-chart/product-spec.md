@@ -164,7 +164,7 @@ it. The dataframe index is not included (use `df.reset_index()` to plot it). Cel
 
 - Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
 - Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
-  shows the same wall-clock time. Timezone-aware datetimes: ISO-8601 with `Z`.
+  shows the same wall-clock time. Timezone-aware datetimes: ISO-8601 in UTC with `Z`.
 - Dates: `YYYY-MM-DD`. Times of day: `HH:mm:ss` (with milliseconds when set). Durations:
   milliseconds.
 - Periods and intervals: labels such as `2020-01` and `(0, 1]`. Structs, bytes, and other
