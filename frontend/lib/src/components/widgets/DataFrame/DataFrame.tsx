@@ -110,10 +110,10 @@ import { DATAFRAME_PRINT_SLOT_CLASS } from "./printClassNames"
 import {
   buildDataFramePrintMeasure,
   clearDataFramePrintSlot,
-  dataFramePrintBudget,
   fillDataFramePrintSlot,
   fitDataFramePrintTable,
   isHiddenFromPrint,
+  registerDataFramePrintSlot,
 } from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
@@ -973,13 +973,16 @@ function DataFrame({
     () => buildDataFramePrintMeasure(theme),
     [theme]
   )
+  const missingPlaceholder = element.placeholder ?? undefined
+  const printAccessibleName = element.alt ?? undefined
   useEffect(() => {
     const slot = printSlotRef.current
     if (!slot) {
       return
     }
 
-    const handleBeforePrint = (event: Event): void => {
+    // Frames fill in page order from one budget shared by the whole page.
+    const unregisterPrintSlot = registerDataFramePrintSlot(slot, budget => {
       // The slot is display:none on screen, so visibility is read from the
       // dataframe. A closed tab, a collapsed expander, or any other hidden
       // ancestor stays mounted. A print table there would still match
@@ -998,10 +1001,10 @@ function DataFrame({
         numRows,
         getPrintCellContent,
         printMeasure,
-        // One budget for every dataframe listening to this same event.
-        dataFramePrintBudget(event)
+        budget,
+        { missingPlaceholder, accessibleName: printAccessibleName }
       )
-    }
+    })
     const handleAfterPrint = (): void => {
       clearDataFramePrintSlot(slot)
     }
@@ -1015,15 +1018,22 @@ function DataFrame({
       }
     }
 
-    window.addEventListener("beforeprint", handleBeforePrint)
     window.addEventListener("afterprint", handleAfterPrint)
     printMedia.addEventListener("change", handlePrintMedia)
     return () => {
-      window.removeEventListener("beforeprint", handleBeforePrint)
+      unregisterPrintSlot()
       window.removeEventListener("afterprint", handleAfterPrint)
       printMedia.removeEventListener("change", handlePrintMedia)
     }
-  }, [columns, getPrintCellContent, isEmptyTable, numRows, printMeasure])
+  }, [
+    columns,
+    getPrintCellContent,
+    isEmptyTable,
+    missingPlaceholder,
+    numRows,
+    printAccessibleName,
+    printMeasure,
+  ])
 
   useEffect(() => {
     const slot = printSlotRef.current

@@ -32,11 +32,11 @@ import {
   DATAFRAME_PRINT_CELL_LIMIT,
   DATAFRAME_PRINT_IMAGE_LIMIT,
   DATAFRAME_PRINT_ROW_LIMIT,
-  dataFramePrintBudget,
   type DataFramePrintMeasure,
   fillDataFramePrintSlot,
   fitDataFramePrintTable,
   isHiddenFromPrint,
+  registerDataFramePrintSlot,
 } from "./printDataFrame"
 
 function column(
@@ -290,8 +290,7 @@ describe("fillDataFramePrintSlot", () => {
   })
 
   it("shares one print budget across frames and gives it back if a row is loading", () => {
-    const budget = dataFramePrintBudget(new Event("beforeprint"))
-    budget.remaining = 2
+    const budget = { remaining: 2 }
 
     fillDataFramePrintSlot(
       slot,
@@ -343,10 +342,78 @@ describe("fillDataFramePrintSlot", () => {
     expect(loading.querySelector("table")).toBeNull()
     expect(loadingBudget.remaining).toBe(2)
     loading.remove()
+  })
 
-    const again = dataFramePrintBudget(new Event("beforeprint"))
-    expect(again.remaining).toBe(DATAFRAME_PRINT_CELL_LIMIT)
-    expect(again).not.toBe(budget)
+  it("prints the missing-value placeholder the grid draws", () => {
+    const missing = Object.assign(textCell(""), { isMissingValue: true })
+    const fill = (missingPlaceholder?: string): string[] => {
+      fillDataFramePrintSlot(
+        slot,
+        [column("Name"), column("Done", { kind: "checkbox" })],
+        1,
+        ([col]) =>
+          col === 0
+            ? missing
+            : ({
+                kind: GridCellKind.Boolean,
+                data: null,
+                allowOverlay: false,
+                isMissingValue: true,
+              } as GridCell),
+        measure,
+        undefined,
+        { missingPlaceholder }
+      )
+      return [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    }
+
+    // A checkbox draws its own empty state, like the grid.
+    expect(fill()).toEqual(["None", ""])
+    expect(fill("—")).toEqual(["—", ""])
+    expect(fill("—")).not.toContain("None")
+  })
+
+  it("aligns cells like the grid and names the table", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name"), column("Count")],
+      1,
+      ([col]) =>
+        col === 0
+          ? textCell("Ada")
+          : {
+              kind: GridCellKind.Number,
+              data: 3,
+              displayData: "3",
+              contentAlign: "right",
+              allowOverlay: false,
+            },
+      measure,
+      undefined,
+      { accessibleName: "Team roster" }
+    )
+
+    const cells = slot.querySelectorAll("td")
+    expect(cells[1]).toHaveStyle({ textAlign: "right" })
+    expect(cells[0].style.textAlign).toBe("")
+    expect(slot.querySelector("table")).toHaveAttribute(
+      "aria-label",
+      "Team roster"
+    )
+  })
+
+  it("leaves the table unnamed when the accessible name is blank", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      1,
+      () => textCell("Ada"),
+      measure,
+      undefined,
+      { accessibleName: "  " }
+    )
+
+    expect(slot.querySelector("table")).not.toHaveAttribute("aria-label")
   })
 
   it("leaves the font ratio to print CSS when the browser can compute it", () => {
@@ -624,7 +691,7 @@ describe("fillDataFramePrintSlot", () => {
   })
 
   it("keeps the canvas when a frame has too many images", () => {
-    const budget = dataFramePrintBudget(new Event("beforeprint"))
+    const budget = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
     fillDataFramePrintSlot(
       slot,
       [column("Photo", { kind: "image" })],
@@ -796,16 +863,48 @@ describe("isHiddenFromPrint", () => {
     details.open = true
     expect(isHiddenFromPrint(hidden)).toBe(false)
   })
+})
 
-  it("treats a collapsed sidebar as unprinted", () => {
-    const sidebar = document.createElement("section")
-    sidebar.setAttribute("data-collapsed", "true")
-    const frame = document.createElement("div")
-    sidebar.append(frame)
-    expect(isHiddenFromPrint(frame)).toBe(true)
+describe("registerDataFramePrintSlot", () => {
+  it("spends the page budget in document order, not registration order", () => {
+    const top = document.createElement("div")
+    const bottom = document.createElement("div")
+    document.body.append(top, bottom)
+    const calls: { name: string; remaining: number }[] = []
+    const spend =
+      (name: string) =>
+      (budget: { remaining: number }): void => {
+        calls.push({ name, remaining: budget.remaining })
+        budget.remaining -= 10
+      }
 
-    sidebar.setAttribute("data-collapsed", "false")
-    expect(isHiddenFromPrint(frame)).toBe(false)
+    // The top frame re-registers last, as it does after a data change.
+    const unregisterBottom = registerDataFramePrintSlot(
+      bottom,
+      spend("bottom")
+    )
+    const unregisterTop = registerDataFramePrintSlot(top, spend("top"))
+    window.dispatchEvent(new Event("beforeprint"))
+
+    expect(calls).toEqual([
+      { name: "top", remaining: DATAFRAME_PRINT_CELL_LIMIT },
+      { name: "bottom", remaining: DATAFRAME_PRINT_CELL_LIMIT - 10 },
+    ])
+
+    // Each print starts from a full budget.
+    calls.length = 0
+    unregisterBottom()
+    window.dispatchEvent(new Event("beforeprint"))
+    expect(calls).toEqual([
+      { name: "top", remaining: DATAFRAME_PRINT_CELL_LIMIT },
+    ])
+
+    unregisterTop()
+    calls.length = 0
+    window.dispatchEvent(new Event("beforeprint"))
+    expect(calls).toHaveLength(0)
+    top.remove()
+    bottom.remove()
   })
 })
 

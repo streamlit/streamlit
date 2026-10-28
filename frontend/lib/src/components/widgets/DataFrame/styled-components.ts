@@ -79,8 +79,8 @@ export const StyledResizableContainer =
 
       "@media print": {
         // The grid locks the on-screen pixel width. Cap the container so a
-        // narrower page does not spill it. A fixed or content width stays
-        // that size when the canvas is the fallback.
+        // narrower page does not spill it. The canvas keeps its fixed or
+        // content width when no print table is built.
         ...printContainRules,
         [`&:has(.${DATAFRAME_PRINT_NOTE_CLASS}), &:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]:
           {

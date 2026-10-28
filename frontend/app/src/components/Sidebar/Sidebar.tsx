@@ -266,6 +266,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       data-testid="stSidebar"
       aria-label="Sidebar"
       data-collapsed={isCollapsed ? "true" : "false"}
+      // Shared "not printed" marker, also set on closed tabs.
+      data-st-inactive={isCollapsed ? "" : undefined}
       enable={{
         top: false,
         right: true,

@@ -22,6 +22,10 @@ import {
 
 import {
   type BaseColumn,
+  DEFAULT_MISSING_PLACEHOLDER,
+  isErrorCell,
+  isMissingValueCell,
+  showsMissingPlaceholder,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import { genericFonts } from "~lib/theme/primitives/typography"
@@ -63,18 +67,18 @@ interface DataFramePrintMeasureTheme {
 }
 
 /**
- * Most cells one print expands into tables.
+ * Maximum number of cells expanded into print tables across the whole page.
  *
  * The handler runs on the main thread before the print preview. Past this
  * many cells the table's DOM and the browser's print layout stall the tab.
- * Every dataframe on the page shares the budget. A frame that cannot fit one
- * more row keeps the on-screen canvas. A wide frame that can fit a shorter
- * prefix prints that prefix instead.
+ * Every dataframe on the page shares the budget, in page order. A frame
+ * that cannot fit one more row keeps the on-screen canvas. A wide frame
+ * that can fit a shorter prefix prints that prefix instead.
  */
 export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
 
 /**
- * Most rows one dataframe expands into a print table.
+ * Maximum number of rows one dataframe expands into a print table.
  *
  * A longer frame prints this prefix and a note that further rows were left
  * out. The cell budget can stop the prefix sooner.
@@ -82,7 +86,7 @@ export const DATAFRAME_PRINT_CELL_LIMIT = 50_000
 export const DATAFRAME_PRINT_ROW_LIMIT = 1_000
 
 /**
- * Most images one print table will request.
+ * Maximum number of images one print table will request.
  *
  * The on-screen grid only fetches images in visible rows. Expanding every
  * loaded image cell starts a request per URL, and most of them are still
@@ -97,24 +101,64 @@ const PRINT_MEASURE_WIDTH = "100000px"
 /**
  * Cells still available for this print.
  *
- * Each dataframe has its own `beforeprint` listener. They share one budget
- * so several medium frames cannot all expand in the same pass.
+ * Every dataframe on the page draws from one budget so several medium
+ * frames cannot all expand in the same pass.
  */
 export interface DataFramePrintBudget {
   remaining: number
 }
 
-const printBudgets = new WeakMap<Event, DataFramePrintBudget>()
+/** Builds one frame's print table from the shared budget. */
+type DataFramePrintHandler = (budget: DataFramePrintBudget) => void
 
-/** Budget for every dataframe that handles this same `beforeprint` event. */
-export function dataFramePrintBudget(event: Event): DataFramePrintBudget {
-  const existing = printBudgets.get(event)
-  if (existing) {
-    return existing
+const printHandlers = new Map<HTMLElement, DataFramePrintHandler>()
+
+function compareDocumentOrder(a: Node, b: Node): number {
+  if (a === b) {
+    return 0
   }
-  const created = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
-  printBudgets.set(event, created)
-  return created
+  return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
+    ? -1
+    : 1
+}
+
+/**
+ * Fill every registered slot in page order.
+ *
+ * Listener order is registration order, and a frame re-registers when its
+ * data changes. Walking the slots in document order keeps the budget with
+ * the tables at the top of the page.
+ */
+function handleBeforePrint(): void {
+  const budget = { remaining: DATAFRAME_PRINT_CELL_LIMIT }
+  const slots = [...printHandlers.keys()].toSorted(compareDocumentOrder)
+  for (const slot of slots) {
+    printHandlers.get(slot)?.(budget)
+  }
+}
+
+/**
+ * Build this slot's print table on `beforeprint`, sharing the page budget.
+ *
+ * Returns a function that unregisters the handler.
+ */
+export function registerDataFramePrintSlot(
+  slot: HTMLElement,
+  handler: DataFramePrintHandler
+): () => void {
+  if (printHandlers.size === 0) {
+    window.addEventListener("beforeprint", handleBeforePrint)
+  }
+  printHandlers.set(slot, handler)
+  return () => {
+    if (printHandlers.get(slot) !== handler) {
+      return
+    }
+    printHandlers.delete(slot)
+    if (printHandlers.size === 0) {
+      window.removeEventListener("beforeprint", handleBeforePrint)
+    }
+  }
 }
 
 /**
@@ -148,19 +192,15 @@ export function buildDataFramePrintMeasure(
  * spend the shared cell budget.
  *
  * Unprinted when any of these match:
- * - a closed tab (`[data-st-inactive]`)
+ * - a closed tab or a collapsed sidebar (`[data-st-inactive]`). A sidebar
+ *   slid off with `translateX` still counts as visible to
+ *   `checkVisibility`, and `beforeprint` uses screen media, so the
+ *   sidebar's print `display: none` is not active yet
  * - a collapsed expander (`details:not([open])`)
- * - a collapsed sidebar (`[data-collapsed='true']`). `translateX` still
- *   counts as visible to `checkVisibility`, and `beforeprint` uses screen
- *   media, so the sidebar's print `display: none` is not active yet
- * - any other `display: none` ancestor
+ * - any other `display: none` or `visibility: hidden` ancestor
  */
 export function isHiddenFromPrint(element: HTMLElement): boolean {
-  if (
-    element.closest(
-      "[data-st-inactive], details:not([open]), [data-collapsed='true']"
-    )
-  ) {
+  if (element.closest("[data-st-inactive], details:not([open])")) {
     return true
   }
   // Other unprinted subtrees (for example a display:none ancestor) are
@@ -168,10 +208,15 @@ export function isHiddenFromPrint(element: HTMLElement): boolean {
   if (typeof element.checkVisibility !== "function") {
     return false
   }
-  return !element.checkVisibility({
-    checkOpacity: false,
-    checkVisibilityCSS: true,
-  })
+  return !element.checkVisibility({ visibilityProperty: true })
+}
+
+/** Per-frame settings that change what the print table shows. */
+export interface DataFramePrintOptions {
+  /** Text the grid draws for a missing value. Defaults to `None`. */
+  missingPlaceholder?: string
+  /** Accessible name of the grid. A blank name leaves the table unnamed. */
+  accessibleName?: string
 }
 
 /**
@@ -194,9 +239,12 @@ export function fillDataFramePrintSlot(
   numRows: number,
   getCellContent: (cell: Item) => GridCell,
   measure: DataFramePrintMeasure,
-  budget?: DataFramePrintBudget
+  budget?: DataFramePrintBudget,
+  options: DataFramePrintOptions = {}
 ): void {
   clearDataFramePrintSlot(slot)
+  const missingPlaceholder =
+    options.missingPlaceholder ?? DEFAULT_MISSING_PLACEHOLDER
 
   const printable = columns
     .map((column, index) => ({ column, index }))
@@ -233,8 +281,12 @@ export function fillDataFramePrintSlot(
   let imageCount = 0
   for (let row = 0; row < rowsToPrint; row++) {
     const cells: PrintCellContent[] = []
-    for (const { index } of printable) {
-      const content = printCellContent(getCellContent([index, row]))
+    for (const { column, index } of printable) {
+      const content = printCellContent(
+        getCellContent([index, row]),
+        column,
+        missingPlaceholder
+      )
       // An unloaded lazy row cannot be fetched before the browser snapshots
       // the page. A partial table would show blanks, so keep the canvas.
       if (content === null) {
@@ -266,6 +318,11 @@ export function fillDataFramePrintSlot(
   }
 
   const table = renderPrintTable(headers, rows)
+  // Print hides the named grid, so the table carries that name instead.
+  const accessibleName = options.accessibleName?.trim()
+  if (accessibleName) {
+    table.setAttribute("aria-label", accessibleName)
+  }
   // The slot is display:none until print media, so its width is 0 while
   // beforeprint still uses screen media. The dataframe itself is on screen.
   // Read it before the table is inserted: a wide table can stretch the frame
@@ -285,7 +342,7 @@ export function fillDataFramePrintSlot(
   slot.replaceChildren(scale)
   // The note stays outside the scaled table so it prints at the body size.
   if (numRows > rowsToPrint) {
-    slot.append(printNote(rowCapNote(rowsToPrint, cellLimit)))
+    slot.append(printNote(truncatedRowsNote(rowsToPrint, cellLimit)))
   }
   applyPrintScale(slot, available, measured.width)
 }
@@ -413,23 +470,53 @@ export function clearDataFramePrintSlot(slot: HTMLElement): void {
 }
 
 /** What one printed cell shows. `null` means the row is still being fetched. */
-type PrintCellContent =
+type PrintCellContent = (
   | { kind: "text"; text: string }
   | { kind: "images"; urls: string[] }
+) & {
+  /** Horizontal alignment the grid draws the cell with. */
+  align?: GridCell["contentAlign"]
+}
+
+/** What the grid shows for this cell, aligned the same way. */
+function printCellContent(
+  cell: GridCell,
+  column: BaseColumn,
+  missingPlaceholder: string
+): PrintCellContent | null {
+  const content = printCellValue(cell, column, missingPlaceholder)
+  if (content === null || cell.contentAlign === undefined) {
+    return content
+  }
+  return { ...content, align: cell.contentAlign }
+}
 
 /**
  * What the grid shows for this cell.
  *
  * `null` means the row is still being fetched. Empty progress and chart cells
- * use the same loading kind, without a skeleton, and print as a blank. The
+ * use the same loading kind, without a skeleton, and print as a blank. A
+ * missing value prints the placeholder the grid draws over it. The
  * formatted display is used when the column has one, so a percentage prints
  * as `42%` rather than the stored `0.42`. An image prints as an image, not
  * as its URL, so a data URL cannot shrink the other columns.
  */
-function printCellContent(cell: GridCell): PrintCellContent | null {
+function printCellValue(
+  cell: GridCell,
+  column: BaseColumn,
+  missingPlaceholder: string
+): PrintCellContent | null {
   if (cell.kind === GridCellKind.Loading) {
     // Unloaded lazy rows draw a skeleton. An empty cell has none.
     return cell.skeletonWidth === undefined ? { kind: "text", text: "" } : null
+  }
+
+  if (
+    !isErrorCell(cell) &&
+    isMissingValueCell(cell) &&
+    showsMissingPlaceholder(column)
+  ) {
+    return { kind: "text", text: missingPlaceholder }
   }
 
   if (cell.kind === GridCellKind.Boolean) {
@@ -615,20 +702,23 @@ function measurePrintTable(
   }
   probe.append(copy)
   document.body.append(probe)
-  const laidOut = probe.querySelector("table")
-  // beforeprint still uses screen media, so this copy is the only laid-out
-  // table. The print slot itself is display:none and has no width.
-  const width =
-    laidOut instanceof HTMLTableElement ? getLaidOutWidth(laidOut) : 0
-  const header =
-    laidOut instanceof HTMLTableElement ? laidOut.rows[0] : undefined
-  const columns =
-    header instanceof HTMLTableRowElement
-      ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-        [...header.cells].map(cell => cell.offsetWidth)
-      : []
-  probe.remove()
-  return { width, columns }
+  try {
+    const laidOut = probe.querySelector("table")
+    // beforeprint still uses screen media, so this copy is the only laid-out
+    // table. The print slot itself is display:none and has no width.
+    const width =
+      laidOut instanceof HTMLTableElement ? getLaidOutWidth(laidOut) : 0
+    const header =
+      laidOut instanceof HTMLTableElement ? laidOut.rows[0] : undefined
+    const columns =
+      header instanceof HTMLTableRowElement
+        ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+          [...header.cells].map(cell => cell.offsetWidth)
+        : []
+    return { width, columns }
+  } finally {
+    probe.remove()
+  }
 }
 
 /**
@@ -687,7 +777,10 @@ function applyMeasureStyles(
     cell.style.fontWeight = String(
       cell.tagName === "TH" ? measure.headerWeight : measure.cellWeight
     )
-    cell.style.textAlign = "left"
+    // Data cells keep the alignment copied from the grid.
+    if (cell.tagName === "TH") {
+      cell.style.textAlign = "left"
+    }
   }
   for (const image of table.querySelectorAll("img")) {
     image.style.width = measure.imageWidth
@@ -721,6 +814,9 @@ function renderPrintTable(
     const line = document.createElement("tr")
     for (const content of row) {
       const cell = document.createElement("td")
+      if (content.align !== undefined) {
+        cell.style.textAlign = content.align
+      }
       if (content.kind === "images") {
         for (const url of content.urls) {
           const image = document.createElement("img")
@@ -751,7 +847,7 @@ function visiblePartNote(cellLimit: number): string {
 }
 
 /** Shown under a printed prefix. The row cap and the cell budget use different reasons. */
-function rowCapNote(rowsToPrint: number, cellLimit: number): string {
+function truncatedRowsNote(rowsToPrint: number, cellLimit: number): string {
   if (rowsToPrint === DATAFRAME_PRINT_ROW_LIMIT) {
     return `Further rows were not printed. This table is capped at ${DATAFRAME_PRINT_ROW_LIMIT.toLocaleString("en-US")} rows.`
   }

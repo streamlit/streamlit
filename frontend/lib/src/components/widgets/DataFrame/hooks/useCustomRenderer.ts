@@ -34,12 +34,11 @@ import {
 import {
   type BaseColumn,
   CustomCells,
+  DEFAULT_MISSING_PLACEHOLDER,
   isErrorCell,
   isMissingValueCell,
+  showsMissingPlaceholder,
 } from "~lib/components/widgets/DataFrame/columns"
-
-// Default token used for missing values (null, NaN, etc.)
-const DEFAULT_MISSING_PLACEHOLDER = "None"
 
 /**
  * Draw a red indicator in the top right corner of the cell
@@ -136,17 +135,13 @@ function useCustomRenderer(
         const placeholderToken =
           missingPlaceholder ?? DEFAULT_MISSING_PLACEHOLDER
 
-        // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
-        // they are taking care of rendering their missing value state themselves (usually as empty cell).
-        // All other cell types are rendered with a placeholder symbol and a faded text color via drawMissingPlaceholder.
-        if (
-          ["checkbox", "line_chart", "bar_chart", "progress"].includes(
-            column.kind
-          )
-        ) {
-          draw()
-        } else {
+        // Some cell types (e.g. checkbox, progress...) render their missing value
+        // state themselves (usually as empty cell). All other cell types are
+        // rendered with a placeholder symbol and a faded text color via drawMissingPlaceholder.
+        if (showsMissingPlaceholder(column)) {
           drawMissingPlaceholder(args as BaseDrawArgs, placeholderToken)
+        } else {
+          draw()
         }
 
         if (column.isRequired === true && column.isEditable) {
