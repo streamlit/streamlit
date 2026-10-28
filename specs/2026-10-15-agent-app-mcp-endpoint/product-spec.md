@@ -192,7 +192,8 @@ the run. A creating call has no earlier snapshot to recover the id from, and the
 spec says a retry that drops it starts another session.
 
 **Annotations:** `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: false`,
-and `openWorldHint: true`. Any action can write, as the parent spec requires.
+and `openWorldHint: true`. Any action can write, as the parent spec requires. Letting an
+author declare otherwise is [out of scope](#out-of-scope).
 
 #### `get_data`
 
@@ -600,6 +601,18 @@ exactly as the result shows it.
 - **A read that does not execute**, the parent spec's follow-up #4. As an MCP tool it
   would also let `get_data` serve a result's files again after the model lost that
   result from its context.
+- **An author's declaration that the app's actions are read-only.** For an app whose
+  widgets only filter and read, a setting could give `interact` `readOnlyHint: true`,
+  `destructiveHint: false`, and `idempotentHint: true`, keeping `openWorldHint: true`, so
+  clients that confirm writes stop asking before each call. Annotations describe a whole
+  tool, so one setting per app is as fine-grained as they go, and it needs one setting
+  rather than one per hint, because MCP applies `destructiveHint` and `idempotentHint`
+  only when `readOnlyHint` is false. It would amend the parent spec's rule that no action
+  is annotated safe: the author makes the claim, not Streamlit. Nothing enforces it, so
+  an app that later gains a write keeps the label, and the name must not suggest a
+  sandbox. MCP also lets clients ignore annotations from servers they do not trust.
+  Whether it belongs in `config.toml` or in app code is open, because whether actions
+  write is a property of the app, not of its deployment.
 - **The `2026-07-28` revision**, until ChatGPT or the Claude apps default to it.
 - **Streaming and messages the server sends on its own:** progress notifications during
   a long run, logging, `listChanged`, sampling, and elicitation. A slow run returns
