@@ -1035,6 +1035,9 @@ function DataFrame({
     printMeasure,
   ])
 
+  // Clear only on unmount. The registration effect re-runs when data or
+  // columns change, and clearing there would drop a table already built for
+  // an open print dialog.
   useEffect(() => {
     const slot = printSlotRef.current
     return () => {

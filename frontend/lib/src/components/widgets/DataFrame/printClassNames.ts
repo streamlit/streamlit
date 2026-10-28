@@ -20,7 +20,7 @@ export const DATAFRAME_PRINT_TABLE_CLASS = "stDataFramePrintTable"
 /** Slot that holds the print table or the fallback note. Hidden on screen. */
 export const DATAFRAME_PRINT_SLOT_CLASS = "stDataFramePrintSlot"
 
-/** Shown instead of that table when the frame cannot be expanded. */
+/** Note printed below a truncated table, or in place of the table when the frame cannot be expanded. */
 export const DATAFRAME_PRINT_NOTE_CLASS = "stDataFramePrintNote"
 
 /**
