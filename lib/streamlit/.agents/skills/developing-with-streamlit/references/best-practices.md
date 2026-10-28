@@ -304,7 +304,7 @@ For as-you-type search, use `st.text_input(..., type="search", live=True)` insid
 
 If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form. This is an advanced pattern; see "Skip reruns on individual widgets" in `performance.md` for an example and caveats.
 
-Do not put expensive work unguarded inside tabs, expanders, or popovers. By default, the app script still enters hidden, collapsed, or closed bodies on every rerun. Set `on_change="rerun"` to make each container's `.open` meaningful, then render its body only when `.open` is `True`; `st.segmented_control` or `st.toggle` with an `if` are alternatives.
+Do not put expensive work unguarded inside tabs, expanders, or popovers. By default, the app script still enters hidden, collapsed, or closed bodies on every rerun. Set `on_change="rerun"` so `.open` reports each container's current state, then render its body only when `.open` is `True`; `st.segmented_control` or `st.toggle` with an `if` are alternatives.
 
 ```python
 # BAD: Heavy content runs even when the tab is hidden
