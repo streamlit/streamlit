@@ -197,7 +197,7 @@ codeBackgroundColor = "#f6f8fa"    # Built-in default; custom surfaces re-derive
 borderColor = "#d0d7de"
 ```
 
-Built-in light/dark keep opaque stock chrome. A custom theme that sets surfaces (or `primaryColor`) but leaves chrome keys unset still derives borders, code fill, and dataframe header fill from those surfaces — same as before the default-theme chrome refresh.
+Built-in light/dark use fixed border, code, and dataframe colors. If you change backgroundColor, secondaryBackgroundColor, or primaryColor, unset borderColor, codeBackgroundColor, dataframeHeaderBackgroundColor, and codeTextColor (→ greenTextColor) derive from your colors instead.
 
 Choose a `primaryColor` dark enough for white primary-button text.
 

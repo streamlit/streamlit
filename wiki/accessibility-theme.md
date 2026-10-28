@@ -78,7 +78,7 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 - **1.4.3 Status text on translucent status fills fails on the page and/or default sidebar.** Fills are translucent: 10% opacity in light and 20% in dark (`primarybg`: 10% / 30%). See the [1.4.3 scorecard](#143-contrast-minimum) for per-color results. Call sites: markdown badges, metric deltas (`getMetricTextColor` / `getMetricBackgroundColor`), and `AlertContainer`.
 - **1.4.3 `primary` as text fails 4.5:1 on the dark page and on dark secondary / default sidebar.** Light primary on the light page and light secondary meets 1.4.3. Includes the file-uploader drag overlay. See the [1.4.3 scorecard](#143-contrast-minimum). Separate from primary-on-`primarybg` status fills.
 - **1.4.3 Named markdown text colors can fail 4.5:1 as plain text** (for example `:orange[…]` on the light page / sidebar). Distinct from text-on-status-fill. See the [1.4.3 scorecard](#143-contrast-minimum).
-- **1.4.11 Control borders use opaque `borderColor` (light `#DCD8D4`, dark `#4A4742`), about 1.4:1 on the light page and about 2.0:1 on the dark page, below 3:1.** Affects unchecked checkbox/radio indicator strokes, default widget outlines (`showWidgetBorder` on unless set to false), and other chrome that uses `borderColor`. Unset `dataframeBorderColor` is a separate stock hex (light `#E8E5E2`, dark `#3A3834`); when the author sets `theme.borderColor`, an unset dataframe border follows that full `borderColor` (see [Theme config notes](#theme-config-notes)).
+- **1.4.11 Control borders use opaque `borderColor` (light `#DCD8D4`, dark `#4A4742`), about 1.4:1 on the light page and about 2.0:1 on the dark page, below 3:1.** Affects unchecked checkbox/radio indicator strokes, default widget outlines (`showWidgetBorder` on unless set to false), and other chrome that uses `borderColor`. Unset `dataframeBorderColor` is a separate stock hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor`, an unset dataframe border follows `borderColorLight` (`transparentize(borderColor, 0.55)`), not the full `borderColor` (see [Theme config notes](#theme-config-notes)).
 - **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
 - **1.4.11 Enabled close icons that paint `fadedText40` fail 3:1 in light.** Toast and skills-nudge close controls; dark meets. See the [1.4.11 scorecard](#1411-non-text-contrast).
 - **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
@@ -123,7 +123,7 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 
 | Role | Light | Dark | Bucket | Note |
 | ---- | ----- | ---- | ------ | ---- |
-| Control border (`borderColor`) | Fail (~1.4) | Fail (~1.8) | Library blocks | Opaque stock `#DCD8D4` / `#4A4742`. Includes unchecked checkbox/radio strokes and default widget outlines (`showWidgetBorder` on) |
+| Control border (`borderColor`) | Fail (~1.4) | Fail (~2.0) | Library blocks | Opaque stock `#DCD8D4` / `#4A4742`. Includes unchecked checkbox/radio strokes and default widget outlines (`showWidgetBorder` on) |
 | Soft focus ring (`focusRing`) | Fail (~1.9) | Fail (~2.2) | Library blocks | Sole focus indicator on many controls |
 | Soft muted focus ring (`focusRingMuted`) | Fail (~1.5) | Fail (~1.8) | Library blocks | Header icon buttons, main menu, sidebar nav, skills nudge. `focusRingSubtle` is defined in `getShadows.ts` and unused (unscored on purpose) |
 | Primary as control on default sidebar | Pass (~4.88) | Pass (~3.06) | Library meets | Sidebar bg defaults to `secondaryBackgroundColor` (`#F8F8F7` / `#2D2B27`) |
@@ -166,8 +166,8 @@ Core color keys (`primaryColor`, `textColor`, `linkColor`, `borderColor`, status
 When unset:
 
 - `dataframeHeaderTextColor` → faded `textColor` (`fadedText60`) — same light **1.4.3** muted-text Library blocks gap
-- `dataframeHeaderBackgroundColor` → stock chrome hex (light `#F7F7F6`, dark `#2D2B27`); customizing only page surfaces does not retint it
-- `dataframeBorderColor` → stock chrome hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor` and leaves `dataframeBorderColor` unset, dataframe borders follow that full `borderColor` (`createEmotionTheme`)
+- `dataframeHeaderBackgroundColor` → stock chrome hex (light `#F7F7F6`, dark `#2D2B27`) while surfaces and `primaryColor` stay on the built-in palette. If any of those differ and this key is unset, the header fill is `bgMix`
+- `dataframeBorderColor` → stock chrome hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor` and leaves `dataframeBorderColor` unset, dataframe borders follow `borderColorLight` (`transparentize(borderColor, 0.55)`)
 - Off `st.toggle` track uses `fadedText10` via `getToggleTrackColor`, not `borderColor`. A custom `theme.borderColor` does not restyle it. Selected tracks use `primary` (sidebar 1.4.11 row).
 
 Raising muted text (or shipping a stronger default header text color) clears the header text gap together with placeholders and related chrome.

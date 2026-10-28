@@ -2183,10 +2183,10 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        If this isn't set on a built-in theme, Streamlit uses the built-in
-        code text color (same as body text). If this isn't set on a custom
-        theme that overrides surfaces or `primaryColor`, Streamlit uses the
-        resolved `greenTextColor` instead.
+        If this isn't set, Streamlit uses the theme's default code text color
+        (the same as body text). If `backgroundColor`,
+        `secondaryBackgroundColor`, or `primaryColor` differs from the base
+        theme, Streamlit uses the resolved `greenTextColor` instead.
     """,
 )
 
@@ -2203,10 +2203,10 @@ _create_theme_options(
     description="""
         Background color used for code blocks.
 
-        If this isn't set on a built-in theme, Streamlit uses the theme's
-        default code background. If this isn't set on a custom theme that
-        overrides surfaces or `primaryColor`, Streamlit derives the fill
-        from those surfaces.
+        If this isn't set, Streamlit uses the theme's default code
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
     """,
 )
 
@@ -2664,10 +2664,11 @@ _create_theme_options(
         The color of the border around dataframes and tables.
 
         If this isn't set and `theme.borderColor` is set, Streamlit uses a
-        lighter version of `theme.borderColor`. If neither is set on a
-        built-in theme, Streamlit uses the theme's default dataframe border
-        color. If neither is set on a custom theme that overrides surfaces
-        or `primaryColor`, Streamlit derives a light border from text color.
+        lighter version of `theme.borderColor`. If neither is set, Streamlit
+        uses the theme's default dataframe border color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme and neither border is set, Streamlit
+        derives a light border from text color.
     """,
 )
 
@@ -2687,10 +2688,10 @@ _create_theme_options(
         This color applies to all non-interior cells of the dataframe. This
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
-        isn't set on a built-in theme, Streamlit uses the theme's default
-        dataframe header background. If this isn't set on a custom theme
-        that overrides surfaces or `primaryColor`, Streamlit derives the
-        fill from those surfaces.
+        isn't set, Streamlit uses the theme's default dataframe header
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
     """,
 )
 

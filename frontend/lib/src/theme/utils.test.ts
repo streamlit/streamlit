@@ -4970,6 +4970,25 @@ describe("Sidebar theme creation", () => {
       )
     })
 
+    it("derives sidebar chrome when only primaryColor differs from stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "#7c3aed",
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Surfaces stay stock (test above); chrome follows main derivation so
+      // primaryColor-only themes do not split opaque sidebar vs derived main.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        mainTheme.emotion.colors.codeTextColor
+      )
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        mainTheme.emotion.colors.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
+    })
+
     it("uses stock sidebar surfaces for preset light and dark themes", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)

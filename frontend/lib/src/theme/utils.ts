@@ -940,15 +940,13 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
-  // Built-in themes keep opaque stock chrome from themeColors.ts. Partial custom
-  // themes that override surfaces (or primary) but leave chrome keys unset still
-  // derive those edges from the resolved surfaces, matching pre-chrome behavior.
+  // Built-in themes keep the opaque chrome from themeColors.ts. A custom theme
+  // whose backgroundColor, secondaryBackgroundColor, or primaryColor differs
+  // from the base palette derives unset chrome from its own surfaces instead.
   //
-  // Compare against the base emotion palette — not mere presence. `createTheme`
-  // → `completeThemeInput` always copies stock primary/bg/secondary via
-  // `toThemeInput`, so presence alone would make every production theme derive.
-  // textColor alone does not gate this: header text still tracks body text via
-  // fadedText60, but borders/fills/code text stay on stock chrome.
+  // Compare values, not presence: createTheme fills every theme input with the
+  // base primary/background colors, so presence alone is always true.
+  // textColor alone does not trigger derivation.
   const shouldDeriveUnsetChrome =
     (notNullOrUndefined(bgColor) &&
       !colorsMatchAsHex(bgColor, colors.bgColor)) ||
@@ -1841,8 +1839,9 @@ export const stockSidebarSurfaces = {
 
 /**
  * Sidebar chrome for the built-in sidebar surface pair.
- * Applied only while the resolved sidebar surfaces still match that pair and
- * both `[theme]` and `[theme.sidebar]` left the key unset.
+ * Applied only while the resolved sidebar surfaces still match that pair, the
+ * main primary still matches stock, and both `[theme]` and `[theme.sidebar]`
+ * leave that key unset.
  */
 export const stockSidebarChrome = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
@@ -1925,16 +1924,23 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
         ? CustomThemeConfig.BaseTheme.LIGHT
         : CustomThemeConfig.BaseTheme.DARK
 
-  // Eligible when the resolved sidebar surfaces match the built-in pair (a
-  // customized dark sidebar keeps luminance-matched base chrome). Each key is
-  // still applied only when both the sidebar section and the inherited main
-  // value left it blank or invalid.
+  // Eligible when the resolved sidebar surfaces match the built-in pair and
+  // main primary still matches stock. A primaryColor-only theme derives chrome
+  // in createEmotionTheme; skip stock sidebar hexes so both areas stay aligned.
+  // A customized dark sidebar derives chrome rather than keeping opaque stock.
+  // Each key is still applied only when both the sidebar section and the
+  // inherited main value left it blank or invalid.
+  const stockPrimary =
+    mainThemeBase === CustomThemeConfig.BaseTheme.LIGHT
+      ? lightTheme.emotion.colors.primary
+      : darkTheme.emotion.colors.primary
   const canUseStockSidebarChrome =
     colorsMatchAsHex(sidebarBackground, stockSurfaces.backgroundColor) &&
     colorsMatchAsHex(
       secondaryBackgroundColor,
       stockSurfaces.secondaryBackgroundColor
-    )
+    ) &&
+    colorsMatchAsHex(activeTheme.emotion.colors.primary, stockPrimary)
 
   const stockChromeFallbacks: {
     borderColor?: string
