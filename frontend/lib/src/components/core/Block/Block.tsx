@@ -53,6 +53,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
+  PRINT_CARD_CLASS,
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
@@ -306,6 +307,7 @@ export const FlexBoxContainer = (
         className={[
           getClassnamePrefix(direction),
           convertKeyToClassName(userKey),
+          styles.border ? PRINT_CARD_CLASS : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -545,7 +547,14 @@ export const BlockNodeRenderer = (
         showBorder={node.deltaBlock.column.showBorder ?? false}
         // Inherit parent row wrap; default true when FlexContext is absent.
         $wrap={flexContext?.wrap ?? true}
-        className="stColumn"
+        className={[
+          "stColumn",
+          node.deltaBlock.column.showBorder === true
+            ? PRINT_CARD_CLASS
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid="stColumn"
       >
         {child}

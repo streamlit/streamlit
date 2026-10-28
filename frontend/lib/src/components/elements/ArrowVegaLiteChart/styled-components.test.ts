@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
+import { createElement } from "react"
+
 import { vi } from "vitest"
 
+import { render } from "~lib/test_util"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
   bindVegaRangeProgress,
   getVegaBindingStyles,
+  StyledVegaLiteChartContainer,
   syncVegaRangeProgress,
   VEGA_RANGE_PROGRESS_VAR,
 } from "./styled-components"
@@ -154,5 +158,27 @@ describe("bindVegaRangeProgress", () => {
 
     unbind()
     expect(removeSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe("StyledVegaLiteChartContainer print layout", () => {
+  it("fits an svg or canvas chart into its column when printing", () => {
+    const before = document.querySelectorAll("style").length
+    render(
+      createElement(StyledVegaLiteChartContainer, {
+        useContainerWidth: true,
+        useContainerHeight: false,
+        isSizeContained: false,
+        hasFallbackHeight: false,
+      })
+    )
+    const css = [...document.querySelectorAll("style")]
+      .slice(before)
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain("svg.marks")
+    expect(css).toContain("canvas.marks")
   })
 })

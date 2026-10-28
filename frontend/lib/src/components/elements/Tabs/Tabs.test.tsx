@@ -187,7 +187,9 @@ describe("st.tabs", () => {
 
     panels.slice(1).forEach(panel => {
       expect(panel).not.toBeVisible()
+      expect(panel).toHaveAttribute("data-st-inactive")
     })
+    expect(panels[0]).not.toHaveAttribute("data-st-inactive")
   })
 
   it("does not show scroll arrows when tabs don't overflow", () => {
