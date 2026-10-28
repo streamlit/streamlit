@@ -323,11 +323,15 @@ describe("Metric element", () => {
     closest.mockRestore()
     rect.mockRestore()
 
-    expect(
-      screen
-        .getByTestId("stMetricValue")
-        .style.getPropertyValue("--st-metric-available")
-    ).toBe("80px")
+    const value = screen.getByTestId("stMetricValue")
+    expect(value.style.getPropertyValue("--st-metric-available")).toBe("80px")
+    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe(
+      "112px"
+    )
+
+    window.dispatchEvent(new Event("afterprint"))
+    expect(value.style.getPropertyValue("--st-metric-available")).toBe("")
+    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
   })
 
   it("renders with border if passed", () => {

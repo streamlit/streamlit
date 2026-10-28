@@ -412,21 +412,19 @@ export const StyledFlexContainerBlock =
         gapWidth = translateGapWidth(gap, theme)
       }
       const crossAxis = getAlignItems(align)
-      const mainAxis = getJustifyContent(justify)
       // Print switches a vertical block to display:block, because Chrome's
       // print layout drops the height of a content-height flex column and a
       // chart then paints over the next heading. It keeps flex when:
-      // - it centers, ends, or spaces its content (block has no equivalent), or
+      // - it centers or end-aligns its children horizontally (block has no
+      //   equivalent), or
       // - it has any set height other than auto (stretch children rely on
       //   flex to share it instead of each taking 100%).
-      // Only a content-height container with default alignment switches.
+      // Vertical alignment only moves content inside a set height. A
+      // content-height column has no free space to distribute, so that
+      // alignment alone does not keep flex.
       const keepsPrintFlexForAlignment =
         direction === Direction.VERTICAL &&
-        (crossAxis === "center" ||
-          crossAxis === "end" ||
-          mainAxis === "center" ||
-          mainAxis === "end" ||
-          mainAxis === "space-between")
+        (crossAxis === "center" || crossAxis === "end")
       const keepsPrintFlexForHeight =
         direction === Direction.VERTICAL && hasDefinitePrintHeight(height)
       const keepsPrintFlex =
@@ -506,8 +504,9 @@ export const StyledFlexContainerBlock =
             // height makes this the content-height column Chrome collapses,
             // so drop flex when the height was the only reason to keep it.
             // That block box loses `gap`, so it uses the same bottom margins
-            // as a content-height container. Center, end, and space-between
-            // stay flex, and their gap still applies.
+            // as a content-height container. Vertical alignment has no free
+            // space once the height is auto, so only horizontal centering
+            // or end alignment stays flex, and its gap still applies.
             ...(keepsPrintFlexForHeight &&
               !keepsPrintFlexForAlignment && {
                 display: "block",

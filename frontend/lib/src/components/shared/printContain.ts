@@ -48,5 +48,8 @@ export const printMediaFitStyles: CSSObject = {
     // heading.
     display: "block",
     maxWidth: "100%",
+    // A canvas keeps its pixel height when the width is capped. Fit the
+    // bitmap inside that box instead of squashing it horizontally.
+    objectFit: "contain",
   },
 }

@@ -278,10 +278,6 @@ export const StyledAppViewBlockContainer =
         ...(isWideMode && applyWideModePadding(theme)),
         [`@media print`]: {
           paddingTop: printPaddingTop,
-          // Same bottom inset as the screen, including the 10rem default
-          // when there is no st.bottom. A configured paddingBottom replaces
-          // that default.
-          paddingBottom: bottomPadding,
         },
       }
     }

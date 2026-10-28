@@ -177,6 +177,38 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
     expect(aligned).not.toContain("display:block")
     expect(aligned).not.toContain("margin-bottom")
+
+    const verticallyCentered = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+          gap: { pixelGap: 16 },
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        })
+      )
+    )
+    // Vertical centering has no free space once a print table releases the
+    // height, so that container becomes block like an unaligned one.
+    expect(verticallyCentered).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;/
+    )
+    expect(verticallyCentered).toContain("margin-bottom:16px")
+  })
+
+  it("uses block layout for a content-height container that only aligns vertically", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          justify: BlockProto.FlexContainer.Justify.SPACE_BETWEEN,
+        })
+      )
+    )
+
+    expect(css).toMatch(/@media print\{[^}]*display:block/)
   })
 })
 

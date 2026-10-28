@@ -97,9 +97,13 @@ function recordMetricValueWidth(value: HTMLElement): void {
   probe.style.whiteSpace = "nowrap"
   probe.style.textOverflow = "clip"
   value.appendChild(probe)
-  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
-  const width = probe.getBoundingClientRect().width
-  probe.remove()
+  let width: number
+  try {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+    width = probe.getBoundingClientRect().width
+  } finally {
+    probe.remove()
+  }
 
   if (width > 0) {
     value.style.setProperty(METRIC_TEXT_WIDTH_VAR, `${width}px`)
@@ -114,6 +118,10 @@ function recordMetricValueWidth(value: HTMLElement): void {
  * container where the ancestor column is wider than the metric.
  * `beforeprint` still uses the screen slot, and the print-media change
  * records the printed one.
+ *
+ * A content-width slot is sized around the value. The recorded width is
+ * cleared first so the slot is read around the unscaled figure, not one
+ * already shrunk to the narrower screen slot.
  */
 function recordMetricAvailableWidth(value: HTMLElement): void {
   const column = value.closest(".stElementContainer")
@@ -121,6 +129,7 @@ function recordMetricAvailableWidth(value: HTMLElement): void {
   if (!(box instanceof HTMLElement)) {
     return
   }
+  value.style.removeProperty(METRIC_AVAILABLE_VAR)
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
   const available = box.clientWidth
   if (available > 0) {
@@ -403,10 +412,19 @@ function Metric({
       }
     }
 
+    // The widths are only read in print, but are cleared so a later print
+    // starts from the current layout.
+    const handleAfterPrint = (): void => {
+      valueRef.current?.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_VAR)
+    }
+
     window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
     printMedia.addEventListener("change", handlePrintMedia)
     return () => {
       window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
       printMedia.removeEventListener("change", handlePrintMedia)
     }
   }, [contentWidth])
