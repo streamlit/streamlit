@@ -325,13 +325,11 @@ def _parse_value(
     import pandas as pd
 
     if column_data_kind == ColumnDataKind.TIMEDELTA and isinstance(value, (int, float)):
-        # Numeric edits arrive as seconds (NumberColumn's stored unit).
-        # pd.Timedelta(int) would treat the number as nanoseconds, and
-        # pd.Timedelta(seconds=float) truncates instead of rounding to the
-        # nearest nanosecond (1.005 would become 1.004999999 s). An
-        # out-of-range or non-finite value raises (OverflowError,
-        # OutOfBoundsTimedelta, or ValueError) instead of returning None, so
-        # callers skip the edit rather than store NaT.
+        # NumberColumn sends durations as seconds. pd.Timedelta(int) reads ints
+        # as nanoseconds, and pd.Timedelta(seconds=float) truncates
+        # (1.005 -> 1.004999999 s), so pass unit="s" to round to the nearest
+        # nanosecond. Invalid values raise so callers skip the edit instead of
+        # storing NaT.
         if not math.isfinite(value):
             # pd.Timedelta(nan, unit="s") returns NaT instead of raising.
             raise ValueError("Duration seconds must be finite.")
@@ -452,10 +450,11 @@ def _apply_cell_edits(
                 # rejects (for example, a duration finer than the column unit
                 # or out of range) instead of crashing the run.
                 _LOGGER.warning(
-                    "Failed to apply edit %r to row %s, column %s. Edit ignored.",
+                    "Failed to apply edit %r to row %s, column %s (%s). Edit ignored.",
                     value,
                     row_pos,
                     col_name,
+                    dataframe_schema.get(col_name),
                     exc_info=ex,
                 )
 

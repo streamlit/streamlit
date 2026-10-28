@@ -76,8 +76,15 @@ import {
   TimeColumn,
 } from "./columns"
 
-/** Column kinds that show a point in time (date, time, datetime) rather than an elapsed duration. */
-const CLOCK_COLUMN_KINDS = new Set(["time", "date", "datetime"])
+/**
+ * Public column type names, keyed by the column kinds that show a point in
+ * time (date, time, datetime) rather than an elapsed duration.
+ */
+const CLOCK_COLUMN_PUBLIC_NAMES = new Map([
+  ["time", "TimeColumn"],
+  ["date", "DateColumn"],
+  ["datetime", "DatetimeColumn"],
+])
 
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
@@ -461,7 +468,7 @@ export function getCellFromArrow(
         : null
     )
   } else if (
-    CLOCK_COLUMN_KINDS.has(column.kind) &&
+    CLOCK_COLUMN_PUBLIC_NAMES.has(column.kind) &&
     isDurationType(arrowCell.contentType) &&
     notNullOrUndefined(arrowCell.content)
   ) {
@@ -469,18 +476,14 @@ export function getCellFromArrow(
     // time/date/datetime column would display them incorrectly
     // (e.g. 1s → 00:16:40).
     const publicColumnName =
-      column.kind === "datetime"
-        ? "DatetimeColumn"
-        : column.kind === "date"
-          ? "DateColumn"
-          : "TimeColumn"
+      CLOCK_COLUMN_PUBLIC_NAMES.get(column.kind) ?? column.kind
     cellTemplate = getErrorCell(
       "Unsupported type",
       `${publicColumnName} does not support timedelta/duration values. ` +
         "Use st.column_config.NumberColumn instead."
     )
   } else if (
-    CLOCK_COLUMN_KINDS.has(column.kind) &&
+    CLOCK_COLUMN_PUBLIC_NAMES.has(column.kind) &&
     notNullOrUndefined(arrowCell.content) &&
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
@@ -516,9 +519,10 @@ export function getCellFromArrow(
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
   ) {
-    // Number and progress columns get seconds so sorting stays numeric and
-    // stays within JS safe integers (very large durations may lose sub-ns
-    // detail). Other column kinds show Arrow's formatted duration string.
+    // Number and progress columns get the duration in seconds, so values sort
+    // numerically and stay within JS safe integers. Nanosecond durations
+    // longer than about 104 days lose some nanosecond precision. Other column
+    // kinds get the humanized duration string.
     if (column.kind === "number" || column.kind === "progress") {
       cellTemplate = column.getCell(
         convertTimestampToSeconds(

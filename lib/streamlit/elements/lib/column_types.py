@@ -620,7 +620,7 @@ def NumberColumn(
         - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
         - ``"duration"``: Treat the value as seconds and show an approximate
           humanized duration (e.g. "a few seconds", "2 hours", "a day").
-          Works for any number or duration column.
+          Works on any number column, including timedelta columns.
         - printf-style format string: Format the number with a printf
           specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
           ``"%X"`` to show an unsigned hexadecimal integer (e.g. "4D2"). You
