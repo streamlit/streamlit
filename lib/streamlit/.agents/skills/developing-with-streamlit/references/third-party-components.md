@@ -4,7 +4,7 @@ Third-party custom components are community Python libraries that add UI Streaml
 
 ## Prefer a native equivalent
 
-Components are not maintained by Streamlit. They can break on Streamlit upgrades and often miss theming, accessibility, and performance work that ships in core. Do not add one, and do not build a custom component, to recreate a native command.
+Most community components are not maintained by Streamlit. `streamlit-bokeh` and `streamlit-pivot-table` are maintained by Streamlit. Community packages can break on Streamlit upgrades and often miss theming, accessibility, and performance work that ships in core. Do not add one, and do not build a custom component, to recreate a native command.
 
 | Instead of | Use |
 | --- | --- |
@@ -19,10 +19,10 @@ Components are not maintained by Streamlit. They can break on Streamlit upgrades
 
 Use the package only when the native command does not cover the behavior:
 
-- **Whole-page refresh** — `@st.fragment(run_every=...)` reruns only that fragment. Keep `streamlit-autorefresh` when the whole page must rerun on a timer. Do not call `st.rerun()` unconditionally inside that fragment: its body also runs on the initial full-app run, so the call reruns the app continuously.
-- **AgGrid** — per-column filter menus, row grouping, pivoting, or custom cell renderers that `column_config` cannot express. `st.dataframe` search highlights matching cells and does not hide other rows. Filter in Python with separate widgets when that is enough.
+- **Whole-page refresh** — keep `streamlit-autorefresh` when the whole page must rerun on a timer; `@st.fragment(run_every=...)` reruns only its own section. Do not emulate a page timer by calling `st.rerun()` inside a `run_every` fragment: the fragment body also runs on every full-app run, so the app reruns in a loop.
+- **AgGrid** — per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. `st.dataframe` search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source; pass `lazy=False` when search is required). When hiding non-matching rows is enough, filter in Python with separate widgets. For pivot tables, use `streamlit-pivot-table`.
 - **Folium** — a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide.
-- **Cookies** — `st.context.cookies` is read-only and reflects the initial request. `st.App` middleware can set cookies on HTTP responses, not in response to in-app actions. Use a cookie component only when the script must set a cookie after the page loads; for sign-in, prefer `st.login`.
+- **Cookies** — `st.context.cookies` is read-only and reflects the initial request. `st.App` middleware can set cookies on HTTP responses, not after a widget interaction. Use a cookie component only when the script must read or change cookies after the page loads; for sign-in, prefer `st.login`.
 - **Search suggestions** — a dropdown of suggestions computed in Python as the user types (`streamlit-searchbox`). `st.text_input` returns the typed text and has no suggestion list.
 - **ECharts** — JavaScript callbacks (`JsCode`, `formatter` functions, `custom` series), GeoJSON map registration, or ECharts GL / 3D charts. `st.echarts_chart` accepts JSON-compatible options only. See [data-display.md](data-display.md).
 
@@ -121,7 +121,7 @@ annotated_text(
 
 ### streamlit-aggrid
 
-Per-column filter menus, row grouping, pivoting, and custom cell renderers beyond `column_config`. Sorting, search, editing, and formatting belong on `st.dataframe` and `st.data_editor`. Search highlights matching cells and does not hide other rows.
+Per-column filter menus, row grouping, and custom cell renderers beyond `column_config`. Use `streamlit-pivot-table` for pivot tables. Sorting, search, editing, and formatting belong on `st.dataframe` and `st.data_editor`.
 
 - **Repo:** https://github.com/PablocFonseca/streamlit-aggrid
 - **Docs:** https://pypi.org/project/streamlit-aggrid/

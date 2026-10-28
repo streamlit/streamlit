@@ -268,7 +268,7 @@ st.dataframe(
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
-Prefer `st.dataframe` and `st.data_editor` with `column_config` over `streamlit-aggrid` for sorting, search, editing, and formatting. Search highlights matching cells and does not hide other rows. Use aggrid only for per-column filter menus, row grouping, pivoting, or custom cell renderers that `column_config` cannot express, unless the app filters with separate widgets.
+Prefer `st.dataframe` and `st.data_editor` with `column_config` over `streamlit-aggrid` for sorting, search, editing, and formatting. Search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source; pass `lazy=False` when search is required). Use aggrid only for per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Use `streamlit-pivot-table` for pivot tables. When hiding non-matching rows is enough, filter the data in Python with separate widgets.
 
 ## Description and key-value lists
 

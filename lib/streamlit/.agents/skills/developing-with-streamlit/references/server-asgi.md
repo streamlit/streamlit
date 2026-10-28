@@ -188,7 +188,11 @@ app = st.App(
 
 User middleware runs before Streamlit's internal middleware on requests and after it on responses.
 
-To set a cookie decided on the HTTP request (for example, on page load), call `response.set_cookie(...)` on the middleware response, and choose `httponly`, `secure`, and `samesite` deliberately; Starlette's defaults are not safe for session cookies. Middleware does not run on script reruns, so it cannot set a cookie in response to a widget interaction. The script reads cookies with `st.context.cookies`, which is read-only and reflects the initial request. Use a cookie component only when the script must set a cookie after the page loads; for sign-in, prefer `st.login`. See [third-party-components.md](third-party-components.md).
+To set a cookie when the page loads, call `response.set_cookie(...)` in middleware. Set `httponly`, `secure`, and `samesite` explicitly; Starlette leaves `httponly` and `secure` off, which is not appropriate for session cookies.
+
+- Middleware runs on HTTP requests, not script reruns, so it cannot set a cookie after a widget interaction.
+- The script reads cookies with the read-only `st.context.cookies`, which reflects the initial request.
+- Use a cookie component only when the script must read or change cookies after the page loads. For sign-in, prefer `st.login`. See [third-party-components.md](third-party-components.md).
 
 ## Lifespan hooks
 
