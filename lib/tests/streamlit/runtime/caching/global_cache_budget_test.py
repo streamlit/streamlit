@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
+import gc
+import queue
 import threading
 import weakref
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -26,6 +29,7 @@ from streamlit.runtime.caching.global_cache_budget import (
     _GLOBAL_CACHE_BUDGET_HOLDER,
     CACHE_DATA_EVICTIONS_FAMILY,
     GlobalCacheBudget,
+    _format_byte_size,
     get_global_cache_budget,
     reconfigure_global_cache_budget_from_config,
 )
@@ -38,6 +42,9 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.stats import CounterStat
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
 
 
 class _DictStorage:
@@ -529,3 +536,230 @@ def test_concurrent_churn_keeps_exact_bounded_accounting() -> None:
     for storage in storages:
         storage.close()
     assert budget.total_bytes == 0
+
+
+def test_startup_configuration_reconfigures_existing_global_budget() -> None:
+    """Server startup enables the budget instance raw-mode caches already use."""
+    existing = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(existing, "raw-mode-existing")
+    storage.set("key", b"abc")
+
+    with (
+        patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", existing),
+        patch(
+            "streamlit.runtime.caching.global_cache_budget.config.get_option",
+            return_value="1KiB",
+        ),
+    ):
+        reconfigure_global_cache_budget_from_config()
+        assert _GLOBAL_CACHE_BUDGET_HOLDER.budget is existing
+
+    assert existing.max_bytes == 1024
+    assert existing.total_bytes == 3
+
+
+def test_reconfigure_disable_clears_accounting_but_keeps_entries() -> None:
+    """Disabling the budget drops accounting without evicting cached entries."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    storage = _create_storage(budget, "toggle")
+    storage.set("a", b"aaa")
+    storage.set("b", b"bb")
+
+    budget.reconfigure(max_bytes=None)
+
+    assert not budget.is_enabled
+    assert budget.total_bytes == 0
+    assert storage.get("a") == b"aaa"
+    assert storage.get("b") == b"bb"
+    storage.set("c", b"c")
+    assert budget.total_bytes == 0
+
+    budget.reconfigure(max_bytes=100)
+    assert budget.total_bytes == 6
+
+
+def test_reconfigure_to_same_budget_keeps_retained_oversized_entry() -> None:
+    """Reapplying the current budget does not evict a retained oversized entry."""
+    budget = GlobalCacheBudget(max_bytes=2)
+    storage = _create_storage(budget, "same-budget")
+    storage.set("big", b"large")
+
+    budget.reconfigure(max_bytes=2)
+
+    assert storage.get("big") == b"large"
+    assert budget.total_bytes == 5
+
+
+class _RacingUnregisterQueue:
+    """An unregister queue whose first ``get_nowait`` loses a race after ``empty``."""
+
+    def __init__(self) -> None:
+        self._queue: queue.SimpleQueue[int] = queue.SimpleQueue()
+        self._lost_races_remaining = 1
+
+    def put(self, storage_id: int) -> None:
+        self._queue.put(storage_id)
+
+    def empty(self) -> bool:
+        return self._queue.empty()
+
+    def get_nowait(self) -> int:
+        if self._lost_races_remaining:
+            self._lost_races_remaining -= 1
+            raise queue.Empty
+        return self._queue.get_nowait()
+
+
+def test_unregister_drain_retries_after_losing_queue_race() -> None:
+    """A queued unregister missed by a racing drain is applied on the next one."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    storage = _create_storage(budget, "racing")
+    storage.set("key", b"abc")
+    pending = _RacingUnregisterQueue()
+    budget._pending_unregisters = pending  # type: ignore[assignment] # ty: ignore[invalid-assignment]
+    pending.put(storage._global_storage_id)
+
+    # Each ``total_bytes`` read drains pending unregisters; the first drain
+    # loses the race and leaves the queued unregister for the second.
+    assert budget.total_bytes == 3
+    assert budget.total_bytes == 0
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        pytest.param(
+            lambda budget, storage_id: budget.record_write_and_reserve_victims(
+                storage_id, "key", 5, 1, []
+            ),
+            id="write",
+        ),
+        pytest.param(
+            lambda budget, storage_id: budget.activate_storage_entries(
+                storage_id, [("key", 5, 1)]
+            ),
+            id="activate",
+        ),
+        pytest.param(
+            lambda budget, storage_id: budget.record_read(storage_id, "key", 1),
+            id="read",
+        ),
+        pytest.param(
+            lambda budget, storage_id: budget.record_removals(storage_id, [("key", 1)]),
+            id="removals",
+        ),
+    ],
+)
+def test_disabled_budget_ignores_direct_reports(
+    report: Callable[[GlobalCacheBudget, int], Sequence[object] | None],
+) -> None:
+    """A disabled budget records nothing and reserves no victims for any report."""
+    budget = GlobalCacheBudget(max_bytes=None)
+    storage = _create_storage(budget, "disabled-reports")
+
+    assert not report(budget, storage._global_storage_id)
+
+    assert budget.total_bytes == 0
+    assert not budget._entries
+    assert not budget._recency_hints
+
+
+def test_activation_for_unregistered_storage_is_ignored() -> None:
+    """Activating entries for a closed storage does not add accounting."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    storage = _create_storage(budget, "closed")
+    storage_id = storage._global_storage_id
+    storage.close()
+
+    budget.activate_storage_entries(storage_id, [("key", 5, 1)])
+
+    assert budget.total_bytes == 0
+    assert not budget._entries
+
+
+def test_rewrite_of_accounted_entry_replaces_its_size() -> None:
+    """Rewriting an accounted key replaces its old size and generation."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    storage = _create_storage(budget, "rewrite")
+    storage_id = storage._global_storage_id
+
+    budget.record_write_and_reserve_victims(storage_id, "key", 5, 1, [])
+    budget.record_write_and_reserve_victims(storage_id, "key", 2, 2, [])
+    assert budget.total_bytes == 2
+
+    budget.record_removals(storage_id, [("key", 1)])
+    assert budget.total_bytes == 2
+
+
+def test_victim_selection_drops_collected_storage_before_evicting() -> None:
+    """Entries of a collected storage are released instead of evicting live ones."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    stale = _create_storage(budget, "stale")
+    survivor = _create_storage(budget, "survivor")
+    stale.set("old", b"aaa")
+    survivor.set("middle", b"bb")
+    stale_id = stale._global_storage_id
+    # Replace the registration with a reference that has no unregister
+    # callback, so the collected storage is only discovered during selection.
+    budget._storages[stale_id] = weakref.ref(stale)
+    del stale
+    gc.collect()
+    assert budget._storages[stale_id]() is None
+
+    survivor.set("new", b"cc")
+
+    assert survivor.get("middle") == b"bb"
+    assert survivor.get("new") == b"cc"
+    assert budget.total_bytes == 4
+    assert stale_id not in budget._storage_entries
+    assert budget._global_evictions == 0
+
+
+def test_reserved_victim_is_kept_after_its_storage_unregisters() -> None:
+    """A reserved victim is not removed once its storage left the budget."""
+    budget = GlobalCacheBudget(max_bytes=100)
+    storage = _create_storage(budget, "unregistered")
+    storage.set("key", b"abc")
+    generation = storage._generations["key"]
+    budget.unregister(storage._global_storage_id)
+
+    assert not storage._evict_from_mem_cache("key", expected_generation=generation)
+    assert storage._mem_cache["key"] == b"abc"
+
+
+@pytest.mark.parametrize(
+    ("family_names", "expected_families"),
+    [
+        pytest.param(None, [CACHE_DATA_EVICTIONS_FAMILY], id="all"),
+        pytest.param(
+            [CACHE_DATA_EVICTIONS_FAMILY], [CACHE_DATA_EVICTIONS_FAMILY], id="match"
+        ),
+        pytest.param(["cache_memory_bytes"], [], id="other"),
+    ],
+)
+def test_get_stats_filters_by_family(
+    family_names: list[str] | None, expected_families: list[str]
+) -> None:
+    """Eviction stats are reported only when their family is requested."""
+    budget = GlobalCacheBudget(max_bytes=100)
+
+    assert budget.stats_families == (CACHE_DATA_EVICTIONS_FAMILY,)
+    assert list(budget.get_stats(family_names)) == expected_families
+
+
+@pytest.mark.parametrize(
+    ("size", "expected"),
+    [
+        (0, "0 bytes"),
+        (1, "1 byte"),
+        (1023, "1023 bytes"),
+        (1024, "1.0 KB"),
+        (1536, "1.5 KB"),
+        (1024**2, "1.0 MB"),
+        (5 * 1024**3, "5.0 GB"),
+        (1024**4, "1.0 TB"),
+    ],
+)
+def test_format_byte_size(size: int, expected: str) -> None:
+    """Budget sizes are formatted with the largest whole binary unit."""
+    assert _format_byte_size(size) == expected

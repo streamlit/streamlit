@@ -25,6 +25,13 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
+// Delegates to the real implementation so tests can override single calls to
+// simulate ping failures that the real retry loop never produces.
+vi.mock("./DoInitPings", async importOriginal => {
+  const actual = await importOriginal<typeof DoInitPingsModule>()
+  return { ...actual, doInitPings: vi.fn(actual.doInitPings) }
+})
+
 import { getLogger } from "loglevel"
 import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
@@ -39,10 +46,12 @@ import {
   RECONNECT_BASE_RETRY_PERIOD_MS,
   RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
   RECONNECT_MINIMUM_RETRY_PERIOD_MS,
+  WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
+import type * as DoInitPingsModule from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import type { ErrorDetails, OnRetry } from "./types"
+import type { ErrorDetails, Event as FsmEvent, OnRetry } from "./types"
 import { MISSING_WEBSOCKET_CLOSE_REASON } from "./websocketCloseDiagnostics"
 import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
@@ -2439,5 +2448,438 @@ describe("WebsocketConnection close diagnostics", () => {
     expect(warnLogs[0]).not.toContain(sessionId)
     expect(args.sendClientError).not.toHaveBeenCalled()
     ws.disconnect()
+  })
+})
+
+describe("WebsocketConnection state machine", () => {
+  type SocketEventType = "open" | "message" | "close" | "error"
+  type SocketListener = (event: unknown) => void
+
+  class MockWebSocket {
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly send = vi.fn()
+    private readonly listeners = new Map<string, SocketListener[]>()
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatch(type: SocketEventType, event: unknown = {}): void {
+      for (const listener of this.listeners.get(type) ?? []) {
+        listener(event)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+  }
+
+  const ABNORMAL_CLOSE_EVENT = { code: 1006, reason: "", wasClean: false }
+
+  let originalWebSocket: typeof WebSocket
+  let sockets: MockWebSocket[]
+  let pingServerSpy: MockInstance
+
+  function createMockWebSocket(): MockWebSocket {
+    const socket = new MockWebSocket()
+    sockets.push(socket)
+    return socket
+  }
+
+  function stepFsm(
+    ws: WebsocketConnection,
+    event: FsmEvent,
+    errMsg?: string
+  ): void {
+    // @ts-expect-error - private stepFsm for test
+    ws.stepFsm(event, errMsg)
+  }
+
+  type SocketClient = {
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }
+
+  /** Creates a connection forced into `state`, with prior state changes cleared. */
+  function createClientInState(state: ConnectionState): {
+    ws: WebsocketConnection
+    args: Args
+  } {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = state
+    vi.mocked(args.onConnectionStateChange).mockClear()
+    return { ws, args }
+  }
+
+  async function createConnectingClient(): Promise<SocketClient> {
+    const { ws, args } = createClientInState(ConnectionState.CONNECTING)
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    const socket = sockets.at(-1)
+    if (!socket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    pingServerSpy.mockClear()
+    return { ws, socket, args }
+  }
+
+  async function createConnectedClient(): Promise<SocketClient> {
+    const client = await createConnectingClient()
+    client.socket.readyState = 1
+    client.socket.dispatch("open")
+    expect(client.args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.CONNECTED,
+      undefined
+    )
+    vi.mocked(client.args.onConnectionStateChange).mockClear()
+    return client
+  }
+
+  function encodeForwardMsg(msg: ForwardMsg): ArrayBuffer {
+    const bytes = ForwardMsg.encode(msg).finish()
+    const copy = new Uint8Array(bytes.byteLength)
+    copy.set(bytes)
+    return copy.buffer
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    originalWebSocket = globalThis.WebSocket
+    sockets = []
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    globalThis.WebSocket = originalWebSocket
+    vi.restoreAllMocks()
+  })
+
+  it.each<{ state: ConnectionState; event: FsmEvent }>([
+    { state: ConnectionState.INITIAL, event: "CONNECTION_SUCCEEDED" },
+    { state: ConnectionState.CONNECTING, event: "SERVER_PING_SUCCEEDED" },
+    { state: ConnectionState.CONNECTED, event: "CONNECTION_SUCCEEDED" },
+    { state: ConnectionState.PINGING_SERVER, event: "CONNECTION_CLOSED" },
+    { state: ConnectionState.STATIC_CONNECTED, event: "CONNECTION_CLOSED" },
+  ])(
+    "rejects $event while in $state without changing state",
+    ({ state, event }) => {
+      const { ws, args } = createClientInState(state)
+
+      expect(() => stepFsm(ws, event)).toThrow(
+        `Unsupported state transition.\nState: ${state}\nEvent: ${event}`
+      )
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+      expect(args.sendClientError).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    }
+  )
+
+  it.each([
+    ConnectionState.INITIAL,
+    ConnectionState.PINGING_SERVER,
+    ConnectionState.CONNECTING,
+    ConnectionState.CONNECTED,
+    ConnectionState.STATIC_CONNECTED,
+  ])("disconnects forever and reports a fatal error raised in %s", state => {
+    const { ws, args } = createClientInState(state)
+
+    stepFsm(ws, "FATAL_ERROR", "something broke")
+
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection fatal error encountered",
+      "something broke",
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "something broke" }
+    )
+  })
+
+  it("reports 'Unknown error' for a fatal error without a message", () => {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+
+    stepFsm(ws, "FATAL_ERROR", "")
+
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "Unknown error" }
+    )
+    expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "" }
+    )
+  })
+
+  it.each<FsmEvent>([
+    "FATAL_ERROR",
+    "CONNECTION_CLOSED",
+    "SERVER_PING_SUCCEEDED",
+  ])("discards %s once disconnected forever", event => {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    ws.disconnect()
+    vi.mocked(args.onConnectionStateChange).mockClear()
+
+    expect(() => stepFsm(ws, event, "late error")).not.toThrow()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+    expect(args.sendClientError).not.toHaveBeenCalled()
+  })
+
+  it.each<{
+    from: ConnectionState
+    eventType: SocketEventType
+    expectedClientErrors: string[]
+  }>([
+    {
+      from: ConnectionState.CONNECTING,
+      eventType: "error",
+      expectedClientErrors: ["Websocket connection onerror triggered"],
+    },
+    {
+      from: ConnectionState.CONNECTED,
+      eventType: "error",
+      expectedClientErrors: ["Websocket connection onerror triggered"],
+    },
+    {
+      from: ConnectionState.CONNECTED,
+      eventType: "close",
+      expectedClientErrors: [],
+    },
+  ])(
+    "returns to PINGING_SERVER and schedules a delayed health probe on socket $eventType while $from",
+    async ({ from, eventType, expectedClientErrors }) => {
+      const { ws, socket, args } =
+        from === ConnectionState.CONNECTED
+          ? await createConnectedClient()
+          : await createConnectingClient()
+
+      socket.dispatch(eventType, ABNORMAL_CLOSE_EVENT)
+
+      expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+      expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+        ConnectionState.PINGING_SERVER,
+        undefined
+      )
+      expect(socket.readyState).toBe(3)
+      expect(
+        vi.mocked(args.sendClientError).mock.calls.map(([error]) => error)
+      ).toEqual(expectedClientErrors)
+
+      // The health probe is delayed by the reconnect backoff window.
+      expect(pingServerSpy).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS)
+      expect(pingServerSpy).toHaveBeenCalledTimes(1)
+
+      ws.disconnect()
+    }
+  )
+
+  it("times out and retries when the socket is still connecting after the timeout", async () => {
+    const { ws, socket, args } = await createConnectingClient()
+
+    await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS - 1)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection timed out",
+      "ws://localhost:1234/_stcore/stream timed out",
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    expect(socket.readyState).toBe(3)
+
+    ws.disconnect()
+  })
+
+  it("does not time out once the socket has opened", async () => {
+    const { ws, socket, args } = await createConnectedClient()
+
+    await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS)
+
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+    expect(socket.readyState).toBe(1)
+
+    ws.disconnect()
+  })
+
+  it.each<SocketEventType>(["open", "message", "close", "error"])(
+    "ignores a %s event from a socket that has already been closed",
+    async eventType => {
+      const { ws, socket, args } = await createConnectedClient()
+      socket.dispatch("close", ABNORMAL_CLOSE_EVENT)
+      vi.mocked(args.onConnectionStateChange).mockClear()
+
+      socket.dispatch(
+        eventType,
+        eventType === "message"
+          ? { data: encodeForwardMsg(ForwardMsg.create()) }
+          : ABNORMAL_CLOSE_EVENT
+      )
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+      expect(args.sendClientError).not.toHaveBeenCalled()
+      expect(args.onMessage).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    }
+  )
+
+  it("forwards decoded frames from the socket to onMessage", async () => {
+    const { ws, socket, args } = await createConnectedClient()
+
+    socket.dispatch("message", {
+      data: encodeForwardMsg(ForwardMsg.fromObject({ hash: "frame-hash" })),
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(args.onMessage).toHaveBeenCalledTimes(1)
+    expect(args.onMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: "frame-hash" })
+    )
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("disconnects forever when a frame cannot be decoded", async () => {
+    const { socket, args } = await createConnectedClient()
+
+    // A lone varint continuation byte is a truncated protobuf message.
+    socket.dispatch("message", { data: new Uint8Array([0xff]).buffer })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      {
+        message: expect.stringContaining(
+          "Failed to process a Websocket message"
+        ),
+      }
+    )
+    expect(args.onMessage).not.toHaveBeenCalled()
+    expect(socket.readyState).toBe(3)
+  })
+
+  it("sends messages while connected and drops them once the socket is closed", async () => {
+    const { ws, socket } = await createConnectedClient()
+
+    ws.sendMessage({})
+    expect(socket.send).toHaveBeenCalledTimes(1)
+
+    socket.dispatch("close", ABNORMAL_CLOSE_EVENT)
+    socket.send.mockClear()
+
+    expect(() => ws.sendMessage({})).not.toThrow()
+    expect(socket.send).not.toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("refuses to open a second socket while one already exists", async () => {
+    const { ws } = await createConnectingClient()
+
+    // @ts-expect-error - private connectToWebSocket for test
+    await expect(ws.connectToWebSocket()).rejects.toThrow(
+      "Websocket already exists"
+    )
+    expect(sockets).toHaveLength(1)
+
+    ws.disconnect()
+  })
+
+  describe("ping cycle failures", () => {
+    afterEach(() => {
+      vi.mocked(doInitPings).mockReset()
+    })
+
+    /** Uses the real pingServer, with the next doInitPings call rejecting. */
+    function rejectNextPing(reason: unknown): void {
+      pingServerSpy.mockRestore()
+      vi.mocked(doInitPings).mockReturnValueOnce({
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- covers the String(reason) fallback for non-Error rejections
+        promise: Promise.reject(reason),
+        cancel: vi.fn(),
+      })
+    }
+
+    it.each([
+      { reason: new Error("ping exploded"), enableBypass: false },
+      { reason: "ping exploded", enableBypass: false },
+      { reason: new Error("ping exploded"), enableBypass: true },
+      { reason: "ping exploded", enableBypass: true },
+    ])(
+      "disconnects forever on an unexpected rejection ($reason, enableBypass=$enableBypass)",
+      async ({ reason, enableBypass }) => {
+        rejectNextPing(reason)
+
+        const args = createMockArgs({ enableBypass })
+        const ws = new WebsocketConnection(args)
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(args.sendClientError).toHaveBeenCalledWith(
+          "Websocket connection fatal error encountered",
+          "ping exploded",
+          "Websocket Connection"
+        )
+        expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+          ConnectionState.DISCONNECTED_FOREVER,
+          { message: "ping exploded" }
+        )
+        expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+          ConnectionState.CONNECTED,
+          undefined
+        )
+
+        ws.disconnect()
+      }
+    )
+
+    it("stays in PINGING_SERVER without reporting an error when the ping is cancelled", async () => {
+      rejectNextPing(new PingCancelledError())
+
+      const args = createMockArgs()
+      const ws = new WebsocketConnection(args)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+      expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+        ConnectionState.PINGING_SERVER,
+        undefined
+      )
+      expect(args.sendClientError).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    })
   })
 })
