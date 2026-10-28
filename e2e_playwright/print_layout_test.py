@@ -66,9 +66,12 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
         row_box = metric_row.bounding_box()
         assert row_box is not None
-        boxes = [metric_columns.nth(index).bounding_box() for index in range(4)]
-        for box in boxes:
+        boxes = []
+        for index in range(4):
+            box = metric_columns.nth(index).bounding_box()
             assert box is not None
+            boxes.append(box)
+        for box in boxes:
             assert abs(box["y"] - boxes[0]["y"]) < 2
             assert box["width"] < row_box["width"] / 3
         for left, right in itertools.pairwise(boxes):
@@ -159,9 +162,11 @@ def test_print_stacks_columns_and_fits_the_dataframe(
     def centered_chart_and_table_do_not_overlap() -> None:
         container_box = centered_chart.bounding_box()
         assert container_box is not None
-        boxes = [part.bounding_box() for part in centered_parts]
-        for box in boxes:
+        boxes = []
+        for part in centered_parts:
+            box = part.bounding_box()
             assert box is not None
+            boxes.append(box)
         for upper, lower in itertools.pairwise(boxes):
             assert upper["y"] + upper["height"] <= lower["y"] + 1
         for box in boxes[:2]:
