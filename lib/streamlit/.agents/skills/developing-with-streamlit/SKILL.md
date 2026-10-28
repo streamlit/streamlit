@@ -58,7 +58,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 - Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one.
-- Check the real app before reporting a change as done: run it with `--server.enableAgentApi=true`, `POST {}` to `/_stcore/agent/interact`, drive the widgets you changed, and confirm `status` is `"ready"` and the output is right. See [Step 4](#step-4-verify-the-change-in-the-running-app).
+- Before reporting a change as done, check it in the running app with the agent API and watch the server's console output for warnings (see [Step 4](#step-4-verify-the-change-in-the-running-app)).
 
 ## Proactively Look Up API Details
 
@@ -232,18 +232,20 @@ For **performance optimization**, read:
 
 The agent API drives the app over HTTP without a browser. It returns the finished page as JSON, with elements named after `st.*` commands and widgets you set by key. For request fields, errors, and limits, read "Check a running app with the agent API" in `references/testing.md`.
 
-1. **Start** a headless instance on a free port in the background, separate from any app the user is running:
+1. **Start** a headless instance in the background, bound to localhost and separate from any app the user is running. Keep its console output where you can read it:
    ```bash
-   streamlit run [path/to/app.py] --server.headless=true --server.port=8599 --server.enableAgentApi=true
+   streamlit run [path/to/app.py] --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
    ```
+   Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
 2. **Load** the app and check that `status` is `"ready"`:
    ```bash
-   curl -s -X POST http://localhost:8599/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
+   curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
    ```
-3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element and the server's console output, fix the code, and send only `session_id` to rerun. Edits apply without a restart.
-4. **Stop** the instance when you're done.
+3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. Edits apply without a restart.
+4. **Check the console output** after each request. Streamlit logs warnings and tracebacks there that the snapshot doesn't show, such as deprecations and ignored parameters. Fix or report anything new.
+5. **Stop** the instance when you're done.
 
-For purely visual changes (theme, CSS, spacing), this only confirms that the app still runs; checking the look needs a browser.
+For purely visual changes (theme, CSS, spacing), this only confirms that the app still runs; checking the look needs a browser. If the app needs credentials, secrets, or services you don't have, or you can't run a background process, say so instead of changing the code to make it run.
 
 ### Step 5: Check Running Apps and Offer to Run
 
@@ -281,7 +283,7 @@ For purely visual changes (theme, CSS, spacing), this only confirms that the app
 
 ## Stopping Points
 
-- **Step 4**: Ask before triggering actions with external side effects, such as database writes, emails, or paid API calls
+- **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers
 - **Step 5**: Ask before starting the Streamlit app for the user
 
 ## Resources
