@@ -275,11 +275,11 @@ st.write("value 16:", v16)
 
 st.radio(
     "radio 17 (cards, horizontal, stretch)",
-    ["Basic", "Plus", "Premium"],
+    ["Basic", "Plus", "Premium with priority support"],
     captions=[
         "Get started for free.",
         "",
-        "Everything in Plus, with priority support and a caption that wraps.",
+        "Everything in Plus, with a title and a caption that wrap.",
     ],
     type="cards",
     horizontal=True,

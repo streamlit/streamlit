@@ -196,10 +196,13 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
  * - Fills its `StyledRadioCardField`, which the group stretches to the row's
  *   height, so cards in a row share the same height. Content stays
  *   top-aligned.
+ * - A row of the title and caption, then the circle. The circle sits in the
+ *   top-right corner, at the same spot in every card however long the title
+ *   or caption is.
  * - Padding subtracts the border width, so border plus padding equals the
  *   `md` (vertical) and `lg` (horizontal) spacing tokens. With the title's
  *   line height above it, the circle sits about as far from the top edge as
- *   from the left edge.
+ *   from the right edge.
  * - Hover and focus tint only unselected cards, because pressing an already
  *   selected card does nothing.
  * - Selected cards get a primary border and a light primary tint, like
@@ -213,7 +216,8 @@ export const StyledRadioCard = styled(RARadioButton)(({ theme }) => {
 
   return {
     display: "flex",
-    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
     flex: "1 1 auto",
     minWidth: 0,
     boxSizing: "border-box",
@@ -263,9 +267,9 @@ interface StyledRadioCardTitleProps {
 }
 
 /**
- * Title of a card: the option label next to the circle. It is semibold when
- * the group has captions, which sets it apart from the caption below it.
- * Without captions it keeps the normal label weight, like the default style.
+ * Title of a card: the option label. It is semibold when the group has
+ * captions, which sets it apart from the caption below it. Without captions
+ * it keeps the normal label weight, like the default style.
  */
 export const StyledRadioCardTitle = styled.div<StyledRadioCardTitleProps>(
   ({ theme, $isEmphasized }) => ({
@@ -291,17 +295,19 @@ export const StyledRadioRow = styled.div(({ theme }) => ({
 }))
 
 /**
- * `StyledRadioRow` for a card. It aligns the circle and the title at the top,
- * so the circle stays next to the first line of a title that wraps.
+ * The title with the caption below it. It takes the width the circle leaves,
+ * so neither one runs underneath the circle.
  */
-export const StyledRadioCardRow = styled(StyledRadioRow)({
-  alignItems: "flex-start",
+export const StyledRadioCardContent = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  flex: "1 1 auto",
+  minWidth: 0,
 })
 
 /**
- * Centers the card's circle on the first line of the title by sizing its box
- * to one title line. A single-line title looks the same as with
- * `StyledRadioRow`.
+ * Holds the card's circle. Its box is one title line tall, so the circle
+ * centers on the first line of the title instead of on a title that wraps.
  */
 export const StyledRadioCardIndicator = styled.div(({ theme }) => ({
   display: "flex",
