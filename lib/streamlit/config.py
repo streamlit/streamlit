@@ -1344,6 +1344,23 @@ _create_option(
 )
 
 _create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows an agent API response includes inline, as the
+        `data.preview` of each element whose data is serialized as Arrow:
+        `st.dataframe`, `st.data_editor`, `st.table`, and Vega-Lite charts
+        (`st.altair_chart`, `st.vega_lite_chart`, and built-in charts such as
+        `st.line_chart`).
+
+        An element with more rows is reported as incomplete. Its full data is
+        at `data.url`, unless `data.unavailable` says why it cannot be served.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
     "server.trustedUserHeaders",
     description="""
         HTTP headers to embed in st.user.

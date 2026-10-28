@@ -33,7 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -629,6 +629,26 @@ def _marshall_lazy_dataframe(
     # the first visible rows so the frontend can render columns immediately.
     lazy_data.initial_chunk.data = initial_bytes
     return True
+
+
+def _lazy_dataframe_data(lazy_data: LazyDataframeProto) -> dict[str, Any] | None:
+    """A lazily loaded dataframe's agent ``data``, previewed from its first chunk.
+
+    The preview is the first ``server.agentPreviewRows`` rows of the chunk the
+    browser receives, the same cap as any table. Rows past the chunk are only
+    fetched by a browser as it scrolls, so nothing serves them, and the chunk
+    alone would pass for the whole table. The row count is the source's,
+    reported only when the source knows it.
+    """
+    data = agent_data.summarize_arrow(lazy_data.initial_chunk.data)
+    if data is None:
+        return None
+    data.update(agent_data.unavailable("lazy_loading"))
+    if lazy_data.HasField("row_count"):
+        data["row_count"] = lazy_data.row_count
+    else:
+        del data["row_count"]
+    return data
 
 
 class ArrowMixin:
@@ -1289,7 +1309,8 @@ class ArrowMixin:
             """The agent description for this dataframe.
 
             Called at each enqueue so the selection path can read ``proto.id``
-            after it is assigned. Column config is walked only while recording.
+            after it is assigned. Column config is walked and the data block
+            built only while recording.
             """
             if not agent_spec.is_recording():
                 return None
@@ -1297,6 +1318,18 @@ class ArrowMixin:
                 "dataframe",
                 # A display dataframe has no element ID, only the author's key.
                 key=proto.id or key,
+                # A lazy table has no `arrow_data`, so nothing is served: its
+                # first chunk, served alone, would pass for the whole table.
+                data_builder=(
+                    lambda: (
+                        _lazy_dataframe_data(proto.lazy_data)
+                        if lazy_marshalled
+                        else agent_data.arrow(
+                            proto.arrow_data.data,
+                            coordinates=self.dg._get_write_delta_path_str(),
+                        )
+                    )
+                ),
                 # A browser user can select rows or press a button column. This
                 # API only reports that. A display-only table has nothing to
                 # withhold, so it is fully supported.
@@ -1307,7 +1340,10 @@ class ArrowMixin:
                 column_order=list(proto.column_order) or None,
                 hide_index=described_hide_index(column_config_mapping),
                 selection_mode=sorted(selection_mode_set) or None,
-                on_select="ignore" if on_select == "ignore" else "rerun",
+                # Reported only with selections on; the documented default,
+                # "ignore", is left out. A callback reaches the server too, so
+                # it is "rerun".
+                on_select="rerun" if is_selection_activated else None,
                 # The text shown for missing values, which the preview reports
                 # as null.
                 placeholder=placeholder,
