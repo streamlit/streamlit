@@ -186,8 +186,8 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
 
-    # Add the agent API route, which answers even when the API is off. Imported
-    # here to keep the agent API's modules out of `import streamlit`.
+    # Add the agent API routes, both of which answer even when the API is off.
+    # Imported here to keep the agent API's modules out of `import streamlit`.
     from streamlit.web.server.starlette.starlette_agent_routes import (
         create_agent_routes,
     )

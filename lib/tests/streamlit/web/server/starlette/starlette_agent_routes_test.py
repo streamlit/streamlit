@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the agent API route."""
+"""Tests for the agent API routes."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_app_static_serving_routes,
     create_media_routes,
 )
-from tests.streamlit.runtime.agent import run_gate
+from tests.streamlit.runtime.agent import openapi_validation, run_gate
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -61,7 +61,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _PATH: Final = "/_stcore/agent/interact"
+_SCHEMA_PATH: Final = "/_stcore/agent/openapi.json"
 _OTHER_METHODS: Final = ["GET", "HEAD", "PUT", "PATCH", "DELETE", "OPTIONS"]
+_LINK: Final = '<openapi.json>; rel="service-desc"'
 
 
 @pytest.fixture
@@ -82,10 +84,12 @@ def interact() -> Iterator[AsyncMock]:
 
 @contextmanager
 def _client(
-    runtime: Any, *, enabled: bool = True, **overrides: Any
+    runtime: Any, *, enabled: bool = True, base_url: str = "", **overrides: Any
 ) -> Generator[TestClient, None, None]:
     with patch_config_options({"server.enableAgentApi": enabled, **overrides}):
-        app = Starlette(routes=starlette_agent_routes.create_agent_routes(runtime, ""))
+        app = Starlette(
+            routes=starlette_agent_routes.create_agent_routes(runtime, base_url)
+        )
         with TestClient(app) as client:
             yield client
 
@@ -393,6 +397,146 @@ def test_a_client_that_disconnects_cancels_the_wait(
     assert cancelled.is_set()
 
 
+@pytest.mark.parametrize("enabled", [True, False])
+def test_the_schema_route_answers_with_the_api_on_and_off(
+    runtime: MagicMock, interact: AsyncMock, enabled: bool
+) -> None:
+    """The document is served whether or not the API is on, says which, and
+    serving it runs nothing.
+    """
+    with _client(runtime, enabled=enabled) as client:
+        fetched = client.get(_SCHEMA_PATH)
+        head = client.head(_SCHEMA_PATH)
+
+    assert fetched.status_code == 200
+    assert fetched.headers["Content-Type"] == "application/json"
+    assert fetched.headers["Cache-Control"] == "no-cache"
+    document = fetched.json()
+    assert document["openapi"] == "3.1.0"
+    assert document["info"]["x-streamlit-agent-api"] == (
+        "available" if enabled else "disabled"
+    )
+    assert head.status_code == 200
+    assert head.content == b""
+    interact.assert_not_awaited()
+    runtime.connect_session.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+def test_other_methods_on_the_schema_route_are_not_allowed(
+    runtime: MagicMock, interact: AsyncMock, method: str
+) -> None:
+    """Every method but GET and HEAD gets an empty 405 from the route itself."""
+    with _client(runtime) as client:
+        response = client.request(method, _SCHEMA_PATH)
+
+    assert response.status_code == 405
+    assert response.headers["Allow"] == "GET, HEAD"
+    assert response.content == b""
+    interact.assert_not_awaited()
+
+
+def test_every_agent_response_links_the_description(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """Each way either route can answer carries the `Link` header, and its
+    target, resolved against the request's URL, is the served document.
+    """
+    responses = {}
+    with _client(runtime, enabled=False) as client:
+        responses["not_available"] = client.post(_PATH, json={})
+    with _client(runtime, **{"server.allowedHosts": ["app.example"]}) as client:
+        responses["host_not_allowed"] = client.post(
+            _PATH, json={}, headers={"Host": "evil.example"}
+        )
+    with (
+        patch.object(starlette_agent_routes._LOGGER, "exception"),
+        _client(runtime) as client,
+    ):
+        responses["method_not_allowed"] = client.get(_PATH)
+        responses["origin_not_allowed"] = client.post(
+            _PATH, json={}, headers={"Origin": "https://evil.example"}
+        )
+        responses["not_json"] = client.post(_PATH, content=b"{")
+        responses["success"] = client.post(_PATH, json={})
+        with patch.object(
+            runtime_util, "get_max_widget_state_size_bytes", return_value=1
+        ):
+            responses["request_too_large"] = client.post(_PATH, json={})
+        with patch.object(
+            starlette_agent_routes,
+            "_read_body",
+            new=AsyncMock(side_effect=ClientDisconnect()),
+        ):
+            responses["client_disconnect"] = client.post(_PATH, json={})
+        interact.side_effect = AgentRequestError("unknown_session", "Gone.")
+        responses["unknown_session"] = client.post(_PATH, json={"session_id": "s_1"})
+        interact.side_effect = RuntimeError("Unexpected.")
+        responses["internal_error"] = client.post(_PATH, json={})
+        responses["schema"] = client.get(_SCHEMA_PATH)
+        responses["schema_head"] = client.head(_SCHEMA_PATH)
+        responses["schema_not_allowed"] = client.delete(_SCHEMA_PATH)
+        targets = {
+            urljoin(str(response.url), "openapi.json")
+            for response in responses.values()
+        }
+        described = [client.get(target) for target in targets]
+
+    assert {name: response.status_code for name, response in responses.items()} == {
+        "not_available": 403,
+        "host_not_allowed": 403,
+        "method_not_allowed": 405,
+        "origin_not_allowed": 403,
+        "not_json": 400,
+        "success": 200,
+        "request_too_large": 413,
+        "client_disconnect": 400,
+        "unknown_session": 404,
+        "internal_error": 500,
+        "schema": 200,
+        "schema_head": 200,
+        "schema_not_allowed": 405,
+    }
+    for name, response in responses.items():
+        assert response.headers.get("Link") == _LINK, name
+    assert targets == {f"http://testserver{_SCHEMA_PATH}"}
+    assert [response.json()["openapi"] for response in described] == ["3.1.0"]
+
+
+@pytest.mark.parametrize("base_url", ["", "base", "a/b"])
+def test_the_documented_server_and_paths_reach_the_routes(
+    runtime: MagicMock, interact: AsyncMock, base_url: str
+) -> None:
+    """Under `server.baseUrlPath` and behind a prefix a proxy strips, the
+    server resolved against the document's URL, joined with the documented
+    path, is the route; resolving the path against the origin is not.
+    """
+    base_path = f"/{base_url}" if base_url else ""
+    schema_url = f"http://testserver{base_path}{_SCHEMA_PATH}"
+    with _client(runtime, base_url=base_url) as client:
+        document = client.get(schema_url).json()
+        server = document["servers"][0]["url"]
+        [interact_path] = [
+            path for path, item in document["paths"].items() if "post" in item
+        ]
+        posted = client.post(
+            urljoin(schema_url, server) + interact_path.lstrip("/"), json={}
+        )
+
+    assert interact_path == f"{base_path}{_PATH}"
+    assert f"{base_path}{_SCHEMA_PATH}" in document["paths"]
+    assert posted.status_code == 200
+    interact.assert_awaited_once()
+    # The same document behind a hosting platform's prefix, which the app
+    # never sees.
+    hosted_url = f"https://host.example/~/+{base_path}{_SCHEMA_PATH}"
+    for document_url in (schema_url, hosted_url):
+        root = urljoin(document_url, server)
+        assert root.endswith("/")
+        assert root + interact_path.lstrip("/") == urljoin(document_url, "interact")
+    assert urljoin(hosted_url, interact_path) == f"https://host.example{interact_path}"
+
+
 @asynccontextmanager
 async def _lifespan_with(runtime: Runtime) -> AsyncGenerator[None, None]:
     await runtime.start()
@@ -492,6 +636,136 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
     assert unknown.json()["error"]["code"] == "unknown_session"
     assert collected.status_code == 200
     assert collected.json()["session_id"] == handle
+
+
+_CONFORMANCE_SCRIPT: Final = """
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+from tests.streamlit.runtime.agent import run_gate
+
+run_gate.wait()
+st.selectbox("Region", ["EMEA", "APAC"], key="region")
+st.selectbox("Team", ["Ops", "Sales"], index=None, key="team")
+st.slider("Range", 0, 10, (2, 8), key="range")
+with st.form("ticket"):
+    st.text_input("Title", key="title")
+    st.form_submit_button("Submit", key="submit")
+st.text_input("Password", type="password", key="password")
+st.file_uploader("Upload", key="upload")
+st.image(np.zeros((2, 2, 3), dtype=np.uint8))
+st.dataframe(pd.DataFrame({"n": range(150)}))
+st.line_chart(pd.DataFrame({"y": [1, 3, 2]}))
+st.plotly_chart(go.Figure(go.Bar(y=[1, 2]), layout={"template": "plotly"}))
+st.chat_input("Ask", key="chat")
+"""
+
+
+def _tree_nodes(document: dict[str, Any]) -> list[dict[str, Any]]:
+    nodes: list[dict[str, Any]] = []
+    pending = [document["tree"]]
+    while pending:
+        node = pending.pop()
+        nodes.append(node)
+        pending.extend(node.get("children") or [])
+    return nodes
+
+
+def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
+    """A real runtime's snapshots and refusals validate against the schemas of
+    the document it serves, and carry no field the document does not name.
+    """
+    overrides: dict[str, Any] = {}
+    with _served_app(tmp_path, _CONFORMANCE_SCRIPT, overrides) as client:
+        document = client.get(_SCHEMA_PATH).json()
+        created = client.post(_PATH, json={})
+        handle = created.json()["session_id"]
+        snapshots = [
+            created,
+            client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"team": "Ops"}}
+            ),
+            client.post(
+                _PATH,
+                json={"session_id": handle, "trigger": {"key": "chat", "value": "Hi"}},
+            ),
+        ]
+        refused: dict[AgentErrorCode, Any] = {
+            "invalid_value": client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"region": "Mars"}}
+            ),
+            "unknown_key": client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"typo": 1}}
+            ),
+            "unsupported_element": client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"upload": []}}
+            ),
+            "missing_form_submit": client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"title": "x"}}
+            ),
+            "invalid_request": client.post(
+                _PATH, json={"session_id": handle, "bogus": True}
+            ),
+            "unknown_page": client.post(_PATH, json={"page": "nope"}),
+        }
+        run_gate.close()
+        overrides["server.agentWaitTimeout"] = 0.2
+        refused["wait_timed_out"] = client.post(_PATH, json={"session_id": handle})
+        overrides["server.agentWaitTimeout"] = 10
+        run_gate.opened.set()
+        snapshots.append(client.post(_PATH, json={"session_id": handle}))
+
+    schemas = document["components"]["schemas"]
+    validators = {
+        name: openapi_validation.schema_validator(document, name)
+        for name in ("InteractRequest", "Snapshot", "Error")
+    }
+
+    def documented(name: str) -> set[str]:
+        return set(schemas[name]["properties"])
+
+    for response in snapshots:
+        assert response.status_code == 200, response.text
+        body = response.json()
+        validators["Snapshot"].validate(body)
+        assert set(body) <= documented("Snapshot")
+        for node in _tree_nodes(body):
+            assert set(node) <= documented("Node"), node
+            assert set(node.get("data", {})) <= documented("ElementData"), node
+        for action in body["actions"]:
+            assert set(action) <= documented("Action"), action
+    for code, response in refused.items():
+        assert response.status_code == error_status(code), response.text
+        body = response.json()
+        assert body["error"]["code"] == code
+        validators["Error"].validate(body)
+        assert set(body) <= documented("Error")
+        assert set(body["error"]) <= set(
+            schemas["Error"]["properties"]["error"]["properties"]
+        )
+    assert refused["wait_timed_out"].json()["session_id"] == handle
+    assert refused["unknown_page"].json()["session_id"] != handle
+    assert refused["unknown_page"].json()["error"]["pages"]
+    # The schema refuses the unknown field the route refused.
+    assert not validators["InteractRequest"].is_valid(
+        {"session_id": handle, "bogus": True}
+    )
+    # The fields the document describes occur in these responses, so the
+    # checks above cover them.
+    nodes = _tree_nodes(created.json())
+    assert any(node.get("clearable") is True for node in nodes)
+    assert any(node.get("support") == "action_unsupported" for node in nodes)
+    assert any(node.get("form_id") for node in nodes)
+    blocks = [node["data"] for node in nodes if "data" in node]
+    assert any("url" in data and "preview" in data for data in blocks)
+    assert any("spec_omitted" in data for data in blocks)
+    [chat_action] = [a for a in created.json()["actions"] if a["key"] == "chat"]
+    assert "label" not in chat_action
+    [chat] = [
+        node for node in _tree_nodes(snapshots[2].json()) if node.get("key") == "chat"
+    ]
+    assert "value" not in chat
 
 
 def test_write_refusals_end_to_end(tmp_path: Path) -> None:

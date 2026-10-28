@@ -41,8 +41,17 @@ if TYPE_CHECKING:
 # Pattern for files that should not be cached (HTML and manifest.json)
 _NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
 
-# Reserved paths that should return 404 instead of index.html fallback.
-_RESERVED_STATIC_PATH_SUFFIXES: Final = ("_stcore/health", "_stcore/host-config")
+# Reserved paths that should return 404 instead of index.html fallback. The
+# agent API's routes are among them because the app's HTML tells a reader
+# without JavaScript where to find them: appended to a page's URL rather than
+# the app's, the path would otherwise answer with the app's HTML and a 200,
+# which reads as success.
+_RESERVED_STATIC_PATH_SUFFIXES: Final = (
+    "_stcore/health",
+    "_stcore/host-config",
+    "_stcore/agent/interact",
+    "_stcore/agent/openapi.json",
+)
 
 
 def create_streamlit_static_handler(
