@@ -156,9 +156,11 @@ def _assert_within_1px(values: list[float]) -> None:
 
 def _line_count(text: Locator) -> float:
     """Return how many lines of text the element spans."""
-    return text.evaluate(
-        "el => el.getBoundingClientRect().height"
-        " / parseFloat(getComputedStyle(el).lineHeight)"
+    return float(
+        text.evaluate(
+            "el => el.getBoundingClientRect().height"
+            " / parseFloat(getComputedStyle(el).lineHeight)"
+        )
     )
 
 
