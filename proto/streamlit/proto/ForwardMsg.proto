@@ -210,6 +210,11 @@ message ForwardMsgMetadata {
   // Fragment roots selected for that execution. Empty means a full-app run.
   repeated string fragment_ids_this_run = 7;
 
+  // On script_finished: fragments of that execution whose output was
+  // discarded before delivery because they are about to rerun. Empty means
+  // none of its output was discarded.
+  repeated string dropped_fragment_ids = 8;
+
   reserved 3;
 }
 

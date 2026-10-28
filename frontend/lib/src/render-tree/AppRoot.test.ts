@@ -1366,6 +1366,45 @@ describe("AppRoot", () => {
       ).toBeTextNode("from B")
     })
 
+    it("keeps a preserved nested fragment's content while cleaning its parent", () => {
+      const parentBlock = makeProto(DeltaProto, {
+        addBlock: { vertical: {}, allowEmpty: true },
+        fragmentId: "frag_p",
+      })
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH)
+        .applyDelta("run_1", parentBlock, forwardMsgMetadata([0, 0]))
+        .applyDelta(
+          "run_1",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "from N" } },
+            fragmentId: "frag_n",
+          }),
+          forwardMsgMetadata([0, 0, 0])
+        )
+        .applyDelta(
+          "run_1",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "stale from P" } },
+            fragmentId: "frag_p",
+          }),
+          forwardMsgMetadata([0, 0, 1])
+        )
+        .applyDelta("run_2", parentBlock, forwardMsgMetadata([0, 0]))
+
+      const pruned = root.clearStaleNodes(
+        "run_2",
+        ["frag_p"],
+        new Set(["frag_n"])
+      )
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 0])
+      ).toBeTextNode("from N")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 1])
+      ).toBeUndefined()
+    })
+
     it("uses ClearStaleNodeVisitor internally", () => {
       // Create a more complex tree with multiple nodes
       const delta1 = makeProto(DeltaProto, {
