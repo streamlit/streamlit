@@ -90,10 +90,10 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
 
       [`@media print`]: {
         display: isCollapsed ? "none" : "initial",
-        // Stay a side column, only as tall as its contents. A stretched
-        // column or a max-height of one page either leaves a blank sidebar
-        // or clips the bottom of it.
-        alignSelf: "flex-start",
+        // Stay a side column as tall as the printed main content, so its
+        // background does not end partway down the page. A max-height of
+        // one page would clip a sidebar that is longer than the page.
+        alignSelf: "stretch",
         height: "auto !important",
         maxHeight: "none !important",
         // Print uses the narrowest sidebar width. re-resizable writes the

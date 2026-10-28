@@ -26,6 +26,12 @@ import {
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
 import {
+  PRINT_CHART_CARD_SELECTOR,
+  PRINT_CHART_SELECTOR,
+  PRINT_VISIBLE_FILTER,
+  printKeepTogetherRules,
+} from "~lib/components/shared/printPageBreak"
+import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
 } from "~lib/components/widgets/DataFrame/printClassNames"
@@ -42,35 +48,25 @@ const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
 /**
  * Marks a bordered card (`st.container(border=True)` or a bordered column)
- * so a printed column row can tell a card from a plain container. A border
- * is drawn with an emotion style, which has no stable selector of its own.
+ * so print can keep a row of cards on one page. A border is drawn with an
+ * emotion style, which has no stable selector of its own.
  */
 export const PRINT_CARD_CLASS = "stPrintCard"
 
 /**
- * Compound match for content that makes a printed column row stack into one
- * column: a card, a dataframe, a static table, or a chart. These are the
+ * Content that makes a printed column row stack into one column: a
+ * dataframe, a static table, or a chart. These keep a width measured on
+ * screen and would overflow a narrower printed column. These are the
  * elements' own classes. Test IDs are not used as selectors.
  *
- * An image is `max-width: 100%` and shrinks into the column, so it does not
- * stack the row. `st.bokeh_chart` is not a built-in element, so there is no
- * class to match.
+ * A border alone does not stack the row. Metrics shrink their text to fit,
+ * and text wraps, so a row of bordered metric cards stays side by side. An
+ * image is `max-width: 100%` and shrinks into the column too.
  */
-const PRINT_STACK_TRIGGER = `:is(.${PRINT_CARD_CLASS}, .stDataFrame, .stTable, .stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)`
+const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR})`
 
-/**
- * A chart or dataframe inside a closed tab or a collapsed expander is still
- * mounted. It is not on the printed page, so it does not make the row stack.
- */
-const VISIBLE_PRINT_STACK_TRIGGER = `${PRINT_STACK_TRIGGER}:not([data-st-inactive] *):not(details:not([open]) *)`
-
-/**
- * Matches a column that is itself a card, or holds one. A bordered column is
- * a card, so a row of bordered metrics stacks. A row of compact widgets
- * (metrics, buttons) without borders matches neither and stays side by side
- * instead of lengthening the printed page.
- */
-const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stColumn ${VISIBLE_PRINT_STACK_TRIGGER}`
+/** Matches a column that holds a dataframe, table, or chart on the printed page. */
+const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
 
 /**
  * Bottom margins that replace flex `gap` once a vertical block prints as a
@@ -436,15 +432,22 @@ export const StyledFlexContainerBlock =
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
       // Print rules:
-      // - A column row that holds a card, chart, dataframe, or table stacks
-      //   into full-width columns. Rows of compact widgets stay side by side.
+      // - A column row that holds a chart, dataframe, or table stacks into
+      //   full-width columns. Other rows stay side by side.
       // - Other vertical blocks switch to block layout unless they keep flex
       //   (see above).
-      // - In landscape, a bordered card avoids page breaks unless it holds a
-      //   print table, which has to paginate.
+      // - A bordered card or column that holds a chart avoids page breaks,
+      //   and so does a side-by-side row of bordered columns.
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
+              [`> .stColumn.${PRINT_CARD_CLASS}`]: {
+                [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+              },
+              // A row of bordered cards that stays side by side prints like
+              // one card, so a page break does not cut every card at once.
+              [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_SELECTOR}))`]:
+                printKeepTogetherRules,
               [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
                 display: "block",
                 "> .stColumn": {
@@ -488,18 +491,7 @@ export const StyledFlexContainerBlock =
                 ...printBlockGapMargins(gapWidth, theme),
               }),
         ...(border && {
-          // Landscape: keep a bordered card on one page so a chart is not
-          // split with a blank remainder. A card that holds a print table
-          // may still break so the header can repeat. Portrait is tall
-          // enough for the next card to start on the same page. A table
-          // inside a closed tab is not built, so it does not opt the card
-          // out.
-          "@media (orientation: landscape)": {
-            [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
-              breakInside: "avoid",
-              pageBreakInside: "avoid",
-            },
-          },
+          [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
         }),
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
           {

@@ -41,8 +41,22 @@ feedback = pd.DataFrame(
 with st.container(border=True, key="feedback"):
     st.dataframe(feedback, hide_index=True, width="stretch")
 
+with st.container(key="metric_row"):
+    for index, column in enumerate(st.columns(4, border=True)):
+        column.metric(f"Metric {index}", f"{index * 1000:,}", f"{index}%")
+
+with st.container(border=True, key="chart_card"):
+    st.markdown("Chart card")
+    st.line_chart(pd.DataFrame({"value": [3, 1, 2]}), height=160)
+
 with st.container(horizontal_alignment="center", key="centered"):
     st.markdown("Centered line")
+
+with st.container(horizontal_alignment="center", key="centered_chart"):
+    st.bar_chart(pd.DataFrame({"value": [2, 1, 3]}), height=160)
+    st.dataframe(feedback, hide_index=True)
+
+st.markdown("After the centered chart")
 
 with st.container(height=120, vertical_alignment="center", key="vertically_centered"):
     st.markdown("Vertically centered")

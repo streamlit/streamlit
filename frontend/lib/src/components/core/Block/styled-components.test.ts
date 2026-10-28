@@ -42,7 +42,7 @@ const cssAddedBy = (renderCall: () => void): string => {
 }
 
 describe("StyledFlexContainerBlock print layout", () => {
-  it("only stacks a column row that holds a card, dataframe, table, or chart", () => {
+  it("only stacks a column row that holds a dataframe, table, or chart", () => {
     const css = cssAddedBy(() =>
       render(
         createElement(StyledFlexContainerBlock, {
@@ -54,12 +54,13 @@ describe("StyledFlexContainerBlock print layout", () => {
 
     expect(css).toContain("@media print")
     // The row itself only becomes display:block, and only gives its columns
-    // the full page width, when one of them holds a card, dataframe, static
+    // the full page width, when one of them holds a dataframe, static
     // table, or chart. A row of compact widgets (metrics, buttons) matches
-    // none of these and keeps its normal flex layout. Images shrink, and
-    // there is no built-in bokeh element class.
-    expect(css).toContain(`:is(.${PRINT_CARD_CLASS}`)
-    expect(css).toContain(".stDataFrame")
+    // none of these and keeps its normal flex layout, bordered or not.
+    // Images shrink, and there is no built-in bokeh element class.
+    expect(css).toContain(":is(.stDataFrame")
+    expect(css).not.toContain(`:is(.${PRINT_CARD_CLASS}`)
+    expect(css).not.toContain(`>.stColumn.${PRINT_CARD_CLASS},`)
     expect(css).toContain(".stTable")
     expect(css).toContain(".stVegaLiteChart")
     expect(css).not.toContain(".stImage")
@@ -76,7 +77,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("margin-bottom:1rem")
   })
 
-  it("lets a dataframe's card break across a page so its header can repeat", () => {
+  it("keeps a bordered chart card on one page unless it holds a print table", () => {
     const css = cssAddedBy(() =>
       render(
         createElement(StyledFlexContainerBlock, {
@@ -86,14 +87,50 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
 
-    // Landscape is too short for a chart card to finish below the
-    // previous one, so the card moves to the next page instead of
-    // splitting. A dataframe print table can be taller than the page,
-    // and forcing that card to stay whole would clip rows that already
-    // fit. Portrait keeps the card in normal flow.
-    expect(css).toContain("@media (orientation: landscape)")
-    expect(css).toContain(":not(:has(.stDataFramePrintTable))")
-    expect(css).toContain("break-inside:avoid")
+    // A chart prints as one piece and moves to the next page, so a split
+    // card would leave an empty bordered strip behind. A print table has
+    // to paginate, so its card may still break. This applies to both
+    // orientations.
+    expect(css).toMatch(
+      /:has\(:is\(\.stVegaLiteChart[^{]*:not\(:has\(\.stDataFramePrintTable\)\)\{break-inside:avoid/
+    )
+    expect(css).not.toContain("orientation")
+
+    const plain = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+        })
+      )
+    )
+    expect(plain).not.toContain("break-inside")
+  })
+
+  it("keeps bordered chart columns and a side-by-side card row on one page", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+          // A gap the other horizontal test does not use, so emotion adds
+          // a new style tag instead of reusing that one.
+          gap: { pixelGap: 12 },
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      new RegExp(
+        `>\\.stColumn\\.${PRINT_CARD_CLASS}:has\\(:is\\(\\.stVegaLiteChart[^{]*\\{break-inside:avoid`
+      )
+    )
+    // The whole row only stays together while it is not stacked.
+    expect(css).toMatch(
+      new RegExp(
+        `:has\\(>\\s?\\.stColumn\\.${PRINT_CARD_CLASS}\\):not\\(:has\\(>\\s?\\.stColumn :is\\(\\.stDataFrame[^{]*\\{break-inside:avoid`
+      )
+    )
   })
 
   it("keeps a centered container's flex alignment and gaps with margin", () => {

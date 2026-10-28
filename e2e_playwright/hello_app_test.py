@@ -21,7 +21,6 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     end_browser_print,
-    flush_print_media_change,
     start_browser_print,
 )
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
@@ -144,6 +143,18 @@ def _set_landscape_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
 
 
+def _print_like_a_browser(app: Page) -> None:
+    """Enter print with ``beforeprint``, so the dataframe prints as a table.
+
+    ``emulate_media`` alone applies the print stylesheet without firing
+    ``beforeprint``, so the dataframe would keep its on-screen canvas.
+    """
+    start_browser_print(app)
+    table = app.locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    expect(table).to_contain_text("China")
+
+
 def test_app_print_mode_portrait_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -153,9 +164,8 @@ def test_app_print_mode_portrait_with_sidebar_open(
     app = themed_app
 
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
@@ -184,8 +194,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active")
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
 
@@ -199,9 +208,8 @@ def test_app_print_mode_landscape_with_sidebar_open(
     app = themed_app
 
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
@@ -229,8 +237,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active")
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
 
@@ -238,13 +245,7 @@ def test_app_print_mode_landscape_with_sidebar_closed(
 def test_print_mode_fits_dataframe_sidebar_and_chart(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """Print shows every dataframe cell inside the widget, beside a narrow sidebar.
-
-    ``emulate_media`` applies the print stylesheet but does not fire
-    ``beforeprint``, so the snapshot tests above still show the on-screen
-    canvas. A browser fires ``beforeprint`` while screen media is still
-    active, then switches to print. This test uses that order.
-    """
+    """Print shows every dataframe cell inside the widget, beside a narrow sidebar."""
     app = themed_app
 
     _load_dataframe_demo_page(app)
