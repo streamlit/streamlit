@@ -31,7 +31,7 @@ browser enforces, what the server does with a client value that violates it as o
 | Wire field matches the registered type | pass or raises (stuck). `WStates.__getitem__` overwrites `value_type` with whatever arrived. | 1 |
 | Deserializer can read the value | raises (stuck): `_compact_state` and `__contains__` only catch `KeyError` | 1 |
 | `disabled` | done (#16209), with two holes: a wrong field still crashes, and a flip within a run splits the callback from the return value | 1 |
-| Widget rendered right now | pass: metadata is never pruned, so callbacks of hidden, closed-dialog, or other-page widgets fire | 3 |
+| Widget registered by the latest run that covered it | pass: metadata is never pruned, so callbacks of hidden, closed-dialog, or other-page widgets fire | 3 |
 | Size of the message | done: `server.maxWidgetStateSize`, 25 MB total, no per-widget limit | — |
 
 ## Text
@@ -71,7 +71,7 @@ browser enforces, what the server does with a client value that violates it as o
 | `multiselect` | `options` | Closed list | late reset: filtered after the callback | 2 |
 | `multiselect` | `max_selections` | Refuses more | raises after the callback, with a message blaming `default` | 2 |
 | `multiselect`, multi `pills` | No duplicates | Impossible in the UI | pass | 2 |
-| `select_slider` | `options`, range | Index mapped to a label | deser: an unknown label falls back to the default; a reversed range is sorted | 2 |
+| `select_slider` | `options`, range | Index mapped to a label | deser: an unknown label falls back to the default; a reversed range is sorted | 2, 4 |
 | `pills`, `segmented_control` | `options` | Closed list | deser in single mode; unknown values dropped in multi mode | 2 |
 | `pills`, `segmented_control` | `required` in single mode | Cannot deselect | pass: the callback fires with `None` | 5 |
 | `feedback` | Index range, or `""` to clear | Fixed icons; clicking the selected face again sends `""` | deser: reset; a non-numeric value raises | 1, 2 |

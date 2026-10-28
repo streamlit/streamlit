@@ -166,11 +166,13 @@ so a correct client never notices it, apart from the cases in
 
 ### What Streamlit guarantees
 
-After v1, a value that reaches a callback, `st.session_state`, or a widget's return value
-from a client satisfies all of the following:
+After Phase 1, a value that reaches a callback, `st.session_state`, or a widget's return
+value from a client satisfies all of the following:
 
 - It has the wire type the widget registered, and the widget can read it.
-- It comes from a widget that is rendered right now and not `disabled`.
+- It comes from a widget that is not `disabled` and that the latest run covering it
+  registered. This includes a widget the app removed later in that run, for example with
+  `placeholder.empty()`, because the app emitted it.
 - It is one of the widget's options, within `max_selections` and with no duplicates,
   unless the widget accepts new options.
 - It is within `min_value`/`max_value` and `max_chars`, and is a well-formed date, time,
@@ -179,7 +181,7 @@ from a client satisfies all of the following:
   what the widget holds: an untouched required widget still reads as empty (`None`, `""`,
   or `[]`), exactly as in the browser, so an app still has to handle that case. Outside a
   form, a client can never clear it. Inside a form, the form-submit rule (item 7 in the
-  [plan](#ranked-delivery-plan), v1.x) adds the browser's stricter rule: a submit is
+  [plan](#ranked-delivery-plan), Phase 2) adds the browser's stricter rule: a submit is
   refused while any rendered required field of that form is empty, touched or not.
 
 Later items add form submission, data editor policies, selections, and fragments (see
@@ -189,7 +191,7 @@ Streamlit never guarantees:
 
 - **Authorization.** An options list the app showed to a user is legal for that user's
   session. Deciding who may act stays in app code.
-- **`validate` regex matches.** These are out of v1; see [Out of scope](#out-of-scope).
+- **`validate` regex matches.** See [Out of scope](#out-of-scope).
 - **What an uploaded file contains.**
 - **That a value is right for the business.**
 
@@ -211,13 +213,13 @@ across the plan rather than saved for a final PR.
 
 | # | Scope | Security | Agent API | Cost | Risk |
 | --- | --- | --- | --- | --- | --- |
-| **v1** | | | | | |
+| **Phase 1** | | | | | |
 | 1 | **Boundary check and protocol integrity.** Check at the boundary; refuse a wrong wire type or a value the widget cannot read; move the `disabled` decision there. | High: crashes, stuck sessions, both `disabled` holes, a button returning a string | High: replaces `_check_readable`; the shared check exists | M | Low–Med |
 | 2 | **Closed option sets.** `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, `feedback`, `tabs`; `max_selections`; duplicates | High: the most-assumed constraint | Med: deletes `_validate_options` and `max_items`; `max_selections` refused instead of raised | S | Low |
-| 3 | **Rendered-widget gate.** Values and triggers only for widgets the page renders now | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
+| 3 | **Rendered-widget gate.** Values and triggers only for widgets registered by the latest run that covered them | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
 | 4 | **Bounds, shapes, formats, length.** `number_input`, `slider`, `select_slider` and `date_input` ranges, `datetime_input`, `time_input`, `color_picker`, `pagination`, `max_chars` on text and chat inputs | Low–Med: mostly coerced today; reversed and over-long ranges pass | High: silent reset or truncation becomes `invalid_value` naming the bound | S | Low |
 | 5 | **`required`, per field.** A required widget cannot change to empty | Med | High: closes "required not enforced" | S | Low |
-| **v1.x** | | | | | |
+| **Phase 2** | | | | | |
 | 6 | **Data editor edit policy.** `num_rows`, editable columns, row and column existence, index rules, cost of added rows | High: editors feed database write-back | High: a prerequisite for agent edits | M–L | Med |
 | 7 | **Form submit integrity.** Fields change only with their own form's submit; a submit is refused as a whole if a rendered required field is empty or its button is disabled | Med | Med–High: replaces `missing_form_submit` logic; allows `clear_on_submit` on the server for agents | M–L | Med |
 | 8 | **Dataframe selections.** `selection_mode` and bounds; `ButtonColumn` row bound | Med | High: a prerequisite for agent selections, the agent spec's first interaction follow-up | S–M | Low |
@@ -242,10 +244,10 @@ Why this order:
 - **Items 4 and 5 add little security on their own,** since most of item 4 is already
   coerced. Their value is the agent half: no silent corrections, `required` enforced, and
   a `value_schema` that can finally state `minimum`, `maximum`, and `maxLength` truthfully.
-- **Item 6 leads v1.x** because it is the largest security gap left after v1: data
-  editors feed database write-back, and a disabled column or a fixed row count protects
-  nothing today. It is also a prerequisite for agent edits. It sits outside v1 only
-  because it needs its own policy design (see the [tech spec](tech-spec.md#per-item-notes)).
+- **Item 6 leads Phase 2** because it is the largest security gap left after Phase 1:
+  data editors feed database write-back, and a disabled column or a fixed row count
+  protects nothing today. It is also a prerequisite for agent edits. It sits outside
+  Phase 1 only because it needs its own policy design (see the [tech spec](tech-spec.md#per-item-notes)).
 - **Item 7 completes `required` inside forms.** A field-level rule cannot catch a submit
   with a required field that was never filled, because that field never changes.
 - **Item 8 unblocks agent selections** and is small.
@@ -316,10 +318,16 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser is unaffected except in two
-cases. A click that races a rerun which hides or retargets the widget is dropped. A
-button that disables itself in `on_click` returns `True` for that run, because the click
-was legal when it was made. The other changes affect only forged values and `AppTest`.
+Each change follows from the contract. A correct browser is affected only in these cases:
+
+- A click that races a rerun which hides or retargets the widget is dropped.
+- A button that disables itself in `on_click` returns `True` for that run, because the
+  click was legal when it was made.
+
+A browser that reconnects to a new session, after a server restart or an expired
+`server.disconnectedSessionTTL`, keeps its values as today. No callback fires for them,
+and each is checked when its widget registers. The other changes affect only forged
+values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -375,7 +383,7 @@ was legal when it was made. The other changes affect only forged values and `App
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. |
+| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
 | No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the sync races described there. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Rejections are logged. A rejection counter belongs with the agent spec's operations follow-up. |
