@@ -71,9 +71,10 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  *
  * The on-screen markdown is ellipsized, so its box is the clipped width. A
  * clone of that markdown is measured unconstrained. The clone keeps bold and
- * inline code, which are wider than the container's plain font, and stays
- * inside the value so it inherits that font. Firefox returns an empty `font`
- * shorthand when the theme sets the face through longhands.
+ * inline code, which are wider than the container's plain font. The clone
+ * stays inside the value to inherit its font, because Firefox returns an
+ * empty `font` shorthand from `getComputedStyle` when the theme sets font
+ * longhands.
  */
 function recordMetricValueWidth(value: HTMLElement): void {
   const source = value.querySelector(".stMarkdownEllipsis")
@@ -124,8 +125,11 @@ function recordMetricValueWidth(value: HTMLElement): void {
  * already shrunk to the narrower screen slot.
  */
 function recordMetricAvailableWidth(value: HTMLElement): void {
-  const column = value.closest(".stElementContainer")
-  const box = column instanceof HTMLElement ? column : value.parentElement
+  const elementContainer = value.closest(".stElementContainer")
+  const box =
+    elementContainer instanceof HTMLElement
+      ? elementContainer
+      : value.parentElement
   if (!(box instanceof HTMLElement)) {
     return
   }
@@ -405,10 +409,17 @@ function Metric({
     }
     // beforeprint still uses screen media. This records the printed column
     // once print layout has replaced it.
+    // Without a recorded text width (print media emulated without
+    // beforeprint), the slot alone would scale the figure against the page.
     const printMedia = window.matchMedia("print")
     const handlePrintMedia = (): void => {
-      if (printMedia.matches && contentWidth && valueRef.current) {
-        recordMetricAvailableWidth(valueRef.current)
+      const value = valueRef.current
+      if (
+        printMedia.matches &&
+        value &&
+        value.style.getPropertyValue(METRIC_TEXT_WIDTH_VAR) !== ""
+      ) {
+        recordMetricAvailableWidth(value)
       }
     }
 
@@ -421,11 +432,15 @@ function Metric({
 
     window.addEventListener("beforeprint", handleBeforePrint)
     window.addEventListener("afterprint", handleAfterPrint)
-    printMedia.addEventListener("change", handlePrintMedia)
+    if (contentWidth) {
+      printMedia.addEventListener("change", handlePrintMedia)
+    }
     return () => {
       window.removeEventListener("beforeprint", handleBeforePrint)
       window.removeEventListener("afterprint", handleAfterPrint)
-      printMedia.removeEventListener("change", handlePrintMedia)
+      if (contentWidth) {
+        printMedia.removeEventListener("change", handlePrintMedia)
+      }
     }
   }, [contentWidth])
 

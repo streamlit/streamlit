@@ -479,6 +479,32 @@ describe("fillDataFramePrintSlot", () => {
     frame.remove()
   })
 
+  it("records a unitless font ratio when container query units are unavailable", () => {
+    const supports = mockCssSupports(true)
+    supports.mockImplementation((property: string) => property !== "width")
+    const frame = document.createElement("div")
+    frame.className = "stDataFrame"
+    Object.defineProperty(frame, "clientWidth", { value: 80 })
+    Object.defineProperty(slot, "clientWidth", { value: 0 })
+    frame.append(slot)
+    document.body.append(frame)
+    const spy = mockTableWidth(320)
+
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      1,
+      () => textCell("Ada"),
+      measure
+    )
+
+    expect(supports).toHaveBeenCalledWith("width", "1cqw")
+    expect(slot.style.getPropertyValue(DATAFRAME_PRINT_SCALE_VAR)).toBe("0.25")
+    spy.mockRestore()
+    supports.mockRestore()
+    frame.remove()
+  })
+
   it("refits from the printed columns when they are wider than the probe", () => {
     const frame = document.createElement("div")
     frame.className = "stDataFrame"

@@ -122,16 +122,17 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
     expect(gapped).toContain("margin-bottom:16px")
-    // Balloons and snow are display:none in print, and the cache spinner
-    // has no height, so the gap margin does not exclude them.
+    // Balloons and snow are display:none in print, so the gap margin does
+    // not exclude them.
     expect(gapped).not.toContain(":not(:has(.stBalloons))")
     expect(gapped).not.toContain(":not(:has(.stSnow))")
-    expect(gapped).not.toContain(":not(:has(> .stCacheSpinner))")
     expect(gapped).toContain(":not(:has(> .stPageLink))")
-    // The link's own margin only trims the flex gap by xs. The print margin
-    // is the gap minus that trim.
+    expect(gapped).toContain(":not(:has(> .stCacheSpinner))")
+    // A page link trims the flex gap by xs and a cache spinner cancels it
+    // with -lg. The print margin is the gap minus that trim.
     expect(gapped).toContain(":has(> .stPageLink)")
     expect(gapped).toContain("margin-bottom:calc(16px - 0.375rem)")
+    expect(gapped).toContain("margin-bottom:calc(16px - 1rem)")
     expect(gapped).not.toContain("padding-bottom:16px")
   })
 

@@ -334,6 +334,57 @@ describe("Metric element", () => {
     expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
   })
 
+  it("refits a content-width metric on print media only after beforeprint", () => {
+    const listeners: (() => void)[] = []
+    const matchMedia = vi
+      .spyOn(window, "matchMedia")
+      .mockImplementation((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
+        addListener: vi.fn(),
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
+        removeListener: vi.fn(),
+        addEventListener: vi.fn((_type: string, listener: () => void) => {
+          listeners.push(listener)
+        }),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+
+    render(<Metric {...getProps({ body: "$48.6M" })} />)
+    expect(listeners).toHaveLength(0)
+
+    render(
+      <Metric
+        {...getProps({ body: "$12.1M" })}
+        widthConfig={new streamlit.WidthConfig({ useContent: true })}
+      />
+    )
+    expect(listeners).toHaveLength(1)
+
+    const value = screen.getAllByTestId("stMetricValue")[1]
+    const column = document.createElement("div")
+    Object.defineProperty(column, "clientWidth", { value: 80 })
+    const closest = vi
+      .spyOn(Element.prototype, "closest")
+      .mockImplementation(selector =>
+        selector === ".stElementContainer" ? column : null
+      )
+
+    // Print emulation without beforeprint has no text width to scale by.
+    listeners[0]()
+    expect(value.style.getPropertyValue("--st-metric-available")).toBe("")
+
+    value.style.setProperty("--st-metric-text-width", "112px")
+    listeners[0]()
+    expect(value.style.getPropertyValue("--st-metric-available")).toBe("80px")
+
+    closest.mockRestore()
+    matchMedia.mockRestore()
+  })
+
   it("renders with border if passed", () => {
     const props = getProps({ showBorder: true })
     render(<Metric {...props} />)

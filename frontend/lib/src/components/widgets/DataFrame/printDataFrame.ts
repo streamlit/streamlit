@@ -732,7 +732,8 @@ function supportsPrintFontRatio(): boolean {
   return (
     typeof CSS !== "undefined" &&
     typeof CSS.supports === "function" &&
-    CSS.supports("font-size", "calc(1px * min(1, tan(atan2(1px, 2px))))")
+    CSS.supports("font-size", "calc(1px * min(1, tan(atan2(1px, 2px))))") &&
+    CSS.supports("width", "1cqw")
   )
 }
 

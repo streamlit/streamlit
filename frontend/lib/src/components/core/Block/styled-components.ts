@@ -78,8 +78,9 @@ const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn${PRINT_STACK_TRIGGER}, > .stCo
  *
  * A page link only trims the flex gap, by xs above and below. Print replaces
  * the gap with margin, so the trim stays in that margin. The next link's own
- * negative margin-top then collapses with it. Balloons and snow containers
- * are `display: none` in print, and a cache spinner has no height, so this
+ * negative margin-top then collapses with it. A cache spinner's zero-height
+ * container cancels its gap with -lg, so its print margin is the gap minus
+ * lg. Balloons and snow containers are `display: none` in print, so this
  * margin does not exclude them.
  */
 function printBlockGapMargins(
@@ -90,11 +91,15 @@ function printBlockGapMargins(
     return {}
   }
   return {
-    "& > :not(:last-child):not(:has(> .stPageLink))": {
-      marginBottom: gapWidth,
-    },
+    "& > :not(:last-child):not(:has(> .stPageLink)):not(:has(> .stCacheSpinner))":
+      {
+        marginBottom: gapWidth,
+      },
     "& > :not(:last-child):has(> .stPageLink)": {
       marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
+    },
+    "& > :not(:last-child):has(> .stCacheSpinner)": {
+      marginBottom: `calc(${gapWidth} - ${theme.spacing.lg})`,
     },
   }
 }
@@ -385,8 +390,8 @@ export interface StyledFlexContainerBlockProps {
   overflowX?: React.CSSProperties["overflowX"]
 }
 
-/** Any set height other than auto, including fit-content. Content height is what collapses in print. */
-function hasDefinitePrintHeight(
+/** True for any configured height except auto. Print keeps flex for these so stretch children share the height. */
+function hasNonAutoHeight(
   height: React.CSSProperties["height"] | undefined
 ): boolean {
   return height !== undefined && height !== "auto"
@@ -426,16 +431,16 @@ export const StyledFlexContainerBlock =
         direction === Direction.VERTICAL &&
         (crossAxis === "center" || crossAxis === "end")
       const keepsPrintFlexForHeight =
-        direction === Direction.VERTICAL && hasDefinitePrintHeight(height)
+        direction === Direction.VERTICAL && hasNonAutoHeight(height)
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
-      // Chrome's print layout drops the height of a flex or table row, so a
-      // chart paints over the next heading. Vertical blocks use normal
-      // flow. A column row stacks, and each column takes the full page
-      // width, only when it holds a card, chart, dataframe, or static
-      // table; a row of compact widgets stays side by side. A bordered
-      // card stays on one page so the chart cannot land on the heading
-      // below.
+      // Print rules:
+      // - A column row that holds a card, chart, dataframe, or table stacks
+      //   into full-width columns. Rows of compact widgets stay side by side.
+      // - Other vertical blocks switch to block layout unless they keep flex
+      //   (see above).
+      // - In landscape, a bordered card avoids page breaks unless it holds a
+      //   print table, which has to paginate.
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
