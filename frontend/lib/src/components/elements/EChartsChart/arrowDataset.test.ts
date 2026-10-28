@@ -429,6 +429,19 @@ describe("quiverToEChartsRows", () => {
       expected: [-0.005, -0.05, null],
     },
     {
+      name: "Decimal with a negative scale",
+      column: {
+        // Unscaled 123 and -5 with scale -2 are 12300 and -500.
+        values: [
+          new Uint32Array([123, 0, 0, 0]),
+          new Uint32Array([-5 >>> 0, 0xffffffff, 0xffffffff, 0xffffffff]),
+          null,
+        ],
+        type: new Decimal(-2, 10),
+      },
+      expected: [12300, -500, null],
+    },
+    {
       name: "Uint64 above MAX_SAFE_INTEGER",
       column: { values: [maxSafe + BigInt(2)], type: new Uint64() },
       expected: [Number(maxSafe + BigInt(2))],

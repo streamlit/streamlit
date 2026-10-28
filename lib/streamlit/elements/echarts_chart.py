@@ -437,11 +437,10 @@ def _ensure_unique_dataset_labels(labels: list[str]) -> None:
 def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
     """Remove pandas index fields so only data columns reach the chart.
 
-    A table built with ``pyarrow.Table.from_pandas`` can store the dataframe
-    index as real fields. Rewrites the pandas metadata rather than dropping it.
-    The browser reads pandas-only type tags (for example, for period columns)
-    from it, and fails to parse metadata that names index fields the table no
-    longer has.
+    ``pyarrow.Table.from_pandas`` can store the dataframe index as real fields.
+    The index entries are removed from the pandas metadata too, rather than
+    dropping the metadata: the browser needs its type tags (for example, for
+    period columns) but fails to parse metadata that names missing fields.
     """
     metadata = table.schema.metadata or {}
     raw_pandas_metadata = metadata.get(b"pandas")
@@ -449,6 +448,7 @@ def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
         # Polars or plain Arrow tables have no pandas index.
         return table
 
+    index_fields: set[str] = set()
     try:
         pandas_metadata = json.loads(raw_pandas_metadata)
         index_columns = pandas_metadata.get("index_columns") or []
@@ -462,12 +462,14 @@ def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
             for column in pandas_metadata.get("columns") or []
             if column.get("field_name") not in index_fields
         ]
+        new_metadata = {**metadata, b"pandas": json.dumps(pandas_metadata).encode()}
     except (ValueError, TypeError, AttributeError):
         # Malformed pandas metadata would also fail to parse in the browser,
-        # so drop it and send the table as plain Arrow.
-        return table.replace_schema_metadata(
-            {key: value for key, value in metadata.items() if key != b"pandas"}
-        )
+        # so drop it and send the table as plain Arrow. Index fields already
+        # read from it are still dropped below.
+        new_metadata = {
+            key: value for key, value in metadata.items() if key != b"pandas"
+        }
 
     if index_fields:
         # Select by position so duplicate data field names survive until the
@@ -479,9 +481,7 @@ def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
                 if name not in index_fields
             ]
         )
-    return table.replace_schema_metadata(
-        {**metadata, b"pandas": json.dumps(pandas_metadata).encode()}
-    )
+    return table.replace_schema_metadata(new_metadata)
 
 
 def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
@@ -926,6 +926,36 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
     return _DEFAULT_CONTENT_HEIGHT
 
 
+def _echarts_data(
+    proto: EChartsChartProto, *, coordinates: str
+) -> dict[str, Any] | None:
+    """An ECharts chart's agent ``data``: its one table and its option.
+
+    A dataframe ``dataset.source`` travels as a named Arrow dataset, and the
+    option keeps only its ``{"name": <hash>}`` placeholder, so a chart over one
+    table is summarized and served like a dataframe. Several tables are not
+    one table, so none of them is served. Without a dataset, the option holds
+    all of the chart's data.
+    """
+    datasets = proto.datasets
+    if not datasets:
+        return agent_data.raw_spec(proto.spec)
+
+    data: dict[str, Any]
+    if len(datasets) > 1:
+        data = agent_data.unavailable("multiple_datasets")
+    else:
+        # No block means the buffer could be neither read nor registered, and
+        # an Arrow copy is only left unregistered above the size bound.
+        data = agent_data.arrow(
+            datasets[0].data.data, coordinates=coordinates
+        ) or agent_data.unavailable("too_large_to_serve")
+    spec = agent_data.parse_spec(proto.spec)
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
 class EChartsMixin:
     @overload
     def echarts_chart(
@@ -1016,14 +1046,18 @@ class EChartsMixin:
             If your option object includes a ``dataset`` with a dataframe-like
             ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
             its rows to ECharts and preserves the column order through
-            ``dataset.dimensions`` when you haven't set it. Datetimes arrive as
-            ISO-8601 strings: naive values keep the wall-clock time with no
-            timezone suffix, and timezone-aware values use a ``Z`` suffix.
-            Dates arrive as ``YYYY-MM-DD``, times of day as ``HH:mm:ss`` (with
-            milliseconds when set), and durations as milliseconds. Missing
-            values become ``null``. The dataframe index
-            isn't included. To plot the index, reset it into a column first
-            (``df.reset_index()``).
+            ``dataset.dimensions`` when you haven't set it. The dataframe index
+            isn't included. To plot it, reset it into a column first
+            (``df.reset_index()``). Cell values are converted as follows:
+
+            - Naive datetimes: ISO-8601 strings without a timezone suffix.
+            - Timezone-aware datetimes: ISO-8601 strings with a ``Z`` suffix.
+            - Dates: ``YYYY-MM-DD``.
+            - Times of day: ``HH:mm:ss``, with milliseconds when set.
+            - Durations: milliseconds.
+            - Decimals: numbers.
+            - Periods and intervals: labels such as ``2020-01`` and ``(0, 1]``.
+            - Missing values and non-finite floats: ``null``.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -1465,7 +1499,9 @@ class EChartsMixin:
             # it is "rerun".
             on_select="rerun" if is_selection_activated else None,
             alt=echarts_chart_proto.alt or None,
-            data_builder=lambda: agent_data.raw_spec(echarts_chart_proto.spec),
+            data_builder=lambda: _echarts_data(
+                echarts_chart_proto, coordinates=self.dg._get_write_delta_path_str()
+            ),
         )
 
         if not is_selection_activated:

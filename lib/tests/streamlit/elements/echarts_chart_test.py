@@ -1074,6 +1074,22 @@ def test_pyarrow_table_source_drops_unparseable_pandas_metadata() -> None:
     assert sent.schema.metadata == {b"origin": b"test"}
 
 
+def test_pyarrow_table_source_drops_index_named_by_malformed_metadata() -> None:
+    """An index field named before the metadata turns out malformed is dropped."""
+    table = pa.Table.from_pandas(_INDEXED_DF)
+    pandas_metadata = table.schema.pandas_metadata
+    pandas_metadata["columns"] = ["not a column entry"]
+    table = table.replace_schema_metadata(
+        {b"pandas": json.dumps(pandas_metadata).encode()}
+    )
+
+    dataset, sent = _convert_source(table)
+
+    assert dataset["dimensions"] == ["v"]
+    assert sent.column_names == ["v"]
+    assert b"pandas" not in (sent.schema.metadata or {})
+
+
 @pytest.mark.parametrize(
     "source",
     [

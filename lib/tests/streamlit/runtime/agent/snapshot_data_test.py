@@ -439,6 +439,46 @@ class SnapshotDataTest(SnapshotCase):
 
         assert data == {"spec": option, "complete": True}
 
+    def test_echarts_reports_its_one_dataframe_dataset(self) -> None:
+        """A dataframe ``dataset.source`` travels as Arrow, so it is summarized
+        and served like a table, beside the option that names it.
+        """
+        st.echarts_chart(
+            {
+                "dataset": {"source": _FRAME},
+                "xAxis": {"type": "category"},
+                "yAxis": {},
+                "series": [{"type": "bar"}],
+            }
+        )
+        [dataset] = self.get_delta_from_queue().new_element.echarts_chart.datasets
+
+        data = self._data("echarts_chart")
+
+        assert _names(data) == ["a", "b"]
+        assert data["row_count"] == 3
+        assert data["complete"] is True
+        assert _arrow_files(self.media_file_storage) == [dataset.data.data]
+        assert _MEDIA_URL.fullmatch(data["url"])
+        assert data["spec"]["dataset"]["source"] == {"name": dataset.name}
+
+    def test_echarts_over_several_dataframes_serves_none(self) -> None:
+        """Two tables are not one, so neither is served or previewed."""
+        st.echarts_chart(
+            {
+                "dataset": [{"source": _FRAME}, {"source": _OTHER}],
+                "series": [{"type": "bar", "datasetIndex": 1}],
+            }
+        )
+
+        data = self._data("echarts_chart")
+
+        assert data["unavailable"] == "multiple_datasets"
+        assert "url" not in data
+        assert "columns" not in data
+        assert _arrow_files(self.media_file_storage) == []
+        assert len(data["spec"]["dataset"]) == 2
+
     def test_pydeck_reports_its_spec_as_given(self) -> None:
         """A Deck.gl spec is complete, whether its layers carry rows inline or
         the browser fetches them, and nothing is counted or served beside it.

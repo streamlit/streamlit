@@ -501,6 +501,9 @@ describe("format", () => {
     { unscaled: -5, scale: 3, expected: "-0.005" },
     { unscaled: -12, scale: 3, expected: "-0.012" },
     { unscaled: -12345, scale: 2, expected: "-123.45" },
+    { unscaled: 123, scale: -2, expected: "12300" },
+    { unscaled: -123, scale: -4, expected: "-1230000" },
+    { unscaled: 0, scale: -2, expected: "0" },
   ])(
     "decimal $unscaled with scale $scale formats as $expected",
     ({ unscaled, scale, expected }) => {

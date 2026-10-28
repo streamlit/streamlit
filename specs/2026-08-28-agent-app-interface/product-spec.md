@@ -984,7 +984,10 @@ Charts and maps:
 
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
-  so there is no table to serve and a client should stop looking for one.
+  so there is no table to serve and a client should stop looking for one. An ECharts
+  `dataset.source` dataframe is the exception: it travels as Arrow, so the chart reports
+  that table as a Vega-Lite chart over one dataframe does, and several such tables as
+  `unavailable: "multiple_datasets"`.
 - **Data a Vega-Lite specification loads from a URL is not served.** The browser fetches
   it and this interface does not, so the chart reports `complete: false` with
   `unavailable: "external_url"`, even beside a dataframe, and the URL stays in `spec`.
@@ -996,8 +999,7 @@ Charts and maps:
   must not remove meaning. Title text a template sets for the figure, an axis, or the
   legend is dropped with it in v1; keeping that text is a follow-up. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
-  the figure's data. Serving a large specification behind `data.url`, and an ECharts
-  `dataset.source` as Arrow, is follow-up #9.
+  the figure's data. Serving a large specification behind `data.url` is follow-up #9.
 - **A map reports the specification its browser renders.** `st.map` compiles the columns
   it plots into a Deck.gl layer, and v1 reports that layer's specification as `spec`, as
   `st.pydeck_chart` does. It carries every plotted point and nothing else from the
@@ -1364,9 +1366,8 @@ than ranked, and say where one builds on another.
    already use, instead of staying inline: an oversized figure specification, option
    list, or text body — a long Markdown document, or its raw copy in a collapsed
    expander — is served behind a URL, readable through `get_data`, with the start of
-   it, `truncated: true`, and its full length or option count in the snapshot. An
-   ECharts `dataset.source` and `st.map`'s plotted columns are served as Arrow, as a
-   dataframe's table is. Table
+   it, `truncated: true`, and its full length or option count in the snapshot.
+   `st.map`'s plotted columns are served as Arrow, as a dataframe's table is. Table
    previews get a byte budget beside the row cap, since a few long strings or nested
    values can make 100 rows enormous, and a request can ask for fewer preview rows; the
    preview then says `complete: false`, as it does past the row cap. Nothing that holds

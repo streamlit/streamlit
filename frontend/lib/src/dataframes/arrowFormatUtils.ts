@@ -470,8 +470,14 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
   // start with a minus sign.
   let numString = decimalWordsToBigInt(value).toString()
 
-  if (scale === 0) {
+  if (scale === 0 || numString === "0") {
     return numString
+  }
+
+  if (scale < 0) {
+    // A negative scale multiplies the unscaled integer by a power of ten,
+    // e.g. 123 with scale -2 is 12300.
+    return numString + "0".repeat(-scale)
   }
 
   let sign = ""
