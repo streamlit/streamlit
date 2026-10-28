@@ -319,21 +319,20 @@ Reads a media file the app still stores:
   reads the argument by its shape alone. Media URLs end in the file's extension where
   its type has one, such as `../../media/<id>.png`, and a table's has none:
   `../../media/<id>`.
-  - **A bare id, or a relative URL whose path ends in `media/<id>`:** the server looks
-    up that id, with one extension removed if there is one, in the media file manager.
-    So `../../media/<id>.png` and a bare `<id>` name the same image.
-  - **An absolute URL whose path ends in `media/<id>`,** such as one the model resolved
-    against the URL it connected to, with or without the Community Cloud prefix: the
-    server does not read it.
+  - **A bare id, or a URL, relative or absolute, whose path ends in `media/<id>`:** the
+    server looks up that id, with one extension removed if there is one, in the media
+    file manager. So `../../media/<id>.png`, the absolute URL a model resolved from it
+    with or without the Community Cloud prefix, and a bare `<id>` name the same image.
+    Only the path's last segment is read, so an absolute URL adds no exposure: the id
+    is what grants access either way.
   - **Anything else**, such as an external `http` or `https` URL, a `data:` URL, or a
     relative static URL: not a media file. `st.image`, `st.audio`, and `st.video` show
     those unchanged.
 - **`unknown_file`** is the error for an argument that reads no stored file. Its
   message depends on the argument's shape, so the model's next step is right:
-  - **A bare id or a media URL, relative or absolute,** that reads no stored file, such
-    as an absolute URL the model resolved, or an id whose file a later run replaced or
-    a run in progress has not re-created yet: pass `url` exactly as the latest result
-    shows it, a relative URL or a bare id. If a run is still in progress, call
+  - **A bare id or a media URL** that reads no stored file, such as one whose file a
+    later run replaced or a run in progress has not re-created yet: pass `url` as the
+    latest result shows it. If a run is still in progress, call
     `interact` with only `session_id` to collect it first. Do not call `interact` just
     to re-create a file.
   - **Anything else:** it is not a media file, so do not call `get_data` for it again,
@@ -389,9 +388,8 @@ model needs:
   `value_schema` for its shape and its `props` for the legal values.
 - `data.complete: false` with a `data.url` means there is more: read it with
   `get_data`, starting at the length of `data.preview.rows`, before the next
-  `interact` call replaces the result. Pass `url` exactly as the result shows it, a
-  relative URL or a bare id. Do not resolve it: a resolved absolute URL is
-  `unknown_file`.
+  `interact` call replaces the result. Pass `url` as the result shows it; it does not
+  need resolving.
   `complete: false` with `unavailable` (`lazy_loading`, `too_large_to_serve`,
   `external_url`, `multiple_datasets`, `undescribed`) has no file. Do not call
   `get_data` for it, and do not page a lazy chunk as if it were the rest of the table.
@@ -697,8 +695,8 @@ sessions.
 native way to expose files, but many clients only let a user attach them by hand rather
 than letting the model read them. Absolute URLs would not help either: the app cannot
 always know its public URL, as above, and a chat client's sandbox still could not fetch
-or parse the Arrow. A read-only tool works in every client, and it accepts the URL
-exactly as the result shows it.
+or parse the Arrow. A read-only tool works in every client, and it accepts the URL as
+the result shows it, or resolved.
 
 ## Follow-ups
 
