@@ -150,6 +150,7 @@ other two are:
 # runtime/state/common.py
 WidgetValidator: TypeAlias = Callable[..., "Violation | None"]
 
+
 class WidgetMetadata(Generic[T]):
     deserializer: WidgetDeserializer[T]
     serializer: WidgetSerializer[T]
@@ -167,7 +168,9 @@ class NumberInputSerde:
     min_value: Number
     max_value: Number
 
-    def validate(self, ui_value: Number | None, *, previous: Any = None) -> Violation | None:
+    def validate(
+        self, ui_value: Number | None, *, previous: Any = None
+    ) -> Violation | None:
         if ui_value is None:
             return None
         if self.data_type == NumberInputProto.FLOAT and not math.isfinite(ui_value):
