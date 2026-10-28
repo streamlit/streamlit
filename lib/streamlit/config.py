@@ -1284,13 +1284,17 @@ _create_option(
     description="""
         Enable the agent API, which lets a non-browser client drive the app
         over HTTP at `/_stcore/agent/interact`.
+        `/_stcore/agent/openapi.json` describes the protocol, and reports
+        whether the API is on.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets
         no more access than the app gives a browser. Requests from web pages
         are refused unless their origin is in `server.corsAllowedOrigins`.
         Identity comes from `server.trustedUserHeaders`; without it, agent
-        sessions are anonymous.
+        sessions are anonymous. A proxy that strips client-supplied identity
+        headers must also strip them from requests to `/_stcore/agent/`, not
+        only from the WebSocket.
 
         Note: This is an experimental feature. The API and its options are
         subject to change.
@@ -1337,6 +1341,23 @@ _create_option(
         what a loop of creating calls can hold in memory. When the limit is
         reached, sessions idle past `server.agentSessionTTL` are reclaimed
         first, and new sessions are then refused.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows an agent API response includes inline, as the
+        `data.preview` of each element whose data is serialized as Arrow:
+        `st.dataframe`, `st.data_editor`, `st.table`, and Vega-Lite charts
+        (`st.altair_chart`, `st.vega_lite_chart`, and built-in charts such as
+        `st.line_chart`).
+
+        An element with more rows is reported as incomplete. Its full data is
+        at `data.url`, unless `data.unavailable` says why it cannot be served.
     """,
     visibility="hidden",
     default_val=100,

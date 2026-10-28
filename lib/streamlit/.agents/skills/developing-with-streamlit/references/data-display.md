@@ -262,11 +262,13 @@ st.dataframe(
 
 | Widget           | Use When                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, search, row selection       |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
 | `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
+
+Prefer `st.dataframe` for sorting, search, and formatting, and `st.data_editor` for editing, over `streamlit-aggrid`. Use `column_config` for formats and editors. Search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source such as a Polars `LazyFrame`). Pass `lazy=False` only when the full table still fits in the browser. Use aggrid only for per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Use `streamlit-pivot-table` for pivot tables. When hiding non-matching rows is enough, filter the data in Python with separate widgets.
 
 ## Description and key-value lists
 

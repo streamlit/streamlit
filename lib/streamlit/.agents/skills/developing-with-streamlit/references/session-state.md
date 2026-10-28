@@ -123,7 +123,23 @@ def increment(amount):
 st.button("Add 5", on_click=increment, args=(5,))
 ```
 
-Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
+Streamlit stores `args` and `kwargs` when the widget command runs, not when the user interacts. Callbacks run before this run's widget commands, so a widget return value passed through `args=` or `kwargs=` is the previous run's value. To read any widget in a callback, including the widget that triggered it, give it a `key` and read `st.session_state` inside the callback.
+
+```python
+# BAD: `text` is the previous run's value, so a just-typed edit can be lost
+text = st.text_area("Notes")
+st.button("Save", on_click=save, args=(text,))
+```
+
+```python
+# GOOD: st.session_state.notes already holds the latest input when the callback runs
+def save():
+    save_notes(st.session_state.notes)
+
+
+st.text_area("Notes", key="notes")
+st.button("Save", on_click=save)
+```
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 
