@@ -44,7 +44,7 @@ Then import according to the component's documentation. The import name often di
 - **Check popularity** — downloads and community usage
 - **Confirm the gap** — no native command in the mapping above covers the behavior
 
-## Components with no native equivalent
+## When a component still fits
 
 ### streamlit-pivot-table
 
@@ -97,8 +97,6 @@ annotated_text(
     ("text", "noun", "#afa"),
 )
 ```
-
-## When native is not enough
 
 ### streamlit-aggrid
 
