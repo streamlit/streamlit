@@ -1795,7 +1795,7 @@ def start_browser_print(page: Page) -> None:
 
 
 def end_browser_print(page: Page) -> None:
-    """Fire ``afterprint`` so print-only DOM is removed.
+    """Fire ``afterprint`` and restore screen media.
 
     Parameters
     ----------
@@ -1803,6 +1803,8 @@ def end_browser_print(page: Page) -> None:
         The page that was printed.
     """
     page.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    page.emulate_media(media="screen", forced_colors="none")
+    flush_print_media_change(page)
 
 
 def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
