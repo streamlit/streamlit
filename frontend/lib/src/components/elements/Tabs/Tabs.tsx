@@ -403,7 +403,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                 data-testid="stTabPanel"
                 id={String(index)}
                 // A closed panel stays mounted but is not printed. Print
-                // layout uses this to ignore a dataframe that lives there.
+                // layout uses this to ignore the charts and dataframes inside it.
                 data-st-inactive={activeTabKey === index ? undefined : ""}
                 $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
