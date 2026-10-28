@@ -22,7 +22,7 @@ import type { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
+import { applyStreamlitTheme } from "./CustomTheme"
 import {
   applyTheming,
   handleClickEvent,
@@ -35,7 +35,6 @@ import {
 vi.mock("./CustomTheme", () => ({
   replaceTemporaryColors: vi.fn().mockReturnValue("{}"),
   applyStreamlitTheme: vi.fn(),
-  layoutWithThemeDefaults: vi.fn().mockReturnValue({}),
 }))
 
 describe("PlotlyChart utils", () => {
@@ -120,13 +119,12 @@ describe("PlotlyChart utils", () => {
       expect(applyStreamlitTheme).toHaveBeenCalled()
     })
 
-    it("applies default theme when not using the default plotly theme", () => {
+    it("does not apply Streamlit theme when theme is empty (theme=None)", () => {
       const mockPlotlyFigure = { data: [{}], layout: {}, frames: [] }
-      const chartTheme = "default"
 
-      applyTheming(mockPlotlyFigure, chartTheme, mockTheme.emotion)
+      applyTheming(mockPlotlyFigure, "", mockTheme.emotion)
 
-      expect(layoutWithThemeDefaults).toHaveBeenCalled()
+      expect(applyStreamlitTheme).not.toHaveBeenCalled()
     })
   })
 

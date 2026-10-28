@@ -44,7 +44,7 @@ export const StyledElementContainerLayoutWrapper: FC<
     config: ElementContainerConfig
   }
 > = ({ node, config, ...rest }) => {
-  const { hasDefiniteHeight, isInHorizontalLayout } =
+  const { hasDefiniteHeight = false, isInHorizontalLayout } =
     useRequiredContext(FlexContext)
 
   const styleOverrides = useMemo(

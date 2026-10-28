@@ -231,7 +231,7 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
         let separator: string
         if (ph.thousand_sep === "_") {
           separator = "_"
-        } else if (ph.pad_char?.startsWith("'")) {
+        } else if (ph.pad_char?.startsWith("'") === true) {
           separator = ph.pad_char.charAt(1)
         } else {
           separator = ","

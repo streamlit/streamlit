@@ -199,7 +199,7 @@ interface StyledMenuListItemProps {
  * A styled menu list item component used by the column menu.
  */
 export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
-  ({ theme, isActive, hasSubmenu, allowWrap }) => ({
+  ({ theme, isActive = false, hasSubmenu = false, allowWrap = false }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-start",

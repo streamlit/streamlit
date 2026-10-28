@@ -160,7 +160,7 @@ export class ConnectionManager {
   public getCachedMessageHashes(): string[] {
     // StaticConnection does not use a MessageCache.
     if (this.websocketConnection instanceof WebsocketConnection) {
-      return this.websocketConnection?.getCachedMessageHashes() ?? []
+      return this.websocketConnection.getCachedMessageHashes()
     }
     return []
   }

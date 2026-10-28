@@ -421,6 +421,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
     null
   )
+  /** Views spec last applied to viewState; a change resets the camera. */
+  const viewsSpecRef = useRef<ParsedDeckGlConfig["views"]>(undefined)
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -625,6 +627,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     let { mapStyle, cartoKey } = converted
     if (
       !hadUnsetMapStyleSentinel &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- pydeck JSON may send null or an empty string for an unset style
       !mapStyle &&
       isMapCompatibleViewSpec(providedViews)
     ) {
@@ -658,7 +661,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   ])
 
   useEffect(() => {
-    // If the ViewState on the server has changed, apply the diff to the current state
+    // Reset the camera when the views change instead of merging the diff:
+    // viewState still holds the previous controller's viewport props (e.g.
+    // MapController's default Web Mercator maxBounds), which would constrain
+    // the new view (GlobeController clamps its zoom to them).
+    if (!isEqual(parsedPydeckJson.views, viewsSpecRef.current)) {
+      viewsSpecRef.current = parsedPydeckJson.views
+      setViewState({ ...deck.initialViewState })
+      initialViewStateRef.current = deck.initialViewState
+      return
+    }
+
+    // Same views: apply only the changed server keys so the user's camera
+    // changes survive reruns.
     if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
@@ -676,7 +691,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       setViewState(existing => ({ ...existing, ...diff }))
       initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState])
+  }, [deck.initialViewState, parsedPydeckJson.views])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {

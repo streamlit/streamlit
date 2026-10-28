@@ -137,7 +137,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   const validateInput = (href?: string): boolean => {
     if (isNullOrUndefined(href)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -184,7 +184,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(href), validateRegex)
       }
 
-      if (validate) {
+      if (validate === true) {
         const validationResult = validateInput(href)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will

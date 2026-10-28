@@ -53,7 +53,10 @@ import {
 } from "@streamlit/protobuf"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -193,7 +196,8 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+  const flexContext = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = flexContext
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -785,6 +789,7 @@ function DataFrame({
   // To activate the group row feature (multi-level headers),
   // we need more than one header row.
   const usesGroupRow = data.dimensions.numHeaderRows > 1
+  const hasFallbackHeight = hasStretchHeightFallback(flexContext)
   const {
     minHeight,
     maxHeight,
@@ -804,7 +809,7 @@ function DataFrame({
     widthConfig,
     heightConfig,
     measuredContainerHeight,
-    isInRoot
+    hasFallbackHeight
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -931,7 +936,7 @@ function DataFrame({
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
   // in a nested container.
   const disableResize =
-    isInHorizontalLayout || Boolean(widthConfig?.useContent && !isInRoot)
+    isInHorizontalLayout || (widthConfig?.useContent === true && !isInRoot)
 
   // The search overlay may only be open while search is actually enabled.
   // Deriving it from `canSearch` ensures the overlay is hidden (instead of

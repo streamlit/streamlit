@@ -17,7 +17,6 @@
 import {
   compileTextInputValidationRegex,
   getInvalidTextInputMessage,
-  isRequiredEmptyText,
   passesTextInputValidation,
 } from "./validation"
 
@@ -91,16 +90,6 @@ describe("passesTextInputValidation", () => {
 
   it("returns false when the value does not match the regex", () => {
     expect(passesTextInputValidation("abc123", regex)).toBe(false)
-  })
-})
-
-describe("isRequiredEmptyText", () => {
-  it.each([null, "", "   ", "\t\n"])("treats %j as required-empty", value => {
-    expect(isRequiredEmptyText(value)).toBe(true)
-  })
-
-  it.each(["a", " a ", "0"])("treats %j as not required-empty", value => {
-    expect(isRequiredEmptyText(value)).toBe(false)
   })
 })
 

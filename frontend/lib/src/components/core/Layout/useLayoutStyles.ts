@@ -128,7 +128,7 @@ const getWidth = (
 ): LayoutDimensionConfig => {
   // The current behaviour is for useContainerWidth to take precedence over
   // width, see arrow.py for reference.
-  if (subElement?.useContainerWidth) {
+  if (subElement?.useContainerWidth === true) {
     return { type: DimensionType.STRETCH }
   }
 
@@ -136,16 +136,17 @@ const getWidth = (
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
   const isStretch =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useStretch still lets the sub-element flag count
-    element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
+    element.widthConfig?.useStretch === true ||
+    subElement?.widthConfig?.useStretch === true
   const isContent =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
-    element.widthConfig?.useContent || subElement?.widthConfig?.useContent
+    element.widthConfig?.useContent === true ||
+    subElement?.widthConfig?.useContent === true
+  // An explicit element width of 0 still counts as a pixel width; `!!` alone
+  // would treat it as unset. A sub-element `pixelWidth` of 0 stays unset,
+  // because `isPositiveNumber(0)` would otherwise turn it into a 0px width.
   const isPixel =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 element width must fall through to the === 0 check below
-    element.widthConfig?.pixelWidth ||
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 sub-element width must not hide the element === 0 check below
-    subElement?.widthConfig?.pixelWidth ||
+    !!element.widthConfig?.pixelWidth ||
+    !!subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth
 
@@ -187,8 +188,8 @@ const getHeight = (
   // We need to support old height configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
-  const isStretch = !!element.heightConfig?.useStretch
-  const isContent = !!element.heightConfig?.useContent
+  const isStretch = element.heightConfig?.useStretch === true
+  const isContent = element.heightConfig?.useContent === true
   const isPixel =
     !!element.heightConfig?.pixelHeight ||
     element.heightConfig?.pixelHeight === 0
@@ -344,7 +345,7 @@ export const useLayoutStyles = ({
     // Apply min-width protection inside content-width containers to prevent elements
     // from becoming too narrow when the container shrinks to fit its content.
     if (
-      flexContext?.isInContentWidthContainer &&
+      flexContext?.isInContentWidthContainer === true &&
       widthConfig.type === DimensionType.STRETCH &&
       minStretchBehavior !== undefined
     ) {

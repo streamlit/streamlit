@@ -35,7 +35,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -968,11 +968,13 @@ class DataEditorMixin:
               performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The editor will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. In a fixed-height
+              container, or a stretch container that fills one, the editor
+              keeps a minimum height that displays up to three rows and shrinks
+              to the remaining space when that minimum fits. Otherwise, the
+              editor uses its default height (at most ten rows) and still
+              grows to match a taller sibling.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
 
@@ -1556,6 +1558,10 @@ class DataEditorMixin:
             agent_props=agent_spec.element(
                 "data_editor",
                 key=proto.id or None,
+                data_builder=lambda: agent_data.arrow(
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_write_delta_path_str(),
+                ),
                 # A browser user can edit the table. This API only reports it.
                 # Kept even when the app locks the editor: unlike a chart
                 # without selections, it is still an editor, and a rejection

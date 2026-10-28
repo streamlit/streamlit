@@ -1719,6 +1719,17 @@ def test_get_widget_value_falls_back_to_previous_run() -> None:
         ss.get_widget_value("missing")
 
 
+def test_get_widget_id_from_key_returns_the_registered_id() -> None:
+    """A user key maps to the element ID it last registered under, else None."""
+    ss = SessionState()
+    ss._set_key_widget_mapping("$$ID-old-prompt", "prompt")
+    ss._set_key_widget_mapping("$$ID-new-prompt", "prompt")
+
+    assert ss.get_widget_id_from_key("prompt") == "$$ID-new-prompt"
+    assert ss.get_widget_id_from_key("$$ID-new-prompt") is None
+    assert ss.get_widget_id_from_key("missing") is None
+
+
 def test_callback_mutation_survives_replay_overlay() -> None:
     """A replay overlay does not overwrite mutations made by fresh callbacks."""
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)

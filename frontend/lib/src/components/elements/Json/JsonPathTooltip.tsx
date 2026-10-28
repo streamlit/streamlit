@@ -120,7 +120,7 @@ function JsonPathTooltip({
     const handleClick = (e: MouseEvent): void => {
       // Guard against the click that opened the tooltip closing it immediately.
       if (Date.now() - openedAtRef.current < OPEN_GUARD_MS) return
-      if (!tooltipBodyRef.current?.contains(e.target as Node)) {
+      if (tooltipBodyRef.current?.contains(e.target as Node) !== true) {
         clearTooltipRef.current()
       }
     }

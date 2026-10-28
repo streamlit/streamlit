@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import textwrap
 from contextlib import asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urljoin
 
+import pyarrow as pa
 import pytest
 from starlette.applications import Starlette
 from starlette.requests import ClientDisconnect, Request
@@ -492,6 +494,60 @@ def test_statuses_end_to_end(tmp_path: Path) -> None:
     assert collected.json()["session_id"] == handle
 
 
+def test_write_refusals_end_to_end(tmp_path: Path) -> None:
+    """A write a real runtime refuses is answered with the catalog's status,
+    runs nothing, and, on a creating call, creates no session.
+    """
+    script = """
+    import streamlit as st
+    from tests.streamlit.runtime.agent import run_gate
+
+    st.text(f"runs={run_gate.count('runs')}")
+    st.text_input("Locked", key="locked", disabled=True)
+    if st.checkbox("More", key="more"):
+        st.slider("Depth", 1, 5, key="depth")
+    st.selectbox("Region", ["EMEA", "APAC"], key="region")
+    """
+    overrides = {"server.agentMaxSessions": 1}
+    with _served_app(tmp_path, script, overrides) as client:
+        creating = client.post(_PATH, json={"widget_state": {"region": "APAC"}})
+        created = client.post(_PATH, json={})
+        handle = created.json()["session_id"]
+        for more in (True, False):
+            client.post(
+                _PATH, json={"session_id": handle, "widget_state": {"more": more}}
+            )
+        refusals = {
+            key: client.post(
+                _PATH, json={"session_id": handle, "widget_state": {key: value}}
+            )
+            for key, value in {
+                "region": "Mars",
+                "typo": 1,
+                "depth": 3,
+                "locked": "x",
+            }.items()
+        }
+        runs = run_gate.value("runs")
+
+    assert creating.status_code == 400
+    assert creating.json()["error"]["code"] == "invalid_request"
+    assert "session_id" not in creating.json()
+    # The one session the server allows was still free.
+    assert created.status_code == 200
+    assert {
+        key: (response.status_code, response.json()["error"]["code"])
+        for key, response in refusals.items()
+    } == {
+        "region": (400, "invalid_value"),
+        "typo": (404, "unknown_key"),
+        "depth": (409, "not_on_page"),
+        "locked": (409, "disabled_widget"),
+    }
+    # The session itself and the two writes that revealed and hid `depth`.
+    assert runs == 3
+
+
 def test_media_urls_resolve_against_the_request_under_a_base_path(
     tmp_path: Path,
 ) -> None:
@@ -536,6 +592,39 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     assert chat_message["props"]["avatar"] == "../../app/static/cat.png"
 
 
+def test_a_tables_data_url_resolves_against_the_request(tmp_path: Path) -> None:
+    """Under `server.baseUrlPath`, a table's `data.url` joined with the
+    request's URL serves the Arrow stream its `data` describes, every row of
+    it and its index column, not only the preview.
+    """
+    script = """
+    import pandas as pd
+    import streamlit as st
+
+    orders = pd.DataFrame(
+        {"order": [f"A-{n:03}" for n in range(150)], "amount": range(150)}
+    )
+    st.dataframe(orders.set_index("order"))
+    """
+    with _served_app(tmp_path, script, {}, base_url="base") as client:
+        response = client.post(f"/base{_PATH}", json={})
+        [data] = [
+            child["data"]
+            for child in response.json()["tree"]["children"][0]["children"]
+            if child["type"] == "dataframe"
+        ]
+        served = client.get(urljoin(str(response.url), data["url"]))
+
+    assert data["complete"] is False
+    assert data["url"].startswith("../../media/")
+    assert served.status_code == 200
+    assert served.headers["Content-Type"] == "application/vnd.apache.arrow.stream"
+    table = pa.ipc.open_stream(served.content).read_all()
+    assert table.num_rows == data["row_count"] == 150
+    assert table.column_names == [column["name"] for column in data["columns"]]
+    assert table.column_names == ["amount", "order"]
+
+
 def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:
     """The route reads no cookie: a valid `st.login` cookie leaves `st.user`
     anonymous and `st.context` without cookies.
@@ -575,3 +664,213 @@ def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:
         "cookies={}",
         "cookie_header=None",
     ]
+
+
+# The worked example in the product spec's "The snapshot" section
+# (specs/2026-08-28-agent-app-interface/product-spec.md), verbatim. Change the two
+# together.
+_SPEC_EXAMPLE: Final = json.loads(
+    """
+{
+  "schema_version": 1,
+  "session_id": "s_7f3a",
+  "status": "ready",
+  "observed_at": "2026-09-06T10:00:00Z",
+  "page": {
+    "url_path": "",
+    "title": "Regional revenue",
+    "icon": ":material/payments:"
+  },
+  "pages": [
+    {
+      "url_path": "",
+      "title": "Regional revenue",
+      "icon": ":material/payments:"
+    },
+    { "url_path": "reports", "title": "Reports" }
+  ],
+  "query_params": {},
+  "tree": {
+    "type": "root",
+    "children": [
+      {
+        "type": "main",
+        "children": [
+          { "type": "title", "props": { "body": "Regional revenue" } },
+          {
+            "type": "caption",
+            "props": {
+              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."
+            }
+          },
+          {
+            "type": "selectbox",
+            "key": "region",
+            "props": {
+              "label": "Region",
+              "options": ["All", "Europe", "AMER", "APAC"],
+              "help": "Customer billing region; All includes every region.",
+              "disabled": false,
+              "label_visibility": "visible",
+              "accept_new_options": false,
+              "filter_mode": "fuzzy",
+              "on_change": "rerun"
+            },
+            "value_schema": { "type": "string" },
+            "value": "All"
+          },
+          {
+            "type": "button",
+            "key": "$$ID-8f2c9a1d4b6e7f30-None",
+            "props": {
+              "label": "Refresh data",
+              "type": "secondary",
+              "disabled": false
+            }
+          },
+          {
+            "type": "metric",
+            "props": {
+              "label": "Net revenue",
+              "value": "€1.2M",
+              "delta": "+8%",
+              "delta_color": "normal",
+              "delta_arrow": "auto",
+              "label_visibility": "visible"
+            }
+          },
+          {
+            "type": "dataframe",
+            "props": { "column_config": { "quarter": { "label": "Quarter" } } },
+            "data": {
+              "columns": [
+                { "name": "quarter", "type": "large_string" },
+                { "name": "revenue", "type": "int64" }
+              ],
+              "row_count": 4,
+              "column_count": 2,
+              "complete": true,
+              "preview": {
+                "rows": [
+                  ["2026-Q1", 284000],
+                  ["2026-Q2", 301500],
+                  ["2026-Q3", 297250],
+                  ["2026-Q4", 318000]
+                ]
+              },
+              "url": "../../media/4f1c8ab27d9e5306"
+            }
+          },
+          {
+            "type": "expander",
+            "props": {
+              "label": "How net revenue is calculated",
+              "expanded": false,
+              "icon": ":material/info:",
+              "type": "default"
+            },
+            "children": [
+              {
+                "type": "markdown",
+                "props": {
+                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      { "type": "sidebar", "children": [] },
+      { "type": "event", "children": [] },
+      { "type": "bottom", "children": [] }
+    ]
+  },
+  "actions": [
+    { "key": "region", "kind": "value", "type": "selectbox", "label": "Region" },
+    {
+      "key": "$$ID-8f2c9a1d4b6e7f30-None",
+      "kind": "trigger",
+      "type": "button",
+      "label": "Refresh data"
+    }
+  ]
+}
+"""  # noqa: E501
+)
+
+_SPEC_EXAMPLE_SCRIPT: Final = """
+import pandas as pd
+import streamlit as st
+
+def home():
+    st.title("Regional revenue")
+    st.caption("Net revenue excludes refunds. Periods are UTC. Source: finance ledger.")
+    st.selectbox(
+        "Region",
+        ["All", "Europe", "AMER", "APAC"],
+        key="region",
+        help="Customer billing region; All includes every region.",
+    )
+    st.button("Refresh data")
+    st.metric("Net revenue", "€1.2M", "+8%")
+    st.dataframe(
+        pd.DataFrame(
+            {
+                "quarter": ["2026-Q1", "2026-Q2", "2026-Q3", "2026-Q4"],
+                "revenue": [284000, 301500, 297250, 318000],
+            }
+        ),
+        column_config={"quarter": st.column_config.Column("Quarter")},
+    )
+    with st.expander("How net revenue is calculated", icon=":material/info:"):
+        st.markdown(
+            "Gross invoiced amounts minus refunds and credit notes, converted to "
+            "EUR at the invoice-date rate."
+        )
+
+def reports():
+    st.text("reports")
+
+st.navigation(
+    [
+        st.Page(
+            home, title="Regional revenue", icon=":material/payments:", default=True
+        ),
+        st.Page(reports, title="Reports", url_path="reports"),
+    ]
+).run()
+"""
+
+# What differs per run, matched by its format in the response body, and the
+# example's spelling of it.
+_RUN_VALUES: Final = [
+    (re.compile(r'"s_[0-9a-f]{32}"'), '"s_7f3a"'),
+    (re.compile(r'"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"'), '"2026-09-06T10:00:00Z"'),
+    (re.compile(r"\$\$ID-[0-9a-f]+-None"), "$$ID-8f2c9a1d4b6e7f30-None"),
+    (re.compile(r'"\.\./\.\./media/[0-9a-f]+"'), '"../../media/4f1c8ab27d9e5306"'),
+]
+
+
+def test_the_specs_worked_example_end_to_end(tmp_path: Path) -> None:
+    """The app the spec's worked example describes gets that snapshot from the
+    route, apart from what differs per run.
+    """
+    with _served_app(tmp_path, _SPEC_EXAMPLE_SCRIPT, {}) as client:
+        response = client.post(_PATH, json={})
+
+    assert response.status_code == 200
+    body = response.text
+    for pattern, example_value in _RUN_VALUES:
+        body = pattern.sub(example_value, body)
+    document = json.loads(body)
+    for node in document["tree"]["children"][0]["children"]:
+        for column in node.get("data", {}).get("columns", []):
+            # pandas before 3.0 holds text as `object`, which Arrow serializes
+            # as `string` rather than `large_string`.
+            if column["type"] == "string":
+                column["type"] = "large_string"
+    assert document == _SPEC_EXAMPLE, (
+        "The snapshot no longer matches the worked example in the product spec's "
+        '"The snapshot" section (specs/2026-08-28-agent-app-interface/'
+        "product-spec.md). Update the code or the example so they agree."
+    )

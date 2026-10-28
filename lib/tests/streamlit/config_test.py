@@ -29,6 +29,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config, config_util, env_util
+from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
@@ -66,6 +67,44 @@ class ConfigTest(unittest.TestCase):
             p.stop()
 
         config._delete_option("_test.tomlTest")
+
+    def test_max_cache_data_size_default(self) -> None:
+        """The global cache budget is disabled by default."""
+        value = config.get_option("server.maxCacheDataSize")
+        assert value is None
+        assert config_max_cache_data_size_to_bytes(value) is None
+
+    def test_max_cache_data_size_accepts_toml_disable_sentinel(self) -> None:
+        """TOML accepts numeric or string zero to disable the global budget."""
+        for value in ("0", '"0"'):
+            config._update_config_with_toml(
+                f"[server]\nmaxCacheDataSize = {value}", "<test definition>"
+            )
+
+            assert (
+                config_max_cache_data_size_to_bytes(
+                    config.get_option("server.maxCacheDataSize")
+                )
+                is None
+            )
+
+    def test_max_cache_data_size_rejects_unitless_nonzero_toml_integer(
+        self,
+    ) -> None:
+        """A nonzero global budget requires an explicit binary unit."""
+        config._update_config_with_toml(
+            "[server]\nmaxCacheDataSize = 500", "<test definition>"
+        )
+
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
+            config_max_cache_data_size_to_bytes(
+                config.get_option("server.maxCacheDataSize")
+            )
+        with pytest.raises(
+            RuntimeError,
+            match=r"`server\.maxCacheDataSize` requires",
+        ):
+            config._check_conflicts()
 
     def _create_theme_config_options(self):
         """Create a list of the valid config options for the [theme] section."""
@@ -800,6 +839,7 @@ class ConfigTest(unittest.TestCase):
                 "secrets.files",
                 "server.address",
                 "server.agentMaxSessions",
+                "server.agentPreviewRows",
                 "server.agentSessionTTL",
                 "server.agentWaitTimeout",
                 "server.allowedHosts",
@@ -821,6 +861,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
+                "server.maxCacheDataSize",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
                 "server.maxWidgetStateSize",
@@ -1151,6 +1192,7 @@ class ConfigTest(unittest.TestCase):
             "server.agentWaitTimeout": 30,
             "server.agentSessionTTL": 900,
             "server.agentMaxSessions": 100,
+            "server.agentPreviewRows": 100,
         }
         for key, default_val in expected_defaults.items():
             option = config._config_options[key]

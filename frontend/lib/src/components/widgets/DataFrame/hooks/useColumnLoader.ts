@@ -390,7 +390,7 @@ function useColumnLoader(
 
         // Make sure that required columns are not hidden when editing mode is dynamic:
         if (
-          updatedColumn.isRequired &&
+          updatedColumn.isRequired === true &&
           element.editingMode === DataframeProto.EditingMode.DYNAMIC
         ) {
           updatedColumn = {
@@ -448,7 +448,7 @@ function useColumnLoader(
 
           // Make sure that required columns are not hidden when editing mode is dynamic:
           if (
-            updatedColumn.isRequired &&
+            updatedColumn.isRequired === true &&
             element.editingMode === DataframeProto.EditingMode.DYNAMIC
           ) {
             updatedColumn = {

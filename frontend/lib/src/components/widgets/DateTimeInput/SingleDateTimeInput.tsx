@@ -272,9 +272,8 @@ function SingleDateTimeInput({
     // true on the retry and the flag is recomputed against live focus rather than
     // surviving as a stale `true`. A double-invoked render computes the same value
     // twice, since focus cannot move between two synchronous passes.
-    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
-      document.activeElement
-    )
+    shouldRestoreFocusRef.current =
+      triggerRef.current?.contains(document.activeElement) === true
   }
 
   const displayValueRef = useRef(displayValue)
@@ -520,7 +519,7 @@ function SingleDateTimeInput({
   // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+    if (calendarButtonRef.current?.contains(document.activeElement) !== true) {
       if (isCalendarActiveRef.current && activeOriginRef.current) {
         activeOriginRef.current.focus()
       } else {
@@ -625,8 +624,8 @@ function SingleDateTimeInput({
         lastTimeSourceRef.current = "inline"
         return
       }
-      if (clearButtonRef.current?.contains(e.target)) return
-      if (calendarButtonRef.current?.contains(e.target)) return
+      if (clearButtonRef.current?.contains(e.target) === true) return
+      if (calendarButtonRef.current?.contains(e.target) === true) return
       lastTimeSourceRef.current = "inline"
       if (!disabled) setIsOpen(true)
     },
@@ -641,8 +640,9 @@ function SingleDateTimeInput({
   // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
-      if (clearButtonRef.current?.contains(e.target as Node)) return
-      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      const target = e.target as Node
+      if (clearButtonRef.current?.contains(target) === true) return
+      if (calendarButtonRef.current?.contains(target) === true) return
       setIsCalendarActive(false)
       lastTimeSourceRef.current = "inline"
       if (!isRestoringFocusRef.current && !disabled) setIsOpen(true)
@@ -674,7 +674,7 @@ function SingleDateTimeInput({
       }
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
-        triggerRef.current?.contains(document.activeElement)
+        triggerRef.current?.contains(document.activeElement) === true
           ? document.activeElement
           : undefined
       // Focus returns here when the dialog closes: the focused field control, or
@@ -761,7 +761,7 @@ function SingleDateTimeInput({
       if (e.key === "Enter") {
         // Let the calendar button's native activation toggle the dialog.
         // Capturing Enter here would commit / form-submit instead.
-        if (calendarButtonRef.current?.contains(e.target as Node)) {
+        if (calendarButtonRef.current?.contains(e.target as Node) === true) {
           return
         }
         e.preventDefault()

@@ -95,8 +95,9 @@ export function processNavigationStructure(
     }
   }
 
-  // If there are named sections, separate empty section pages as individuals
-  const individualPages = navSections[""] || []
+  // Pages with an empty section header render as individuals. That group is
+  // absent when every page has a named section.
+  const individualPages = "" in navSections ? navSections[""] : []
   const sections: NavigationSections = {}
 
   Object.entries(navSections).forEach(([header, pages]) => {

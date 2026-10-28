@@ -265,9 +265,9 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
 
   useEffect(() => {
     // Skip if not needed, already cached, or already have a loading result.
-    // LOAD_FAILED is a truthy Symbol, so failed plugins are intentionally cached
+    // LOAD_FAILED is not null, so failed plugins are intentionally cached
     // and not retried - this prevents infinite retry loops on persistent failures.
-    if (!needed || cachedPlugin || loadingResult) {
+    if (!needed || cachedPlugin !== null || loadingResult !== null) {
       return
     }
 

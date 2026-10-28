@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
+import type { ReactElement } from "react"
+
 import { screen } from "@testing-library/react"
 
 import {
   createSidebarTheme,
   createTheme,
+  type EmotionTheme,
   mockEndpoints,
   mockTheme,
   type ThemeConfig,
+  useEmotionTheme,
 } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
@@ -60,6 +64,59 @@ describe("ThemedSidebar Component", () => {
     // mockTheme keeps built-in light main surfaces → stock sidebar pair
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: "#F8F8F7",
+    })
+  })
+
+  describe("sidebar theme identity", () => {
+    const seenThemes: EmotionTheme[] = []
+
+    const ThemeProbe = (): ReactElement => {
+      seenThemes.push(useEmotionTheme())
+      return <div />
+    }
+
+    beforeEach(() => {
+      seenThemes.length = 0
+    })
+
+    it("provides the same theme object across re-renders", () => {
+      const { rerenderWithContexts } = renderWithContexts(
+        <ThemedSidebar {...getProps()}>
+          <ThemeProbe />
+        </ThemedSidebar>
+      )
+      rerenderWithContexts(
+        <ThemedSidebar {...getProps()}>
+          <ThemeProbe />
+        </ThemedSidebar>
+      )
+
+      expect(seenThemes.length).toBeGreaterThanOrEqual(2)
+      expect(new Set(seenThemes).size).toBe(1)
+    })
+
+    it("provides the new sidebar theme when the active theme changes", () => {
+      const { rerenderWithContexts } = renderWithContexts(
+        <ThemedSidebar {...getProps()}>
+          <ThemeProbe />
+        </ThemedSidebar>
+      )
+      const initialTheme = seenThemes.at(-1)
+
+      const newActiveTheme = createTheme("Custom", {
+        secondaryBackgroundColor: "#112233",
+      })
+      rerenderWithContexts(
+        <ThemedSidebar {...getProps()}>
+          <ThemeProbe />
+        </ThemedSidebar>,
+        { themeContext: { activeTheme: newActiveTheme } }
+      )
+
+      const expectedBgColor =
+        createSidebarTheme(newActiveTheme).emotion.colors.bgColor
+      expect(expectedBgColor).not.toBe(initialTheme?.colors.bgColor)
+      expect(seenThemes.at(-1)?.colors.bgColor).toBe(expectedBgColor)
     })
   })
 
