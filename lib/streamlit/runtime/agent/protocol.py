@@ -855,10 +855,11 @@ def _element_data_schema() -> dict[str, Any]:
                 "description": (
                     "The complete data as an Arrow IPC stream. Relative to the URL "
                     "of the request that returned this snapshot, like every media "
-                    "URL in it: resolve it with `urljoin`, not against the origin. A "
-                    "fetch-now handle: take it from the latest snapshot, fetch it "
-                    "while working with that snapshot, and never store or share "
-                    "it. A collected URL answers `404`."
+                    "URL in it: resolve it with `urljoin`, not against the origin. "
+                    "Fetch it as often as you need while the element is still "
+                    "rendered. Once a later run no longer renders the element, or "
+                    "the session has expired, it answers `404`, so take it from the "
+                    "latest snapshot and never store or share it."
                 ),
             },
             "unavailable": {
