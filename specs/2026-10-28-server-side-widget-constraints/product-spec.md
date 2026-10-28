@@ -111,8 +111,10 @@ own, provided each reports the violation and lets the caller decide."
    - Nothing raises in the app. This generalizes what [#16209](https://github.com/streamlit/streamlit/pull/16209)
      does for `disabled`, and it is what the browser itself does when it blocks a commit:
      it sends nothing.
-3. **One rule set, with each caller deciding what a violation means.** The check reports a
-   violation; it does not act on it.
+3. **One rule set, defined by each widget, with each caller deciding what a violation
+   means.** Each widget states what it accepts inside its own implementation, beside how
+   it reads its value (see the [tech spec](tech-spec.md#where-constraints-live-in-each-widgets-serde)).
+   The check reports a violation; it does not act on it.
    - A browser session drops the value, as in (2).
    - The agent API refuses the whole request with `invalid_value` before anything runs,
      naming the constraint.
@@ -252,7 +254,7 @@ client and moves it into the runtime.
 
 | Agent code today | After |
 | --- | --- |
-| `_validate_options` and `ElementState.options` (options taken from the agent description) | The widget's own check against `WidgetMetadata` (item 2). The agent description stays a description and stops doubling as a validation list. |
+| `_validate_options` and `ElementState.options` (options taken from the agent description) | The widget serde's own `validate`, reached through `WidgetMetadata.validator` (item 2). The agent never needs to know a widget's rules, and the agent description stays a description instead of doubling as a validation list. |
 | `ElementState.max_items` for `max_selections` and ranges | The shared check (items 2 and 4). |
 | `_check_readable`, which runs the deserializer to avoid a stuck session | The shared readability check (item 1). |
 | The docstring rule that "constraints a widget owns are left to the widget, which resets, truncates, or trims" | The widget reports the violation; the agent refuses with `invalid_value`. |

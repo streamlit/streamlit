@@ -12,8 +12,9 @@ checks each client-sent `WidgetState` when it enters the session, before any cal
 runs. It checks against the metadata of the run that rendered the widget, and it returns
 a structured violation instead of acting on it. `SessionState` drops violating values and
 re-syncs the browser. The agent API calls the same function before it queues a run and
-refuses the request. Constraints are stated by each widget at registration, from the
-same arguments that fill its proto, using a small set of shared helpers.
+refuses the request. What a widget accepts stays inside its own implementation: a
+`validate` method on its serde, next to `serialize` and `deserialize`, registered through a
+new `WidgetMetadata.validator` callback.
 
 ## Problem
 
@@ -103,7 +104,8 @@ applies these checks in order and returns the first violation:
      `arrow_value`.
    - `WStates.__getitem__` stops overwriting `metadata.value_type`. The field that
      actually arrived is recorded on the `Serialized` entry instead.
-5. **The widget's own check** (`metadata.check`, see below). This covers the widget's
+5. **The widget's own validator** (`metadata.validator`, the serde's `validate`, see
+   below). This covers the widget's
    options, bounds, shapes, lengths, and whether an empty value is allowed.
 6. **The deserializer can read it** (`unreadable`). Run in a `try`, once. The result is
    cached as the `Value` that `_widget_changed` would otherwise compute, so the value is
@@ -137,43 +139,103 @@ A rejection is logged at debug level when a correct browser can cause it
 (`not_rendered`, and option or bound violations, which a sync race can produce). It is
 logged at warning level otherwise, once per widget per session.
 
-### Where constraints live
+### Where constraints live: in each widget's serde
 
-`WidgetMetadata` gains `check: Callable[[WidgetStateProto], Violation | None] | None`.
-Each widget builds it at registration with shared helpers, next to where it fills its
-proto:
+What a widget accepts is defined by the widget, in its own module, beside how it reads
+and writes its value. Each serde gets a `validate` method next to `serialize` and
+`deserialize`. It is registered through a new `WidgetMetadata` callback, the same way the
+other two are:
 
 ```python
-# selectbox.py
+# runtime/state/common.py
+WidgetValidator: TypeAlias = Callable[..., "Violation | None"]
+
+class WidgetMetadata(Generic[T]):
+    deserializer: WidgetDeserializer[T]
+    serializer: WidgetSerializer[T]
+    # What a client may send. Called with the unpacked wire value of a changed
+    # entry, before callbacks run. None accepts anything the deserializer reads.
+    validator: WidgetValidator | None = None
+```
+
+```python
+# number_input.py
+@dataclass
+class NumberInputSerde:
+    value: Number | None
+    data_type: int
+    min_value: Number
+    max_value: Number
+
+    def validate(self, ui_value: Number | None, *, previous: Any = None) -> Violation | None:
+        if ui_value is None:
+            return None
+        if self.data_type == NumberInputProto.FLOAT and not math.isfinite(ui_value):
+            return Violation("malformed")
+        return widget_checks.within(ui_value, self.min_value, self.max_value)
+
+    def deserialize(self, ui_value: Number | None) -> Number | None:
+        val = ui_value if ui_value is not None else self.value
+        ...
+        # URL and programmatic values are coerced rather than refused.
+        return self.value if self.validate(val) is not None else val
+
+
 register_widget(
     ...,
-    formatted_options=formatted_options,
-    check=None if accept_new_options else widget_checks.one_of(formatted_options),
-    disabled=disabled,
-)
-
-# slider.py
-check = widget_checks.number_range(
-    min_value, max_value, items=2 if is_range else 1, ordered=True, integer=is_int
+    deserializer=serde.deserialize,
+    serializer=serde.serialize,
+    validator=serde.validate,
 )
 ```
 
-The helpers are:
+**Why the serde is the right home:**
 
-- `one_of`, `items_of(options, max_items, unique)`
-- `number_in(min, max, integer)`, `number_range(...)`
-- `iso_date(min, max, items)`, `iso_datetime`, `iso_time`
-- `hex_color`
-- `text_length(max_chars)`
-- `not_empty(emptiness)`, which composes with the others
+- **It already holds the facts.** Options, bounds, `max_chars`, and `format_func` are
+  already on the serde, captured from the run that rendered the widget, which is exactly
+  the contract the client was shown. Metadata keeps that run's serde until the widget
+  registers again, so validating against it needs no extra bookkeeping.
+- **Each rule lives in one place per widget.** `deserialize` keeps coercing URL and
+  programmatic values by calling `validate`. Today the same bounds or options rule is
+  written twice: once in the deserializer and again in the widget function after
+  registration.
+- **A widget is reviewed in one file:** what it renders, what it accepts, and how it reads
+  values. A coverage test, like the agent description test, fails for a value widget
+  registered without a validator unless an explicit list says any value of the right wire
+  type is legal, as for `checkbox`, `toggle`, and buttons.
 
-Helpers build lookups lazily, such as a `frozenset` of options on first use, so a browser
-session whose widgets never change pays nothing beyond building the closure.
+**What does not belong in the serde.** Rules about the protocol or about containers stay
+in `widget_checks.check_client_value`, which calls `metadata.validator` as step 5:
 
-The fields `formatted_options`, `max_array_length`, and `clearable` already exist on the
-metadata for URL binding. URL seeding then calls the same helpers wherever its rule is the
-same. It keeps its own sanitize-and-correct behavior, because a URL has no previous value
-to fall back to.
+- unchanged values pass
+- the rendered gate
+- `disabled`
+- the wire field
+- readability (by running the deserializer)
+- form membership (item 7), a property of the form rather than of a value
+
+None of these differs per widget, and putting them in each serde would copy them 20
+times.
+
+**Shared helpers** keep serdes from repeating the same comparisons. They are small pure
+functions that return a `Violation` with its details:
+
+- `within(value, min, max)`, `one_of(labels, value)`, `items_of(labels, values, max_items, unique)`
+- `iso_date`, `iso_time`, `hex_color`
+- `text_length(text, max_chars)`, `is_empty(value)`
+
+An options serde builds its label `frozenset` lazily with a `cached_property`, so a
+browser session whose widgets never change pays nothing.
+
+**The previous value.** Check 1 already passes unchanged values, so a validator sees only
+changes and almost never needs the previous value. The data editor is the exception: its
+payload is cumulative, so `DataEditorSerde.validate` uses the `previous` keyword to check
+only new or changed entries. Every other serde ignores it.
+
+**URL seeding** uses the same `validate` wherever its rule is the same, in place of the
+`formatted_options`, `max_array_length`, and `clearable` comparisons it makes today. It
+keeps its sanitize-and-correct behavior, because a URL has no previous value to fall back
+to.
 
 ### Rendered-widget gate
 
@@ -260,7 +322,8 @@ form rule, that a submit needs every required field filled, belongs to item 7.
   [required spec](../2026-08-18-required-widgets/product-spec.md). So a key whose
   `required` flips from false to true keeps its empty value until the user changes it.
 
-**Item 6: data editor.** The editor stores an edit policy on its metadata at registration:
+**Item 6: data editor.** `DataEditorSerde` gains an edit policy, captured at registration,
+and its `validate` checks the payload against it:
 - `editing_mode`
 - the row count
 - the editable columns: not disabled, not auto-disabled for Arrow incompatibility, not
@@ -297,8 +360,8 @@ With form membership on the server, the agent API can apply `clear_on_submit` it
 agent sessions, which the agent spec lists as follow-up #8.
 
 **Item 8: selections.** `_validate_selection_state` (`elements/arrow.py:463`) already
-checks mode and bounds, but only for programmatic selections. The dataframe's `check`
-calls it for client values. A `ButtonColumn` click is checked for `row < num_rows`.
+checks mode and bounds, but only for programmatic selections. The dataframe selection
+serde's `validate` calls it for client values. A `ButtonColumn` click is checked for `row < num_rows`.
 
 **Item 9: fragments.** `AppSession.request_rerun` accepts a `fragment_id` only if the
 fragment was registered by the last run that covered it. Stale fragments are also cleared
@@ -336,8 +399,8 @@ This is the rerun hot path (`runtime/state/session_state.py`). The cost per mess
 | Changed list | Linear in the list |
 | Data editor | Linear in the changed entries |
 
-A browser session's registration path builds one closure per widget, and lookups are built
-lazily. Add a benchmark next to the existing session-state ones: 1,000 widgets with one
+A browser session's registration path builds nothing new: the validator is a bound method
+of the serde each widget already creates, and option lookups are built lazily. Add a benchmark next to the existing session-state ones: 1,000 widgets with one
 change, and a 10,000-option selectbox changing its value. The budget is no measurable
 regression in the unchanged case.
 
@@ -368,7 +431,15 @@ regression in the unchanged case.
   definitions that disagree within a release, and ties validation to agent descriptions.
 - **Only declarative constraint fields interpreted centrally**, extending
   `formatted_options` and friends. Date, range, and data editor semantics would leak into
-  the state layer. Helpers give the same uniformity and keep each rule beside its widget.
+  the state layer, and a widget's rules would no longer be in the widget.
+- **Composing helpers at the `register_widget` call site** instead of a serde method. The
+  call site would refuse values while the serde, which coerces URL values, held a second
+  copy of the same rule. A method keeps one definition per widget, beside the facts it
+  needs.
+- **Folding validation into `deserialize`**, for example by having it raise or return a
+  sentinel. A deserializer must coerce URL and programmatic values and must always return
+  a value, so it cannot also report a refusal without a second return channel. A separate
+  method that `deserialize` calls gives that channel and keeps both on the serde.
 - **Reject the whole message, or close the connection.** See the product spec's options.
   Both are hostile to benign races.
 - **A public opt-out config.** It invites disabling a security fix to paper over a race we
