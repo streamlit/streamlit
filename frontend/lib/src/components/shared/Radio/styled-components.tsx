@@ -15,6 +15,7 @@
  */
 
 import styled, { type CSSObject } from "@emotion/styled"
+import { transparentize } from "color2k"
 import {
   RadioButton as RARadioButton,
   RadioField as RARadioField,
@@ -28,42 +29,106 @@ import { convertRemToPx } from "~lib/theme/utils"
 interface StyledRadioGroupProps {
   $horizontal: boolean
   $hasCaptions: boolean
+  /** Whether the options render as cards (`type="cards"`). */
+  $isCards: boolean
+  /**
+   * Whether the widget has a definite width (`width="stretch"` or pixels).
+   * Only horizontal cards use it.
+   */
+  $containerWidth: boolean
 }
 
 /**
- * Flex container for the radio group. Controls direction, wrap, gap, and
- * minimum height. `shouldForwardProp` prevents `$`-prefixed layout props from
- * being forwarded to React Aria's RadioGroup component. The native `orientation`
- * prop passes through so React Aria sets the correct `data-orientation`
- * attribute and uses the right arrow-key direction for keyboard navigation.
+ * Layout of a card group. Cards in the same row share its height.
+ *
+ * - Vertical: a stack that stretches each card to the group width, which is
+ *   the widest card for `width="content"`.
+ * - Horizontal with a container width: equal columns that fill the row and
+ *   wrap once a card would get narrower than `radioCardMinWidth`.
+ * - Horizontal with `width="content"`: a wrapping row of content-width cards,
+ *   like horizontal radio buttons and `st.pills`. An equal-width grid can't
+ *   wrap here: it needs the widest card's width, which the fit-content element
+ *   container doesn't know yet while it sizes the group.
+ */
+function getCardGroupStyles(
+  theme: EmotionTheme,
+  horizontal: boolean,
+  containerWidth: boolean
+): CSSObject {
+  if (!horizontal) {
+    return {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "stretch",
+      gap: theme.spacing.sm,
+    }
+  }
+
+  if (containerWidth) {
+    return {
+      display: "grid",
+      gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${theme.sizes.radioCardMinWidth}), 1fr))`,
+      gap: theme.spacing.sm,
+    }
+  }
+
+  return {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "stretch",
+    gap: theme.spacing.sm,
+  }
+}
+
+/**
+ * Container for the radio group. Controls direction, wrap, gap, and minimum
+ * height; card groups use `getCardGroupStyles` instead. `shouldForwardProp`
+ * prevents `$`-prefixed layout props from being forwarded to React Aria's
+ * RadioGroup component. The native `orientation` prop passes through so React
+ * Aria sets the correct `data-orientation` attribute and uses the right
+ * arrow-key direction for keyboard navigation.
  */
 export const StyledRadioGroup = styled(RARadioGroup, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledRadioGroupProps>(({ theme, $horizontal, $hasCaptions }) => ({
-  display: "flex",
-  flexDirection: $horizontal ? "row" : "column",
-  flexWrap: "wrap",
-  // Horizontal groups use `center` to distribute the minElementHeight space
-  // evenly above and below items. Vertical groups stack items from the top.
-  alignItems: $horizontal ? "center" : "flex-start",
-  // Horizontal groups always use `lg` (16px) between items regardless of
-  // captions. Vertical groups add `sm` only when captions are present.
-  gap: $horizontal
-    ? theme.spacing.lg
-    : $hasCaptions
-      ? theme.spacing.sm
-      : theme.spacing.none,
-  minHeight: theme.sizes.minElementHeight,
-}))
+})<StyledRadioGroupProps>(({
+  theme,
+  $horizontal,
+  $hasCaptions,
+  $isCards,
+  $containerWidth,
+}) => {
+  if ($isCards) {
+    return getCardGroupStyles(theme, $horizontal, $containerWidth)
+  }
+
+  return {
+    display: "flex",
+    flexDirection: $horizontal ? "row" : "column",
+    flexWrap: "wrap",
+    // Horizontal groups use `center` to distribute the minElementHeight space
+    // evenly above and below items. Vertical groups stack items from the top.
+    alignItems: $horizontal ? "center" : "flex-start",
+    // Horizontal groups always use `lg` (16px) between items regardless of
+    // captions. Vertical groups add `sm` only when captions are present.
+    gap: $horizontal
+      ? theme.spacing.lg
+      : $hasCaptions
+        ? theme.spacing.sm
+        : theme.spacing.none,
+    minHeight: theme.sizes.minElementHeight,
+  }
+})
 
 /**
  * Per-option wrapper: it declares the option's `value` and passes the group's
  * selection state to its `RadioButton` child via context. `RadioButton` must
  * nest inside this field.
  *
- * Stacks the clickable label above the caption, which sits outside the label so
- * React Aria can expose it as the option's `aria-describedby` target rather than
- * folding it into the accessible name.
+ * In the default style, it stacks the clickable label above the caption, which
+ * sits outside the label so React Aria can expose it as the option's
+ * `aria-describedby` target rather than folding it into the accessible name.
+ * Card groups use `StyledRadioCardField`, put the caption inside the label,
+ * and keep it out of the name with `aria-labelledby`.
  *
  * Owns the text colour, including the disabled variant, so the label and the
  * caption dim together. React Aria marks both this element and the label
@@ -78,6 +143,19 @@ export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
     color: theme.colors.fadedText40,
   },
 }))
+
+/**
+ * `StyledRadioField` for a card group. Its rules only matter in a wrapping row
+ * of content-width cards; the other card layouts stretch the field.
+ *
+ * - It never shrinks, which would break words apart; the row wraps instead.
+ * - It is capped at the row's width, so a card too wide for the row wraps its
+ *   text at word boundaries.
+ */
+export const StyledRadioCardField = styled(StyledRadioField)({
+  flex: "0 0 auto",
+  maxWidth: "100%",
+})
 
 /**
  * Clickable `<label>` for each radio option. It wraps the hidden input, the
@@ -111,6 +189,94 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
 }))
 
 /**
+ * Clickable `<label>` for each option of a card group (`type="cards"`). Unlike
+ * `StyledRadioButton`, it also wraps the caption, so the whole card is one
+ * click target. `RadioCardOption` keeps the caption out of the accessible name.
+ *
+ * - Fills its `StyledRadioCardField`, which the group stretches to the row's
+ *   height, so cards in a row share the same height. Content stays
+ *   top-aligned.
+ * - Padding includes the border, so the circle sits about the same distance
+ *   from the top and left edges.
+ * - Hover and focus only tint unselected cards: pressing a selected radio does
+ *   nothing.
+ * - Selected cards get a primary border and a light primary tint, like
+ *   selected pills. An inset primary ring doubles the border without shifting
+ *   the layout, so the selection reads at card size.
+ * - Disabled cards keep a neutral border. A selected one keeps a faint fill;
+ *   the circle still shows which option is selected.
+ */
+export const StyledRadioCard = styled(RARadioButton)(({ theme }) => {
+  const selectedRing = `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`
+
+  return {
+    display: "flex",
+    flexDirection: "column",
+    flex: "1 1 auto",
+    minWidth: 0,
+    boxSizing: "border-box",
+    padding: `calc(${theme.spacing.md} - ${theme.sizes.borderWidth}) calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    borderRadius: theme.radii.default,
+    backgroundColor: theme.colors.bgColor,
+    cursor: "pointer",
+    transition:
+      "background-color 100ms ease, border-color 100ms ease, box-shadow 100ms ease",
+    "&:is([data-hovered], [data-focus-visible]):not([data-selected])": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&[data-focus-visible]": {
+      boxShadow: theme.shadows.focusRing,
+    },
+    "&[data-selected]:not([data-disabled])": {
+      borderColor: theme.colors.primary,
+      backgroundColor: transparentize(theme.colors.primary, 0.9),
+      boxShadow: selectedRing,
+    },
+    "&[data-selected][data-focus-visible]:not([data-disabled])": {
+      boxShadow: `${selectedRing}, ${theme.shadows.focusRing}`,
+    },
+    "&[data-disabled]": {
+      cursor: "not-allowed",
+      backgroundColor: theme.colors.transparent,
+    },
+    "&[data-selected][data-disabled]": {
+      backgroundColor: theme.colors.fadedText05,
+    },
+    // Forced colors drop the fills and box shadows, which would leave no
+    // selection or focus cue. A system-colored outline brings both back. One
+    // outline is enough: keyboard focus sits on the selected card, or on an
+    // unselected one only while nothing is selected.
+    "@media (forced-colors: active)": {
+      "&:is([data-selected], [data-focus-visible])": {
+        outline: `${theme.sizes.focusOutlineWidth} solid Highlight`,
+        outlineOffset: `calc(-1 * ${theme.sizes.focusOutlineWidth})`,
+      },
+    },
+  }
+})
+
+interface StyledRadioCardTitleProps {
+  $isEmphasized: boolean
+}
+
+/**
+ * Title of a card: the option label next to the circle. It is semibold when
+ * the group has captions, which sets it apart from the caption below it.
+ * Without captions it keeps the normal label weight, like the default style.
+ */
+export const StyledRadioCardTitle = styled.div<StyledRadioCardTitleProps>(
+  ({ theme, $isEmphasized }) => ({
+    minWidth: 0,
+    "& p": {
+      fontWeight: $isEmphasized
+        ? theme.fontWeights.semiBold
+        : theme.fontWeights.normal,
+    },
+  })
+)
+
+/**
  * Flex row that contains only the radio circle and the option label text.
  * Using `align-items: center` here centers the circle with the label text
  * naturally — no `marginTop` offset calculations needed, regardless of font
@@ -120,6 +286,26 @@ export const StyledRadioRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.sm,
+}))
+
+/**
+ * `StyledRadioRow` for a card. It aligns the circle and the title at the top,
+ * so the circle stays next to the first line of a title that wraps.
+ */
+export const StyledRadioCardRow = styled(StyledRadioRow)({
+  alignItems: "flex-start",
+})
+
+/**
+ * Holds the circle of a card in a box one title line tall, which centers the
+ * circle on the title's first line. A single-line title looks the same as
+ * with `StyledRadioRow`.
+ */
+export const StyledRadioCardIndicator = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  height: `calc(${theme.fontSizes.sm} * ${theme.lineHeights.base})`,
 }))
 
 interface StyledRadioOuterProps {
@@ -141,9 +327,8 @@ interface StyledRadioOuterProps {
  *   `StyledRadioInner` supplies the white centre when selected and the
  *   `bgColor` hole when not.
  *
- * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
- * center` and contains only this circle and the option text, so centering is
- * automatic.
+ * No margin offset needed: its parent centers it vertically
+ * (`StyledRadioRow` in the default style, `StyledRadioCardIndicator` in cards).
  */
 export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
   ({ theme, $isSelected, $isHovered, $isDisabled }) => {
@@ -239,8 +424,9 @@ const captionBoxStyles = ({ theme }: { theme: EmotionTheme }): CSSObject => ({
  *   its output in a `<div>`, which is invalid inside `Text`'s default `<span>`.
  * - Blank captions render nothing rather than an empty `Text`: React Aria drops
  *   the description id unless this slot mounts content.
- * - No `cursor` rule: it is not a click target, so the default text cursor
- *   signals selectable prose.
+ * - No `cursor` rule: in the default style it is not a click target, so the
+ *   text cursor signals selectable prose. Inside a card it inherits the card's
+ *   pointer.
  */
 export const StyledRadioCaption = styled(RAText)(captionBoxStyles)
 

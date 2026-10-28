@@ -60,6 +60,14 @@ if TYPE_CHECKING:
     assert_type(radio("foo", [1, 2, 3], on_change=lambda: None), int)
     assert_type(radio("foo", [1, 2, 3], index=None, on_change="ignore"), int | None)
 
+    # Check type parameter
+    assert_type(radio("foo", ["a", "b"], type="cards"), str)
+    assert_type(radio("foo", ["a", "b"], type="default"), str)
+    assert_type(radio("foo", ["a", "b"], index=None, type="cards"), str | None)
+    # ty infers `Unknown` for empty options.
+    assert_type(radio("foo", [], type="cards"), None)  # ty: ignore[type-assertion-failure]
+    radio("foo", ["a", "b"], type="pills")  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
+
     def on_radio_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -76,6 +84,7 @@ if TYPE_CHECKING:
             disabled=False,
             horizontal=True,
             captions=["First", "Second", "Third"],
+            type="cards",
             label_visibility="visible",
             width="stretch",
             persist_state="session",

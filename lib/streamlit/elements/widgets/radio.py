@@ -14,7 +14,17 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Never, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Generic,
+    Literal,
+    Never,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib import agent_spec
@@ -42,6 +52,7 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
@@ -67,6 +78,12 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 T = TypeVar("T")
+
+_RADIO_TYPE_TO_PROTO: Final[dict[str, RadioProto.Type.ValueType]] = {
+    "default": RadioProto.Type.DEFAULT,
+    "cards": RadioProto.Type.CARDS,
+}
+_RADIO_TYPES: Final = tuple(_RADIO_TYPE_TO_PROTO)
 
 
 class RadioSerde(Generic[T]):
@@ -156,6 +173,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
+        type: Literal["default", "cards"] = "default",
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -178,6 +196,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
+        type: Literal["default", "cards"] = "default",
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -200,6 +219,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
+        type: Literal["default", "cards"] = "default",
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -222,6 +242,7 @@ class RadioMixin:
         disabled: bool = False,
         horizontal: bool = False,
         captions: Sequence[str] | None = None,
+        type: Literal["default", "cards"] = "default",
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
@@ -343,6 +364,27 @@ class RadioMixin:
             this list is shorter than ``options``, the remaining options have no
             caption. Any captions after the last option are ignored.
 
+        type : "default" or "cards"
+            The visual style of the radio options. This can be one of the
+            following:
+
+            - ``"default"`` (default): Each option is a radio button followed
+              by its label, with its caption (if any) below the label.
+            - ``"cards"``: Each option is a bordered card that contains a radio
+              button, the option's label, and its caption (if any). The whole
+              card is clickable, so links in labels and captions are shown as
+              plain text. The selected card is highlighted with the theme's
+              primary color.
+
+            Both styles accept the same options, support the same keyboard
+            navigation, and return the same value.
+
+            When ``type="cards"`` and ``horizontal=True``, the cards are
+            arranged in rows and wrap into more rows when they don't fit. If
+            ``width`` is ``"stretch"`` or an integer, the cards in a row have
+            equal widths and fill the widget's width. Otherwise, each card is
+            as wide as its content.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -450,6 +492,30 @@ class RadioMixin:
            https://doc-radio-empty.streamlit.app/
            height: 300px
 
+        To display the options as selectable cards, set ``type="cards"``.
+        Captions are shown inside each card, below the option's label:
+
+        >>> import streamlit as st
+        >>>
+        >>> plan = st.radio(
+        ...     "Choose a plan",
+        ...     ["Starter", "Pro", "Enterprise"],
+        ...     captions=[
+        ...         "For individuals getting started.",
+        ...         "For growing teams.",
+        ...         "Advanced controls and support.",
+        ...     ],
+        ...     type="cards",
+        ...     horizontal=True,
+        ...     width="stretch",
+        ... )
+        >>>
+        >>> st.write("You selected:", plan)
+
+        .. output::
+           https://doc-radio-cards.streamlit.app/
+           height: 250px
+
         """
         ctx = get_script_run_ctx()
         return self._radio(
@@ -465,6 +531,7 @@ class RadioMixin:
             disabled=disabled,
             horizontal=horizontal,
             captions=captions,
+            radio_type=type,
             label_visibility=label_visibility,
             bind=bind,
             persist_state=persist_state,
@@ -488,6 +555,7 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
+        radio_type: Literal["default", "cards"] = "default",
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
@@ -498,6 +566,10 @@ class RadioMixin:
             on_change,
             supported_modes=("rerun", "ignore"),
         )
+        # Check tuple membership: a dict lookup would raise `TypeError` for an
+        # unhashable value such as a list.
+        if radio_type not in _RADIO_TYPES:
+            raise StreamlitValueError("type", [repr(t) for t in _RADIO_TYPES])
 
         check_widget_policies(
             self.dg,
@@ -527,6 +599,7 @@ class RadioMixin:
             help=help,
             horizontal=horizontal,
             captions=captions,
+            type=radio_type,
             width=width,
         )
 
@@ -563,6 +636,7 @@ class RadioMixin:
         radio_proto.options[:] = formatted_options
         radio_proto.form_id = current_form_id(self.dg)
         radio_proto.horizontal = horizontal
+        radio_proto.type = _RADIO_TYPE_TO_PROTO[radio_type]
         radio_proto.disabled = disabled
         radio_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility

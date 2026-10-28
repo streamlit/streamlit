@@ -23,7 +23,9 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Radio, { type Props } from "./Radio"
 
-const { bodyText, fadedText40 } = lightTheme.emotion.colors
+const { bodyText, fadedText40, primary, borderColor } =
+  lightTheme.emotion.colors
+const { normal, semiBold } = lightTheme.emotion.fontWeights
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
@@ -494,5 +496,243 @@ describe("Radio widget", () => {
 
     expect(first).toBeChecked()
     expect(onChange).toHaveBeenCalledWith(0)
+  })
+})
+
+describe("Radio cards (type='cards')", () => {
+  const cardGridColumns = "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))"
+
+  const getCardProps = (props: Partial<Props> = {}): Props =>
+    getProps({
+      type: "cards",
+      options: ["Starter", "Pro", "Enterprise"],
+      captions: ["For individuals", "For teams", "For companies"],
+      ...props,
+    })
+
+  it("renders each option as a card that holds its title and caption", () => {
+    render(<Radio {...getCardProps()} />)
+
+    const cards = screen.getAllByTestId("stRadioOption")
+    expect(cards).toHaveLength(3)
+    expect(within(cards[1]).getByText("Pro")).toBeVisible()
+    expect(within(cards[1]).getByText("For teams")).toBeVisible()
+    // Each card holds only its own caption.
+    expect(within(cards[1]).queryByText("For individuals")).toBeNull()
+  })
+
+  it("keeps the caption outside the option label in the default style", () => {
+    render(<Radio {...getCardProps({ type: "default" })} />)
+
+    const options = screen.getAllByTestId("stRadioOption")
+    expect(screen.getByText("For teams")).toBeVisible()
+    expect(within(options[1]).queryByText("For teams")).toBeNull()
+  })
+
+  it("selects an option when its caption is clicked", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<Radio {...getCardProps({ onChange, value: 0 })} />)
+
+    // The whole card, caption included, is the click target.
+    await user.click(screen.getByText("For teams"))
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(1)
+    expect(screen.getByRole("radio", { name: "Pro" })).toBeChecked()
+    expect(screen.getByRole("radio", { name: "Starter" })).not.toBeChecked()
+  })
+
+  it("names an option by its title and describes it by its caption", () => {
+    render(
+      <Radio
+        {...getCardProps({
+          captions: ["For individuals", "", "**Big** teams"],
+        })}
+      />
+    )
+
+    const pro = screen.getByRole("radio", { name: "Pro" })
+    expect(
+      screen.getByRole("radio", { name: "Starter" })
+    ).toHaveAccessibleDescription("For individuals")
+    expect(
+      screen.getByRole("radio", { name: "Enterprise" })
+    ).toHaveAccessibleDescription("Big teams")
+    // The caption sits inside the label but must not join the name, and an
+    // uncaptioned card has nothing to describe it.
+    expect(pro).toHaveAccessibleName("Pro")
+    expect(pro).not.toHaveAttribute("aria-describedby")
+  })
+
+  it("gives the card titles of two groups distinct ids", () => {
+    render(
+      <>
+        <Radio {...getCardProps({ label: "First" })} />
+        <Radio {...getCardProps({ label: "Second" })} />
+      </>
+    )
+
+    const labelledBy = screen
+      .getAllByRole("radio")
+      .map(radio => radio.getAttribute("aria-labelledby"))
+    expect(new Set(labelledBy).size).toBe(6)
+    // Each id resolves to that option's title.
+    expect(document.getElementById(labelledBy[4] ?? "")).toHaveTextContent(
+      "Pro"
+    )
+  })
+
+  it("does not reserve caption space in a horizontal group", () => {
+    render(
+      <Radio
+        {...getCardProps({
+          horizontal: true,
+          captions: ["For individuals", "", "For companies"],
+        })}
+      />
+    )
+
+    // Cards in a row share the same height, so no spacer is needed.
+    expect(
+      screen.queryByTestId("stRadioCaptionSpacer")
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(2)
+  })
+
+  it.each([
+    { horizontal: false, key: "{ArrowDown}" },
+    { horizontal: true, key: "{ArrowRight}" },
+  ])(
+    "moves the selection with $key when horizontal=$horizontal",
+    async ({ horizontal, key }) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      render(<Radio {...getCardProps({ onChange, value: 0, horizontal })} />)
+
+      const [first, second] = screen.getAllByRole("radio")
+      await user.click(first)
+      onChange.mockClear()
+      await user.keyboard(key)
+
+      expect(second).toBeChecked()
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(1)
+    }
+  )
+
+  it("keeps a disabled group's selection and ignores clicks", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<Radio {...getCardProps({ onChange, value: 2, disabled: true })} />)
+
+    await user.click(screen.getByText("For teams"))
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole("radio", { name: "Enterprise" })).toBeChecked()
+    expect(screen.getByRole("radio", { name: "Pro" })).toBeDisabled()
+  })
+
+  it("highlights only the selected card with the primary color", () => {
+    render(<Radio {...getCardProps({ value: 1 })} />)
+
+    const cards = screen.getAllByTestId("stRadioOption")
+    expect(cards[1]).toHaveStyle({ borderColor: primary })
+    expect(cards[0]).toHaveStyle({ borderColor })
+  })
+
+  it.each([
+    { captions: ["For individuals"], fontWeight: semiBold },
+    { captions: [], fontWeight: normal },
+  ])(
+    "uses font weight $fontWeight for titles when captions=$captions",
+    ({ captions, fontWeight }) => {
+      render(<Radio {...getCardProps({ captions })} />)
+
+      // Captioning any option makes every title semibold, so titles stand out
+      // from their captions.
+      expect(screen.getByText("Enterprise")).toHaveStyle({ fontWeight })
+    }
+  )
+
+  it.each([
+    {
+      horizontal: false,
+      containerWidth: false,
+      expected: { display: "flex", flexDirection: "column" },
+    },
+    {
+      horizontal: true,
+      containerWidth: true,
+      expected: { display: "grid", gridTemplateColumns: cardGridColumns },
+    },
+    {
+      horizontal: true,
+      containerWidth: false,
+      expected: { display: "flex", flexWrap: "wrap" },
+    },
+  ])(
+    "lays out cards for horizontal=$horizontal, containerWidth=$containerWidth",
+    ({ horizontal, containerWidth, expected }) => {
+      render(<Radio {...getCardProps({ horizontal, containerWidth })} />)
+
+      expect(screen.getByRole("radiogroup")).toHaveStyle(expected)
+    }
+  )
+
+  it("keeps content-width cards from shrinking below their content", () => {
+    render(<Radio {...getCardProps({ horizontal: true })} />)
+
+    // A shrinking card would break its words apart; the row wraps instead,
+    // and the cap lets a card wider than the row wrap at word boundaries.
+    const field = screen.getAllByTestId("stRadioOption")[0].parentElement
+    expect(field).toHaveStyle({ flexShrink: "0", maxWidth: "100%" })
+  })
+
+  it.each([
+    { type: "cards" as const, linkCount: 0 },
+    { type: "default" as const, linkCount: 2 },
+  ])(
+    "renders $linkCount links in titles and captions for type=$type",
+    ({ type, linkCount }) => {
+      render(
+        <Radio
+          {...getCardProps({
+            type,
+            options: ["Plain", "See [label](https://example.com)"],
+            captions: ["", "Read the [docs](https://example.com)."],
+          })}
+        />
+      )
+
+      // The whole card is clickable, so links in it show as plain text and
+      // are not focusable.
+      expect(screen.queryAllByRole("link")).toHaveLength(linkCount)
+      expect(screen.getByText("docs", { exact: false })).toBeVisible()
+    }
+  )
+
+  it("ignores containerWidth in the default style", () => {
+    render(
+      <Radio
+        {...getCardProps({
+          type: "default",
+          horizontal: true,
+          containerWidth: true,
+        })}
+      />
+    )
+
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle({ display: "flex", flexDirection: "row" })
+    expect(group).not.toHaveStyle({ gridTemplateColumns: cardGridColumns })
+  })
+
+  it("renders the no-options placeholder as a disabled card", () => {
+    render(<Radio {...getCardProps({ options: [], captions: ["unused"] })} />)
+
+    const placeholder = screen.getByRole("radio", {
+      name: "No options to select.",
+    })
+    expect(placeholder).toBeDisabled()
+    expect(screen.queryAllByTestId("stRadioCaption")).toHaveLength(0)
   })
 })

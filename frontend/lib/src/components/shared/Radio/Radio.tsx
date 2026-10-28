@@ -19,6 +19,7 @@ import {
   type ReactElement,
   useCallback,
   useEffect,
+  useId,
   useState,
 } from "react"
 
@@ -32,12 +33,23 @@ import {
   StyledRadioButton,
   StyledRadioCaption,
   StyledRadioCaptionSpacer,
+  StyledRadioCard,
+  StyledRadioCardField,
+  StyledRadioCardIndicator,
+  StyledRadioCardRow,
+  StyledRadioCardTitle,
   StyledRadioField,
   StyledRadioGroup,
   StyledRadioInner,
   StyledRadioOuter,
   StyledRadioRow,
 } from "./styled-components"
+
+/**
+ * Visual style of the options: a list of radio buttons (`"default"`) or one
+ * bordered, selectable card per option (`"cards"`).
+ */
+export type RadioType = "default" | "cards"
 
 export interface Props {
   disabled: boolean
@@ -49,6 +61,129 @@ export interface Props {
   label?: string
   labelVisibility?: LabelVisibilityOptions
   help?: string
+  /** Visual style of the options. Defaults to `"default"`. */
+  type?: RadioType
+  /**
+   * Whether the widget has a definite width (`width="stretch"` or pixels),
+   * so the cards in a horizontal row get equal widths that fill it. Unused by
+   * the default style.
+   */
+  containerWidth?: boolean
+}
+
+interface RadioIndicatorProps {
+  isSelected: boolean
+  isHovered: boolean
+  isDisabled: boolean
+}
+
+/** The radio circle, shared by both styles. */
+function RadioIndicator({
+  isSelected,
+  isHovered,
+  isDisabled,
+}: Readonly<RadioIndicatorProps>): ReactElement {
+  return (
+    <StyledRadioOuter
+      $isSelected={isSelected}
+      $isHovered={isHovered}
+      $isDisabled={isDisabled}
+    >
+      <StyledRadioInner $isSelected={isSelected} $isDisabled={isDisabled} />
+    </StyledRadioOuter>
+  )
+}
+
+interface RadioCaptionProps {
+  caption: string
+  /** Renders links as plain text, for captions inside a clickable card. */
+  disableLinks?: boolean
+}
+
+/**
+ * The caption, rendered as React Aria's `description` slot of the enclosing
+ * `RadioField`. Blank captions render nothing.
+ */
+function RadioCaption({
+  caption,
+  disableLinks = false,
+}: Readonly<RadioCaptionProps>): ReactElement | null {
+  if (caption === "") {
+    return null
+  }
+
+  return (
+    <StyledRadioCaption
+      slot="description"
+      elementType="div"
+      data-testid="stRadioCaption"
+    >
+      <StreamlitMarkdown
+        source={caption}
+        allowHTML={false}
+        isCaption
+        isLabel
+        disableLinks={disableLinks}
+      />
+    </StyledRadioCaption>
+  )
+}
+
+interface RadioCardOptionProps {
+  value: string
+  option: string
+  caption: string
+  /** Id of the title element, which labels the option's input. */
+  titleId: string
+  /** Whether the title is semibold, which the group uses when it has captions. */
+  isEmphasized: boolean
+}
+
+/**
+ * One option of a card group (`type="cards"`). The caption sits inside the
+ * card's label so the whole card is one click target. Labelling the input by
+ * the title alone keeps the caption out of the accessible name; it remains the
+ * description.
+ *
+ * Links in the title and caption render as plain text, as in button labels:
+ * React Aria cancels clicks inside the label, and a focusable link there would
+ * select the card on Enter instead of opening.
+ */
+function RadioCardOption({
+  value,
+  option,
+  caption,
+  titleId,
+  isEmphasized,
+}: Readonly<RadioCardOptionProps>): ReactElement {
+  return (
+    <StyledRadioCardField value={value} aria-labelledby={titleId}>
+      <StyledRadioCard data-testid="stRadioOption">
+        {({ isSelected, isHovered, isDisabled }) => (
+          <>
+            <StyledRadioCardRow>
+              <StyledRadioCardIndicator>
+                <RadioIndicator
+                  isSelected={isSelected}
+                  isHovered={isHovered}
+                  isDisabled={isDisabled}
+                />
+              </StyledRadioCardIndicator>
+              <StyledRadioCardTitle id={titleId} $isEmphasized={isEmphasized}>
+                <StreamlitMarkdown
+                  source={option}
+                  allowHTML={false}
+                  isLabel
+                  disableLinks
+                />
+              </StyledRadioCardTitle>
+            </StyledRadioCardRow>
+            <RadioCaption caption={caption} disableLinks />
+          </>
+        )}
+      </StyledRadioCard>
+    </StyledRadioCardField>
+  )
 }
 
 function Radio({
@@ -61,8 +196,13 @@ function Radio({
   label,
   labelVisibility,
   help,
+  type = "default",
+  containerWidth = false,
 }: Readonly<Props>): ReactElement {
   const [value, setValue] = useState(defaultValue ?? null)
+  const isCards = type === "cards"
+  // Unique per group, so card title ids never collide across groups.
+  const titleBaseId = useId()
 
   useEffect(() => {
     if (defaultValue === value) {
@@ -128,9 +268,25 @@ function Radio({
         data-testid="stRadioGroup"
         $horizontal={horizontal}
         $hasCaptions={hasCaptions}
+        $isCards={isCards}
+        $containerWidth={containerWidth}
       >
         {cleanedOptions.map((option: string, index: number) => {
           const caption = optionCaptions[index] ?? ""
+
+          if (isCards) {
+            return (
+              <RadioCardOption
+                // eslint-disable-next-line @eslint-react/no-array-index-key
+                key={index}
+                value={index.toString()}
+                option={option}
+                caption={caption}
+                titleId={`${titleBaseId}-title-${index}`}
+                isEmphasized={hasCaptions}
+              />
+            )
+          }
 
           // In a horizontal group, an option without a caption still needs that
           // vertical space reserved, or its label stops lining up with the
@@ -146,16 +302,11 @@ function Radio({
               <StyledRadioButton data-testid="stRadioOption">
                 {({ isSelected, isHovered, isDisabled }) => (
                   <StyledRadioRow>
-                    <StyledRadioOuter
-                      $isSelected={isSelected}
-                      $isHovered={isHovered}
-                      $isDisabled={isDisabled}
-                    >
-                      <StyledRadioInner
-                        $isSelected={isSelected}
-                        $isDisabled={isDisabled}
-                      />
-                    </StyledRadioOuter>
+                    <RadioIndicator
+                      isSelected={isSelected}
+                      isHovered={isHovered}
+                      isDisabled={isDisabled}
+                    />
                     <StreamlitMarkdown
                       source={option}
                       allowHTML={false}
@@ -164,20 +315,7 @@ function Radio({
                   </StyledRadioRow>
                 )}
               </StyledRadioButton>
-              {caption !== "" && (
-                <StyledRadioCaption
-                  slot="description"
-                  elementType="div"
-                  data-testid="stRadioCaption"
-                >
-                  <StreamlitMarkdown
-                    source={caption}
-                    allowHTML={false}
-                    isCaption
-                    isLabel
-                  />
-                </StyledRadioCaption>
-              )}
+              <RadioCaption caption={caption} />
               {needsSpacer && (
                 <StyledRadioCaptionSpacer
                   aria-hidden="true"

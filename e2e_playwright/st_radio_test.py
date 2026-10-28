@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FloatRect, Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 23
+NUM_RADIO_ELEMENTS = 28
 
 
 def test_radio_widget_rendering(
@@ -90,6 +90,11 @@ def test_radio_widget_rendering(
     assert_snapshot(
         get_radio(themed_app, re.compile(r"^radio 14")), name="st_radio-markdown_label"
     )
+    assert_snapshot(get_radio(themed_app, "radio 16 (cards)"), name="st_radio-cards")
+    assert_snapshot(
+        get_radio(themed_app, "radio 17 (cards, horizontal, stretch)"),
+        name="st_radio-cards_horizontal",
+    )
 
 
 def test_radio_option_hover(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -108,6 +113,109 @@ def test_radio_option_hover(themed_app: Page, assert_snapshot: ImageCompareFunct
     unselected.hover()
     expect(unselected).to_have_attribute("data-hovered", "true")
     assert_snapshot(radio, name="st_radio-option_hover")
+
+
+def test_radio_cards_states(app: Page, assert_snapshot: ImageCompareFunction):
+    """Snapshot disabled cards, and keyboard focus plus hover on unselected cards."""
+    assert_snapshot(
+        get_radio(app, "radio 18 (cards, disabled)"), name="st_radio-cards_disabled"
+    )
+
+    radio = get_radio(app, "radio 19 (cards, horizontal, empty)")
+    light = get_radio_option(radio, "Light")
+    system = get_radio_option(radio, "System")
+
+    # Moving focus with the keyboard shows the focus ring; focusing the input
+    # directly would not count as keyboard focus.
+    light.get_by_role("radio").focus()
+    app.keyboard.press("Shift+Tab")
+    app.keyboard.press("Tab")
+    expect(light).to_have_attribute("data-focus-visible", "true")
+    system.hover()
+    expect(system).to_have_attribute("data-hovered", "true")
+    # Neither focus nor hover selects a card.
+    expect(radio.get_by_role("radio", checked=True)).to_have_count(0)
+    assert_snapshot(radio, name="st_radio-cards_states")
+
+
+def _card_boxes(radio: Locator) -> list[FloatRect]:
+    """Return the bounding box of each card in a radio group."""
+    boxes = []
+    for card in radio.get_by_test_id("stRadioOption").all():
+        box = card.bounding_box()
+        assert box is not None
+        boxes.append(box)
+    return boxes
+
+
+def _assert_within_1px(values: list[float]) -> None:
+    """Assert that the values differ by at most 1px."""
+    assert max(values) - min(values) <= 1, values
+
+
+def test_radio_cards_behavior(app: Page):
+    """Cards keep radio semantics, select on a caption click, and wrap cleanly."""
+    cards = get_radio(app, "radio 16 (cards)")
+
+    # The caption sits inside the card but stays out of the accessible name.
+    expect(cards).to_match_aria_snapshot(
+        """
+        - radiogroup "radio 16 (cards)":
+          - radio "Starter"
+          - radio "Pro" [checked]
+          - radio "Enterprise"
+        """
+    )
+    enterprise = cards.get_by_role("radio", name="Enterprise")
+    expect(enterprise).to_have_accessible_description("Advanced controls and support.")
+
+    # The whole card is the click target, caption included.
+    cards.get_by_text("Advanced controls and support.").click()
+    expect(enterprise).to_be_checked()
+    expect_markdown(app, "value 16: Enterprise")
+    expect(cards.get_by_role("radio", name="Pro")).not_to_be_checked()
+
+    # Arrow keys move the selection between cards, as in the default style.
+    empty = get_radio(app, "radio 19 (cards, horizontal, empty)")
+    get_radio_option(empty, "Light").click()
+    expect_markdown(app, "value 19: Light")
+    app.keyboard.press("ArrowRight")
+    expect_markdown(app, "value 19: Dark")
+    expect(empty.get_by_role("radio", name="Light")).not_to_be_checked()
+
+    # Disabled cards ignore clicks. `force` skips Playwright's wait for the
+    # disabled input, so the click really lands on the card.
+    disabled = get_radio(app, "radio 18 (cards, disabled)")
+    expect(disabled.get_by_role("radio", name="Monthly")).to_be_disabled()
+    get_radio_option(disabled, "Monthly").click(force=True)
+    expect(disabled.get_by_role("radio", name="Lifetime")).to_be_checked()
+    expect_markdown(app, "value 18: Lifetime")
+
+    # Vertical and stretch-width cards have equal widths. Cards in a row share
+    # its height, whatever their captions; content-width cards keep their own
+    # widths.
+    _assert_within_1px([box["width"] for box in _card_boxes(cards)])
+    stretch = get_radio(app, "radio 17 (cards, horizontal, stretch)")
+    stretch_boxes = _card_boxes(stretch)
+    _assert_within_1px([box["width"] for box in stretch_boxes])
+    for boxes in (stretch_boxes, _card_boxes(empty)):
+        _assert_within_1px([box["height"] for box in boxes])
+        _assert_within_1px([box["y"] for box in boxes])
+
+    # In a narrow column, content-width cards wrap into more rows instead of
+    # shrinking, so no title breaks onto a second line.
+    narrow = get_radio(app, "radio 20 (cards, horizontal, narrow column)")
+    assert len({round(box["y"]) for box in _card_boxes(narrow)}) > 1
+    for title in ("Small", "Medium", "Large"):
+        lines = narrow.get_by_text(title, exact=True).evaluate(
+            "el => el.getBoundingClientRect().height"
+            " / parseFloat(getComputedStyle(el).lineHeight)"
+        )
+        assert round(lines) == 1, (title, lines)
+
+    # The whole card is clickable, so a caption link shows as plain text.
+    expect(narrow.get_by_text("size guide", exact=False)).to_be_visible()
+    expect(narrow.get_by_role("link")).to_have_count(0)
 
 
 def test_radio_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
