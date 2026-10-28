@@ -1,6 +1,6 @@
 ---
 name: developing-with-streamlit
-description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
+description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, testing, beautifying, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
 ---
 
 # Developing with Streamlit
@@ -13,6 +13,7 @@ Invoke this skill when the user's request involves:
 - Creating a new Streamlit app
 - Editing or modifying an existing Streamlit app
 - Debugging Streamlit issues (errors, session state bugs, performance problems)
+- Verifying that an app works after a change, or writing tests for it
 - Beautifying or improving the visual design of a Streamlit app
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
@@ -57,6 +58,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 - Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one.
+- Check the real app before reporting a change as done: run it with `--server.enableAgentApi=true`, `POST {}` to `/_stcore/agent/interact`, drive the widgets you changed, and confirm `status` is `"ready"` and the output is right. See [Step 4](#step-4-verify-the-change-in-the-running-app).
 
 ## Proactively Look Up API Details
 
@@ -79,7 +81,9 @@ Step 2: Identify task type and load appropriate reference(s)
     ↓
 Step 3: Apply guidance from reference to edit code
     ↓
-Step 4: Check if app is running and offer to run it
+Step 4: Verify the change in the running app (agent API)
+    ↓
+Step 5: Check if app is running and offer to run it
 ```
 
 ### Step 1: Locate the Streamlit Source Code (if needed)
@@ -161,7 +165,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
 | **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 | **Requiring users to sign in** — `st.login`/`st.logout`/`st.user` with OIDC, gating on `st.user.is_logged_in`, and `[auth]` secrets configuration (not a hand-rolled password gate) | read `references/authentication.md` |
-| **Writing automated tests for an app** — `st.testing.v1.AppTest` for headless, in-process tests (simulate widgets, assert on elements) instead of launching a browser/server | read `references/testing.md` |
+| **Checking that a change works, debugging a running app, or writing automated tests** — the agent API (`--server.enableAgentApi=true`, `POST /_stcore/agent/interact`) to drive the real app over HTTP while you develop, and `st.testing.v1.AppTest` for headless, in-process tests (simulate widgets, assert on elements) instead of launching a browser | read `references/testing.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
@@ -222,7 +226,26 @@ For **performance optimization**, read:
 3. Preserve existing functionality while adding improvements
 4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so wrong API use is reported before the app runs. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.
 
-### Step 4: Check Running Apps and Offer to Run
+### Step 4: Verify the Change in the Running App
+
+**Goal:** Confirm the edited app runs and behaves as intended in the real Streamlit runtime before you report the task as done.
+
+The agent API drives the app over HTTP without a browser. It returns the finished page as JSON, with elements named after `st.*` commands and widgets you set by key. For request fields, errors, and limits, read "Check a running app with the agent API" in `references/testing.md`.
+
+1. **Start** a headless instance on a free port in the background, separate from any app the user is running:
+   ```bash
+   streamlit run [path/to/app.py] --server.headless=true --server.port=8599 --server.enableAgentApi=true
+   ```
+2. **Load** the app and check that `status` is `"ready"`:
+   ```bash
+   curl -s -X POST http://localhost:8599/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
+   ```
+3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element and the server's console output, fix the code, and send only `session_id` to rerun. Edits apply without a restart.
+4. **Stop** the instance when you're done.
+
+For purely visual changes (theme, CSS, spacing), this only confirms that the app still runs; checking the look needs a browser.
+
+### Step 5: Check Running Apps and Offer to Run
 
 **Goal:** Help the user see their changes by checking if their app is running.
 
@@ -258,7 +281,8 @@ For **performance optimization**, read:
 
 ## Stopping Points
 
-- **Step 4**: Ask before starting the Streamlit app
+- **Step 4**: Ask before triggering actions with external side effects, such as database writes, emails, or paid API calls
+- **Step 5**: Ask before starting the Streamlit app for the user
 
 ## Resources
 

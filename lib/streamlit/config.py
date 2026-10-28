@@ -1299,7 +1299,6 @@ _create_option(
         Note: This is an experimental feature. The API and its options are
         subject to change.
     """,
-    visibility="hidden",
     default_val=False,
     type_=bool,
 )
@@ -1314,7 +1313,6 @@ _create_option(
         of the same request waits for it instead of starting it over. Keep it
         below the request timeout of the clients you expect.
     """,
-    visibility="hidden",
     default_val=30,
     type_=int,
 )
@@ -1327,7 +1325,6 @@ _create_option(
         An agent session is reclaimed after this much time without an
         interaction, so clients do not have to close sessions explicitly.
     """,
-    visibility="hidden",
     default_val=900,
     type_=int,
 )
@@ -1342,7 +1339,6 @@ _create_option(
         reached, sessions idle past `server.agentSessionTTL` are reclaimed
         first, and new sessions are then refused.
     """,
-    visibility="hidden",
     default_val=100,
     type_=int,
 )
@@ -1359,7 +1355,6 @@ _create_option(
         An element with more rows is reported as incomplete. Its full data is
         at `data.url`, unless `data.unavailable` says why it cannot be served.
     """,
-    visibility="hidden",
     default_val=100,
     type_=int,
 )
