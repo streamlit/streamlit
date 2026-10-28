@@ -180,6 +180,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # Required to create the qa-approved label if it does not exist.
+      issues: write
       pull-requests: write
 
     steps:
@@ -273,15 +275,30 @@ jobs:
             exit 0
           fi
 
+          # A QA result applies to the PR, not to one commit. A PASS on any
+          # commit of the branch adds qa-approved, and that label stays until
+          # a later FAIL.
           VERDICT=$(tr -d '[:space:]' < "qa-artifacts/verdict.txt")
           case "$VERDICT" in
             FAIL)
+              echo "Removing 'qa-approved' label if present"
+              gh pr edit "$PR_NUMBER_ENV" --remove-label "qa-approved" --repo "$REPOSITORY" || true
               echo "Adding 'do-not-merge' label"
               gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
               ;;
             PASS)
               # A QA PASS must not lift a review hold. Only ai-pr-review.yml
               # or a human may remove do-not-merge, including a hold this job added on FAIL.
+              if ! gh api --silent "repos/$REPOSITORY/labels/qa-approved" 2>/dev/null; then
+                echo "Creating 'qa-approved' label"
+                # Ignore create races; adding the label below still fails if it does not exist.
+                gh label create "qa-approved" \
+                  --repo "$REPOSITORY" \
+                  --description "AI QA testing passed" \
+                  --color "0E8A16" || true
+              fi
+              echo "Adding 'qa-approved' label"
+              gh pr edit "$PR_NUMBER_ENV" --add-label "qa-approved" --repo "$REPOSITORY"
               echo "QA PASS does not remove 'do-not-merge'; re-add 'ai-review' or remove the label manually"
               ;;
             *)
