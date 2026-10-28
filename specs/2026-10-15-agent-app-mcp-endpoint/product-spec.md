@@ -96,7 +96,9 @@ Or in Cursor's `mcp.json`:
 
 The route follows the parent spec's rules for every agent route: it respects
 `server.baseUrlPath`, it is registered even with the API off so a probe gets an answer
-rather than the app's HTML, and its URL carries no version. A person pastes the URL
+rather than the app's HTML, and its URL carries no version. Appended to a page's URL
+instead of the app's, such as `/page2/_stcore/agent/mcp`, it is a `404` rather than the
+app's HTML with a `200`, as the other agent routes are. A person pastes the URL
 once; MCP negotiates its protocol revision on each connection, and clients read the tool
 list afresh every time, so the URL never has to change.
 
@@ -148,7 +150,10 @@ The agent API's operation, unchanged:
   `st.context.headers` the same way, and the same limits, timeout, and validation
   rules apply.
 - **`session_id` stays an explicit argument**, rather than following the MCP connection.
-  See [Key design decisions](#key-design-decisions).
+  See [Key design decisions](#key-design-decisions). The input schema types it as a
+  string, not nullable. A `null`, which models often send for an optional argument, is
+  `invalid_request`, as over HTTP, and the message says to omit it to create a session:
+  a client that lost its id must not silently get a fresh session.
 
 ```json
 {
@@ -338,9 +343,11 @@ Reads a media file the app still stores:
   that confirms writes can call it without asking.
 
 `unknown_file`, `result_too_large`, and `read_unsupported` are the only new error
-codes, listed in the OpenAPI error catalog as MCP-only, with no HTTP status, since no
-HTTP route returns them. An HTTP `get_data`, one of the parent spec's smaller
-follow-ups, would reuse the same three codes and give them statuses.
+codes. No HTTP route returns them, so they have no HTTP status: they sit in an MCP-only
+list beside `errors.ERROR_CATALOG`, which pairs every code with one, and the OpenAPI
+document names them apart from the `Error` schema's `code` enum, which lists what the
+HTTP route returns. An HTTP `get_data`, one of the parent spec's smaller follow-ups,
+would reuse the same three codes and give them statuses.
 `read_unsupported` means the session's media store cannot return bytes. `unknown_file`
 means the id is wrong or the file is gone. A bad `offset` or `limit`, or a missing or
 malformed argument, reuses the parent's `invalid_request`.
@@ -444,17 +451,14 @@ session.
 - **No batches.** Only the `2025-03-26` revision had them, and answering one would run
   several interactions inside one HTTP request, past the timeout each is held under.
 
-Checks run in this order: the HTTP method (`405`), then Host and `Origin` (`403`), then
-a web page's content type (`400`), then enablement (`400`), then body size (`413`), then
-parsing. Host and `Origin` run before enablement, so a rebound page does not learn
-whether the API is on. `POST /_stcore/agent/interact` checks enablement first today;
-the implementation moves that check after its Host, `Origin`, and content-type checks,
-so both routes refuse a request in the same order. The one change a caller of that
-route can see: with the API off, a disallowed Host or `Origin` gets
-`host_not_allowed` or `origin_not_allowed` instead of `not_available`. A disabled API
-is `400` here, not the HTTP route's `403`, because the official TypeScript client reads
-`403` as an authorization failure: it neither falls back to `initialize` nor shows the
-message.
+Checks run in the order `POST /_stcore/agent/interact` uses: the HTTP method (`405`),
+then enablement (`400`), then Host and `Origin` (`403`), then a web page's content type
+(`400`), then body size (`413`), then parsing. Checking Host and `Origin` first would
+hide nothing: the OpenAPI document reports `available` or `disabled` to any caller, by
+design, and a page that fails the `Origin` check cannot use the API either way. A
+disabled API is `400` here, not the HTTP route's `403`, because the official TypeScript
+client reads `403` as an authorization failure: it neither falls back to `initialize`
+nor shows the message.
 
 A content type counts as JSON when its media type is `application/json`, whatever its
 parameters, so `application/json; charset=utf-8` passes. Every refusal before parsing
@@ -539,9 +543,14 @@ decode cap in [Rollout](#rollout) bounds what parallel `get_data` calls cost.
 The parent spec's discovery points at the MCP endpoint too:
 
 - The OpenAPI document lists the route under `paths` and mentions it in its description,
-  relative to the document.
-- The `<noscript>` text in `index.html` gains one sentence: the same interface is an MCP
-  server at `_stcore/agent/mcp` under the app's URL.
+  relative to the document. With the API off, the minimal document lists it with only
+  its refusal, the `400`, as it lists `interact` with only its `403`.
+- Every response from the route carries `Link: <openapi.json>; rel="service-desc"`, as
+  the other agent routes' responses do. Relative to `_stcore/agent/mcp`, it names the
+  document beside it.
+- The `<noscript>` text in `index.html` gains one sentence, stated as a fact like the
+  rest: the same protocol is also an MCP server at `_stcore/agent/mcp` under the app's
+  root URL.
 
 **URLs in a result are relative to the MCP endpoint**, the rule the HTTP API uses for
 its own responses. A table's `data.url` is `../../media/<id>`, and other media URLs keep
@@ -587,6 +596,9 @@ lines including the tool descriptions. Beyond the endpoint itself:
   agent routes already parse requests with `asyncio.to_thread`. A per-server cap on
   reads decoding at once makes parallel calls wait their turn rather than each decode a
   large file, and the concurrency performance test checks that bound.
+- The route is wired like the other two agent routes: `_stcore/agent/mcp` joins the
+  reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
+  and its endpoint is wrapped so every response carries the `Link` header.
 - Reading a file back is optional for a media store. Hosts can plug in their own store
   through `RuntimeConfig.media_file_storage`, and the storage interface has no read
   today: only the built-in in-memory store can return a file's bytes. On a store that
