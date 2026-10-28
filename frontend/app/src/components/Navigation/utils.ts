@@ -122,5 +122,5 @@ export function processNavigationStructure(
 export function filterVisiblePages(
   pages: AppPage.$Properties[]
 ): AppPage.$Properties[] {
-  return pages.filter(page => !page.isHidden)
+  return pages.filter(page => page.isHidden !== true)
 }

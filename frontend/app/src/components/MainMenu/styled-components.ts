@@ -88,7 +88,7 @@ interface StyledMenuItemRowProps {
  * Menu item button with hover highlight.
  */
 export const StyledMenuItemRow = styled.button<StyledMenuItemRowProps>(
-  ({ theme, isRecording }) => ({
+  ({ theme, isRecording = false }) => ({
     display: "flex",
     alignItems: "center",
     padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
@@ -243,7 +243,7 @@ interface StyledToggleRowProps {
  * consistent with StyledMenuItemRow.
  */
 export const StyledToggleRow = styled.button<StyledToggleRowProps>(
-  ({ theme, isDisabled }) => ({
+  ({ theme, isDisabled = false }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -304,7 +304,7 @@ export const StyledToggleTrack = styled.div<StyledToggleProps>(
 )
 
 export const StyledToggleKnob = styled.div<StyledToggleProps>(
-  ({ theme, isChecked, isDisabled }) => {
+  ({ theme, isChecked, isDisabled = false }) => {
     const lightTheme = hasLightBackgroundColor(theme)
 
     let backgroundColor = lightTheme
