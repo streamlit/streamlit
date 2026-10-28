@@ -101,7 +101,7 @@ st.altair_chart(chart, alt="Revenue by region over time")
 
 Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for this. Prefer Vega-based charts unless the spec is already ECharts-native.
 
-Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported. Keep `streamlit-echarts` for those spec features. See [third-party-components.md](third-party-components.md).
+Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
 
 ```python
 st.echarts_chart(
