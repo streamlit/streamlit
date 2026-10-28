@@ -435,8 +435,9 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[0, 0] == pd.Timedelta(seconds=90)
         # pandas 2+ may ignore 90.5s; older pandas may accept or upcast it.
         _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
-        # Either way, the cell is never cleared.
-        assert not pd.isna(df.iat[0, 0])
+        # Either way, the cell holds the old or the new value, never a
+        # cleared or truncated one.
+        assert df.iat[0, 0] in {pd.Timedelta(seconds=90), pd.Timedelta(seconds=90.5)}
 
     def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
         """A finer-than-dtype duration row add must not crash the app."""
@@ -450,8 +451,14 @@ class DataEditorUtilTest(unittest.TestCase):
         assert df.iat[1, 0] == pd.Timedelta(seconds=90)
         # pandas 2+ may skip 90.5s; older pandas may accept or upcast it.
         _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
-        # Either way, no added value is stored as NaT.
-        assert not df["duration"].isna().any()
+        # Either way, existing rows are unchanged and an added row (if any)
+        # holds exactly 90.5 seconds.
+        assert list(df["duration"].iloc[:2]) == [
+            pd.Timedelta(seconds=5),
+            pd.Timedelta(seconds=90),
+        ]
+        assert len(df) in {2, 3}
+        assert df["duration"].iloc[2:].eq(pd.Timedelta(seconds=90.5)).all()
 
     @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
     def test_apply_cell_edits_fractional_seconds_on_timedelta(self, dtype: str):

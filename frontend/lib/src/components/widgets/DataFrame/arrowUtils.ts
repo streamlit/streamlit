@@ -516,11 +516,9 @@ export function getCellFromArrow(
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
   ) {
-    // Convert Arrow duration ticks to seconds for numeric columns so
-    // sorting stays numeric without overflowing JS safe integers.
-    // Other column kinds keep Arrow's formatted duration string.
-    // Converting to a JavaScript number can collapse very small sub-second
-    // differences for large durations.
+    // Number and progress columns get seconds so sorting stays numeric and
+    // stays within JS safe integers (very large durations may lose sub-ns
+    // detail). Other column kinds show Arrow's formatted duration string.
     if (column.kind === "number" || column.kind === "progress") {
       cellTemplate = column.getCell(
         convertTimestampToSeconds(

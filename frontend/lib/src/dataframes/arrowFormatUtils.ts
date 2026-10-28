@@ -382,6 +382,10 @@ function formatDatetime(date: number | Date, field?: Field): string {
 // Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
 const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
 
+// Below this many ticks, scaling a second count to ticks is off by less than
+// one tick, so the exact tick can be recovered.
+const EXACT_DURATION_TICK_LIMIT = 2 ** 52
+
 /**
  * Number of decimal second places represented by a duration field's unit.
  * Without a unit, the field is read as nanoseconds (the pandas default).
@@ -417,11 +421,20 @@ export function isValidDurationSeconds(
   if (!Number.isFinite(scaledSeconds)) {
     return false
   }
-  // A second count is representable if it scales to a whole number of ticks.
-  // Converting ticks to float seconds and back adds up to about one ulp of
-  // error (for example, nanosecond ticks past 2^53), so allow two ulps of
+  const nearestTick = Math.round(scaledSeconds)
+  if (Math.abs(nearestTick) < EXACT_DURATION_TICK_LIMIT) {
+    // Ticks in this range are exact floats, so a representable second count
+    // is the float nearest to a whole tick. Scaling can land one tick off,
+    // so the neighboring ticks are checked as well.
+    return [nearestTick - 1, nearestTick, nearestTick + 1].some(
+      tick => tick / scale === seconds
+    )
+  }
+  // Past 2^52 ticks (for example, nanosecond durations past about 52 days),
+  // a float second count cannot hold every tick. Converting ticks to float
+  // seconds and back adds up to about one ulp of error, so allow two ulps of
   // slack. A larger remainder means the value is finer than the column's unit.
-  const tickRemainder = Math.abs(scaledSeconds - Math.round(scaledSeconds))
+  const tickRemainder = Math.abs(scaledSeconds - nearestTick)
   return tickRemainder <= Math.abs(scaledSeconds) * Number.EPSILON * 2
 }
 
@@ -605,9 +618,15 @@ function formatDurationWithIntl(
   try {
     return formatDurationParts(durationFormatCtor, locales, parts)
   } catch (error) {
-    if (error instanceof RangeError) {
-      return formatDurationParts(durationFormatCtor, undefined, parts)
+    if (!(error instanceof RangeError)) {
+      return undefined
     }
+  }
+  // A RangeError usually means an unsupported locale, so retry with the
+  // default locale. If that also fails, the caller shows the clock.
+  try {
+    return formatDurationParts(durationFormatCtor, undefined, parts)
+  } catch {
     return undefined
   }
 }

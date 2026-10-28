@@ -310,7 +310,14 @@ def _parse_value(
 
     Returns
     -------
-    The converted value.
+    The converted value, or ``None`` if the value cannot be parsed.
+
+    Raises
+    ------
+    ValueError, OverflowError
+        If a numeric timedelta value is non-finite or outside the pandas
+        Timedelta range (``OutOfBoundsTimedelta`` is a ``ValueError``).
+        Callers skip such an edit instead of storing ``NaT``.
     """
     if value is None:
         return None
@@ -483,8 +490,9 @@ def _assign_row_values(
     Using a mapping keeps numpy from coercing nested sequences (for example,
     lists) into multi-dimensional arrays. Widget state comes from the client,
     so pandas can reject a value (for example, a duration finer than the
-    column unit). Log and skip the row when assignment raises. If pandas
-    widens the timedelta dtype instead of raising, keep that widened column.
+    column unit). Log and skip the row when assignment raises. Some pandas
+    versions widen the timedelta dtype instead of raising; in that case the
+    widened column is kept.
     """
     import warnings
 

@@ -48,10 +48,11 @@ import {
 } from "./utils"
 
 /**
- * The duration display selected by a column's format, if any. `duration`
- * works on any number column. On timedelta columns, the automatic format
- * also humanizes, and `compact` / `localized` switch to their duration
- * displays.
+ * Returns the duration display for a column, or `undefined` to format the
+ * value as a plain number.
+ * - `duration`: any number column.
+ * - Timedelta columns: an empty format also means `duration`; `compact` and
+ *   `localized` select their duration displays.
  */
 function getDurationFormat(
   format: string | undefined,

@@ -938,6 +938,27 @@ describe("formatDurationFromSeconds", () => {
         intlObject.DurationFormat = original
       }
     })
+
+    it("falls back to the elapsed-time clock when the default-locale retry also fails", async () => {
+      const intlObject = Intl as unknown as { DurationFormat?: unknown }
+      const original = intlObject.DurationFormat
+      intlObject.DurationFormat = function ThrowingDurationFormat() {
+        return {
+          format: (): string => {
+            throw new RangeError("Unsupported duration")
+          },
+        }
+      }
+      // Reload the module so its formatter cache starts empty.
+      vi.resetModules()
+      try {
+        const { formatDurationFromSeconds: formatWithThrowingIntl } =
+          await import("./arrowFormatUtils")
+        expect(formatWithThrowingIntl(5, "localized")).toEqual("00:00:05")
+      } finally {
+        intlObject.DurationFormat = original
+      }
+    })
   })
 })
 
@@ -968,6 +989,15 @@ describe("isValidDurationSeconds", () => {
     expect(isValidDurationSeconds(90.5, 0)).toBe(false)
     expect(isValidDurationSeconds(1.0005, 3)).toBe(false)
     expect(isValidDurationSeconds(90.0000000005, 9)).toBe(false)
+  })
+
+  it("rejects values finer than the unit near the pandas Timedelta limit", () => {
+    // About 285 years: a relative tolerance alone would accept this
+    // sub-millisecond value on timedelta64[ms]. Written as a sum because the
+    // float cannot hold the exact decimal.
+    expect(isValidDurationSeconds(9_000_000_000 + 0.000001, 3)).toBe(false)
+    expect(isValidDurationSeconds(9_000_000_000.001, 3)).toBe(true)
+    expect(isValidDurationSeconds(9_000_000_000, 0)).toBe(true)
   })
 
   it.each([
