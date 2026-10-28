@@ -128,41 +128,23 @@ class ForwardMsgQueue:
         if not retain_lifecycle_msgs:
             self._queue = []
         else:
-            self._queue = [
-                _update_script_finished_message(msg, fragment_ids_this_run is not None)
-                for msg in self._queue
-                if msg.WhichOneof("type")
-                in {
-                    "new_session",
-                    "script_finished",
-                    "session_status_changed",
-                    "parent_message",
-                    "page_info_changed",
-                }
-                # Toasts are one-shot notifications that must survive the queue
-                # clear happening when a run is interrupted (e.g. st.toast()
-                # immediately followed by st.rerun()); otherwise the toast delta
-                # is dropped before it reaches the browser (issue #7740).
-                or _is_toast_delta(msg)
-                or (
-                    # preserve all messages if this is a fragment rerun and...
-                    fragment_ids_this_run is not None
-                    and (
-                        # the message is not a delta message
-                        # (not associated with a fragment) or...
-                        msg.delta is None
-                        or (
-                            # it is a delta but not associated with any of the passed
-                            # fragments
-                            msg.delta is not None
-                            and (
-                                msg.delta.fragment_id is None
-                                or msg.delta.fragment_id not in fragment_ids_this_run
-                            )
-                        )
+            retained: list[ForwardMsg] = []
+            # A run's deltas precede its script_finished, so this holds the
+            # fragments whose output was dropped from the run that finishes next.
+            dropped_fragment_ids: set[str] = set()
+            for msg in self._queue:
+                if not _is_retained_on_clear(msg, fragment_ids_this_run):
+                    dropped_fragment_ids.add(msg.delta.fragment_id)
+                    continue
+                if msg.WhichOneof("type") == "script_finished":
+                    _update_script_finished_message(
+                        msg,
+                        is_fragment_run=fragment_ids_this_run is not None,
+                        dropped_fragment_ids=dropped_fragment_ids,
                     )
-                )
-            ]
+                    dropped_fragment_ids = set()
+                retained.append(msg)
+            self._queue = retained
 
         self._delta_index_map = {}
 
@@ -252,10 +234,44 @@ def _maybe_compose_delta_msgs(
     return None
 
 
+_LIFECYCLE_MSG_TYPES = frozenset(
+    {
+        "new_session",
+        "script_finished",
+        "session_status_changed",
+        "parent_message",
+        "page_info_changed",
+    }
+)
+
+
+def _is_retained_on_clear(
+    msg: ForwardMsg, fragment_ids_this_run: list[str] | None
+) -> bool:
+    """True if a lifecycle-retaining clear keeps this message in the queue."""
+    if msg.WhichOneof("type") in _LIFECYCLE_MSG_TYPES:
+        return True
+
+    # Toasts are one-shot notifications that must survive the queue clear
+    # happening when a run is interrupted (e.g. st.toast() immediately followed
+    # by st.rerun()); otherwise the toast delta is dropped before it reaches the
+    # browser (issue #7740).
+    if _is_toast_delta(msg):
+        return True
+
+    # A fragment rerun only drops deltas of the fragments it is about to rerun.
+    # Non-delta messages have an empty fragment_id and are kept.
+    return (
+        fragment_ids_this_run is not None
+        and msg.delta.fragment_id not in fragment_ids_this_run
+    )
+
+
 def _update_script_finished_message(
-    msg: ForwardMsg, is_fragment_run: bool
-) -> ForwardMsg:
-    """
+    msg: ForwardMsg, *, is_fragment_run: bool, dropped_fragment_ids: set[str]
+) -> None:
+    """Update a retained ``script_finished`` message in place.
+
     When we are here, the message queue is cleared from non-lifecycle messages
     before they were flushed to the browser.
 
@@ -265,22 +281,36 @@ def _update_script_finished_message(
     the frontend that the previous run was interrupted by a new script start.
     Otherwise, a `FINISHED_SUCCESSFULLY` message might trigger a reset of widget
     states on the frontend.
+
+    ``dropped_fragment_ids`` holds the fragments whose deltas this clear dropped
+    from the run that this ``script_finished`` belongs to.
+
+    Status rewrites leave metadata (including run identity) on the same message
+    so the frontend still attributes this finish to the run that produced it.
     """
-    if msg.WhichOneof("type") == "script_finished" and (
-        # If this is not a fragment run (= full app run), its okay to change the
-        # script_finished type to FINISHED_EARLY_FOR_RERUN because another full app run
-        # is about to start.
-        # If this is a fragment run, it is allowed to change the state of
-        # all script_finished states except for FINISHED_SUCCESSFULLY, which we use to
-        # indicate that a full app run has finished successfully (in other words, a
-        # fragment should not modify the finished status of a full app run, because
-        # the fragment finished state is different and the frontend might not trigger
-        # cleanups etc. correctly).
-        is_fragment_run is False
-        or msg.script_finished != ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-    ):
-        msg.script_finished = ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
-    # Status rewrites leave metadata (including run identity) on the same
-    # message so the frontend still attributes this finish to the run that
-    # produced it.
-    return msg
+    status = msg.script_finished
+    if is_fragment_run and status == ForwardMsg.FINISHED_SUCCESSFULLY:
+        # A fragment should not modify the finished status of a full app run,
+        # because the fragment finished state is different and the frontend
+        # might not trigger cleanups etc. correctly.
+        return
+
+    if is_fragment_run and status == ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY:
+        # This run reached its end, and the next run's cleanup only covers the
+        # fragments it reruns. Downgrading would leave elements this run
+        # stopped rendering on screen, so keep the status unless its cleanup
+        # could remove live output that this clear dropped.
+        if not dropped_fragment_ids:
+            return
+        # Dropped output of some of this run's own fragments is replaced by
+        # their next run, so the browser limits cleanup to the other fragments.
+        # The message can be retained by several clears, so earlier drops count.
+        finished_ids = list(msg.metadata.fragment_ids_this_run)
+        all_dropped_ids = dropped_fragment_ids.union(msg.metadata.dropped_fragment_ids)
+        if all_dropped_ids < set(finished_ids):
+            msg.metadata.dropped_fragment_ids[:] = [
+                f for f in finished_ids if f in all_dropped_ids
+            ]
+            return
+
+    msg.script_finished = ForwardMsg.FINISHED_EARLY_FOR_RERUN

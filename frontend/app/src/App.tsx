@@ -184,7 +184,14 @@ export interface Props {
 
 interface FinishedRun {
   scriptRunId: string
+  /** Fragment roots selected for the run. Empty means a full-app run. */
   fragmentIds: string[]
+  /**
+   * Fragment roots whose stale nodes this finish clears: the run's fragments
+   * minus those whose output the server dropped before delivery. Empty means
+   * a full-app run. Undefined when every fragment's output was dropped.
+   */
+  cleanupFragmentIds?: string[]
 }
 
 interface State {
@@ -2055,9 +2062,20 @@ export class App extends PureComponent<Props, State> {
     if (!scriptRunId) {
       return undefined
     }
+    const fragmentIds = metadata.fragmentIdsThisRun
+    const droppedFragmentIds = new Set(metadata.droppedFragmentIds)
+    const cleanupFragmentIds = fragmentIds.filter(
+      fragmentId => !droppedFragmentIds.has(fragmentId)
+    )
     return {
       scriptRunId,
-      fragmentIds: metadata.fragmentIdsThisRun,
+      fragmentIds,
+      // An empty list would mean a full-app run, so it must not come from
+      // dropping every fragment of a fragment run.
+      cleanupFragmentIds:
+        fragmentIds.length > 0 && cleanupFragmentIds.length === 0
+          ? undefined
+          : cleanupFragmentIds,
     }
   }
 
@@ -2080,7 +2098,9 @@ export class App extends PureComponent<Props, State> {
     // re-enable even when a run ends with a compilation error.
     this.setState(prevState => ({
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-      scriptRunFinishedFragmentIds: finishedRun?.fragmentIds ?? [],
+      // A fragment whose output was dropped is acked when its rerun finishes.
+      scriptRunFinishedFragmentIds:
+        finishedRun?.cleanupFragmentIds ?? finishedRun?.fragmentIds ?? [],
     }))
 
     // Clear history replaceState only on a real finish for the latest
@@ -2114,8 +2134,10 @@ export class App extends PureComponent<Props, State> {
         })
       })
 
+      const cleanupFragmentIds = finishedRun?.cleanupFragmentIds
       if (
         finishedRun &&
+        cleanupFragmentIds &&
         (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
           status ===
             ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
@@ -2133,7 +2155,7 @@ export class App extends PureComponent<Props, State> {
             // batching cannot retarget it to a later NewSession.
             elements: elements.clearStaleNodes(
               finishedRun.scriptRunId,
-              finishedRun.fragmentIds
+              cleanupFragmentIds
             ),
           }),
           () => {
@@ -2160,7 +2182,7 @@ export class App extends PureComponent<Props, State> {
         ) {
           this.connectionManager.incrementMessageCacheRunCount(
             this.sessionInfo.current.maxCachedMessageAge,
-            finishedRun.fragmentIds
+            cleanupFragmentIds
           )
         }
       }
