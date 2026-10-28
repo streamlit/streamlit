@@ -83,7 +83,6 @@ _RADIO_TYPE_TO_PROTO: Final[dict[str, RadioProto.Type.ValueType]] = {
     "default": RadioProto.Type.DEFAULT,
     "cards": RadioProto.Type.CARDS,
 }
-_RADIO_TYPES: Final = tuple(_RADIO_TYPE_TO_PROTO)
 
 
 class RadioSerde(Generic[T]):
@@ -356,7 +355,7 @@ class RadioMixin:
             The default is false (vertical buttons).
 
         captions : iterable of str or None
-            A list of captions to show below each radio button. If this is
+            A list of captions to show below each option's label. If this is
             ``None`` (default), no captions are shown.
 
             Captions are matched to ``options`` by position. To caption only
@@ -376,14 +375,10 @@ class RadioMixin:
               plain text. The selected card is highlighted with the theme's
               primary color.
 
-            Both styles accept the same options, support the same keyboard
-            navigation, and return the same value.
-
-            When ``type="cards"`` and ``horizontal=True``, the cards are
-            arranged in rows and wrap into more rows when they don't fit. If
-            ``width`` is ``"stretch"`` or an integer, the cards in a row have
-            equal widths and fill the widget's width. Otherwise, each card is
-            as wide as its content.
+            With ``horizontal=True``, cards wrap into more rows when they
+            don't fit. If ``width`` is ``"stretch"`` or an integer, the cards
+            in each row have equal widths and fill the row. Otherwise, each
+            card is as wide as its content.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -566,10 +561,11 @@ class RadioMixin:
             on_change,
             supported_modes=("rerun", "ignore"),
         )
-        # Check tuple membership: a dict lookup would raise `TypeError` for an
-        # unhashable value such as a list.
-        if radio_type not in _RADIO_TYPES:
-            raise StreamlitValueError("type", [repr(t) for t in _RADIO_TYPES])
+        # Check for a string first, so any other `type` value, such as a list
+        # or a NumPy array, raises StreamlitValueError instead of failing in
+        # the dict lookup.
+        if not isinstance(radio_type, str) or radio_type not in _RADIO_TYPE_TO_PROTO:
+            raise StreamlitValueError("type", [repr(t) for t in _RADIO_TYPE_TO_PROTO])
 
         check_widget_policies(
             self.dg,

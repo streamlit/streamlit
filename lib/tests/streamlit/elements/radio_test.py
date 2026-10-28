@@ -885,8 +885,11 @@ class RadioTypeTest(DeltaGeneratorTestCase):
         [
             ("unknown_string", "pills"),
             ("wrong_case", "Cards"),
-            # Unhashable, so a dict lookup would raise `TypeError` instead.
+            # Non-strings that a dict lookup or a tuple membership check
+            # would mishandle: unhashable, or compared element-wise.
             ("unhashable", ["cards"]),
+            ("numpy_array", np.array(["cards"])),
+            ("numpy_array_multiple", np.array(["default", "cards"])),
         ]
     )
     def test_invalid_type_raises_exception(self, _name: str, radio_type: Any) -> None:
@@ -908,7 +911,10 @@ class RadioTypeTest(DeltaGeneratorTestCase):
     def test_other_parameter_type_errors_still_name_provided_type(
         self, _name: str, invalid_kwargs: dict[str, Any], expected_message: str
     ) -> None:
-        """Test that type errors of other parameters still name the provided type."""
+        """Test that the `type` parameter doesn't shadow the builtin `type()`.
+
+        Error messages for other parameters use it to name the provided type.
+        """
         with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             st.radio("the label", ("a", "b"), type="cards", **invalid_kwargs)
 

@@ -39,7 +39,7 @@ interface StyledRadioGroupProps {
 }
 
 /**
- * Layout of a card group. Cards in the same row share its height.
+ * Layout of a card group. Cards in the same row share that row's height.
  *
  * - Vertical: a stack that stretches each card to the group width, which is
  *   the widest card for `width="content"`.
@@ -148,9 +148,9 @@ export const StyledRadioField = styled(RARadioField)(({ theme }) => ({
  * `StyledRadioField` for a card group. Its rules only matter in a wrapping row
  * of content-width cards; the other card layouts stretch the field.
  *
- * - It never shrinks, which would break words apart; the row wraps instead.
- * - It is capped at the row's width, so a card too wide for the row wraps its
- *   text at word boundaries.
+ * - Never shrinks, so the row wraps instead of breaking words apart.
+ * - Caps its width at 100% of the row, so a card wider than the row wraps
+ *   its text at word boundaries.
  */
 export const StyledRadioCardField = styled(StyledRadioField)({
   flex: "0 0 auto",
@@ -198,8 +198,8 @@ export const StyledRadioButton = styled(RARadioButton)(({ theme }) => ({
  *   top-aligned.
  * - Padding includes the border, so the circle sits about the same distance
  *   from the top and left edges.
- * - Hover and focus only tint unselected cards: pressing a selected radio does
- *   nothing.
+ * - Hover and focus tint only unselected cards, because pressing an already
+ *   selected card does nothing.
  * - Selected cards get a primary border and a light primary tint, like
  *   selected pills. An inset primary ring doubles the border without shifting
  *   the layout, so the selection reads at card size.
@@ -297,9 +297,9 @@ export const StyledRadioCardRow = styled(StyledRadioRow)({
 })
 
 /**
- * Holds the circle of a card in a box one title line tall, which centers the
- * circle on the title's first line. A single-line title looks the same as
- * with `StyledRadioRow`.
+ * Centers the card's circle on the first line of the title by sizing its box
+ * to one title line. A single-line title looks the same as with
+ * `StyledRadioRow`.
  */
 export const StyledRadioCardIndicator = styled.div(({ theme }) => ({
   display: "flex",

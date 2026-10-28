@@ -21,6 +21,7 @@ from e2e_playwright.conftest import (
     rerun_app,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -191,27 +192,37 @@ def test_radio_cards_behavior(app: Page):
     expect(disabled.get_by_role("radio", name="Lifetime")).to_be_checked()
     expect_markdown(app, "value 18: Lifetime")
 
+    # Layout reads don't auto-wait like `expect`, so `wait_until` retries the
+    # checks below until they pass.
     # Vertical and stretch-width cards have equal widths. Cards in a row share
-    # its height, whatever their captions; content-width cards keep their own
-    # widths.
-    _assert_within_1px([box["width"] for box in _card_boxes(cards)])
+    # that row's height, whatever their captions; content-width cards keep
+    # their own widths.
     stretch = get_radio(app, "radio 17 (cards, horizontal, stretch)")
-    stretch_boxes = _card_boxes(stretch)
-    _assert_within_1px([box["width"] for box in stretch_boxes])
-    for boxes in (stretch_boxes, _card_boxes(empty)):
-        _assert_within_1px([box["height"] for box in boxes])
-        _assert_within_1px([box["y"] for box in boxes])
+
+    def assert_equal_card_sizes() -> None:
+        _assert_within_1px([box["width"] for box in _card_boxes(cards)])
+        stretch_boxes = _card_boxes(stretch)
+        _assert_within_1px([box["width"] for box in stretch_boxes])
+        for boxes in (stretch_boxes, _card_boxes(empty)):
+            _assert_within_1px([box["height"] for box in boxes])
+            _assert_within_1px([box["y"] for box in boxes])
+
+    wait_until(app, assert_equal_card_sizes)
 
     # In a narrow column, content-width cards wrap into more rows instead of
     # shrinking, so no title breaks onto a second line.
     narrow = get_radio(app, "radio 20 (cards, horizontal, narrow column)")
-    assert len({round(box["y"]) for box in _card_boxes(narrow)}) > 1
-    for title in ("Small", "Medium", "Large"):
-        lines = narrow.get_by_text(title, exact=True).evaluate(
-            "el => el.getBoundingClientRect().height"
-            " / parseFloat(getComputedStyle(el).lineHeight)"
-        )
-        assert round(lines) == 1, (title, lines)
+
+    def assert_cards_wrap_with_one_line_titles() -> None:
+        assert len({round(box["y"]) for box in _card_boxes(narrow)}) > 1
+        for title in ("Small", "Medium", "Large"):
+            lines = narrow.get_by_text(title, exact=True).evaluate(
+                "el => el.getBoundingClientRect().height"
+                " / parseFloat(getComputedStyle(el).lineHeight)"
+            )
+            assert round(lines) == 1, (title, lines)
+
+    wait_until(app, assert_cards_wrap_with_one_line_titles)
 
     # The whole card is clickable, so a caption link shows as plain text.
     expect(narrow.get_by_text("size guide", exact=False)).to_be_visible()
