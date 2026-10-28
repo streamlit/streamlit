@@ -321,7 +321,7 @@ st.dataframe(
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
 
-**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. Use `format="compact"` for an elapsed-time clock like `02:00:00`.
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. On a timedelta column, `format="compact"` is an elapsed-time clock (`02:00:00`). On other number columns, `compact` stays abbreviated notation (`1.2K`).
 
 ## Editing data with st.data_editor
 

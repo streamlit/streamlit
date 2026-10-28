@@ -596,13 +596,13 @@ def NumberColumn(
         the user. This defaults to ``None``. On timedelta / duration columns,
         this is a number of seconds.
 
-    format : str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "duration", or None
+    format : str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", "bytes", "duration", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
         - ``None`` (default): Streamlit infers the formatting from the data.
-          On timedelta / duration columns, this shows a humanized duration
-          (like ``"duration"``).
+          On timedelta / duration columns, this uses the same humanized
+          display as ``"duration"``.
         - ``"plain"``: Show the full number without any formatting (e.g. "1234.567").
         - ``"localized"``: Show the number in the default locale format
           (e.g. "1,234.567"). On timedelta / duration columns, show a

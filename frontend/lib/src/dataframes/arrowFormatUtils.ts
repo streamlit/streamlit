@@ -516,6 +516,8 @@ function toDurationParts(
   }
 
   if (fractionalTicks) {
+    // Scale the column unit's fractional ticks up to nanoseconds for
+    // Intl.DurationFormat.
     const fractionalNanoseconds =
       fractionalTicks * 10 ** (9 - fractionalSecondDigits)
     const milliseconds = Math.floor(fractionalNanoseconds / 1_000_000)
