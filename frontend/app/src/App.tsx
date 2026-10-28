@@ -765,7 +765,7 @@ export class App extends PureComponent<Props, State> {
           // deprecated setAnonymousCrossOriginPropertyOnMediaElements (if true, use "anonymous")
           resourceCrossOriginMode:
             resourceCrossOriginMode ??
-            (setAnonymousCrossOriginPropertyOnMediaElements
+            (setAnonymousCrossOriginPropertyOnMediaElements === true
               ? "anonymous"
               : undefined),
         }
@@ -897,7 +897,7 @@ export class App extends PureComponent<Props, State> {
   ): void {
     // Show dialog only if blockErrorDialogs host config is false
     const { blockErrorDialogs } = this.state.appConfig
-    if (!blockErrorDialogs) {
+    if (blockErrorDialogs !== true) {
       this.openDialog(newDialog)
     }
 
@@ -1094,7 +1094,7 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleCustomParentMessage = (parentMessage: ParentMessage): void => {
-    if (this.state.appConfig.enableCustomParentMessages) {
+    if (this.state.appConfig.enableCustomParentMessages === true) {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "CUSTOM_PARENT_MESSAGE",
         message: parentMessage.message,
@@ -1268,7 +1268,7 @@ export class App extends PureComponent<Props, State> {
       // Now that we allow multiple set page config calls, menu items are additive
       // for behavior consistency with other page config properties.
       this.setState((prevState: State) => {
-        if (menuItems.clearAboutMd) {
+        if (menuItems.clearAboutMd === true) {
           menuItems.aboutSectionMd = ""
         }
         return {
@@ -2441,7 +2441,10 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
+      if (
+        pageScriptHash !== currentPageScriptHash &&
+        preserveQueryParams !== true
+      ) {
         // When switching pages, preserve only embed params and widget-bound params.
         // All other params (like ?foo=bar) should be cleared.
         const filteredParams = this.widgetMgr.filterParamsForPageChange(
@@ -2485,10 +2488,10 @@ export class App extends PureComponent<Props, State> {
       this.connectionManager?.getCachedMessageHashes() ?? []
 
     this.rerunEpoch += 1
-    if (isHistoryNavigation) {
+    if (isHistoryNavigation === true) {
       this.historyNavigationEpoch = this.rerunEpoch
     } else if (
-      isAutoRerun &&
+      isAutoRerun === true &&
       // Only re-stick while a history BackMsg is still awaiting NewSession
       // (backend pending coalesce). Do not re-stick after the history run's
       // NewSession (a later auto-rerun is a separate interrupt) or after a
@@ -2849,8 +2852,8 @@ export class App extends PureComponent<Props, State> {
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank about text still lets other menu items count
       menuItems?.aboutSectionMd ||
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help url still lets the bug-report item count
-      (menuItems?.getHelpUrl && !menuItems.hideGetHelp) ||
-      (menuItems?.reportABugUrl && !menuItems.hideReportABug)
+      (menuItems?.getHelpUrl && menuItems.hideGetHelp !== true) ||
+      (menuItems?.reportABugUrl && menuItems.hideReportABug !== true)
     )
   }
 
