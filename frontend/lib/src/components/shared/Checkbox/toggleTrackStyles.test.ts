@@ -37,7 +37,7 @@ describe("getToggleTrackColor", () => {
     }
   )
 
-  it("uses darkenedBgMix15 for off hover, matching radio/checkbox", () => {
+  it("uses fadedText20 for off hover", () => {
     const theme = lightTheme.emotion
 
     expect(
@@ -46,7 +46,7 @@ describe("getToggleTrackColor", () => {
         isHovered: true,
         isDisabled: false,
       })
-    ).toBe(theme.colors.darkenedBgMix15)
+    ).toBe(theme.colors.fadedText20)
   })
 
   it("uses primary when selected, including while hovered", () => {
