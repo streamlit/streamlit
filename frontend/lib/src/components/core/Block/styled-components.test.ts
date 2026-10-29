@@ -25,6 +25,7 @@ import { render } from "~lib/test_util"
 
 import {
   PRINT_CARD_CLASS,
+  PRINT_HIDDEN_CLASS,
   StyledColumn,
   StyledElementContainer,
   StyledFlexContainerBlock,
@@ -154,10 +155,10 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
     expect(gapped).toContain("margin-bottom:16px")
-    // Balloons and snow are display:none in print, so the gap margin does
-    // not exclude them.
-    expect(gapped).not.toContain(":not(:has(.stBalloons))")
-    expect(gapped).not.toContain(":not(:has(.stSnow))")
+    // Only a child with a printed sibling after it gets the gap, so a
+    // trailing st.empty, balloons, or snow container adds no blank strip.
+    expect(gapped).toContain(`:has(~ :not(.${PRINT_HIDDEN_CLASS}))`)
+    expect(gapped).not.toContain(":last-child")
     expect(gapped).toContain(":not(:has(> .stPageLink))")
     expect(gapped).toContain(":not(:has(> .stCacheSpinner))")
     // A page link trims the flex gap by xs and a cache spinner cancels it
@@ -306,7 +307,7 @@ describe("StyledLayoutWrapper print layout", () => {
         createElement(StyledLayoutWrapper, {
           height: "auto",
           flex: "0 1 100%",
-          keepsPrintFlex: true,
+          hasDefiniteHeight: true,
         })
       )
     )

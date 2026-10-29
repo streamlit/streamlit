@@ -96,10 +96,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
         alignSelf: "stretch",
         height: "auto !important",
         maxHeight: "none !important",
-        // Print uses the narrowest sidebar width. re-resizable writes the
-        // on-screen width inline, and initial_sidebar_width or a drag can
-        // make that a large share of the page. Both are replaced so the
-        // main column keeps the page.
+        // Override the inline width from re-resizable (set by
+        // `initial_sidebar_width` or dragging) with `minSidebarWidth`, so an
+        // expanded sidebar does not crowd out the main column when printed.
         width: `${theme.sizes.minSidebarWidth} !important`,
         minWidth: `${theme.sizes.minSidebarWidth} !important`,
         maxWidth: `${theme.sizes.minSidebarWidth} !important`,

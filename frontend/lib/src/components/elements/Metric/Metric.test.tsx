@@ -612,6 +612,22 @@ describe("Metric element", () => {
       expect(screen.getByTestId("stMetricChart")).toBeVisible()
     })
 
+    it("caps a sparkline to the card when printing", () => {
+      const props = getProps({
+        showBorder: true,
+        chartData: [1, 3, 2],
+        chartType: MetricProto.ChartType.LINE,
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricChart")).toBeVisible()
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+      expect(css).toMatch(/@media print\{[^}]*max-width:100%/)
+      expect(css).toMatch(/@media print\{[^}]*\.vega-embed/)
+    })
+
     it("does not render chart when chartData is empty", () => {
       const props = getProps({
         chartData: [],
