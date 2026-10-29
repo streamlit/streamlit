@@ -70,54 +70,70 @@ The check sits between storing the incoming states and running callbacks:
 # omitting URL-bound values for history navigation. Replayed triggers were
 # validated when captured and are overlaid after callbacks.
 self.set_widgets_from_proto(fresh_widget_states)
-changed, self._rejected_client_values = self._check_incoming_widget_states(
-    fresh_widget_states
-)
+changed, self._rejected_client_values = self._check_incoming_widget_states()
 self._call_callbacks(changed, ...)  # reuses the boundary's comparison
 ```
 
 ```python
-def _check_incoming_widget_states(
-    self, states: WidgetStatesProto
-) -> tuple[frozenset[str], frozenset[str]]:
-    """Return the IDs of accepted changes and of rejected values."""
-    changed: set[str] = set()
+def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]]:
+    """Return the IDs of accepted changes, in message order, and of rejected values."""
+    changed: list[str] = []
     rejected: set[str] = set()
-    # set_widgets_from_proto keeps the last entry of a repeated ID: check that one.
-    latest = {state.id: state for state in states.widgets}
-    for state in latest.values():
-        metadata = self._new_widget_state.widget_metadata.get(state.id)
+    # After compaction the states hold this message only. set_widgets_from_proto
+    # kept the last entry of a repeated ID at the position of its first, so each
+    # ID is checked once, on its last entry, and callbacks keep message order.
+    for widget_id, wstate in list(self._new_widget_state.states.items()):
+        state = wstate.value
+        metadata = self._new_widget_state.widget_metadata.get(widget_id)
         if metadata is None:
             # Never registered in this session: a value is checked when its
             # widget registers. A correct browser never resends a trigger.
             if _has_active_trigger_value(state):
-                self._new_widget_state.drop(state.id)
-                rejected.add(state.id)
+                self._new_widget_state.drop(widget_id)
+                rejected.add(widget_id)
+            else:
+                self._unregistered_client_ids.add(widget_id)
             continue
         result = widget_checks.check_client_value(
             state,
             metadata=metadata,
-            previous=self._old_state.get(state.id),
-            is_rendered=state.id in self._new_widget_state.rendered_ids,
+            previous=self._old_state.get(widget_id),
+            is_rendered=widget_id in self._new_widget_state.rendered_ids,
         )
-        # A browser sends a shared format_func label as is; only the agent API refuses it.
-        if result.violation is None or result.violation.kind == "ambiguous_option":
+        # A browser sends a shared format_func label as is; only the agent API
+        # refuses it. browser_refuses says which kinds a browser session drops.
+        if not widget_checks.browser_refuses(result.violation):
             # Cache the deserialized value so the run does not deserialize it again.
-            self._new_widget_state.cache_value(state, result.value)
+            self._new_widget_state.cache_value(
+                widget_id, result.value, state.WhichOneof("value")
+            )
             if result.changed:
-                changed.add(state.id)
+                changed.append(widget_id)
             continue
         if result.partial is not None:
             # A data editor keeps its payload minus the violating entries (item 6).
-            self._new_widget_state.cache_value(state, result.partial)
+            self._new_widget_state.cache_value(
+                widget_id, result.partial, state.WhichOneof("value")
+            )
             if result.changed:
-                changed.add(state.id)
+                changed.append(widget_id)
         else:
-            self._new_widget_state.drop(state.id)  # previous value stays in _old_state
-            rejected.add(state.id)
-        _log_violation(state.id, result.violation)  # never logs the value
-    return frozenset(changed), frozenset(rejected)
+            self._new_widget_state.drop(widget_id)  # previous value stays in _old_state
+            rejected.add(widget_id)
+            if metadata.value_type not in _TRIGGER_PROTO_FIELDS:
+                self._pending_resync.add(widget_id)  # see Browser re-sync
+        # Never logs the value. The dedup set holds only IDs with metadata.
+        widget_checks.log_violation(
+            widget_id, result.violation, warned=self._warned_widget_ids
+        )
+    return tuple(changed), frozenset(rejected)
 ```
+
+`changed` is ordered because callbacks run in message order, which the agent API relies
+on when it sorts its states into snapshot order. Compaction clears every stored entry
+before the message arrives, including entries with no metadata that an interrupted run
+left behind (`MutableMapping.clear` used to stop at the first of them), so the states
+hold exactly this message.
 
 `check_client_value` is a function in a new `runtime/state/widget_checks.py`. It reports
 a violation and never acts on it. Its only side effect comes from the chat input
@@ -151,9 +167,10 @@ read it:
    first hole #16209 left.
 3. **Unchanged values pass.** The deserialized value is compared with `_old_state`.
    This is the comparison `_widget_changed` makes today, moved here, so no wire form is
-   stored, and `_call_callbacks` takes the changed IDs instead of comparing again. Its
-   Components v2 path keeps its own per-key diff and sees only the entries the boundary
-   kept, so its `disabled` check goes away too. A deserializer never replaces a value its
+   stored, and `_call_callbacks` takes the changed IDs instead of comparing again. Both
+   of its paths iterate those IDs. Its Components v2 path keeps its own per-key diff and
+   sees only the changed entries the boundary kept: a dropped value diffed against the
+   old map would read as every key changing. So its `disabled` check goes away too. A deserializer never replaces a value its
    validator refuses (see [below](#where-constraints-live-in-each-widgets-serde)), so a
    violation cannot read as unchanged. Only a conversion can map a forged value onto the
    stored one, such as `2.9` onto `2` for an `INT` input, and that changes nothing. Most
@@ -771,10 +788,12 @@ This is the rerun hot path (`runtime/state/session_state.py`). The cost per mess
 
 No wire form is stored, so memory does not grow. A browser session's registration path
 builds nothing new: the validator is a bound method of the serde each widget already
-creates, and option lookups are built lazily. Add a benchmark next to the existing
-session-state ones: 1,000 widgets with one change, a 10,000-option selectbox changing its
-value, and a data editor whose added rows approach `server.maxWidgetStateSize`. The
-budget is no measurable regression in the unchanged case.
+creates, and option lookups are built lazily. Item 1 adds the first session-state
+benchmarks (`lib/tests/streamlit/runtime/state/session_state_perf_test.py`): 1,000
+widgets with one change, a 10,000-option selectbox changing its value, and an unchanged
+data editor payload of about 20 MB. The budget is no measurable regression in the
+unchanged case. Item 1 makes the 1,000-widget case about twice as fast, because reading
+a client value no longer rebuilds the widget's metadata.
 
 ### Testing
 

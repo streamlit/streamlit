@@ -32,7 +32,16 @@ from __future__ import annotations
 
 import traceback
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias, get_args
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    NamedTuple,
+    TypeAlias,
+    TypeGuard,
+    get_args,
+)
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -131,7 +140,7 @@ def accepted_value_fields(metadata: WidgetMetadata[Any]) -> frozenset[ValueField
     return _DEFAULT_FIELDS.get(metadata.value_type) or frozenset({metadata.value_type})
 
 
-def browser_refuses(violation: Violation | None) -> bool:
+def browser_refuses(violation: Violation | None) -> TypeGuard[Violation]:
     """Whether a browser session drops a value with ``violation``.
 
     The agent API refuses every violation.

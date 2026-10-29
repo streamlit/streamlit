@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import unittest
 from copy import deepcopy
 from dataclasses import dataclass
@@ -62,7 +63,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
-from streamlit.runtime.state import SessionState, get_session_state
+from streamlit.runtime.state import SessionState, get_session_state, widget_checks
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     BindOption,
@@ -85,11 +86,24 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 
 def identity(x):
     return x
+
+
+def _changed_ids(ss: SessionState) -> list[str]:
+    """The staged widget values that differ from the previous run's.
+
+    Tests that stage values directly and call ``_call_callbacks`` bypass the
+    boundary check, which is what reports the changed IDs.
+    """
+    return [
+        widget_id
+        for widget_id in ss._new_widget_state
+        if ss._new_widget_state.get(widget_id) != ss._old_state.get(widget_id)
+    ]
 
 
 def _raw_session_state() -> SessionState:
@@ -1146,7 +1160,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert ThreadState.get().in_fragment_callback is False
     # Rerun is re-queued rather than swallowed.
@@ -1184,7 +1198,7 @@ def test_on_change_callback_rerun_is_requeued() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 1
 
@@ -1211,7 +1225,7 @@ def test_normal_callback_return_queues_no_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     mock_ctx.script_requests.request_rerun_batch.assert_not_called()
 
@@ -1248,7 +1262,7 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
     # rerun because neither callback requested a targeted rerun — no conflict.
@@ -1287,7 +1301,7 @@ def test_fragment_widget_callback_rerun_is_requeued() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 1
 
@@ -1343,7 +1357,7 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     return requeue_calls
 
@@ -1390,7 +1404,7 @@ def test_contextless_callback_dispatch_does_not_raise() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=None,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     normal_callback.assert_called_once_with()
 
@@ -1440,7 +1454,7 @@ def test_fragment_origin_target_with_callback_less_change_does_not_escalate() ->
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the composing targeted re-queue; no full-app escalation.
     assert len(requeue_calls) == 1
@@ -1525,7 +1539,7 @@ def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 2
     forced = requeue_calls[-1]
@@ -1605,7 +1619,7 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # The escalated rerun must NOT include the text_input's string_value.
     assert len(requeue_calls) == 2
@@ -1827,7 +1841,7 @@ def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(incoming_replay_trigger_states=replay)
+        ss._call_callbacks(_changed_ids(ss), incoming_replay_trigger_states=replay)
 
     mock_ctx.script_requests.request_rerun.assert_not_called()
     mock_ctx.script_requests.request_rerun_batch.assert_called_once()
@@ -1851,6 +1865,7 @@ def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
         return_value=mock_ctx,
     ):
         ss._call_callbacks(
+            _changed_ids(ss),
             incoming_replay_trigger_states=replay,
             incoming_replay_trigger_values={"chat": hydrated_chat},
         )
@@ -1875,7 +1890,7 @@ def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     assert batch[0].replay_trigger_states == interaction
@@ -1930,7 +1945,7 @@ def test_targeted_chat_replay_preserves_hydrated_uploaded_files() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     rerun_data = batch[0]
@@ -2081,7 +2096,7 @@ def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> 
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     request = script_requests.on_scriptrunner_yield()
     assert request is not None
@@ -2106,7 +2121,9 @@ def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> 
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(incoming_replay_trigger_states=incoming_replay)
+        ss._call_callbacks(
+            _changed_ids(ss), incoming_replay_trigger_states=incoming_replay
+        )
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     replay = batch[0].replay_trigger_states
@@ -2179,7 +2196,7 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # The targeted re-queue plus one forced full-app rerun.
     assert len(requeue_calls) == 2
@@ -2231,7 +2248,7 @@ def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the targeted re-queue: the fragment-scoped default was not escalated.
     assert len(requeue_calls) == 1
@@ -2284,7 +2301,7 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the two targeted re-queues; no forced full-app rerun was added.
     assert len(requeue_calls) == 2
@@ -2373,7 +2390,7 @@ def _coalesce_callback_requests(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     request = script_requests.on_scriptrunner_ready()
     assert request.type is ScriptRequestType.RERUN
@@ -2807,6 +2824,18 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             wstates["baz"]
 
+    def test_compact_state_drops_values_without_metadata(self):
+        """Compaction drops every widget value, including ones it cannot read."""
+        wstates = WStates()
+        wstates.set_widget_from_proto(WidgetStateProto(id="no_metadata", int_value=1))
+        wstates.set_from_value("readable", 2)
+        session_state = SessionState({}, {}, wstates)
+
+        session_state._compact_state()
+
+        assert wstates.states == {}
+        assert session_state._old_state == {"readable": 2}
+
     def test_set_widgets_from_proto_rejects_oversized_widget_state(self):
         widget_state = WidgetStateProto()
         widget_state.id = "large_widget"
@@ -2981,11 +3010,6 @@ class SessionStateMethodTests(unittest.TestCase):
 
         with pytest.raises(KeyError):
             del self.session_state["nonexistent"]
-
-    def test_widget_changed(self):
-        assert self.session_state._widget_changed("foo")
-        self.session_state._new_widget_state.set_from_value("foo", "bar")
-        assert not self.session_state._widget_changed("foo")
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -3206,8 +3230,9 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
             assert stat.category_name == "st_session_state"
 
             # The expected size of the session state in bytes.
-            # It composes of the session_state's fields.
-            expected_session_state_size_bytes = 3000
+            # It composes of the session_state's fields, including the empty
+            # sets the client value checks keep per session.
+            expected_session_state_size_bytes = 3500
 
             init_size = stat.byte_length
             assert init_size < expected_session_state_size_bytes
@@ -3369,7 +3394,7 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
     # New state: {value: {a:1, b:3}}
     ss._new_widget_state.set_from_value(wid, {"value": {"a": 1, "b": 3}})
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
     assert calls == ["b"]
 
 
@@ -3406,7 +3431,7 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     ws.json_trigger_value = json.dumps({"event": "submit"})
     ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
     assert called == ["submit"]
 
 
@@ -6192,7 +6217,7 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         callback = MagicMock()
         self._stage_changed_widget(disabled=True, callback=callback)
 
-        self.session_state._call_callbacks()
+        self.session_state._call_callbacks(_changed_ids(self.session_state))
 
         callback.assert_not_called()
 
@@ -6201,7 +6226,7 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         callback = MagicMock()
         self._stage_changed_widget(disabled=False, callback=callback)
 
-        self.session_state._call_callbacks()
+        self.session_state._call_callbacks(_changed_ids(self.session_state))
 
         callback.assert_called_once()
 
@@ -6226,7 +6251,7 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
             widget_id, {"value": {"a": 1, "b": 3}}
         )
 
-        self.session_state._call_callbacks()
+        self.session_state._call_callbacks(_changed_ids(self.session_state))
 
         assert calls == []
 
@@ -6314,3 +6339,352 @@ class DisabledWidgetAppTest(unittest.TestCase):
         at.button[0].click().run()
 
         assert at.session_state["clicked"] is True
+
+
+# region Client value boundary
+
+
+def _boundary_metadata(
+    widget_id: str,
+    *,
+    value_type: str = "string_value",
+    callback: Callable[[], None] | None = None,
+    callbacks: dict[str, Callable[[], None]] | None = None,
+) -> WidgetMetadata:
+    """String-widget metadata whose default is "default"."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda value: "default" if value is None else value,
+        serializer=lambda value: value,
+        value_type=value_type,
+        callback=callback,
+        callbacks=callbacks,
+    )
+
+
+def _session_with(
+    *metadata: WidgetMetadata, old_state: dict[str, Any] | None = None
+) -> SessionState:
+    """A SessionState that registered ``metadata`` and holds ``old_state``."""
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    for widget_metadata in metadata:
+        ss._set_widget_metadata(widget_metadata)
+    ss._old_state.update(old_state or {})
+    return ss
+
+
+class _BoundaryCtx(MockScriptRunCtx):
+    """A script context for registration tests that queues no reruns."""
+
+    script_requests = None
+
+
+def _message(*states: WidgetStateProto) -> WidgetStatesProto:
+    return WidgetStatesProto(widgets=list(states))
+
+
+@pytest.fixture
+def refusal_logs() -> Iterator[list[str]]:
+    """Collect the refusal messages widget_checks logs at warning level."""
+    collected: list[str] = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            if record.levelno >= logging.WARNING:
+                collected.append(record.getMessage())
+
+    logger = logging.getLogger(widget_checks.__name__)
+    handler = _Collector()
+    logger.addHandler(handler)
+    try:
+        yield collected
+    finally:
+        logger.removeHandler(handler)
+
+
+def test_boundary_reports_only_changed_values() -> None:
+    """An unchanged value is cached without a callback; a changed one runs it."""
+    calls: list[str] = []
+    ss = _session_with(
+        _boundary_metadata("a", callback=lambda: calls.append("a")),
+        _boundary_metadata("b", callback=lambda: calls.append("b")),
+        old_state={"a": "old", "b": "same"},
+    )
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="b", string_value="same"),
+            WidgetStateProto(id="a", string_value="new"),
+        )
+    )
+
+    assert calls == ["a"]
+    assert ss._new_widget_state.states == {
+        "b": Value("same", "string_value"),
+        "a": Value("new", "string_value"),
+    }
+    assert ss._rejected_client_values == frozenset()
+
+
+def test_boundary_drops_a_value_in_the_wrong_field(
+    refusal_logs: list[str],
+) -> None:
+    """A wrong wire field keeps the previous value, runs no callback, and never raises."""
+    callback = MagicMock()
+    ss = _session_with(
+        _boundary_metadata("w", callback=callback), old_state={"w": "previous"}
+    )
+    forged = _message(WidgetStateProto(id="w", bool_value=True))
+
+    ss.on_script_will_rerun(forged)
+    ss.on_script_will_rerun(forged)
+
+    callback.assert_not_called()
+    assert "w" not in ss._new_widget_state.states
+    assert ss["w"] == "previous"
+    assert ss._rejected_client_values == frozenset({"w"})
+    assert ss._pending_resync == {"w"}
+    # Logged once per widget, without the value.
+    assert len(refusal_logs) == 1
+    assert "w (wrong_type)" in refusal_logs[0]
+    assert "True" not in refusal_logs[0]
+
+
+@pytest.mark.parametrize(
+    ("first", "last", "accepted"),
+    [
+        (WidgetStateProto(id="w", bool_value=True), "new", True),
+        (WidgetStateProto(id="w", string_value="new"), None, False),
+    ],
+)
+def test_boundary_judges_a_repeated_id_on_its_last_entry(
+    first: WidgetStateProto, last: str | None, accepted: bool
+) -> None:
+    """Only the last entry of a repeated ID is checked, and its callback runs once."""
+    callback = MagicMock()
+    ss = _session_with(
+        _boundary_metadata("w", callback=callback), old_state={"w": "previous"}
+    )
+    last_state = (
+        WidgetStateProto(id="w", string_value=last)
+        if last is not None
+        else WidgetStateProto(id="w", bool_value=True)
+    )
+
+    ss.on_script_will_rerun(_message(first, last_state))
+
+    assert callback.call_count == (1 if accepted else 0)
+    assert ss["w"] == ("new" if accepted else "previous")
+
+
+def test_boundary_drops_an_unknown_trigger_and_keeps_an_unknown_value(
+    refusal_logs: list[str],
+) -> None:
+    """With no metadata, a trigger is dropped and a value waits for registration."""
+    ss = _session_with()
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="button", trigger_value=True),
+            WidgetStateProto(id="text", string_value="restored"),
+        )
+    )
+
+    assert "button" not in ss._new_widget_state.states
+    assert ss._rejected_client_values == frozenset({"button"})
+    assert isinstance(ss._new_widget_state.states["text"], Serialized)
+    assert ss._unregistered_client_ids == {"text"}
+    assert refusal_logs == []
+
+
+def test_callbacks_run_in_message_order() -> None:
+    """Accepted changes run their callbacks in the order the message lists them."""
+    calls: list[str] = []
+    ss = _session_with(
+        *(
+            _boundary_metadata(name, callback=lambda name=name: calls.append(name))
+            for name in ("x", "y", "z")
+        ),
+        old_state={"x": "old", "y": "old", "z": "old"},
+    )
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="z", string_value="new"),
+            WidgetStateProto(id="x", string_value="new"),
+            WidgetStateProto(id="y", string_value="new"),
+        )
+    )
+
+    assert calls == ["z", "x", "y"]
+
+
+def test_a_refused_components_v2_value_runs_no_key_callback() -> None:
+    """A dropped JSON state is not diffed against the old map as every key changing."""
+    calls: list[str] = []
+    ss = _session_with(
+        _boundary_metadata(
+            "component",
+            value_type="json_value",
+            callbacks={"a": lambda: calls.append("a"), "b": lambda: calls.append("b")},
+        ),
+        old_state={"component": {"value": {"a": 1, "b": 2}}},
+    )
+
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="component", bytes_value=b"forged"))
+    )
+
+    assert calls == []
+    assert ss["component"] == {"value": {"a": 1, "b": 2}}
+
+
+def test_replay_capture_skips_a_refused_trigger() -> None:
+    """A trigger refused beside a targeted rerun is not replayed in the next run."""
+    ss = _session_with(
+        _boundary_metadata(
+            "target", value_type="trigger_value", callback=_raise_targeted_rerun
+        ),
+        _boundary_metadata("forged", value_type="trigger_value"),
+        old_state={"target": False, "forged": False},
+    )
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    forged = WidgetStateProto(id="forged")
+    forged.string_trigger_value.data = "x"
+    refused_target = WidgetStateProto(id="target")
+    refused_target.string_trigger_value.data = "x"
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            _message(
+                # A refused entry for the target comes first, the legal click last.
+                refused_target,
+                forged,
+                WidgetStateProto(id="target", trigger_value=True),
+            )
+        )
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert [(state.id, state.trigger_value) for state in replay.widgets] == [
+        ("target", True)
+    ]
+
+
+def test_a_refused_fresh_trigger_does_not_block_a_replayed_one() -> None:
+    """A replayed trigger is overlaid when the fresh trigger for it was refused."""
+    ss = _session_with(
+        _boundary_metadata("button", value_type="trigger_value"),
+        old_state={"button": False},
+    )
+    forged = WidgetStateProto(id="button")
+    forged.string_trigger_value.data = "x"
+
+    ss.on_script_will_rerun(
+        _message(forged),
+        replay_trigger_states=_message(
+            WidgetStateProto(id="button", trigger_value=True)
+        ),
+    )
+
+    assert ss["button"] is True
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=_BoundaryCtx(),
+)
+def test_registration_checks_a_value_for_a_widget_never_registered(
+    _mock_ctx: MagicMock,
+) -> None:
+    """A browser's map sent to a new session keeps its values and runs no callback."""
+    callback = MagicMock()
+    ss = _session_with()
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", string_value="kept")))
+
+    result = ss.register_widget(_boundary_metadata("w", callback=callback), None)
+
+    assert result.value == "kept"
+    assert result.value_changed is False
+    assert ss._new_widget_state.states["w"] == Value("kept", "string_value")
+    assert ss._unregistered_client_ids == set()
+    callback.assert_not_called()
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=_BoundaryCtx(),
+)
+def test_registration_drops_a_refused_value_for_a_widget_never_registered(
+    _mock_ctx: MagicMock, refusal_logs: list[str]
+) -> None:
+    """A violating value in a new session falls back to the default and re-syncs."""
+    ss = _session_with()
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    result = ss.register_widget(_boundary_metadata("w"), "w")
+
+    assert result.value == "default"
+    assert result.value_changed is True
+    assert result.incoming_serialized_value is None
+    assert len(refusal_logs) == 1
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=_BoundaryCtx(),
+)
+def test_a_refused_value_keeps_the_previous_value_and_resyncs_once(
+    _mock_ctx: MagicMock,
+) -> None:
+    """Registration reports the previous value as changed once, so the browser adopts it."""
+    metadata = _boundary_metadata("w")
+    ss = _session_with(metadata, old_state={"w": "previous"})
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    first = ss.register_widget(metadata, None)
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", string_value="previous")))
+    second = ss.register_widget(metadata, None)
+
+    assert (first.value, first.value_changed) == ("previous", True)
+    assert (second.value, second.value_changed) == ("previous", False)
+
+
+def test_a_stale_widget_leaves_the_resync_set() -> None:
+    """A refused widget that stops rendering is no longer waiting for a re-sync."""
+    ss = _session_with(_boundary_metadata("w"), old_state={"w": "previous"})
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        ss.on_script_finished(frozenset())
+
+    assert ss._pending_resync == set()
+
+
+def test_clear_resets_the_pending_client_value_sets() -> None:
+    """Clearing session state forgets refusals and unchecked client values."""
+    ss = _session_with(_boundary_metadata("w"), old_state={"w": "previous"})
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="w", bool_value=True),
+            WidgetStateProto(id="new", string_value="x"),
+        )
+    )
+
+    ss.clear()
+
+    assert ss._rejected_client_values == frozenset()
+    assert ss._pending_resync == set()
+    assert ss._unregistered_client_ids == set()
+
+
+# endregion Client value boundary
