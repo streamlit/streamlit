@@ -273,7 +273,11 @@ def test_element_toolbar_renders_above_selected_segment(app: Page):
 
     # If the selected segment painted over the toolbar (the bug),
     # elementFromPoint would return the segment instead of a toolbar node.
-    assert _is_top_most_at(toolbar, (left + right) / 2, (top + bottom) / 2)
+    # Retry because the z-index switches in after the slide-in transition.
+    wait_until(
+        app,
+        lambda: _is_top_most_at(toolbar, (left + right) / 2, (top + bottom) / 2),
+    )
 
 
 def test_click_single_icon_segment_and_take_snapshot(

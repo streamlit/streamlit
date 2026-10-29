@@ -34,10 +34,10 @@ export interface StyledToolbarWrapperProps {
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   ({ theme, locked = false, target }) => {
     const topDistance = getOverlayToolbarTopDistance(theme)
-    // The shown toolbar overlaps the bottom of the preceding element. Match
-    // the z-index of its raised parts (e.g. the selected segmented control
-    // option) so the later DOM position paints the toolbar on top, while
-    // staying below app chrome like the sticky bottom container.
+    // The shown toolbar overlaps the bottom of the preceding element. Use the
+    // same z-index as raised content there (e.g. the selected segmented
+    // control option) so the toolbar, which comes later in the DOM, paints on
+    // top. Stay below app chrome such as the sticky bottom container.
     const shownZIndex = theme.zIndices.priority
     const shownStyles = {
       // The hidden toolbar overlaps the top of its own element (e.g. the

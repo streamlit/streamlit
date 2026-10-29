@@ -460,7 +460,8 @@ if st.button("Apply ignore segmented control", key="apply_ignore_sc"):
     st.text(f"Applied ignore multi segmented control: {ignore_multi}")
 
 # Kept last so it does not shift the snapshotted elements above.
-# The dataframe's hover toolbar overlaps the bottom of the selected segment.
+# Place a dataframe below a selected segment so its hover toolbar overlaps
+# the segment.
 with st.container(key="segmented_control_toolbar_overlap"):
     st.segmented_control(
         "Toolbar overlap",
