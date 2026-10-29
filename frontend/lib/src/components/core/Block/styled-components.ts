@@ -67,6 +67,12 @@ const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR}
 /** Matches a column that holds a dataframe, table, or chart on the printed page. */
 const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
 
+/**
+ * Matches a horizontal container (not an `st.columns` row) that holds a
+ * dataframe, table, or chart on the printed page.
+ */
+const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
+
 /** Element types whose container is `display: none` in print. */
 export const PRINT_HIDDEN_ELEMENT_TYPES = new Set([
   "empty",
@@ -453,8 +459,9 @@ export const StyledFlexContainerBlock =
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
       // Print rules:
-      // - A column row that holds a chart, dataframe, or table stacks into
-      //   full-width columns. Other rows stay side by side.
+      // - A column row or horizontal container that holds a chart,
+      //   dataframe, or table stacks into full-width children. Other rows
+      //   stay side by side.
       // - Other vertical blocks switch to block layout unless they keep flex
       //   (see above).
       // - A bordered card or column that holds a chart avoids page breaks,
@@ -503,6 +510,18 @@ export const StyledFlexContainerBlock =
                     ),
                   },
                 },
+              },
+              // A horizontal container with a chart stacks the same way.
+              // Its children print full width as block boxes, because a
+              // content-height flex column collapses in Chrome print.
+              [PRINT_STACK_HORIZONTAL_CONTAINER]: {
+                display: "block",
+                "> *": {
+                  width: "100%",
+                  maxWidth: "100%",
+                  minWidth: 0,
+                },
+                ...printBlockGapMargins(gapWidth, theme),
               },
             }
           : keepsPrintFlex
