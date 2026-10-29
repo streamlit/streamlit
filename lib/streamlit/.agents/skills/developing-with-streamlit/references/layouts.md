@@ -21,7 +21,7 @@ How you structure your app affects usability more than you think.
 | `st.bottom`       | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls.                                                                                                                                                                       |
 | `st.space`        | You need explicit vertical or horizontal spacing inside the current layout direction.                                                                                                                                                                                                       |
 
-On every rerun, the app script enters every tab, expander, and popover body, including hidden, collapsed, and closed bodies. For expensive content, see [Conditional rendering](performance.md#conditional-rendering).
+By default, the app script enters every tab, expander, and popover body on every rerun, including hidden, collapsed, and closed bodies. For expensive content, see [Conditional rendering](performance.md#conditional-rendering).
 
 ## Sidebar: navigation + global filters only
 
