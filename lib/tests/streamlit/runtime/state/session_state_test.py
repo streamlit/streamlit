@@ -3465,9 +3465,8 @@ def test_json_change_callbacks_treat_non_dict_values_as_empty(
 ) -> None:
     """A non-dict JSON value counts as empty, so every key on the other side fires."""
     calls: list[str] = []
-    ss = SessionState()
     wid = "w-json"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=lambda v: v,
@@ -3478,12 +3477,12 @@ def test_json_change_callbacks_treat_non_dict_values_as_empty(
                 "b": lambda: calls.append("b"),
                 "c": lambda: calls.append("c"),
             },
-        )
+        ),
+        old_state={wid: old_value},
     )
-    ss._old_state[wid] = old_value
     ss._new_widget_state.set_from_value(wid, new_value)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
 
     assert sorted(calls) == expected_calls
 
@@ -3528,9 +3527,8 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
 def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
     """A list payload runs each named callback in order and skips other entries."""
     called: list[str] = []
-    ss = SessionState()
     wid = "w-trig"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=lambda s: json.loads(s) if s else None,
@@ -3548,13 +3546,17 @@ def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
     )
     ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
 
     assert called == ["submit", "click"]
 
 
 def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> None:
-    """A trigger payload that fails to deserialize with KeyError runs no callback."""
+    """A trigger payload that fails to deserialize with KeyError runs no callback.
+
+    The boundary check refuses the payload as unreadable, so it never reaches
+    callback dispatch.
+    """
     called: list[str] = []
 
     def failing_deserializer(value: str | None) -> Any:
@@ -3562,9 +3564,8 @@ def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> N
             return None
         raise KeyError("event")
 
-    ss = SessionState()
     wid = "w-trig"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=failing_deserializer,
@@ -3575,11 +3576,11 @@ def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> N
     )
     ws = WidgetStateProto(id=wid)
     ws.json_trigger_value = json.dumps({"event": "submit"})
-    ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss.on_script_will_rerun(_message(ws))
 
     assert called == []
+    assert ss._rejected_client_values == frozenset({wid})
 
 
 def test_trigger_dispatch_ignores_widget_without_state() -> None:
