@@ -999,7 +999,6 @@ class NumberInputMixin:
                 placeholder=placeholder,
                 icon=icon,
                 disabled=disabled,
-                # Checked by the browser, not by this interface.
                 required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

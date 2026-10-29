@@ -30,11 +30,15 @@ and the whole request is refused if any part of it is not legal. This covers:
   (``widget_checks.check_client_value``): the widget's wire field, its
   deserializer, ``disabled``, and its own validator, which decides whether a
   value is one of its options, within its bounds and ``max_chars``, in a
-  layout its frontend sends, and a range of the right length in order. Only a
-  value whose wire form equals the stored one skips the validator, so a value
-  the widget would convert, such as ``2.5`` for an integer input holding
-  ``2``, is refused rather than corrected. Unlike a browser session, a request
-  is also refused for a label several options share.
+  layout its frontend sends, a range of the right length in order, and not
+  empty for a ``required`` widget. Only a value whose wire form equals the
+  stored one skips the validator, so a value the widget would convert, such
+  as ``2.5`` for an integer input holding ``2``, is refused rather than
+  corrected. The unset form, which ``null`` sends unless it clears a widget,
+  reads as the default without a conversion, so it is compared after
+  deserializing: ``null`` to an empty required widget changes nothing. Unlike
+  a browser session, a request is also refused for a label several options
+  share.
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
@@ -304,6 +308,14 @@ def _too_long(violation: Violation, sent: _Sent) -> AgentRequestError:
     )
 
 
+def _empty_required(_violation: Violation, sent: _Sent) -> AgentRequestError:
+    return AgentRequestError(
+        "invalid_value",
+        f"{sent.key!r} is required and cannot be emptied. Text of only whitespace "
+        "is empty, and so is a date range without both ends.",
+    )
+
+
 # How each violation the shared check reports is refused. Only the option
 # messages quote what was sent: options are not secrets, and the client holds
 # the value. The others name the constraint, never the sent value, which may be
@@ -322,7 +334,7 @@ _VIOLATION_ERRORS: Final[
     "bad_shape": _bad_shape,
     "malformed": _malformed,
     "too_long": _too_long,
-    "empty_required": _refused_value,
+    "empty_required": _empty_required,
 }
 
 
@@ -1086,7 +1098,7 @@ def _encode_trigger(
                 "the text to submit.",
             )
         # Empty text is accepted although the browser keeps send disabled
-        # without it: browser-only gates such as `required` are not enforced.
+        # without it. `st.chat_input` has no `required` to refuse it.
         state.chat_input_value.data = payload
     else:  # pragma: no cover - a trigger's description matches its wire type
         raise AgentRequestError("not_a_trigger", f"{key!r} is not a trigger.")

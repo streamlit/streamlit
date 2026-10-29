@@ -994,11 +994,11 @@ class TextWidgetsMixin:
                 placeholder=placeholder,
                 icon=icon,
                 disabled=disabled,
-                # `required` and `validate` are checked by the browser, not by
-                # this interface, so a client has to send values that pass
-                # them. `validate` is the effective rule, including the one
-                # `type` implies. `live` is left out: it only times the
-                # browser's commits, and every value a client sets reruns.
+                # `validate` is checked by the browser, not by this
+                # interface, so a client has to send values that pass it.
+                # It is the effective rule, including the one `type`
+                # implies. `live` is left out: it only times the browser's
+                # commits, and every value a client sets reruns.
                 required=required,
                 validate=(
                     [validate_regex, validate_message]
@@ -1460,8 +1460,6 @@ class TextWidgetsMixin:
                 help=text_area_proto.help or None,
                 placeholder=placeholder,
                 disabled=disabled,
-                # `required` is checked by the browser, not by this interface,
-                # so a client has to send values that pass it.
                 required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

@@ -623,10 +623,12 @@ def check_client_value(
         ``True`` compares ``state`` with ``stored_state`` on the wire, which is
         stricter: a value the deserializer converts onto the stored one, such
         as ``2.5`` for an integer input holding ``2``, still reaches the
-        validator. The agent API uses it.
+        validator. A ``state`` with no value field reads as the default
+        without a conversion, so it is compared deserialized either way. The
+        agent API uses it.
     stored_state : WidgetState or None
         The stored value in its wire form, for ``compare_wire``. ``None`` means
-        there is none, so the value always counts as changed.
+        there is none, so a value with a field always counts as changed.
 
     Returns
     -------
@@ -658,7 +660,9 @@ def check_client_value(
 
     # An unchanged value passes. An active trigger always differs,
     # because the stored trigger was reset before the client's states arrived.
-    if compare_wire:
+    # A state without a value field is the unset form, which reads as the
+    # default without a conversion, so the wire comparison does not apply.
+    if compare_wire and field is not None:
         if stored_state is not None and _wire_equal(state, stored_state):
             return CheckResult(None, value)
     elif _unchanged(value, previous):

@@ -608,6 +608,48 @@ class WidgetWritesTest(SnapshotCase):
         st.text_input("Short", max_chars=3, key="short")
         self._check({key: sent}, expected)
 
+    @parameterized.expand(
+        [
+            # `null` to a widget that is already empty changes nothing.
+            ("null_to_an_empty_text_input", "empty_name", None, ""),
+            ("null_to_an_empty_number", "empty_age", None, None),
+            ("null_to_empty_pills", "empty_mood", None, None),
+            ("null_to_an_empty_date", "empty_day", None, None),
+            ("text_to_an_empty_input", "empty_name", "Bob", "Bob"),
+            (
+                "empty_text",
+                "filled_name",
+                "",
+                _Refused("'filled_name' is required and cannot be emptied."),
+            ),
+            ("whitespace", "filled_name", " \t", _Refused("cannot be emptied")),
+            # `null` resets to the default, which is empty.
+            ("null_to_a_filled_text_input", "filled_name", None, _Refused("required")),
+            ("null_to_a_filled_number", "filled_age", None, _Refused("required")),
+            ("null_to_filled_pills", "filled_mood", None, _Refused("required")),
+            (
+                "start_of_a_range",
+                "trip",
+                ["2026-01-05"],
+                _Refused("a date range without both ends"),
+            ),
+        ]
+    )
+    def test_required(self, _name: str, key: str, sent: Any, expected: Any) -> None:
+        """A required widget can stay empty, but no request can empty it."""
+        st.text_input("Empty name", key="empty_name", required=True)
+        st.session_state.filled_name = "Ada"
+        st.text_input("Filled name", key="filled_name", required=True)
+        st.number_input("Empty age", value=None, key="empty_age", required=True)
+        st.session_state.filled_age = 30.0
+        st.number_input("Filled age", value=None, key="filled_age", required=True)
+        st.pills("Empty mood", ["calm", "busy"], key="empty_mood", required=True)
+        st.session_state.filled_mood = "calm"
+        st.pills("Filled mood", ["calm", "busy"], key="filled_mood", required=True)
+        st.date_input("Empty day", value=None, key="empty_day", required=True)
+        st.date_input("Trip", value=[], key="trip", required=True)
+        self._check({key: sent}, expected)
+
     def test_a_value_the_widget_cannot_read_is_refused(self) -> None:
         """A value the deserializer raises on would raise in every later run."""
         st.text_input("Code", key="code")

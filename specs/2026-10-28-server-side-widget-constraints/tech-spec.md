@@ -179,7 +179,8 @@ read it:
    trigger always differs, because `_reset_triggers` cleared the stored one first, and an
    inactive one, such as `trigger_value: false`, is unchanged.
    - The agent API compares wire values instead, so even such a value reaches the
-     validator. See [Agent API integration](#agent-api-integration).
+     validator, except for a state with no value field, which reads as the default
+     without a conversion. See [Agent API integration](#agent-api-integration).
 4. **The widget is rendered** (`not_rendered`). See the
    [rendered-widget gate](#rendered-widget-gate).
 5. **It is not disabled** (`disabled`).
@@ -833,9 +834,13 @@ stored value serialized. Otherwise the validator runs, so `2.5` sent to an `INT`
 `number_input` that holds `2` is refused with `invalid_value`, instead of being truncated
 to `2` and reported as success. A mismatch that only differs in form, such as
 `int_value` against `double_value`, just runs the validator, which accepts a legal value.
-Empty forms are normalized before the comparison: a missing value field and an empty
-array both mean empty. So a `null` sent to an empty widget still matches, even for a
-`required` `st.pills` whose stored `None` serializes as `[]`, and item 5's no-op holds.
+A state with no value field is the unset form, which `null` sends unless it clears the
+widget. It reads as the default without a conversion, so it is compared after
+deserializing, as in a browser session, and an empty array equals a missing field. So a
+`null` sent to an empty widget still matches, even for a `required` text input whose
+stored `""` has a field on the wire, or a `required` `st.pills` whose stored `None`
+serializes as `[]`, and item 5's no-op holds. A `null` that would empty a filled required
+widget is refused with `invalid_value`: "'name' is required and cannot be emptied."
 
 The snapshot-based addressing checks stay first, so the existing error codes win where
 they apply. Each item deletes the agent's own copy of its constraint, as listed in the

@@ -81,19 +81,28 @@ Notes:
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
 - To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
 
-## Widget input constraints are mostly client-side
+## Widget input constraints
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`), and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. `disabled` is the exception: the server refuses any value sent for a widget while it was disabled, and its callback does not run. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+The server checks every value a client sends, including a bound URL parameter, against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs. The widget keeps its previous value. This holds for a modified client too, so app code doesn't need to re-check:
 
-For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
+- `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …) and `max_selections`
+- `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range
+- `required`: a client can't empty a required widget
+- `disabled`: a disabled widget accepts nothing
+
+Still not enforced on the server, so check these yourself when they matter:
+
+- `validate` on `st.text_input`, including the email or URL check `type` implies. It runs only in the browser.
+- `st.data_editor` edits and column constraints, and dataframe or chart selections.
+- An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it, and only the browser blocks a form submit while it is empty.
+- Authorization, file contents, and business rules, such as whether *this* user may pick an option:
 
 ```python
-ALLOWED_ROLES = ["viewer", "editor"]
-role = st.selectbox("Role", ALLOWED_ROLES, key="role")
+role = st.selectbox("Role", ["viewer", "editor"], key="role")
 
-# Don't rely on the widget's options as a security check.
-if role not in ALLOWED_ROLES:
-    st.error("Invalid role.")
+# The options are enforced. Whether this user may grant "editor" is not.
+if role == "editor" and not user_is_admin():
+    st.error("Only admins can grant editor access.")
     st.stop()
 grant_access(role)
 ```

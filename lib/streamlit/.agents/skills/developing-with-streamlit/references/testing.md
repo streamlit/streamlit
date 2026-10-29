@@ -129,6 +129,8 @@ at.get_by_key("filters")  # unique key, any type
 
 Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
 
+AppTest sends values through the server's constraint check, as a browser does. A value outside the bounds, past `max_chars`, or one that empties a `required` widget is dropped: the widget keeps its previous value and no callback runs.
+
 The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
 ### Forms

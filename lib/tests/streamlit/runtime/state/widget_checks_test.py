@@ -370,6 +370,33 @@ def test_wire_comparison(
     assert validator.called is reaches_validator
 
 
+def test_the_unset_form_is_compared_after_deserializing() -> None:
+    """A state with no field reads as the default, so the wire comparison skips it.
+
+    `null` to an empty required text input is then a no-op, though the stored
+    `""` has a field on the wire.
+    """
+    validator = MagicMock(return_value=None)
+    metadata = _metadata(
+        deserializer=lambda value: "" if value is None else value,
+        validator=validator,
+    )
+
+    def check(previous: str) -> None:
+        check_client_value(
+            _state(),
+            metadata=metadata,
+            previous=previous,
+            compare_wire=True,
+            stored_state=_state(string_value=previous),
+        )
+
+    check("")
+    validator.assert_not_called()
+    check("Ada")
+    validator.assert_called_once()
+
+
 def test_an_unreadable_value_is_logged_once_per_widget_at_warning(
     records: list[logging.LogRecord],
 ) -> None:
