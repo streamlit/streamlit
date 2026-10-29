@@ -552,6 +552,12 @@ class WidgetWritesTest(SnapshotCase):
             ),
             ("one_end_of_a_slider_range", "range", [20], _Refused("takes 2 items.")),
             (
+                "fraction_to_an_integer_slider",
+                "amount",
+                2.5,
+                _Refused("'amount' takes a whole number."),
+            ),
+            (
                 "reversed_select_slider_range",
                 "span",
                 ["c", "a"],
@@ -569,6 +575,8 @@ class WidgetWritesTest(SnapshotCase):
                 "2026/01/05",
                 _Refused("'day' takes a date as YYYY-MM-DD."),
             ),
+            # Text the widget cannot read as a date gets the generic message.
+            ("impossible_date", "day", "2026-13-45", _Refused("not one it accepts")),
             (
                 "reversed_date_range",
                 "days",
@@ -601,7 +609,11 @@ class WidgetWritesTest(SnapshotCase):
     def test_bounds_shapes_and_lengths(
         self, _name: str, key: str, sent: Any, expected: Any
     ) -> None:
-        """A value the widget would reset, sort, or cut is refused, naming the bound."""
+        """A value the widget would reset, sort, or cut is refused, naming the bound.
+
+        These are the refusals the OpenAPI document's `widget_state`
+        description lists for bounds, ranges, layouts, and `max_chars`.
+        """
         render_value_widgets()
         st.number_input("Bounded", 0, 10, 5, key="bounded")
         st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
@@ -955,33 +967,6 @@ class WidgetWritesTest(SnapshotCase):
         render_value_widgets()
         _render_option_widgets()
         self._check({key: sent}, expected)
-
-    @parameterized.expand(
-        [
-            ("out_of_range_slider_value_resets", "amount", 500, 0),
-            ("fraction_to_an_integer_slider_truncates", "amount", 2.5, 2),
-            ("short_slider_range_resets", "range", [30], (20, 80)),
-            ("reversed_slider_range_is_kept", "range", [80, 20], (80, 20)),
-            ("malformed_date_resets", "day", "2026-13-45", dt.date(2026, 1, 2)),
-            ("malformed_color_resets", "color", "red", "#000000"),
-        ]
-    )
-    def test_values_the_widget_adjusts_are_applied_as_the_app_applies_them(
-        self, _name: str, key: str, sent: Any, expected: Any
-    ) -> None:
-        """A value of the right type that the widget's own rules adjust is
-        accepted, and the app reads what the widget makes of it, as the
-        OpenAPI document's `widget_state` description says.
-        """
-        render_value_widgets()
-        self._check({key: sent}, expected)
-
-    def test_an_out_of_range_number_input_value_resets(self) -> None:
-        """A number outside a bounded `st.number_input` is accepted and reset
-        to the widget's default, as the OpenAPI document says.
-        """
-        st.number_input("Bounded", min_value=0, max_value=10, value=5, key="bounded")
-        self._check({"bounded": 50}, 5)
 
     @parameterized.expand(
         [
