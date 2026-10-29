@@ -60,12 +60,16 @@ export const PRINT_CARD_CLASS = "stPrintCard"
  */
 const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR})`
 
-/** Matches a column that holds a dataframe, table, or chart on the printed page. */
+/**
+ * Relative selector for a dataframe, table, or chart that prints inside a
+ * direct child column. It has no leading `&`, so wrap it in `&:has(...)`.
+ */
 const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
 
 /**
- * Matches a horizontal container (not an `st.columns` row) that holds a
- * dataframe, table, or chart on the printed page.
+ * Emotion selector for this horizontal container when it is not an
+ * `st.columns` row and it holds a dataframe, table, or chart on the printed
+ * page. The leading `&` is this flex container.
  */
 const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
 
@@ -265,6 +269,10 @@ interface StyledColumnProps {
   $wrap?: boolean
 }
 
+/**
+ * A column of an `st.columns` row. Print stacking and print containment are
+ * applied by the parent row in `StyledFlexContainerBlock`.
+ */
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
     const { VerticalAlignment } = BlockProto.Column
@@ -318,7 +326,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
       }),
-      // Print stacking for columns is set by the parent row.
     }
   }
 )
@@ -425,16 +432,20 @@ export const StyledFlexContainerBlock =
         gapWidth = translateGapWidth(gap, theme)
       }
       const crossAxis = getAlignItems(align)
-      // Print switches a vertical block to display:block, because Chrome's
-      // print layout drops the height of a content-height flex column and a
-      // chart then paints over the next heading. It keeps flex when:
-      // - it centers or end-aligns its children horizontally (block has no
-      //   equivalent), or
-      // - it has a definite height (stretch children rely on flex to share
-      //   it instead of each taking 100%).
-      // Vertical alignment only moves content inside a set height. A
-      // content-height column has no free space to distribute, so that
-      // alignment alone does not keep flex.
+      // Print layout rules. Chrome's print layout drops the height of a
+      // content-height flex column, so a chart would paint over the next
+      // element:
+      // - A vertical block prints as display:block, unless it centers or
+      //   end-aligns its children (block has no equivalent) or has a
+      //   definite height that stretch children share. Vertical alignment
+      //   alone does not keep flex: a content-height column has no free
+      //   space to distribute.
+      // - A column row or horizontal container that holds a visible chart,
+      //   dataframe, or table stacks into full-width children. Columns of a
+      //   row that stays side by side are size containers, so a
+      //   content-width metric can scale to its printed column.
+      // - A bordered card with a chart, and a side-by-side row of bordered
+      //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
         direction === Direction.VERTICAL &&
         (crossAxis === "center" || crossAxis === "end")
@@ -443,19 +454,14 @@ export const StyledFlexContainerBlock =
         (hasDefiniteHeight ?? isFixedLengthHeight(height))
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
-      // Print rules:
-      // - A column row or horizontal container that holds a chart,
-      //   dataframe, or table stacks into full-width children. Other rows
-      //   stay side by side.
-      // - Other vertical blocks switch to block layout unless they keep flex
-      //   (see above).
-      // - A bordered card or column that holds a chart avoids page breaks,
-      //   and so does a side-by-side row of bordered columns.
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
               [`> .stColumn.${PRINT_CARD_CLASS}`]: {
                 [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+              },
+              [`&:not(:has(${PRINT_STACK_TRIGGER_SELECTOR})) > .stColumn`]: {
+                containerType: "inline-size",
               },
               // A row of bordered cards that stays side by side prints like
               // one card, so a page break does not cut every card at once.
@@ -465,8 +471,6 @@ export const StyledFlexContainerBlock =
                 display: "block",
                 "> .stColumn": {
                   display: "block",
-                  float: "none",
-                  clear: "both",
                   width: "100%",
                   maxWidth: "100%",
                   minWidth: 0,
@@ -476,14 +480,11 @@ export const StyledFlexContainerBlock =
                         marginBottom: gapWidth,
                       },
                     }),
-                  // The column's content block is height 100%. A stacked
-                  // column has no definite height, so that percentage is
-                  // auto and a flex column collapses in Chrome print. A
-                  // chart then paints over the next heading. Block layout
-                  // keeps the column content gap (the small gap
-                  // ContainerContentsWrapper always sets) as margin. An
-                  // unstacked column is not matched, so a 100% block in a
-                  // sized parent stays flex.
+                  // A stacked column has no definite height, so its
+                  // 100%-height content block would collapse as a flex
+                  // column and the chart would paint over the next heading.
+                  // Print it as a block and keep the column's small gap as
+                  // margins.
                   "> .stVerticalBlock": {
                     display: "block",
                     ...printBlockGapMargins(
