@@ -515,6 +515,12 @@ anything is seeded. The correction then needs its own forward message, through
 `remove_param` or `set_corrected_value` as `_clear_url_param` does. The regular sync in
 `register_widget` would not send one: it drops a parameter at the default only on the
 server (`discard_param_no_forward_msg`), and it leaves a parameter that is already present.
+The correction is sent only where the URL would have seeded an enabled widget: the
+parameter is present and binding's priority rules give the URL the value, which is the
+case on initial load, on history navigation, and when a page change brings the widget
+back. Elsewhere the browser has already dropped the parameter, and correcting it on every
+rerun would rebroadcast `page_info_changed`. Seeding and the correction share one helper
+for those priority rules, so they cannot drift apart.
 
 An app that wants a link to preset a filter shown as locked reads `st.query_params` in
 app code and passes the value to the widget. App code is trusted, and the author owns

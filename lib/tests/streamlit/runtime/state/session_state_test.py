@@ -6118,22 +6118,30 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         assert result.value == "default"
         assert result.value_changed is True
 
+    def _page_info_queries(self) -> list[str]:
+        """The query strings of the page_info_changed messages sent so far."""
+        return [
+            msg.page_info_changed.query_string
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("page_info_changed")
+        ]
+
+    def _load_url(self, query_string: str) -> None:
+        """Set the URL the client reports, as a rerun request does."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.populate_from_query_string(query_string)
+        self.session_state.query_params.set_initial_query_params(query_string)
+
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_disabled_url_bound_widget_keeps_seeded_value(
+    def test_disabled_url_bound_widget_ignores_its_param_on_initial_load(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A URL-seeded value for a disabled ``bind='query-params'`` widget is
-        preserved, not discarded. URL seeding writes into both widget state and
-        session state, so it counts as a programmatic (app-driven) assignment
-        rather than a frontend interaction — the enforcement guard must not fire
-        (and must not raise) in this case.
-        """
-        ThreadState.update(active_script_hash="main_hash")
-        self.session_state.query_params.set_initial_query_params("cb=url_value")
-
+        """A link cannot set a widget the app shows as disabled. The widget keeps
+        its default, and the parameter is removed from the browser's URL."""
+        self._load_url("cb=url_value&other=1")
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=True, bind="query-params"
@@ -6141,34 +6149,73 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         result = self.session_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "url_value"
+        assert result.value == "default"
+        assert not self.session_state.query_params.has_param("cb")
+        assert self._page_info_queries() == ["other=1"]
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_disabled_url_bound_widget_url_wins_over_forged_value(
+    def test_disabled_url_bound_widget_ignores_url_and_forged_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A disabled ``bind='query-params'`` widget seeds from the URL even when
-        the frontend also submits a (forged) value on first registration. URL
-        seeding normally yields to a frontend value, but a disabled widget can't
-        be interacted with, so the URL must win instead of the widget falling back
-        to its default.
-        """
-        ThreadState.update(active_script_hash="main_hash")
-        self.session_state.query_params.set_initial_query_params("cb=url_value")
-
+        """Neither the URL nor a client value sets a disabled bound widget that
+        registers for the first time."""
+        self._load_url("cb=url_value")
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=True, bind="query-params"
         )
-        # The frontend also submits a value for the disabled, URL-bound widget.
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert not self.session_state.query_params.has_param("cb")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_disabled_url_bound_widget_ignores_its_param_on_history_navigation(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Back/forward keeps a disabled widget's value and rewrites the URL to it."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+        self.session_state._old_state[widget_id] = "previous"
+        self.session_state._query_param_bound_widget_ids.add(widget_id)
+        self._load_url("cb=from_history")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "previous"
+        assert self.session_state.query_params.get("cb") == "previous"
+        assert self._page_info_queries() == ["cb=previous"]
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_enabled_url_bound_widget_seeds_from_its_param(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An enabled bound widget still takes its value from the link (control)."""
+        self._load_url("cb=url_value")
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=False, bind="query-params"
+        )
 
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "url_value"
+        assert self.session_state.query_params.get("cb") == "url_value"
+        assert self._page_info_queries() == []
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

@@ -1742,10 +1742,16 @@ class SessionState:
 
         # Handle query param binding
         url_binding_resolved = False
+        # A disabled widget ignores its parameter where the URL would have seeded
+        # it, so the parameter must be corrected to what the widget holds.
+        correct_disabled_param = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
             url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
+            )
+            correct_disabled_param = metadata.disabled and self._url_would_seed(
+                widget_id, user_key
             )
             # Whenever the URL (or its absence) decided this widget's value, the
             # wire labels captured above belong to a discarded frontend value.
@@ -1816,7 +1822,21 @@ class SessionState:
         restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if widget_value != default_value:
+            if correct_disabled_param:
+                # The address bar must not claim a value the widget ignored. The
+                # frontend still shows the parameter, so unlike the sync below,
+                # both corrections send a forward message.
+                if widget_value == default_value:
+                    self.query_params.remove_param(user_key)
+                else:
+                    serialized = metadata.serializer(widget_value)
+                    if not self.query_params.stored_param_matches_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    ):
+                        self.query_params.set_corrected_value(
+                            user_key, serialized, metadata.value_type
+                        )
+            elif widget_value != default_value:
                 if (
                     user_key in self._old_state
                     and not self.query_params.has_param(user_key)
@@ -1944,6 +1964,38 @@ class SessionState:
         )
         return False
 
+    def _url_has_priority(
+        self, widget_id: str, user_key: str, *, is_history_navigation: bool
+    ) -> bool:
+        """Whether binding's priority rules let the URL decide a widget's value.
+
+        On history navigation the URL always does. Otherwise a client value for
+        the widget wins, and after the widget's first run so does a value that
+        code set in ``st.session_state``.
+        """
+        if is_history_navigation:
+            return True
+        if widget_id in self._new_widget_state:
+            return False
+        return (
+            widget_id not in self._old_state or user_key not in self._new_session_state
+        )
+
+    def _url_would_seed(self, widget_id: str, user_key: str) -> bool:
+        """Whether the URL would seed a bound widget in this run if it were enabled.
+
+        That needs the parameter present and the URL to have priority. Elsewhere
+        the frontend has already dropped a parameter the server cleared, so
+        there is nothing to correct.
+        """
+        ctx = get_script_run_ctx()
+        is_history_navigation = ctx is not None and ctx.is_history_navigation
+        return self.query_params.get_initial_value(
+            user_key
+        ) is not None and self._url_has_priority(
+            widget_id, user_key, is_history_navigation=is_history_navigation
+        )
+
     def _handle_query_param_binding(
         self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
     ) -> bool:
@@ -1965,6 +2017,10 @@ class SessionState:
           leaves that assignment in place; on history navigation the restored
           entry had no param, so the default is what the URL asks for.
 
+        A disabled widget accepts no client input, and the URL is client input,
+        so it is never seeded: it keeps its default or previous value, and
+        ``register_widget`` corrects the parameter.
+
         Returns True if the widget's value was resolved here (seeded from the URL,
         or reset to the default on history navigation), False otherwise.
         """
@@ -1978,26 +2034,20 @@ class SessionState:
             value_type=metadata.value_type,
             script_hash=script_hash,
         )
+        if metadata.disabled:
+            return False
 
         # Check priority rules - skip seeding if user/code has already set a value.
-        # A disabled widget is exempt: it cannot be interacted with, so any value in
-        # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
-        # disabled enforcement in register_widget then discards the forged value.
-        if widget_id in self._new_widget_state and not metadata.disabled:
-            if not is_history_navigation:
-                return False
+        if not self._url_has_priority(
+            widget_id, user_key, is_history_navigation=is_history_navigation
+        ):
+            return False
+        if widget_id in self._new_widget_state:
             # History navigation must discard preserved widget state so the URL
             # can seed. Omit only strips the incoming proto; this also drops
             # values copied into _new_widget_state on MPA page change and
             # first-time binds.
             del self._new_widget_state[widget_id]
-        is_initial_load = widget_id not in self._old_state
-        if (
-            not is_initial_load
-            and user_key in self._new_session_state
-            and not is_history_navigation
-        ):
-            return False  # Code set value after first run
 
         url_value = self.query_params.get_initial_value(user_key)
         if url_value is not None and self._seed_widget_from_url(

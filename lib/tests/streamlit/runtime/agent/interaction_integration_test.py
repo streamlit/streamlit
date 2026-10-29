@@ -103,6 +103,28 @@ report_page = st.Page(report, title="Report", url_path="report")
 st.navigation([home_page, report_page]).run()
 """
 
+# A filter the app shows as locked, bound to a parameter on the second page.
+_LOCKED_FILTER_SCRIPT: Final = """
+import streamlit as st
+
+def home():
+    st.text("page=home")
+
+def report():
+    st.text("page=report")
+    st.selectbox(
+        "Quarter",
+        ["Q1", "Q2", "Q3", "Q4"],
+        key="quarter",
+        bind="query-params",
+        disabled=True,
+    )
+
+home_page = st.Page(home, title="Home", default=True)
+report_page = st.Page(report, title="Report", url_path="report")
+st.navigation([home_page, report_page]).run()
+"""
+
 _CONTEXT_SCRIPT: Final = """
 import streamlit as st
 from tests.streamlit.runtime.agent import run_gate
@@ -673,6 +695,36 @@ async def test_an_unknown_page_later_is_refused_before_anything_runs(
     assert error.details == {"pages": document["pages"]}
     assert error.session_id is None
     assert run_gate.value("runs") == 1
+
+
+@pytest.mark.anyio
+async def test_navigation_cannot_set_a_disabled_bound_widget(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """`query_params` cannot set a widget the app shows as disabled, as
+    `widget_state` cannot. The widget keeps its default and the parameter goes.
+    """
+    async with _running_app(tmp_path, options, _LOCKED_FILTER_SCRIPT) as app:
+        created = await app.call(
+            {"page": "report", "query_params": {"quarter": ["Q3"]}}
+        )
+        home_path = next(
+            page["url_path"] for page in created["pages"] if page["title"] == "Home"
+        )
+        handle = created["session_id"]
+        await app.call({"session_id": handle, "page": home_path})
+        navigated = await app.call(
+            {
+                "session_id": handle,
+                "page": "report",
+                "query_params": {"quarter": ["Q2"]},
+            }
+        )
+
+    for document in (created, navigated):
+        assert "page=report" in _texts(document)
+        assert _keyed(document, "quarter")["value"] == "Q1"
+        assert "quarter" not in document["query_params"]
 
 
 @pytest.mark.anyio
