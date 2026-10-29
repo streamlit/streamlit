@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E tests for the agent API's interact route and its OpenAPI document.
+"""E2E tests for the agent API's interact route, its OpenAPI document, and
+its MCP server.
 
 `POST /_stcore/agent/interact` drives the app, and the app's HTML links
 `GET /_stcore/agent/openapi.json`, which describes it.
+`POST /_stcore/agent/mcp` serves the same protocol as JSON-RPC to MCP clients.
 
 The tests call the routes over HTTP with `page.request`, which sends no
 `Origin` header, like the programmatic clients the route serves. Externally
@@ -47,6 +49,7 @@ if TYPE_CHECKING:
 
 _INTERACT_PATH: Final = "/_stcore/agent/interact"
 _SCHEMA_PATH: Final = "/_stcore/agent/openapi.json"
+_MCP_PATH: Final = "/_stcore/agent/mcp"
 _ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
 _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
@@ -476,11 +479,141 @@ def test_the_app_links_a_description_that_reaches_the_api(
     assert document["openapi"].startswith("3.1")
     assert document["info"]["x-streamlit-agent-api"] == "available"
 
-    [interact_path] = [
-        path for path, item in document["paths"].items() if "post" in item
-    ]
+    operations = {
+        item["post"]["operationId"]: path
+        for path, item in document["paths"].items()
+        if "post" in item
+    }
+    assert set(operations) == {"interact", "mcp"}
+    interact_path = operations["interact"]
+    assert urlsplit(operations["mcp"]).path.endswith(_MCP_PATH)
+    assert _MCP_PATH.lstrip("/") in noscript
     root = urljoin(schema_url, document["servers"][0]["url"])
     interact_url = root + interact_path.lstrip("/")
     assert urlsplit(interact_url).path == urlsplit(_interact_url(app_base_url)).path
     created = _snapshot(page.request.post(interact_url, data={}, max_redirects=0))
     assert _SESSION_ID.fullmatch(created["session_id"])
+
+
+def _mcp(page: Page, app_base_url: str, message: dict[str, Any]) -> APIResponse:
+    return page.request.post(
+        build_app_url(app_base_url, path=_MCP_PATH), data=message, max_redirects=0
+    )
+
+
+def _rpc_result(
+    page: Page, app_base_url: str, method: str, params: dict[str, Any]
+) -> dict[str, Any]:
+    """Send a JSON-RPC request to the MCP server and return its result."""
+    response = _mcp(
+        page,
+        app_base_url,
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params},
+    )
+    assert response.status == 200, _describe(response)
+    body: dict[str, Any] = response.json()
+    assert body["id"] == 1, body
+    result: dict[str, Any] = body["result"]
+    return result
+
+
+def _tool(
+    page: Page, app_base_url: str, name: str, arguments: dict[str, Any]
+) -> tuple[bool, Any]:
+    """Call an MCP tool and return whether it failed and its content."""
+    result = _rpc_result(
+        page, app_base_url, "tools/call", {"name": name, "arguments": arguments}
+    )
+    [content] = result["content"]
+    if content["type"] == "text":
+        return result["isError"], json.loads(content["text"])
+    return result["isError"], content
+
+
+@pytest.mark.external_test
+def test_mcp_clients_drive_the_app_and_read_its_data(
+    app_page: Page, app_base_url: str
+) -> None:
+    """An MCP client initializes, lists the two tools, drives the app with
+    `interact`, and reads a table past its preview and an image with
+    `get_data`, which runs nothing. A `2026-07-28` probe and methods other
+    than POST are refused without the app's HTML.
+    """
+    initialized = _rpc_result(
+        app_page,
+        app_base_url,
+        "initialize",
+        {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {"name": "e2e", "version": "1"},
+        },
+    )
+    assert initialized["protocolVersion"] == "2025-11-25"
+    assert initialized["serverInfo"]["name"] == "streamlit"
+    notified = _mcp(
+        app_page,
+        app_base_url,
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+    )
+    assert notified.status == 202, _describe(notified)
+    assert notified.body() == b""
+    tools = _rpc_result(app_page, app_base_url, "tools/list", {})["tools"]
+    assert [tool["name"] for tool in tools] == ["interact", "get_data"]
+
+    is_error, data_page = _tool(app_page, app_base_url, "interact", {"page": "data"})
+    assert is_error is False
+    session_id = data_page["session_id"]
+    table = _keyed(data_page, "orders")["data"]
+    assert (table["row_count"], len(table["preview"]["rows"])) == (250, 100)
+    is_error, rows = _tool(
+        app_page,
+        app_base_url,
+        "get_data",
+        {"session_id": session_id, "url": table["url"], "offset": 100},
+    )
+    assert is_error is False
+    assert (len(rows["rows"]), rows["next_offset"]) == (150, None)
+    assert rows["rows"][0] == [100, 150.0]
+
+    is_error, home = _tool(
+        app_page,
+        app_base_url,
+        "interact",
+        {"session_id": session_id, "page": _home_path(data_page)},
+    )
+    assert is_error is False
+    runs = _lines(home)["runs"]
+    image_url = next(
+        node["props"]["url"] for node in _nodes(home) if node["type"] == "image"
+    )
+    is_error, image = _tool(
+        app_page, app_base_url, "get_data", {"session_id": session_id, "url": image_url}
+    )
+    assert is_error is False
+    assert image["type"] == "image"
+    assert image["mimeType"].startswith("image/")
+    is_error, refused = _tool(
+        app_page,
+        app_base_url,
+        "get_data",
+        {"session_id": session_id, "url": "logo.png"},
+    )
+    assert is_error is True
+    assert refused["error"]["code"] == "unknown_file"
+    # Neither read ran the app: the next rerun is the only one since `home`.
+    _, rerun = _tool(app_page, app_base_url, "interact", {"session_id": session_id})
+    assert int(_lines(rerun)["runs"]) == int(runs) + 1
+
+    probe = _mcp(
+        app_page,
+        app_base_url,
+        {"jsonrpc": "2.0", "id": 2, "method": "server/discover"},
+    )
+    assert probe.status == 400, _describe(probe)
+    assert probe.json()["error"]["code"] == -32600
+    fetched = app_page.request.get(
+        build_app_url(app_base_url, path=_MCP_PATH), max_redirects=0
+    )
+    assert fetched.status == 405, _describe(fetched)
+    assert "text/html" not in fetched.headers.get("content-type", "")

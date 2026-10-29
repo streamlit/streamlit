@@ -17,14 +17,18 @@
 ``POST /_stcore/agent/interact`` drives the app for a client without a
 browser, and ``GET /_stcore/agent/openapi.json`` describes how, so a caller
 that found the app can learn the protocol without being handed documentation.
-Both are always registered, so a request with the API off, or with any other
-method, is answered here instead of falling through to the app's HTML. With
-the API off, the document only reports that. Every response from either route
-carries a `Link` header to it.
+``POST /_stcore/agent/mcp`` serves the same protocol as a remote MCP server,
+for AI applications that connect to tools through MCP. All three are always
+registered, so a request with the API off, or with any other method, is
+answered here instead of falling through to the app's HTML. With the API off,
+the document only reports that. Every response from any of them carries a
+`Link` header to it.
 
-When ``server.enableAgentApi`` is on, the interact route is served wherever
-the app is, to any caller the app would serve: the WebSocket's Host allow-list
-applies, and the same trusted identity headers are mapped into ``st.user``.
+When ``server.enableAgentApi`` is on, the interact and MCP routes are served
+wherever the app is, to any caller the app would serve: the WebSocket's Host
+allow-list applies, and the same trusted identity headers are mapped into
+``st.user``. The MCP route's ``interact`` tool runs the interact route's code
+path, so both answer the same request with the same bytes.
 """
 
 from __future__ import annotations
@@ -38,7 +42,14 @@ from typing import TYPE_CHECKING, Any, Final, TypeVar
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime import runtime_util
-from streamlit.runtime.agent import errors, interaction, protocol, snapshot
+from streamlit.runtime.agent import (
+    errors,
+    interaction,
+    json_encoding,
+    mcp,
+    protocol,
+    snapshot,
+)
 from streamlit.web.server import server_util
 from streamlit.web.server.starlette import starlette_websocket
 from streamlit.web.server.starlette.starlette_routes import (
@@ -64,6 +75,9 @@ _T = TypeVar("_T")
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/openapi.json"
+# Beside the interact route, so the media URLs a result carries, relative to
+# the request, climb back to the app's root the same way from both.
+_ROUTE_AGENT_MCP: Final = "_stcore/agent/mcp"
 
 # Every method a route registers, so none falls through to the static files
 # mount. Starlette adds HEAD to GET.
@@ -110,23 +124,12 @@ class _BodyTooLargeError(Exception):
     """The request body is larger than the route accepts."""
 
 
-def _render_json(content: Any) -> bytes:
-    """Render ``content`` exactly as Starlette's ``JSONResponse`` does."""
-    return json.dumps(
-        content,
-        ensure_ascii=False,
-        allow_nan=False,
-        indent=None,
-        separators=(",", ":"),
-    ).encode("utf-8")
-
-
 def _encode_snapshot(document: dict[str, Any]) -> bytes:
     """The response body for a snapshot, with media URLs relative to the request."""
     snapshot.rebase_media_urls(
         document, paths=_MEDIA_PATHS, prefix=_APP_ROOT_FROM_ROUTE
     )
-    return _render_json(document)
+    return json_encoding.response_body(document)
 
 
 def _relative_server_url(schema_path: str) -> str:
@@ -209,6 +212,57 @@ def _page_request_without_json(request: Request) -> bool:
         return False
     content_type = request.headers.get("Content-Type", "")
     return content_type.split(";", 1)[0].strip().lower() != "application/json"
+
+
+def _refused_caller(request: Request) -> tuple[errors.AgentErrorCode, str] | None:
+    """The code and message refusing the request's caller, or None.
+
+    The checks after enablement, in the order both routes apply them: Host,
+    then `Origin`, then a web page's content type.
+    """
+    if _refused_host(request):
+        return "host_not_allowed", _HOST_MESSAGE
+    if _refused_origin(request):
+        return "origin_not_allowed", _ORIGIN_MESSAGE
+    if _page_request_without_json(request):
+        return "invalid_request", _PAGE_CONTENT_TYPE_MESSAGE
+    return None
+
+
+def _jsonrpc_response(status: int, message: dict[str, Any]) -> Response:
+    """A JSON-RPC message as the MCP route's response."""
+    from starlette.responses import Response
+
+    return Response(
+        json_encoding.response_body(message),
+        status_code=status,
+        media_type="application/json",
+    )
+
+
+def _jsonrpc_error_response(
+    status: int, code: int, message: str, *, request_id: str | int | None = None
+) -> Response:
+    """A JSON-RPC error as the MCP route's response, with `id: null` unless
+    ``request_id`` gives the request's.
+    """
+    return _jsonrpc_response(status, mcp.jsonrpc_error(request_id, code, message))
+
+
+def _jsonrpc_refusal(
+    code: errors.AgentErrorCode, message: str, *, status: int | None = None
+) -> Response:
+    """The MCP route's answer to a request refused before it was parsed.
+
+    Its `id` cannot be read yet, so the error has `id: null`, notifications
+    included. The agent API's code leads the message, which says what to do.
+    The HTTP status is the code's unless ``status`` is given.
+    """
+    return _jsonrpc_error_response(
+        errors.error_status(code) if status is None else status,
+        mcp.INVALID_REQUEST,
+        f"{code}: {message}",
+    )
 
 
 async def _read_body(request: Request, limit: int) -> bytes:
@@ -311,14 +365,33 @@ async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
     raise _ClientGoneError
 
 
+def _tool_text_body(
+    request_id: str | int | None, text: bytes, *, is_error: bool
+) -> bytes:
+    """The JSON-RPC response for a tool call whose text is the interact
+    route's response body, unchanged.
+    """
+    result = mcp.tool_result(text.decode("utf-8"), is_error=is_error)
+    return json_encoding.response_body(mcp.jsonrpc_result(request_id, result))
+
+
+def _user_info(request: Request) -> UserInfoType:
+    """The ``st.user`` identity the request's trusted headers carry."""
+    # The same trusted headers the WebSocket maps for a browser. Never the auth
+    # cookie: it is only honored on the WebSocket behind an XSRF token, which a
+    # cross-site request here could otherwise ride.
+    return {**starlette_websocket.gather_user_info(request.headers)}
+
+
 def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create the agent API routes.
 
-    Both are registered even when the API is off. The app's HTML links to the
-    schema path, and an unregistered path falls through to the single-page-app
-    handler, which answers with the app's HTML and a 200, so following the link
-    would read as success. Answered here instead, the link is never a dead end,
-    and turning the API on needs no change to any cached HTML.
+    All three are registered even when the API is off. The app's HTML links to
+    the schema path, and an unregistered path falls through to the
+    single-page-app handler, which answers with the app's HTML and a 200, so
+    following the link would read as success. Answered here instead, the link
+    is never a dead end, and turning the API on needs no change to any cached
+    HTML.
 
     Parameters
     ----------
@@ -330,11 +403,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     Returns
     -------
     list[BaseRoute]
-        The routes for ``_stcore/agent/interact`` and
-        ``_stcore/agent/openapi.json``.
+        The routes for ``_stcore/agent/interact``,
+        ``_stcore/agent/openapi.json``, and ``_stcore/agent/mcp``.
     """
     from starlette.requests import ClientDisconnect
-    from starlette.responses import JSONResponse, Response
+    from starlette.responses import Response
     from starlette.routing import Route
 
     from streamlit.url_util import make_url_path
@@ -343,55 +416,62 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     registry = interaction.AgentSessionRegistry(runtime) if enabled else None
     interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
     schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
+    mcp_path = make_url_path(base_url or "", _ROUTE_AGENT_MCP)
 
     # Built on the first request so an app that never serves it pays nothing,
     # then cached: it depends only on `enabled`, read once above, and on the
     # installed release.
     @functools.cache
     def schema_body() -> bytes:
-        return _render_json(
+        return json_encoding.response_body(
             protocol.build_openapi_document(
                 interact_path=interact_path,
                 schema_path=schema_path,
+                mcp_path=mcp_path,
                 server_url=_relative_server_url(schema_path),
                 enabled=enabled,
             )
         )
 
-    def error_response(
+    # Built on first use and cached like the document. MCP requires that the
+    # list not change during a connection, so the session TTL it states is
+    # read once.
+    @functools.cache
+    def mcp_tools() -> list[dict[str, Any]]:
+        session_ttl = float(config.get_option("server.agentSessionTTL"))
+        return protocol.build_mcp_tools(session_ttl=session_ttl)
+
+    def error_response(code: errors.AgentErrorCode, message: str) -> Response:
+        status, body = refused(code, message)
+        return Response(body, status_code=status, media_type="application/json")
+
+    def refused(
         code: errors.AgentErrorCode,
         message: str,
         *,
         session_id: str | None = None,
         details: dict[str, Any] | None = None,
-    ) -> Response:
-        body: dict[str, Any] = {"error": {"code": code, "message": message}}
-        if details:
-            body["error"].update(details)
-        if session_id is not None:
-            # Set when the remedy is a request on a session: a creating call
-            # that already produced one, or a run still going after the timeout.
-            body["session_id"] = session_id
-        return JSONResponse(body, status_code=errors.error_status(code))
+    ) -> tuple[int, bytes]:
+        """The interact route's status and error body for a refusal."""
+        body = errors.error_body(code, message, session_id=session_id, details=details)
+        return errors.error_status(code), json_encoding.response_body(body)
 
     async def run_interaction(
         request: Request,
         session_registry: interaction.AgentSessionRegistry,
         payload: dict[str, Any],
-    ) -> Response:
-        # The same trusted headers the WebSocket maps for a browser. Never the
-        # auth cookie: it is only honored on the WebSocket behind an XSRF token,
-        # which a cross-site request here could otherwise ride.
-        user_info: UserInfoType = {
-            **starlette_websocket.gather_user_info(request.headers)
-        }
+    ) -> tuple[int, bytes]:
+        """Run one interaction for either route: the interact route's status
+        and response body, which the MCP route's `interact` tool returns as
+        its text.
+        """
         try:
             body = await _unless_disconnected(
                 request,
                 interaction.interact(
                     session_registry,
                     payload,
-                    user_info=user_info,
+                    user_info=_user_info(request),
                     headers=request.headers.items(),
                     encode=_encode_snapshot,
                 ),
@@ -400,11 +480,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # Nobody reads this. A retry collects the run of a session the
             # client already held; a creating call's session is closed instead,
             # since the client never received its `session_id`.
-            return error_response(
+            return refused(
                 "wait_timed_out", "The client disconnected before the run settled."
             )
         except errors.AgentRequestError as exc:
-            return error_response(
+            return refused(
                 exc.code,
                 exc.message,
                 session_id=exc.session_id,
@@ -413,10 +493,50 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except Exception:
             _LOGGER.exception("Agent API interaction failed.")
             # The cause is in the server log; the response does not name it.
-            return error_response(
-                "internal_error", "The interaction could not be completed."
+            return refused("internal_error", "The interaction could not be completed.")
+        return 200, body
+
+    async def call_tool(
+        request: Request,
+        session_registry: interaction.AgentSessionRegistry,
+        message: mcp.Message,
+    ) -> Response:
+        """Answer a `tools/call` request: `interact` through the interact
+        route's code path, and `get_data` after the session's identity check.
+        """
+        call = mcp.tool_call(message)
+        if call is None:
+            return _jsonrpc_response(200, mcp.tool_call_refusal(message))
+
+        if call.name == "interact":
+            status, body = await run_interaction(
+                request, session_registry, call.arguments
             )
-        return Response(body, media_type="application/json")
+            # Off the event loop, since a snapshot can be hundreds of KB. A
+            # 202 `wait_timed_out` is not a failure: its text says how to
+            # collect the run.
+            rendered = await asyncio.to_thread(
+                _tool_text_body, message.id, body, is_error=status >= 400
+            )
+            return Response(rendered, media_type="application/json")
+
+        try:
+            arguments = mcp.parse_get_data_arguments(call.arguments)
+            # The identity check `interact` applies, and a use of the session
+            # that restarts its idle timer, but not its in-flight lock: a read
+            # runs no app code, and clients often call tools in parallel.
+            session = session_registry.get(arguments.session_id, _user_info(request))
+            session_registry.app_session(session)
+        except errors.AgentRequestError as exc:
+            reason = exc.message
+            if exc.code == "unknown_session":
+                reason = mcp.unknown_session_message()
+            result = mcp.tool_error(exc.code, reason)
+            return _jsonrpc_response(200, mcp.jsonrpc_result(message.id, result))
+        rendered = await asyncio.to_thread(
+            mcp.render_get_data, message.id, runtime.media_file_mgr, arguments
+        )
+        return Response(rendered, media_type="application/json")
 
     async def answer_schema(request: Request) -> Response:  # noqa: RUF029 - endpoints are async
         """Serve the OpenAPI document, whether or not the API is on.
@@ -449,12 +569,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             return Response(status_code=405, headers={"Allow": "POST"})
         if registry is None:
             return error_response("not_available", _DISABLED_MESSAGE)
-        if _refused_host(request):
-            return error_response("host_not_allowed", _HOST_MESSAGE)
-        if _refused_origin(request):
-            return error_response("origin_not_allowed", _ORIGIN_MESSAGE)
-        if _page_request_without_json(request):
-            return error_response("invalid_request", _PAGE_CONTENT_TYPE_MESSAGE)
+        refusal = _refused_caller(request)
+        if refusal is not None:
+            return error_response(*refusal)
 
         # The bound the WebSocket handler applies to an inbound frame, so the
         # agent path is no more permissive than the browser path.
@@ -480,7 +597,93 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         if not isinstance(payload, dict):
             return error_response("invalid_request", "The body must be a JSON object.")
 
-        return await run_interaction(request, registry, payload)
+        status, content = await run_interaction(request, registry, payload)
+        return Response(content, status_code=status, media_type="application/json")
+
+    async def answer_mcp(request: Request) -> Response:
+        """Answer one JSON-RPC message, as MCP's Streamable HTTP transport.
+
+        The interact route's checks apply in its order, each refusal before
+        parsing answered as a JSON-RPC error with `id: null`.
+        """
+        if request.method != "POST":
+            # A GET would open a stream for messages the server sends on its
+            # own, and this server sends none.
+            return Response(status_code=405, headers={"Allow": "POST"})
+        if registry is None:
+            # 400 rather than the interact route's 403: MCP clients read a 403
+            # as an authorization failure, and neither fall back to
+            # `initialize` nor show the message.
+            return _jsonrpc_refusal("not_available", _DISABLED_MESSAGE, status=400)
+        refusal = _refused_caller(request)
+        if refusal is not None:
+            return _jsonrpc_refusal(*refusal)
+
+        max_request_bytes = runtime_util.get_max_widget_state_size_bytes()
+        try:
+            body = await _read_body(request, max_request_bytes)
+        except ClientDisconnect:
+            # Nobody reads this: the client left while sending the body.
+            return Response(status_code=400)
+        except _BodyTooLargeError:
+            return _jsonrpc_refusal(
+                "request_too_large",
+                f"The request body exceeds {max_request_bytes} bytes.",
+            )
+        # Unlike the interact route's, an empty body is no request at all.
+        if not body.strip():
+            return _jsonrpc_error_response(
+                400, mcp.PARSE_ERROR, "Parse error: the body is empty."
+            )
+        try:
+            payload = await asyncio.to_thread(_parse_body, body)
+        except ValueError as exc:
+            return _jsonrpc_error_response(
+                400,
+                mcp.PARSE_ERROR,
+                f"Parse error: the body is not valid JSON: {exc}.",
+            )
+
+        message = mcp.classify(payload)
+        if message.kind == "batch":
+            # Only a revision this server does not speak had batches, and one
+            # would run several interactions past the timeout each is held to.
+            return _jsonrpc_error_response(
+                200,
+                mcp.INVALID_REQUEST,
+                "Batches are not supported: send one message per request.",
+            )
+        if message.kind == "invalid":
+            return _jsonrpc_error_response(
+                400,
+                mcp.INVALID_REQUEST,
+                "The body is not a JSON-RPC 2.0 request, notification, or response.",
+            )
+        if message.kind != "request":
+            # A notification, such as `notifications/initialized`, or a
+            # response gets no answer.
+            return Response(status_code=202)
+        refused_request = mcp.request_refusal(
+            message, request.headers.get(mcp.PROTOCOL_VERSION_HEADER)
+        )
+        if refused_request is not None:
+            return _jsonrpc_response(*refused_request)
+
+        try:
+            if message.method == "tools/call":
+                return await call_tool(request, registry, message)
+            return _jsonrpc_response(
+                200,
+                mcp.answer(
+                    message, instructions=protocol.MCP_INSTRUCTIONS, tools=mcp_tools()
+                ),
+            )
+        except Exception:
+            _LOGGER.exception("Agent API MCP request failed.")
+            # The cause is in the server log; the response does not name it.
+            return _jsonrpc_error_response(
+                200, mcp.INTERNAL_ERROR, "Internal error.", request_id=message.id
+            )
 
     return [
         Route(
@@ -491,6 +694,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         Route(
             schema_path,
             _with_service_desc_link(answer_schema),
+            methods=_ROUTE_METHODS,
+        ),
+        Route(
+            mcp_path,
+            _with_service_desc_link(answer_mcp),
             methods=_ROUTE_METHODS,
         ),
     ]

@@ -191,6 +191,7 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/_stcore/bidi-components/*`: v2 bidi component resources
 - `/_stcore/agent/interact`: Agent API (POST only; off unless the hidden `server.enableAgentApi` is set)
 - `/_stcore/agent/openapi.json`: The agent API's OpenAPI document (GET; always served, and with the API off it only reports that the API is disabled, via `info.x-streamlit-agent-api`)
+- `/_stcore/agent/mcp`: The agent API as a remote MCP server (POST only, JSON-RPC; same switch and checks as the interact route, but answers 400 rather than 403 while the API is off)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -202,7 +203,7 @@ Browser connects -> Runtime.connect_session()
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
 
-**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies. `GET /_stcore/agent/openapi.json` serves the OpenAPI document `runtime/agent/protocol.py` builds from the error catalog and the request validator; with the API off, it only reports that. Every response from either route carries `Link: <openapi.json>; rel="service-desc"`, and the app's `index.html` links the document too.
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies. `GET /_stcore/agent/openapi.json` serves the OpenAPI document `runtime/agent/protocol.py` builds from the error catalog and the request validator; with the API off, it only reports that. `POST /_stcore/agent/mcp` (`runtime/agent/mcp.py`) serves the same protocol over MCP's Streamable HTTP transport with no MCP session: its `interact` tool runs the interact route's code path and returns the same bytes, and its `get_data` tool reads media files (table pages as JSON rows) through `MediaFileManager.read_file` after the registry's identity check, without the in-flight lock; `protocol.py` holds the tool descriptions and inlined input schema. Every response from any of the three routes carries `Link: <openapi.json>; rel="service-desc"`, and the app's `index.html` links the document too.
 
 ## Key abstractions
 
@@ -371,6 +372,7 @@ Media files (images, audio, video, and an agent session's Arrow data copies from
 - **Coordinates**: Each file tracks its location in the app (delta path) to handle replacements (e.g., animation frames)
 - **Session tracking**: Files are associated with sessions; removed when no sessions reference them
 - **Deferred callables**: `st.download_button` with callable data uses `DeferredCallableEntry` for lazy evaluation
+- **Reads**: `read_file` returns a stored file for the agent API's MCP `get_data` tool. Only the built-in `MemoryMediaFileStorage` supports it (`can_read_files`); `MediaFileStorage` has no read method, so a host-provided storage serves its files itself
 
 **Multi-server considerations**:
 - Media requests may hit different servers than the WebSocket connection

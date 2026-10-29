@@ -479,7 +479,7 @@ class AgentSessionRegistry:
         self._reclaim_idle()
         session = self._sessions.get(handle)
         if session is None or session.user_info != user_info:
-            ttl = _duration(float(config.get_option("server.agentSessionTTL")))
+            ttl = format_duration(float(config.get_option("server.agentSessionTTL")))
             raise AgentRequestError(
                 "unknown_session",
                 "This session does not exist or has expired: sessions end after "
@@ -636,7 +636,7 @@ async def interact(
                 raise AgentRequestError(
                     "wait_timed_out",
                     "The app has finished, but its snapshot was still being "
-                    f"built after {_duration(_wait_timeout())}. Nothing is lost: "
+                    f"built after {format_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
                     session_id=session.handle,
                 ) from None
@@ -690,8 +690,10 @@ def _wait_timeout() -> float:
     return float(config.get_option("server.agentWaitTimeout"))
 
 
-def _duration(seconds: float) -> str:
-    """Phrase a number of seconds for an error message, such as "15 minutes"."""
+def format_duration(seconds: float) -> str:
+    """Phrase a number of seconds for a message or description, such as
+    "15 minutes".
+    """
     if seconds and seconds % 60 == 0:
         amount, unit = seconds / 60, "minute"
     else:
@@ -949,8 +951,8 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _duration(_wait_timeout())
-            elapsed = _duration(round(time.monotonic() - interaction.started))
+            timeout = format_duration(_wait_timeout())
+            elapsed = format_duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
                 "wait_timed_out",
                 f"The app did not finish within {timeout}, and is still "

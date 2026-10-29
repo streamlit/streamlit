@@ -184,12 +184,10 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     if not arrow_bytes:
         return None
 
-    import pyarrow as pa
-
     limit = _preview_row_limit()
     try:
-        table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
-        columns = _arrow_columns(table)
+        table = read_arrow_stream(arrow_bytes)
+        columns = arrow_columns(table)
     except Exception:
         # Any failure, not just a malformed stream: an element without a
         # summary costs far less than a failed snapshot.
@@ -198,7 +196,7 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
 
     rows: list[list[Any]] | None
     try:
-        rows = _arrow_rows(table, limit)
+        rows = arrow_rows(table, limit=limit)
     except Exception:
         # A column neither Python nor Arrow's text cast can represent, such as
         # a timestamp in a time zone neither knows. The schema and size still
@@ -352,13 +350,50 @@ def _preview_row_limit() -> int:
     return max(0, int(config.get_option("server.agentPreviewRows")))
 
 
-def _arrow_columns(table: pa.Table) -> list[dict[str, str]]:
+def read_arrow_stream(arrow_bytes: bytes) -> pa.Table:
+    """Read an Arrow IPC stream into a table.
+
+    Streamlit's serializer writes an uncompressed stream, so the table's
+    buffers point into ``arrow_bytes`` rather than copying it, and reading a
+    few rows of a large stream costs about as much as reading a small one.
+
+    Parameters
+    ----------
+    arrow_bytes
+        An Arrow IPC stream, such as an element payload's ``arrow_data.data``.
+
+    Returns
+    -------
+    pa.Table
+        The stream's table.
+
+    Raises
+    ------
+    Exception
+        Whatever ``pyarrow`` raises for bytes that are not an Arrow stream.
+    """
+    import pyarrow as pa
+
+    return pa.RecordBatchStreamReader(arrow_bytes).read_all()
+
+
+def arrow_columns(table: pa.Table) -> list[dict[str, str]]:
     """An Arrow table's columns with their types, by position.
 
     Every column the bytes behind `data.url` carry, under the same names, so
     the reported schema is the schema of what a client fetches. That includes
     an unnamed, non-range index, which pandas stores as `__index_level_N__` and
     `st.dataframe` displays.
+
+    Parameters
+    ----------
+    table
+        The table to describe.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        One ``{"name", "type"}`` per column.
     """
     return [
         {"name": name, "type": str(dtype)}
@@ -366,8 +401,9 @@ def _arrow_columns(table: pa.Table) -> list[dict[str, str]]:
     ]
 
 
-def _arrow_rows(table: pa.Table, limit: int) -> list[list[Any]]:
-    """Return up to ``limit`` rows as lists of cell values in column order.
+def arrow_rows(table: pa.Table, *, offset: int = 0, limit: int) -> list[list[Any]]:
+    """Return up to ``limit`` rows from ``offset`` on, as lists of cell values
+    in column order.
 
     By position rather than by name, so a table with two columns of the same
     name keeps both.
@@ -376,14 +412,28 @@ def _arrow_rows(table: pa.Table, limit: int) -> list[list[Any]]:
     widget values and props use, rather than through a pandas DataFrame: pandas
     turns an integer column with nulls into floats, which loses digits past
     2**53, and its JSON writer drops a timestamp's offset and writes out bytes.
+
+    Parameters
+    ----------
+    table
+        The table to read.
+    offset
+        The first row to read. Past the last row, there are none.
+    limit
+        The most rows to read.
+
+    Returns
+    -------
+    list[list[Any]]
+        The rows, as JSON-compatible values.
     """
     if table.num_columns == 0:
         # Zipping no columns yields no rows, but the table still has them.
-        return [[] for _ in range(min(table.num_rows, limit))]
+        return [[] for _ in range(max(0, min(table.num_rows - offset, limit)))]
     return [
         [json_encoding.to_json_value(cell) for cell in row]
         for row in zip(
-            *(_cell_values(column) for column in table.slice(0, limit).columns),
+            *(_cell_values(column) for column in table.slice(offset, limit).columns),
             strict=True,
         )
     ]

@@ -189,7 +189,11 @@ class TestReservedPaths:
 
     @pytest.mark.parametrize(
         "path",
-        ["/page2/_stcore/agent/openapi.json", "/page2/_stcore/agent/interact"],
+        [
+            "/page2/_stcore/agent/openapi.json",
+            "/page2/_stcore/agent/interact",
+            "/page2/_stcore/agent/mcp",
+        ],
     )
     def test_agent_route_under_a_page_path_returns_404(
         self, static_app: TestClient, path: str
@@ -203,6 +207,27 @@ class TestReservedPaths:
 
         assert response.status_code == 404
         assert "text/html" not in response.headers.get("content-type", "")
+
+    def test_post_to_a_reserved_path_returns_404(self, static_app: TestClient) -> None:
+        """A reserved path is a 404 for a `POST` too, not the 405 static files
+        answer to methods other than GET, so an MCP client that adds a page's
+        URL learns that no server is there.
+        """
+        response = static_app.post("/page2/_stcore/agent/mcp", json={})
+
+        assert response.status_code == 404
+
+    def test_post_to_a_reserved_path_at_the_root_keeps_the_405(
+        self, static_app: TestClient
+    ) -> None:
+        """At the app's root, a reserved path whose route does not take the
+        method keeps the 405 static files answer, which names the methods
+        they allow.
+        """
+        response = static_app.post("/_stcore/health")
+
+        assert response.status_code == 405
+        assert response.headers["Allow"] == "GET, HEAD"
 
 
 class TestWithBaseUrl:

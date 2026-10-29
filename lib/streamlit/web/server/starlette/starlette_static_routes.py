@@ -51,6 +51,7 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = (
     "_stcore/host-config",
     "_stcore/agent/interact",
     "_stcore/agent/openapi.json",
+    "_stcore/agent/mcp",
 )
 
 
@@ -140,7 +141,18 @@ def create_streamlit_static_handler(
             try:
                 response = await super().get_response(path, scope)
             except HTTPException as exc:
-                if exc.status_code != 404 or self._is_reserved(scope["path"]):
+                if self._is_reserved(scope["path"]):
+                    if path.replace("\\", "/") in _RESERVED_STATIC_PATH_SUFFIXES:
+                        # At the app's root, the static files' own answer
+                        # stands, such as a 405 for a `POST` to the health
+                        # check.
+                        raise
+                    # Appended to a page's URL, a reserved path is never a
+                    # static file, so it is a 404 for every method: a `POST`
+                    # from an MCP client would otherwise get the 405 that
+                    # static files answer to methods other than GET.
+                    raise HTTPException(status_code=404) from exc
+                if exc.status_code != 404:
                     raise
                 # Serve index.html for 404s (existing behavior):
                 response = FileResponse(self._index_path)
