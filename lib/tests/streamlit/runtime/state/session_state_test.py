@@ -6463,6 +6463,7 @@ def _boundary_metadata(
     value_type: str = "string_value",
     callback: Callable[[], None] | None = None,
     callbacks: dict[str, Callable[[], None]] | None = None,
+    fragment_id: str | None = None,
 ) -> WidgetMetadata:
     """String-widget metadata whose default is "default"."""
     return WidgetMetadata(
@@ -6472,6 +6473,7 @@ def _boundary_metadata(
         value_type=value_type,
         callback=callback,
         callbacks=callbacks,
+        fragment_id=fragment_id,
     )
 
 
@@ -6795,3 +6797,116 @@ def test_clear_resets_the_pending_client_value_sets() -> None:
 
 
 # endregion Client value boundary
+
+# region Rendered widgets
+
+
+def _registered(
+    *metadata: WidgetMetadata, fragment_ids_this_run: list[str] | None = None
+) -> SessionState:
+    """A SessionState in which a run registered ``metadata``."""
+    ss = _session_with()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run),
+    ):
+        for widget_metadata in metadata:
+            ss.register_widget(widget_metadata, None)
+    return ss
+
+
+def _finish_run(
+    ss: SessionState,
+    *registered: str,
+    fragment_ids_this_run: list[str] | None = None,
+    remove_stale_widgets: bool = True,
+) -> None:
+    """End a run that registered the widgets ``registered``."""
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run),
+    ):
+        ss.on_script_finished(
+            frozenset(registered), remove_stale_widgets=remove_stale_widgets
+        )
+
+
+def test_registration_marks_a_widget_rendered() -> None:
+    """Registering adds the ID, and neither compaction nor a cache clear removes it."""
+    ss = _registered(_boundary_metadata("w"))
+
+    assert ss._new_widget_state.rendered_ids == {"w"}
+    ss.on_script_will_rerun(_message())
+    ss.clear()
+    assert ss._new_widget_state.rendered_ids == {"w"}
+
+
+def test_a_full_run_forgets_the_widgets_it_did_not_register() -> None:
+    """A completed full run keeps only the rendered widgets it registered."""
+    ss = _registered(_boundary_metadata("shown"), _boundary_metadata("hidden"))
+
+    _finish_run(ss, "shown")
+
+    assert ss._new_widget_state.rendered_ids == {"shown"}
+
+
+def test_a_fragment_run_forgets_only_its_own_widgets() -> None:
+    """A fragment run covers its fragment's widgets, not the rest of the page."""
+    ss = _registered(
+        _boundary_metadata("outside"),
+        _boundary_metadata("kept", fragment_id="f"),
+        _boundary_metadata("hidden", fragment_id="f"),
+        _boundary_metadata("other_fragment", fragment_id="g"),
+    )
+
+    _finish_run(ss, "kept", fragment_ids_this_run=["f"])
+
+    assert ss._new_widget_state.rendered_ids == {"outside", "kept", "other_fragment"}
+
+
+def test_an_interrupted_run_forgets_no_rendered_widget() -> None:
+    """A run whose widget list is incomplete prunes nothing, like the states."""
+    ss = _registered(_boundary_metadata("a"), _boundary_metadata("b"))
+
+    _finish_run(ss, remove_stale_widgets=False)
+
+    assert ss._new_widget_state.rendered_ids == {"a", "b"}
+
+
+def test_client_widget_ids_never_add_a_rendered_widget() -> None:
+    """A page change prunes against the client's IDs, so a forged ID stays out."""
+    ss = _registered(_boundary_metadata("on_page"), _boundary_metadata("gone"))
+    ss._set_widget_metadata(_boundary_metadata("forged"))
+
+    # The page-change cleanup passes the IDs from the client's message.
+    _finish_run(ss, "on_page", "forged")
+
+    assert ss._new_widget_state.rendered_ids == {"on_page"}
+
+
+def test_a_hidden_widget_stops_waiting_for_a_resync() -> None:
+    """A pending re-sync is forgotten with the rendered widget, but kept with it."""
+    ss = _registered(_boundary_metadata("shown"), _boundary_metadata("hidden"))
+    ss._pending_resync.update({"shown", "hidden"})
+
+    _finish_run(ss, "shown")
+
+    assert ss._pending_resync == {"shown"}
+
+
+def test_an_early_stop_prunes_rendered_widgets_and_keeps_values() -> None:
+    """st.stop() before a widget forgets that it rendered, but not its value."""
+    ss = _registered(_boundary_metadata("before"), _boundary_metadata("after"))
+    ss._new_widget_state.set_from_value("after", "kept")
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    ):
+        ss.prune_rendered_widgets(frozenset({"before"}))
+
+    assert ss._new_widget_state.rendered_ids == {"before"}
+    assert ss["after"] == "kept"
+
+
+# endregion Rendered widgets

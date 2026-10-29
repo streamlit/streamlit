@@ -476,11 +476,22 @@ The set changes at three points:
   scopes states to `fragment_ids_this_run`. After a fragment run, only that fragment's
   widgets are pruned.
 - **When a run ends in `st.stop()` or an uncaught exception,** the set is pruned the
-  same way. That path sets `premature_stop`, so `_on_script_finished` skips
-  `on_script_finished` and no state is pruned, which keeps widget values as today. The
-  browser still removes every element the run did not send. Without this prune, a
-  widget hidden behind `if not logged_in: st.stop()` would stay in the set, and a forged
-  trigger would still fire its callback.
+  same way (`SessionState.prune_rendered_widgets`). That path sets `premature_stop`, so
+  `_on_script_finished` skips `on_script_finished` and no state is pruned, which keeps
+  widget values as today. The browser still removes every element the run did not send.
+  Without this prune, a widget hidden behind `if not logged_in: st.stop()` would stay in
+  the set, and a forged trigger would still fire its callback.
+  - The prune needs `has_script_started`: a callback that raises or calls `st.stop()`
+    ends the run before anything registers, so the set is left alone.
+  - A stop that the session requests from outside the script raises the same
+    `StopException`, but it interrupts the run. With `runner.fastReruns`, the session
+    replaces a running script runner with a new one and ignores the old runner's
+    events, so the browser never sees the stopped run end and keeps its widgets.
+    Pruning there would also race with the new runner's check of the message that
+    caused the rerun. `ScriptRunner.request_stop` therefore marks the runner, and a
+    marked runner prunes nothing. The user's stop button takes the same path, which
+    only leaves the set larger than the page.
+  - `ScriptRunner._on_script_finished` and AppTest's copy of it apply the same rule.
   - Pruning rather than replacing matters on a page transition. There,
     `script_runner.py` calls `on_script_finished` with IDs taken from the client's
     `rerun_data.widget_states`, before `on_script_will_rerun` runs the check. Replacing

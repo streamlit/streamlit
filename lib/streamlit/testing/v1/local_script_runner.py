@@ -209,7 +209,7 @@ class LocalScriptRunner(ScriptRunner):
         self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
     ) -> None:
         # Do not drop unseen widgets when the script stopped for a rerun
-        # (later widgets never registered). Keep this gate in sync with
+        # (later widgets never registered). Keep these gates in sync with
         # ScriptRunner._on_script_finished.
         if not premature_stop:
             self._session_state.on_script_finished(
@@ -218,6 +218,12 @@ class LocalScriptRunner(ScriptRunner):
                     ctx.has_script_started
                     and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
                 ),
+            )
+        elif ctx.has_script_started and not self._stop_requested:
+            # st.stop() or an uncaught exception ended the body early: the
+            # widgets it did not send are no longer rendered.
+            self._session_state.prune_rendered_widgets(
+                ctx.shared.widget_ids_this_run.snapshot()
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

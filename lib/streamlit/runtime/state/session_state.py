@@ -227,6 +227,12 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    # The widgets registered by the latest run that covered them. A full run
+    # covers every widget, and a fragment run only its fragment's widgets.
+    # Only registration adds an ID; SessionState.prune_rendered_widgets removes
+    # the ones a run covered but did not register. Like the metadata, it
+    # survives `clear`.
+    rendered_ids: set[str] = field(default_factory=set)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -1604,18 +1610,7 @@ class SessionState:
             active_widget_ids,
             ctx.fragment_ids_this_run,
         )
-
-        # A widget that stopped rendering has no browser value left to correct.
-        if self._pending_resync:
-            self._pending_resync = {
-                widget_id
-                for widget_id in self._pending_resync
-                if not _is_stale_widget(
-                    self._new_widget_state.widget_metadata.get(widget_id),
-                    active_widget_ids,
-                    ctx.fragment_ids_this_run,
-                )
-            }
+        self.prune_rendered_widgets(active_widget_ids)
 
         # Remove entries from _old_state corresponding to stale widgets.
         self._old_state = {
@@ -1662,6 +1657,45 @@ class SessionState:
         # widget IDs while preserving currently mapped keyed widgets.
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
+
+    def prune_rendered_widgets(self, widget_ids_this_run: frozenset[str]) -> None:
+        """Forget the rendered widgets that a run covered but did not register.
+
+        A full run covers every widget, and a fragment run only its fragment's
+        widgets, by the rule that scopes stale widget states. No ID is added,
+        so a client's list of widget IDs can only shrink the set. A forgotten
+        widget no longer waits for a re-sync either: the browser removed it.
+
+        This runs where stale widget states are removed, and also when a run
+        ends in ``st.stop()`` or an uncaught exception, which keeps the states.
+
+        Parameters
+        ----------
+        widget_ids_this_run : frozenset[str]
+            The IDs of the widgets the run registered.
+        """
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        widget_state = self._new_widget_state
+        fragment_ids_this_run = ctx.fragment_ids_this_run
+        if fragment_ids_this_run:
+            metadata_by_id = widget_state.widget_metadata
+            widget_state.rendered_ids = {
+                widget_id
+                for widget_id in widget_state.rendered_ids
+                if not _is_stale_widget(
+                    metadata_by_id.get(widget_id),
+                    widget_ids_this_run,
+                    fragment_ids_this_run,
+                )
+            }
+        else:
+            # A full run covers every widget, and every rendered widget has
+            # metadata, so the stale ones are those it did not register.
+            widget_state.rendered_ids.intersection_update(widget_ids_this_run)
+        # Only a rendered widget waits for a re-sync.
+        self._pending_resync.intersection_update(widget_state.rendered_ids)
 
     def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the latest metadata retained for a widget id, if any."""
@@ -1796,6 +1830,9 @@ class SessionState:
             client_value_refused = True
 
         self._set_widget_metadata(metadata)
+        # Registering is rendering: the run sends the widget to the browser,
+        # even if it later replaces it or is interrupted.
+        self._new_widget_state.rendered_ids.add(widget_id)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
