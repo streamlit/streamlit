@@ -338,8 +338,8 @@ class SnapshotBuilderTest(SnapshotCase):
         days = _state(snapshot, "date_input", "days")
         assert days.max_items == 2
         assert days.schema_type == "array"
-        assert _state(snapshot, "multiselect", "limited").max_items == 2
-        assert _state(snapshot, "multiselect", "any").max_items is None
+        # The multiselect's own validator enforces `max_selections`.
+        assert _state(snapshot, "multiselect", "limited").max_items is None
         assert _state(snapshot, "pills", "mood").clearable is True
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False

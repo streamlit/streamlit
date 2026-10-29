@@ -77,7 +77,13 @@ def _render_option_widgets() -> None:
         accept_new_options=True,
         key="same_open",
     )
-    st.selectbox("Shared", ["a", "A"], format_func=str.upper, key="shared")
+    st.selectbox("Shared", ["x", "a", "A"], format_func=str.upper, key="shared")
+    st.selectbox(
+        "Shared default", ["a", "A"], format_func=str.upper, key="shared_default"
+    )
+    st.multiselect(
+        "Shared tags", ["x", "a", "A"], format_func=str.upper, key="shared_tags"
+    )
     st.selectbox("Rate", ["0.10", "0.25"], key="rate")
     st.selectbox("Count", [1, 12], key="count")
     st.multiselect("Repeated", ["a", "b"], default=["a", "a"], key="repeated")
@@ -447,7 +453,12 @@ class WidgetWritesTest(SnapshotCase):
                 7,
                 _Refused("7 is not one of the options for 'stars': 0, 1, 2, 3, 4."),
             ),
-            ("over_max_selections", "limited", ["a", "b", "c"], _Refused("at most 2")),
+            (
+                "over_max_selections",
+                "limited",
+                ["a", "b", "c"],
+                _Refused("'limited' takes at most 2 items, as its `max_selections`"),
+            ),
             ("within_max_selections", "limited", ["a", "c"], ["a", "c"]),
             (
                 "over_a_range",
@@ -467,7 +478,27 @@ class WidgetWritesTest(SnapshotCase):
             # Read as text, a shared label resolves the way the widget resolves
             # it for a browser, which sends the same label.
             ("accept_new_shared_label", "same_open", "Same", "y"),
-            ("shared_label", "shared", "A", _Refused("Several options")),
+            (
+                "shared_label",
+                "shared",
+                "A",
+                _Refused("Several options for 'shared' display as 'A'"),
+            ),
+            # Equal to the stored value on the wire, so it is unchanged. It
+            # resolves as a browser's echo of the same label does.
+            ("unchanged_shared_label", "shared_default", "A", "A"),
+            (
+                "shared_label_in_a_list",
+                "shared_tags",
+                ["X", "A"],
+                _Refused("Several options for 'shared_tags' display as 'A'"),
+            ),
+            (
+                "duplicate_selection",
+                "many",
+                ["a", "b", "a"],
+                _Refused("'many' lists 'a' more than once"),
+            ),
             ("number_naming_an_option", "numbered", 2, "2"),
             ("tab_label", "tabs", "B", "B"),
             ("not_a_tab", "tabs", "C", _Refused("not one of the options")),

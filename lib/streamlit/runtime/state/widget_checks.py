@@ -127,7 +127,7 @@ _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
     {"disabled", "not_an_option", "too_many_items"}
 )
 
-# `ambiguous_option` carries no detail, so every report shares one Violation.
+# A single label needs no position, so `one_of`'s reports share one Violation.
 _AMBIGUOUS: Final = Violation("ambiguous_option")
 
 # The fixed text that starts every refusal log line. The e2e parity gate looks
@@ -257,13 +257,14 @@ def items_of(
         ``max_items``; ``not_an_option`` with the ``options`` and the
         ``positions`` of the labels that are not options; ``duplicate_items``
         with the ``positions`` of the first extra repeat; and
-        ``ambiguous_option``. A detail never holds a sent label.
+        ``ambiguous_option`` with the ``positions`` of the first shared label.
+        A detail never holds a sent label.
     """
     if max_items is not None and len(values) > max_items:
         return Violation("too_many_items", MappingProxyType({"max_items": max_items}))
     missing: list[int] = []
     duplicate: int | None = None
-    ambiguous = False
+    ambiguous: int | None = None
     listed: Counter[str] = Counter()
     for position, item in enumerate(values):
         offered = counts.get(item, 0)
@@ -277,8 +278,8 @@ def items_of(
                 if duplicate is None:
                     duplicate = position
                 continue
-        if offered > 1 and not accept_new:
-            ambiguous = True
+        if offered > 1 and not accept_new and ambiguous is None:
+            ambiguous = position
     if missing:
         return Violation(
             "not_an_option",
@@ -288,7 +289,11 @@ def items_of(
         return Violation(
             "duplicate_items", MappingProxyType({"positions": (duplicate,)})
         )
-    return _AMBIGUOUS if ambiguous else None
+    if ambiguous is not None:
+        return Violation(
+            "ambiguous_option", MappingProxyType({"positions": (ambiguous,)})
+        )
+    return None
 
 
 def check_client_value(

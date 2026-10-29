@@ -872,7 +872,7 @@ def test_select_slider_serde_deserialize_range_with_unknown_value() -> None:
         # An empty range lists one label twice.
         (["b", "b"], None),
         # A shared label is accepted in a browser session.
-        (["X"], Violation("ambiguous_option")),
+        (["X"], Violation("ambiguous_option", {"positions": (0,)})),
         (
             ["b", "zz"],
             Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (1,)}),

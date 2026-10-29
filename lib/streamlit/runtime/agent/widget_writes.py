@@ -23,23 +23,26 @@ and the whole request is refused if any part of it is not legal. This covers:
   display-only is refused with the code that names why, and so is a value sent
   to a trigger, a trigger fired as a value, or one element set twice.
 - Values and triggers (``build_widget_states``): each value must have the
-  JSON type its ``value_schema`` states and be one of its options, and ``null``
-  resets or clears it. Accepted values and the one trigger are encoded in each
-  widget's wire type, in snapshot order, as the ``WidgetStates`` a browser
-  would send. Each encoded state then passes the check a browser value passes
+  JSON type its ``value_schema`` states, and ``null`` resets or clears it.
+  Accepted values and the one trigger are encoded in each widget's wire type,
+  in snapshot order, as the ``WidgetStates`` a browser would send. Each encoded
+  state then passes the check a browser value passes
   (``widget_checks.check_client_value``): the widget's wire field, its
-  deserializer, ``disabled``, and its own validator. Only a value whose wire
-  form equals the stored one skips the validator.
+  deserializer, ``disabled``, and its own validator, which decides, for
+  example, whether a value is one of its options. Only a value whose wire form
+  equals the stored one skips the validator. Unlike a browser session, a
+  request is also refused for a label several options share.
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
   that fragment, and an open dialog's widgets cannot be mixed with anything
   outside the dialog.
 
-Every acceptance decision comes from the last snapshot's ``ElementState``,
-because the snapshot is the document the client wrote against. The widget
-registry supplies the codec, each widget's wire type, serializer, and
-deserializer, and the widget's own checks.
+What a request may address, and the JSON type of each value, come from the
+last snapshot's ``ElementState``, because the snapshot is the document the
+client wrote against. The widget registry supplies the codec, each widget's
+wire type, serializer, and deserializer, and the widget's own checks, which
+decide which values it accepts.
 
 Constraints a widget owns are left to the widget, which resets, truncates, or
 trims the value for browsers and agents alike: bounds, fractions sent to an
@@ -53,8 +56,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import math
-from collections import Counter
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.agent.errors import AgentRequestError
@@ -185,34 +187,94 @@ def _disabled(key: str) -> AgentRequestError:
     )
 
 
-def _refused_value(key: str, _violation: Violation) -> AgentRequestError:
-    return _not_accepted(key)
+class _Sent(NamedTuple):
+    """What a request sent for one widget, which a refusal may draw on."""
+
+    # The key as the client sent it, so a message never quotes an internal
+    # element ID back at a caller that used an authored key.
+    key: str
+    # The JSON value after its type check, or the trigger's payload.
+    value: Any
+    # Whether the element's options are numbers, such as `st.feedback`'s
+    # indexes, which a refusal then lists bare.
+    as_numbers: bool
 
 
-def _refused_disabled(key: str, _violation: Violation) -> AgentRequestError:
-    return _disabled(key)
+def _refused_value(_violation: Violation, sent: _Sent) -> AgentRequestError:
+    return _not_accepted(sent.key)
 
 
-# How each violation the shared check reports is refused. A message names the
-# constraint, never the sent value, which may be a password.
+def _refused_disabled(_violation: Violation, sent: _Sent) -> AgentRequestError:
+    return _disabled(sent.key)
+
+
+def _sent_item(violation: Violation, sent: _Sent) -> Any:
+    """The item of the sent value that a violation's ``positions`` names."""
+    positions = violation.detail.get("positions")
+    # A list sent for a list wire is encoded item by item, so its positions
+    # match the wire's.
+    if positions and isinstance(sent.value, list) and positions[0] < len(sent.value):
+        return sent.value[positions[0]]
+    return sent.value
+
+
+def _not_an_option(violation: Violation, sent: _Sent) -> AgentRequestError:
+    options = list(violation.detail.get("options", ()))
+    return AgentRequestError(
+        "invalid_value",
+        f"{_sent_item(violation, sent)!r} is not one of the options for "
+        f"{sent.key!r}: " + _list_options(options, as_numbers=sent.as_numbers),
+    )
+
+
+def _ambiguous_option(violation: Violation, sent: _Sent) -> AgentRequestError:
+    # The widget would resolve a shared label to one of its options without
+    # saying which, so the caller could not tell what it set.
+    return AgentRequestError(
+        "invalid_value",
+        f"Several options for {sent.key!r} display as "
+        f"{_sent_item(violation, sent)!r}, so it does not identify one.",
+    )
+
+
+def _too_many_items(violation: Violation, sent: _Sent) -> AgentRequestError:
+    return AgentRequestError(
+        "invalid_value",
+        f"{sent.key!r} takes at most {violation.detail.get('max_items')} items, "
+        "as its `max_selections` says.",
+    )
+
+
+def _duplicate_items(violation: Violation, sent: _Sent) -> AgentRequestError:
+    return AgentRequestError(
+        "invalid_value",
+        f"{sent.key!r} lists {_sent_item(violation, sent)!r} more than once. List "
+        "each option once.",
+    )
+
+
+# How each violation the shared check reports is refused. Only the option
+# messages quote what was sent: options are not secrets, and the client holds
+# the value. The others name the constraint, never the sent value, which may be
+# a password.
 _VIOLATION_ERRORS: Final[
-    Mapping[ViolationKind, Callable[[str, Violation], AgentRequestError]]
+    Mapping[ViolationKind, Callable[[Violation, _Sent], AgentRequestError]]
 ] = {
     "wrong_type": _refused_value,
     "unreadable": _refused_value,
     "disabled": _refused_disabled,
-    "not_an_option": _refused_value,
-    "too_many_items": _refused_value,
-    "duplicate_items": _refused_value,
-    "ambiguous_option": _refused_value,
+    "not_an_option": _not_an_option,
+    "too_many_items": _too_many_items,
+    "duplicate_items": _duplicate_items,
+    "ambiguous_option": _ambiguous_option,
 }
 
 
 def _check_with_widget(
     session_state: SessionState,
-    key: str,
     metadata: WidgetMetadata[Any],
     encoded: WidgetState,
+    sent: _Sent,
 ) -> None:
     """Refuse an encoded state that the widget's own checks refuse.
 
@@ -220,7 +282,8 @@ def _check_with_widget(
     stored value, so a write the widget would drop is refused before anything
     runs. The comparison is on the wire: a value counts as unchanged only if it
     equals the stored value serialized, so a value the deserializer would
-    convert onto the stored one still reaches the widget's validator.
+    convert onto the stored one still reaches the widget's validator. Unlike a
+    browser session, the agent API also refuses a label several options share.
     """
     stored_state: WidgetState | None = None
     try:
@@ -243,7 +306,7 @@ def _check_with_widget(
         stored_state=stored_state,
     )
     if result.violation is not None:
-        raise _VIOLATION_ERRORS[result.violation.kind](key, result.violation)
+        raise _VIOLATION_ERRORS[result.violation.kind](result.violation, sent)
 
 
 def _require_actionable(
@@ -432,14 +495,8 @@ def build_widget_states(
                 "interface cannot supply.",
             )
 
-        value = _check_json_type(key, state, sent)
-        _validate_options(
-            key,
-            value,
-            options=state.options,
-            as_numbers=state.schema_type in {"integer", "number"},
-        )
-        value = _iso_text_to_wire(key, metadata, state.command, value)
+        checked = _check_json_type(key, state, sent)
+        value = _iso_text_to_wire(key, metadata, state.command, checked)
         wire_value = _temporal_to_wire(key, metadata, value)
         encoded = _encode(
             element_id,
@@ -448,11 +505,16 @@ def build_widget_states(
             key,
             # An option's reported value can be a number, such as
             # `st.feedback`'s index; free text cannot.
-            option_labels=frozenset(str(option) for option in state.options or ()),
+            closed_options=state.options is not None,
             clearable=state.clearable,
             as_list=state.schema_type == "array",
         )
-        _check_with_widget(session_state, key, metadata, encoded)
+        _check_with_widget(
+            session_state,
+            metadata,
+            encoded,
+            _Sent(key, checked, as_numbers=state.schema_type in {"integer", "number"}),
+        )
         values[element_id] = encoded
         touched_forms.add(state.form_id or "")
 
@@ -481,14 +543,20 @@ def build_widget_states(
                 "through `widget_state` instead of firing it.",
             )
 
+        payload = trigger.get("value")
         encoded_trigger = _encode_trigger(
             element_id,
             metadata.value_type,
-            trigger.get("value"),
+            payload,
             trigger_key,
             options=state.options,
         )
-        _check_with_widget(session_state, trigger_key, metadata, encoded_trigger)
+        _check_with_widget(
+            session_state,
+            metadata,
+            encoded_trigger,
+            _Sent(trigger_key, payload, as_numbers=False),
+        )
         states.widgets.append(encoded_trigger)
         submitted_form = state.form_id or ""
         touched_forms.add(submitted_form)
@@ -649,7 +717,7 @@ def _check_json_type(key: str, state: ElementState, value: Any) -> Any:
             raise AgentRequestError(
                 "invalid_value",
                 f"{key!r} takes at most {state.max_items} items, as its "
-                "`value_schema` (`maxItems`) or `max_selections` says.",
+                "`value_schema` (`maxItems`) says.",
             )
 
     if schema_type in {"integer", "number", "string"} and isinstance(value, bool):
@@ -680,45 +748,6 @@ def _list_options(options: list[Any], *, as_numbers: bool) -> str:
     )
     more = len(options) - _MAX_LISTED_OPTIONS
     return listed + (f", and {more} more." if more > 0 else ".")
-
-
-def _validate_options(
-    key: str,
-    value: Any,
-    *,
-    options: list[Any] | None,
-    as_numbers: bool,
-) -> None:
-    """Refuse values outside a selection widget's closed list of options.
-
-    Options are compared as text, so `st.feedback`'s integer indexes and
-    string labels are matched the same way. A widget without a closed list,
-    such as one that accepts new options, is not checked. A list may repeat an
-    option: an app's `default` can, and the widget keeps it, so a reported
-    value has to be accepted back.
-    """
-    if options is None or value is None:
-        return
-
-    # Counted once, so each candidate is one lookup however long the list is.
-    counts = Counter(str(option) for option in options)
-    candidates = value if isinstance(value, list) else [value]
-    for candidate in candidates:
-        count = counts.get(str(candidate), 0)
-        if count == 0:
-            raise AgentRequestError(
-                "invalid_value",
-                f"{candidate!r} is not one of the options for {key!r}: "
-                + _list_options(options, as_numbers=as_numbers),
-            )
-        if count > 1:
-            # The runtime would resolve a shared label to one of its options
-            # without saying which, so the caller could not tell what it set.
-            raise AgentRequestError(
-                "invalid_value",
-                f"Several options for {key!r} display as {candidate!r}, so it "
-                "does not identify one.",
-            )
 
 
 def _parse_iso(value: Any) -> dt.date | dt.time | None:
@@ -882,7 +911,7 @@ def _encode(
     value: Any,
     key: str,
     *,
-    option_labels: frozenset[str],
+    closed_options: bool,
     clearable: bool,
     as_list: bool,
 ) -> WidgetState:
@@ -894,7 +923,8 @@ def _encode(
     password.
 
     A list wire carries a single value as a one-item list, as single-select
-    button groups and single sliders do.
+    button groups and single sliders do. ``closed_options`` says whether the
+    element has a closed list of options, whose labels a JSON number can name.
     """
     value_type = metadata.value_type
     state = WidgetState()
@@ -920,14 +950,16 @@ def _encode(
         elif value_type == "int_value":
             state.int_value = _as_integer(value)
         elif value_type == "string_value":
-            state.string_value = _as_string(value, option_labels)
+            state.string_value = _as_string(value, closed_options=closed_options)
         elif value_type == "json_value":
             state.json_value = json.dumps(value)
         elif is_array_value_field_name(value_type):
             items = value if isinstance(value, list) else [value]
             array = getattr(state, value_type)
             if value_type == "string_array_value":
-                array.data.extend(_as_string(item, option_labels) for item in items)
+                array.data.extend(
+                    _as_string(item, closed_options=closed_options) for item in items
+                )
             elif value_type == "double_array_value":
                 array.data.extend(_as_number(item) for item in items)
             else:
@@ -976,9 +1008,9 @@ def _encode_trigger(
             )
         state.trigger_value = True
     elif value_type == "string_trigger_value":
-        # A trigger that chooses among options (`st.menu_button`) is validated
-        # like a selection widget: firing it with something it never offered is
-        # a client mistake, not a no-op rerun.
+        # A trigger that chooses among options (`st.menu_button`) is checked
+        # by the widget's validator, like a selection widget: firing it with
+        # something it never offered is a client mistake, not a no-op rerun.
         if not isinstance(payload, str):
             raise AgentRequestError(
                 "invalid_value",
@@ -989,7 +1021,6 @@ def _encode_trigger(
                     else "."
                 ),
             )
-        _validate_options(key, payload, options=options, as_numbers=False)
         state.string_trigger_value.data = payload
     elif value_type == "json_trigger_value":
         try:
@@ -1039,14 +1070,17 @@ def _as_integer(value: Any) -> int:
     return int(value)
 
 
-def _as_string(value: Any, option_labels: frozenset[str]) -> str:
+def _as_string(value: Any, *, closed_options: bool) -> str:
     """Coerce a JSON value into the widget's wire string.
 
-    A number is accepted only where it names an option.
+    A number becomes text only for a widget with a closed list of options,
+    such as `st.feedback`'s indexes, where the widget's validator decides
+    whether it names one. Free text, including a widget that accepts new
+    options, takes no number.
     """
     if isinstance(value, str):
         return value
-    if _is_json_number(value) and str(value) in option_labels:
+    if _is_json_number(value) and closed_options:
         return str(value)
     raise TypeError("not a string")
 

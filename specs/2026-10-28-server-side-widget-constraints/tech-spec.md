@@ -421,8 +421,8 @@ functions that return a `Violation` with its details:
 
 An options serde builds its label counts (a `Counter`) lazily with a `cached_property`, so
 a browser session whose widgets never change pays nothing. Counts rather than a set,
-because `ambiguous_option` needs to know when a label is shared, as
-`widget_writes._validate_options` does today. `one_of` and `items_of` report
+because `ambiguous_option` needs to know when a label is shared, which the agent API
+refuses. `one_of` and `items_of` report
 `ambiguous_option` only when the value has no other violation, so a browser session can
 accept it. A shared label repeated at most as often as options share it is
 `ambiguous_option` too, not `duplicate_items`: the multiselect's "Select all" adds every
@@ -802,7 +802,15 @@ array both mean empty. So a `null` sent to an empty widget still matches, even f
 
 The snapshot-based addressing checks stay first, so the existing error codes win where
 they apply. Each item deletes the agent's own copy of its constraint, as listed in the
-[product spec](product-spec.md#agent-interaction-api).
+[product spec](product-spec.md#agent-interaction-api). Item 2 deletes
+`_validate_options` and the `max_selections` half of `ElementState.max_items`.
+`ElementState.options` stays, but only as an encoding fact: for a widget with a closed
+list, a JSON number is sent as its text, such as `st.feedback`'s index, and the
+validator decides whether it names an option, while free text, including a widget with
+`accept_new_options`, takes no number. Its errors still list the options. An option
+error quotes the sent candidate, because options are not secrets and the client holds
+the value; every other error names only the constraint. A shared label that is
+unchanged on the wire, such as the reported value sent back, is accepted.
 
 ### Performance
 

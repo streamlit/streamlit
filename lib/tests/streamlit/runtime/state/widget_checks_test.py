@@ -484,9 +484,13 @@ def test_one_of(value: str, accept_new: bool, expected: Violation | None) -> Non
         # A range may repeat an option.
         (("a", "a"), {"unique": False}, None),
         # "Select all" lists a shared label as often as options share it.
-        (("a", "X", "X"), {}, Violation("ambiguous_option")),
+        (("a", "X", "X"), {}, Violation("ambiguous_option", {"positions": (1,)})),
         (("X", "X", "X"), {}, Violation("duplicate_items", {"positions": (2,)})),
-        (("X", "X"), {"unique": False}, Violation("ambiguous_option")),
+        (
+            ("X", "X"),
+            {"unique": False},
+            Violation("ambiguous_option", {"positions": (0,)}),
+        ),
         (("a", "new"), {"accept_new": True}, None),
         (("X", "X"), {"accept_new": True}, None),
         (
