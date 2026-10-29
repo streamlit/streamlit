@@ -304,8 +304,8 @@ export function EChartsChart({
     }
     return prepared
     // Rebuild only when layout tokens change. `theme` is read for rem→px insets
-    // (spacing, title size, baseFontSize) and for the inside funnel label
-    // colors, which are the same in light and dark mode.
+    // (spacing, title size, baseFontSize) and for the inside funnel and pie
+    // label colors, which are the same in light and dark mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,

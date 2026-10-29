@@ -280,15 +280,20 @@ describe("buildStreamlitEChartsTheme", () => {
     }
   })
 
-  it("styles funnel labels for the default outside position", () => {
-    const echartsTheme = buildStreamlitEChartsTheme(darkTheme.emotion)
+  it.each(["funnel", "pie", "tree"])(
+    "styles %s labels for the default position on the app background",
+    seriesType => {
+      const echartsTheme = buildStreamlitEChartsTheme(darkTheme.emotion)
 
-    const funnel = echartsTheme.funnel as { label: Record<string, unknown> }
-    // Outside funnel labels sit on the app background, so they use the plain
-    // themed label style without an on-fill halo.
-    expect(funnel.label.color).toBe(getGray70(darkTheme.emotion))
-    expect(funnel.label.textBorderWidth).toBeUndefined()
-  })
+      const series = echartsTheme[seriesType] as {
+        label: Record<string, unknown>
+      }
+      // These labels sit on the app background, so they use the plain themed
+      // label style instead of ECharts' fixed grays or an on-fill halo.
+      expect(series.label.color).toBe(getGray70(darkTheme.emotion))
+      expect(series.label.textBorderWidth).toBeUndefined()
+    }
+  )
 
   it("styles axis pointer labels like the tooltip", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
@@ -514,23 +519,28 @@ describe("Streamlit theme resolved by ECharts", () => {
     expect(series(0).get(["select", "itemStyle", "borderWidth"])).toBe(2)
   })
 
-  it("labels outside funnels plainly and inside funnels with the halo", () => {
-    const emotionTheme = darkTheme.emotion
-    const data = [{ name: "A", value: 1 }]
-    const { series } = renderThemed({
-      series: [
-        { type: "funnel", data },
-        { type: "funnel", label: { position: "inside" }, data },
-      ],
-    })
+  it.each(["funnel", "pie"])(
+    "labels outside %s series plainly and inside ones with the halo",
+    seriesType => {
+      const emotionTheme = darkTheme.emotion
+      const data = [{ name: "A", value: 1 }]
+      const { series } = renderThemed({
+        series: [
+          { type: seriesType, data },
+          { type: seriesType, label: { position: "inside" }, data },
+        ],
+      })
 
-    expect(series(0).get(["label", "color"])).toBe(getGray70(emotionTheme))
-    expect(series(0).get(["label", "textBorderWidth"])).toBeUndefined()
-    expect(series(1).get(["label", "color"])).toBe(emotionTheme.colors.gray100)
-    expect(series(1).get(["label", "textBorderColor"])).toBe(
-      emotionTheme.colors.white
-    )
-  })
+      expect(series(0).get(["label", "color"])).toBe(getGray70(emotionTheme))
+      expect(series(0).get(["label", "textBorderWidth"])).toBeUndefined()
+      expect(series(1).get(["label", "color"])).toBe(
+        emotionTheme.colors.gray100
+      )
+      expect(series(1).get(["label", "textBorderColor"])).toBe(
+        emotionTheme.colors.white
+      )
+    }
+  )
 
   it("gives a funnel data item that moves its label inside the halo", () => {
     const emotionTheme = darkTheme.emotion
@@ -1266,6 +1276,29 @@ describe("applyStreamlitOptionDefaults", () => {
       textBorderWidth: 2,
     })
     expect(insideLabel).toEqual({ position: "inside", color: "#123456" })
+  })
+
+  it("gives inside pie labels the halo but keeps a donut center label plain", () => {
+    const centerLabel = { position: "center" }
+    const result = applyDefaults({
+      series: [
+        { type: "pie", label: { position: "inner" }, data: [] },
+        { type: "pie", label: centerLabel, data: [] },
+        // Must NOT happen: a series type without inside labels gets the halo.
+        { type: "bar", label: { position: "inside" }, data: [] },
+      ],
+    })
+
+    const series = result.series as Array<{ label: Record<string, unknown> }>
+    expect(series[0].label).toEqual({
+      position: "inner",
+      color: theme.colors.gray100,
+      textBorderColor: theme.colors.white,
+      textBorderWidth: 2,
+    })
+    // The center label sits in the donut hole, on the app background.
+    expect(series[1].label).toBe(centerLabel)
+    expect(series[2].label).toEqual({ position: "inside" })
   })
 
   it("gives inside funnel data item labels the halo under user series label keys", () => {

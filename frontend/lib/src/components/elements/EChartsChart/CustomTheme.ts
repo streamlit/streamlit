@@ -230,7 +230,7 @@ function buildChartTitleDefaults(theme: EmotionTheme): {
  * fixed color disappears on part of the palette.
  *
  * Both colors must stay the same in light and dark mode:
- * ``withInsideFunnelLabelStyle`` writes them into the option, and
+ * ``withInsideLabelStyle`` writes them into the option, and
  * EChartsChart doesn't rebuild the option on a color-only theme change.
  */
 function buildOnFillLabelStyle(theme: EmotionTheme): {
@@ -471,15 +471,26 @@ export function buildStreamlitEChartsTheme(
         borderColor: colors.bgColor,
       },
     },
-    // Funnel labels sit outside the stages by default, on the app background.
-    // The theme can't branch on the label position, so inside labels get the
-    // on-fill halo in the option instead (see `withInsideFunnelLabelStyle`).
+    // Funnel and pie labels sit outside the shapes by default, on the app
+    // background, where ECharts draws them in its own fixed grays. The theme
+    // can't branch on the label position, so inside labels get the on-fill
+    // halo in the option instead (see `withInsideLabelStyle`).
     funnel: {
       label: bodyTextStyle,
       itemStyle: {
         borderColor: colors.bgColor,
       },
       ...selectStyle,
+    },
+    pie: {
+      label: bodyTextStyle,
+    },
+    // Tree labels default to dark text with a white halo, which smears on a
+    // dark background. The node markers keep ECharts' hollow default: their
+    // white center is fixed, and a filled marker would hide which nodes are
+    // collapsed.
+    tree: {
+      label: bodyTextStyle,
     },
     // Candlesticks use the same rising green and falling red as
     // st.plotly_chart. ECharts' fixed default paints rising candles red.
@@ -1282,12 +1293,12 @@ function buildDefaultGrid(
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
  * ``grid`` layout, stacking of bottom-anchored chart controls, and the style
- * of inside funnel labels).
+ * of inside funnel and pie labels).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, control stacking, and funnel labels are purely
+ * choice. Title size, ``grid``, control stacking, and inside labels are purely
  * visual, so they only run under ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
@@ -1299,9 +1310,10 @@ function buildDefaultGrid(
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
- * Inside funnel labels are styled in every series variant that declares
- * ``type: "funnel"`` (see ``mapOptionSeries``). A per-tick or media override
- * without a ``type`` is skipped, since it only merges into a series by index.
+ * Inside labels are styled in every series variant that declares
+ * ``type: "funnel"`` or ``type: "pie"`` (see ``mapOptionSeries``). A per-tick
+ * or media override without a ``type`` is skipped, since it only merges into a
+ * series by index.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
@@ -1326,21 +1338,24 @@ export function applyStreamlitOptionDefaults(
         ),
       }
     : fillOptionDefaults(option, applyVisualDefaults, theme)
-  return applyVisualDefaults
-    ? withInsideFunnelLabelStyle(filled, theme)
-    : filled
+  return applyVisualDefaults ? withInsideLabelStyle(filled, theme) : filled
 }
 
 /**
- * Funnel label positions that draw the text on the stage itself. Mirrors
- * ``isLabelInside`` in ECharts' ``funnelLayout``.
+ * Label positions that draw the text on the shape itself, per series type.
+ * The funnel set mirrors ``isLabelInside`` in ECharts' ``funnelLayout``, and
+ * the pie set the one in its ``labelLayout``. A pie's ``"center"`` label sits
+ * in the donut hole, on the app background, so it doesn't count as inside.
  */
-const INSIDE_FUNNEL_LABEL_POSITIONS: ReadonlySet<string> = new Set([
-  "inner",
-  "inside",
-  "center",
-  "insideLeft",
-  "insideRight",
+const INSIDE_LABEL_POSITIONS: ReadonlyMap<
+  string,
+  ReadonlySet<string>
+> = new Map([
+  [
+    "funnel",
+    new Set(["inner", "inside", "center", "insideLeft", "insideRight"]),
+  ],
+  ["pie", new Set(["inner", "inside"])],
 ])
 
 /** The ``label`` of a series or data item, or an empty object if it has none. */
@@ -1352,44 +1367,44 @@ function getLabelObject(entry: unknown): Record<string, unknown> {
   return isPlainObject(label) ? (label as Record<string, unknown>) : {}
 }
 
-/** Whether a funnel series or data item draws its label on the stage. */
-function hasInsideFunnelLabel(entry: unknown): boolean {
-  const { position } = getLabelObject(entry)
-  return (
-    typeof position === "string" && INSIDE_FUNNEL_LABEL_POSITIONS.has(position)
-  )
-}
-
 /**
- * Give inside funnel labels the on-fill label style.
+ * Give inside funnel and pie labels the on-fill label style.
  *
- * The theme styles funnel labels for ECharts' default outside position, on
- * the app background. The init theme can't branch on a label's position, so
- * this option-level pass adds the on-fill halo when a series places its
- * labels inside, or when a data item moves its own label inside. Label keys
- * the user set on the series or the item win. A data item that moves its
- * label outside a series with inside labels keeps the series' halo.
+ * The theme styles funnel and pie labels for ECharts' default outside
+ * position, on the app background. The init theme can't branch on a label's
+ * position, so this option-level pass adds the on-fill halo when a series
+ * places its labels inside, or when a data item moves its own label inside.
+ * Label keys the user set on the series or the item win. A data item that
+ * moves its label outside a series with inside labels keeps the series' halo.
  *
  * Each series entry is styled on its own. A data item's halo keys skip only
  * label keys set on the same entry, so a timeline or ``media`` override that
  * restyles that series' label doesn't reach the item, whose keys win.
  */
-function withInsideFunnelLabelStyle(
+function withInsideLabelStyle(
   option: EChartsOptionObject,
   theme: EmotionTheme
 ): EChartsOptionObject {
   const onFillLabel = buildOnFillLabelStyle(theme)
   return mapOptionSeries(option, series => {
-    if (series.type !== "funnel") {
+    const insidePositions =
+      typeof series.type === "string"
+        ? INSIDE_LABEL_POSITIONS.get(series.type)
+        : undefined
+    if (insidePositions === undefined) {
       return series
     }
+    const hasInsideLabel = (entry: unknown): boolean => {
+      const { position } = getLabelObject(entry)
+      return typeof position === "string" && insidePositions.has(position)
+    }
     const seriesLabel = getLabelObject(series)
-    if (hasInsideFunnelLabel(series)) {
+    if (hasInsideLabel(series)) {
       // Data items inherit the series label, halo included.
       return { ...series, label: { ...onFillLabel, ...seriesLabel } }
     }
     const { data } = series
-    if (!Array.isArray(data) || !data.some(hasInsideFunnelLabel)) {
+    if (!Array.isArray(data) || !data.some(hasInsideLabel)) {
       return series
     }
     // Items inherit the series label, so a key the user set there still wins.
@@ -1397,7 +1412,7 @@ function withInsideFunnelLabelStyle(
     return {
       ...series,
       data: data.map((item: unknown) =>
-        hasInsideFunnelLabel(item)
+        hasInsideLabel(item)
           ? {
               ...(item as Record<string, unknown>),
               label: { ...itemDefaults, ...getLabelObject(item) },
