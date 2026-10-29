@@ -354,10 +354,11 @@ The agent spec needs these edits once the relevant items land:
 
 Each change follows from the contract. A correct browser sees only four of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
-programmatic text past `max_chars`, and the sync races. A browser that reconnects to a
-new session, after a server restart or an expired `server.disconnectedSessionTTL`, keeps
-its values as today. No callback fires for them, and each is checked when its widget
-registers. The other changes affect only forged values and `AppTest`.
+text past `max_chars` from app code or a link, and the sync races. A browser that
+reconnects to a new session, after a server restart or an expired
+`server.disconnectedSessionTTL`, keeps its values as today. No callback fires for them,
+and each is checked when its widget registers. The other changes affect only forged
+values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -373,13 +374,15 @@ registers. The other changes affect only forged values and `AppTest`.
   needs a changelog entry, but it is rare, because `bind="query-params"` is new. A link
   that presets a filter shown as locked still works if the app reads `st.query_params`
   and passes the value to the widget itself.
-- **Programmatic text past `max_chars` is no longer truncated one rerun later.** Today
+- **Text past `max_chars` from app code or a link.** Today
   `st.session_state["name"] = "abcd"` for a `max_chars=3` text input is accepted, then
   truncated to `"abc"` when the browser sends it back. That fires `on_change` although
   nobody changed the widget, and the browser keeps showing `"abcd"`. Because
   deserializers stop truncating (item 4), the text now stays as written on both sides
-  until the programmatic-writes follow-up settles one rule. This needs a changelog
-  entry. The alternative is [open question 1](#open-questions).
+  until the programmatic-writes follow-up settles one rule. The alternative is
+  [open question 1](#open-questions). A link is still truncated, but in UTF-16 code
+  units, as the browser counts, so text with astral characters such as emoji keeps fewer
+  characters than today. Both need a changelog entry.
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
   `max_value` or `""` on a `required` field, now sees it dropped instead of coerced,
@@ -402,7 +405,9 @@ registers. The other changes affect only forged values and `AppTest`.
    browser sends it back (see [Behavior changes](#behavior-changes)). The options are
    to keep it as written until the programmatic-writes follow-up, which this spec
    proposes, or to truncate it at registration in item 4. Truncating keeps today's end
-   value, one run earlier, and also removes the spurious `on_change`.
+   value, one run earlier, and also removes the spurious `on_change`. Keeping the text
+   has one more cost: after a reconnect to a new session, the browser resends it, the
+   check at registration refuses it, and the widget falls back to its default.
 
 ## Out of scope
 
@@ -444,7 +449,7 @@ registers. The other changes affect only forged values and `AppTest`.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, programmatic text past `max_chars`, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, text past `max_chars` from app code or a link, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |

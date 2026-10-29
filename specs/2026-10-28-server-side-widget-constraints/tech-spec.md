@@ -315,11 +315,12 @@ represent, such as an unknown `select_slider` label, passes through as the label
 `selectbox` already does. URL seeding relies on today's fallback and truncation, so it
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
 and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
-unknown `select_slider` label falls back to that position's default. Truncation slices
-code points, as today, so a link restores the same string. With astral characters the
-result can exceed `max_chars` in UTF-16 units, but that never causes a refusal: an
-unchanged echo passes check 3, and any change the browser makes stays within its own
-limit. Any other violation clears the parameter. So `?q=abcd` for `max_chars=3` still
+unknown `select_slider` label falls back to that position's default. Truncation counts
+UTF-16 code units, as the check does, so a repaired value always passes it, including
+when a reconnect to a new session checks it at registration. For text with astral
+characters, such as emoji, that keeps fewer characters than today's code-point slicing,
+which the product spec lists as a behavior change. Any other violation clears the
+parameter. So `?q=abcd` for `max_chars=3` still
 seeds `"abc"`, `?n=2.9` still seeds `2`, and an out-of-range value is still cleared. As
 today, a repaired value that equals the default clears the parameter instead of seeding
 it. Each widget makes this change in the item that gives it a validator (items 2 and 4).
