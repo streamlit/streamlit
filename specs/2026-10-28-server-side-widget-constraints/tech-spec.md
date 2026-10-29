@@ -96,16 +96,18 @@ def _drop_invalid_client_values(
             previous=self._old_state.get(state.id),
             is_rendered=state.id in self._new_widget_state.rendered_ids,
         )
-        if result.changed:
-            changed.add(state.id)
         # A browser sends a shared format_func label as is; only the agent API refuses it.
         if result.violation is None or result.violation.kind == "ambiguous_option":
             # The Value the run reads, so nothing is deserialized twice.
             self._new_widget_state.cache_value(state, result.value)
+            if result.changed:
+                changed.add(state.id)
             continue
         if result.partial is not None:
             # A data editor keeps its payload minus the violating entries (item 6).
             self._new_widget_state.cache_value(state, result.partial)
+            if result.changed:
+                changed.add(state.id)
         else:
             self._new_widget_state.drop(state.id)  # previous value stays in _old_state
             rejected.add(state.id)
@@ -203,7 +205,8 @@ class CheckResult(NamedTuple):
     value: Any = None
     # A data editor payload without its violating entries (item 6).
     partial: Any = None
-    # Whether the accepted value differs from the stored one (check 3).
+    # Whether the value kept, `value` or `partial`, differs from the stored one.
+    # Always False for a refused value.
     changed: bool = False
 ```
 
@@ -302,11 +305,13 @@ with no log and no re-sync, and a correct browser can send such a value in a syn
 A conversion can still map a forged value onto the stored one, but a correct browser
 never sends that form, so nothing needs a re-sync. A value a deserializer cannot
 represent, such as an unknown `select_slider` label, passes through as the label, as
-`selectbox` already does. URL seeding relies on today's fallback, so it calls `validate`
-itself, on the deserialized value serialized again, and clears the parameter on a
-violation. A bound URL value of `2.9` therefore still becomes `2`, and an out-of-range
-one is still cleared. Each widget makes this change in the item that gives it a validator
-(items 2 and 4).
+`selectbox` already does. URL seeding relies on today's fallback and truncation, so it
+takes both over. It calls `validate` itself, on the deserialized value serialized again,
+and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
+unknown `select_slider` label falls back to that position's default. Any other violation
+clears the parameter. So `?q=abcd` for `max_chars=3` still becomes `"abc"`, a bound URL
+value of `2.9` still becomes `2`, and an out-of-range one is still cleared. Each widget
+makes this change in the item that gives it a validator (items 2 and 4).
 
 **Why the serde is the right home:**
 
@@ -458,7 +463,7 @@ of what the widget accepts, and each source applies its own policy to a violatio
 
 **URL binding: a behavior-preserving refactor after item 4.** `_seed_widget_from_url`
 already validates the query string. Items 2 and 4 have it call `validate` where a
-deserializer used to fall back to the default (see
+deserializer used to fall back to the default or truncate (see
 [above](#where-constraints-live-in-each-widgets-serde)). Its other checks are comparisons
 on metadata fields that exist only for this purpose. Once every serde has a validator:
 
@@ -751,8 +756,9 @@ Questions that need a product or rollout decision, including the kill switch and
    so a deserializer that falls back to the default lets a refused value read as
    unchanged whenever the widget holds its default, with no log and no `set_value`. A
    correct browser can send such a value in a sync race. This spec closes that gap: in
-   items 2 and 4, each deserializer stops replacing refused values, and URL seeding calls
-   `validate` instead (see [Where constraints live](#where-constraints-live-in-each-widgets-serde)).
+   items 2 and 4, each deserializer stops replacing refused values, and URL seeding takes
+   over today's fallback and truncation through `validate` (see
+   [Where constraints live](#where-constraints-live-in-each-widgets-serde)).
    The alternatives keep the fallback and add hot-path cost: compare wire values, as the
    agent API does, or run the validator on unchanged entries. Is changing each
    deserializer acceptable?
