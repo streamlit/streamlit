@@ -680,6 +680,21 @@ Items 1–3 are covered above.
   `INT` `slider`, and `pagination`. Check 1 lets them receive a `double_value`, which
   their deserializers truncate (`int()`) or, for `pagination`, return unchanged, but the
   browser never sends a fraction.
+- A float `slider` can commit a value just past a bound. React Aria clamps a thumb to
+  the bounds and then rounds it to the step's precision, one decimal place more than
+  the step has (`snapValueToStep`). So `min_value=0.123` with `step=0.1` commits
+  `0.12`, and `max_value=0.9996` commits `1.0`. At the top it clamps to
+  `min_value + n * step` with `n` from a rounded quotient, which can pass `max_value`
+  by more than the rounding: `max_value=2.49` with `step=2.5` commits `2.5`.
+  `SliderSerde` mirrors that arithmetic, which is the same in Python, to get the lowest
+  and highest values the browser commits, and accepts them. Its deserializer reads a
+  value between a bound and the browser's rounding of it as the bound, so the app never
+  sees a value past a bound. A value past the browser's extremes is still
+  `out_of_range`, and the detail names the author's bounds. A whole step never rounds,
+  so integer, date, and time sliders keep exact bounds. The mirror matched React Aria
+  for every end and step of 4,000 random float sliders, and an e2e test drives both
+  ends. `number_input` needs no such band: its frontend refuses an out-of-range commit
+  itself (`commitValue`).
 - `slider`, `select_slider`, `date_input` ranges: the item count is fixed. `date_input`
   allows up to two items, and an empty or start-only range. The values must be ordered,
   which the browser guarantees.

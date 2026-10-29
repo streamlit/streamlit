@@ -940,6 +940,49 @@ def test_a_bound_url_value_outside_the_bounds_is_cleared(
     assert at.query_params.get(key) == expected_param
 
 
+_ROUNDED_SLIDER: str = (
+    "import streamlit as st\n"
+    "st.slider('Ratio', 0.123, 1.0, 0.5, step=0.1, key='ratio', "
+    "bind='query-params', on_change=lambda: st.session_state.update(calls=1))\n"
+)
+
+
+def test_a_bound_the_browser_rounds_reads_as_the_bound(
+    refusal_logs: list[str],
+) -> None:
+    """React Aria commits min_value=0.123 as 0.12 for a 0.1 step, which is accepted.
+
+    The value reads as the bound, so the app never sees a value past it, and
+    a value past what the browser rounds to is still refused.
+    """
+    at = AppTest.from_string(_ROUNDED_SLIDER).run()
+    ratio_id = _widget_id(at, "ratio")
+
+    with patch_config_options({"global.e2eTest": True}):
+        at._run(widget_state=forged(ratio_id, double_array_value=_numbers(0.12)))
+        assert at.session_state.ratio == 0.123
+        assert at.session_state.calls == 1
+        assert refusal_logs == []
+
+        at._run(widget_state=forged(ratio_id, double_array_value=_numbers(0.11)))
+
+    assert not at.exception
+    assert at.session_state.ratio == 0.123
+    assert len(refusal_logs) == 1
+    assert "(out_of_range)" in refusal_logs[0]
+
+
+def test_a_link_with_a_rounded_bound_seeds_the_bound() -> None:
+    """A link the browser wrote with the rounded bound seeds the bound itself."""
+    at = AppTest.from_string(_ROUNDED_SLIDER)
+    at.query_params["ratio"] = "0.12"
+    at.run()
+
+    assert not at.exception
+    assert at.session_state.ratio == 0.123
+    assert at.query_params.get("ratio") == "0.123"
+
+
 def _temporal_app() -> None:
     import datetime as dt
 

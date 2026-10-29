@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 42
+NUM_SLIDER_WIDGETS = 44
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -805,4 +805,28 @@ def test_default_time_sliders_reach_time_max(app: Page):
         "Default time range slider value:",
         "09:00:00 23:59:59.999999",
         exact_match=True,
+    )
+
+
+def test_bounds_the_browser_rounds_read_as_the_bounds(app: Page):
+    """Home and End commit a bound React Aria rounded to the step's precision.
+
+    The browser sends 0.12 for min_value=0.123 and 1.0 for max_value=0.9996.
+    The server reads each as its bound, and the parity gate fails the test if
+    it refuses one.
+    """
+    rounded_min = get_slider(app, "Rounded min slider")
+    rounded_min.scroll_into_view_if_needed()
+    rounded_min.get_by_role("slider").press("Home")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Rounded min slider value:", "0.123", exact_match=True
+    )
+
+    rounded_max = get_slider(app, "Rounded max slider")
+    rounded_max.scroll_into_view_if_needed()
+    rounded_max.get_by_role("slider").press("End")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Rounded max slider value:", "0.9996", exact_match=True
     )

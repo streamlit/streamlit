@@ -431,3 +431,16 @@ st.write(
     "Default time range slider value:",
     f"{default_time_range[0]} {default_time_range[1]}",
 )
+
+# Float sliders whose bounds have more decimals than their step. React Aria
+# rounds a thumb at either end to the step's precision, so the browser sends
+# 0.12 for min_value=0.123 and 1.0 for max_value=0.9996. Each reads as the
+# bound it stands for.
+rounded_min_value = st.slider(
+    "Rounded min slider", min_value=0.123, max_value=1.0, value=0.5, step=0.1
+)
+st.write("Rounded min slider value:", rounded_min_value)
+rounded_max_value = st.slider(
+    "Rounded max slider", min_value=0.0, max_value=0.9996, value=0.5, step=0.1
+)
+st.write("Rounded max slider value:", rounded_max_value)

@@ -28,6 +28,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets import slider as slider_module
 from streamlit.elements.widgets.slider import (
     _MAX_SAFE_DAY,
     _MIN_SAFE_DAY,
@@ -1180,6 +1181,121 @@ def test_slider_serde_deserialize_passes_through_in_range_value() -> None:
     """In-range ui_values are returned and converted to the slider's data type."""
     serde = _make_int_serde(value=[20])
     assert serde.deserialize([42.0]) == 42
+
+
+@pytest.mark.parametrize(
+    ("step", "precision"),
+    [
+        # React Aria counts the point, so 0.1 rounds to two places.
+        (0.1, 2),
+        (0.01, 3),
+        (0.25, 3),
+        (2.5, 2),
+        (0.000001, 7),
+        (0.1 + 0.2, 18),
+        # JavaScript writes these in exponent notation.
+        (1e-7, 8),
+        (1.5e-7, 10),
+        # A whole step, which JavaScript writes without a point, never rounds.
+        (1.0, 0),
+        (100.0, 0),
+        (1, 0),
+        (86_400_000_000, 0),
+    ],
+)
+def test_step_precision_matches_react_aria(step: float, precision: int) -> None:
+    """The decimal places the frontend's slider rounds a committed value to."""
+    assert slider_module._step_precision(step) == precision
+
+
+@pytest.mark.parametrize(
+    ("min_value", "max_value", "step", "expected"),
+    [
+        # The values the frontend's Slider commits at each end, recorded with
+        # React Aria in a vitest.
+        (0.123, 1.0, 0.1, (0.12, 1.0)),
+        (0.0001, 1.0, 0.01, (0.0, 1.0)),
+        (-0.126, 1.0, 0.1, (-0.13, 1.0)),
+        (0.0, 0.9996, 0.1, (0.0, 1.0)),
+        (0.0051, 0.1051, 0.1, (0.0051, 0.11)),
+        (0.0, 2.49, 2.5, (0.0, 2.5)),
+        # Bounds on the step's grid commit as they are.
+        (0.0, 1.0, 0.1, (0.0, 1.0)),
+        (0.125, 1.0, 0.1, (0.125, 1.0)),
+        (0.0, 100.0, 1.0, (0.0, 100.0)),
+    ],
+)
+def test_browser_bounds(
+    min_value: float, max_value: float, step: float, expected: tuple[float, float]
+) -> None:
+    """React Aria rounds a clamped thumb to the step's precision, past a bound."""
+    assert slider_module._browser_bounds(min_value, max_value, step) == expected
+
+
+def _rounding_serde(
+    min_value: float, max_value: float, *, single_value: bool = True
+) -> SliderSerde:
+    """A float slider with a 0.1 step, whose bounds may have more decimals."""
+    return SliderSerde(
+        value=[0.5] if single_value else [0.5, 0.9],
+        data_type=SliderProto.FLOAT,
+        single_value=single_value,
+        orig_tz=None,
+        min_value=min_value,
+        max_value=max_value,
+        step=0.1,
+    )
+
+
+@pytest.mark.parametrize(
+    ("bounds", "single_value", "sent", "expected"),
+    [
+        # The browser commits each bound rounded to the step's precision.
+        ((0.123, 1.0), True, [0.12], 0.123),
+        ((0.0, 0.9996), True, [1.0], 0.9996),
+        ((0.123, 0.9996), False, [0.12, 0.92], (0.123, 0.92)),
+        ((0.123, 1.0), True, [0.5], 0.5),
+    ],
+)
+def test_a_bound_the_browser_rounds_is_accepted_and_read_as_the_bound(
+    bounds: tuple[float, float], single_value: bool, sent: list[float], expected: Any
+) -> None:
+    """A correct browser is never refused, and the app never sees a value past a bound."""
+    serde = _rounding_serde(*bounds, single_value=single_value)
+
+    assert serde.validate(_doubles(*sent)) is None
+    assert serde.deserialize(sent) == expected
+
+
+@pytest.mark.parametrize(
+    ("bounds", "sent"),
+    [
+        ((0.123, 1.0), 0.11),
+        ((0.123, 1.0), -1.0),
+        ((0.0, 0.9996), 1.01),
+        # With this min, the browser's top end is 0.92, so 1.0 is never sent.
+        ((0.123, 0.9996), 1.0),
+    ],
+)
+def test_a_value_past_what_the_browser_rounds_to_is_refused(
+    bounds: tuple[float, float], sent: float
+) -> None:
+    """Only the browser's own rounding is accepted, and the refusal names the bounds."""
+    serde = _rounding_serde(*bounds)
+
+    assert serde.validate(_doubles(sent)) == Violation(
+        "out_of_range", {"min_value": bounds[0], "max_value": bounds[1]}
+    )
+    assert serde.deserialize([sent]) == sent
+
+
+def test_an_integer_slider_has_no_rounding_band() -> None:
+    """A whole step never rounds, so the bounds are exact."""
+    serde = _make_int_serde(value=[20], min_value=10, max_value=100)
+
+    assert serde.validate(_doubles(9.0)) == Violation(
+        "out_of_range", {"min_value": 10, "max_value": 100}
+    )
 
 
 class SliderEdgeCasesTest(DeltaGeneratorTestCase):
