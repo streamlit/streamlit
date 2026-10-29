@@ -78,8 +78,7 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  * longhands.
  */
 function recordMetricValueWidth(value: HTMLElement): void {
-  // A recorded width scales the probe's font in print, so it is cleared
-  // before measuring.
+  // Clear any previously recorded width so print CSS does not scale the probe.
   value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
   const source = value.querySelector(".stMarkdownEllipsis")
   if (!(source instanceof HTMLElement) || source.textContent === "") {
@@ -115,21 +114,17 @@ function recordMetricValueWidth(value: HTMLElement): void {
 }
 
 /**
- * Record the width a content-width metric has to fit.
+ * Record the width a content-width metric can use in print
+ * (`--st-metric-available`).
  *
- * The value is not a container, so its own size cannot be that slot.
- * The element container is the slot, including inside a horizontal
- * container where the ancestor column is wider than the metric.
- * `beforeprint` still uses the screen slot, and the print-media change
- * records the printed one.
- *
- * A content-width slot is sized around the value. The recorded width is
- * cleared first so the slot is read around the unscaled figure, not one
- * already shrunk to the narrower screen slot.
- *
- * A bordered card's border and padding sit between the slot and the value,
- * so they are subtracted. The value can overflow a narrow slot, so its own
- * width is not a reliable measure of that inset.
+ * - Measures the element container, which is capped at its column width.
+ *   The value itself is not a size container. `beforeprint` reads the
+ *   screen slot, and the print-media change reads the printed one.
+ * - Clears `--st-metric-available` first, so the slot is read around the
+ *   unscaled figure.
+ * - Subtracts the card's border and padding between the slot and the value.
+ *   The value can overflow a narrow slot, so its own width is not a
+ *   reliable measure of that inset.
  */
 function recordMetricAvailableWidth(value: HTMLElement): void {
   const elementContainer = value.closest(".stElementContainer")
@@ -414,7 +409,7 @@ function Metric({
   const chartRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef<HTMLDivElement>(null)
 
-  const contentWidth = Boolean(widthConfig?.useContent)
+  const isContentWidth = Boolean(widthConfig?.useContent)
 
   useEffect(() => {
     const handleBeforePrint = (): void => {
@@ -422,14 +417,31 @@ function Metric({
         return
       }
       recordMetricValueWidth(valueRef.current)
-      if (contentWidth) {
+      if (isContentWidth) {
         recordMetricAvailableWidth(valueRef.current)
       }
     }
-    // beforeprint still uses screen media. This records the printed column
-    // once print layout has replaced it.
-    // Without a recorded text width (print media emulated without
-    // beforeprint), the slot alone would scale the figure against the page.
+
+    // Clear the recorded widths so a later print measures the current layout.
+    const handleAfterPrint = (): void => {
+      valueRef.current?.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_VAR)
+    }
+
+    window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
+    const removePrintListeners = (): void => {
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
+    }
+    if (!isContentWidth) {
+      return removePrintListeners
+    }
+
+    // `beforeprint` fires while screen layout is still active, so a
+    // content-width metric re-reads its slot once print media applies. Skip it
+    // when no text width was recorded (print emulated without `beforeprint`):
+    // the font rule would otherwise scale the figure against the whole page.
     const printMedia = window.matchMedia("print")
     const handlePrintMedia = (): void => {
       const value = valueRef.current
@@ -441,27 +453,12 @@ function Metric({
         recordMetricAvailableWidth(value)
       }
     }
-
-    // The widths are only read in print, but are cleared so a later print
-    // starts from the current layout.
-    const handleAfterPrint = (): void => {
-      valueRef.current?.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
-      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_VAR)
-    }
-
-    window.addEventListener("beforeprint", handleBeforePrint)
-    window.addEventListener("afterprint", handleAfterPrint)
-    if (contentWidth) {
-      printMedia.addEventListener("change", handlePrintMedia)
-    }
+    printMedia.addEventListener("change", handlePrintMedia)
     return () => {
-      window.removeEventListener("beforeprint", handleBeforePrint)
-      window.removeEventListener("afterprint", handleAfterPrint)
-      if (contentWidth) {
-        printMedia.removeEventListener("change", handlePrintMedia)
-      }
+      removePrintListeners()
+      printMedia.removeEventListener("change", handlePrintMedia)
     }
-  }, [contentWidth])
+  }, [isContentWidth])
 
   const { MetricDirection } = MetricProto
   const {
@@ -576,7 +573,7 @@ function Metric({
       className="stMetric"
       data-testid="stMetric"
       showBorder={showBorder}
-      contentWidth={contentWidth}
+      isContentWidth={isContentWidth}
     >
       <StyledMetricContent showBorder={showBorder}>
         <StyledMetricLabelText
