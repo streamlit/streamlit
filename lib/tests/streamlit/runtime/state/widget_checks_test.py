@@ -17,8 +17,9 @@
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, get_args
+from typing import TYPE_CHECKING, Any, Final, get_args
 from unittest.mock import MagicMock
 
 import pytest
@@ -38,7 +39,7 @@ from streamlit.runtime.state.widget_checks import (
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Sequence
 
     from streamlit.runtime.state.common import ValueFieldName, WidgetValidator
 
@@ -411,6 +412,115 @@ def test_e2e_tests_log_every_refusal_at_warning(
 
     assert [r.levelno for r in records] == [logging.WARNING] * 3
     assert all(REFUSAL_LOG_MARKER in r.getMessage() for r in records)
+
+
+@pytest.mark.parametrize(
+    ("kind", "level"),
+    [
+        ("not_an_option", logging.DEBUG),
+        ("too_many_items", logging.DEBUG),
+        ("duplicate_items", logging.WARNING),
+    ],
+)
+def test_option_kinds_log_at_their_level(
+    records: list[logging.LogRecord], kind: ViolationKind, level: int
+) -> None:
+    """A sync race can change the options, but no browser repeats an option."""
+    log_violation(_ID, Violation(kind), warned=set())
+
+    assert [r.levelno for r in records] == [level]
+
+
+def _labels(*labels: str) -> Sequence[str]:
+    """Labels as a validator receives them: a protobuf array, not a list."""
+    return _state(string_array_value=list(labels)).string_array_value.data
+
+
+_COUNTS: Final = Counter(["a", "b", "X", "X"])
+
+
+@pytest.mark.parametrize(
+    ("value", "accept_new", "expected"),
+    [
+        ("a", False, None),
+        ("c", False, Violation("not_an_option", {"options": ("a", "b", "X")})),
+        # A shared format_func label does not say which option it means.
+        ("X", False, Violation("ambiguous_option")),
+        # Any non-empty text is legal, untrimmed and shared labels included.
+        ("new", True, None),
+        (" a ", True, None),
+        ("X", True, None),
+        ("", True, Violation("not_an_option", {"options": ("a", "b", "X")})),
+    ],
+)
+def test_one_of(value: str, accept_new: bool, expected: Violation | None) -> None:
+    """One label is an option, a shared label, or not an option."""
+    assert widget_checks.one_of(_COUNTS, value, accept_new=accept_new) == expected
+
+
+@pytest.mark.parametrize(
+    ("values", "options", "expected"),
+    [
+        (("a", "b"), {}, None),
+        ((), {"max_items": 0}, None),
+        (("a", "b"), {"max_items": 1}, Violation("too_many_items", {"max_items": 1})),
+        # The limit is checked first.
+        (("c", "d"), {"max_items": 1}, Violation("too_many_items", {"max_items": 1})),
+        (
+            ("a", "c", "b", "d"),
+            {},
+            Violation(
+                "not_an_option",
+                {"options": ("a", "b", "X"), "positions": (1, 3)},
+            ),
+        ),
+        # Options are checked before duplicates and ambiguity.
+        (
+            ("a", "a", "X", "c"),
+            {},
+            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (3,)}),
+        ),
+        (("a", "b", "a"), {}, Violation("duplicate_items", {"positions": (2,)})),
+        # A range may repeat an option.
+        (("a", "a"), {"unique": False}, None),
+        # "Select all" lists a shared label as often as options share it.
+        (("a", "X", "X"), {}, Violation("ambiguous_option")),
+        (("X", "X", "X"), {}, Violation("duplicate_items", {"positions": (2,)})),
+        (("X", "X"), {"unique": False}, Violation("ambiguous_option")),
+        (("a", "new"), {"accept_new": True}, None),
+        (("X", "X"), {"accept_new": True}, None),
+        (
+            ("new", "new"),
+            {"accept_new": True},
+            Violation("duplicate_items", {"positions": (1,)}),
+        ),
+        (
+            ("", "a"),
+            {"accept_new": True},
+            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (0,)}),
+        ),
+    ],
+)
+def test_items_of(
+    values: tuple[str, ...], options: dict[str, Any], expected: Violation | None
+) -> None:
+    """A list is checked for its length, then its options, duplicates, and ambiguity."""
+    assert widget_checks.items_of(_COUNTS, _labels(*values), **options) == expected
+
+
+def test_an_ambiguous_label_is_accepted_and_counts_as_a_change() -> None:
+    """A browser session keeps a shared label, which the agent API refuses."""
+    result = check_client_value(
+        _state(string_value="X"),
+        metadata=_metadata(
+            validator=lambda ui, **_kwargs: widget_checks.one_of(_COUNTS, ui)
+        ),
+        previous="a",
+    )
+
+    assert result == (Violation("ambiguous_option"), "X", True)
+    assert not widget_checks.browser_refuses(result.violation)
+    assert widget_checks.browser_refuses(Violation("not_an_option"))
 
 
 def test_every_violation_kind_has_a_log_explanation() -> None:

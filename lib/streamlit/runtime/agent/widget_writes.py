@@ -201,6 +201,10 @@ _VIOLATION_ERRORS: Final[
     "wrong_type": _refused_value,
     "unreadable": _refused_value,
     "disabled": _refused_disabled,
+    "not_an_option": _refused_value,
+    "too_many_items": _refused_value,
+    "duplicate_items": _refused_value,
+    "ambiguous_option": _refused_value,
 }
 
 

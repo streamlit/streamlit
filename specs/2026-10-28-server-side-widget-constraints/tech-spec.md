@@ -399,8 +399,8 @@ times.
 **Shared helpers** keep serdes from repeating the same comparisons. They are small pure
 functions that return a `Violation` with its details:
 
-- `within(value, min, max)`, `one_of(labels, value, accept_new)`,
-  `items_of(labels, values, max_items, unique, accept_new)`
+- `within(value, min, max)`, `one_of(counts, value, accept_new)`,
+  `items_of(counts, values, max_items, unique, accept_new)`
 - `iso_date`, `iso_time`, `hex_color`
 - `text_length(text, max_chars)`, `is_empty(value)`
 
@@ -411,8 +411,11 @@ because `ambiguous_option` needs to know when a label is shared, as
 `ambiguous_option` only when the value has no other violation, so a browser session can
 accept it. A shared label repeated at most as often as options share it is
 `ambiguous_option` too, not `duplicate_items`: the multiselect's "Select all" adds every
-option's label. With `accept_new`, which `accept_new_options` sets, any non-empty label is
-legal, because the browser lets the user type one. `max_items` and `unique` still apply.
+option's label. A violation's detail never holds a sent label: `not_an_option` lists the
+`options` and the `positions` of the items that failed, and `duplicate_items` the position
+of the first extra repeat. With `accept_new`, which `accept_new_options` sets, any
+non-empty label is legal, a shared label included, because the browser lets the user type
+one. `max_items` and `unique` still apply, and a new label can be listed once.
 
 **The previous value.** Check 3 already passes unchanged values, so a validator sees only
 changes and almost never needs the previous value. The data editor is the exception: its

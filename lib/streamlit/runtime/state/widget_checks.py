@@ -27,11 +27,15 @@ The checks run in this order, and the first violation wins:
 3. An unchanged value passes.
 4. The widget is not disabled (``disabled``).
 5. The widget's own validator, ``WidgetMetadata.validator``.
+
+Validators share small helpers, such as ``one_of`` and ``items_of`` for a
+widget with a closed set of options.
 """
 
 from __future__ import annotations
 
 import traceback
+from collections import Counter
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -49,7 +53,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.state.common import ValueFieldName, unpack_widget_state_value
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.common import WidgetMetadata
@@ -63,6 +67,17 @@ ViolationKind: TypeAlias = Literal[
     "unreadable",
     # The widget was disabled in the run the client was shown.
     "disabled",
+    # The value is not one of the widget's options.
+    "not_an_option",
+    # The value has more items than the widget allows, such as more than a
+    # multiselect's `max_selections`.
+    "too_many_items",
+    # The value lists an option more often than the widget offers it.
+    "duplicate_items",
+    # The value is a label that several options show, so it does not say which
+    # option it means. A browser sends a shared label as shown, and the widget
+    # resolves it, so only the agent API refuses it.
+    "ambiguous_option",
 ]
 
 
@@ -70,9 +85,9 @@ class Violation(NamedTuple):
     """Why a client value is refused."""
 
     kind: ViolationKind
-    # Facts that explain the refusal, such as the accepted fields. Never the
-    # sent value, which may be a password. The default is read-only because
-    # every Violation shares it.
+    # Facts that explain the refusal, such as the accepted fields or the
+    # options. Never the sent value, which may be a password. The default is
+    # read-only because every Violation shares it.
     detail: Mapping[str, Any] = MappingProxyType({})
 
 
@@ -106,9 +121,14 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 }
 
 # Kinds a correct browser can cause in a sync race, such as a rerun that
-# disables a widget just before the user's click arrives. They are logged at
-# debug level.
-_RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset({"disabled"})
+# disables a widget, or changes its options, just before the user's change
+# arrives. They are logged at debug level.
+_RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
+    {"disabled", "not_an_option", "too_many_items"}
+)
+
+# `ambiguous_option` carries no detail, so every report shares one Violation.
+_AMBIGUOUS: Final = Violation("ambiguous_option")
 
 # The fixed text that starts every refusal log line. The e2e parity gate looks
 # for it in the server output.
@@ -126,6 +146,22 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
         "version."
     ),
     "disabled": "The widget was disabled when the client sent it.",
+    "not_an_option": (
+        "It is not one of the widget's options. A rerun can change the options "
+        "just before a user's change arrives."
+    ),
+    "too_many_items": (
+        "It has more items than the widget allows. A rerun can change the "
+        "widget just before a user's change arrives."
+    ),
+    "duplicate_items": (
+        "It lists an option more often than the widget offers it. The Streamlit "
+        "frontend never sends that, so the message was forged or came from a "
+        "different frontend version."
+    ),
+    "ambiguous_option": (
+        "Several options show its label, so it does not say which option it means."
+    ),
 }
 
 
@@ -144,9 +180,115 @@ def accepted_value_fields(metadata: WidgetMetadata[Any]) -> frozenset[ValueField
 def browser_refuses(violation: Violation | None) -> TypeGuard[Violation]:
     """Whether a browser session drops a value with ``violation``.
 
-    The agent API refuses every violation.
+    A browser sends a label that several options share as shown, and the
+    widget resolves it, so a browser session accepts ``ambiguous_option``. The
+    agent API refuses every violation.
     """
-    return violation is not None
+    return violation is not None and violation.kind != "ambiguous_option"
+
+
+def one_of(
+    counts: Mapping[str, int], value: str, *, accept_new: bool = False
+) -> Violation | None:
+    """Check one label against the labels a widget shows.
+
+    Parameters
+    ----------
+    counts : Mapping[str, int]
+        How many options show each label, such as a ``Counter`` of the
+        formatted options.
+    value : str
+        The label the client sent.
+    accept_new : bool
+        Whether the widget accepts new options, as ``accept_new_options``
+        does. Then any non-empty text is legal, a shared label included.
+
+    Returns
+    -------
+    Violation or None
+        ``not_an_option`` with the ``options``, ``ambiguous_option`` for a
+        label several options share, or ``None``.
+    """
+    offered = counts.get(value, 0)
+    if offered == 0:
+        if accept_new and value != "":
+            return None
+        return Violation("not_an_option", MappingProxyType({"options": tuple(counts)}))
+    if offered > 1 and not accept_new:
+        return _AMBIGUOUS
+    return None
+
+
+def items_of(
+    counts: Mapping[str, int],
+    values: Sequence[str],
+    *,
+    max_items: int | None = None,
+    unique: bool = True,
+    accept_new: bool = False,
+) -> Violation | None:
+    """Check a list of labels against the labels a widget shows.
+
+    A label that several options share may be listed as often as they share
+    it, as a multiselect's "Select all" does. That is ``ambiguous_option``,
+    which is reported only when nothing else is wrong.
+
+    Parameters
+    ----------
+    counts : Mapping[str, int]
+        How many options show each label, such as a ``Counter`` of the
+        formatted options.
+    values : Sequence[str]
+        The labels the client sent.
+    max_items : int or None
+        The most labels the widget takes, or ``None`` for no limit.
+    unique : bool
+        Whether each option can be listed once. A range, such as a
+        ``select_slider``'s, may list one twice.
+    accept_new : bool
+        Whether the widget accepts new options, as ``accept_new_options``
+        does. Then any non-empty text is legal, a shared label included, and a
+        new label can be listed once.
+
+    Returns
+    -------
+    Violation or None
+        The first of these, or ``None``: ``too_many_items`` with
+        ``max_items``; ``not_an_option`` with the ``options`` and the
+        ``positions`` of the labels that are not options; ``duplicate_items``
+        with the ``positions`` of the first extra repeat; and
+        ``ambiguous_option``. A detail never holds a sent label.
+    """
+    if max_items is not None and len(values) > max_items:
+        return Violation("too_many_items", MappingProxyType({"max_items": max_items}))
+    missing: list[int] = []
+    duplicate: int | None = None
+    ambiguous = False
+    listed: Counter[str] = Counter()
+    for position, item in enumerate(values):
+        offered = counts.get(item, 0)
+        if offered == 0 and not (accept_new and item != ""):
+            missing.append(position)
+            continue
+        if unique:
+            listed[item] += 1
+            # A new label counts as offered once, by the user who typed it.
+            if listed[item] > max(offered, 1):
+                if duplicate is None:
+                    duplicate = position
+                continue
+        if offered > 1 and not accept_new:
+            ambiguous = True
+    if missing:
+        return Violation(
+            "not_an_option",
+            MappingProxyType({"options": tuple(counts), "positions": tuple(missing)}),
+        )
+    if duplicate is not None:
+        return Violation(
+            "duplicate_items", MappingProxyType({"positions": (duplicate,)})
+        )
+    return _AMBIGUOUS if ambiguous else None
 
 
 def check_client_value(
