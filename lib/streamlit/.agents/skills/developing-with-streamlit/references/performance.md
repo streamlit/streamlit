@@ -347,7 +347,7 @@ These checks are a UX guardrail, not a security boundary. See [Widget input cons
 
 **This is critical and often missed.**
 
-By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` always render all their content, even when hidden or collapsed.
+By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
 
 ### Tabs with expensive content
 
