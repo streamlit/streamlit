@@ -322,6 +322,7 @@ _VIOLATION_ERRORS: Final[
     "bad_shape": _bad_shape,
     "malformed": _malformed,
     "too_long": _too_long,
+    "empty_required": _refused_value,
 }
 
 

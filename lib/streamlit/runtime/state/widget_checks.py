@@ -30,7 +30,8 @@ The checks run in this order, and the first violation wins:
 
 Validators share small helpers, such as ``one_of`` and ``items_of`` for a
 widget with a closed set of options, ``within`` for bounds, ``iso_date`` for the
-layouts the browser sends, and ``text_length`` for ``max_chars``.
+layouts the browser sends, ``text_length`` for ``max_chars``, and ``filled`` for
+``required``.
 """
 
 from __future__ import annotations
@@ -40,6 +41,7 @@ import math
 import re
 import traceback
 from collections import Counter
+from collections.abc import Sized
 from itertools import pairwise
 from types import MappingProxyType
 from typing import (
@@ -58,7 +60,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.state.common import ValueFieldName, unpack_widget_state_value
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping, Sequence, Sized
+    from collections.abc import Collection, Mapping, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.common import WidgetMetadata
@@ -94,6 +96,8 @@ ViolationKind: TypeAlias = Literal[
     "malformed",
     # The text is longer than the widget's `max_chars`.
     "too_long",
+    # The value empties a `required` widget.
+    "empty_required",
 ]
 
 
@@ -140,7 +144,14 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 # disables a widget, or changes its options, just before the user's change
 # arrives. They are logged at debug level.
 _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
-    {"disabled", "not_an_option", "too_many_items", "out_of_range", "too_long"}
+    {
+        "disabled",
+        "not_an_option",
+        "too_many_items",
+        "out_of_range",
+        "too_long",
+        "empty_required",
+    }
 )
 
 # A single label needs no position, so `one_of`'s reports share one Violation.
@@ -160,6 +171,17 @@ _NOT_ISO_TIME: Final = _malformed("a time as HH:MM or HH:MM:SS")
 _NOT_ISO_DATETIME: Final = _malformed("a date and time as YYYY-MM-DDTHH:MM")
 _NOT_HEX_COLOR: Final = _malformed("a hex color as #rgb or #rrggbb")
 _UNORDERED: Final = Violation("bad_shape", MappingProxyType({"order": True}))
+_EMPTY_REQUIRED: Final = Violation("empty_required")
+
+# The characters JavaScript's `String.prototype.trim()` removes, which is how
+# the browser decides that text is empty. Python's `str.strip()` also removes
+# U+001C to U+001F and U+0085, which the browser keeps, and keeps U+FEFF, which
+# the browser removes, so it would refuse text the browser accepts.
+_ECMASCRIPT_WHITESPACE: Final = (
+    "\t\n\v\f\r \u00a0\u1680"
+    "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+    "\u2028\u2029\u202f\u205f\u3000\ufeff"
+)
 
 # The layouts the browser sends. `[0-9]` rather than `\d`, which also matches
 # the digits of other scripts. Each is matched in full, so a trailing newline
@@ -220,6 +242,10 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
     "too_long": (
         "It is longer than the widget's max_chars. A rerun can lower the limit "
         "just before a user's change arrives."
+    ),
+    "empty_required": (
+        "It empties a required widget. A rerun can make a widget required just "
+        "before a user's change arrives."
     ),
 }
 
@@ -538,6 +564,36 @@ def truncate_utf16(text: str, max_chars: int) -> str:
         if units > max_chars:
             return text[:index]
     return text
+
+
+def is_empty(value: Any) -> bool:
+    """Whether a value is empty as a ``required`` widget counts it.
+
+    ``None``, an empty list, tuple, or protobuf array, and text of only
+    whitespace are empty. Whitespace is what the browser's ``trim()`` removes,
+    so text the browser lets a user submit is never empty here.
+    """
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip(_ECMASCRIPT_WHITESPACE)
+    if isinstance(value, Sized):
+        return len(value) == 0
+    return False
+
+
+def filled(value: Any, *, required: bool) -> Violation | None:
+    """Refuse an empty value for a required widget.
+
+    A validator sees only changed values, so this refuses a change to empty.
+    An untouched required widget keeps its empty default, as in the browser.
+
+    Returns
+    -------
+    Violation or None
+        ``empty_required``, or ``None``.
+    """
+    return _EMPTY_REQUIRED if required and is_empty(value) else None
 
 
 def check_client_value(

@@ -424,7 +424,9 @@ functions that return a `Violation` with its details:
   `ordered(values)`
 - `iso_date`, `iso_time`, `iso_datetime_minutes`, `hex_color`, each a full match of
   the one layout the browser sends
-- `text_length(text, max_chars)`, `truncate_utf16(text, max_chars)`, `is_empty(value)`
+- `text_length(text, max_chars)`, `truncate_utf16(text, max_chars)`
+- `is_empty(value)`, and `filled(value, required)`, which refuses an empty value for a
+  required widget
 
 Bound and shape details name the constraint, never the value: `out_of_range` carries
 `min_value` and `max_value`, `bad_shape` the allowed `item_counts` or `order`,

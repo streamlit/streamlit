@@ -424,6 +424,8 @@ def test_e2e_tests_log_every_refusal_at_warning(
         ("duplicate_items", logging.WARNING),
         ("out_of_range", logging.DEBUG),
         ("too_long", logging.DEBUG),
+        # A key keeps the ID while `required` turns on.
+        ("empty_required", logging.DEBUG),
         ("bad_shape", logging.WARNING),
         ("malformed", logging.WARNING),
     ],
@@ -763,6 +765,95 @@ def test_truncate_utf16_never_splits_a_character(
 
     assert truncated == expected
     assert widget_checks.utf16_length(truncated) <= max_chars
+
+
+# The characters JavaScript's `trim()` removes, from Node: every code point `c`
+# with `String.fromCodePoint(c).trim() === ""`.
+_BROWSER_WHITESPACE: Final = [
+    0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x20, 0xA0, 0x1680, *range(0x2000, 0x200B),
+    0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF,
+]  # fmt: skip
+
+
+@pytest.mark.parametrize(
+    ("value", "empty"),
+    [
+        (None, True),
+        ("", True),
+        (" ", True),
+        (" \t\n ", True),
+        ("".join(map(chr, _BROWSER_WHITESPACE)), True),
+        # Python's `strip()` removes these, but the browser keeps them.
+        (chr(0x1C), False),
+        (chr(0x1F), False),
+        (chr(0x85), False),
+        # The byte order mark, which the browser removes and `strip()` keeps.
+        (chr(0xFEFF), True),
+        (" a ", False),
+        ([], True),
+        ((), True),
+        (["2026-01-01"], False),
+        (0, False),
+        (0.0, False),
+        (dt.date(2026, 1, 1), False),
+    ],
+)
+def test_is_empty(value: Any, empty: bool) -> None:
+    """Emptiness follows the browser: None, no items, or whitespace it trims."""
+    assert widget_checks.is_empty(value) is empty
+
+
+def test_is_empty_reads_a_protobuf_array() -> None:
+    """A wire array is empty without items, as a list is."""
+    empty = _state(string_array_value=[]).string_array_value.data
+    filled = _state(string_array_value=["a"]).string_array_value.data
+
+    assert widget_checks.is_empty(empty) is True
+    assert widget_checks.is_empty(filled) is False
+
+
+def test_whitespace_matches_the_browser_trim() -> None:
+    """The whitespace set is exactly what the browser's `trim()` removes."""
+    assert sorted(map(ord, widget_checks._ECMASCRIPT_WHITESPACE)) == sorted(
+        _BROWSER_WHITESPACE
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "required", "expected"),
+    [
+        ("   ", True, Violation("empty_required")),
+        (None, True, Violation("empty_required")),
+        ([], True, Violation("empty_required")),
+        ("a", True, None),
+        # An optional widget can be emptied.
+        ("", False, None),
+        (None, False, None),
+    ],
+)
+def test_filled(value: Any, required: bool, expected: Violation | None) -> None:
+    """Only a required widget refuses an empty value."""
+    assert widget_checks.filled(value, required=required) == expected
+
+
+def test_an_empty_required_value_is_refused_only_when_changed() -> None:
+    """An unchanged empty value passes before the validator runs."""
+    metadata = _metadata(
+        validator=lambda ui_value, **_kwargs: widget_checks.filled(
+            ui_value, required=True
+        )
+    )
+
+    unchanged = check_client_value(
+        _state(string_value=""), metadata=metadata, previous=""
+    )
+    emptied = check_client_value(
+        _state(string_value=" "), metadata=metadata, previous="Ada"
+    )
+
+    assert unchanged.violation is None
+    assert emptied.violation == Violation("empty_required")
+    assert emptied.changed is False
 
 
 def test_every_violation_kind_has_a_log_explanation() -> None:
