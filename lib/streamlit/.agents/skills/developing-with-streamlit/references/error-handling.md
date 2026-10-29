@@ -1,11 +1,11 @@
 
 # Streamlit error handling
 
-By default, an uncaught exception renders a full traceback right in the app. That's bad UX, and the traceback can leak file paths, queries, secrets, and other internals to whoever is looking at the app. Handle expected failure modes deliberately instead of letting them crash the script.
+By default, an uncaught exception renders a full traceback right in the app. That's bad UX, and the traceback can leak file paths, queries, secrets, and other internals to whoever is looking at the app. Handle expected failure modes deliberately instead of letting them crash the script. For a deployed app, also set `client.showErrorDetails` to `"type"` or `"none"` so an uncaught exception shows a generic message in the browser instead of the traceback, which still goes to the console (see [cli.md](cli.md#setting-configuration-with-streamlit-run)).
 
 ## Wrap risky operations in try/except
 
-Anything that can fail at runtime should be guarded: external API calls, database and `st.connection` queries, file parsing, and conversions of user input. Catch the specific exceptions you expect — never a bare `except:`, which also swallows things like `KeyboardInterrupt` and hides real bugs.
+Anything that can fail at runtime should be guarded: external API calls, database and `st.connection` queries, and parsing of files or other user-supplied data. Catch the specific exceptions you expect — never a bare `except:`, which also catches the exceptions that `st.stop()` and `st.rerun()` use to halt the script, swallows `KeyboardInterrupt`, and hides real bugs.
 
 ```python
 # BAD: any failure dumps a traceback into the app and keeps running
@@ -32,14 +32,18 @@ On a handled failure, surface an actionable message with `st.error(...)` (or `st
 
 ```python
 # GOOD: query is isolated; on failure the rest of the script doesn't run
+from sqlalchemy.exc import SQLAlchemyError
+
 conn = st.connection("sql")
 try:
-    df = conn.query("SELECT * FROM sales WHERE region = :region", params={"region": region})
-except Exception as e:
+    df = conn.query(
+        "SELECT * FROM sales WHERE region = :region", params={"region": region}
+    )
+except SQLAlchemyError:
     st.error("Failed to load sales data. Check the connection and try again.")
     st.stop()
 
-st.dataframe(df)          # only reached when the query succeeded
+st.dataframe(df)  # only reached when the query succeeded
 st.metric("Total", df["amount"].sum())
 ```
 
@@ -56,7 +60,7 @@ record = lookup_customer(name)  # raises on ""
 
 # GOOD: absent input isn't an error — prompt neutrally with st.info, then stop.
 # (Save st.warning / st.error for input that's actually wrong, like the
-# conversion failure below.)
+# unreadable file below.)
 name = st.text_input("Customer name")
 if not name:
     st.info("Enter a customer name to continue.")
@@ -65,24 +69,30 @@ if not name:
 record = lookup_customer(name)
 ```
 
-Conversions deserve the same treatment, since user text rarely matches the type you need:
+Prevent bad values at the widget where you can: collect numbers and dates with typed widgets such as `st.number_input(min_value=..., max_value=...)` instead of parsing text, and use the browser-side checks listed in [Client-side validation](performance.md#client-side-validation). Those checks are a UX guardrail, so still validate values that drive writes, permissions, or limits in the script (see [session-state.md](session-state.md#widget-input-constraints-are-mostly-client-side)).
+
+Parsing user-supplied files deserves the same treatment as other risky calls:
 
 ```python
-raw = st.text_input("Quantity")
-try:
-    qty = int(raw)
-except ValueError:
-    st.error("Quantity must be a whole number.")
+uploaded = st.file_uploader("Orders CSV", type="csv")
+if uploaded is None:
+    st.info("Upload an orders CSV to continue.")
     st.stop()
 
-if qty <= 0:
-    st.warning("Quantity must be greater than zero.")
+try:
+    orders = pd.read_csv(uploaded)
+except ValueError:  # Covers ParserError, EmptyDataError, and UnicodeDecodeError.
+    st.error("Couldn't read that file. Upload a comma-separated UTF-8 CSV.")
+    st.stop()
+
+if "amount" not in orders.columns:
+    st.warning("The file needs an `amount` column.")
     st.stop()
 ```
 
 ## st.exception is for debug surfaces, not the default path
 
-`st.exception(e)` renders the exception object and its traceback in the app. That's useful on a deliberate debug or admin surface, but it exposes internals — so it should not be your default user-facing error. Prefer a plain-language `st.error` for users, and reserve `st.exception` for when you genuinely want the object shown.
+`st.exception(e)` renders the exception object and its traceback in the app, even when `client.showErrorDetails` hides details for uncaught exceptions. That's useful on a deliberate debug or admin surface, but it exposes internals — so it should not be your default user-facing error. Prefer a plain-language `st.error` for users, and reserve `st.exception` for when you genuinely want the object shown.
 
 ```python
 # Debug-only surface, e.g. behind an admin toggle
@@ -90,7 +100,7 @@ try:
     result = run_pipeline()
 except Exception as e:
     if st.session_state.get("debug_mode"):
-        st.exception(e)       # full traceback for the developer
+        st.exception(e)  # full traceback for the developer
     else:
         st.error("Something went wrong running the pipeline.")
     st.stop()
@@ -125,14 +135,15 @@ st.line_chart(df)
 
 ## Errors inside cached functions
 
-An exception raised inside an `@st.cache_data` or `@st.cache_resource` function is **not** cached — it propagates to the caller, and re-raises on every rerun until the inputs change or the call finally succeeds. So guard the *call site*, not the cached body, and don't assume a failure gets memoized away.
+An exception raised inside an `@st.cache_data` or `@st.cache_resource` function is **not** cached — it propagates to the caller and nothing is stored, so the next call with the same arguments runs the function again. So guard the *call site*, not the cached body, and don't assume a failure gets memoized away.
 
 ```python
 @st.cache_data
 def load_prices(ticker: str) -> pd.DataFrame:
     resp = requests.get(f"https://api.example.com/prices/{ticker}", timeout=10)
-    resp.raise_for_status()        # let it raise on a real failure
+    resp.raise_for_status()  # let it raise on a real failure
     return pd.DataFrame(resp.json())
+
 
 # GOOD: handle the failure where you CALL the cached function.
 try:
