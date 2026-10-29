@@ -70,7 +70,7 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_mock_script_run_ctx, create_pep649_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Sequence
     from pathlib import Path
 
 MAC = "mac"
@@ -89,12 +89,32 @@ def _mock_script_run_ctx() -> MagicMock:
     return ctx
 
 
-def _tracking_ctx() -> ScriptRunContext:
-    """Attach a real ScriptRunContext with usage-stats gathering enabled."""
+_THREAD_TIMEOUT = 5.0
+
+
+@pytest.fixture
+def tracking_ctx() -> Iterator[ScriptRunContext]:
+    """Attach a ScriptRunContext with usage-stats gathering, then restore."""
+    thread = threading.current_thread()
+    previous_ctx = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
     ctx = create_mock_script_run_ctx()
     ctx.gather_usage_stats = True
-    add_script_run_ctx(threading.current_thread(), ctx)
-    return ctx
+    add_script_run_ctx(thread, ctx)
+    try:
+        yield ctx
+    finally:
+        if previous_ctx is None:
+            if hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+                delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        else:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous_ctx)
+
+
+def _join_threads(threads: Sequence[threading.Thread]) -> None:
+    """Join worker threads with a timeout so a hang fails the test."""
+    for thread in threads:
+        thread.join(timeout=_THREAD_TIMEOUT)
+        assert not thread.is_alive()
 
 
 def _command_names(ctx: ScriptRunContext) -> list[str]:
@@ -869,9 +889,12 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
-def test_nested_commands_are_suppressed_in_the_same_context() -> None:
+def test_nested_commands_are_suppressed_in_the_same_context(
+    tracking_ctx: ScriptRunContext,
+) -> None:
     """Nested commands in one execution context record only the outer command."""
-    ctx = _tracking_ctx()
+    ctx = tracking_ctx
+    assert ThreadState.get().command_tracking_deactivated is False
 
     @metrics_util.gather_metrics("inner")
     def inner() -> None:
@@ -888,25 +911,12 @@ def test_nested_commands_are_suppressed_in_the_same_context() -> None:
     assert ThreadState.get().command_tracking_deactivated is False
 
 
-def test_main_script_command_tracking_uses_initialized_thread_state() -> None:
-    """Main-script execution tracks commands through the initialized ThreadState."""
-    ctx = _tracking_ctx()
-    assert ThreadState.get().command_tracking_deactivated is False
-
-    @metrics_util.gather_metrics("main_cmd")
-    def main_cmd() -> str:
-        assert ThreadState.get().command_tracking_deactivated is True
-        return "ok"
-
-    assert main_cmd() == "ok"
-    assert _command_names(ctx) == ["main_cmd"]
-    assert ThreadState.get().command_tracking_deactivated is False
-
-
-def test_parallel_contexts_record_independent_top_level_commands() -> None:
+def test_parallel_contexts_record_independent_top_level_commands(
+    tracking_ctx: ScriptRunContext,
+) -> None:
     """Two copied execution contexts record overlapping top-level commands."""
-    ctx = _tracking_ctx()
-    overlap = threading.Barrier(2)
+    ctx = tracking_ctx
+    overlap = threading.Barrier(2, timeout=_THREAD_TIMEOUT)
     copied_a = contextvars.copy_context()
     copied_b = contextvars.copy_context()
 
@@ -935,21 +945,23 @@ def test_parallel_contexts_record_independent_top_level_commands() -> None:
     ]
     for thread in threads:
         thread.start()
-    for thread in threads:
-        thread.join()
+    _join_threads(threads)
     if errors:
         raise errors[0]
 
     assert set(_command_names(ctx)) == {"worker_a", "worker_b"}
 
 
-def test_finishing_one_context_does_not_reactivate_nested_tracking() -> None:
+def test_finishing_one_context_does_not_reactivate_nested_tracking(
+    tracking_ctx: ScriptRunContext,
+) -> None:
     """One context restoring tracking must not un-suppress another context's nesting."""
-    ctx = _tracking_ctx()
-    both_inside = threading.Barrier(2)
+    ctx = tracking_ctx
+    both_inside = threading.Barrier(2, timeout=_THREAD_TIMEOUT)
     a_finished = threading.Event()
     copied_a = contextvars.copy_context()
     copied_b = contextvars.copy_context()
+    errors: list[BaseException] = []
 
     @metrics_util.gather_metrics("nested_b")
     def nested_b() -> None:
@@ -962,30 +974,41 @@ def test_finishing_one_context_does_not_reactivate_nested_tracking() -> None:
     @metrics_util.gather_metrics("outer_b")
     def outer_b() -> None:
         both_inside.wait()
-        a_finished.wait()
+        if not a_finished.wait(timeout=_THREAD_TIMEOUT):
+            raise TimeoutError("outer_a did not finish")
         nested_b()
 
     def run_a() -> None:
-        setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
-        copied_a.run(outer_a)
-        a_finished.set()
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied_a.run(outer_a)
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            a_finished.set()
 
     def run_b() -> None:
-        setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
-        copied_b.run(outer_b)
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied_b.run(outer_b)
+        except BaseException as exc:
+            errors.append(exc)
 
     threads = [threading.Thread(target=run_a), threading.Thread(target=run_b)]
     for thread in threads:
         thread.start()
-    for thread in threads:
-        thread.join()
+    _join_threads(threads)
+    if errors:
+        raise errors[0]
 
     assert set(_command_names(ctx)) == {"outer_a", "outer_b"}
 
 
-def test_command_tracking_flag_restored_after_exception() -> None:
+def test_command_tracking_flag_restored_after_exception(
+    tracking_ctx: ScriptRunContext,
+) -> None:
     """An exception in a tracked command must restore nested-command tracking."""
-    ctx = _tracking_ctx()
+    ctx = tracking_ctx
 
     @metrics_util.gather_metrics("boom")
     def boom() -> None:
@@ -1005,9 +1028,11 @@ def test_command_tracking_flag_restored_after_exception() -> None:
     assert _command_names(ctx) == ["boom", "after_boom"]
 
 
-def test_command_tracking_flag_restored_after_rerun_exception() -> None:
+def test_command_tracking_flag_restored_after_rerun_exception(
+    tracking_ctx: ScriptRunContext,
+) -> None:
     """A RerunException must restore nested-command tracking for later commands."""
-    ctx = _tracking_ctx()
+    ctx = tracking_ctx
 
     @metrics_util.gather_metrics("rerun_cmd")
     def rerun_cmd() -> None:
@@ -1029,6 +1054,42 @@ def test_gather_metrics_without_script_run_context_does_not_raise() -> None:
             return "ok"
 
         assert no_ctx() == "ok"
+
+
+def test_helper_thread_started_inside_tracked_command_records_its_own_top_level(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A helper attached during an outer command still records its own top-level commands."""
+    started = threading.Event()
+    done = threading.Event()
+    errors: list[BaseException] = []
+
+    @metrics_util.gather_metrics("helper_cmd")
+    def helper_cmd() -> None:
+        pass
+
+    def helper_target() -> None:
+        try:
+            started.set()
+            helper_cmd()
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            done.set()
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        helper = threading.Thread(target=helper_target)
+        add_script_run_ctx(helper, tracking_ctx)
+        helper.start()
+        assert started.wait(timeout=_THREAD_TIMEOUT)
+        assert done.wait(timeout=_THREAD_TIMEOUT)
+        _join_threads([helper])
+
+    outer()
+    if errors:
+        raise errors[0]
+    assert set(_command_names(tracking_ctx)) == {"outer", "helper_cmd"}
 
 
 def test_gather_metrics_without_thread_state_does_not_raise() -> None:
@@ -1056,7 +1117,7 @@ def test_gather_metrics_without_thread_state_does_not_raise() -> None:
 
     thread = threading.Thread(target=run_in_fresh_thread)
     thread.start()
-    thread.join()
+    _join_threads([thread])
     if error:
         raise error[0]
     assert result == [7]

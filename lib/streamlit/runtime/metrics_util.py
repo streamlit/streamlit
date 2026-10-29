@@ -33,6 +33,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
     ThreadState,
     get_script_run_ctx,
 )
@@ -688,24 +689,17 @@ def gather_metrics(
         exec_start = timer()
         ctx = get_script_run_ctx(suppress_warning=True)
 
-        command_tracking_deactivated = False
-        thread_state_available = False
-        if ctx is not None:
-            try:
-                command_tracking_deactivated = (
-                    ThreadState.get().command_tracking_deactivated
-                )
-                thread_state_available = True
-            except RuntimeError:
-                # Tracking is skipped when this thread has a ScriptRunContext
-                # but no ThreadState, rather than raising into user code.
-                pass
+        thread_state: FragmentThreadState | None = None
+        if ctx is not None and ctx.gather_usage_stats:
+            # Skip tracking rather than raise into user code when this thread
+            # has a ScriptRunContext but no ThreadState.
+            with contextlib.suppress(RuntimeError):
+                thread_state = ThreadState.get()
 
         tracking_activated = (
             ctx is not None
-            and thread_state_available
-            and ctx.gather_usage_stats
-            and not command_tracking_deactivated
+            and thread_state is not None
+            and not thread_state.command_tracking_deactivated
             and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
@@ -743,8 +737,7 @@ def gather_metrics(
             raise
         finally:
             if has_set_command_tracking_deactivated:
-                with contextlib.suppress(RuntimeError):
-                    ThreadState.update(command_tracking_deactivated=False)
+                ThreadState.update(command_tracking_deactivated=False)
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value

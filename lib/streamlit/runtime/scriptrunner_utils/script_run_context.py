@@ -396,6 +396,11 @@ def add_script_run_ctx(
     Repeat attaches on the same not-yet-started thread are last-wins for
     both ``ctx`` and the FragmentThreadState snapshot.
 
+    ``command_tracking_deactivated`` is not copied. The child is a new
+    command-nesting stack, so it starts with tracking on. The snapshot is
+    not live-shared; copying a parent's ``True`` would leave helper-thread
+    ``st.*`` calls untracked for the thread's life.
+
     Self-attach fallback: when called from inside the thread it is
     attaching to (current thread, or ``thread`` omitted with explicit
     ``ctx``), ``ThreadState`` is seeded directly from ``ctx``. The
@@ -441,10 +446,15 @@ def add_script_run_ctx(
         # Store the parent snapshot on the thread; the run() wrapper below
         # reads it at start time. Repeat add_script_run_ctx() calls refresh
         # the snapshot — last attach wins, matching the ctx attachment above.
+        fields = dataclasses.asdict(parent_ts)
+        # Helper threads are a new execution stack. Do not copy the parent's
+        # nested-command suppression flag, or commands on the helper stay
+        # untracked for the thread's life (the snapshot is not live-shared).
+        fields["command_tracking_deactivated"] = False
         setattr(
             thread,
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
-            dataclasses.asdict(parent_ts),
+            fields,
         )
         # Skip the wrap if the target is already running: run() has
         # already been called, and setting the sentinel here would

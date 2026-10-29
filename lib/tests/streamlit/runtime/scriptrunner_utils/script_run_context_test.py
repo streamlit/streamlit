@@ -479,6 +479,32 @@ class ScriptRunContextTest(unittest.TestCase):
         assert parent_ts.delta_path == (1, 2, 3)
         assert parent_ts.active_script_hash == "parent_hash"
 
+    def test_add_script_run_ctx_does_not_copy_command_tracking_deactivated(self):
+        """Helper threads start with tracking on even if the parent is nested.
+
+        ``command_tracking_deactivated`` is per execution stack. Copying a
+        parent's ``True`` would leave helper-thread commands untracked for
+        the thread's life because the snapshot is not live-shared.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        captured: dict[str, object] = {}
+
+        def child_target() -> None:
+            captured["flag"] = ThreadState.get().command_tracking_deactivated
+
+        t = threading.Thread(target=child_target)
+        add_script_run_ctx(t, ctx)
+        t.start()
+        t.join(timeout=5)
+
+        assert not t.is_alive()
+        assert captured["flag"] is False
+        assert ThreadState.get().command_tracking_deactivated is True
+
     def test_ctx_construction_creates_shared(self):
         """A freshly constructed ScriptRunContext owns its own SharedRunState."""
         ctx_a = _create_script_run_context(lambda _msg: None)
