@@ -221,7 +221,8 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
 - **Colors** — series use `theme.chartCategoricalColors`; continuous scales (`visualMap`) use
   `theme.chartSequentialColors`. These are the same palettes used by `st.plotly_chart`,
   `st.vega_lite_chart`, and `st.altair_chart`, and they are partially customizable through the
-  config options `theme.chartCategoricalColors` and `theme.chartSequentialColors`.
+  config options `theme.chartCategoricalColors` and `theme.chartSequentialColors`. Candlesticks
+  use the same rising green and falling red as `st.plotly_chart`.
 - **Typography** — title, axis labels, legend, and tooltip use Streamlit's font family and sizes.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
