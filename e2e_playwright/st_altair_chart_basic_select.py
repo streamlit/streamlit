@@ -391,7 +391,7 @@ bind_radio_origin = alt.selection_point(
     value="USA",
     toggle=False,
 )
-st.altair_chart(
+bind_radio_selection = st.altair_chart(
     alt.Chart(cars)
     .mark_point()
     .encode(
@@ -403,10 +403,11 @@ st.altair_chart(
     .transform_filter(bind_radio_origin)
     .add_params(bind_radio_click, bind_radio_origin),
     on_select="rerun",
-    selection_mode="bind_radio_click",
+    selection_mode=["bind_radio_click", "bind_radio_origin"],
     key="bind_radio_rerun",
     width="stretch",
 )
+st.write("Radio-bound selection:", str(bind_radio_selection))
 
 bind_select_click = alt.selection_point(name="bind_select_click", toggle=False)
 bind_select_origin = alt.selection_point(
@@ -432,3 +433,23 @@ st.altair_chart(
     key="bind_select_rerun",
     width="stretch",
 )
+
+legend_selection = alt.selection_point(
+    name="legend_pick", fields=["Origin"], bind="legend"
+)
+legend_selection_state = st.altair_chart(
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Miles_per_Gallon:Q",
+        y="Horsepower:Q",
+        color=alt.condition(legend_selection, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .add_params(legend_selection),
+    on_select="rerun",
+    selection_mode="legend_pick",
+    key="legend_bound_selection",
+    width="stretch",
+)
+st.write("Legend-bound selection:", str(legend_selection_state))

@@ -31,9 +31,10 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 21
+_EXPECTED_CHART_COUNT = 24
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -340,6 +341,28 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
 
 
+def test_tooltip_formatting_without_javascript(app: Page):
+    """Tooltip templates expand ``{@[n]}``, and ``valueFormatter`` formats numbers."""
+    template_chart = _get_chart(app, "c_tooltip_template")
+    # Heatmaps draw on two canvas layers.
+    expect(template_chart.locator("canvas").first).to_be_visible()
+    template_chart.hover()
+    template_tooltip = template_chart.locator(".echarts-template-tooltip")
+    expect(template_tooltip).to_have_text(
+        f"Mon · 654 sessions · {_XSS_TEMPLATE_PAYLOAD}"
+    )
+    # Must NOT happen: the expanded payload turned into markup.
+    expect(template_tooltip.locator("img")).to_have_count(0)
+
+    format_chart = _get_chart(app, "c_tooltip_value_format")
+    expect(format_chart.locator("canvas")).to_be_visible()
+    format_chart.hover()
+    format_tooltip = format_chart.locator(".echarts-value-format-tooltip")
+    expect(format_tooltip).to_contain_text("$1,234.57")
+    # Dollar format rounds to cents, so the unrounded grouped value must not remain.
+    expect(format_tooltip).not_to_contain_text("1,234.567")
+
+
 def test_toolbar_actions(app: Page):
     """Download and fullscreen toolbar actions work on a single page load."""
     png_container = get_element_by_key(app, "c_custom_colors")
@@ -408,6 +431,9 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Radar exercises non-cartesian theming (split areas, spokes, names),
         # which must stay subtle/legible in both light and dark mode.
         "c_radar": "st_echarts_chart-radar",
+        # Funnel stage separators must follow the app background instead of
+        # ECharts' white lines, and outside labels must stay legible on it.
+        "c_funnel": "st_echarts_chart-funnel",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)

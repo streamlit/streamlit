@@ -38,13 +38,16 @@ const FontFaceDeclaration = ({
     // backwards compatibility.
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank weightRange falls back to the legacy weight
     const resolvedWeight = weightRange || weight
+    const fontWeightRule =
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `resolvedWeight` is `string | number`; a 0 or empty weight omits the declaration
+      resolvedWeight ? `font-weight: ${resolvedWeight};` : ""
     return `
       @font-face {
         font-family: ${family};
         src: url(${url}) format("woff2");
         font-display: swap;
         ${style ? `font-style: ${style};` : ""}
-        ${resolvedWeight ? `font-weight: ${resolvedWeight};` : ""}
+        ${fontWeightRule}
         ${unicodeRange ? `unicode-range: ${unicodeRange};` : ""}
       }
     `

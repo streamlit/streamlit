@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 31
+NUM_SELECTBOXES = 35
 
 
 def get_selectbox_input(
@@ -934,3 +934,101 @@ def test_selectbox_on_change_ignore(app: Page):
     wait_for_app_loaded(app)
     expect(get_selectbox_input(app, "Ignore change selectbox")).to_have_value("beta")
     expect_prefixed_markdown(app, "Ignore selectbox value:", "beta")
+
+
+def test_selectbox_required_blocks_empty_form_submits_and_clearing(app: Page):
+    """Test that required gates empty form submits and blocks clearing a selection."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+
+    country_widget = get_element_by_key(app, "required_country")
+    city_widget = get_element_by_key(app, "required_city")
+    country_input = country_widget.get_by_role("combobox")
+    expect(country_input).to_have_attribute("aria-required", "true")
+    expect(country_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    expect(country_widget.get_by_test_id("stSelectboxErrorIcon")).to_have_count(0)
+
+    # An empty form submit is blocked and every empty field shows the error.
+    submit_button = app.get_by_role(
+        "button", name="Submit required selectbox form", exact=True
+    )
+    submit_button.click()
+    expect(country_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(city_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(country_widget.get_by_test_id("stSelectboxErrorIcon")).to_be_visible()
+    expect(country_input).to_have_attribute("aria-invalid", "true")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Selecting an option clears that field's error, but the other one still blocks.
+    select_selectbox_option(app, "Required country", "Germany")
+    expect(country_widget.get_by_role("alert")).to_have_count(0)
+    submit_button.click()
+    expect(city_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(country_widget.get_by_role("alert")).to_have_count(0)
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Once every required field has a value, the form submits.
+    select_selectbox_option(app, "Required city", "Berlin")
+    submit_button.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required country: Germany")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(city_widget.get_by_role("alert")).to_have_count(0)
+    # clear_on_submit resets the fields after the successful submit.
+    expect(country_input).to_have_value("")
+
+    # Outside a form, a required selectbox has no clear button.
+    color_widget = get_element_by_key(app, "required_color")
+    color_input = color_widget.get_by_role("combobox")
+    expect(color_widget.get_by_role("button", name="Clear value")).to_have_count(0)
+    select_selectbox_option(app, "Required color", "green")
+    expect_markdown(app, "required color: green")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(color_widget.get_by_role("button", name="Clear value")).to_have_count(0)
+
+    # Escape does not clear the selection.
+    color_input.click()
+    color_input.press("Escape")
+    expect(color_input).to_have_value("green")
+
+    # Deleting the text and blurring restores the selection without a rerun.
+    color_input.fill("")
+    color_input.blur()
+    expect(color_input).to_have_value("green")
+    wait_for_app_run(app)
+    expect_markdown(app, "required color: green")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+
+    # A different option, including a new one, can still replace the selection.
+    color_input.fill("purple")
+    color_input.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required color: purple")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    # Outside a form there is no empty commit, so no error is ever shown.
+    expect(color_widget.get_by_role("alert")).to_have_count(0)
+
+    # A hidden label omits the marker but keeps aria-required.
+    hidden_widget = get_element_by_key(app, "required_hidden_select")
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+    expect(hidden_widget.get_by_role("combobox")).to_have_attribute(
+        "aria-required", "true"
+    )
+
+
+def test_selectbox_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error chrome."""
+    widget = get_element_by_key(themed_app, "required_country")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_selectbox-required_marker")
+
+    themed_app.get_by_role(
+        "button", name="Submit required selectbox form", exact=True
+    ).click()
+    expect(widget.get_by_test_id("stSelectboxErrorIcon")).to_be_visible()
+    assert_snapshot(widget, name="st_selectbox-required_error")

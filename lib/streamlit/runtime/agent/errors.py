@@ -126,7 +126,7 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     ),
     "unknown_page": (
         404,
-        "No page has that `url_path`. The response's `pages` lists the available ones.",
+        "No page has that `url_path`. The error's `pages` lists the available ones.",
     ),
     "not_on_page": (
         409,
