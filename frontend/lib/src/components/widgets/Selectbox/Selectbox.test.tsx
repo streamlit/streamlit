@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
+import { REQUIRED_FIELD_MESSAGE } from "~lib/components/widgets/BaseWidget/requiredField"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -233,6 +234,439 @@ describe("Selectbox query param binding", () => {
       null,
       true,
       undefined
+    )
+  })
+})
+
+describe("Selectbox required", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function createWidgetMgr(): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    widgetMgr: WidgetStateManager
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    return { sendRerunBackMsg, widgetMgr }
+  }
+
+  /** Renders two empty required selectboxes in one form; returns their roots. */
+  function renderRequiredFormPair(
+    widgetMgr: WidgetStateManager
+  ): [HTMLElement, HTMLElement] {
+    render(
+      <>
+        <Selectbox
+          {...getProps(
+            { id: "first", formId: "form", default: null, required: true },
+            { widgetMgr }
+          )}
+        />
+        <Selectbox
+          {...getProps(
+            { id: "second", formId: "form", default: null, required: true },
+            { widgetMgr }
+          )}
+        />
+      </>
+    )
+    const [first, second] = screen.getAllByTestId("stSelectbox")
+    return [first, second]
+  }
+
+  /** Pick an option in the selectbox rendered inside `root`. */
+  async function pickOptionIn(
+    root: HTMLElement,
+    value: string
+  ): Promise<void> {
+    const user = userEvent.setup()
+    await user.click(within(root).getByRole("button", { name: "Open" }))
+    await user.click(screen.getByRole("option", { name: value }))
+    await user.click(document.body)
+  }
+
+  function expectRequiredError(root: HTMLElement): void {
+    const scope = within(root)
+    expect(scope.getByTestId("stSelectboxErrorIcon")).toBeVisible()
+    const alert = scope.getByRole("alert")
+    expect(alert).toHaveTextContent(REQUIRED_FIELD_MESSAGE)
+    const input = scope.getByRole("combobox")
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+      alert.getAttribute("id")
+    )
+  }
+
+  function expectNoRequiredError(root: HTMLElement): void {
+    const scope = within(root)
+    expect(scope.queryByTestId("stSelectboxErrorIcon")).not.toBeInTheDocument()
+    expect(scope.queryByRole("alert")).not.toBeInTheDocument()
+    expect(scope.getByRole("combobox")).not.toHaveAttribute("aria-invalid")
+  }
+
+  it("shows the marker and aria-required without an error on initial render", () => {
+    render(<Selectbox {...getProps({ default: null, required: true })} />)
+
+    const selectbox = screen.getByTestId("stSelectbox")
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "aria-required",
+      "true"
+    )
+    expect(screen.getByTestId("stWidgetLabelRequired")).toBeVisible()
+    expectNoRequiredError(selectbox)
+  })
+
+  it("sets aria-required and the marker only when required is true", () => {
+    render(<Selectbox {...getProps({ default: null, required: false })} />)
+
+    expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-required")
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+  })
+
+  it("hides the clear button after a selection when required", async () => {
+    const props = getProps({ default: null, required: true })
+    render(<Selectbox {...props} />)
+
+    await pickOptionIn(screen.getByTestId("stSelectbox"), "b")
+
+    expect(screen.getByDisplayValue("b")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Clear value" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the clear button after a selection when not required", async () => {
+    const props = getProps({ default: null, required: false })
+    render(<Selectbox {...props} />)
+
+    await pickOptionIn(screen.getByTestId("stSelectbox"), "b")
+
+    expect(screen.getByRole("button", { name: "Clear value" })).toBeVisible()
+  })
+
+  it("does not clear a required selection on Escape", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: null, required: true })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<Selectbox {...props} />)
+
+    await pickOptionIn(screen.getByTestId("stSelectbox"), "b")
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{Escape}")
+
+    expect(input).toHaveValue("b")
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      "b",
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.objectContaining({ fromUser: true })
+    )
+  })
+
+  it("does not register a form submit validator outside a form", () => {
+    const props = getProps({ default: null, required: true })
+    const addValidatorSpy = vi.spyOn(props.widgetMgr, "addFormSubmitValidator")
+    render(<Selectbox {...props} />)
+
+    expect(addValidatorSpy).not.toHaveBeenCalled()
+    expectNoRequiredError(screen.getByTestId("stSelectbox"))
+  })
+
+  it("blocks a form submit and shows an error on every empty required field", () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    const [first, second] = renderRequiredFormPair(widgetMgr)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectRequiredError(first)
+    expectRequiredError(second)
+  })
+
+  it("clears a field's error on selection and submits once every field is filled", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    const [first, second] = renderRequiredFormPair(widgetMgr)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError(first)
+
+    await pickOptionIn(first, "b")
+    expectNoRequiredError(first)
+    expectRequiredError(second)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectNoRequiredError(first)
+
+    await pickOptionIn(second, "c")
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expectNoRequiredError(second)
+  })
+
+  it("does not clear form values when a required submit fails", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const [filled, empty] = renderRequiredFormPair(widgetMgr)
+    await pickOptionIn(filled, "b")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(within(filled).getByRole("combobox")).toHaveValue("b")
+    expectNoRequiredError(filled)
+    expectRequiredError(empty)
+  })
+
+  it("clears a submitted required form without an error and gates the next submit", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    render(
+      <Selectbox
+        {...getProps(
+          { formId: "form", default: null, required: true },
+          { widgetMgr }
+        )}
+      />
+    )
+    const selectbox = screen.getByTestId("stSelectbox")
+    await pickOptionIn(selectbox, "b")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveValue("")
+    })
+    expectNoRequiredError(selectbox)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expectRequiredError(selectbox)
+  })
+
+  it("does not gate a form submit when required is false", () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    render(
+      <Selectbox
+        {...getProps(
+          { formId: "form", default: null, required: false },
+          { widgetMgr }
+        )}
+      />
+    )
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expectNoRequiredError(screen.getByTestId("stSelectbox"))
+  })
+
+  it("blocks a form submit when a disabled required field is empty", () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    render(
+      <Selectbox
+        {...getProps(
+          { formId: "form", default: null, required: true },
+          { widgetMgr, disabled: true }
+        )}
+      />
+    )
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectRequiredError(screen.getByTestId("stSelectbox"))
+  })
+
+  it("clears a leftover error when required is turned off and does not bring it back", () => {
+    const { widgetMgr } = createWidgetMgr()
+    const props = getProps(
+      { formId: "form", default: null, required: true },
+      { widgetMgr }
+    )
+    const { rerender } = render(<Selectbox {...props} />)
+    const selectbox = screen.getByTestId("stSelectbox")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError(selectbox)
+
+    rerender(
+      <Selectbox
+        {...props}
+        element={SelectboxProto.create({ ...props.element, required: false })}
+      />
+    )
+    expectNoRequiredError(selectbox)
+    expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-required")
+
+    rerender(
+      <Selectbox
+        {...props}
+        element={SelectboxProto.create({ ...props.element, required: true })}
+      />
+    )
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "aria-required",
+      "true"
+    )
+    expectNoRequiredError(selectbox)
+  })
+
+  it("clears a leftover error after a session_state fill and does not bring it back on a programmatic clear", async () => {
+    const { widgetMgr } = createWidgetMgr()
+    const props = getProps(
+      { formId: "form", default: null, required: true },
+      { widgetMgr }
+    )
+    const { rerender } = render(<Selectbox {...props} />)
+    const selectbox = screen.getByTestId("stSelectbox")
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError(selectbox)
+
+    rerender(
+      <Selectbox
+        {...props}
+        element={SelectboxProto.create({
+          ...props.element,
+          setValue: true,
+          rawValue: "b",
+        })}
+      />
+    )
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveValue("b")
+    })
+    expectNoRequiredError(selectbox)
+
+    rerender(
+      <Selectbox
+        {...props}
+        element={SelectboxProto.create({ ...props.element, setValue: true })}
+      />
+    )
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveValue("")
+    })
+    expectNoRequiredError(selectbox)
+  })
+
+  it("deregisters the form submit validator on unmount", () => {
+    const { sendRerunBackMsg, widgetMgr } = createWidgetMgr()
+    const props = getProps(
+      { formId: "form", default: null, required: true },
+      { widgetMgr }
+    )
+    const { unmount } = render(<Selectbox {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    unmount()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps an ignore-buffered selection when Escape is pressed", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: null,
+      required: true,
+      ignoreRerun: true,
+    })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<Selectbox {...props} />)
+
+    await pickOptionIn(screen.getByTestId("stSelectbox"), "b")
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{Escape}")
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.objectContaining({ fromUser: true })
+    )
+  })
+
+  it("keeps the query param binding clearable but never writes null from the UI", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      queryParamKey: "required_select",
+      default: null,
+      required: true,
+    })
+    const registerSpy = vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<Selectbox {...props} />)
+
+    expect(registerSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "required_select",
+      "string_value",
+      null,
+      true,
+      undefined
+    )
+
+    await pickOptionIn(screen.getByTestId("stSelectbox"), "b")
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{Escape}")
+
+    expect(setStringValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      null,
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      "b",
+      expect.objectContaining({ fromUser: true })
     )
   })
 })
