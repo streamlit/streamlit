@@ -94,10 +94,6 @@ class ElementState(NamedTuple):
     # The command that emitted it, for checks that only apply to some, such as
     # reading ISO text for a date-time input.
     command: str = ""
-    # The most items a request may send for a range, `value_schema.maxItems`.
-    # A longer list is refused. A multiselect's `max_selections` is the
-    # widget's own validator's decision.
-    max_items: int | None = None
     # The JSON type its `value_schema` names, so a number is not accepted as
     # text where the wire form happens to be a string, as for `st.feedback`.
     schema_type: str | None = None
@@ -405,7 +401,6 @@ class _SnapshotBuilder:
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
             command=command,
-            max_items=_max_items(description),
             schema_type=(description.get("value_schema") or {}).get("type"),
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
@@ -465,14 +460,6 @@ def _attach_value(
         value_schema is not None and value is not None and value is not False
     ):
         result["value"] = value
-
-
-def _max_items(description: dict[str, Any]) -> int | None:
-    """The longest list a later request may send for a range, its ``maxItems``."""
-    limit = (description.get("value_schema") or {}).get("maxItems")
-    if isinstance(limit, bool) or not isinstance(limit, int):
-        return None
-    return limit
 
 
 def _public_key(element_id: str) -> str:

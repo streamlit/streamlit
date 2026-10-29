@@ -28,10 +28,13 @@ and the whole request is refused if any part of it is not legal. This covers:
   in snapshot order, as the ``WidgetStates`` a browser would send. Each encoded
   state then passes the check a browser value passes
   (``widget_checks.check_client_value``): the widget's wire field, its
-  deserializer, ``disabled``, and its own validator, which decides, for
-  example, whether a value is one of its options. Only a value whose wire form
-  equals the stored one skips the validator. Unlike a browser session, a
-  request is also refused for a label several options share.
+  deserializer, ``disabled``, and its own validator, which decides whether a
+  value is one of its options, within its bounds and ``max_chars``, in a
+  layout its frontend sends, and a range of the right length in order. Only a
+  value whose wire form equals the stored one skips the validator, so a value
+  the widget would convert, such as ``2.5`` for an integer input holding
+  ``2``, is refused rather than corrected. Unlike a browser session, a request
+  is also refused for a label several options share.
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
@@ -42,13 +45,9 @@ What a request may address, and the JSON type of each value, come from the
 last snapshot's ``ElementState``, because the snapshot is the document the
 client wrote against. The widget registry supplies the codec, each widget's
 wire type, serializer, and deserializer, and the widget's own checks, which
-decide which values it accepts.
-
-Constraints a widget owns are left to the widget, which resets, truncates, or
-trims the value for browsers and agents alike: bounds, fractions sent to an
-`st.number_input` or `st.slider` that holds whole numbers, and a text or chat
-input's `max_chars`. #16203 tracks the constraints still enforced only in the
-browser.
+decide which values it accepts. A refusal names the constraint, such as the
+options, the bounds, or ``max_chars``. #16203 tracks the constraints still
+enforced only in the browser.
 """
 
 from __future__ import annotations
@@ -253,6 +252,58 @@ def _duplicate_items(violation: Violation, sent: _Sent) -> AgentRequestError:
     )
 
 
+def _bound_text(bound: Any) -> str:
+    """A bound as a request would send it: ISO text for a date or time."""
+    if isinstance(bound, (dt.date, dt.time)):
+        return bound.isoformat()
+    return str(bound)
+
+
+def _out_of_range(violation: Violation, sent: _Sent) -> AgentRequestError:
+    low = violation.detail.get("min_value")
+    high = violation.detail.get("max_value")
+    if low is not None and high is not None:
+        accepted = f"from {_bound_text(low)} to {_bound_text(high)}"
+    elif low is not None:
+        accepted = f"of at least {_bound_text(low)}"
+    else:
+        accepted = f"of at most {_bound_text(high)}"
+    return AgentRequestError(
+        "invalid_value", f"{sent.key!r} takes values {accepted}, inclusive."
+    )
+
+
+def _bad_shape(violation: Violation, sent: _Sent) -> AgentRequestError:
+    if violation.detail.get("order"):
+        return AgentRequestError(
+            "invalid_value",
+            f"{sent.key!r} takes the lower end of its range first.",
+        )
+    counts = list(violation.detail.get("item_counts", ()))
+    if len(counts) > 1 and counts[0] == 0:
+        accepted = f"at most {counts[-1]}"
+    else:
+        accepted = " or ".join(str(count) for count in counts)
+    noun = "item" if counts[-1:] == [1] else "items"
+    return AgentRequestError("invalid_value", f"{sent.key!r} takes {accepted} {noun}.")
+
+
+def _malformed(violation: Violation, sent: _Sent) -> AgentRequestError:
+    expected = violation.detail.get("expected")
+    if expected is None:  # pragma: no cover - every helper names the layout
+        return _not_accepted(sent.key)
+    return AgentRequestError("invalid_value", f"{sent.key!r} takes {expected}.")
+
+
+def _too_long(violation: Violation, sent: _Sent) -> AgentRequestError:
+    return AgentRequestError(
+        "invalid_value",
+        f"{sent.key!r} takes at most {violation.detail.get('max_chars')} "
+        "characters, as its `max_chars` says. A character outside the Basic "
+        "Multilingual Plane, such as most emoji, counts as two.",
+    )
+
+
 # How each violation the shared check reports is refused. Only the option
 # messages quote what was sent: options are not secrets, and the client holds
 # the value. The others name the constraint, never the sent value, which may be
@@ -267,10 +318,10 @@ _VIOLATION_ERRORS: Final[
     "too_many_items": _too_many_items,
     "duplicate_items": _duplicate_items,
     "ambiguous_option": _ambiguous_option,
-    "out_of_range": _refused_value,
-    "bad_shape": _refused_value,
-    "malformed": _refused_value,
-    "too_long": _refused_value,
+    "out_of_range": _out_of_range,
+    "bad_shape": _bad_shape,
+    "malformed": _malformed,
+    "too_long": _too_long,
 }
 
 
@@ -710,19 +761,11 @@ def _check_json_type(key: str, state: ElementState, value: Any) -> Any:
             )
         value = value[0]
 
-    if isinstance(value, list):
-        if any(item is None for item in value):
-            raise AgentRequestError(
-                "invalid_value",
-                f"{key!r} cannot hold null inside its list. Leave the item out "
-                "instead.",
-            )
-        if state.max_items is not None and len(value) > state.max_items:
-            raise AgentRequestError(
-                "invalid_value",
-                f"{key!r} takes at most {state.max_items} items, as its "
-                "`value_schema` (`maxItems`) says.",
-            )
+    if isinstance(value, list) and any(item is None for item in value):
+        raise AgentRequestError(
+            "invalid_value",
+            f"{key!r} cannot hold null inside its list. Leave the item out instead.",
+        )
 
     if schema_type in {"integer", "number", "string"} and isinstance(value, bool):
         what = "text" if schema_type == "string" else "a number"

@@ -420,7 +420,7 @@ class WidgetWritesTest(SnapshotCase):
                 "fraction_to_a_whole_number_is_refused",
                 "whole",
                 2.5,
-                _Refused("not one it accepts"),
+                _Refused("'whole' takes a whole number."),
             ),
             ("number_to_a_datetime_input", "when", 5, _Refused("must be a string")),
             (
@@ -521,6 +521,91 @@ class WidgetWritesTest(SnapshotCase):
         """Options are matched as text, limits are enforced, and new text is allowed."""
         render_value_widgets()
         _render_option_widgets()
+        self._check({key: sent}, expected)
+
+    @parameterized.expand(
+        [
+            (
+                "number_above_max",
+                "bounded",
+                11,
+                _Refused("'bounded' takes values from 0 to 10, inclusive."),
+            ),
+            ("number_at_max", "bounded", 10, 10),
+            (
+                "float_below_min",
+                "ratio",
+                -0.5,
+                _Refused("'ratio' takes values from 0.0 to 1.0, inclusive."),
+            ),
+            (
+                "slider_above_max",
+                "amount",
+                101,
+                _Refused("'amount' takes values from 0 to 100, inclusive."),
+            ),
+            (
+                "reversed_slider_range",
+                "range",
+                [80, 20],
+                _Refused("'range' takes the lower end of its range first."),
+            ),
+            ("one_end_of_a_slider_range", "range", [20], _Refused("takes 2 items.")),
+            (
+                "reversed_select_slider_range",
+                "span",
+                ["c", "a"],
+                _Refused("'span' takes the lower end of its range first."),
+            ),
+            (
+                "date_past_its_default_bounds",
+                "day",
+                "2040-01-01",
+                _Refused("'day' takes values from 2016-01-02 to 2036-01-02"),
+            ),
+            (
+                "date_in_the_legacy_layout",
+                "day",
+                "2026/01/05",
+                _Refused("'day' takes a date as YYYY-MM-DD."),
+            ),
+            (
+                "reversed_date_range",
+                "days",
+                ["2026-01-09", "2026-01-05"],
+                _Refused("'days' takes the lower end of its range first."),
+            ),
+            (
+                "malformed_color",
+                "color",
+                "red",
+                _Refused("'color' takes a hex color as #rgb or #rrggbb."),
+            ),
+            (
+                "page_past_the_last",
+                "page",
+                11,
+                _Refused("'page' takes values from 1 to 10, inclusive."),
+            ),
+            (
+                "text_past_max_chars",
+                "short",
+                "abcd",
+                _Refused("'short' takes at most 3 characters"),
+            ),
+            # An emoji is two UTF-16 code units, as the browser counts it.
+            ("emoji_past_max_chars", "short", "ab😀", _Refused("at most 3 characters")),
+            ("emoji_at_max_chars", "short", "a😀", "a😀"),
+        ]
+    )
+    def test_bounds_shapes_and_lengths(
+        self, _name: str, key: str, sent: Any, expected: Any
+    ) -> None:
+        """A value the widget would reset, sort, or cut is refused, naming the bound."""
+        render_value_widgets()
+        st.number_input("Bounded", 0, 10, 5, key="bounded")
+        st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
+        st.text_input("Short", max_chars=3, key="short")
         self._check({key: sent}, expected)
 
     def test_a_value_the_widget_cannot_read_is_refused(self) -> None:
@@ -777,7 +862,7 @@ class WidgetWritesTest(SnapshotCase):
                 "integer_past_int64_is_refused",
                 "whole",
                 2**63,
-                _Refused("not one it accepts"),
+                _Refused("from -9007199254740991 to 9007199254740991, inclusive"),
             ),
             (
                 "integer_past_int64_on_pagination",
@@ -823,7 +908,7 @@ class WidgetWritesTest(SnapshotCase):
             (
                 "chat_past_max_chars",
                 {"key": "prompt", "value": "x" * 9},
-                _Refused("not one it accepts"),
+                _Refused("'prompt' takes at most 8 characters"),
             ),
             ("chat_at_max_chars", {"key": "prompt", "value": "x" * 8}, "x" * 8),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),

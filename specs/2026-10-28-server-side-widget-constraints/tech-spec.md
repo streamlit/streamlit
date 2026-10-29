@@ -822,7 +822,11 @@ array both mean empty. So a `null` sent to an empty widget still matches, even f
 The snapshot-based addressing checks stay first, so the existing error codes win where
 they apply. Each item deletes the agent's own copy of its constraint, as listed in the
 [product spec](product-spec.md#agent-interaction-api). Item 2 deletes
-`_validate_options` and the `max_selections` half of `ElementState.max_items`.
+`_validate_options` and the `max_selections` half of `ElementState.max_items`, and item 4
+deletes the rest of it, the length of a range. A value a widget used to reset, sort, or
+cut is refused instead, and the error names the constraint: the `min_value` and
+`max_value`, the item count or order of a range, the layout, such as `YYYY-MM-DD` or a
+whole number, or `max_chars`.
 `ElementState.options` stays, but only as an encoding fact: for a widget with a closed
 list, a JSON number is sent as its text, such as `st.feedback`'s index, and the
 validator decides whether it names an option, while free text, including a widget with

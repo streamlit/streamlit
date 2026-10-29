@@ -336,10 +336,10 @@ class SnapshotBuilderTest(SnapshotCase):
 
         snapshot = self._build()
         days = _state(snapshot, "date_input", "days")
-        assert days.max_items == 2
+        # Only the JSON type is recorded: a range's item count and a
+        # multiselect's `max_selections` are the widgets' own validators' to check.
         assert days.schema_type == "array"
-        # The multiselect's own validator enforces `max_selections`.
-        assert _state(snapshot, "multiselect", "limited").max_items is None
+        assert not hasattr(days, "max_items")
         assert _state(snapshot, "pills", "mood").clearable is True
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False
