@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Never, overload
+from typing import TYPE_CHECKING, Any, Final, Never, overload
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
@@ -39,7 +39,12 @@ from streamlit.type_util import is_bytes_like, to_bytes
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state.common import WidgetCallback
+    from streamlit.runtime.state.common import ValueFieldName, WidgetCallback
+
+# The wire fields a component's frontend may send its value in.
+_COMPONENT_VALUE_FIELDS: Final[frozenset[ValueFieldName]] = frozenset(
+    {"json_value", "bytes_value", "arrow_value"}
+)
 
 
 class MarshallComponentException(StreamlitAPIException):
@@ -208,6 +213,9 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
                 ctx=get_script_run_ctx(),
                 on_change_handler=on_change,
                 value_type="json_value",
+                # The frontend sends JSON, bytes, or an Arrow table, chosen per
+                # message by the type of the component's value.
+                accepted_value_fields=_COMPONENT_VALUE_FIELDS,
             )
             widget_value = component_state.value
 
