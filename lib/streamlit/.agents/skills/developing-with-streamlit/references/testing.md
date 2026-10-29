@@ -27,7 +27,7 @@ If the app's config sets any of these, add the matching override to the same com
 - `server.allowedHosts`: `--server.allowedHosts=127.0.0.1`
 - `server.fileWatcherType = "none"`: `--server.fileWatcherType=auto`
 
-Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. On Windows, use `curl.exe` with double-quoted, escaped JSON, or send the requests from a short Python script. If the port is taken, Streamlit exits; pick another port and use it below. Keep the server running while you work: a script edit applies on the session's next request, with no restart. Stop it when you're done.
+Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. On Windows, use `curl.exe` with double-quoted, escaped JSON, or send the requests from a short Python script. If the port is taken, Streamlit exits; pick another port and use it below. Keep the server running while you work; a script edit needs no restart. After editing the script, send only `session_id` first. Requests are checked against the last snapshot, so new options and changed keys show up only after that rerun. Stop the server when you're done.
 
 **Watch the server's console output.** Keep it where you can read it (the background process's output, or a log file outside the project) and check it after every request, not only on errors. Streamlit logs warnings and tracebacks there that the snapshot does not show, such as deprecations and ignored parameters. Treat a new warning or traceback as something to fix or report.
 

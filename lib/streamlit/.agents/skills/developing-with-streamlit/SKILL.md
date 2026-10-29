@@ -241,7 +241,7 @@ The agent API drives the app over HTTP without a browser. It returns the finishe
    ```bash
    curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
    ```
-3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. A script edit applies on the session's next request, without a restart.
+3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. Edits need no restart, but after each one send only `session_id` first: requests are checked against the last snapshot, so new options and changed keys show up only after that rerun.
 4. **Check the console output** after each request. Streamlit logs warnings and tracebacks there that the snapshot doesn't show, such as deprecations and ignored parameters. Fix or report anything new.
 5. **Stop** the instance when you're done.
 
