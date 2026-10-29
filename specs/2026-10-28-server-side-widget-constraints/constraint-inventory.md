@@ -42,7 +42,7 @@ browser enforces, what the server does with a client value that violates it as o
 | `text_input` | `validate` regex, and the defaults of `type="email"`/`"url"` | `RegExp(p, "us").test`; blocks the commit and the form submit | pass | out |
 | `text_input`, `text_area` | `required` | Blocks an empty or whitespace-only commit and the form submit | pass | 5, 7 |
 | `chat_input` | `max_chars` | Refuses past the limit | deser: truncated | 4 |
-| `chat_input` | `accept_file`, `file_type`, `max_upload_size` | Filters files | Files sent when not accepted are ignored. In single mode, N files are all returned. A type violation raises *(code)*. Size is not checked. | 11 |
+| `chat_input` | `accept_file`, `file_type`, `max_upload_size` | Filters files | Files sent when not accepted are ignored. In single mode, N files are all returned. A type violation raises *(code)*. Size is not checked. | 1 (the raise), 11 |
 | `chat_input` | `submit_mode` | Blocks new submits while a run is going | pass | out |
 
 ## Numbers, dates, colors
@@ -67,7 +67,7 @@ browser enforces, what the server does with a client value that violates it as o
 | Widget | Constraint | Browser | Server today | Item |
 | --- | --- | --- | --- | --- |
 | `selectbox`, `radio` | `options` | Closed list | late reset. With int options that changed in the same run, the string `'3'` was returned instead of `3`. | 2 |
-| `selectbox`, `multiselect` | `accept_new_options` | Any non-empty text | Any string, by design | — |
+| `selectbox`, `multiselect` | `accept_new_options` | Any non-empty text | Any string, by design | 2: non-empty text stays legal |
 | `multiselect` | `options` | Closed list | late reset: filtered after the callback | 2 |
 | `multiselect` | `max_selections` | Refuses more | raises after the callback, with a message blaming `default` | 2 |
 | `multiselect`, multi `pills` | No duplicates | Impossible in the UI | pass | 2 |
@@ -121,7 +121,7 @@ These rows were checked by reading the code. The upload route is
 
 | Constraint | Browser | Server today | Item |
 | --- | --- | --- | --- |
-| `type` | MIME type or extension, from the browser's `file.type` | The extension check raises in the app. It is skipped entirely when any entry contains `/`, which includes the `image`, `audio`, `video`, and `text` shortcuts. | 11 |
+| `type` | MIME type or extension, from the browser's `file.type` | The extension check raises in the app. It is skipped entirely when any entry contains `/`, which includes the `image`, `audio`, `video`, and `text` shortcuts. | 1 (the raise), 11 |
 | `server.maxUploadSize` | Checked | done: 413 at three layers | — |
 | Per-widget `max_upload_size` | Checked; MB is ×1024 on Windows and ×1000 elsewhere | pass | 11 |
 | `accept_multiple_files=False` | Keeps one file | done: the first ID is kept | — |
