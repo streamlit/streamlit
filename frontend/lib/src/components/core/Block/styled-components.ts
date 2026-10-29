@@ -498,9 +498,14 @@ export const StyledFlexContainerBlock =
               },
               // A horizontal container with a chart stacks the same way.
               // Its children print full width as block boxes, because a
-              // content-height flex column collapses in Chrome print.
+              // content-height flex column collapses in Chrome print. A
+              // fixed height that fit the row would cut off the stacked
+              // children, so the container grows to fit them instead of
+              // scrolling.
               [PRINT_STACK_HORIZONTAL_CONTAINER]: {
                 display: "block",
+                height: "auto",
+                overflow: "visible",
                 "> *": {
                   width: "100%",
                   maxWidth: "100%",
@@ -641,6 +646,15 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
         hasDefiniteHeight !== true && {
           display: "block",
         }),
+      // A horizontal container with a chart stacks its children in print
+      // and outgrows its fixed height, so its wrapper follows its height.
+      [`&:has(> .stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`]:
+        {
+          display: "block",
+          flex: "0 0 auto",
+          height: "auto",
+          maxHeight: "none",
+        },
     },
   })
 )

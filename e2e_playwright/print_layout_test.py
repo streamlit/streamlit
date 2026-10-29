@@ -257,7 +257,9 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     wait_until(app, plotly_row_stacks)
 
     # A horizontal container with a chart stacks like a column row, and the
-    # chart spans the container. One without a chart stays side by side.
+    # chart spans the container. Its fixed height fits the row but not the
+    # stacked children, so it grows to fit them. One without a chart stays
+    # side by side.
     horizontal_chart = get_element_by_key(app, "horizontal_chart")
     horizontal_parts = [
         horizontal_chart.get_by_test_id("stVegaLiteChart"),
@@ -278,6 +280,10 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         assert after_box is not None
         assert chart_box["width"] > container_box["width"] * 0.9
         assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
+        assert (
+            beside_box["y"] + beside_box["height"]
+            <= container_box["y"] + container_box["height"] + 1
+        )
         assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
     wait_until(app, horizontal_chart_stacks)
