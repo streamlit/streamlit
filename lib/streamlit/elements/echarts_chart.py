@@ -30,7 +30,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1340,15 +1340,18 @@ class EChartsMixin:
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
-        # A callback reaches the server, so it is the same mode as "rerun".
         # A display-only chart has an element ID only when the author set a key.
         # An active selection is reported, not settable through this API.
         agent_props = agent_spec.element(
             "echarts_chart",
             key=echarts_chart_proto.id or None,
             support="action_unsupported" if is_selection_activated else None,
-            on_select="ignore" if on_select == "ignore" else "rerun",
+            # Reported only with selections on; the documented default,
+            # "ignore", is left out. A callback reaches the server too, so
+            # it is "rerun".
+            on_select="rerun" if is_selection_activated else None,
             alt=echarts_chart_proto.alt or None,
+            data_builder=lambda: agent_data.raw_spec(echarts_chart_proto.spec),
         )
 
         if not is_selection_activated:

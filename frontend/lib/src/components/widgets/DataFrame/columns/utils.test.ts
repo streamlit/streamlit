@@ -234,6 +234,19 @@ describe("toSafeArray", () => {
     ],
     // Plain objects are serialized into a single stringified element
     [{ foo: "bar" }, ["[object Object]"]],
+    // Dict items (e.g. a list of structs) are serialized to JSON
+    [
+      [{ a: 1 }, { b: BigInt(2) }, null],
+      ['{"a":1}', '{"b":2}', ""],
+    ],
+    // Null struct fields of other items are dropped
+    [
+      [
+        { a: 1, b: null },
+        { a: null, b: 2 },
+      ],
+      ['{"a":1}', '{"b":2}'],
+    ],
   ])("converts %s to a valid array: %s", (input, expected) => {
     expect(toSafeArray(input)).toEqual(expected)
   })

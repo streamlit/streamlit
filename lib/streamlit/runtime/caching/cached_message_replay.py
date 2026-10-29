@@ -352,11 +352,20 @@ def replay_cached_messages(
                             data.media, data.mimetype, data.media_id
                         )
                 dg = returned_dgs[msg.id_of_dg_called_on]
+                agent_props = _agent_props_for_this_session(msg.agent_props)
+                if agent_props is not None:
+                    from streamlit.elements.lib import agent_data
+
+                    agent_data.serve_replayed_arrow(
+                        msg.message,
+                        agent_props,
+                        coordinates=dg._get_write_delta_path_str(),
+                    )
                 maybe_dg = dg._enqueue(
                     msg.delta_type,
                     msg.message,
                     layout_config=msg.layout_config,
-                    agent_props=_agent_props_for_this_session(msg.agent_props),
+                    agent_props=agent_props,
                 )
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg

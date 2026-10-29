@@ -187,6 +187,23 @@ class TestReservedPaths:
 
         assert response.status_code == 404
 
+    @pytest.mark.parametrize(
+        "path",
+        ["/page2/_stcore/agent/openapi.json", "/page2/_stcore/agent/interact"],
+    )
+    def test_agent_route_under_a_page_path_returns_404(
+        self, static_app: TestClient, path: str
+    ) -> None:
+        """An agent route appended to a page's URL is not the app's HTML.
+
+        The app's HTML names the description's path for readers without
+        JavaScript, so a 200 here would read as having found it.
+        """
+        response = static_app.get(path)
+
+        assert response.status_code == 404
+        assert "text/html" not in response.headers.get("content-type", "")
+
 
 class TestWithBaseUrl:
     """Tests for static files with base URL."""
