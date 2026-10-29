@@ -486,3 +486,25 @@ with st.container(key="c_echarts_alt_overrides_description"):
         height=_HEIGHT,
         alt="Streamlit alt overrides description",
     )
+
+# A funnel with outside labels. Guards the stage separators (white by default
+# in ECharts) and the themed outside label color.
+with st.container(key="c_funnel"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "funnel",
+                    "data": [
+                        {"name": "Leads", "value": 100},
+                        {"name": "Qualified", "value": 70},
+                        {"name": "Proposal", "value": 45},
+                        {"name": "Won", "value": 30},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="funnel",
+        height=_HEIGHT,
+    )

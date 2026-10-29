@@ -18,8 +18,10 @@ import { transparentize } from "color2k"
 import { isPlainObject } from "lodash-es"
 
 import {
+  getDecreasingRed,
   getGray30,
   getGray70,
+  getIncreasingGreen,
   hasLightBackgroundColor,
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -223,6 +225,27 @@ function buildChartTitleDefaults(theme: EmotionTheme): {
 }
 
 /**
+ * Label style for text drawn on palette fills of varying lightness. Dark text
+ * with a light halo stays readable on every palette color, whereas any single
+ * fixed color disappears on part of the palette.
+ *
+ * Both colors are primitives that are the same in light and dark mode, so
+ * ``withInsideFunnelLabelStyle`` can write them into the option, which
+ * EChartsChart doesn't rebuild when only the theme colors change.
+ */
+function buildOnFillLabelStyle(theme: EmotionTheme): {
+  color: string
+  textBorderColor: string
+  textBorderWidth: number
+} {
+  return {
+    color: theme.colors.gray100,
+    textBorderColor: theme.colors.white,
+    textBorderWidth: 2,
+  }
+}
+
+/**
  * Vertical offset for a legend lifted under a top title.
  *
  * Legend ``top`` is measured from the container, not the title box, so this
@@ -264,6 +287,16 @@ export function buildStreamlitEChartsTheme(
     fontFamily: genericFonts.bodyFont,
     fontSize: bodyFontSize,
   }
+  // ECharts outlines a selected item in a fixed dark gray, which barely shows
+  // on a dark background. The body text color looks the same in light mode
+  // and stays visible in dark mode.
+  const selectStyle = {
+    select: {
+      itemStyle: {
+        borderColor: colors.bodyText,
+      },
+    },
+  }
 
   return {
     // Series palette (shared with Plotly/Vega/Altair, honors config overrides).
@@ -284,6 +317,20 @@ export function buildStreamlitEChartsTheme(
         fontFamily: genericFonts.bodyFont,
         fontSize: bodyFontSize,
       },
+      // ECharts dims a toggled-off entry to a fixed light gray, which looks
+      // almost like an active label on a dark background.
+      inactiveColor: colors.fadedText20,
+      inactiveBorderColor: colors.fadedText20,
+      lineStyle: {
+        inactiveColor: colors.fadedText20,
+      },
+      // A scrolling legend's page arrows are a fixed blue, and the disabled
+      // arrow is near-white, which reads as the active one in dark mode.
+      pageIconColor: labelColor,
+      pageIconInactiveColor: colors.fadedText20,
+      pageTextStyle: {
+        color: labelColor,
+      },
     },
     tooltip: {
       backgroundColor: colors.bgColor,
@@ -302,6 +349,18 @@ export function buildStreamlitEChartsTheme(
       // that is itself the tooltip value is shortened like any other number.
       // On an ordinary time-series chart the date stays in the header.
       valueFormatter: formatEChartsTooltipValue,
+    },
+    // A `cross` tooltip, or an axis pointer with `label.show`, draws value
+    // chips on the axes in a fixed blue with white text. Style them like the
+    // tooltip, since both describe the hovered point.
+    axisPointer: {
+      label: {
+        color: colors.bodyText,
+        backgroundColor: colors.bgColor,
+        borderColor: colors.borderColor,
+        // ECharts takes a pixel number, and `borderWidth` is a px token.
+        borderWidth: Number.parseFloat(theme.sizes.borderWidth),
+      },
     },
     categoryAxis: axisDefaults,
     valueAxis: axisDefaults,
@@ -387,24 +446,45 @@ export function buildStreamlitEChartsTheme(
         opacity: hasLightBackgroundColor(theme) ? 0.2 : 0.35,
       },
       label: bodyTextStyle,
+      ...selectStyle,
     },
-    // Sunburst and funnel draw labels on top of palette-colored shapes whose
-    // lightness varies, so pin a dark label with a light halo instead of
-    // ECharts' fixed default (dark for sunburst, white for funnel) — either one
-    // disappears on part of the palette.
+    bar: selectStyle,
+    pictorialBar: selectStyle,
+    scatter: selectStyle,
+    heatmap: selectStyle,
+    graph: selectStyle,
+    // Line markers default to `emptyCircle`, whose hollow center ECharts fills
+    // with white. On a dark background that reads as a white dot, so use a
+    // filled marker there, as ECharts' own dark theme does.
+    ...(!hasLightBackgroundColor(theme) && { line: { symbol: "circle" } }),
+    // ECharts separates sunburst segments and funnel stages with a white line,
+    // which glares on a dark background. The app background reads as a gap,
+    // as it does for treemap tiles. Sunburst labels sit on the segments, so
+    // they use the on-fill halo instead of ECharts' fixed dark default.
     sunburst: {
-      label: {
-        color: colors.gray100,
-        textBorderColor: colors.white,
-        textBorderWidth: 2,
+      label: buildOnFillLabelStyle(theme),
+      itemStyle: {
+        borderColor: colors.bgColor,
       },
     },
+    // Funnel labels sit outside the stages by default, on the app background.
+    // Inside labels get the on-fill halo per series (see
+    // `withInsideFunnelLabelStyle`), since a theme can't see the position.
     funnel: {
-      label: {
-        color: colors.gray100,
-        textBorderColor: colors.white,
-        textBorderWidth: 2,
-        fontFamily: genericFonts.bodyFont,
+      label: bodyTextStyle,
+      itemStyle: {
+        borderColor: colors.bgColor,
+      },
+      ...selectStyle,
+    },
+    // Candlesticks use the same rising green and falling red as
+    // st.plotly_chart. ECharts' fixed default paints rising candles red.
+    candlestick: {
+      itemStyle: {
+        color: getIncreasingGreen(theme),
+        color0: getDecreasingRed(theme),
+        borderColor: getIncreasingGreen(theme),
+        borderColor0: getDecreasingRed(theme),
       },
     },
     // Boxplot: ECharts fills the box with opaque white, which glares against a
@@ -560,6 +640,20 @@ export function buildStreamlitEChartsTheme(
           textBackgroundColor: colors.secondaryBg,
           textPadding: convertRemToPx(theme.spacing.twoXS),
           textBorderRadius: convertRemToPx(theme.radii.sm),
+        },
+      },
+      // The data view panel is a light surface with blue buttons by default.
+      // ECharts merges a theme feature only into features the spec enables, so
+      // this styles the panel without adding a data view button.
+      feature: {
+        dataView: {
+          backgroundColor: colors.bgColor,
+          textColor: colors.bodyText,
+          textareaColor: colors.secondaryBg,
+          textareaBorderColor: colors.borderColor,
+          // Matches Streamlit's primary button.
+          buttonColor: colors.primary,
+          buttonTextColor: colors.white,
         },
       },
     },
@@ -1183,13 +1277,14 @@ function buildDefaultGrid(
 /**
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
- * ``grid`` layout, and stacking of bottom-anchored chart controls).
+ * ``grid`` layout, stacking of bottom-anchored chart controls, and the style
+ * of inside funnel labels).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, and control stacking are purely visual, so they
- * only run under ``theme="streamlit"``.
+ * choice. Title size, ``grid``, control stacking, and funnel labels are purely
+ * visual, so they only run under ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
@@ -1200,6 +1295,9 @@ function buildDefaultGrid(
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
+ * Inside funnel labels are styled in every series variant that declares
+ * ``type: "funnel"`` (see ``mapOptionSeries``). A per-tick or media override
+ * without a ``type`` is skipped, since it only merges into a series by index.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
@@ -1214,17 +1312,56 @@ export function applyStreamlitOptionDefaults(
   const applyVisualDefaults = themeStr === STREAMLIT_THEME
 
   const baseOption = option.baseOption
-  if (isPlainObject(baseOption)) {
-    return {
-      ...option,
-      baseOption: fillOptionDefaults(
-        baseOption as EChartsOptionObject,
-        applyVisualDefaults,
-        theme
-      ),
+  const filled = isPlainObject(baseOption)
+    ? {
+        ...option,
+        baseOption: fillOptionDefaults(
+          baseOption as EChartsOptionObject,
+          applyVisualDefaults,
+          theme
+        ),
+      }
+    : fillOptionDefaults(option, applyVisualDefaults, theme)
+  return applyVisualDefaults
+    ? withInsideFunnelLabelStyle(filled, theme)
+    : filled
+}
+
+/**
+ * Funnel label positions that draw the text on the stage itself. Mirrors
+ * ``isLabelInside`` in ECharts' ``funnelLayout``.
+ */
+const INSIDE_FUNNEL_LABEL_POSITIONS: ReadonlySet<unknown> = new Set([
+  "inner",
+  "inside",
+  "center",
+  "insideLeft",
+  "insideRight",
+])
+
+/**
+ * Give funnel series with inside labels the on-fill label style.
+ *
+ * The theme styles funnel labels for ECharts' default outside position, on
+ * the app background. A theme can't see a series' label position, so a series
+ * that moves its labels onto the palette-colored stages gets the on-fill halo
+ * here. Label keys the user set win. A data item that sets its own
+ * ``label.position`` keeps the series style.
+ */
+function withInsideFunnelLabelStyle(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): EChartsOptionObject {
+  return mapOptionSeries(option, series => {
+    if (series.type !== "funnel" || !isPlainObject(series.label)) {
+      return series
     }
-  }
-  return fillOptionDefaults(option, applyVisualDefaults, theme)
+    const label = series.label as Record<string, unknown>
+    if (!INSIDE_FUNNEL_LABEL_POSITIONS.has(label.position)) {
+      return series
+    }
+    return { ...series, label: { ...buildOnFillLabelStyle(theme), ...label } }
+  })
 }
 
 /** Fill the ``aria`` and ``grid`` defaults on a single (non-timeline) option. */
@@ -1271,51 +1408,30 @@ function fillOptionDefaults(
 }
 
 /**
- * Reset each series' cursor to the normal arrow for display-only charts.
+ * Apply ``mapSeries`` to every series entry an option can define.
  *
- * ECharts defaults series data items to a ``"pointer"`` cursor (and a hover
- * emphasis), which implies the chart is clickable. That's misleading when no
- * click/selection handler is wired, and inconsistent with other non-interactive
- * Streamlit charts. We only reset the cursor (the hover emphasis is left intact,
- * as it's useful alongside tooltips) and leave any series where the user set an
- * explicit ``cursor`` untouched. Legend/dataZoom/toolbox cursors are unaffected.
- *
- * This reaches data items only. ECharts applies ``series.cursor`` when it draws
- * symbols, bars, and candlesticks, but never to a line's polyline or an area's
- * polygon, which therefore keep zrender's ``"pointer"`` default — so hovering
- * the line itself (or anywhere in an area fill) still shows a click cursor.
- * There is no option-level fix: ``silent`` would remove it but also disables
- * hover emphasis and item tooltips.
+ * Besides the root ``series``, timeline specs nest series under
+ * ``baseOption`` and per-tick ``options[*]``, and responsive specs nest them
+ * under ``media[*].option`` at either level. Non-object entries are kept.
  */
-export function withDefaultSeriesCursor(
-  option: EChartsOptionObject
+function mapOptionSeries(
+  option: EChartsOptionObject,
+  mapSeries: (series: Record<string, unknown>) => Record<string, unknown>
 ): EChartsOptionObject {
-  const withCursor = (entry: unknown): unknown => {
-    if (!isPlainObject(entry)) {
-      return entry
-    }
-    const seriesObject = entry as Record<string, unknown>
-    if ("cursor" in seriesObject) {
-      return entry
-    }
-    return { ...seriesObject, cursor: "default" }
-  }
-  const applyCursorToSeries = (
-    target: EChartsOptionObject
-  ): EChartsOptionObject => {
+  const mapEntry = (entry: unknown): unknown =>
+    isPlainObject(entry) ? mapSeries(entry as Record<string, unknown>) : entry
+  const applyToSeries = (target: EChartsOptionObject): EChartsOptionObject => {
     const { series } = target
     if (Array.isArray(series)) {
-      return { ...target, series: series.map(withCursor) }
+      return { ...target, series: series.map(mapEntry) }
     }
     if (isPlainObject(series)) {
-      return { ...target, series: withCursor(series) }
+      return { ...target, series: mapEntry(series) }
     }
     return target
   }
-  const applyCursorToMedia = (
-    target: EChartsOptionObject
-  ): EChartsOptionObject => {
-    const withSeries = applyCursorToSeries(target)
+  const applyToMedia = (target: EChartsOptionObject): EChartsOptionObject => {
+    const withSeries = applyToSeries(target)
     const media = withSeries.media
     if (!Array.isArray(media)) {
       return withSeries
@@ -1332,37 +1448,57 @@ export function withDefaultSeriesCursor(
         }
         return {
           ...mediaEntry,
-          option: applyCursorToSeries(
-            mediaEntry.option as EChartsOptionObject
-          ),
+          option: applyToSeries(mediaEntry.option as EChartsOptionObject),
         }
       }),
     }
   }
 
-  // Timeline specs nest series under ``baseOption`` and per-tick ``options``.
-  // Responsive specs nest series under ``media[*].option``. Apply the cursor
-  // default in all of those places so display-only charts don't keep ECharts'
-  // pointer cursor.
-  let result = applyCursorToMedia(option)
+  let result = applyToMedia(option)
   const baseOption = result.baseOption
   if (isPlainObject(baseOption)) {
     result = {
       ...result,
-      baseOption: applyCursorToMedia(baseOption as EChartsOptionObject),
+      baseOption: applyToMedia(baseOption as EChartsOptionObject),
     }
   }
   if (Array.isArray(result.options)) {
     result = {
       ...result,
       options: (result.options as unknown[]).map((tick: unknown) =>
-        isPlainObject(tick)
-          ? applyCursorToMedia(tick as EChartsOptionObject)
-          : tick
+        isPlainObject(tick) ? applyToMedia(tick as EChartsOptionObject) : tick
       ),
     }
   }
   return result
+}
+
+/**
+ * Reset each series' cursor to the normal arrow for display-only charts.
+ *
+ * ECharts defaults series data items to a ``"pointer"`` cursor (and a hover
+ * emphasis), which implies the chart is clickable. That's misleading when no
+ * click/selection handler is wired, and inconsistent with other non-interactive
+ * Streamlit charts. We only reset the cursor (the hover emphasis is left intact,
+ * as it's useful alongside tooltips) and leave any series where the user set an
+ * explicit ``cursor`` untouched. Legend/dataZoom/toolbox cursors are unaffected.
+ *
+ * This reaches data items only. ECharts applies ``series.cursor`` when it draws
+ * symbols, bars, and candlesticks, but never to a line's polyline or an area's
+ * polygon, which therefore keep zrender's ``"pointer"`` default — so hovering
+ * the line itself (or anywhere in an area fill) still shows a click cursor.
+ * There is no option-level fix: ``silent`` would remove it but also disables
+ * hover emphasis and item tooltips.
+ *
+ * Series in timeline and responsive variants get the same default (see
+ * ``mapOptionSeries``).
+ */
+export function withDefaultSeriesCursor(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  return mapOptionSeries(option, series =>
+    "cursor" in series ? series : { ...series, cursor: "default" }
+  )
 }
 
 /**
