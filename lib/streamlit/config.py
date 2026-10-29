@@ -863,11 +863,10 @@ _create_option(
         cleared. Passing ``ttl`` explicitly to ``st.connection`` -- including
         ``ttl=None`` -- always uses that value and ignores this default.
 
-        This default applies to every connection type. When it expires, the
-        connection is closed and reopened, which can fail for connections that
-        cannot be recreated, such as caller's-rights connections after their
-        viewer token expires or a Snowflake session borrowed in Streamlit in
-        Snowflake. Pass an explicit ``ttl`` to ``st.connection`` for those.
+        This default applies to every connection type, including caller's-rights
+        connections and the Snowflake connection in Streamlit in Snowflake.
+        Expiry closes the connection, and the next ``st.connection`` call opens
+        a new one. Pass an explicit ``ttl`` to override it for one connection.
     """,
     default_val=None,
     type_=float,

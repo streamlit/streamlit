@@ -391,11 +391,9 @@ def connection_factory(  # type: ignore
         That option defaults to ``None``, which keeps the connection cached
         until it is cleared. Passing ``ttl`` explicitly -- including
         ``ttl=None`` -- always uses that value instead and ignores the
-        server default. The server default applies to every connection type
-        and closes the connection when it expires, which can fail for
-        connections that cannot be recreated, such as caller's-rights
-        connections or a Snowflake session borrowed in Streamlit in Snowflake.
-        Pass ``ttl`` explicitly for those.
+        server default. The server default applies to every connection type,
+        including caller's-rights connections. When a connection expires, it
+        is closed and the next call opens a new one.
     **kwargs : any
         Connection-specific keyword arguments that are passed to the
         connection's ``._connect()`` method. ``**kwargs`` are typically
