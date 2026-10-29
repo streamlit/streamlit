@@ -1357,3 +1357,206 @@ def test_a_bound_url_text_past_max_chars_is_truncated(
     assert not at.exception
     assert at.session_state[key] == expected
     assert at.query_params.get(key) == expected
+
+
+def _required_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    kw = {"required": True, "on_change": on_change}
+    st.text_input("Name", key="name", args=["name"], **kw)
+    st.text_area("Bio", key="bio", args=["bio"], **kw)
+    st.number_input("Age", value=None, key="age", args=["age"], **kw)
+    st.date_input("Day", value=None, key="day", args=["day"], **kw)
+    st.date_input("Trip", value=[], key="trip", args=["trip"], **kw)
+    st.time_input("Alarm", value=None, key="alarm", args=["alarm"], **kw)
+    st.datetime_input("When", value=None, key="when", args=["when"], **kw)
+    st.pills("Mood", ["calm", "busy"], key="mood", args=["mood"], **kw)
+    st.segmented_control("Mode", ["a", "b"], key="mode", args=["mode"], **kw)
+
+
+# A legal value for each widget in _required_app, which starts empty.
+_LEGAL_REQUIRED: dict[str, dict[str, Any]] = {
+    "name": {"string_value": "Ada"},
+    "bio": {"string_value": "Hi"},
+    "age": {"double_value": 30.0},
+    "day": {"string_array_value": _labels("2026-01-05")},
+    "trip": {"string_array_value": _labels("2026-01-05", "2026-01-09")},
+    "alarm": {"string_value": "08:15"},
+    "when": {"string_array_value": _labels("2026-01-05T10:15")},
+    "mood": {"string_array_value": _labels("calm")},
+    "mode": {"string_array_value": _labels("a")},
+}
+
+
+@pytest.mark.parametrize(
+    ("key", "field"),
+    [
+        ("name", {"string_value": ""}),
+        ("name", {"string_value": "   "}),
+        # The byte order mark, which the browser's trim() removes.
+        ("name", {"string_value": chr(0xFEFF)}),
+        ("bio", {"string_value": "\n\t"}),
+        # An unset value reads as the empty default.
+        ("name", {}),
+        ("age", {}),
+        ("day", {"string_array_value": _labels()}),
+        # A range is empty until both ends are set.
+        ("trip", {"string_array_value": _labels("2026-02-01")}),
+        ("trip", {"string_array_value": _labels()}),
+        ("alarm", {}),
+        ("when", {"string_array_value": _labels()}),
+        ("mood", {"string_array_value": _labels()}),
+        ("mood", {}),
+        ("mode", {"string_array_value": _labels()}),
+    ],
+)
+def test_a_change_that_empties_a_required_widget_is_refused(
+    key: str, field: dict[str, Any]
+) -> None:
+    """Emptying a filled required widget runs no callback and re-syncs it."""
+    at = AppTest.from_function(_required_app).run()
+    _send_legal_values(at, _LEGAL_REQUIRED)
+
+    _assert_refused_and_resynced(at, key, field, _LEGAL_REQUIRED)
+
+
+def test_an_untouched_required_widget_keeps_its_empty_default(
+    refusal_logs: list[str],
+) -> None:
+    """The browser's echo of the empty defaults is unchanged, so nothing is refused.
+
+    A new session restores the same empty map without a refusal, too.
+    """
+    with patch_config_options({"global.e2eTest": True}):
+        at = AppTest.from_function(_required_app).run()
+        restored = at._tree.get_widget_states().widgets
+        at._run(widget_state=forged_many(*restored))
+
+        fresh = AppTest.from_function(_required_app)
+        fresh._run(widget_state=forged_many(*restored))
+
+    for app in (at, fresh):
+        assert not app.exception
+        assert "calls" not in app.session_state
+        assert app.text_input(key="name").value == ""
+        assert app.number_input(key="age").value is None
+        assert app.date_input(key="trip").value == ()
+        assert app.button_group[0].value is None
+    assert refusal_logs == []
+
+
+def test_a_new_session_keeps_filled_required_values() -> None:
+    """A reconnect restores filled required widgets without a callback."""
+    first = AppTest.from_function(_required_app).run()
+    _send_legal_values(first, _LEGAL_REQUIRED)
+    restored = first._tree.get_widget_states().widgets
+
+    fresh = AppTest.from_function(_required_app)
+    fresh._run(widget_state=forged_many(*restored))
+
+    assert not fresh.exception
+    assert "calls" not in fresh.session_state
+    assert fresh.text_input(key="name").value == "Ada"
+    assert fresh.number_input(key="age").value == 30.0
+    assert fresh.session_state.mood == "calm"
+
+
+def _flipping_required_app() -> None:
+    import streamlit as st
+
+    def on_change() -> None:
+        st.session_state.calls = st.session_state.get("calls", 0) + 1
+
+    st.text_input(
+        "Name",
+        "Bob",
+        key="name",
+        required=st.session_state.get("strict", False),
+        on_change=on_change,
+    )
+
+
+def test_a_key_that_turns_required_on_keeps_its_empty_value(
+    refusal_logs: list[str],
+) -> None:
+    """Turning `required` on never makes the held value illegal.
+
+    `required` is outside a keyed widget's identity, so the empty text stays
+    until the user changes it, and only a later change to empty is refused.
+    """
+    at = AppTest.from_function(_flipping_required_app).run()
+    name_id = _widget_id(at, "name")
+    at._run(widget_state=forged(name_id, string_value=""))
+    assert at.session_state.calls == 1
+
+    with patch_config_options({"global.e2eTest": True}):
+        at.session_state["strict"] = True
+        at._run(widget_state=forged(name_id, string_value=""))
+        assert at.text_input(key="name").value == ""
+        assert refusal_logs == []
+
+        at._run(widget_state=forged(name_id, string_value="Ann"))
+        at._run(widget_state=forged(name_id, string_value=" "))
+
+    assert at.text_input(key="name").value == "Ann"
+    assert at.session_state.calls == 2
+    assert len(refusal_logs) == 1
+    assert "(empty_required)" in refusal_logs[0]
+
+
+def test_a_new_session_drops_programmatic_empty_text_for_a_required_widget() -> None:
+    """App code may empty a required widget, but a new session refuses the echo.
+
+    The new session checks the value against the widget's default when it
+    registers, and it has no programmatic value to explain the empty text.
+    """
+    script = (
+        "import streamlit as st\n"
+        "st.text_input('Name', 'Bob', key='name', required=True)\n"
+    )
+    first = AppTest.from_string(script).run()
+    first.session_state["name"] = ""
+    first.run()
+    assert first.text_input(key="name").value == ""
+    restored = first._tree.get_widget_states().widgets
+
+    fresh = AppTest.from_string(script)
+    fresh._run(widget_state=forged_many(*restored))
+
+    assert fresh.text_input(key="name").value == "Bob"
+    assert fresh.text_input(key="name").proto.set_value is True
+
+
+@pytest.mark.parametrize(
+    ("key", "url_value", "expected"),
+    [
+        ("name", "", "Bob"),
+        ("name", "   ", "Bob"),
+        # A range link with only its start is empty.
+        ("trip", "2026-02-01", (dt.date(2026, 1, 5), dt.date(2026, 1, 9))),
+        ("mood", "", "calm"),
+    ],
+)
+def test_a_bound_url_value_cannot_empty_a_required_widget(
+    key: str, url_value: str, expected: Any
+) -> None:
+    """A link that would empty a required widget is cleared, as a browser value is."""
+    at = AppTest.from_string(
+        "import datetime as dt\n"
+        "import streamlit as st\n"
+        "st.text_input('Name', 'Bob', key='name', required=True, "
+        "bind='query-params')\n"
+        "st.date_input('Trip', (dt.date(2026, 1, 5), dt.date(2026, 1, 9)), "
+        "key='trip', required=True, bind='query-params')\n"
+        "st.pills('Mood', ['calm', 'busy'], default='calm', key='mood', "
+        "required=True, bind='query-params')\n"
+    )
+    at.query_params[key] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state[key] == expected
+    assert at.query_params.get(key) is None

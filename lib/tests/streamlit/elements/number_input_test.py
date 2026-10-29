@@ -1061,3 +1061,32 @@ def test_serde_validate(
     """A finite number within the bounds, and a whole one for an integer input."""
     serde = NumberInputSerde(value=50, data_type=data_type, min_value=0, max_value=100)
     assert serde.validate(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("default", "required", "ui_value", "expected"),
+    [
+        # An unset value reads as the default, so it empties the input only
+        # without one.
+        (None, True, None, Violation("empty_required")),
+        (5, True, None, None),
+        (None, False, None, None),
+        # Zero is a number, not an empty value.
+        (None, True, 0, None),
+    ],
+)
+def test_serde_validate_refuses_emptying_a_required_input(
+    default: int | None,
+    required: bool,
+    ui_value: int | None,
+    expected: Violation | None,
+) -> None:
+    """A required number input cannot be emptied."""
+    serde = NumberInputSerde(
+        value=default,
+        data_type=NumberInput.INT,
+        min_value=0,
+        max_value=100,
+        required=required,
+    )
+    assert serde.validate(ui_value) == expected

@@ -110,6 +110,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     default_option_index: int | None
     format_func: Callable[[Any], str]
     session_state_fallback: T | None
+    required: bool
 
     def __init__(
         self,
@@ -120,6 +121,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
         session_state_fallback: T | None = None,
+        required: bool = False,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
@@ -127,6 +129,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.required = required
 
     @cached_property
     def _label_counts(self) -> Counter[str]:
@@ -137,10 +140,20 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     def validate(
         self, ui_value: Sequence[str] | None, **_kwargs: Any
     ) -> Violation | None:
-        """Refuse a label a client was not shown, or more than one."""
+        """Refuse a label a client was not shown, more than one, or none.
+
+        A required widget is never cleared.
+        """
         if ui_value is None:
+            # An unset value reads as the default, so it is empty only without one.
+            if self.default_option_index is None:
+                return widget_checks.filled(None, required=self.required)
             return None
-        return widget_checks.items_of(self._label_counts, ui_value, max_items=1)
+        # `[]` is a deselection, whatever the default.
+        violation = widget_checks.filled(ui_value, required=self.required)
+        return violation or widget_checks.items_of(
+            self._label_counts, ui_value, max_items=1
+        )
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -571,6 +584,12 @@ class ButtonGroupMixin:
             If ``required=True`` is used with ``selection_mode="multi"``, an
             exception is raised.
 
+            .. note::
+               Streamlit refuses a change that clears a required selection,
+               also from a modified client. A widget that starts without a
+               selection still returns ``None`` until the user picks an
+               option.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -998,6 +1017,12 @@ class ButtonGroupMixin:
             If ``required=True`` is used with ``selection_mode="multi"``, an
             exception is raised.
 
+            .. note::
+               Streamlit refuses a change that clears a required selection,
+               also from a modified client. A widget that starts without a
+               selection still returns ``None`` until the user picks an
+               option.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -1358,6 +1383,7 @@ class ButtonGroupMixin:
                 default_option_index=default_values[0] if default_values else None,
                 format_func=actual_format_func,
                 session_state_fallback=_ss_fallback_single,
+                required=required,
             )
             serializer = single_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", single_serde.deserialize)

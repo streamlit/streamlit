@@ -448,9 +448,9 @@ def test_datetime_input_interaction():
 
 
 def test_datetime_input_required_is_exposed_in_app_test() -> None:
-    """Test that AppTest exposes required and still allows an empty value.
+    """AppTest exposes required, and an empty value is refused once filled.
 
-    The required check runs in the browser, so AppTest can still set None.
+    AppTest sends values through the same check a browser value passes.
     """
 
     def script():
@@ -469,7 +469,7 @@ def test_datetime_input_required_is_exposed_in_app_test() -> None:
     assert widget.value == new_value
 
     at = widget.set_value(None).run()
-    assert at.datetime_input[0].value is None
+    assert at.datetime_input[0].value == new_value
 
 
 def test_datetime_input_min_max_validation():
@@ -901,6 +901,33 @@ class TestDateTimeInputSerdeISO:
                 string_array_value={"data": ui_value}
             ).string_array_value.data
         )
+        assert (None if violation is None else violation.kind) == expected
+
+    @pytest.mark.parametrize(
+        ("default", "ui_value", "expected"),
+        [
+            # An unset value and `[]` both read as the default.
+            (None, None, "empty_required"),
+            (None, [], "empty_required"),
+            (datetime(2025, 6, 15, 12, 0), [], None),
+            (datetime(2025, 6, 15, 12, 0), None, None),
+            (None, ["2025-06-15T12:00"], None),
+        ],
+    )
+    def test_validate_refuses_emptying_a_required_input(
+        self,
+        default: datetime | None,
+        ui_value: list[str] | None,
+        expected: str | None,
+    ) -> None:
+        """A required datetime input is empty only when it reads as no default."""
+        serde = DateTimeInputSerde(
+            value=default,
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+            required=True,
+        )
+        violation = serde.validate(ui_value)
         assert (None if violation is None else violation.kind) == expected
 
 

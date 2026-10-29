@@ -1153,3 +1153,36 @@ def test_text_serde_validate_counts_max_chars_like_the_browser(
     else:
         assert violation == Violation("too_long", {"max_chars": max_chars})
     assert serde.deserialize(sent) == ("default!" if sent is None else sent)
+
+
+@pytest.mark.parametrize("serde_class", [TextInputSerde, TextAreaSerde])
+@pytest.mark.parametrize(
+    ("default", "sent", "accepted"),
+    [
+        ("", "", False),
+        ("", "  \n", False),
+        ("", "Ada", True),
+        # An unset value reads as the default.
+        ("", None, False),
+        (None, None, False),
+        ("Ada", None, True),
+        # An empty default is still empty, although the author wrote it.
+        ("   ", "   ", False),
+        # The browser's trim() keeps U+0085, which Python's strip() removes.
+        ("", chr(0x85), True),
+    ],
+)
+def test_text_serde_validate_refuses_emptying_a_required_widget(
+    serde_class: type[TextInputSerde | TextAreaSerde],
+    default: str | None,
+    sent: str | None,
+    accepted: bool,
+) -> None:
+    """A required text widget refuses empty or whitespace-only text."""
+    required = serde_class(value=default, required=True)
+    optional = serde_class(value=default)
+
+    assert required.validate(sent) == (
+        None if accepted else Violation("empty_required")
+    )
+    assert optional.validate(sent) is None

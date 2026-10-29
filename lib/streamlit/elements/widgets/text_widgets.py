@@ -68,15 +68,26 @@ if TYPE_CHECKING:
 
 
 def _validate_text(
-    ui_value: str | None, *, value: str | None, max_chars: int | None
+    ui_value: str | None,
+    *,
+    value: str | None,
+    max_chars: int | None,
+    required: bool,
 ) -> Violation | None:
-    """Refuse text past ``max_chars``, counted in UTF-16 code units as a browser does.
+    """Refuse text that empties a required widget, or is past ``max_chars``.
 
-    The author's ``value`` is accepted as written, even past ``max_chars``: the
-    browser shows it and sends it back, for example when a form clears to it.
+    Text of only whitespace is empty, and ``max_chars`` counts UTF-16 code
+    units, both as the browser does. The author's ``value`` is accepted as
+    written, even past ``max_chars``: the browser shows it and sends it back,
+    for example when a form clears to it.
     """
-    if ui_value is None or ui_value == value:
-        return None
+    # An unset value reads as the default. Emptiness is checked before the
+    # author's value, because an empty default is still empty.
+    violation = widget_checks.filled(
+        value if ui_value is None else ui_value, required=required
+    )
+    if violation is not None or ui_value is None or ui_value == value:
+        return violation
     return widget_checks.text_length(ui_value, max_chars)
 
 
@@ -84,9 +95,15 @@ def _validate_text(
 class TextInputSerde:
     value: str | None
     max_chars: int | None = None
+    required: bool = False
 
     def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
-        return _validate_text(ui_value, value=self.value, max_chars=self.max_chars)
+        return _validate_text(
+            ui_value,
+            value=self.value,
+            max_chars=self.max_chars,
+            required=self.required,
+        )
 
     def deserialize(self, ui_value: str | None) -> str | None:
         # Never cuts text to max_chars: validate refuses longer text from a
@@ -102,9 +119,15 @@ class TextInputSerde:
 class TextAreaSerde:
     value: str | None
     max_chars: int | None = None
+    required: bool = False
 
     def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
-        return _validate_text(ui_value, value=self.value, max_chars=self.max_chars)
+        return _validate_text(
+            ui_value,
+            value=self.value,
+            max_chars=self.max_chars,
+            required=self.required,
+        )
 
     def deserialize(self, ui_value: str | None) -> str | None:
         # Never cuts text to max_chars, as TextInputSerde.deserialize explains.
@@ -532,9 +555,12 @@ class TextWidgetsMixin:
             skip validation.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -925,7 +951,7 @@ class TextWidgetsMixin:
         if live_debounce_ms is not None:
             text_input_proto.live_debounce_ms = live_debounce_ms
 
-        serde = TextInputSerde(value, max_chars)
+        serde = TextInputSerde(value, max_chars, required=required)
 
         widget_state = register_widget(
             text_input_proto.id,
@@ -1186,9 +1212,12 @@ class TextWidgetsMixin:
             its default value until the user provides input.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1382,7 +1411,7 @@ class TextWidgetsMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             text_area_proto.ignore_rerun = True
 
-        serde = TextAreaSerde(value, max_chars)
+        serde = TextAreaSerde(value, max_chars, required=required)
         widget_state = register_widget(
             text_area_proto.id,
             on_change_handler=on_change_callback,

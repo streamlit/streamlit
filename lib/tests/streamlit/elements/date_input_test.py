@@ -1146,6 +1146,50 @@ class TestDateInputSerdeISO:
             assert violation is not None
             assert violation.kind == expected
 
+    @pytest.mark.parametrize(
+        ("is_range", "default", "ui_value", "empty"),
+        [
+            (False, None, ["2024-06-15"], False),
+            # `[]` is no date, even with a default.
+            (False, (date(2024, 6, 1),), [], True),
+            # An unset value reads as the default.
+            (False, (date(2024, 6, 1),), None, False),
+            (False, None, None, True),
+            # A range is empty until both ends are set, as in the browser.
+            (True, None, ["2024-06-15", "2024-06-20"], False),
+            (True, None, ["2024-06-15"], True),
+            (True, None, [], True),
+            (True, (date(2024, 6, 1),), None, True),
+            (True, (date(2024, 6, 1), date(2024, 6, 5)), None, False),
+        ],
+    )
+    def test_validate_refuses_emptying_a_required_input(
+        self,
+        is_range: bool,
+        default: tuple[date, ...] | None,
+        ui_value: list[str] | None,
+        empty: bool,
+    ) -> None:
+        """A required date input needs a date, or a range with both ends."""
+        values = _DateInputValues(
+            value=default,
+            is_range=is_range,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        wire = (
+            None
+            if ui_value is None
+            else WidgetState(
+                string_array_value={"data": ui_value}
+            ).string_array_value.data
+        )
+
+        violation = DateInputSerde(values, required=True).validate(wire)
+
+        assert violation == (Violation("empty_required") if empty else None)
+        assert DateInputSerde(values).validate(wire) is None
+
     def test_validate_names_the_bounds(self) -> None:
         """An out-of-range date reports both bounds."""
         serde = DateInputSerde(

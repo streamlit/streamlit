@@ -177,6 +177,42 @@ class TestButtonGroupSerde:
             {"options": ("Apple", "Banana", "Cherry"), "positions": (0,)},
         )
 
+    @pytest.mark.parametrize(
+        ("default_option_index", "ui_value", "empty"),
+        [
+            # `[]` is a deselection, whatever the default.
+            (None, [], True),
+            (0, [], True),
+            # An unset value reads as the default.
+            (None, None, True),
+            (0, None, False),
+            (None, ["Banana"], False),
+        ],
+    )
+    def test_single_select_validate_refuses_clearing_a_required_widget(
+        self,
+        default_option_index: int | None,
+        ui_value: list[str] | None,
+        empty: bool,
+    ) -> None:
+        """A required single selection cannot be cleared."""
+        formatted_options = ["Apple", "Banana"]
+
+        def _serde(*, required: bool) -> _SingleSelectButtonGroupSerde[str]:
+            return _SingleSelectButtonGroupSerde[str](
+                ["apple", "banana"],
+                formatted_options=formatted_options,
+                formatted_option_to_option_index={"Apple": 0, "Banana": 1},
+                default_option_index=default_option_index,
+                required=required,
+            )
+
+        wire = None if ui_value is None else _wire(*ui_value)
+        assert _serde(required=True).validate(wire) == (
+            Violation("empty_required") if empty else None
+        )
+        assert _serde(required=False).validate(wire) is None
+
     def test_multi_select_serialize(self):
         """Test multi-select serialization returns list of formatted strings."""
         options = ["apple", "banana", "cherry"]

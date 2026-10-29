@@ -309,7 +309,7 @@ class NumberInputSerde:
     data_type: int
     min_value: Number
     max_value: Number
-    required: bool
+    required: bool = False
 
     def validate(
         self, ui_value: Number | None, *, previous: Any = None, value: Any = None
@@ -318,9 +318,7 @@ class NumberInputSerde:
             # An unset value reads as the default, as the browser commits the
             # default when the user empties a field that has one. It is empty
             # only without a default, and then a required widget refuses it.
-            if self.value is None and self.required:
-                return Violation("empty_required")
-            return None
+            return widget_checks.filled(self.value, required=self.required)
         # Refuse non-finite values for every type: NaN fails every comparison, and
         # check 1 lets an INT input receive a double such as 2.5.
         if not math.isfinite(ui_value):
@@ -721,18 +719,36 @@ passes check 3, so an empty default is never refused. An agent's `null` sent to 
 widget is a no-op, and its `null` sent to a filled one with an empty default is
 `empty_required`. The stricter form rule, that a submit needs every required field
 filled, belongs to item 7.
+- The widgets with `required` are `text_input`, `text_area`, `number_input`,
+  `date_input`, `time_input`, `datetime_input`, and single-select `st.pills` and
+  `st.segmented_control`. Each serde holds the flag, and `validate` checks emptiness
+  first with `filled`.
 - Emptiness follows the widget: `None`, `[]`, `()`, or text that is only whitespace. An
   unset value reads as the widget's default, because the browser commits the default
   when the user empties a field that has one, so it is empty only when the default is.
-  Two `date_input` cases differ: `[]` is empty even with a default, because
-  `DateInputSerde` reads it as `None` (`()` for a range), and a `required` range with
-  only a start date is empty, as in the browser's `isRequiredEmptyDateValue`.
+  `datetime_input` reads `[]` as its default too. Three cases differ:
+  - `date_input`: `[]` is empty even with a default, because `DateInputSerde` reads it
+    as `None` (`()` for a range), and a `required` range with only a start date is
+    empty, as in the browser's `isRequiredEmptyDateValue`.
+  - `st.pills` and `st.segmented_control`: `[]` is a deselection, whatever the default.
+  - Text: emptiness is checked before the exemption for the author's value, so a
+    required text input whose default is `""` still refuses a change to `""`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the
   browser. Python's `str.strip()` also strips `U+001C`–`U+001F` and `U+0085`, which the
   browser keeps, and keeps `U+FEFF`, which the browser strips.
 - `required` stays out of keyed identity, per the
   [required spec](../2026-08-18-required-widgets/product-spec.md). So a key whose
   `required` flips from false to true keeps its empty value until the user changes it.
+  `empty_required` is therefore a race kind: a rerun can turn `required` on just before
+  a user's change to empty arrives.
+- App code may still empty a required widget through session state, and the browser's
+  echo of that value is unchanged. A reconnect to a new session refuses it at
+  registration, as it refuses programmatic text past `max_chars`, so the widget falls
+  back to its default.
+- URL seeding runs the same `validate`, so a link cannot empty a required widget: an
+  empty parameter, or a range link with only its start, clears the parameter when the
+  default is not empty. A link equal to an empty default is cleared before the check,
+  as before.
 
 **Item 6: data editor.** `DataEditorSerde` gains an edit policy, captured at registration,
 and its `validate` checks the payload against it:

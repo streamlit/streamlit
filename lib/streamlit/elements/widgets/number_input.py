@@ -78,16 +78,21 @@ class NumberInputSerde:
     data_type: int
     min_value: Number
     max_value: Number
+    required: bool = False
 
     def validate(self, ui_value: Number | None, **_kwargs: Any) -> Violation | None:
         """Refuse a number the browser would not commit.
 
         The browser commits only finite numbers within the bounds it was sent,
         and only whole numbers for an integer input. The bounds include the
-        JavaScript safe-number limits that stand in for unset ones.
+        JavaScript safe-number limits that stand in for unset ones. A required
+        input is never emptied.
         """
         if ui_value is None:
-            return None
+            # An unset value reads as the default, as the browser commits the
+            # default when the user empties a field that has one. It is empty
+            # only without a default.
+            return widget_checks.filled(self.value, required=self.required)
         # NaN fails every comparison, and an integer input can receive a
         # double such as 2.5, because the int and double fields accept each
         # other.
@@ -533,9 +538,12 @@ class NumberInputMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -911,6 +919,7 @@ class NumberInputMixin:
             data_type,
             min_value,
             max_value,
+            required=required,
         )
         widget_state = register_widget(
             number_input_proto.id,

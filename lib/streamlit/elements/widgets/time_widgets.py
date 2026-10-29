@@ -489,18 +489,21 @@ class DateTimeInputSerde:
     value: datetime | None
     min: datetime
     max: datetime
+    required: bool = False
 
     def validate(
         self, ui_value: Sequence[str] | None, **_kwargs: Any
     ) -> Violation | None:
         """Refuse what the browser never sends.
 
-        The browser sends ``[]`` or one ``YYYY-MM-DDTHH:MM`` within the bounds.
+        The browser sends ``[]`` or one ``YYYY-MM-DDTHH:MM`` within the bounds,
+        and never empties a required input.
         """
-        if ui_value is None:
-            return None
+        if ui_value is None or not ui_value:
+            # Both read as the default, so they are empty only without one.
+            return widget_checks.filled(self.value, required=self.required)
         violation = widget_checks.item_count(ui_value, allowed=(0, 1))
-        if violation is not None or not ui_value:
+        if violation is not None:
             return violation
         parsed = widget_checks.iso_datetime_minutes(ui_value[0])
         if isinstance(parsed, widget_checks.Violation):
@@ -532,15 +535,20 @@ class DateTimeInputSerde:
 class TimeInputSerde:
     value: time | None
     step: int = 900
+    required: bool = False
 
     @property
     def _wire_fmt(self) -> str:
         return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
 
     def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
-        """Refuse a time that is not ``HH:MM`` or ``HH:MM:SS``, for any ``step``."""
+        """Refuse a time that is not ``HH:MM`` or ``HH:MM:SS``, for any ``step``.
+
+        A required input is never emptied.
+        """
         if ui_value is None:
-            return None
+            # An unset value reads as the default, so it is empty only without one.
+            return widget_checks.filled(self.value, required=self.required)
         parsed = widget_checks.iso_time(ui_value)
         return parsed if isinstance(parsed, widget_checks.Violation) else None
 
@@ -697,6 +705,7 @@ def _validate_datetime_value(
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
+    required: bool = False
 
     @staticmethod
     def _parse_date(value: str) -> date:
@@ -715,10 +724,17 @@ class DateInputSerde:
         """Refuse what the browser never sends.
 
         The browser sends ``YYYY-MM-DD`` dates within the bounds: none or one,
-        or for a range none, its start, or both ends in order.
+        or for a range none, its start, or both ends in order. A required input
+        gets a date, or a range with both ends.
         """
-        if ui_value is None:
-            return None
+        # An unset value reads as the default, and `[]` as no date even with a
+        # default. A range is empty until both ends are set, as in the browser.
+        selected = self.value.value if ui_value is None else ui_value
+        if self.value.is_range and selected is not None and len(selected) < 2:
+            selected = None
+        violation = widget_checks.filled(selected, required=self.required)
+        if violation is not None or ui_value is None:
+            return violation
         violation = widget_checks.item_count(
             ui_value, allowed=(0, 1, 2) if self.value.is_range else (0, 1)
         )
@@ -950,9 +966,12 @@ class TimeWidgetsMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1193,7 +1212,7 @@ class TimeWidgetsMixin:
                 max_value="23 hours",
             )
 
-        serde = TimeInputSerde(parsed_time, step=step)
+        serde = TimeInputSerde(parsed_time, step=step, required=required)
         if parsed_time is not None:
             time_input_proto.default = parsed_time.strftime(serde._wire_fmt)
         time_input_proto.form_id = current_form_id(self.dg)
@@ -1484,9 +1503,12 @@ class TimeWidgetsMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1743,6 +1765,7 @@ class TimeWidgetsMixin:
             value=default_value_for_proto,
             min=datetime_values.min,
             max=datetime_values.max,
+            required=required,
         )
         widget_state = register_widget(
             date_time_input_proto.id,
@@ -2061,9 +2084,12 @@ class TimeWidgetsMixin:
             an empty required range.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, also
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -2347,7 +2373,7 @@ class TimeWidgetsMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             date_input_proto.ignore_rerun = True
 
-        serde = DateInputSerde(parsed_values)
+        serde = DateInputSerde(parsed_values, required=required)
 
         widget_state = register_widget(
             date_input_proto.id,
