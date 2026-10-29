@@ -66,9 +66,9 @@ requests, and its constraint facts come from agent descriptions.
 The check sits between storing the incoming states and running callbacks:
 
 ```python
-# SessionState.on_script_will_rerun. On history navigation, fresh_widget_states
-# is what _omit_query_bound_widget_states leaves. Replayed triggers are overlaid
-# after callbacks, as today, and are not checked here.
+# SessionState.on_script_will_rerun. Validate fresh browser states, after
+# omitting URL-bound values for history navigation. Replayed triggers were
+# validated when captured and are overlaid after callbacks.
 self.set_widgets_from_proto(fresh_widget_states)
 changed, self._rejected_client_values = self._check_incoming_widget_states(
     fresh_widget_states
@@ -83,12 +83,14 @@ def _check_incoming_widget_states(
     """Return the IDs of accepted changes and of rejected values."""
     changed: set[str] = set()
     rejected: set[str] = set()
-    for state in states.widgets:
+    # set_widgets_from_proto keeps the last entry of a repeated ID: check that one.
+    latest = {state.id: state for state in states.widgets}
+    for state in latest.values():
         metadata = self._new_widget_state.widget_metadata.get(state.id)
         if metadata is None:
             # Never registered in this session: a value is checked when its
             # widget registers. A correct browser never resends a trigger.
-            if widget_checks.is_trigger(state):
+            if _has_active_trigger_value(state):
                 self._new_widget_state.drop(state.id)
                 rejected.add(state.id)
             continue
@@ -100,7 +102,7 @@ def _check_incoming_widget_states(
         )
         # A browser sends a shared format_func label as is; only the agent API refuses it.
         if result.violation is None or result.violation.kind == "ambiguous_option":
-            # The Value the run reads, so nothing is deserialized twice.
+            # Cache the deserialized value so the run does not deserialize it again.
             self._new_widget_state.cache_value(state, result.value)
             if result.changed:
                 changed.add(state.id)
@@ -117,10 +119,11 @@ def _check_incoming_widget_states(
     return frozenset(changed), frozenset(rejected)
 ```
 
-`check_client_value` is a function in a new `runtime/state/widget_checks.py`. It only
-reports: it stores nothing and acts on no violation, and its one side effect is the chat
-input deserializer's, described below. It applies these checks in order and returns the
-first violation, together with the deserialized value once step 2 has read it:
+`check_client_value` is a function in a new `runtime/state/widget_checks.py`. It reports
+a violation and never acts on it. Its only side effect comes from the chat input
+deserializer, which consumes upload records (see below). It applies these checks in order
+and returns the first violation, together with the deserialized value once step 2 has
+read it:
 
 1. **The wire field is one the widget accepts** (`wrong_type`). Item 1 derives each
    widget's accepted fields from what the frontend actually sends, audited per widget,
@@ -141,18 +144,22 @@ first violation, together with the deserialized value once step 2 has read it:
    `json_value`) and the shown run's deserializer run in one `try`, as
    `_widget_changed` deserializes today. Any exception counts, including the
    `StreamlitAPIException` that upload deserializers raise for a disallowed file name
-   (`enforce_filename_restriction`), so item 1 turns that raise into a drop. The result
+   (`enforce_filename_restriction`), so item 1 turns that raise into a drop. The browser
+   filters the same extensions, so only a forged upload loses today's error. The result
    is cached as the `Value`, so it is computed once. With check 1, this keeps a
    wrong-type or malformed value for a disabled widget from crashing the session, the
    first hole #16209 left.
 3. **Unchanged values pass.** The deserialized value is compared with `_old_state`.
    This is the comparison `_widget_changed` makes today, moved here, so no wire form is
-   stored, and `_call_callbacks` takes the changed IDs instead of comparing again. A
-   deserializer never replaces a value its validator refuses (see
-   [below](#where-constraints-live-in-each-widgets-serde)), so a violation cannot read as
-   unchanged. Only a conversion can map a forged value onto the stored one, such as
-   `2.9` onto `2` for an `INT` input, and that changes nothing. Most entries end here:
-   the browser resends its whole widget map on every rerun. A trigger is always a change.
+   stored, and `_call_callbacks` takes the changed IDs instead of comparing again. Its
+   Components v2 path keeps its own per-key diff and sees only the entries the boundary
+   kept, so its `disabled` check goes away too. A deserializer never replaces a value its
+   validator refuses (see [below](#where-constraints-live-in-each-widgets-serde)), so a
+   violation cannot read as unchanged. Only a conversion can map a forged value onto the
+   stored one, such as `2.9` onto `2` for an `INT` input, and that changes nothing. Most
+   entries end here: the browser resends its whole widget map on every rerun. An active
+   trigger always differs, because `_reset_triggers` cleared the stored one first, and an
+   inactive one, such as `trigger_value: false`, is unchanged.
    - The agent API compares wire values instead, so even such a value reaches the
      validator. See [Agent API integration](#agent-api-integration).
 4. **The widget is rendered** (`not_rendered`). See the
@@ -169,16 +176,21 @@ Step 2 runs the deserializer before the rendered and `disabled` checks, which is
 today's order: `_widget_changed` deserializes every incoming entry before
 `_call_callbacks` reads `disabled`. The one deserializer with a side effect is chat
 input's, which removes the upload and audio records it reads from
-`MemoryUploadedFileManager`. It still runs once per entry, so a refused chat value
-consumes its records exactly as a disabled one does today.
+`MemoryUploadedFileManager`, so a refused chat value consumes its records, as a disabled
+one does today. Nothing can read them afterwards: a chat value is a trigger the browser
+never resends, so keeping them would only hold the files until the session ends.
 
 **Widgets this session never registered.** An entry with no metadata skips the boundary
 check. This is what a browser sends when it reconnects to a new session, after a server
 restart or an expired `server.disconnectedSessionTTL`: it resends its whole widget map.
-When the widget registers, its value runs through checks 1, 2, 5, and 6 against this
-run's metadata, the way URL seeding is checked, and the browser is re-synced on a
-violation. A violation drops the value as never sent, which in a new session means the
-default. So state restoration keeps working, and skipping the boundary is safe:
+When the widget registers, its value runs through checks 1, 2, 3, 5, and 6 against this
+run's metadata. Check 3 compares it with the default, so an untouched, empty `required`
+widget passes. A violation is handled as at the boundary: `ambiguous_option` is
+accepted, and any other violation drops the value as never sent, which in a new session
+means the default, and re-syncs the browser. The drop also clears
+`incoming_serialized_value(s)`, as the `disabled` discard does today, so option
+reconciliation cannot fall back to the refused label. So state restoration keeps
+working, and skipping the boundary is safe:
 
 - No callback can fire for the entry, because `_call_callbacks` needs metadata.
 - A value whose widget never registers is discarded at the end of the run, because
@@ -192,8 +204,9 @@ Today it makes the widget return `True` without running its callback.
 Replayed trigger states (`replay_trigger_states`) are server-held and were checked when
 they first arrived, so they skip the check. That holds only if replay capture skips the
 rejected entries: it reads the raw message (`_current_interaction_widget_states`), so it
-filters out the IDs in `_rejected_client_values`. Otherwise a rejected trigger sent beside
-a legal callback that requests a targeted rerun would come back unchecked in the next run.
+takes the last entry per ID, as the boundary does, and filters out the IDs in
+`_rejected_client_values`. Otherwise a rejected trigger sent beside a legal callback that
+requests a targeted rerun would come back unchecked in the next run.
 
 ### Violations
 
@@ -246,7 +259,13 @@ other two are:
 class WidgetValidator(Protocol):
     def __call__(
         self, ui_value: Any, *, previous: Any = None, value: Any = None
-    ) -> Violation | None: ...
+    ) -> Violation | None:
+        """Return a violation for one changed client value, or None.
+
+        `ui_value` is the unpacked wire value, `value` is that value after
+        `deserialize`, and `previous` is the stored value. Only the data editor
+        reads the keywords.
+        """
 
 
 class WidgetMetadata(Generic[T]):
@@ -316,14 +335,15 @@ represent, such as an unknown `select_slider` label, passes through as the label
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
 and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
 unknown `select_slider` label falls back to that position's default. Truncation counts
-UTF-16 code units, as the check does, so a repaired value always passes it, including
-when a reconnect to a new session checks it at registration. For text with astral
-characters, such as emoji, that keeps fewer characters than today's code-point slicing,
-which the product spec lists as a behavior change. Any other violation clears the
-parameter. So `?q=abcd` for `max_chars=3` still
-seeds `"abc"`, `?n=2.9` still seeds `2`, and an out-of-range value is still cleared. As
-today, a repaired value that equals the default clears the parameter instead of seeding
-it. Each widget makes this change in the item that gives it a validator (items 2 and 4).
+UTF-16 code units, as the check does, and never splits a character, so a repaired value
+is valid text that always passes the check, including when a reconnect to a new session
+checks it at registration. For text with astral characters, such as emoji, that keeps
+fewer characters than today's code-point slicing, which the product spec lists as a
+behavior change. `ambiguous_option` is accepted, as at the boundary, and any other
+violation clears the parameter. So `?q=abcd` for `max_chars=3` still seeds `"abc"`,
+`?n=2.9` still seeds `2`, and an out-of-range value is still cleared. As today, a
+repaired value that equals the default clears the parameter instead of seeding it. Each
+widget makes this change in the item that gives it a validator (items 2 and 4).
 
 **Why the serde is the right home:**
 
@@ -497,10 +517,12 @@ with `rendered_ids`, so it is bounded by the rendered widgets.
 Trigger widgets need no re-sync: a trigger resets anyway. Some widgets have no
 `set_value` channel: `st.data_editor`, `st.tabs` (`TabContainer` has no `set_value`,
 and `Tabs.tsx` re-syncs only when `default_tab_index` changes), the open state of
-`st.expander` and `st.popover`, and dataframe and chart selections (items 8 and 12). The
-browser keeps showing a refused change for them until they remount or the user changes
-them again. For `st.data_editor`, item 6 therefore drops only the refused entries. A
-frontend re-sync for the others, such as a forced flag on `TabContainer`, is a follow-up.
+`st.expander` and `st.popover`, `st.file_uploader`, `st.camera_input`, `st.audio_input`,
+and chart selections (item 12). The browser keeps showing a refused change for them
+until they remount or the user changes them again. For `st.data_editor`, item 6
+therefore drops only the refused entries. A frontend re-sync for the others, such as a
+forced flag on `TabContainer`, is a follow-up. Dataframe selections (item 8) re-sync
+through `Dataframe.selection_state`, which the frontend already applies.
 
 ### Other value sources: URL binding and session state
 
@@ -627,7 +649,10 @@ widget is a no-op, and its `null` sent to a filled one with an empty default is
 filled, belongs to item 7.
 - Emptiness follows the widget: `None`, `[]`, or text that is only whitespace. An unset
   value reads as the widget's default, because the browser commits the default when the
-  user empties a field that has one, so it is empty only when the default is.
+  user empties a field that has one, so it is empty only when the default is. Two
+  `date_input` cases differ: `[]` is empty even with a default, because `DateInputSerde`
+  reads it as `None`, and a `required` range with only a start date is empty, as in the
+  browser's `isRequiredEmptyDateValue`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the
   browser. Python's `str.strip()` strips a slightly different set.
 - `required` stays out of keyed identity, per the
@@ -662,10 +687,11 @@ Out-of-range or negative row indices and unknown columns become violations inste
 raising. Added rows are applied in one `concat`, not row by row: today about 2 ms per
 row, so 10k rows cost about 22 s of script time.
 
-**Item 7: forms.** `WidgetMetadata` gains `form_id`, which today exists only on the proto.
-The check groups a message by form:
+**Item 7: forms.** `WidgetMetadata` gains `form_id` and `is_form_submitter`, which today
+exist only on the protos. The check groups a message by form:
 - A changed field is accepted only if the same message fires a rendered, enabled submit
-  button of that field's form (`form_not_submitted`).
+  button of that field's form (`form_not_submitted`). Another trigger in the form, such
+  as a Components v2 event, is not a submit.
 - When a submit fires, every rendered required field of that form must be non-empty after
   the per-field checks: a field whose change one of them dropped counts with its previous
   value. Otherwise the trigger and all of that form's field changes are dropped together
@@ -683,7 +709,8 @@ agent sessions, which the agent spec lists as follow-up #8.
 
 **Item 8: selections.** `_validate_selection_state` (`elements/arrow.py:463`) already
 checks mode and bounds, but only for programmatic selections. The dataframe selection
-serde's `validate` calls it for client values. A `ButtonColumn` click is checked for `row < num_rows`.
+serde's `validate` calls it for client values, and a refused selection re-syncs through
+`selection_state`. A `ButtonColumn` click is checked for `row < num_rows`.
 
 **Item 9: fragments.** `AppSession.request_rerun` accepts a `fragment_id` only if the
 fragment was registered by the last run that covered it. Item 9 also clears stale
@@ -754,14 +781,18 @@ budget is no measurable regression in the unchanged case.
   that the callback did not fire, the previous value was kept, and `set_value` was sent,
   also while the widget still holds its default. Also assert that an unchanged default
   passes.
-- **Session state**: a widget map sent to a new session keeps its values and fires no
-  callback, a violating entry falls back to the default at registration, and a trigger
-  in that map is dropped. A value refused for a widget outside a fragment is corrected at
-  the next full run. A run that ends in `st.stop()` or an exception before a widget
-  registers keeps that widget's value, and a forged trigger for it is then refused. A
-  programmatic text value past `max_chars` stays as written and fires no `on_change`.
+- **Session state**: a widget map sent to a new session keeps its values, including an
+  empty `required` default and a shared `format_func` label, and fires no callback. A
+  violating entry falls back to the default at registration, and a trigger in that map is
+  dropped. A message that repeats an ID is judged on its last entry only, for callbacks
+  and for replay capture alike. A value refused for a widget outside a fragment is
+  corrected at the next full run. A run that ends in `st.stop()` or an exception before a
+  widget registers keeps that widget's value, and a forged trigger for it is then
+  refused. A programmatic text value past `max_chars` stays as written and fires no
+  `on_change`.
 - **Forms**: a submit whose required field gets filler that a per-field check drops, such
-  as text past `max_chars`, is refused as a whole.
+  as text past `max_chars`, is refused as a whole. A trigger in the form that is not a
+  submit button commits no field changes.
 - **Script runner**: a page-change message adds no ID to `rendered_ids`, and the previous
   page's widgets are refused once the new page's run completes. `AppTest` does not
   exercise this ordering.
@@ -770,15 +801,16 @@ budget is no measurable regression in the unchanged case.
   widget.
 - **URL binding**: a disabled bound widget ignores its parameter on initial load and on
   back/forward navigation, and the parameter is corrected or removed.
-- **Browser parity**, the gate for every item: before each item merges, run the full e2e
-  suite with every rejection logged at warning level, and fail on any. A correct browser
-  must never be refused, so this guards against false positives, which is the main risk
-  (see the product spec's [Rollout](product-spec.md#rollout)). Forged values cannot be
-  sent from a browser, so the new e2e tests cover only what a correct browser can
-  produce: re-sync, values that survive a reconnect to a new session
-  (`websocket_reconnects_test.py` only resumes the same session), a self-disabling button
-  that returns `True`, and a link that names a disabled bound widget. The `run_every` hide
-  race is timing-dependent, so a session-state test replays its message order instead.
+- **Browser parity**, a permanent CI gate from item 1 on: run the full e2e suite with
+  every rejection logged at warning level, and fail on any. A correct browser must never
+  be refused, including after a later frontend change, so this guards against false
+  positives, which is the main risk (see the product spec's
+  [Rollout](product-spec.md#rollout)). Forged values cannot be sent from a browser, so
+  the new e2e tests cover only what a correct browser can produce: re-sync, values that
+  survive a reconnect to a new session (`websocket_reconnects_test.py` only resumes the
+  same session), a self-disabling button that returns `True`, and a link that names a
+  disabled bound widget. The `run_every` hide race is timing-dependent, so a
+  session-state test replays its message order instead.
 
 ## Alternatives considered
 

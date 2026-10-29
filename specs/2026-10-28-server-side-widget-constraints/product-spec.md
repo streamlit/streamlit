@@ -99,9 +99,9 @@ own, provided each reports the violation and lets the caller decide."
 1. **One check, at the boundary, against what the client was shown.**
    - Every value or trigger a client sends is checked once, when the message enters the
      session and before any callback runs.
-   - The check uses the widget as the client last saw it: the constraints of the latest
-     run that rendered it. In a sync race, that run can be one ahead of what the browser
-     shows (see [Behavior changes](#behavior-changes)).
+   - The check uses the constraints from the latest run that rendered the widget. That
+     is usually what the client saw; in a sync race it can be one run newer (see
+     [Behavior changes](#behavior-changes)).
    - If the current run later changes those constraints (new options, new bounds), the
      value is reconciled the way it is today.
    - This is the rule the agent API already follows: the snapshot is the contract.
@@ -110,9 +110,9 @@ own, provided each reports the violation and lets the caller decide."
    - Its callback does not run, and the value does not count as changed for this run.
    - The browser is told which value the server holds. Widgets with no channel for
      that are the exception: `st.data_editor`, `st.tabs`, the open state of
-     `st.expander` and `st.popover`, and dataframe and chart selections. A refused
-     change stays visible in them until they remount or the user changes them again
-     (see the [tech spec](tech-spec.md#browser-re-sync)).
+     `st.expander` and `st.popover`, the file, camera, and audio inputs, and chart
+     selections. A refused change stays visible in them until they remount or the user
+     changes them again (see the [tech spec](tech-spec.md#browser-re-sync)).
    - Nothing raises in the app. This generalizes what [#16209](https://github.com/streamlit/streamlit/pull/16209)
      does for `disabled`, and it is what the browser itself does when it blocks a commit:
      it sends nothing.
@@ -281,14 +281,15 @@ option:
 - The real risk is an implementation bug that silently drops legitimate input. A switch
   can only be flipped once someone has noticed the bug, so the plan mitigates the bug
   directly:
-  - **E2E parity gate.** Before each item merges, the full e2e suite runs with every
+  - **E2E parity gate.** From item 1 on, the full e2e suite runs in CI with every
     rejection logged at warning level, and any rejection fails the run. A correct browser
-    must never be refused.
+    must never be refused, including after a later frontend change.
   - **Accepted wire fields.** Item 1 derives each widget's accepted wire fields from what
     the frontend actually sends, audited per widget, not from the registered
     `value_type` (see the [tech spec](tech-spec.md#the-boundary-check)).
   - **Separate releases.** Items 1, 3, and 7 land in different releases, so a regression
-    bisects to one item, and a patch release can revert it.
+    bisects to one item, and a patch release can revert it. Platforms that pin a
+    version, such as SiS, get that revert later.
 
 ### Agent interaction API
 
@@ -356,9 +357,9 @@ Each change follows from the contract. A correct browser sees only four of them,
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
 text past `max_chars` from app code or a link, and the sync races. A browser that
 reconnects to a new session, after a server restart or an expired
-`server.disconnectedSessionTTL`, keeps its values as today. No callback fires for them,
-and each is checked when its widget registers. The other changes affect only forged
-values and `AppTest`.
+`server.disconnectedSessionTTL`, keeps its values as today, apart from text past
+`max_chars` from app code. No callback fires for them, and each is checked when its
+widget registers. The other changes affect only forged values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -379,10 +380,12 @@ values and `AppTest`.
   truncated to `"abc"` when the browser sends it back. That fires `on_change` although
   nobody changed the widget, and the browser keeps showing `"abcd"`. Because
   deserializers stop truncating (item 4), the text now stays as written on both sides
-  until the programmatic-writes follow-up settles one rule. The alternative is
-  [open question 1](#open-questions). A link is still truncated, but in UTF-16 code
-  units, as the browser counts, so text with astral characters such as emoji keeps fewer
-  characters than today. Both need a changelog entry.
+  until the programmatic-writes follow-up settles one rule. After a reconnect to a new
+  session, the check at registration refuses it, and the widget falls back to its
+  default. The alternative is [open question 1](#open-questions). A link is still
+  truncated, but in UTF-16 code units, as the browser counts, so text with astral
+  characters such as emoji keeps fewer characters than today. Both need a changelog
+  entry.
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
   `max_value` or `""` on a `required` field, now sees it dropped instead of coerced,
@@ -405,9 +408,8 @@ values and `AppTest`.
    browser sends it back (see [Behavior changes](#behavior-changes)). The options are
    to keep it as written until the programmatic-writes follow-up, which this spec
    proposes, or to truncate it at registration in item 4. Truncating keeps today's end
-   value, one run earlier, and also removes the spurious `on_change`. Keeping the text
-   has one more cost: after a reconnect to a new session, the browser resends it, the
-   check at registration refuses it, and the widget falls back to its default.
+   value, one run earlier, removes the spurious `on_change`, and avoids the fallback to
+   the default after a reconnect to a new session.
 
 ## Out of scope
 
@@ -422,8 +424,8 @@ values and `AppTest`.
 - **`step`.** The browser does not snap a typed `number_input`, `time_input`, or
   `datetime_input` value to `step`, so there is no browser constraint to mirror. The
   slider does snap, but checking float multiples needs a tolerance and protects nothing.
-- **Custom components.** They declare no constraints. Filtering components v2 state to
-  its declared keys is a possible follow-up.
+- **Custom components.** They declare no value constraints, so only items 1 and 3 apply
+  to them. Filtering components v2 state to its declared keys is a possible follow-up.
 - **Upload content and MIME verification.** Both the MIME type and the filename are
   chosen by the client. Item 11 hardens what can be checked.
 - **`st.chat_input` `submit_mode`, and dialogs the browser dismissed** with
@@ -448,7 +450,7 @@ values and `AppTest`.
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
+| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars` from app code. |
 | No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, text past `max_chars` from app code or a link, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
