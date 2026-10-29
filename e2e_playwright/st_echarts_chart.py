@@ -486,3 +486,42 @@ with st.container(key="c_echarts_alt_overrides_description"):
         height=_HEIGHT,
         alt="Streamlit alt overrides description",
     )
+
+# Tooltip formatting without JavaScript: a ``{@[n]}`` dimension placeholder in a
+# tooltip template (ECharts expands it only in labels), and a Streamlit number
+# format as ``valueFormatter``. One item fills each chart, so hovering the
+# chart center lands on it.
+with st.container(key="c_tooltip_template"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-template-tooltip",
+                "formatter": "{a} · {@[2]} sessions",
+            },
+            "xAxis": {"type": "category", "data": ["11:00"]},
+            "yAxis": {"type": "category", "data": ["Mon"]},
+            "visualMap": {"min": 0, "max": 1000, "show": False},
+            "series": [{"type": "heatmap", "name": "Mon", "data": [[0, 0, 654]]}],
+            **_NO_ANIM,
+        },
+        key="tooltip_template",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_tooltip_value_format"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-value-format-tooltip",
+                "valueFormatter": "dollar",
+            },
+            "xAxis": {"type": "category", "data": ["Revenue"]},
+            "yAxis": {"type": "value", "max": 1300},
+            "series": [{"type": "bar", "barWidth": "90%", "data": [1234.567]}],
+            **_NO_ANIM,
+        },
+        key="tooltip_value_format",
+        height=_HEIGHT,
+    )

@@ -63,7 +63,13 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 })
 
-function formatTooltipItem(value: unknown): string {
+/**
+ * Format one tooltip value as plain text.
+ *
+ * Numbers are shortened, blank and unsupported values render as ``-``, and
+ * other strings and booleans pass through.
+ */
+export function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }

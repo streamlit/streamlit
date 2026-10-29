@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 21
+_EXPECTED_CHART_COUNT = 23
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -338,6 +338,26 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
 
     expect(app.locator("img[onerror]")).to_have_count(0)
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
+
+
+def test_tooltip_formatting_without_javascript(app: Page):
+    """Tooltip templates expand ``{@[n]}``, and ``valueFormatter`` formats numbers."""
+    template_chart = _get_chart(app, "c_tooltip_template")
+    # Heatmaps draw on two canvas layers.
+    expect(template_chart.locator("canvas").first).to_be_visible()
+    template_chart.hover()
+    template_tooltip = template_chart.locator(".echarts-template-tooltip")
+    expect(template_tooltip).to_have_text("Mon · 654 sessions")
+    # Must NOT happen: the placeholder is printed literally.
+    expect(template_tooltip).not_to_contain_text("{@")
+
+    format_chart = _get_chart(app, "c_tooltip_value_format")
+    expect(format_chart.locator("canvas")).to_be_visible()
+    format_chart.hover()
+    format_tooltip = format_chart.locator(".echarts-value-format-tooltip")
+    expect(format_tooltip).to_contain_text("$1,234.57")
+    # The theme's default number shortening would print the raw decimals.
+    expect(format_tooltip).not_to_contain_text("1,234.567")
 
 
 def test_toolbar_actions(app: Page):

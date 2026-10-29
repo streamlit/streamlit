@@ -189,9 +189,11 @@ st.echarts_chart(
 **JSON-only in v1.** The option object must be JSON-serializable. ECharts supports embedding
 raw JavaScript callbacks (e.g. `formatter` functions, `renderItem` for custom series). To keep
 parity with `st.plotly_chart`/`st.vega_lite_chart`/`st.altair_chart` (which are pure-JSON specs) and to avoid
-executing arbitrary JS, **v1 does not support JavaScript function values**. Most formatting
-needs are covered by ECharts' [string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
-(e.g. `"formatter": "{b}: {c}"`). JS callbacks are documented as [out of scope](#out-of-scope-future-work).
+executing arbitrary JS, **v1 does not support JavaScript function values**. Use ECharts'
+[string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
+(e.g. `"formatter": "{b}: {c}"`) instead. For tooltips, Streamlit adds JSON-only formatting
+(see [Tooltip formatting](#tooltip-formatting)). JS callbacks are documented as
+[out of scope](#out-of-scope-future-work).
 
 **Unsupported chart families in v1.** Streamlit raises a `StreamlitAPIException` when the
 normalized option uses any of these keys (walked through `series` and top-level components,
@@ -249,6 +251,59 @@ over the Streamlit theme defaults (the theme fills in gaps; it does not override
 values). `theme=None` disables these theme defaults and renders with ECharts' built-in default
 theme. Independently of theming, display-only charts set a missing `series.cursor` to `"default"`
 so they do not misleadingly appear clickable; an explicitly configured cursor is preserved.
+
+#### Tooltip formatting
+
+ECharts formats tooltips through JavaScript callbacks, which a JSON spec cannot carry. Its
+string templates don't fill the gap: a tooltip template inserts raw values (`{c}` prints
+`1234567.891`), skips the theme's number shortening, and doesn't expand the `{@dim}` /
+`{@[n]}` placeholders that ECharts supports in series labels (they print literally). So
+currency, percentages, and units in tooltips would need JavaScript.
+
+Streamlit fills the gap without adding template syntax. It reuses an ECharts key and an
+ECharts placeholder syntax, and both conversions run in the frontend for both themes:
+
+```python
+st.echarts_chart({
+    "tooltip": {"trigger": "axis", "valueFormatter": "compact"},
+    "series": [
+        {"type": "bar", "name": "Revenue", "tooltip": {"valueFormatter": "dollar"}},
+        {"type": "line", "name": "Sessions", "tooltip": {"valueFormatter": "%,d sessions"}},
+    ],
+    ...
+})
+
+# Heatmap cell: "Mon · 654 sessions"
+{"tooltip": {"formatter": "{a} · {@[2]} sessions"}, ...}
+```
+
+- **String `valueFormatter`.** ECharts' `tooltip.valueFormatter` (a function that formats each
+  value in the default tooltip) also accepts a Streamlit number format: the named formats and
+  printf-style strings of `st.metric(format=...)`. A string there is a hover-time `TypeError` in
+  ECharts, so no working spec changes meaning. Numbers and numeric strings are formatted, other
+  strings pass through, and missing or non-finite values show `-`. One format applies to every
+  value of a series (ECharts doesn't tell the formatter which dimension a value belongs to), so
+  `encode.tooltip` chooses the dimensions to show. The frontend drops any other value (not a
+  named format and no `%` placeholder, rejected by sprintf, or not a string) and logs a browser
+  console warning, so the default formatting applies. Python logs a warning for the cases it
+  can detect, everything except sprintf syntax errors. ECharts escapes the returned text.
+- **`{@dim}` / `{@[n]}` in tooltip templates.** A string `tooltip.formatter` that contains `{@`
+  becomes a function that runs ECharts' own string-template steps (time tokens on time axes,
+  then `{a}`/`{b}`/`{c}`/`{d}` via the public `echarts.format.formatTpl`), then expands the
+  placeholders the way labels do: index or dimension name over array rows, object rows, or a
+  single value. Missing values print as an empty string. In an axis tooltip the placeholders
+  read the first series, as `{c}` means `{c0}`. Expanded values are HTML-escaped. Templates
+  without `{@` stay strings, so existing charts don't change. Values are inserted unformatted.
+
+Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOption` /
+`options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
+arrays aren't walked.
+
+Not included: a format suffix in templates (e.g. `{@[2]:compact}`). ECharts has no format
+specifiers, so it would be syntax only Streamlit understands. Per-dimension formats and
+date/time formats for tooltip values are also left out, as are number formats for axis labels.
+Pre-formatted strings on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`)
+remain the workaround for those.
 
 #### Selections
 
@@ -686,8 +741,9 @@ st.echarts_chart(pie)
   charts whose types weren't statically included. ECharts GL and other third-party extensions
   remain separate and are not bundled.
 - **JSON-only spec.** Power users who rely on JS `formatter`/`renderItem` callbacks are not
-  served in v1 (see [Out of Scope](#out-of-scope-future-work)). String-template formatters cover
-  the large majority of cases.
+  served in v1 (see [Out of Scope](#out-of-scope-future-work)). String templates plus
+  Streamlit's [tooltip formatting](#tooltip-formatting) cover common formatting; number formats
+  on axis labels and per-dimension tooltip formats still need pre-formatted strings.
 
 ## Out of Scope (Future Work)
 
@@ -881,6 +937,9 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Re-theming: a light/dark switch calls `setTheme` and does not dispose the instance; a
   `renderer` switch still disposes and re-initializes.
 - Tooltip XSS: HTML/script payloads in tooltip/label content render as escaped text.
+- Tooltip formatting: string `valueFormatter` number formats (named, printf, arrays, numeric
+  strings, invalid strings dropped with a warning) and `{@dim}` / `{@[n]}` expansion (array and
+  object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
 - `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored;
   unsupported CSS units warn and fall back.
 - Display-only `key` still emits `st-key-*`; keyed `renderer` switch does not reset selection.
