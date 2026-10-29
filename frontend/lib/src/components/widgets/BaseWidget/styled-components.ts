@@ -58,7 +58,7 @@ export const StyledRequiredMarker = styled.span<{
 }>(({ theme, $disabled }) => ({
   fontSize: theme.fontSizes.twoSm,
   color:
-    $disabled === true ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    $disabled === true ? theme.colors.fadedText40 : theme.colors.fadedText70,
   marginLeft: theme.spacing.xs,
   flexShrink: 0,
   whiteSpace: "nowrap",
@@ -66,7 +66,7 @@ export const StyledRequiredMarker = styled.span<{
 
 export const StyledWidgetInstructions = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.twoSm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   margin: theme.spacing.none,
   textAlign: "right",
   position: "absolute",

@@ -84,7 +84,7 @@ export const StyledTextAreaInput = styled.textarea<{
   paddingRight: $hasError
     ? `calc(${theme.spacing.xs} + ${theme.iconSizes.base} + ${theme.spacing.sm})`
     : undefined,
-  "&::placeholder": { color: theme.colors.fadedText60 },
+  "&::placeholder": { color: theme.colors.fadedText70 },
   "&:disabled": {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,

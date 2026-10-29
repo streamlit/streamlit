@@ -91,7 +91,7 @@ export const StyledFileDropzoneInstructionsSubtext = styled.span<{
   disabled?: boolean
 }>(({ theme, disabled = false }) => ({
   fontSize: theme.fontSizes.sm,
-  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText70,
   display: "block",
   overflow: "hidden",
   textOverflow: "ellipsis",
