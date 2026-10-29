@@ -915,6 +915,15 @@ class SelectSliderOnChangeModeTest(DeltaGeneratorTestCase):
 
 
 @pytest.mark.parametrize(
+    "live_label",
+    [
+        pytest.param(False, id="label_fixed_per_run"),
+        # Like a format_func that reads the clock: even the previous run's
+        # format_func already returns the new labels.
+        pytest.param(True, id="label_read_live"),
+    ],
+)
+@pytest.mark.parametrize(
     ("value", "selection", "expected_raw"),
     [
         pytest.param(None, "F", ["F (3)"], id="single"),
@@ -925,29 +934,41 @@ def test_select_slider_resends_new_labels_when_format_func_output_changes(
     value: tuple[str, str] | None,
     selection: str | tuple[str, str],
     expected_raw: list[str],
-):
+    live_label: bool,
+) -> None:
     """A label change re-sends the fresh labels instead of resetting to the
     default. Regression test for gh-17175."""
 
-    def script():
+    # The count the label shows. It moves on when a run starts, after the
+    # client sent its label, the way time passes between reruns.
+    clock = {"count": 2, "next": 2}
+
+    def script(live_label: bool, clock: dict[str, int]) -> None:
         import streamlit as st
 
-        count = st.session_state.get("count", 2)
+        clock["count"] = clock["next"]
+        count = clock["count"]
+
+        def label(option: str) -> str:
+            return f"{option} ({clock['count'] if live_label else count})"
+
         st.select_slider(
             "Pick",
             ["D", "E", "F"],
             value=st.session_state.get("initial"),
-            format_func=lambda x: f"{x} ({count})",
+            format_func=label,
             key="picker",
         )
 
-    at = AppTest.from_function(script)
+    at = AppTest.from_function(
+        script, kwargs={"live_label": live_label, "clock": clock}
+    )
     at.session_state["initial"] = value
     at = at.run()
     at = at.select_slider(key="picker").set_value(selection).run()
     assert at.select_slider(key="picker").value == selection
 
-    at.session_state["count"] = 3
+    clock["next"] = 3
     at = at.run()
 
     picker = at.select_slider(key="picker")

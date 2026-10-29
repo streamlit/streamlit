@@ -22,11 +22,12 @@ import streamlit as st
 
 if st.button("Bump label count"):
     st.session_state["label_count"] = st.session_state.get("label_count", 0) + 1
-label_count = st.session_state.get("label_count", 0)
 
 
 def fmt(option: str) -> str:
-    return f"{option} ({label_count})"
+    # Read on every call, like a label that shows the time, so even the
+    # previous run's format_func returns the new label.
+    return f"{option} ({st.session_state.get('label_count', 0)})"
 
 
 selected = st.selectbox(

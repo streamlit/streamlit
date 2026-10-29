@@ -149,6 +149,10 @@ class Value:
     """A widget value that's not serialized. Immutable."""
 
     value: Any
+    # The proto the value was decoded from, when the client sent it. Serializing
+    # the value again can give a different result than what the client sent: a
+    # `format_func` that reads the clock or session state labels it anew.
+    received: WidgetStateProto | None = field(default=None, compare=False)
 
 
 WState: TypeAlias = Value | Serialized
@@ -203,7 +207,7 @@ class WStates(MutableMapping[str, Any]):
             )
         )
 
-        self.states[k] = Value(deserialized)
+        self.states[k] = Value(deserialized, received=wstate.value)
         return deserialized
 
     def __setitem__(self, k: str, v: WState) -> None:
@@ -312,6 +316,20 @@ class WStates(MutableMapping[str, Any]):
             setattr(widget, field, serialized)
 
         return widget
+
+    def get_received(self, k: str) -> WidgetStateProto | None:
+        """Get the widget's value as the client sent it.
+
+        Unlike ``get_serialized``, a value decoded from the client's proto is
+        not serialized again. Return ``None`` if the widget has no value from
+        the client.
+        """
+        item = self.states.get(k)
+        if isinstance(item, Serialized):
+            return item.value
+        if isinstance(item, Value):
+            return item.received
+        return None
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
@@ -1602,22 +1620,24 @@ class SessionState:
         widget_id = metadata.id
         ctx = get_script_run_ctx()
 
-        # Capture the stored wire value *before* swapping in this run's
-        # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string and string-array widgets
-        # we expose this so callers can reconcile a stored value against freshly
-        # computed state without re-deriving it from the deserialized value.
+        # Capture the wire value the client sent. Callbacks may already have
+        # decoded it, and serializing the decoded value again would call the
+        # author's `format_func`, which can already return this run's label
+        # (e.g. one that reads the clock). For string and string-array widgets
+        # we expose this so callers can reconcile the client's value against
+        # freshly computed state without re-deriving it from the deserialized
+        # value.
         incoming_serialized_value: str | None = None
         incoming_serialized_values: list[str] | None = None
         if metadata.value_type == "string_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            stored_proto = self._new_widget_state.get_received(widget_id)
             if (
                 stored_proto is not None
                 and stored_proto.WhichOneof("value") == "string_value"
             ):
                 incoming_serialized_value = stored_proto.string_value
         elif metadata.value_type == "string_array_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
+            stored_proto = self._new_widget_state.get_received(widget_id)
             if (
                 stored_proto is not None
                 and stored_proto.WhichOneof("value") == "string_array_value"

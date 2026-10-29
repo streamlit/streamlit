@@ -892,27 +892,49 @@ def test_radio_serde_serialize_returns_formatted_value(
     assert serde.serialize(value) == expected
 
 
-def test_radio_resends_new_label_when_format_func_output_changes():
+@pytest.mark.parametrize(
+    "live_label",
+    [
+        pytest.param(False, id="label_fixed_per_run"),
+        # Like a format_func that reads the clock: even the previous run's
+        # format_func already returns the new label.
+        pytest.param(True, id="label_read_live"),
+    ],
+)
+def test_radio_resends_new_label_when_format_func_output_changes(
+    live_label: bool,
+) -> None:
     """A label change re-sends the fresh label instead of losing the selection.
     Regression test for gh-17175."""
 
-    def script():
+    # The count the label shows. It moves on when a run starts, after the
+    # client sent its label, the way time passes between reruns.
+    clock = {"count": 2, "next": 2}
+
+    def script(live_label: bool, clock: dict[str, int]) -> None:
         import streamlit as st
 
-        count = st.session_state.get("count", 2)
+        clock["count"] = clock["next"]
+        count = clock["count"]
+
+        def label(option: str) -> str:
+            return f"{option} ({clock['count'] if live_label else count})"
+
         st.radio(
             "Pick one",
             ["D", "E"],
-            format_func=lambda x: f"{x} ({count})",
+            format_func=label,
             index=None,
             key="picker",
         )
 
-    at = AppTest.from_function(script).run()
+    at = AppTest.from_function(
+        script, kwargs={"live_label": live_label, "clock": clock}
+    ).run()
     at = at.radio(key="picker").set_value("E").run()
     assert at.radio(key="picker").value == "E"
 
-    at.session_state["count"] = 3
+    clock["next"] = 3
     at = at.run()
 
     picker = at.radio(key="picker")
