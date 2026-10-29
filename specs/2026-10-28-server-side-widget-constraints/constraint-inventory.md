@@ -30,7 +30,7 @@ browser enforces, what the server does with a client value that violates it as o
 | --- | --- | --- |
 | Wire field matches the registered type | pass or raises (stuck). `WStates.__getitem__` overwrites `value_type` with whatever arrived. | 1 |
 | Deserializer can read the value | raises (stuck): `_compact_state` and `__contains__` only catch `KeyError` | 1 |
-| `disabled` | done (#16209), with two holes: a wrong field still crashes, and a flip within a run splits the callback from the return value | 1 |
+| `disabled` | done (#16209), with three holes: a wrong field still crashes, a flip within a run splits the callback from the return value, and a bound widget's URL parameter still sets it *(code)* | 1 |
 | Widget registered by the latest run that covered it | pass: metadata is never pruned, so callbacks of hidden, closed-dialog, or other-page widgets fire | 3 |
 | Size of the message | done: `server.maxWidgetStateSize`, 25 MB total, no per-widget limit | — |
 

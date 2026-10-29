@@ -120,8 +120,12 @@ reports: it stores nothing and acts on no violation, and its one side effect is 
 input deserializer's, described below. It applies these checks in order and returns the
 first violation, together with the deserialized value once step 2 has read it:
 
-1. **The wire field is one the widget accepts** (`wrong_type`). Most widgets accept the
-   `value_type` they registered.
+1. **The wire field is one the widget accepts** (`wrong_type`). Item 1 derives each
+   widget's accepted fields from what the frontend actually sends, audited per widget,
+   not from the registered `value_type`. `register_widget`'s docstring
+   (`runtime/state/widgets.py`) calls that a "best-effort guess" that is "updated to be
+   the correct type" once a proto arrives, which is why `WStates.__getitem__` overwrites
+   it today. Most widgets turn out to accept the `value_type` they registered.
    - Lossless numeric pairs are interchangeable: `int_value` with `double_value`, and the
      int and double array fields.
    - Components v1, which register `json_value`, also accept `bytes_value` and
@@ -418,15 +422,35 @@ The gate creates one new race. Here is how each race plays out:
 
 The `disabled` decision moves to the boundary, against the metadata the client saw. The
 registration-time discard of client values goes away, apart from the check of
-[widgets this session never registered](#the-boundary-check); URL seeding of disabled
-widgets keeps working as it does now. This closes both holes #16209 left:
+[widgets this session never registered](#the-boundary-check). This closes the holes
+#16209 left:
 
 - A wrong-type or unreadable value for a disabled widget is refused by checks 1 and 2,
   inside their `try`, so it can no longer crash the session.
 - A widget that becomes disabled during the run its click caused keeps the click's value.
   Its callback has already fired, so the return value now agrees with it.
+- A disabled bound widget ignores its URL parameter (below).
 
 A widget that was disabled when shown and is enabled during the run is still refused.
+
+**A disabled widget accepts no client input from any channel.** The URL parameter of a
+disabled bound widget is ignored on initial load and on back/forward navigation, and the
+widget keeps its default or previous value. The server rewrites the parameter to the
+widget's actual value, or removes it, the way it already corrects an invalid URL value,
+so the address bar never claims a value the widget does not hold. Today #16209 exempts
+URL seeding twice: `url_binding_resolved` skips the disabled discard in `register_widget`,
+and the priority check in `_handle_query_param_binding` lets a disabled widget seed. That
+leaves two holes:
+
+- With `disabled=not st.user.is_admin` and `bind="query-params"`, a user who cannot
+  change the filter in the UI can set it by editing the URL.
+- The agent API refuses a disabled widget in `widget_state` with `disabled_widget`, but
+  `query_params` on a navigation request still sets it. Blocking makes both paths agree.
+
+An app that wants a link to preset a filter shown as locked reads `st.query_params` in
+app code and passes the value to the widget. App code is trusted, and the author owns
+that check. This rule is part of item 1, which moves the `disabled` decision, and not of
+the URL-binding refactor, which keeps behavior unchanged.
 
 ### Browser re-sync
 
@@ -458,7 +482,7 @@ of what the widget accepts, and each source applies its own policy to a violatio
 | Source | Trusted? | Policy on a violation | In this spec |
 | --- | --- | --- | --- |
 | Client `WidgetStates` | No | Drop it as never sent; the agent API refuses the request | Yes |
-| A bound widget's URL parameter | No: the client sends the query string in `ClientState` | Repair it, then validate it, then clear or correct the parameter | A refactor onto `validate`, below |
+| A bound widget's URL parameter | No: the client sends the query string in `ClientState` | Ignore it for a disabled widget. Otherwise repair it, then validate it, then clear or correct the parameter | The `disabled` rule in item 1, and a refactor onto `validate`, below |
 | Programmatic `st.session_state` writes | Yes: it is app code | Mixed today | Follow-up, below |
 
 **URL binding: a behavior-preserving refactor after item 4.** `_seed_widget_from_url`
@@ -489,21 +513,17 @@ This is a pure refactor. The query-param unit tests and `st_query_params_test.py
 easy to bisect.
 
 **The URL is a second client channel, and it deliberately has fewer rules.** A bound
-widget's parameter gets the same *value* rules, through the same serde. It does not get
-the *structural* rules, and that is by design: an author who binds a widget is accepting
-that a shared link can set it. Concretely:
-
-- URL seeding still applies to a `disabled` bound widget. #16209 exempted this on
-  purpose.
-- On load, a URL can set a form field without a submit.
+widget's parameter gets the same *value* rules, through the same serde, and `disabled`
+(see [`disabled` consolidation](#disabled-consolidation)). It does not get the form rule,
+and that is by design: an author who binds a widget is accepting that a shared link can
+set it, so on load a URL can set a form field without a submit.
 
 Binding's priority rules limit when the URL applies at all: on initial load and on
 browser back/forward navigation. Otherwise session state and user interaction win. If
 the boundary check drops a client value for a bound widget, seeding can run in the same
-rerun only under those rules. Its value then passes the same `validate`, so the URL
-cannot be used to get around the drop. The security docs should spell this out; whether
-`disabled` should also block seeding is the product spec's
-[open question 4](product-spec.md#open-questions).
+rerun only under those rules. Its value then passes the same `validate`, and a disabled
+widget ignores it, so the URL cannot be used to get around the drop. The security docs
+should spell this out.
 
 **Programmatic writes: a follow-up, not part of this spec.** App code is trusted, so a
 programmatic value raises no security question. It also does not affect agents: the
@@ -530,8 +550,8 @@ follow-up should:
   path.
 
 That last decision changes API behavior, so it belongs in its own spec or papercut,
-together with the product spec's [open question 2](product-spec.md#open-questions) on
-`AppTest.set_value`.
+together with the follow-up that makes `AppTest.set_value` raise for an invalid value
+(see the product spec's [Out of scope](product-spec.md#out-of-scope)).
 
 ### Per-item notes
 
@@ -712,14 +732,19 @@ budget is no measurable regression in the unchanged case.
   page's widgets are refused once the new page's run completes. `AppTest` does not
   exercise this ordering.
 - **Agent API**: new `invalid_value` cases for each item, and the deleted checks keep
-  their behavior.
-- **Browser parity**: run the e2e suite with rejections logged at warning level and fail on
-  any. A correct browser must never be refused, so this guards against false positives,
-  which is the main risk. Forged values cannot be sent from a browser, so the new e2e
-  tests cover only what a correct browser can produce: re-sync, values that survive a
-  reconnect to a new session (`websocket_reconnects_test.py` only resumes the same
-  session), and a self-disabling button that returns `True`. The `run_every` hide race is
-  timing-dependent, so a session-state test replays its message order instead.
+  their behavior. `query_params` on a navigation request cannot set a disabled bound
+  widget.
+- **URL binding**: a disabled bound widget ignores its parameter on initial load and on
+  back/forward navigation, and the parameter is corrected or removed.
+- **Browser parity**, the gate for every item: before each item merges, run the full e2e
+  suite with every rejection logged at warning level, and fail on any. A correct browser
+  must never be refused, so this guards against false positives, which is the main risk
+  (see the product spec's [Rollout](product-spec.md#rollout)). Forged values cannot be
+  sent from a browser, so the new e2e tests cover only what a correct browser can
+  produce: re-sync, values that survive a reconnect to a new session
+  (`websocket_reconnects_test.py` only resumes the same session), a self-disabling button
+  that returns `True`, and a link that names a disabled bound widget. The `run_every` hide
+  race is timing-dependent, so a session-state test replays its message order instead.
 
 ## Alternatives considered
 
@@ -743,14 +768,14 @@ budget is no measurable regression in the unchanged case.
   method keeps the decision at the boundary and both on the serde.
 - **Reject the whole message, or close the connection.** See the product spec's options.
   Both are hostile to benign races.
-- **A public opt-out config.** It invites disabling a security fix to paper over a race we
-  should fix instead. See the product spec's
-  [open question 1](product-spec.md#open-questions).
+- **An opt-out config, public or hidden.** A public one invites disabling a security fix
+  to paper over a race we should fix instead. A hidden kill switch such as
+  `server.enforceWidgetConstraints` only helps once someone has noticed a bug, so the
+  plan mitigates bugs directly: the e2e parity gate, wire fields taken from what the
+  frontend sends, and items 1, 3, and 7 in separate releases. See the product spec's
+  [Rollout](product-spec.md#rollout).
 
 ## Open questions
-
-Questions that need a product or rollout decision, including the kill switch and
-`AppTest.set_value`, are in the [product spec](product-spec.md#open-questions).
 
 1. **Deserializers that replace refused values.** Check 3 compares deserialized values,
    so a deserializer that falls back to the default lets a refused value read as

@@ -52,7 +52,7 @@ editor's edit code directly:
 | `st.form` | A field's value changes without a submit. A form whose submit button is disabled still applies its field values. |
 | `max_selections` | `StreamlitSelectionCountExceedsMaxError` is raised *after* the callback fired, and the message blames the author's `default`. |
 | The wire type of a value | `string_value: "x"` sent to `st.button` returns `"x"` and fires `on_click`. Sent to `st.slider`, it raises on this run and every later one, so the session is stuck. |
-| `disabled=True` (enforced since [#16209](https://github.com/streamlit/streamlit/pull/16209)) | A wrong-type value for a disabled widget still crashes the session. A button that disables itself in its own `on_click` fires the callback, but returns `False`. |
+| `disabled=True` (enforced since [#16209](https://github.com/streamlit/streamlit/pull/16209)) | A wrong-type value for a disabled widget still crashes the session. A button that disables itself in its own `on_click` fires the callback, but returns `False`. A bound widget's URL parameter still sets a disabled widget. |
 
 The threat model is not exotic. It needs no XSS. Anyone who can reach an app's WebSocket
 can script it: a signed-in user of an internal tool, a browser extension, or an agent
@@ -122,18 +122,21 @@ own, provided each reports the violation and lets the caller decide."
    - A browser session drops the value, as in (2).
    - The agent API refuses the whole request with `invalid_value` before anything runs,
      naming the constraint.
-   - Whether `AppTest` raises at `set_value` time is [open question 2](#open-questions).
+   - `AppTest` drops the value, exactly as a browser session does. A follow-up makes
+     `set_value` raise instead (see [Out of scope](#out-of-scope)).
 4. **Only client input is refused.** A bound widget's URL parameter is client input too.
    It already gets value checks, and those move onto the same per-widget definition. It
-   keeps its own repair-and-correct policy, and it deliberately skips the structural rules,
-   because an author who binds a widget accepts that a link can set it. Programmatic
+   keeps its own repair-and-correct policy. Of the structural rules it gets only
+   `disabled`: a disabled widget accepts no client input from any channel, so it ignores
+   its URL parameter. A URL can still set a form field without a submit, because an
+   author who binds a widget accepts that a link can set it. Programmatic
    `st.session_state` writes and widget defaults keep their current rules. Making
    programmatic writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
 
-There is no new parameter and no public config option (see
-[open question 1](#open-questions) on a hidden kill switch). The check refuses only what
-the shipped frontend never sends, so a correct client never notices it, apart from the
-cases in [Behavior changes](#behavior-changes).
+There is no new parameter and no config option, not even a hidden kill switch (see
+[Rollout](#rollout)). The check refuses only what the shipped frontend never sends, so a
+correct client never notices it, apart from the cases in
+[Behavior changes](#behavior-changes).
 
 #### How to handle a violation in a browser session
 
@@ -216,7 +219,7 @@ across the plan rather than saved for a final PR.
 | # | Scope | Security | Agent API | Cost | Risk |
 | --- | --- | --- | --- | --- | --- |
 | **Phase 1** | | | | | |
-| 1 | **Boundary check and protocol integrity.** Check at the boundary; refuse a wrong wire type or a value the widget cannot read; move the `disabled` decision there. | High: crashes, stuck sessions, both `disabled` holes, a button returning a string | High: replaces `_check_readable`; the shared check exists | M | Low–Med |
+| 1 | **Boundary check and protocol integrity.** Check at the boundary; refuse a wrong wire type or a value the widget cannot read; move the `disabled` decision there; a disabled bound widget ignores its URL parameter. | High: crashes, stuck sessions, the `disabled` holes, a button returning a string | High: replaces `_check_readable`; the shared check exists | M | Low–Med |
 | 2 | **Closed option sets.** `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, `feedback`, `tabs`; `max_selections`; duplicates. With `accept_new_options`, any non-empty text stays legal. | High: the most-assumed constraint | Med: deletes `_validate_options` and `max_items`; `max_selections` refused instead of raised | S | Low |
 | 3 | **Rendered-widget gate.** Values and triggers only for widgets registered by the latest run that covered them | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
 | 4 | **Bounds, shapes, formats, length.** `number_input`, `slider`, `select_slider` and `date_input` ranges, `datetime_input`, `time_input`, `color_picker`, `pagination`, `max_chars` on text and chat inputs | Low–Med: mostly coerced today; reversed and over-long ranges pass | High: silent reset or truncation becomes `invalid_value` naming the bound | S | Low |
@@ -261,6 +264,26 @@ Why this order:
   away (see the
   [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)). It does
   not change what a URL can set.
+
+### Rollout
+
+There is no kill switch, public or hidden, such as a `server.enforceWidgetConstraints`
+option:
+
+- A correct client never sends a violating value.
+- In the sync races, the outcome is no worse than today: the widget was about to be
+  removed or reset anyway.
+- The real risk is an implementation bug that silently drops legitimate input. A switch
+  can only be flipped once someone has noticed the bug, so the plan mitigates the bug
+  directly:
+  - **E2E parity gate.** Before each item merges, the full e2e suite runs with every
+    rejection logged at warning level, and any rejection fails the run. A correct browser
+    must never be refused.
+  - **Accepted wire fields.** Item 1 derives each widget's accepted wire fields from what
+    the frontend actually sends, audited per widget, not from the registered
+    `value_type` (see the [tech spec](tech-spec.md#the-boundary-check)).
+  - **Separate releases.** Items 1, 3, and 7 land in different releases, so a regression
+    bisects to one item, and a patch release can revert it.
 
 ### Agent interaction API
 
@@ -310,6 +333,9 @@ own "is rendered" fact, which the agent's `not_on_page` can sit on top of.
 - **Defense in depth.** Agent sessions are ordinary sessions, so the boundary check runs
   on their reruns too. A bug in the agent's own validation can no longer let an invalid
   value through.
+- **`disabled` holds for navigation too.** `widget_state` already refuses a disabled
+  widget with `disabled_widget`, but `query_params` on a navigation request can still set
+  a disabled bound widget today. After item 1 it cannot, so both paths agree.
 
 The agent spec needs these edits once the relevant items land:
 
@@ -321,11 +347,12 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only two of them, both
-listed below: the self-disabling button and the sync races. A browser that reconnects to
-a new session, after a server restart or an expired `server.disconnectedSessionTTL`,
-keeps its values as today. No callback fires for them, and each is checked when its
-widget registers. The other changes affect only forged values and `AppTest`.
+Each change follows from the contract. A correct browser sees only three of them, all
+listed below: the self-disabling button, the URL parameter of a disabled bound widget,
+and the sync races. A browser that reconnects to a new session, after a server restart or
+an expired `server.disconnectedSessionTTL`, keeps its values as today. No callback fires
+for them, and each is checked when its widget registers. The other changes affect only
+forged values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -335,11 +362,18 @@ widget registers. The other changes affect only forged values and `AppTest`.
   values. It still raises for an author's `default` or for session state.
 - **A self-disabling button returns `True`** in the run its click caused, because the
   click was legal when it was made. Today it returns `False` after firing `on_click`.
+- **A disabled bound widget ignores its URL parameter.** Today a link can set a widget
+  the app shows as disabled, because #16209 exempted URL seeding. The widget now keeps
+  its default or previous value, and the server corrects or removes the parameter. This
+  needs a changelog entry, but it is rare, because `bind="query-params"` is new. A link
+  that presets a filter shown as locked still works if the app reads `st.query_params`
+  and passes the value to the widget itself.
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
-  `max_value` or `""` on a `required` field, now sees it dropped instead of coerced. This
-  is fidelity with the browser, and it is called out in the changelog. `AppTest` already
-  stages form values until submit, so item 7 does not change form tests.
+  `max_value` or `""` on a `required` field, now sees it dropped instead of coerced,
+  exactly as in the browser. This is called out in the changelog. A follow-up makes
+  `set_value` raise instead (see [Out of scope](#out-of-scope)). `AppTest` already stages
+  form values until submit, so item 7 does not change form tests.
 - **Sync races.** A user's change can be dropped where it is accepted today. This happens
   when a server-initiated rerun (`run_every`, `st.rerun` from another fragment, a file
   change) removed the widget, or changed its options or bounds, after the browser
@@ -348,32 +382,6 @@ widget registers. The other changes affect only forged values and `AppTest`.
   reconnect, before the new session registered the widget, is dropped too. Rejections a
   correct browser can cause are logged at debug level; the rest are logged at warning
   level, without the value, which may be a password.
-
-## Open questions
-
-1. **A hidden kill switch for the rollout.** Items 3 and 7 can drop a correct browser's
-   input in a race. Item 1 adds the wire-type check and moves the `disabled` decision on
-   every rerun of every session. A false positive in any of them would silently drop
-   legitimate input. The options are to put items 1, 3, and 7 behind a hidden
-   `server.enforceWidgetConstraints` switch for one release, to put only items 3 and 7
-   behind it, or to ship without one. A public opt-out is not an option (see the
-   [tech spec](tech-spec.md#alternatives-considered)).
-2. **Whether `AppTest.set_value` raises for an invalid value.** `AppTest` sends widget
-   states through the same path as a browser, so an out-of-constraint `set_value` is
-   dropped, and the test sees only the previous value (see
-   [Behavior changes](#behavior-changes)). The options are to drop it as the browser
-   does, to raise at `set_value` time through the same check the agent API uses, or to
-   drop it and log the rejection at warning level in `AppTest` runs. The author leans
-   toward dropping it in Phase 1, mirroring the browser, with raising as a follow-up.
-3. **Surfacing rejection counts.** Rejections are only logged, so operators watching for
-   forged traffic have no count to alert on. The options are logs only, a counter that
-   ships with the agent spec's operations follow-up, or a metric in Phase 1. The
-   [checklist](#checklist) currently places the counter with that follow-up.
-4. **Whether `disabled` also blocks URL seeding of a bound widget.**
-   [#16209](https://github.com/streamlit/streamlit/pull/16209) exempts it on purpose, so a
-   shared link can set a filter the app shows as disabled. The options are to keep the
-   exemption, or to block seeding, which makes `disabled` absolute at the cost of links
-   that set such filters.
 
 ## Out of scope
 
@@ -402,6 +410,12 @@ widget registers. The other changes affect only forged values and `AppTest`.
   Turning the raw `TypeError`s into clear errors is a safe papercut. Deciding whether an
   explicit invalid write should raise or reset changes API behavior, so it needs its own
   spec (see the [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)).
+- **`AppTest.set_value` raising for an invalid value.** Phase 1 keeps the logic simple:
+  `AppTest` drops an invalid value, exactly as the browser path does. A follow-up makes
+  `set_value` raise through the same check the agent API uses, because a test that sets
+  an invalid value is itself wrong and should fail.
+- **A rejection counter.** Phase 1 only logs rejections. A counter for operators is a
+  possible follow-up, alongside the agent spec's operations follow-up.
 - **Request rate limits.** See the agent spec's default-on gates.
 
 ## Checklist
@@ -409,8 +423,8 @@ widget registers. The other changes affect only forged values and `AppTest`.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the sync races described there. `AppTest` values that violate constraints are now dropped. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
-| Metrics collected | No. Rejections are logged. A rejection counter belongs with the agent spec's operations follow-up ([open question 3](#open-questions)). |
+| Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
 | Any docs changes needed? | A security page listing the guarantees. Update the docstrings that call `required` "client-side only" when item 5 or 7 lands, and the `disabled` notes. Add a changelog entry for each behavior change. |
