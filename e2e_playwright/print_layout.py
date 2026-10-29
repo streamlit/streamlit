@@ -61,6 +61,17 @@ st.markdown("After the centered chart")
 with st.container(height=120, vertical_alignment="center", key="vertically_centered"):
     st.markdown("Vertically centered")
 
+with (
+    st.container(height=200, key="stretch_parent"),
+    st.container(height="stretch", vertical_alignment="center", key="stretch_centered"),
+):
+    st.markdown("Stretch centered")
+
+with st.expander("Chart expander", expanded=True):
+    st.bar_chart(pd.DataFrame({"value": [3, 2, 1]}), height=160)
+
+st.markdown("After the expander chart")
+
 with st.container(key="chart_row"):
     chart_column, second_column = st.columns(2)
     with chart_column:

@@ -385,13 +385,23 @@ export interface StyledFlexContainerBlockProps {
    * (from `overflow`) instead of the `overflow` shorthand.
    */
   overflowX?: React.CSSProperties["overflowX"]
+  /**
+   * Whether the block has a definite height to share among its children.
+   * Print keeps flex for these so stretch children share the height.
+   * Defaults to true for a fixed length. A percentage height is only
+   * definite inside a definite-height parent, which the style cannot see.
+   */
+  hasDefiniteHeight?: boolean
 }
 
-/** True for any configured height except auto. Print keeps flex for these so stretch children share the height. */
-function hasNonAutoHeight(
+function isFixedLengthHeight(
   height: React.CSSProperties["height"] | undefined
 ): boolean {
-  return height !== undefined && height !== "auto"
+  return (
+    height !== undefined &&
+    height !== "auto" &&
+    !(typeof height === "string" && height.endsWith("%"))
+  )
 }
 
 export const StyledFlexContainerBlock =
@@ -408,6 +418,7 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
       overflowX,
+      hasDefiniteHeight,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -419,8 +430,8 @@ export const StyledFlexContainerBlock =
       // chart then paints over the next heading. It keeps flex when:
       // - it centers or end-aligns its children horizontally (block has no
       //   equivalent), or
-      // - it has any set height other than auto (stretch children rely on
-      //   flex to share it instead of each taking 100%).
+      // - it has a definite height (stretch children rely on flex to share
+      //   it instead of each taking 100%).
       // Vertical alignment only moves content inside a set height. A
       // content-height column has no free space to distribute, so that
       // alignment alone does not keep flex.
@@ -428,7 +439,8 @@ export const StyledFlexContainerBlock =
         direction === Direction.VERTICAL &&
         (crossAxis === "center" || crossAxis === "end")
       const keepsPrintFlexForHeight =
-        direction === Direction.VERTICAL && hasNonAutoHeight(height)
+        direction === Direction.VERTICAL &&
+        (hasDefiniteHeight ?? isFixedLengthHeight(height))
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
       // Print rules:
@@ -586,6 +598,12 @@ interface StyledLayoutWrapperProps {
   alignSelf?: React.CSSProperties["alignSelf"]
   minHeight?: React.CSSProperties["minHeight"]
   maxHeight?: React.CSSProperties["maxHeight"]
+  /**
+   * Keeps flex in print for a stretch-height block in a definite-height
+   * parent. Its auto height would otherwise switch it to block layout and
+   * stop it from filling the parent.
+   */
+  keepsPrintFlex?: boolean
 }
 
 /**
@@ -603,7 +621,15 @@ export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
 }))
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex, alignSelf, minHeight, maxHeight }) => ({
+  ({
+    width,
+    height,
+    flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
+    keepsPrintFlex,
+  }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -620,9 +646,10 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
       // See StyledFlexContainerBlock: flex height collapses when printing.
       // Fixed and stretch-height wrappers keep flex so their child retains
       // its allocated height.
-      ...((height === undefined || height === "auto") && {
-        display: "block",
-      }),
+      ...((height === undefined || height === "auto") &&
+        keepsPrintFlex !== true && {
+          display: "block",
+        }),
       [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
         {
           // A fixed height clips a print table, or a fallback note stacked
