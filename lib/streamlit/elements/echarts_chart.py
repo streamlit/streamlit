@@ -135,8 +135,9 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
 # The named formats a tooltip ``valueFormatter`` string accepts (the same set as
-# ``st.metric``). Any string with a ``%`` counts as a printf-style format. Mirrors
-# ``NAMED_NUMBER_FORMATS`` in the frontend's ``EChartsChart/tooltipFormatters.ts``.
+# ``st.metric``). Any string with a ``%`` passes as a printf-style format here;
+# the frontend validates its placeholders. Mirrors ``NAMED_NUMBER_FORMATS`` in the
+# frontend's ``EChartsChart/tooltipFormatters.ts``.
 _NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
 
 
@@ -525,7 +526,7 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
 
 
 def _iter_config_entries(value: Any) -> Iterator[dict[str, Any]]:
-    """Yield the dicts of a value that is one dict or a list of dicts.
+    """Yield the dicts of a value that is one dict or a list or tuple of dicts.
 
     Used for option keys such as ``series`` and ``tooltip``.
     """
@@ -666,8 +667,10 @@ def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
 
     ECharts only accepts a function there, which a JSON spec cannot carry, so
     Streamlit reads a string as a number format (a named format or a
-    printf-style string). The frontend drops anything else and keeps the
-    default tooltip formatting, so the chart still renders.
+    printf-style string). This warns only for values that are certainly not
+    number formats. The frontend also validates printf placeholders, drops any
+    value it cannot use, and keeps the default tooltip formatting, so the chart
+    still renders.
     """
     for tooltip in _iter_tooltips(option):
         value_formatter = tooltip.get("valueFormatter")
@@ -678,10 +681,10 @@ def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
             continue
         message = (
             "The provided ECharts spec sets a tooltip `valueFormatter` of "
-            f"{value_formatter!r}, which is not a number format. Use a named "
+            f"{value_formatter!r}, which is not a number format, so Streamlit "
+            "ignores it and uses the default tooltip formatting. Use a named "
             'format such as "dollar" or "compact", or a printf-style string '
-            'such as "%.2f". Streamlit ignores it and uses the default tooltip '
-            "formatting."
+            'such as "%.2f" (for example, "%.2f €" instead of "{value} €").'
         )
         _LOGGER.warning("%s", message, stack_info=True)
 
@@ -966,7 +969,9 @@ class EChartsMixin:
               the same formats as in |st.metric|_. ``"percent"`` multiplies
               values by 100. One format applies to every value of a series, so
               use ``encode.tooltip`` to choose which dimensions the tooltip
-              shows.
+              shows. Streamlit ignores any other value, including a malformed
+              printf-style string, and the tooltip keeps its default
+              formatting.
             - String ``formatter`` templates in tooltips expand the
               ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
               otherwise supports only in series labels (e.g.

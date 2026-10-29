@@ -509,13 +509,14 @@ with st.container(key="c_funnel"):
         height=_HEIGHT,
     )
 
-# Tooltip formatting without JavaScript: a ``{@[n]}`` dimension placeholder in a
-# tooltip template (ECharts expands it only in labels), and a Streamlit number
-# format as ``valueFormatter``. One item fills each chart, so hovering the
-# chart center lands on it. Streamlit builds the template's HTML itself, so the
-# cell also carries an HTML payload that ``{@[3]}`` must print as text. The
-# visualMap reads the value column explicitly because it defaults to the last
-# column, which here is the text payload, and would leave the cell undrawn.
+# Tooltip formatting without JavaScript. One item fills each chart, so hovering
+# the chart center lands on it.
+# - The template chart expands a ``{@[n]}`` placeholder, which ECharts expands
+#   only in labels. Streamlit builds that HTML itself, so the cell also carries
+#   an HTML payload that ``{@[3]}`` must print as text.
+# - Its ``visualMap.dimension`` points at the value column, because it defaults
+#   to the last column (the text payload) and would leave the cell undrawn.
+# - The bar chart formats its value with the ``"dollar"`` number format.
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 with st.container(key="c_tooltip_template"):
     st.echarts_chart(

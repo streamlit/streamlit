@@ -111,9 +111,9 @@ function readDimensionValue(
  * - ``{@...}``, read from the first item (an axis tooltip's first series, as
  *   with ``{c}``).
  *
- * Tooltips are HTML, so every inserted value is escaped and only the author's
- * template markup is kept. As in labels, placeholders expand after ``{b}`` and
- * the others, so a name that contains ``{@...}`` text is expanded too (still
+ * Tooltips are HTML, so the formatter escapes every inserted value and keeps
+ * only the author's template markup. As in labels, ``{@...}`` expands last, so
+ * a series name that contains ``{@...}`` text is expanded too (and still
  * escaped).
  */
 function buildTemplateFormatter(
@@ -144,7 +144,8 @@ function buildTemplateFormatter(
       DIMENSION_PLACEHOLDER,
       (_placeholder, dimension: string) => {
         const value = readDimensionValue(firstItem, dimension)
-        // Missing values and nested objects or arrays print nothing.
+        // The formatter prints nothing for a missing value, a nested object,
+        // or an array.
         return typeof value === "string" ||
           typeof value === "number" ||
           typeof value === "boolean"
@@ -176,19 +177,19 @@ function buildValueFormatter(format: string): TooltipValueFormatter | null {
   }
 
   const formatItem = (item: unknown): string => {
-    const numericItem =
+    const coercedItem =
       typeof item === "string" && isNumericString(item) ? Number(item) : item
-    if (typeof numericItem === "number" && Number.isFinite(numericItem)) {
-      return formatNumber(numericItem, format)
+    if (typeof coercedItem === "number" && Number.isFinite(coercedItem)) {
+      return formatNumber(coercedItem, format)
     }
-    return formatTooltipItem(numericItem)
+    return formatTooltipItem(coercedItem)
   }
   return (value: unknown): string | string[] =>
     Array.isArray(value) ? value.map(formatItem) : formatItem(value)
 }
 
 /** Map an array, returning the input array when no entry changed. */
-function mapChanged(
+function mapPreservingIdentity(
   entries: unknown[],
   transform: (entry: unknown) => unknown
 ): unknown[] {
@@ -213,7 +214,9 @@ function withChangedProperty(
 /** Convert the string formatters of a tooltip config or a list of them. */
 function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
   if (Array.isArray(tooltip)) {
-    return mapChanged(tooltip, entry => withTooltipFormatters(entry, useUTC))
+    return mapPreservingIdentity(tooltip, entry =>
+      withTooltipFormatters(entry, useUTC)
+    )
   }
   if (!isPlainObject(tooltip)) {
     return tooltip
@@ -281,7 +284,7 @@ function convertOptionTooltips(
     withTooltip,
     "series",
     Array.isArray(series)
-      ? mapChanged(series, convertSeries)
+      ? mapPreservingIdentity(series, convertSeries)
       : convertSeries(series)
   )
 }
@@ -315,7 +318,7 @@ function convertOptionAndMediaTooltips(
   return withChangedProperty(
     result,
     "media",
-    mapChanged(media, convertMediaEntry)
+    mapPreservingIdentity(media, convertMediaEntry)
   )
 }
 
@@ -352,6 +355,10 @@ export function applyTooltipFormatters(
   const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
     convertOptionAndMediaTooltips(variant, useUTC)
 
+  // This walks the same locations as Python's ``_iter_option_variants``, which
+  // logs the warnings for these values. With a declared ``baseOption``,
+  // ECharts ignores the root's own tooltips and ``baseOption.media``.
+  // Converting those as well is harmless and keeps both sides aligned.
   let result = convertVariant(option)
   if (baseOption) {
     result = withChangedProperty(
@@ -367,7 +374,7 @@ export function applyTooltipFormatters(
     result = withChangedProperty(
       result,
       "options",
-      mapChanged(options, convertTimelineOption)
+      mapPreservingIdentity(options, convertTimelineOption)
     )
   }
   return result

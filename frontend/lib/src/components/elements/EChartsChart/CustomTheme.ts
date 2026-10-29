@@ -123,8 +123,9 @@ function formatTooltipNumber(value: number): string {
  *
  * Returns plain text that ECharts escapes: one string, or one string per
  * entry for multi-value points such as candlesticks. An option
- * ``tooltip.formatter`` replaces this, and so does a ``tooltip.valueFormatter``
- * number format, which ``applyTooltipFormatters`` turns into a function.
+ * ``tooltip.formatter`` replaces this. So does a string
+ * ``tooltip.valueFormatter`` number format, which ``applyTooltipFormatters``
+ * converts into a function.
  */
 export function formatEChartsTooltipValue(value: unknown): string | string[] {
   if (Array.isArray(value)) {
