@@ -16,7 +16,7 @@
 
 import type { ReactElement } from "react"
 
-import { cleanup, screen, within } from "@testing-library/react"
+import { cleanup, screen, waitFor, within } from "@testing-library/react"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
@@ -128,8 +128,79 @@ describe("containsMathSyntax", () => {
       expected: true,
       description: "inline math with Greek letters",
     },
+    {
+      input: "the $n$-th term",
+      expected: true,
+      description: "inline math attached to a word",
+    },
+    {
+      input: "1.5$\\times$10$^6$",
+      expected: true,
+      description: "formulas around a number",
+    },
+    {
+      input: "costs $5 where $x$ is the rate",
+      expected: true,
+      description: "a formula next to an unescaped dollar amount",
+    },
+    {
+      input: "$$\n\n$$",
+      expected: true,
+      description: "empty display math from st.latex",
+    },
+    {
+      input: "Type ``` to open a fence. $x^2$",
+      expected: true,
+      description: "a formula after backticks in the middle of a line",
+    },
 
     // Invalid math syntax - should return false (avoid false positives)
+    {
+      input: "$315K of $1.46M quota",
+      expected: false,
+      description: "dollar amounts with suffixes",
+    },
+    {
+      input: "$5-$10",
+      expected: false,
+      description: "dollar range with a hyphen",
+    },
+    {
+      input: "$5/$10",
+      expected: false,
+      description: "dollar amounts separated by a slash",
+    },
+    {
+      input: "US$5 and US$10",
+      expected: false,
+      description: "prefixed dollar amounts",
+    },
+    {
+      input: "$x$1",
+      expected: false,
+      description: "closing $ followed by a digit",
+    },
+    {
+      input: "\\$x\\$",
+      expected: false,
+      description: "escaped dollar signs",
+    },
+    {
+      input: "`$x$` and $5 and $10",
+      expected: false,
+      description: "dollar signs in inline code",
+    },
+    {
+      input: "```bash\necho $HOME/$USER\n```\n$5 and $10",
+      expected: false,
+      description: "dollar signs in a fenced code block",
+    },
+    {
+      input: "```\n$x$",
+      expected: false,
+      description: "dollar signs in an unclosed fenced code block",
+    },
+    { input: "$$$$", expected: false, description: "price tier symbols" },
     {
       input: "the price is between $5 and $10",
       expected: false,
@@ -167,6 +238,21 @@ describe("containsMathSyntax", () => {
       expect(containsMathSyntax(input)).toBe(expected)
     }
   )
+
+  it.each([
+    { input: "$5-$", description: "dollar range cut off mid-stream" },
+    { input: "US$5 and US$", description: "prefixed amounts cut off" },
+  ])(
+    "ignores a closing $ at the end while streaming: $description",
+    ({ input }: { input: string }) => {
+      expect(containsMathSyntax(input, { isStreaming: true })).toBe(false)
+      expect(containsMathSyntax(input)).toBe(true)
+    }
+  )
+
+  it("detects a finished formula while streaming", () => {
+    expect(containsMathSyntax("$x$ and", { isStreaming: true })).toBe(true)
+  })
 })
 
 describe("containsEmojiShortcodes", () => {
@@ -1355,6 +1441,68 @@ describe("StreamlitMarkdown", () => {
     expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
       width: "100%",
     })
+  })
+
+  it("renders dollar amounts as plain text when there is no formula", () => {
+    render(
+      <StreamlitMarkdown source="$315K of $1.46M quota" allowHTML={false} />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveTextContent("$315K of $1.46M quota")
+    expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders math when the source contains a formula", async () => {
+    render(<StreamlitMarkdown source="Energy: $E=mc^2$" allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    // KaTeX is lazy-loaded, so the formula renders asynchronously.
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$")
+  })
+
+  it("renders escaped dollar signs next to a formula as text", async () => {
+    render(
+      <StreamlitMarkdown
+        source={"costs \\$5 where $r$ is the rate"}
+        allowHTML={false}
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).toHaveTextContent("costs $5 where")
+    expect(container.querySelectorAll(".katex")).toHaveLength(1)
+  })
+
+  it("renders dollar amounts in labels as plain text", () => {
+    render(
+      <StreamlitMarkdown
+        source="Buy for $5 or $10"
+        allowHTML={false}
+        isLabel
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveTextContent("Buy for $5 or $10")
+    expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders an unfinished display math block while streaming", async () => {
+    render(
+      <StreamlitMarkdown
+        source={"Result:\n\n$$\nx^2"}
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector(".katex-display")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$$")
   })
 
   // Custom color directive tests

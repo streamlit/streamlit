@@ -147,7 +147,7 @@ st.markdown("Hello! 👋 :+1: :tada: :streamlit:")
 
 ## LaTeX math
 
-Single `$` for inline, double `$$` for display mode. Inline math requires non-whitespace after `$` to avoid conflicts with currency (e.g., "$5" won't be parsed as math).
+Single `$` for inline, double `$$` for display mode. Inline math can't start or end with a space, and its closing `$` can't be followed by a digit, so dollar amounts like "$5 and $10" stay plain text. If a string contains a formula, every `$` pair in it is parsed as math, so escape other dollar signs as `\\$` (e.g., `"Costs \\$5, where $r$ is the rate"`).
 
 ```python
 # Inline math

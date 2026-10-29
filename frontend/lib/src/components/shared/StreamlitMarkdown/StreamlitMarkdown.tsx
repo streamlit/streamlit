@@ -122,18 +122,57 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Detects if the markdown source contains math syntax that requires KaTeX.
- * Checks for inline math ($...$) and display math ($$...$$) patterns.
- * For inline math, ensures no whitespace immediately after opening $ or before closing $
- * to avoid false positives like "$5 and $10".
+ * Matches fenced code blocks (opened at the start of a line) and inline code,
+ * whose `$` signs are never math. An unclosed fence, common while streaming,
+ * runs to the end of the source.
+ */
+const CODE_PATTERN =
+  /(?<=^|\n)[ \t]*(`{3,}|~{3,})[\s\S]*?(?:\n[ \t]*\1|$)|`[^`\n]+`/g
+
+/**
+ * Display math: an unescaped `$$` pair. A `$$` next to another `$` doesn't
+ * count, so price tiers like "$$$$" stay plain text.
+ */
+const DISPLAY_MATH_PATTERN = /(?<![\\$])\$\$(?!\$)[\s\S]*?(?<!\\)\$\$/
+
+/**
+ * Inline math, following Pandoc's rule so dollar amounts like "$5 and $10" or
+ * "$5-$10" don't count as a formula:
+ * - the opening `$` is unescaped and followed by a non-space
+ * - the closing `$` is unescaped, preceded by a non-space, and not followed by
+ *   a digit
+ */
+const INLINE_MATH_PATTERN = /(?<![\\$])\$(?![\s$])[^$\n]*?[^\s\\$]\$(?!\d)/
+
+/**
+ * Inline math while streaming: a closing `$` at the end of the source doesn't
+ * count yet, because the next chunk may start with a digit (as in "$5-$10").
+ */
+const STREAMING_INLINE_MATH_PATTERN =
+  /(?<![\\$])\$(?![\s$])[^$\n]*?[^\s\\$]\$(?!\d|$)/
+
+/**
+ * Detects whether the markdown source contains a math formula, ignoring `$` in
+ * code and escaped `\$`. RenderedMarkdown enables math parsing (remark-math)
+ * and KaTeX only when this returns true, so dollar signs in a source without a
+ * formula render as plain text.
  *
  * @param source - The markdown source string to check
+ * @param options.isStreaming - Whether more content may still be appended
  * @returns true if math syntax is detected, false otherwise
  */
-export function containsMathSyntax(source: string): boolean {
-  // Detect display math: $$...$$ or inline math: $...$
-  // Inline math requires non-whitespace after opening $ and before closing $
-  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
+export function containsMathSyntax(
+  source: string,
+  { isStreaming = false }: { isStreaming?: boolean } = {}
+): boolean {
+  if (!source.includes("$")) {
+    return false
+  }
+  const text = source.replaceAll(CODE_PATTERN, "")
+  const inlineMathPattern = isStreaming
+    ? STREAMING_INLINE_MATH_PATTERN
+    : INLINE_MATH_PATTERN
+  return DISPLAY_MATH_PATTERN.test(text) || inlineMathPattern.test(text)
 }
 
 export enum Tags {
@@ -1171,9 +1210,9 @@ const directiveCompletionHandler: RemendHandler = {
 const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
 
 // Standard remark plugins that don't depend on theme or props
-// Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
+// Note: RenderedMarkdown adds remarkMathPlugin and the lazy-loaded remarkEmoji
+// only when the source needs them
 const BASE_REMARK_PLUGINS = [
-  remarkMathPlugin,
   remarkGfm,
   remarkDirective,
   createRemarkHelpIcon(),
@@ -1265,13 +1304,56 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
-  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+  const processedSource = useMemo(() => {
+    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
+    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
+    let processed = source.replaceAll(":material/", ":material_")
+
+    if (isLabel) {
+      // Escape markdown syntax that would be stripped in labels, leaving empty content.
+      // See: https://github.com/streamlit/streamlit/issues/7359
+      //
+      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
+      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
+      //
+      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
+      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
+      processed = processed.replaceAll(
+        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
+        "$1\\$2"
+      )
+      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
+    }
+
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed, REMEND_OPTIONS)
+    }
+
+    return processed
+  }, [source, isLabel, allowHTML, unterminatedParsing])
+
+  // Check the source that gets parsed: while streaming, remend closes an
+  // unfinished `$$` block so it can render as math right away.
+  const needsMath = useMemo(
+    () =>
+      containsMathSyntax(processedSource, {
+        isStreaming: unterminatedParsing,
+      }),
+    [processedSource, unterminatedParsing]
+  )
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
     key: "katex",
-    needed: needsKatex,
+    needed: needsMath,
     load: loadKatexPlugin,
     pluginName: "rehype-katex",
     onBeforeLoad: loadKatexStyles,
@@ -1321,6 +1403,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
+      // Parse math only when the source contains a formula, so dollar amounts
+      // like "$5 and $10" stay plain text
+      ...(needsMath ? [remarkMathPlugin] : []),
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
@@ -1334,12 +1419,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(createRemarkUnsupportedDirectivesCleanup())
 
     return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+  }, [theme, colorMapping, needsMath, needsEmoji, wrappedEmojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
 
-    if (needsKatex && wrappedKatexPlugin) {
+    if (needsMath && wrappedKatexPlugin) {
       plugins.push(wrappedKatexPlugin)
     }
 
@@ -1352,7 +1437,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
+  }, [allowHTML, needsMath, wrappedKatexPlugin, wrappedRawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -1363,41 +1448,6 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       }) as Components,
     [overrideComponents]
   )
-
-  const processedSource = useMemo(() => {
-    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
-    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
-
-    if (isLabel) {
-      // Escape markdown syntax that would be stripped in labels, leaving empty content.
-      // See: https://github.com/streamlit/streamlit/issues/7359
-      //
-      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
-      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
-      //
-      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
-      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replaceAll(
-        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
-        "$1\\$2"
-      )
-      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replaceAll(
-        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
-        "$1$2\\$3"
-      )
-    }
-
-    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
-    // Only apply when unterminatedParsing is enabled (during streaming).
-    // Skip for labels (short, complete strings) and HTML content (may interfere).
-    if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed, REMEND_OPTIONS)
-    }
-
-    return processed
-  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1412,7 +1462,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
   const isLoadingPlugins =
-    (needsKatex && katexPlugin === null) ||
+    (needsMath && katexPlugin === null) ||
     (allowHTML && rawPlugin === null) ||
     (needsEmoji && emojiPlugin === null)
 
