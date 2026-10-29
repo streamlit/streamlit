@@ -313,12 +313,9 @@ export function convertTimeToDate(
  * Converts a duration (timedelta) value to milliseconds based on the unit
  * information in the field.
  *
- * Nanosecond and microsecond counts are divided directly into milliseconds
- * (rather than via `convertTimestampToSeconds(...) * 1000`, which adds float
- * noise such as `20.987638999999998`). Like `convertTimestampToSeconds`,
- * bigints outside the safe integer range keep their sub-millisecond
- * remainder. Millisecond and second counts are converted with `Number()`
- * directly.
+ * Nanosecond and microsecond counts are divided straight into milliseconds,
+ * avoiding the float noise of going through seconds (`20.987638999999998`).
+ * Bigints outside the safe integer range keep their sub-millisecond remainder.
  *
  * @param duration The duration value in the field's unit.
  * @param field The field containing the unit information. Without one, the

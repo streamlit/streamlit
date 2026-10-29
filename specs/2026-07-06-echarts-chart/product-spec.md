@@ -167,8 +167,9 @@ it. The dataframe index is not included (use `df.reset_index()` to plot it). Cel
   shows the same wall-clock time. Timezone-aware datetimes: ISO-8601 in UTC with `Z`.
 - Dates: `YYYY-MM-DD`. Times of day: `HH:mm:ss` (with milliseconds when set). Durations:
   milliseconds.
-- Periods and intervals: labels such as `2020-01` and `(0, 1]`. Structs, bytes, and other
-  objects: the text `st.dataframe` shows. Lists: arrays.
+- Periods and intervals: labels such as `2020-01` and `(0, 1]`. Bytes: their comma-separated
+  byte values (`97,98` for `b"ab"`). Structs and other objects: the text `st.dataframe` shows.
+  Lists: arrays.
 
 A dataframe-like object anywhere else (`series.data`, `xAxis.data`, …) is **not** converted; it
 fails the JSON-serializability check with an error that points the user at `dataset.source`:

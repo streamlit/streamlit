@@ -235,10 +235,10 @@ export function EChartsChart({
   const renderError =
     opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
 
-  // Parse the spec and put the Arrow dataset rows back into its
-  // `dataset.source` placeholders, memoized on the spec string. A dataset that
-  // cannot be read is reported like an invalid spec, so ECharts never sees a
-  // placeholder.
+  // Parse the spec and replace its Arrow `dataset.source` placeholders with
+  // rows. Memoized on the spec string, which embeds each dataset's content
+  // hash. An unreadable dataset is reported as a spec error, so ECharts never
+  // receives a placeholder.
   const { option, parseError } = useMemo<{
     option: EChartsOptionObject | null
     parseError: string | null

@@ -463,7 +463,7 @@ class SnapshotDataTest(SnapshotCase):
         assert data["spec"]["dataset"]["source"] == {"name": dataset.name}
 
     def test_echarts_over_several_dataframes_serves_none(self) -> None:
-        """Two tables are not one, so neither is served or previewed."""
+        """A chart over two distinct dataframes reports ``multiple_datasets`` and serves neither table."""
         st.echarts_chart(
             {
                 "dataset": [{"source": _FRAME}, {"source": _OTHER}],

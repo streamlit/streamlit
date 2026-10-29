@@ -330,8 +330,8 @@ def _serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | Non
 def _arrow_in_payload(message: Message) -> bytes:
     """The Arrow data an element's payload carries, or empty bytes.
 
-    A table's payload is its Arrow data. A Vega-Lite or ECharts chart's is the
-    one buffer its data is in, since only a chart with a single buffer
+    A table's payload is its Arrow data. A Vega-Lite or ECharts chart returns
+    its Arrow buffer only when it has exactly one, because only such a chart
     registers a copy.
     """
     if isinstance(message, EChartsChartProto):

@@ -556,7 +556,8 @@ def _convert_single_dataset(
         raise StreamlitDataframeConversionError(
             "The provided ECharts `dataset.source` could not be converted for "
             "display. Convert or drop the columns that cannot be serialized "
-            f"(for example, cast them to strings).\n\n{ex}",
+            "(for example, cast object columns to strings, or call "
+            f"`.sparse.to_dense()` on sparse columns).\n\n{ex}",
             error_id="echarts-dataset-not-arrow-serializable",
         ) from ex
 
@@ -947,9 +948,10 @@ def _echarts_data(
     if len(datasets) > 1:
         data = agent_data.unavailable("multiple_datasets")
     else:
-        # agent_data.arrow returns None only when the bytes can neither be
-        # summarized nor served. In a recording session, only
-        # server.maxMessageSize prevents serving.
+        # agent_data.arrow returns None for empty bytes and for bytes that can
+        # neither be summarized nor served. A converted dataset is never
+        # empty, and in a recording session only server.maxMessageSize
+        # prevents serving.
         data = agent_data.arrow(
             datasets[0].data.data, coordinates=coordinates
         ) or agent_data.unavailable("too_large_to_serve")
@@ -1063,7 +1065,9 @@ class EChartsMixin:
             - Decimals: numbers.
             - Periods and intervals: labels such as ``2020-01`` and ``(0, 1]``.
             - Lists: arrays.
-            - Structs, bytes, mixed-type columns, and other objects: the text
+            - Bytes: their comma-separated byte values, such as ``97,98`` for
+              ``b"ab"``.
+            - Structs, mixed-type columns, and other objects: the text
               ``st.dataframe`` shows.
             - Missing values and non-finite floats: ``null``.
 
