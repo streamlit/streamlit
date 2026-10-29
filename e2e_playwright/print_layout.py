@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pandas as pd
+import plotly.graph_objects as go
 
 import streamlit as st
 
@@ -80,3 +81,23 @@ with st.container(key="chart_row"):
         st.markdown("Second chart column")
 
 st.markdown("After the chart row")
+
+with st.container(key="metric_extras"):
+    content_column, chart_column = st.columns(2, border=True)
+    content_column.metric("Content width", "1,234,567,890", "12%", width="content")
+    chart_column.metric(
+        "Sparkline", "42", "3%", chart_data=[1, 5, 2, 6, 3, 7, 4], chart_type="area"
+    )
+
+with st.container(key="plotly_row"):
+    plotly_column, text_column = st.columns(2)
+    plotly_column.plotly_chart(
+        go.Figure(go.Bar(x=["a", "b", "c"], y=[1, 3, 2])), height=200
+    )
+    text_column.markdown("Beside the Plotly chart")
+
+st.markdown("After the Plotly row")
+
+with st.container(border=True, key="trailing_empty"):
+    st.markdown("Text above a trailing placeholder")
+    st.empty()

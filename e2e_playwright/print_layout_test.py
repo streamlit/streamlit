@@ -243,3 +243,74 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     end_browser_print(app)
     expect(app.locator(".stDataFramePrintTable")).to_have_count(0)
+
+
+def _assert_inside(inner: Locator, outer: Locator) -> None:
+    inner_box = inner.bounding_box()
+    outer_box = outer.bounding_box()
+    assert inner_box is not None
+    assert outer_box is not None
+    assert inner_box["x"] >= outer_box["x"] - 1
+    assert inner_box["x"] + inner_box["width"] <= (
+        outer_box["x"] + outer_box["width"] + 1
+    )
+
+
+def test_print_fits_metrics_plotly_and_trailing_placeholder(app: Page) -> None:
+    """Metric variants fit their card, Plotly rows stack, and a trailing
+    placeholder adds no gap.
+    """
+    expect(app.get_by_text("After the Plotly row", exact=True)).to_be_visible()
+
+    app.set_viewport_size(_PORTRAIT)
+    start_browser_print(app)
+
+    # A content-width metric and a metric sparkline both keep the size
+    # measured on screen unless print caps them to the narrower card.
+    metric_columns = get_element_by_key(app, "metric_extras").get_by_test_id("stColumn")
+    expect(metric_columns).to_have_count(2)
+    content_column, chart_column = metric_columns.nth(0), metric_columns.nth(1)
+    content_value = content_column.get_by_test_id("stMetricValue")
+    sparkline = chart_column.get_by_test_id("stMetricChart")
+    sparkline_graphic = sparkline.locator("svg, canvas").first
+    expect(content_value).to_be_visible()
+    expect(sparkline_graphic).to_be_visible()
+
+    def metrics_fit_their_columns() -> None:
+        _assert_inside(content_value, content_column)
+        _assert_inside(sparkline, chart_column)
+        _assert_inside(sparkline_graphic, chart_column)
+
+    wait_until(app, metrics_fit_their_columns)
+
+    # A Plotly chart stacks its row like the built-in charts.
+    plotly_row = get_element_by_key(app, "plotly_row")
+    plotly_chart = plotly_row.get_by_test_id("stPlotlyChart")
+    beside_text = plotly_row.get_by_text("Beside the Plotly chart", exact=True)
+    after_plotly = app.get_by_text("After the Plotly row", exact=True)
+    expect(plotly_chart).to_be_visible()
+
+    def plotly_row_stacks() -> None:
+        chart_box = plotly_chart.bounding_box()
+        beside_box = beside_text.bounding_box()
+        after_box = after_plotly.bounding_box()
+        assert chart_box is not None
+        assert beside_box is not None
+        assert after_box is not None
+        assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
+        assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, plotly_row_stacks)
+
+    # The print gap margin only goes on a child with a printed sibling after
+    # it, so a hidden trailing placeholder leaves no blank strip.
+    trailing_children = get_element_by_key(app, "trailing_empty").locator(":scope > *")
+    expect(trailing_children).to_have_count(2)
+    assert (
+        trailing_children.first.evaluate(
+            "element => getComputedStyle(element).marginBottom"
+        )
+        == "0px"
+    )
+
+    end_browser_print(app)

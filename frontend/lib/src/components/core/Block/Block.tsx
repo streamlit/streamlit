@@ -628,7 +628,7 @@ export const BlockNodeRenderer = (
         )}
         {...styles}
         {...stretchWrapperStyles}
-        keepsPrintFlex={
+        hasDefiniteHeight={
           isStretchHeight && flexContext?.hasDefiniteHeight === true
         }
       >

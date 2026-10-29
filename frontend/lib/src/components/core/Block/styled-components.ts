@@ -56,8 +56,7 @@ export const PRINT_CARD_CLASS = "stPrintCard"
 /**
  * Content that makes a printed column row stack into one column: a
  * dataframe, a static table, or a chart. These keep a width measured on
- * screen and would overflow a narrower printed column. These are the
- * elements' own classes. Test IDs are not used as selectors.
+ * screen and would overflow a narrower printed column.
  *
  * A border alone does not stack the row. Metrics shrink their text to fit,
  * and text wraps, so a row of bordered metric cards stays side by side. An
@@ -68,17 +67,28 @@ const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR}
 /** Matches a column that holds a dataframe, table, or chart on the printed page. */
 const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
 
+/** Element types whose container is `display: none` in print. */
+export const PRINT_HIDDEN_ELEMENT_TYPES = new Set([
+  "empty",
+  "balloons",
+  "snow",
+])
+
+/** Marks an element container that takes no space on the printed page. */
+export const PRINT_HIDDEN_CLASS = "stPrintHidden"
+
+/** A child followed by at least one sibling that prints. */
+const CHILD_BEFORE_PRINTED_SIBLING = `& > :has(~ :not(.${PRINT_HIDDEN_CLASS}))`
+
 /**
- * Bottom margins that replace flex `gap` once a vertical block prints as a
- * block box. `gap` does not apply there. Margin stays outside the child, so
- * border-box padding does not eat into a fixed height.
- *
- * A page link only trims the flex gap, by xs above and below. Print replaces
- * the gap with margin, so the trim stays in that margin. The next link's own
- * negative margin-top then collapses with it. A cache spinner's zero-height
- * container cancels its gap with -lg, so its print margin is the gap minus
- * lg. Balloons and snow containers are `display: none` in print, so this
- * margin does not exclude them.
+ * Replaces flex `gap` with bottom margins when a vertical block prints as
+ * `display: block` (`gap` does not apply there). Only a child with a printed
+ * sibling after it gets one, so a trailing `st.empty`, balloons, or snow
+ * container leaves no extra strip:
+ * - Most children get the full gap.
+ * - A page link keeps its xs trim, so it gets `gap - xs`.
+ * - A zero-height cache spinner cancels its gap with -lg, so it gets
+ *   `gap - lg`.
  */
 function printBlockGapMargins(
   gapWidth: string | undefined,
@@ -88,14 +98,14 @@ function printBlockGapMargins(
     return {}
   }
   return {
-    "& > :not(:last-child):not(:has(> .stPageLink)):not(:has(> .stCacheSpinner))":
+    [`${CHILD_BEFORE_PRINTED_SIBLING}:not(:has(> .stPageLink)):not(:has(> .stCacheSpinner))`]:
       {
         marginBottom: gapWidth,
       },
-    "& > :not(:last-child):has(> .stPageLink)": {
+    [`${CHILD_BEFORE_PRINTED_SIBLING}:has(> .stPageLink)`]: {
       marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
     },
-    "& > :not(:last-child):has(> .stCacheSpinner)": {
+    [`${CHILD_BEFORE_PRINTED_SIBLING}:has(> .stCacheSpinner)`]: {
       marginBottom: `calc(${gapWidth} - ${theme.spacing.lg})`,
     },
   }
@@ -191,10 +201,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       overflow: "visible",
       ...(GLOBAL_ELEMENTS.has(elementType)
         ? {
-            // The particle overlay is already hidden. This container still
-            // sits in the vertical block, and the print gap margin would
-            // otherwise beat its negative margin and leave a blank strip.
-            // A display:none box has no margin.
+            // Hide balloons and snow in print. Their negative margin only
+            // cancels the flex gap, so the print gap margin would otherwise
+            // leave a blank strip.
             display: "none",
           }
         : {}),
@@ -599,11 +608,10 @@ interface StyledLayoutWrapperProps {
   minHeight?: React.CSSProperties["minHeight"]
   maxHeight?: React.CSSProperties["maxHeight"]
   /**
-   * Keeps flex in print for a stretch-height block in a definite-height
-   * parent. Its auto height would otherwise switch it to block layout and
-   * stop it from filling the parent.
+   * True for a stretch-height wrapper in a definite-height parent. Print
+   * keeps flex for it, like a fixed height, so it still fills the parent.
    */
-  keepsPrintFlex?: boolean
+  hasDefiniteHeight?: boolean
 }
 
 /**
@@ -628,7 +636,7 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     alignSelf,
     minHeight,
     maxHeight,
-    keepsPrintFlex,
+    hasDefiniteHeight,
   }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
@@ -647,7 +655,7 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
       // Fixed and stretch-height wrappers keep flex so their child retains
       // its allocated height.
       ...((height === undefined || height === "auto") &&
-        keepsPrintFlex !== true && {
+        hasDefiniteHeight !== true && {
           display: "block",
         }),
       [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:

@@ -20,6 +20,7 @@ import {
   type Item,
 } from "@glideapps/glide-data-grid"
 
+import { PRINT_INACTIVE_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import {
   type BaseColumn,
   DEFAULT_MISSING_PLACEHOLDER,
@@ -192,7 +193,7 @@ export function buildDataFramePrintMeasure(
  * spend the shared cell budget.
  *
  * Unprinted when any of these match:
- * - a closed tab or a collapsed sidebar (`[data-st-inactive]`). A sidebar
+ * - a closed tab or a collapsed sidebar (`PRINT_INACTIVE_ATTRIBUTE`). A sidebar
  *   slid off with `translateX` still counts as visible to
  *   `checkVisibility`, and `beforeprint` uses screen media, so the
  *   sidebar's print `display: none` is not active yet
@@ -200,7 +201,7 @@ export function buildDataFramePrintMeasure(
  * - any other `display: none` or `visibility: hidden` ancestor
  */
 export function isHiddenFromPrint(element: HTMLElement): boolean {
-  if (element.closest("[data-st-inactive], details:not([open])")) {
+  if (element.closest(`[${PRINT_INACTIVE_ATTRIBUTE}], details:not([open])`)) {
     return true
   }
   // Other unprinted subtrees (for example a display:none ancestor) are
