@@ -200,7 +200,52 @@ class WStateTests(unittest.TestCase):
     def test_getitem_serialized(self):
         assert isinstance(self.wstates.states["widget_id_1"], Serialized)
         assert self.wstates["widget_id_1"] == "5"
-        assert self.wstates.states["widget_id_1"] == Value("5")
+        assert self.wstates.states["widget_id_1"] == Value("5", "int_value")
+
+    def test_getitem_keeps_the_registered_value_type(self):
+        """Reading a value that arrived in another field leaves value_type alone."""
+        widget_state = WidgetStateProto(id="widget_id_1", double_value=5.0)
+        self.wstates.set_widget_from_proto(widget_state)
+
+        assert self.wstates["widget_id_1"] == "5.0"
+        assert self.wstates.widget_metadata["widget_id_1"].value_type == "int_value"
+        assert self.wstates.states["widget_id_1"] == Value("5.0", "double_value")
+
+    def test_get_serialized_writes_the_field_the_value_arrived_in(self):
+        """A value is serialized back to its arrived field, not the registered one."""
+        self.wstates.cache_value("widget_id_2", 5, "double_value")
+
+        serialized = self.wstates.get_serialized("widget_id_2")
+
+        assert serialized.WhichOneof("value") == "double_value"
+        assert serialized.double_value == 5.0
+
+    def test_get_serialized_component_bytes(self):
+        """A Components v1 value that arrived as bytes is serialized as bytes."""
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="component",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+        self.wstates.set_widget_from_proto(
+            WidgetStateProto(id="component", bytes_value=b"\x00\x01")
+        )
+        assert self.wstates["component"] == b"\x00\x01"
+
+        serialized = self.wstates.get_serialized("component")
+
+        assert serialized.bytes_value == b"\x00\x01"
+
+    def test_drop(self):
+        """drop forgets a value and ignores an unknown ID."""
+        self.wstates.drop("widget_id_2")
+        self.wstates.drop("unknown")
+
+        assert "widget_id_2" not in self.wstates.states
+        assert "widget_id_2" in self.wstates.widget_metadata
 
     def test_getitem_value(self):
         assert self.wstates["widget_id_2"] == 5
@@ -3405,6 +3450,28 @@ def test_json_trigger_value_gets_reset():
     assert isinstance(new_value, Value)
     assert new_value.value is None
     assert ss._old_state[widget_id] is None
+
+
+def test_reset_triggers_resets_a_button_read_from_another_field() -> None:
+    """A button stays a trigger after reading a value sent in another field."""
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="button",
+            deserializer=lambda value: value,
+            serializer=lambda value: value,
+            value_type="trigger_value",
+        )
+    )
+    ss._new_widget_state.set_widget_from_proto(
+        WidgetStateProto(id="button", string_value="x")
+    )
+    assert ss._new_widget_state["button"] == "x"
+
+    ss._reset_triggers()
+
+    assert ss._new_widget_state["button"] is False
+    assert ss._get_widget_metadata("button").value_type == "trigger_value"
 
 
 # endregion Multiple callbacks

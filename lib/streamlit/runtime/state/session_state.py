@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import functools
-import json
 import pickle  # noqa: S403
 from collections.abc import (
     Callable,
@@ -67,9 +66,9 @@ from streamlit.runtime.state.common import (
     WidgetArgs,
     WidgetCallback,
     WidgetMetadata,
-    is_array_value_field_name,
     is_element_id,
     is_keyed_element_id,
+    pack_widget_state_value,
     unpack_widget_state_value,
 )
 from streamlit.runtime.state.presentation import apply_presenter
@@ -149,6 +148,10 @@ class Value:
     """A widget value that's not serialized. Immutable."""
 
     value: Any
+    # The WidgetState field a client value arrived in, which serializing it
+    # again writes to. None means the widget's registered `value_type`, as for
+    # a value the server set or one that arrived with no field set.
+    wire_field: ValueFieldName | None = None
 
 
 WState: TypeAlias = Value | Serialized
@@ -189,21 +192,8 @@ class WStates(MutableMapping[str, Any]):
             # gotten from a reconnecting browser and the script is
             # trying to access it. Pretend it doesn't exist.
             raise KeyError(k)
-        value_field_name = cast(
-            "ValueFieldName",
-            wstate.value.WhichOneof("value"),
-        )
         deserialized = metadata.deserializer(unpack_widget_state_value(wstate.value))
-
-        # Update metadata to reflect information from WidgetState proto
-        self.set_widget_metadata(
-            replace(
-                metadata,
-                value_type=value_field_name,
-            )
-        )
-
-        self.states[k] = Value(deserialized)
+        self.cache_value(k, deserialized, wstate.value.WhichOneof("value"))
         return deserialized
 
     def __setitem__(self, k: str, v: WState) -> None:
@@ -244,6 +234,20 @@ class WStates(MutableMapping[str, Any]):
     def set_from_value(self, k: str, v: Any) -> None:
         """Set a widget's deserialized value, overwriting any existing value it has."""
         self[k] = Value(v)
+
+    def cache_value(
+        self, widget_id: str, value: Any, wire_field: ValueFieldName | None
+    ) -> None:
+        """Replace a client value with its deserialized form.
+
+        ``wire_field`` is the field it arrived in, which serializing it again
+        writes to.
+        """
+        self.states[widget_id] = Value(value, wire_field)
+
+    def drop(self, widget_id: str) -> None:
+        """Forget a widget's value in this mapping, if it has one."""
+        self.states.pop(widget_id, None)
 
     def set_widget_metadata(self, widget_meta: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata, overwriting any existing metadata it has."""
@@ -287,31 +291,11 @@ class WStates(MutableMapping[str, Any]):
             # We're missing the widget's metadata. (Can this happen?)
             return None
 
-        widget = WidgetStateProto()
-        widget.id = k
-
-        field = metadata.value_type
-        serialized = metadata.serializer(item.value)
-
-        if is_array_value_field_name(field):
-            arr = getattr(widget, field)
-            arr.data.extend(serialized)
-        elif field in {"json_value", "json_trigger_value"}:
-            setattr(widget, field, json.dumps(serialized))
-        elif field == "file_uploader_state_value":
-            widget.file_uploader_state_value.CopyFrom(serialized)
-        elif field == "string_trigger_value":
-            widget.string_trigger_value.CopyFrom(serialized)
-        elif field == "chat_input_value":
-            widget.chat_input_value.CopyFrom(serialized)
-        elif field is not None and serialized is not None:
-            # If the field is None, the widget value was cleared
-            # by the user and therefore is None. But we cannot
-            # set it to None here, since the proto properties are
-            # not nullable. So we just don't set it.
-            setattr(widget, field, serialized)
-
-        return widget
+        # A Components v1 value goes back to the field it arrived in, such as
+        # bytes_value, which the registered json_value could not hold.
+        return pack_widget_state_value(
+            k, item.wire_field or metadata.value_type, metadata.serializer(item.value)
+        )
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
