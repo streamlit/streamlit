@@ -19,10 +19,12 @@ from __future__ import annotations
 import textwrap
 from contextlib import asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
+from streamlit import file_util
 from streamlit.elements.lib import agent_spec
 from streamlit.runtime import Runtime, RuntimeConfig
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -36,12 +38,17 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_app_static_serving_routes,
     create_media_routes,
 )
+from streamlit.web.server.starlette.starlette_static_routes import (
+    create_streamlit_static_assets_routes,
+)
 from tests.streamlit.runtime.agent import run_gate
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
     from pathlib import Path
+
+    from starlette.routing import BaseRoute
 
 
 @asynccontextmanager
@@ -55,14 +62,29 @@ async def _lifespan_with(runtime: Runtime) -> AsyncGenerator[None, None]:
         await runtime.stopped
 
 
+def _static_assets_routes(tmp_path: Path, base_url: str) -> list[BaseRoute]:
+    """The core static files mount, serving a stand-in ``index.html``."""
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>app</html>")
+    with patch.object(file_util, "get_static_dir", return_value=str(static_dir)):
+        return create_streamlit_static_assets_routes(base_url)
+
+
 @contextmanager
 def served_app(
-    tmp_path: Path, script: str, overrides: dict[str, Any], *, base_url: str = ""
+    tmp_path: Path,
+    script: str,
+    overrides: dict[str, Any],
+    *,
+    base_url: str = "",
+    static_assets: bool = False,
 ) -> Generator[TestClient, None, None]:
     """A real Runtime on ``script``, behind the agent, media, and app static routes.
 
     ``overrides`` is read at every lookup, so a test can change an option while
-    the app runs.
+    the app runs. With ``static_assets``, the core static files mount comes
+    last, as in the real app, and answers every path no route takes.
     """
     main_script = tmp_path / "app.py"
     main_script.write_text(textwrap.dedent(script))
@@ -96,6 +118,11 @@ def served_app(
                     *starlette_agent_routes.create_agent_routes(runtime, base_url),
                     *create_media_routes(media_storage, base_url),
                     *create_app_static_serving_routes(str(main_script), base_url),
+                    *(
+                        _static_assets_routes(tmp_path, base_url)
+                        if static_assets
+                        else []
+                    ),
                 ],
                 lifespan=lambda _app: _lifespan_with(runtime),
             )

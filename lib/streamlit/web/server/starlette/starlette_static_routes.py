@@ -63,7 +63,7 @@ def create_streamlit_static_handler(
     - SPA fallback (serving index.html on 404s for client-side routing)
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
-    - Trailing slash redirect (301)
+    - Trailing slash redirect (301 for GET and HEAD, 308 for other methods)
     - Double-slash protection (400 for protocol-relative URL security)
     """
     from starlette.exceptions import HTTPException
@@ -106,8 +106,8 @@ def create_streamlit_static_handler(
                 await response(scope, receive, send)
                 return
 
-            # Handle trailing slash redirect: Returns 301 for paths with trailing
-            # slashes (except root "/" or mount root).
+            # Handle trailing slash redirect: Redirects paths with trailing
+            # slashes (except root "/" or mount root) to the path without them.
             # We replicate this for consistent URL handling and to avoid duplicate
             # content issues. When mounted (e.g., at "/app"), scope["path"] is the
             # full path "/app/" and scope["root_path"] is "/app", so we must not
@@ -119,15 +119,30 @@ def create_streamlit_static_handler(
                 if redirect_path == root_path:
                     await super().__call__(scope, receive, send)
                     return
-                # Build redirect URL without trailing slash
                 query_string = scope.get("query_string", b"")
-                if query_string:
-                    redirect_path += "?" + query_string.decode("latin-1")
-                response = RedirectResponse(
-                    url=redirect_path,
-                    status_code=301,
-                    headers={"Cache-Control": "no-cache"},
-                )
+                query = "?" + query_string.decode("latin-1") if query_string else ""
+                if scope["method"] in {"GET", "HEAD"}:
+                    response = RedirectResponse(
+                        url=redirect_path + query,
+                        status_code=301,
+                        headers={"Cache-Control": "no-cache"},
+                    )
+                else:
+                    # Clients turn a POST redirected with a 301 into a GET
+                    # without its body, so MCP SDKs don't follow one. A 308
+                    # keeps the method and the body, so a pasted MCP URL with
+                    # a trailing slash, such as `/_stcore/agent/mcp/`, still
+                    # connects. Its Location is relative (`../mcp`), so it
+                    # resolves against the URL the client called: behind a
+                    # proxy that strips a path prefix, an absolute path built
+                    # from scope["path"] would lose that prefix.
+                    trailing_slashes = len(path) - len(redirect_path)
+                    last_segment = redirect_path.rsplit("/", 1)[-1]
+                    response = RedirectResponse(
+                        url="../" * trailing_slashes + last_segment + query,
+                        status_code=308,
+                        headers={"Cache-Control": "no-cache"},
+                    )
                 await response(scope, receive, send)
                 return
 

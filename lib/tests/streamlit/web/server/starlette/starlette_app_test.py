@@ -1420,6 +1420,49 @@ def test_a_reserved_path_refuses_other_methods_by_where_it_is(
     assert "<html>" not in under_a_page.text
 
 
+@pytest.mark.parametrize(
+    ("base_url", "mcp_path"),
+    [("", "/_stcore/agent/mcp"), ("app", "/app/_stcore/agent/mcp")],
+)
+def test_the_mcp_url_with_a_trailing_slash_redirects_to_the_route(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, base_url: str, mcp_path: str
+) -> None:
+    """The MCP URL with a trailing slash falls through to the static files
+    mount, whose 308 keeps the POST, so a client that follows it initializes.
+    """
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+    initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+
+    with (
+        patch_config_options(
+            {
+                "server.enableAgentApi": True,
+                "server.baseUrlPath": base_url,
+                "global.developmentMode": False,
+            }
+        ),
+        TestClient(create_starlette_app(_DummyRuntime(component_dir))) as client,
+    ):
+        redirected = client.post(
+            f"{mcp_path}/", json=initialize, follow_redirects=False
+        )
+        followed = client.post(f"{mcp_path}/", json=initialize)
+
+    assert redirected.status_code == HTTPStatus.PERMANENT_REDIRECT
+    assert redirected.headers["location"] == "../mcp"
+    assert [response.status_code for response in followed.history] == [
+        HTTPStatus.PERMANENT_REDIRECT
+    ]
+    assert followed.url.path == mcp_path
+    assert followed.status_code == HTTPStatus.OK, followed.text
+    assert followed.json()["result"]["serverInfo"]["name"] == "streamlit"
+
+
 @patch_config_options({"global.developmentMode": False})
 def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
     """Ensure hashed static assets receive long-lived cache headers."""

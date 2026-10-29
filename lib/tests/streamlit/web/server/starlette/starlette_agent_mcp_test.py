@@ -959,7 +959,8 @@ def test_the_official_mcp_client_connects_and_uses_both_tools(tmp_path: Path) ->
     """The official Python MCP client connects in its default mode, which
     probes `server/discover` first and falls back to `initialize`, and in its
     handshake-only mode, then calls both tools. Like a hosted connector, it
-    sends no `Origin`, and it opens no stream and ends no session.
+    sends no `Origin`, and it opens no stream and ends no session. Given the
+    URL with a trailing slash, it follows the static files' 308 to the route.
     """
     import httpx2
     from mcp.client import Client
@@ -968,17 +969,19 @@ def test_the_official_mcp_client_connects_and_uses_both_tools(tmp_path: Path) ->
     sent: list[httpx2.Request] = []
 
     async def record(request: httpx2.Request) -> None:
+        # A redirected request carries its body as a stream until it is read.
+        await request.aread()
         sent.append(request)
 
-    async def connect(app: Any, mode: str) -> dict[str, Any]:
+    async def connect(
+        app: Any, mode: str, url: str = f"http://testserver{_MCP_PATH}"
+    ) -> dict[str, Any]:
         async with httpx2.AsyncClient(
             transport=httpx2.ASGITransport(app=app),
             base_url="http://testserver",
             event_hooks={"request": [record]},
         ) as http:
-            transport = streamable_http_client(
-                f"http://testserver{_MCP_PATH}", http_client=http
-            )
+            transport = streamable_http_client(url, http_client=http)
             async with Client(transport, mode=mode) as session:
                 tools = await session.list_tools()
                 created = await session.call_tool("interact", {})
@@ -1010,14 +1013,21 @@ def test_the_official_mcp_client_connects_and_uses_both_tools(tmp_path: Path) ->
                     "refused": (refused.is_error, json.loads(refused.content[0].text)),
                 }
 
-    with agent_served_app.served_app(tmp_path, _DATA_SCRIPT, {}) as client:
+    with agent_served_app.served_app(
+        tmp_path, _DATA_SCRIPT, {}, static_assets=True
+    ) as client:
         assert client.portal is not None
         auto = client.portal.call(connect, client.app, "auto")
         auto_requests = list(sent)
         sent.clear()
         legacy = client.portal.call(connect, client.app, "legacy")
+        legacy_requests = list(sent)
+        sent.clear()
+        slashed = client.portal.call(
+            connect, client.app, "auto", f"http://testserver{_MCP_PATH}/"
+        )
 
-    for connected in (auto, legacy):
+    for connected in (auto, legacy, slashed):
         assert connected["protocol_version"] == "2025-11-25"
         assert connected["server_name"] == "streamlit"
         assert connected["instructions"] == protocol.MCP_INSTRUCTIONS
@@ -1031,7 +1041,19 @@ def test_the_official_mcp_client_connects_and_uses_both_tools(tmp_path: Path) ->
         assert body["error"]["code"] == "unknown_file"
     methods = [json.loads(request.content).get("method") for request in auto_requests]
     assert methods[:3] == ["server/discover", "initialize", "notifications/initialized"]
-    assert json.loads(sent[0].content)["method"] == "initialize"
-    for request in [*auto_requests, *sent]:
+    assert json.loads(legacy_requests[0].content)["method"] == "initialize"
+    # Each message to the URL with the slash is sent again, with the same
+    # body, to the route the 308 names.
+    assert [request.url.path for request in sent] == [
+        f"{_MCP_PATH}/",
+        _MCP_PATH,
+    ] * len(auto_requests)
+    assert [request.content for request in sent[::2]] == [
+        request.content for request in sent[1::2]
+    ]
+    assert [json.loads(request.content).get("method") for request in sent[1::2]] == (
+        methods
+    )
+    for request in [*auto_requests, *legacy_requests, *sent]:
         assert request.method == "POST"
         assert "origin" not in request.headers
