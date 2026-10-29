@@ -26,6 +26,7 @@ import {
   StyledWidgetLabel,
   type StyledWidgetProps,
 } from "~lib/components/widgets/BaseWidget/styled-components"
+import { MARKDOWN_ELLIPSIS_CLASS } from "~lib/hooks/useLabelTitleTooltip"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
@@ -37,75 +38,89 @@ import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 export const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
 
 /**
- * Printed column width for a content-width metric. The value is not a
- * container, so the font rule reads this instead of `cqi`.
+ * Slot width for a content-width metric, measured around the value. The
+ * value is not a size container, so the font rule reads this together with
+ * the printed column's `cqi`.
  */
 export const METRIC_AVAILABLE_VAR = "--st-metric-available"
 
 interface StyledMetricContainerProps {
   showBorder: boolean
-  /** A content-width card is sized by its figure, so print must not contain it. */
+  /**
+   * A content-width card is sized by its value, so print must not set
+   * `container-type` on the value.
+   */
   isContentWidth?: boolean
 }
 
+const ELLIPSIS_SELECTOR = `.${MARKDOWN_ELLIPSIS_CLASS}`
+
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
-  ({ theme, showBorder, isContentWidth }) => ({
-    height: "100%",
-    ...(showBorder && {
-      border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-      borderRadius: theme.radii.default,
-      overflow: "hidden",
-    }),
-    // A printed column is often narrower than the on-screen card. The label
-    // and delta wrap onto extra lines. A stretch card scales the value down
-    // to the card. A content-width card stays as wide as the figure.
-    "@media print": {
-      overflow: "visible",
-      "& .stMarkdownEllipsis, & .stMarkdownEllipsis p": {
+  ({ theme, showBorder, isContentWidth }) => {
+    // A bordered card's border plus padding is `lg` on each side.
+    const cardInset = showBorder ? `2 * ${theme.spacing.lg}` : "0px"
+    const contentWidthSlot = `min(var(${METRIC_AVAILABLE_VAR}, 100cqi), calc(100cqi - ${cardInset}))`
+    return {
+      height: "100%",
+      ...(showBorder && {
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+        borderRadius: theme.radii.default,
+        overflow: "hidden",
+      }),
+      // A printed column is often narrower than the on-screen card. The label
+      // and delta wrap onto extra lines. A stretch card scales the value down
+      // to the card. A content-width card stays as wide as the figure.
+      "@media print": {
         overflow: "visible",
-        textOverflow: "clip",
-        whiteSpace: "normal",
-        overflowWrap: "anywhere",
-        maxWidth: "100%",
-        width: "auto",
-        minWidth: 0,
-      },
-      "& .stMetricValue .stMarkdownEllipsis, & .stMetricValue .stMarkdownEllipsis p":
-        {
-          whiteSpace: "nowrap",
-          overflowWrap: "normal",
+        [`& ${ELLIPSIS_SELECTOR}, & ${ELLIPSIS_SELECTOR} p`]: {
+          overflow: "visible",
+          textOverflow: "clip",
+          whiteSpace: "normal",
+          overflowWrap: "anywhere",
+          maxWidth: "100%",
+          width: "auto",
+          minWidth: 0,
         },
-      // `container-type` on the value makes its intrinsic width 0. A
-      // content-width card is sized by that value, so containing it would
-      // shrink the card to the label. The figure still scales when the
-      // printed column, recorded in `--st-metric-available`, is narrower.
-      ...(isContentWidth === true
-        ? {
-            "& .stMetricValue .stMarkdownEllipsis": {
-              fontSize: `min(1em, calc(1em * tan(atan2(var(${METRIC_AVAILABLE_VAR}, var(${METRIC_TEXT_WIDTH_VAR}, 100vw)), var(${METRIC_TEXT_WIDTH_VAR}, 100vw)))))`,
-            },
-          }
-        : {
-            "& .stMetricValue": {
-              containerType: "inline-size" as const,
-            },
-            // Size the wrapper only. `em` on the paragraph would use that
-            // already scaled size and shrink the figure a second time. The
-            // paragraph inherits this size.
-            "& .stMetricValue .stMarkdownEllipsis": {
-              // The variable is the figure's width at 1em, recorded in
-              // beforeprint. CSS cannot divide one length by another in
-              // calc(), so tan(atan2(a, b)) gives the unitless ratio a / b.
-              // A card wider than the figure stays at 1em.
-              fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
-              // Without a recorded width (no beforeprint, e.g. a headless PDF
-              // export), the figure keeps 1em. Clipping it then keeps a long
-              // figure out of the neighboring card.
-              overflow: "hidden",
-            },
-          }),
-    },
-  })
+        [`& .stMetricValue ${ELLIPSIS_SELECTOR}, & .stMetricValue ${ELLIPSIS_SELECTOR} p`]:
+          {
+            whiteSpace: "nowrap",
+            overflowWrap: "normal",
+          },
+        // `container-type` on the value makes its intrinsic width 0. A
+        // content-width card is sized by that value, so containing it would
+        // shrink the card to the label. The figure scales to the narrower of
+        // the measured slot and the printed column: a side-by-side column is
+        // a size container in print, so `100cqi` resolves at paper width. The
+        // card's border and padding sit between the column and the value.
+        // Outside a column, `100cqi` falls back to the page width.
+        ...(isContentWidth === true
+          ? {
+              [`& .stMetricValue ${ELLIPSIS_SELECTOR}`]: {
+                fontSize: `min(1em, calc(1em * tan(atan2(${contentWidthSlot}, var(${METRIC_TEXT_WIDTH_VAR}, ${contentWidthSlot})))))`,
+              },
+            }
+          : {
+              "& .stMetricValue": {
+                containerType: "inline-size" as const,
+              },
+              // Size the wrapper only. `em` on the paragraph would use that
+              // already scaled size and shrink the figure a second time. The
+              // paragraph inherits this size.
+              [`& .stMetricValue ${ELLIPSIS_SELECTOR}`]: {
+                // The variable is the figure's width at 1em, recorded in
+                // beforeprint. CSS cannot divide one length by another in
+                // calc(), so tan(atan2(a, b)) gives the unitless ratio a / b.
+                // A card wider than the figure stays at 1em.
+                fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
+                // Without a recorded width (no beforeprint, e.g. a headless PDF
+                // export), the figure keeps 1em. Clipping it then keeps a long
+                // figure out of the neighboring card.
+                overflow: "hidden",
+              },
+            }),
+      },
+    }
+  }
 )
 
 export const StyledMetricContent = styled.div<{ showBorder: boolean }>(

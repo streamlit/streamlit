@@ -39,6 +39,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { MARKDOWN_ELLIPSIS_CLASS } from "~lib/hooks/useLabelTitleTooltip"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
@@ -68,7 +69,8 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
  * Print layout narrows the card after `beforeprint`. Print CSS divides the
  * available width by this length and shrinks the figure only when that slot
  * is narrower. A stretch metric uses the card (100cqi); a content-width
- * metric uses the width from `recordMetricAvailableWidth`.
+ * metric uses the narrower of the width from `recordMetricAvailableWidth`
+ * and its printed column (100cqi).
  *
  * The on-screen markdown is ellipsized, so its box is the clipped width. A
  * clone of that markdown is measured unconstrained. The clone keeps bold and
@@ -80,7 +82,7 @@ const LARGE_DATASET_POINT_THRESHOLD = 1000
 function recordMetricValueWidth(value: HTMLElement): void {
   // Clear any previously recorded width so print CSS does not scale the probe.
   value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
-  const source = value.querySelector(".stMarkdownEllipsis")
+  const source = value.querySelector(`.${MARKDOWN_ELLIPSIS_CLASS}`)
   if (!(source instanceof HTMLElement) || source.textContent === "") {
     return
   }

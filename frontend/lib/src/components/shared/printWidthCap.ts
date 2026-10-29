@@ -17,7 +17,8 @@
 import type { CSSObject } from "@emotion/styled"
 
 /**
- * Keep a screen-measured chart or dataframe inside its column when printing.
+ * Keep a screen-measured chart or metric sparkline inside its column when
+ * printing.
  *
  * These elements lock a pixel width from the on-screen layout. Print reflow
  * narrows the page without clearing that width, so the box spills out of its

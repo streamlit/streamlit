@@ -14,6 +14,7 @@
 
 import pandas as pd
 import plotly.graph_objects as go
+import pydeck as pdk
 
 import streamlit as st
 
@@ -87,6 +88,44 @@ with st.container(key="plotly_row"):
     text_column.markdown("Beside the Plotly chart")
 
 st.markdown("After the Plotly row")
+
+with st.container(key="echarts_row"):
+    echarts_column, echarts_text_column = st.columns(2)
+    with echarts_column:
+        st.echarts_chart(
+            {
+                "xAxis": {"type": "category", "data": ["a", "b", "c"]},
+                "yAxis": {"type": "value"},
+                "series": [{"type": "bar", "data": [2, 1, 3]}],
+                "animation": False,
+            },
+            height=200,
+        )
+    echarts_text_column.markdown("Beside the ECharts chart")
+
+st.markdown("After the ECharts row")
+
+with st.container(key="deck_row"):
+    deck_column, deck_text_column = st.columns(2)
+    deck_column.pydeck_chart(
+        pdk.Deck(
+            map_style=None,
+            initial_view_state=pdk.ViewState(latitude=37.76, longitude=-122.4, zoom=11),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=pd.DataFrame({"lat": [37.76], "lon": [-122.4]}),
+                    get_position="[lon, lat]",
+                    get_radius=200,
+                    get_fill_color=[255, 0, 0],
+                )
+            ],
+        ),
+        height=200,
+    )
+    deck_text_column.markdown("Beside the DeckGL chart")
+
+st.markdown("After the DeckGL row")
 
 with st.container(horizontal=True, height=180, key="horizontal_chart"):
     st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
