@@ -66,16 +66,18 @@ requests, and its constraint facts come from agent descriptions.
 The check sits between storing the incoming states and running callbacks:
 
 ```python
-# SessionState.on_script_will_rerun
+# SessionState.on_script_will_rerun. On history navigation, fresh_widget_states
+# is what _omit_query_bound_widget_states leaves. Replayed triggers are overlaid
+# after callbacks, as today, and are not checked here.
 self.set_widgets_from_proto(fresh_widget_states)
-changed, self._rejected_client_values = self._drop_invalid_client_values(
+changed, self._rejected_client_values = self._check_incoming_widget_states(
     fresh_widget_states
 )
 self._call_callbacks(changed, ...)  # reuses the boundary's comparison
 ```
 
 ```python
-def _drop_invalid_client_values(
+def _check_incoming_widget_states(
     self, states: WidgetStatesProto
 ) -> tuple[frozenset[str], frozenset[str]]:
     """Return the IDs of accepted changes and of rejected values."""
@@ -127,7 +129,8 @@ first violation, together with the deserialized value once step 2 has read it:
    the correct type" once a proto arrives, which is why `WStates.__getitem__` overwrites
    it today. Most widgets turn out to accept the `value_type` they registered.
    - Lossless numeric pairs are interchangeable: `int_value` with `double_value`, and the
-     int and double array fields.
+     int and double array fields, within ±2^53, where a double holds every integer
+     exactly.
    - Components v1, which register `json_value`, also accept `bytes_value` and
      `arrow_value`.
    - `WStates.__getitem__` stops overwriting `metadata.value_type`. The field that
@@ -312,12 +315,14 @@ represent, such as an unknown `select_slider` label, passes through as the label
 `selectbox` already does. URL seeding relies on today's fallback and truncation, so it
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
 and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
-unknown `select_slider` label falls back to that position's default. Truncation counts
-UTF-16 code units, as the check does, so a repaired value always passes it. That differs
-from today's code-point slicing only for astral characters. Any other violation clears
-the parameter. So `?q=abcd` for `max_chars=3` still becomes `"abc"`, a bound URL
-value of `2.9` still becomes `2`, and an out-of-range one is still cleared. Each widget
-makes this change in the item that gives it a validator (items 2 and 4).
+unknown `select_slider` label falls back to that position's default. Truncation slices
+code points, as today, so a link restores the same string. With astral characters the
+result can exceed `max_chars` in UTF-16 units, but that never causes a refusal: an
+unchanged echo passes check 3, and any change the browser makes stays within its own
+limit. Any other violation clears the parameter. So `?q=abcd` for `max_chars=3` still
+seeds `"abc"`, `?n=2.9` still seeds `2`, and an out-of-range value is still cleared. As
+today, a repaired value that equals the default clears the parameter instead of seeding
+it. Each widget makes this change in the item that gives it a validator (items 2 and 4).
 
 **Why the serde is the right home:**
 
@@ -384,15 +389,21 @@ written to the same placeholder: the app emitted it, and its ID stays in
 `widget_ids_this_run`. Tracking replaced delta paths would add cost to every run's hot
 path, so the guarantee names registration instead.
 
-The set changes at two points:
+The set changes at three points:
 
 - **When a run registers a widget,** the widget is added. A run in progress, including
   one later interrupted, already sent that element to the browser.
-- **Where `_remove_stale_widgets` runs,** the set is pruned: it keeps only the IDs that
-  are also in the active set, and it never adds one. This happens in
+- **Where `_remove_stale_widgets` runs,** the set is pruned: it removes the widgets the
+  run covered but did not register, and it never adds one. This happens in
   `on_script_finished` with `remove_stale_widgets=True`, and uses the same rule that
   scopes states to `fragment_ids_this_run`. After a fragment run, only that fragment's
   widgets are pruned.
+- **When a run ends in `st.stop()` or an uncaught exception,** the set is pruned the
+  same way. That path sets `premature_stop`, so `_on_script_finished` skips
+  `on_script_finished` and no state is pruned, which keeps widget values as today. The
+  browser still removes every element the run did not send. Without this prune, a
+  widget hidden behind `if not logged_in: st.stop()` would stay in the set, and a forged
+  trigger would still fire its callback.
   - Pruning rather than replacing matters on a page transition. There,
     `script_runner.py` calls `on_script_finished` with IDs taken from the client's
     `rerun_data.widget_states`, before `on_script_will_rerun` runs the check. Replacing
@@ -453,7 +464,10 @@ Removing the two exemptions would not close these holes. On a clean initial load
 seeding never reaches the priority check, and `_seed_widget_from_url` writes the value
 into `_new_session_state`, which wins resolution even after the widget-state entry is
 discarded. So `_handle_query_param_binding` returns early for a disabled widget, before
-anything is seeded, and then corrects the parameter.
+anything is seeded. The correction then needs its own forward message, through
+`remove_param` or `set_corrected_value` as `_clear_url_param` does. The regular sync in
+`register_widget` would not send one: it drops a parameter at the default only on the
+server (`discard_param_no_forward_msg`), and it leaves a parameter that is already present.
 
 An app that wants a link to preset a filter shown as locked reads `st.query_params` in
 app code and passes the value to the widget. App code is trusted, and the author owns
@@ -479,8 +493,13 @@ check refuses it again. Only a benign race needs this, because a correct browser
 is refused only when a rerun changed the widget first. The pending set is pruned together
 with `rendered_ids`, so it is bounded by the rendered widgets.
 
-Trigger widgets need no re-sync: a trigger resets anyway. `st.data_editor` has no channel
-to re-sync edits, so item 6 drops only the refused entries.
+Trigger widgets need no re-sync: a trigger resets anyway. Some widgets have no
+`set_value` channel: `st.data_editor`, `st.tabs` (`TabContainer` has no `set_value`,
+and `Tabs.tsx` re-syncs only when `default_tab_index` changes), the open state of
+`st.expander` and `st.popover`, and dataframe and chart selections (items 8 and 12). The
+browser keeps showing a refused change for them until they remount or the user changes
+them again. For `st.data_editor`, item 6 therefore drops only the refused entries. A
+frontend re-sync for the others, such as a forced flag on `TabContainer`, is a follow-up.
 
 ### Other value sources: URL binding and session state
 
@@ -541,7 +560,11 @@ today an out-of-constraint write has four different outcomes, depending on the w
 - **Reset to the default:** an unknown option, or a number or date out of range.
 - **A clean error:** more than `max_selections`, or a slider above `max_value`.
 - **Accepted unchecked:** text past `max_chars`, a failed `validate`, or the color
-  `"red"`.
+  `"red"`. Text past `max_chars` is corrected one rerun later, though: the browser sends
+  it back, and the deserializer truncates it, which fires `on_change` although nobody
+  changed the widget. Once deserializers stop truncating (item 4), the echo is unchanged
+  and the text stays as written. The product spec lists this as a behavior change and
+  leaves the alternative open (its [open question 1](product-spec.md#open-questions)).
 - **A raw `TypeError`:** `"abc"` for a number input, `123` for a text input, or `"yes"`
   for a checkbox.
 
@@ -733,7 +756,9 @@ budget is no measurable regression in the unchanged case.
 - **Session state**: a widget map sent to a new session keeps its values and fires no
   callback, a violating entry falls back to the default at registration, and a trigger
   in that map is dropped. A value refused for a widget outside a fragment is corrected at
-  the next full run.
+  the next full run. A run that ends in `st.stop()` or an exception before a widget
+  registers keeps that widget's value, and a forged trigger for it is then refused. A
+  programmatic text value past `max_chars` stays as written and fires no `on_change`.
 - **Forms**: a submit whose required field gets filler that a per-field check drops, such
   as text past `max_chars`, is refused as a whole.
 - **Script runner**: a page-change message adds no ID to `rendered_ids`, and the previous

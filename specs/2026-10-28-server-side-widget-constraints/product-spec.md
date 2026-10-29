@@ -99,17 +99,20 @@ own, provided each reports the violation and lets the caller decide."
 1. **One check, at the boundary, against what the client was shown.**
    - Every value or trigger a client sends is checked once, when the message enters the
      session and before any callback runs.
-   - The check uses the widget as the client last saw it: the constraints of the run that
-     rendered it.
+   - The check uses the widget as the client last saw it: the constraints of the latest
+     run that rendered it. In a sync race, that run can be one ahead of what the browser
+     shows (see [Behavior changes](#behavior-changes)).
    - If the current run later changes those constraints (new options, new bounds), the
      value is reconciled the way it is today.
    - This is the rule the agent API already follows: the snapshot is the contract.
 2. **A rejected value is treated as never sent.**
    - The widget keeps its previous value, or its default if it never had one.
    - Its callback does not run, and the value does not count as changed for this run.
-   - The browser is told which value the server holds. `st.data_editor` is the
-     exception: it has no channel for that, so a refused edit stays visible until the
-     editor remounts or the user undoes it (item 6 in the [plan](#ranked-delivery-plan)).
+   - The browser is told which value the server holds. Widgets with no channel for
+     that are the exception: `st.data_editor`, `st.tabs`, the open state of
+     `st.expander` and `st.popover`, and dataframe and chart selections. A refused
+     change stays visible in them until they remount or the user changes them again
+     (see the [tech spec](tech-spec.md#browser-re-sync)).
    - Nothing raises in the app. This generalizes what [#16209](https://github.com/streamlit/streamlit/pull/16209)
      does for `disabled`, and it is what the browser itself does when it blocks a commit:
      it sends nothing.
@@ -130,8 +133,9 @@ own, provided each reports the violation and lets the caller decide."
    `disabled`: a disabled widget accepts no client input from any channel, so it ignores
    its URL parameter. A URL can still set a form field without a submit, because an
    author who binds a widget accepts that a link can set it. Programmatic
-   `st.session_state` writes and widget defaults keep their current rules. Making
-   programmatic writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
+   `st.session_state` writes and widget defaults keep their current rules, apart from
+   one side effect listed in [Behavior changes](#behavior-changes). Making programmatic
+   writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
 
 There is no new parameter and no config option, not even a hidden kill switch (see
 [Rollout](#rollout)). The check refuses only what the shipped frontend never sends, so a
@@ -175,8 +179,8 @@ After Phase 1, a value that reaches a callback, `st.session_state`, or a widget'
 value from a client satisfies all of the following:
 
 - It has the wire type the widget registered, and the widget can read it.
-- It comes from a widget that is not `disabled` and that the latest run covering it
-  registered. This includes a widget the app removed later in that run, for example with
+- It comes from a widget that the latest run covering it registered, and that was not
+  `disabled` in that run. This includes a widget the app removed later in that run, for example with
   `placeholder.empty()`, because the app emitted it.
 - It is one of the widget's options, or any non-empty text for a widget that accepts new
   options, and it is within `max_selections` with no duplicates.
@@ -214,7 +218,8 @@ Items are ranked by four criteria, in this order:
 
 Each item is meant to be one reviewable PR. Each item also switches the agent API to the
 shared check for its constraint and deletes the agent's copy, so agent adoption is spread
-across the plan rather than saved for a final PR.
+across the plan rather than saved for a final PR. Cost is the estimated PR size: S
+(small), M (medium), or L (large).
 
 | # | Scope | Security | Agent API | Cost | Risk |
 | --- | --- | --- | --- | --- | --- |
@@ -347,12 +352,12 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only three of them, all
+Each change follows from the contract. A correct browser sees only four of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
-and the sync races. A browser that reconnects to a new session, after a server restart or
-an expired `server.disconnectedSessionTTL`, keeps its values as today. No callback fires
-for them, and each is checked when its widget registers. The other changes affect only
-forged values and `AppTest`.
+programmatic text past `max_chars`, and the sync races. A browser that reconnects to a
+new session, after a server restart or an expired `server.disconnectedSessionTTL`, keeps
+its values as today. No callback fires for them, and each is checked when its widget
+registers. The other changes affect only forged values and `AppTest`.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -368,6 +373,13 @@ forged values and `AppTest`.
   needs a changelog entry, but it is rare, because `bind="query-params"` is new. A link
   that presets a filter shown as locked still works if the app reads `st.query_params`
   and passes the value to the widget itself.
+- **Programmatic text past `max_chars` is no longer truncated one rerun later.** Today
+  `st.session_state["name"] = "abcd"` for a `max_chars=3` text input is accepted, then
+  truncated to `"abc"` when the browser sends it back. That fires `on_change` although
+  nobody changed the widget, and the browser keeps showing `"abcd"`. Because
+  deserializers stop truncating (item 4), the text now stays as written on both sides
+  until the programmatic-writes follow-up settles one rule. This needs a changelog
+  entry. The alternative is [open question 1](#open-questions).
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
   `max_value` or `""` on a `required` field, now sees it dropped instead of coerced,
@@ -382,6 +394,15 @@ forged values and `AppTest`.
   reconnect, before the new session registered the widget, is dropped too. Rejections a
   correct browser can cause are logged at debug level; the rest are logged at warning
   level, without the value, which may be a password.
+
+## Open questions
+
+1. **Programmatic text past `max_chars`.** Once deserializers stop truncating, an
+   over-long value written to `st.session_state` is no longer corrected when the
+   browser sends it back (see [Behavior changes](#behavior-changes)). The options are
+   to keep it as written until the programmatic-writes follow-up, which this spec
+   proposes, or to truncate it at registration in item 4. Truncating keeps today's end
+   value, one run earlier, and also removes the spurious `on_change`.
 
 ## Out of scope
 
@@ -422,8 +443,8 @@ forged values and `AppTest`.
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
+| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, programmatic text past `max_chars`, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
