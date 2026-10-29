@@ -312,8 +312,10 @@ represent, such as an unknown `select_slider` label, passes through as the label
 `selectbox` already does. URL seeding relies on today's fallback and truncation, so it
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
 and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
-unknown `select_slider` label falls back to that position's default. Any other violation
-clears the parameter. So `?q=abcd` for `max_chars=3` still becomes `"abc"`, a bound URL
+unknown `select_slider` label falls back to that position's default. Truncation counts
+UTF-16 code units, as the check does, so a repaired value always passes it. That differs
+from today's code-point slicing only for astral characters. Any other violation clears
+the parameter. So `?q=abcd` for `max_chars=3` still becomes `"abc"`, a bound URL
 value of `2.9` still becomes `2`, and an out-of-range one is still cleared. Each widget
 makes this change in the item that gives it a validator (items 2 and 4).
 
