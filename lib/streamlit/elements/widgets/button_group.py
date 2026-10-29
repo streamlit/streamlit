@@ -169,7 +169,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # or format_func changes dynamically (e.g. a language switch): the frontend
         # sends a stale wire value from the previous mapping that can't be resolved.
         # Prefer the last known session-state value (the user's live selection) over
-        # the configured default so _widget_changed does not detect a spurious
+        # the configured default so the boundary check does not detect a spurious
         # difference and fire an on_change callback. The session-state value is
         # always more accurate than the default because it reflects what the user
         # actually had selected (e.g. user clicked "B" while default was "A").
@@ -255,8 +255,8 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             # applies the same filter for invalid canonical values.
 
         # A label change never changes the selection, so recover stale wire entries
-        # from the last known session-state selection: that keeps _widget_changed
-        # from firing a spurious on_change and stops a relabeled selection from
+        # from the last known session-state selection: that keeps the boundary
+        # check from firing a spurious on_change and stops a relabeled selection from
         # being truncated. Each unresolvable wire entry is a stale label for one
         # previously selected option that is not already resolved (a "candidate"),
         # so comparing counts tells us whether a deselect also happened this rerun:
@@ -1274,7 +1274,7 @@ class ButtonGroupMixin:
         # Look up the currently-stored session-state value to use as a stale-wire
         # fallback in the serde. When format_func changes dynamically and no default
         # is configured, deserialize would otherwise return None/[] for stale wire
-        # values, causing _widget_changed to fire a spurious on_change callback.
+        # values, so the boundary check would fire a spurious on_change callback.
         # Using the last known valid value as a fallback keeps the comparison equal.
         # Value resolution (this fallback, keeping on_change quiet) and label resync
         # (the wire-vs-fresh-serialization check in _button_group that decides whether

@@ -258,7 +258,7 @@ class TestButtonGroupSerde:
         When the user has selected a non-default option (e.g. "B" while default="A")
         and format_func changes, the serde must return the user's live selection ("B"),
         not the configured default ("A"). Returning the default would cause
-        _widget_changed("B", "A") to fire the spurious on_change callback.
+        the boundary check ("B" against "A") to fire the spurious on_change callback.
         """
         options = ["A", "B"]
         formatted_options = ["manzana", "naranja"]
@@ -452,7 +452,8 @@ class TestButtonGroupSerde:
         When the user has ["A","B"] selected (default is only ["A"]) and format_func
         changes so all wire values go stale, the serde must return ["A","B"] (the live
         selection), not ["A"] (the configured default). Returning the default would
-        cause _widget_changed(["A","B"], ["A"]) to fire a spurious on_change callback.
+        cause the boundary check (["A","B"] against ["A"]) to fire a spurious
+        on_change callback.
         """
         options = ["A", "B", "C"]
         formatted_options = ["manzana", "naranja", "cereza"]
@@ -479,7 +480,7 @@ class TestButtonGroupSerde:
         """Single-select with a stale value, no default, but an active session-state value.
 
         When format_func changes and no default is configured, the serde falls back
-        to the session_state_fallback value so _widget_changed sees no difference
+        to the session_state_fallback value so the boundary check sees no difference
         and suppresses the spurious on_change callback.
         """
         options = ["A", "B"]
@@ -503,7 +504,8 @@ class TestButtonGroupSerde:
 
         When format_func changes, all selections go stale, and no default is
         configured, the serde falls back to the last known session-state value so
-        that _widget_changed sees no difference and suppresses the spurious callback.
+        that the boundary check sees no difference and suppresses the spurious
+        callback.
         """
         options = ["A", "B", "C"]
         formatted_options = ["manzana", "naranja", "cereza"]
@@ -1709,7 +1711,7 @@ class TestDynamicFormatFuncCallback:
         Regression test for gh-15493: when the user has selected a non-default
         option (e.g. "B" while default="A") and format_func changes dynamically,
         the deserialized value must remain "B" (via session_state_fallback) so
-        that _widget_changed("B", "B") suppresses the spurious callback.
+        that the boundary check ("B" against "B") suppresses the spurious callback.
         """
 
         def script():
@@ -1771,7 +1773,8 @@ class TestDynamicFormatFuncCallback:
 
         When the user has selected ["A","B"] (while default is only ["A"]) and
         format_func changes, session_state_fallback must return ["A","B"] so that
-        _widget_changed(["A","B"], ["A","B"]) suppresses the spurious callback.
+        the boundary check (["A","B"] against ["A","B"]) suppresses the spurious
+        callback.
         """
 
         def script():

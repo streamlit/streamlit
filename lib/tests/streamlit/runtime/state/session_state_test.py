@@ -1149,7 +1149,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
 
     ss._set_widget_metadata(meta)
     ss._old_state[wid] = 1
-    ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
+    ss._new_widget_state.set_from_value(wid, 2)  # a changed value
 
     mock_ctx = MagicMock()
     # Self-contained: initialize ThreadState so this test doesn't depend on

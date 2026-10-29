@@ -845,7 +845,11 @@ a client value no longer rebuilds the widget's metadata.
   every rejection logged at warning level, and fail on any. A correct browser must never
   be refused, including after a later frontend change, so this guards against false
   positives, which is the main risk (see the product spec's
-  [Rollout](product-spec.md#rollout)). Forged values cannot be sent from a browser, so
+  [Rollout](product-spec.md#rollout)). The e2e conftest reads the output of every app
+  server it started after each test, and a test fails on any line with the refusal
+  marker. Reruns are disabled for that failure, so a flaky retry cannot hide it. A test
+  that provokes a sync race on purpose opts out with
+  `@pytest.mark.allow_refused_widget_values(reason=...)`, and that list should stay short. Forged values cannot be sent from a browser, so
   the new e2e tests cover only what a correct browser can produce: re-sync, values that
   survive a reconnect to a new session (`websocket_reconnects_test.py` only resumes the
   same session), a self-disabling button that returns `True`, and a link that names a

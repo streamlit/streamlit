@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
@@ -409,3 +410,16 @@ def test_e2e_tests_log_every_refusal_at_warning(
 
     assert [r.levelno for r in records] == [logging.WARNING] * 3
     assert all(REFUSAL_LOG_MARKER in r.getMessage() for r in records)
+
+
+def test_the_e2e_parity_gate_looks_for_the_refusal_marker() -> None:
+    """The e2e conftest fails on, and never reruns, the text log_violation writes."""
+    e2e_dir = Path(__file__).parents[5] / "e2e_playwright"
+    if not e2e_dir.is_dir():  # pragma: no cover - run outside the repository
+        pytest.skip("The e2e tests are not next to these tests.")
+
+    conftest = (e2e_dir / "conftest.py").read_text(encoding="utf-8")
+    pytest_ini = (e2e_dir / "pytest.ini").read_text(encoding="utf-8")
+
+    assert f'_REFUSED_WIDGET_VALUE_MARKER: Final = "{REFUSAL_LOG_MARKER}"' in conftest
+    assert f'--rerun-except "{REFUSAL_LOG_MARKER}"' in pytest_ini
