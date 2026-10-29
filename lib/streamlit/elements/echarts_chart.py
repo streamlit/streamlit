@@ -135,7 +135,8 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
 # The named formats a tooltip ``valueFormatter`` string accepts (the same set as
-# ``st.metric``). Any string with a ``%`` is treated as a printf-style format.
+# ``st.metric``). Any string with a ``%`` counts as a printf-style format. Mirrors
+# ``NAMED_NUMBER_FORMATS`` in the frontend's ``EChartsChart/tooltipFormatters.ts``.
 _NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
 
 
@@ -523,12 +524,15 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
             yield from _iter_media_options(timeline_option)
 
 
-def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
-    """Yield series configs from a ``series`` value (object, list, or tuple)."""
-    if isinstance(series, dict):
-        yield series
-    elif isinstance(series, (list, tuple)):
-        for entry in series:
+def _iter_config_entries(value: Any) -> Iterator[dict[str, Any]]:
+    """Yield the dicts of a value that is one dict or a list of dicts.
+
+    Used for option keys such as ``series`` and ``tooltip``.
+    """
+    if isinstance(value, dict):
+        yield value
+    elif isinstance(value, (list, tuple)):
+        for entry in value:
             if isinstance(entry, dict):
                 yield entry
 
@@ -555,7 +559,7 @@ def _author_aria_label_description(option: dict[str, Any]) -> str | None:
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
-        yield from _iter_series_entries(variant.get("series"))
+        yield from _iter_config_entries(variant.get("series"))
 
 
 def _enables_selection(option: dict[str, Any]) -> bool:
@@ -646,23 +650,15 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
-def _iter_tooltip_entries(tooltip: Any) -> Iterator[dict[str, Any]]:
-    """Yield tooltip configs from a ``tooltip`` value (object, list, or tuple)."""
-    for entry in tooltip if isinstance(tooltip, (list, tuple)) else [tooltip]:
-        if isinstance(entry, dict):
-            yield entry
-
-
 def _iter_tooltips(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield top-level and series tooltip configs across option variants.
 
-    Per-data-item tooltips are not included, matching the frontend, which
-    converts only these tooltips.
+    Skips per-data-item tooltips, which the frontend does not convert either.
     """
     for variant in _iter_option_variants(option):
-        yield from _iter_tooltip_entries(variant.get("tooltip"))
+        yield from _iter_config_entries(variant.get("tooltip"))
     for series in _iter_series(option):
-        yield from _iter_tooltip_entries(series.get("tooltip"))
+        yield from _iter_config_entries(series.get("tooltip"))
 
 
 def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:

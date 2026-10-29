@@ -68,8 +68,8 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
 /**
  * Format one tooltip value as plain text.
  *
- * Numbers are shortened, blank and unsupported values render as ``-``, and
- * other strings and booleans pass through.
+ * Shortens numbers, renders blank and unsupported values as ``-``, and passes
+ * other strings and booleans through.
  */
 export function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
@@ -123,8 +123,8 @@ function formatTooltipNumber(value: number): string {
  *
  * Returns plain text that ECharts escapes: one string, or one string per
  * entry for multi-value points such as candlesticks. An option
- * ``tooltip.formatter`` replaces this. ``tooltip.valueFormatter`` would too,
- * but the chart spec is JSON and cannot carry that callback.
+ * ``tooltip.formatter`` replaces this, and so does a ``tooltip.valueFormatter``
+ * number format, which ``applyTooltipFormatters`` turns into a function.
  */
 export function formatEChartsTooltipValue(value: unknown): string | string[] {
   if (Array.isArray(value)) {

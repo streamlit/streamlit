@@ -121,6 +121,19 @@ describe("applyTooltipFormatters", () => {
       ).toBe("Tue 12:00: 321")
     })
 
+    it("treats a number-like name as an index unless a dimension has it", () => {
+      const formatter = formatterOf(
+        applyTooltipFormatters({ tooltip: { formatter: "{@1}/{@2}" } })
+      )
+
+      expect(
+        formatter(itemParams({ value: [10, 20, 30], dimensionNames: [] }))
+      ).toBe("20/30")
+      expect(
+        formatter(itemParams({ value: [10, 20], dimensionNames: ["2", "1"] }))
+      ).toBe("20/10")
+    })
+
     it("uses a single value for every placeholder and blanks missing ones", () => {
       const formatter = formatterOf(
         applyTooltipFormatters({
@@ -171,6 +184,38 @@ describe("applyTooltipFormatters", () => {
           }),
         ])
       ).toBe("2026-01-02: 5")
+    })
+
+    it("reads useUTC from a declared baseOption, not the root", () => {
+      const timestamp = Date.UTC(2026, 0, 2, 23)
+      const timeParams = [
+        itemParams({
+          axisType: "xAxis.time",
+          axisValue: timestamp,
+          value: [timestamp, 5],
+        }),
+      ]
+      const tooltip = { trigger: "axis", formatter: "{HH}: {@[1]}" }
+      const localHours = String(new Date(timestamp).getHours()).padStart(
+        2,
+        "0"
+      )
+
+      const utcBase = applyTooltipFormatters({
+        useUTC: false,
+        baseOption: { useUTC: true, tooltip },
+      })
+      const localBase = applyTooltipFormatters({
+        useUTC: true,
+        baseOption: { tooltip },
+      })
+
+      expect(
+        formatterOf(utcBase.baseOption as EChartsOptionObject)(timeParams)
+      ).toBe("23: 5")
+      expect(
+        formatterOf(localBase.baseOption as EChartsOptionObject)(timeParams)
+      ).toBe(`${localHours}: 5`)
     })
 
     it("escapes HTML in expanded values but keeps template markup", () => {
@@ -283,6 +328,18 @@ describe("applyTooltipFormatters", () => {
     ).toBe("8")
     // The input spec is not mutated.
     expect(seriesTooltip.valueFormatter).toBe("dollar")
+  })
+
+  it("converts each entry of a tooltip list", () => {
+    const untouched = { formatter: "{b}" }
+
+    const result = applyTooltipFormatters({
+      tooltip: [{ valueFormatter: "dollar" }, untouched],
+    })
+
+    const [converted, second] = result.tooltip as EChartsOptionObject[]
+    expect((converted.valueFormatter as ValueFormatter)(5)).toBe("$5.00")
+    expect(second).toBe(untouched)
   })
 
   it("does not convert per-data-item tooltips", () => {

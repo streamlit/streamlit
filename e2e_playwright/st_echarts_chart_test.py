@@ -34,6 +34,7 @@ from e2e_playwright.shared.app_utils import (
 _EXPECTED_CHART_COUNT = 24
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -347,9 +348,13 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(template_chart.locator("canvas").first).to_be_visible()
     template_chart.hover()
     template_tooltip = template_chart.locator(".echarts-template-tooltip")
-    expect(template_tooltip).to_have_text("Mon · 654 sessions")
-    # Must NOT happen: the placeholder is printed literally.
+    expect(template_tooltip).to_have_text(
+        f"Mon · 654 sessions · {_XSS_TEMPLATE_PAYLOAD}"
+    )
+    # Must NOT happen: a placeholder printed literally, or the expanded payload
+    # turned into markup.
     expect(template_tooltip).not_to_contain_text("{@")
+    expect(template_tooltip.locator("img")).to_have_count(0)
 
     format_chart = _get_chart(app, "c_tooltip_value_format")
     expect(format_chart.locator("canvas")).to_be_visible()

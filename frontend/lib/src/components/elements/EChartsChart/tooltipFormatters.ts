@@ -15,7 +15,7 @@
  */
 
 import * as echarts from "echarts"
-import { isPlainObject } from "lodash-es"
+import { isPlainObject, omit } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
@@ -26,12 +26,16 @@ import { type EChartsOptionObject, formatTooltipItem } from "./CustomTheme"
 const LOG = getLogger("EChartsChart")
 
 /**
- * ECharts' label placeholder for one dimension of a data item: ``{@name}``
- * or ``{@[2]}``. ECharts uses the same pattern for labels.
+ * A placeholder for one dimension of a data item, such as ``{@name}`` or
+ * ``{@[2]}``. ECharts matches label placeholders with the same pattern.
  */
 const DIMENSION_PLACEHOLDER = /\{@(.+?)\}/g
 
-/** The named formats of ``formatNumber``, the same set ``st.metric`` accepts. */
+/**
+ * The named formats of ``formatNumber``, the same set ``st.metric`` accepts.
+ * Mirrors ``NumberFormat`` in ``lib/streamlit/elements/lib/column_types.py``,
+ * which the Python warning reads. Keep both in sync.
+ */
 const NAMED_NUMBER_FORMATS = new Set([
   "plain",
   "localized",
@@ -63,7 +67,8 @@ type FormatTplParams = Parameters<typeof echarts.format.formatTpl>[1]
 /**
  * Read one dimension of a tooltip item the way ECharts reads it for a label
  * placeholder. ``dimension`` is a dimension name or a bracketed index such as
- * ``[2]`` (``[]`` means index 0, as in ECharts).
+ * ``[2]`` (``[]`` means index 0, as in ECharts). As in ECharts, a number-like
+ * name such as ``1`` is an index unless a dimension has that name.
  */
 function readDimensionValue(
   item: TooltipItemParams,
@@ -73,8 +78,15 @@ function readDimensionValue(
   const dimensionNames = Array.isArray(item.dimensionNames)
     ? (item.dimensionNames as unknown[])
     : []
-  const isIndex = dimension.startsWith("[") && dimension.endsWith("]")
-  const index = isIndex ? Number(dimension.slice(1, -1)) : undefined
+  let index: number | undefined
+  if (dimension.startsWith("[") && dimension.endsWith("]")) {
+    index = Number(dimension.slice(1, -1))
+  } else if (
+    !dimensionNames.includes(dimension) &&
+    !Number.isNaN(Number(dimension))
+  ) {
+    index = Number(dimension)
+  }
 
   if (Array.isArray(value)) {
     return value[index ?? dimensionNames.indexOf(dimension)]
@@ -91,14 +103,18 @@ function readDimensionValue(
 }
 
 /**
- * Build a tooltip formatter for a string template that uses ``{@dim}`` or
- * ``{@[n]}`` placeholders.
+ * Build a tooltip formatter that expands ``{@dim}`` / ``{@[n]}``, which ECharts
+ * supports only in labels. It runs ECharts' own string-template steps first:
  *
- * ECharts expands these placeholders only in labels. This runs the same steps
- * as ECharts' own string-template tooltip (time tokens on time axes, then
- * ``{a}``/``{b}``/``{c}``/``{d}``), then expands the placeholders from the first
- * item, just as ``{c}`` means the first series in an axis tooltip. Tooltips are
- * HTML, so expanded values are escaped.
+ * - Time tokens such as ``{yyyy}``, on time axes.
+ * - ``{a}``/``{b}``/``{c}``/``{d}``, via ``echarts.format.formatTpl``.
+ * - ``{@...}``, read from the first item (an axis tooltip's first series, as
+ *   with ``{c}``).
+ *
+ * Tooltips are HTML, so every inserted value is escaped and only the author's
+ * template markup is kept. As in labels, placeholders expand after ``{b}`` and
+ * the others, so a name that contains ``{@...}`` text is expanded too (still
+ * escaped).
  */
 function buildTemplateFormatter(
   template: string,
@@ -143,8 +159,9 @@ function buildTemplateFormatter(
  * Build a ``valueFormatter`` from a Streamlit number format: a named format
  * such as ``"dollar"`` or a printf-style string such as ``"%,d sessions"``.
  *
- * Returns ``null`` for a string that is not a number format. Without a
- * placeholder, printf would print the same text for every value.
+ * Returns ``null`` for a string that is not a number format: a template
+ * without a ``%`` placeholder (printf would print the same text for every
+ * value) or a malformed printf string.
  */
 function buildValueFormatter(format: string): TooltipValueFormatter | null {
   if (!NAMED_NUMBER_FORMATS.has(format) && !format.includes("%")) {
@@ -170,46 +187,6 @@ function buildValueFormatter(format: string): TooltipValueFormatter | null {
     Array.isArray(value) ? value.map(formatItem) : formatItem(value)
 }
 
-/** Convert the string formatters of one tooltip config, if it has any. */
-function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
-  if (Array.isArray(tooltip)) {
-    return mapChanged(tooltip, entry => withTooltipFormatters(entry, useUTC))
-  }
-  if (!isPlainObject(tooltip)) {
-    return tooltip
-  }
-  const tooltipObject = tooltip as Record<string, unknown>
-  const { formatter, valueFormatter } = tooltipObject
-  let result = tooltipObject
-
-  if (typeof formatter === "string" && formatter.includes("{@")) {
-    result = {
-      ...result,
-      formatter: buildTemplateFormatter(formatter, useUTC),
-    }
-  }
-
-  if (!isNullOrUndefined(valueFormatter)) {
-    const built =
-      typeof valueFormatter === "string"
-        ? buildValueFormatter(valueFormatter)
-        : null
-    if (built) {
-      result = { ...result, valueFormatter: built }
-    } else {
-      // ECharts calls ``valueFormatter`` as a function, so leaving this in
-      // place would throw on every hover. Fall back to the default formatting.
-      LOG.warn(
-        `Ignoring the ECharts tooltip valueFormatter ${JSON.stringify(valueFormatter)}: ` +
-          'use a number format such as "dollar", "compact", or "%.2f".'
-      )
-      const { valueFormatter: _ignored, ...rest } = result
-      result = rest
-    }
-  }
-  return result
-}
-
 /** Map an array, returning the input array when no entry changed. */
 function mapChanged(
   entries: unknown[],
@@ -221,6 +198,56 @@ function mapChanged(
     : entries
 }
 
+/**
+ * Copy ``target`` with ``key`` set to ``value``. Returns ``target`` itself when
+ * the value is unchanged, so callers can detect that nothing was converted.
+ */
+function withChangedProperty(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+): Record<string, unknown> {
+  return value === target[key] ? target : { ...target, [key]: value }
+}
+
+/** Convert the string formatters of a tooltip config or a list of them. */
+function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
+  if (Array.isArray(tooltip)) {
+    return mapChanged(tooltip, entry => withTooltipFormatters(entry, useUTC))
+  }
+  if (!isPlainObject(tooltip)) {
+    return tooltip
+  }
+  let result = tooltip as Record<string, unknown>
+  const { formatter, valueFormatter } = result
+
+  if (typeof formatter === "string" && formatter.includes("{@")) {
+    result = {
+      ...result,
+      formatter: buildTemplateFormatter(formatter, useUTC),
+    }
+  }
+
+  if (!isNullOrUndefined(valueFormatter)) {
+    const numberFormatter =
+      typeof valueFormatter === "string"
+        ? buildValueFormatter(valueFormatter)
+        : null
+    if (numberFormatter) {
+      result = { ...result, valueFormatter: numberFormatter }
+    } else {
+      // ECharts calls ``valueFormatter`` as a function, so leaving this in
+      // place would throw on every hover. Fall back to the default formatting.
+      LOG.warn(
+        `Ignoring the ECharts tooltip valueFormatter ${JSON.stringify(valueFormatter)}: ` +
+          'use a number format such as "dollar", "compact", or "%.2f".'
+      )
+      result = omit(result, "valueFormatter")
+    }
+  }
+  return result
+}
+
 /** Convert the tooltip formatters of one series config. */
 function withSeriesTooltipFormatters(
   series: unknown,
@@ -230,58 +257,66 @@ function withSeriesTooltipFormatters(
     return series
   }
   const seriesObject = series as Record<string, unknown>
-  const tooltip = withTooltipFormatters(seriesObject.tooltip, useUTC)
-  return tooltip === seriesObject.tooltip
-    ? series
-    : { ...seriesObject, tooltip }
+  return withChangedProperty(
+    seriesObject,
+    "tooltip",
+    withTooltipFormatters(seriesObject.tooltip, useUTC)
+  )
 }
 
-/** Convert the top-level and series tooltip formatters of one option node. */
-function withOptionNodeTooltipFormatters(
+/** Convert the top-level and series tooltip formatters of one option variant. */
+function convertOptionTooltips(
   target: EChartsOptionObject,
   useUTC: boolean
 ): EChartsOptionObject {
-  let result = target
-  if ("tooltip" in target) {
-    const tooltip = withTooltipFormatters(target.tooltip, useUTC)
-    if (tooltip !== target.tooltip) {
-      result = { ...result, tooltip }
-    }
-  }
-  const { series } = target
-  const mappedSeries = Array.isArray(series)
-    ? mapChanged(series, entry => withSeriesTooltipFormatters(entry, useUTC))
-    : withSeriesTooltipFormatters(series, useUTC)
-  if (mappedSeries !== series) {
-    result = { ...result, series: mappedSeries }
-  }
-  return result
+  const { tooltip, series } = target
+  const convertSeries = (entry: unknown): unknown =>
+    withSeriesTooltipFormatters(entry, useUTC)
+  const withTooltip = withChangedProperty(
+    target,
+    "tooltip",
+    withTooltipFormatters(tooltip, useUTC)
+  )
+  return withChangedProperty(
+    withTooltip,
+    "series",
+    Array.isArray(series)
+      ? mapChanged(series, convertSeries)
+      : convertSeries(series)
+  )
 }
 
-/** Convert an option node plus its responsive ``media[*].option`` overrides. */
-function withNodeAndMediaTooltipFormatters(
+/** Convert an option variant plus its responsive ``media[*].option`` overrides. */
+function convertOptionAndMediaTooltips(
   target: EChartsOptionObject,
   useUTC: boolean
 ): EChartsOptionObject {
-  const result = withOptionNodeTooltipFormatters(target, useUTC)
-  if (!Array.isArray(result.media)) {
+  const result = convertOptionTooltips(target, useUTC)
+  const { media } = result
+  if (!Array.isArray(media)) {
     return result
   }
-  const media = mapChanged(result.media as unknown[], entry => {
+  const convertMediaEntry = (entry: unknown): unknown => {
     if (!isPlainObject(entry)) {
       return entry
     }
     const mediaEntry = entry as Record<string, unknown>
-    if (!isPlainObject(mediaEntry.option)) {
-      return entry
-    }
-    const option = withOptionNodeTooltipFormatters(
-      mediaEntry.option as EChartsOptionObject,
-      useUTC
-    )
-    return option === mediaEntry.option ? entry : { ...mediaEntry, option }
-  })
-  return media === result.media ? result : { ...result, media }
+    return isPlainObject(mediaEntry.option)
+      ? withChangedProperty(
+          mediaEntry,
+          "option",
+          convertOptionTooltips(
+            mediaEntry.option as EChartsOptionObject,
+            useUTC
+          )
+        )
+      : mediaEntry
+  }
+  return withChangedProperty(
+    result,
+    "media",
+    mapChanged(media, convertMediaEntry)
+  )
 }
 
 /**
@@ -311,29 +346,29 @@ export function applyTooltipFormatters(
   const baseOption = isPlainObject(option.baseOption)
     ? (option.baseOption as EChartsOptionObject)
     : undefined
-  // ECharts reads ``useUTC`` from the root, or from ``baseOption`` on a
-  // timeline.
-  const useUTC = (baseOption?.useUTC ?? option.useUTC) === true
+  // A declared ``baseOption`` holds the chart, so ECharts reads ``useUTC``
+  // only from there and ignores the root.
+  const useUTC = (baseOption ? baseOption.useUTC : option.useUTC) === true
+  const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
+    convertOptionAndMediaTooltips(variant, useUTC)
 
-  let result = withNodeAndMediaTooltipFormatters(option, useUTC)
+  let result = convertVariant(option)
   if (baseOption) {
-    const convertedBase = withNodeAndMediaTooltipFormatters(baseOption, useUTC)
-    if (convertedBase !== baseOption) {
-      result = { ...result, baseOption: convertedBase }
-    }
-  }
-  if (Array.isArray(result.options)) {
-    const options = mapChanged(result.options as unknown[], tick =>
-      isPlainObject(tick)
-        ? withNodeAndMediaTooltipFormatters(
-            tick as EChartsOptionObject,
-            useUTC
-          )
-        : tick
+    result = withChangedProperty(
+      result,
+      "baseOption",
+      convertVariant(baseOption)
     )
-    if (options !== result.options) {
-      result = { ...result, options }
-    }
+  }
+  const { options } = result
+  if (Array.isArray(options)) {
+    const convertTimelineOption = (tick: unknown): unknown =>
+      isPlainObject(tick) ? convertVariant(tick as EChartsOptionObject) : tick
+    result = withChangedProperty(
+      result,
+      "options",
+      mapChanged(options, convertTimelineOption)
+    )
   }
   return result
 }

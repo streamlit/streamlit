@@ -300,11 +300,24 @@ Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOpt
 `options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
 arrays aren't walked.
 
-Not included: a format suffix in templates (e.g. `{@[2]:compact}`). ECharts has no format
-specifiers, so it would be syntax only Streamlit understands. Per-dimension formats and
-date/time formats for tooltip values are also left out, as are number formats for axis labels.
-Pre-formatted strings on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`)
-remain the workaround for those.
+Options considered:
+
+- **Extend the ECharts keys (chosen).** No new syntax and no Python parameter, and the number
+  formats are the ones `st.metric` users already know. Cost: these specs no longer render the
+  same way in plain ECharts.
+- **A Streamlit parameter** (e.g. `st.echarts_chart(spec, value_format="dollar")`). Portable
+  specs, but one format for the whole chart, and it duplicates a key ECharts already has.
+- **A format suffix in templates** (e.g. `{@[2]:compact}`). Most flexible, but ECharts has no
+  format specifiers, so it would be syntax only Streamlit understands. Not included.
+
+Also not included:
+
+- `{value}` templates in `valueFormatter` (e.g. `"{value} €"`, by analogy with
+  `axisLabel.formatter`). Strings without a `%` are dropped, which leaves room to adopt them,
+  or an upstream meaning, later. Use printf instead: `"%.2f €"`.
+- Per-dimension formats, date/time formats for tooltip values, number formats for axis labels,
+  and coordinate-system tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings
+  on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
 
 #### Selections
 
@@ -705,7 +718,11 @@ st.echarts_chart(pie)
   raw-HTML tooltip rendering on the user's behalf (no HTML formatter injection; do not change
   `tooltip.renderMode`), and a required regression test asserts that HTML/script payloads in
   tooltip/label content render as escaped text. An app author who sets an HTML formatter in
-  `spec` is opting into the same trust model as Plotly/Vega.
+  `spec` is opting into the same trust model as Plotly/Vega. The one formatter Streamlit
+  builds is the [tooltip formatting](#tooltip-formatting) function, and it only replaces an
+  author's string template, which ECharts already renders as HTML. It keeps the template's
+  markup and escapes every value it inserts, and an e2e test covers an HTML payload expanded
+  through `{@[n]}`. A `valueFormatter` returns plain text, which ECharts escapes.
 - **Other JSON-reachable sinks.** Tooltip escaping is not the whole boundary. ECharts'
   [security guide](https://echarts.apache.org/handbook/en/best-practices/security/) also lists
   HTML/URL fields that a JSON spec can set (`toolbox.feature.dataView.title` / `lang`,

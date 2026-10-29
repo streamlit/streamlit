@@ -512,19 +512,29 @@ with st.container(key="c_funnel"):
 # Tooltip formatting without JavaScript: a ``{@[n]}`` dimension placeholder in a
 # tooltip template (ECharts expands it only in labels), and a Streamlit number
 # format as ``valueFormatter``. One item fills each chart, so hovering the
-# chart center lands on it.
+# chart center lands on it. Streamlit builds the template's HTML itself, so the
+# cell also carries an HTML payload that ``{@[3]}`` must print as text. The
+# visualMap reads the value column explicitly because it defaults to the last
+# column, which here is the text payload, and would leave the cell undrawn.
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 with st.container(key="c_tooltip_template"):
     st.echarts_chart(
         {
             "tooltip": {
                 "trigger": "item",
                 "className": "echarts-template-tooltip",
-                "formatter": "{a} · {@[2]} sessions",
+                "formatter": "{a} · {@[2]} sessions · {@[3]}",
             },
             "xAxis": {"type": "category", "data": ["11:00"]},
             "yAxis": {"type": "category", "data": ["Mon"]},
-            "visualMap": {"min": 0, "max": 1000, "show": False},
-            "series": [{"type": "heatmap", "name": "Mon", "data": [[0, 0, 654]]}],
+            "visualMap": {"min": 0, "max": 1000, "show": False, "dimension": 2},
+            "series": [
+                {
+                    "type": "heatmap",
+                    "name": "Mon",
+                    "data": [[0, 0, 654, _XSS_TEMPLATE_PAYLOAD]],
+                }
+            ],
             **_NO_ANIM,
         },
         key="tooltip_template",

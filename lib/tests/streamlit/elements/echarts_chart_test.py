@@ -957,6 +957,10 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             ),
             ("timeline", {"baseOption": {"tooltip": {"valueFormatter": "{value} €"}}}),
             (
+                "timeline_option",
+                {"options": [{"tooltip": {"valueFormatter": "{value} €"}}]},
+            ),
+            (
                 "media",
                 {"media": [{"option": {"tooltip": {"valueFormatter": "{value} €"}}}]},
             ),
