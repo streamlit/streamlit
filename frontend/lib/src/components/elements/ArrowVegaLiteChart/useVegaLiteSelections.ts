@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import type { SignalValue, View as VegaView } from "vega"
 
-import { debounce, notNullOrUndefined } from "~lib/util/utils"
+import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { VegaLiteChartElement } from "./arrowUtils"
 
-/**
- * Debounce time for triggering a widget state update
- * This prevents to rapid updates to the widget state.
- */
+/** Delay for continuous selection changes such as hover and wheel zoom. */
 const DEBOUNCE_TIME_MS = 150
+
+/** Events whose selection changes send immediately in the same task. */
+const DISCRETE_INPUT_EVENTS = ["click", "dblclick", "keydown", "keyup"]
+/** Events that end the discrete-input window or resume a held drag. */
+const CONTINUOUS_INPUT_EVENTS = ["pointermove", "wheel"]
 
 /** This is the state that is sent to the backend
  * This needs to be the same structure that is also defined
@@ -41,14 +43,20 @@ interface VegaLiteState {
 
 interface UseVegaLiteSelectionsOutput {
   maybeConfigureSelections: (view: VegaView) => VegaView
+  /** Flushes queued changes and removes listeners from the active view. */
+  teardownSelections: () => void
   onFormCleared: () => void
+}
+
+interface DebouncedSelection {
+  value: SignalValue
+  timerId: ReturnType<typeof setTimeout>
 }
 
 const LOG = getLogger("useVegaLiteSelections")
 
 /**
- * Hook that returns a function that can be used to configure the selection
- * events for a vega-lite chart.
+ * Hook that configures selection events for a Vega-Lite chart.
  *
  * @param element The vega-lite chart element
  * @param widgetMgr The widget manager
@@ -60,82 +68,398 @@ export const useVegaLiteSelections = (
   fragmentId?: string
 ): UseVegaLiteSelectionsOutput => {
   const { id: chartId, formId, selectionMode } = element
+  const teardownRef = useRef<(() => void) | null>(null)
+
+  const teardownSelections = useCallback(() => {
+    teardownRef.current?.()
+    teardownRef.current = null
+  }, [])
 
   const maybeConfigureSelections = useCallback(
     (vegaView: VegaView): VegaView => {
+      teardownSelections()
+
+      if (selectionMode.length === 0) {
+        return vegaView
+      }
+
+      let isActive = true
+      let isPointerDown = false
+      let activePointerId: number | null = null
+      let pointerGestureId = 0
+      let pendingPointerReleaseGestureId: number | null = null
+      let isDiscreteInputTask = false
+      let discreteInputResetTimerId: ReturnType<typeof setTimeout> | null =
+        null
+      const heldSelections = new Map<string, SignalValue>()
+      const debouncedSelections = new Map<string, DebouncedSelection>()
+      const signalListeners = new Map<
+        string,
+        (name: string, value: SignalValue) => void
+      >()
+
+      const clearDiscreteInput = (): void => {
+        isDiscreteInputTask = false
+        if (discreteInputResetTimerId !== null) {
+          clearTimeout(discreteInputResetTimerId)
+          discreteInputResetTimerId = null
+        }
+      }
+
+      const handleDiscreteInput = (event?: Event): void => {
+        if (
+          (event?.type === "keydown" || event?.type === "keyup") &&
+          (event.target instanceof HTMLInputElement ||
+            event.target instanceof HTMLTextAreaElement)
+        ) {
+          return
+        }
+        clearDiscreteInput()
+        isDiscreteInputTask = true
+        // Keep the marker through microtasks queued by this input event, but
+        // never let it classify a later task as part of the same action.
+        // eslint-disable-next-line no-restricted-globals -- This task marker is local to the imperative Vega event lifecycle.
+        discreteInputResetTimerId = setTimeout(clearDiscreteInput, 0)
+      }
+
+      const clearDebouncedSelection = (name: string): void => {
+        const debouncedSelection = debouncedSelections.get(name)
+        if (debouncedSelection) {
+          clearTimeout(debouncedSelection.timerId)
+          debouncedSelections.delete(name)
+        }
+      }
+
+      const holdDebouncedSelections = (): void => {
+        debouncedSelections.forEach((debouncedSelection, name) => {
+          clearTimeout(debouncedSelection.timerId)
+          heldSelections.set(name, debouncedSelection.value)
+        })
+        debouncedSelections.clear()
+      }
+
+      const startPointerGesture = (event: PointerEvent): void => {
+        // Ignore additional pointers while the initiating pointer is held. A
+        // new gesture may start while the previous release is still settling.
+        if (isPointerDown && pendingPointerReleaseGestureId === null) {
+          return
+        }
+        holdDebouncedSelections()
+        clearDiscreteInput()
+        pointerGestureId += 1
+        activePointerId = event.pointerId
+        isPointerDown = true
+        pendingPointerReleaseGestureId = null
+      }
+
+      const isChartPointerEvent = (event: PointerEvent): boolean => {
+        const target = event.target
+        return (
+          event.isPrimary !== false &&
+          target instanceof Element &&
+          target.closest(".vega-bindings, select, input, textarea, button") ===
+            null &&
+          target.closest("canvas, svg") !== null
+        )
+      }
+
+      const handlePointerDown = (event: PointerEvent): void => {
+        if (event.button !== 0 || !isChartPointerEvent(event)) {
+          return
+        }
+        startPointerGesture(event)
+      }
+
+      /**
+       * Resumes a drag that re-enters the chart with the primary button held;
+       * otherwise ends the click/key window so hover and wheel changes debounce.
+       */
+      const handleContinuousInput = (event: Event): void => {
+        if (event.type === "pointermove") {
+          const pointerEvent = event as PointerEvent
+          const canStartGesture =
+            !isPointerDown ||
+            (pendingPointerReleaseGestureId !== null &&
+              pointerEvent.pointerId === activePointerId)
+          if (
+            canStartGesture &&
+            (pointerEvent.buttons & 1) !== 0 &&
+            isChartPointerEvent(pointerEvent)
+          ) {
+            startPointerGesture(pointerEvent)
+            return
+          }
+        }
+        if (!isPointerDown) {
+          clearDiscreteInput()
+        }
+      }
+
+      const sendSelections = (
+        selections: ReadonlyMap<string, SignalValue>
+      ): void => {
+        if (selections.size === 0) {
+          return
+        }
+
+        // Preserve the Vega state locally so remounts and fullscreen changes can
+        // restore the selection without syncing the full view state to Python.
+        const viewState = vegaView.getState({
+          data: (nameArg?: string, _operator?: unknown) => {
+            // Vega-Lite stores each selection in `<param name>_store`.
+            // https://vega.github.io/vega/docs/api/view/#view_getState
+            return selectionMode.some(mode => `${mode}_store` === nameArg)
+          },
+          // Restoring subcontext data can cause Vega to throw.
+          recurse: false,
+        })
+
+        if (notNullOrUndefined(viewState)) {
+          widgetMgr.setElementState(chartId, "viewState", viewState)
+        }
+
+        const widgetInfo: WidgetInfo = { id: chartId, formId }
+        const currentWidgetState = JSON.parse(
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank widget state parses as an empty object
+          widgetMgr.getStringValue(widgetInfo) || "{}"
+        )
+        const selection = {
+          ...currentWidgetState?.selection,
+        }
+
+        selections.forEach((value, name) => {
+          // Return selected points directly instead of Vega-Lite's vlPoint wrapper:
+          // https://github.com/vega/altair/blob/f1b4e2c84da2fba220022c8a285cc8280f824ed8/altair/utils/selection.py#L50
+          let processedSelection = value
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "vlPoint" in value &&
+            typeof value.vlPoint === "object" &&
+            value.vlPoint !== null &&
+            "or" in value.vlPoint
+          ) {
+            processedSelection = value.vlPoint.or
+          }
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy signal still falls back to an empty selection
+          selection[name] = processedSelection || {}
+        })
+
+        const updatedState: VegaLiteState = {
+          selection,
+        }
+
+        if (!isEqual(currentWidgetState, updatedState)) {
+          widgetMgr.setStringValue(
+            widgetInfo.id,
+            JSON.stringify(updatedState),
+            {
+              formId: widgetInfo.formId,
+              fragmentId,
+              fromUser: true,
+            }
+          )
+        }
+      }
+
+      const sendSelection = (name: string, value: SignalValue): void => {
+        sendSelections(new Map([[name, value]]))
+      }
+
+      const debounceSelection = (name: string, value: SignalValue): void => {
+        clearDebouncedSelection(name)
+        const debouncedSelection: DebouncedSelection = {
+          value,
+          // eslint-disable-next-line no-restricted-globals -- Selection signals are scheduled outside React's lifecycle.
+          timerId: setTimeout(() => {
+            if (debouncedSelections.get(name) !== debouncedSelection) {
+              return
+            }
+            debouncedSelections.delete(name)
+            sendSelection(name, debouncedSelection.value)
+          }, DEBOUNCE_TIME_MS),
+        }
+        debouncedSelections.set(name, debouncedSelection)
+      }
+
+      const flushHeldSelections = (): void => {
+        if (heldSelections.size === 0) {
+          return
+        }
+        const selections = new Map(heldSelections)
+        heldSelections.clear()
+        sendSelections(selections)
+      }
+
+      const flushHeldSelectionsSafely = (): void => {
+        try {
+          flushHeldSelections()
+        } catch (error) {
+          LOG.warn("Failed to flush Vega selections", error)
+        }
+      }
+
+      const finishActivePointerGesture = (): void => {
+        isPointerDown = false
+        activePointerId = null
+        pendingPointerReleaseGestureId = null
+        handleDiscreteInput()
+        flushHeldSelectionsSafely()
+      }
+
+      const finishPointerRelease = async (
+        releasedGestureId: number
+      ): Promise<void> => {
+        try {
+          // Wait for Vega to process the release so its final signal values are
+          // held and sent in one update.
+          await vegaView.runAsync()
+        } catch (error) {
+          LOG.warn("Failed to finish Vega pointer gesture processing", error)
+        } finally {
+          if (
+            isActive &&
+            pointerGestureId === releasedGestureId &&
+            pendingPointerReleaseGestureId === releasedGestureId
+          ) {
+            // Signals queued by the release belong to the same discrete input.
+            finishActivePointerGesture()
+          }
+        }
+      }
+
+      const schedulePointerGestureFinish = (): void => {
+        if (!isPointerDown || pendingPointerReleaseGestureId !== null) {
+          return
+        }
+        const releasedGestureId = pointerGestureId
+        pendingPointerReleaseGestureId = releasedGestureId
+        void finishPointerRelease(releasedGestureId)
+      }
+
+      const handlePointerRelease = (event: PointerEvent): void => {
+        if (!isPointerDown || event.pointerId !== activePointerId) {
+          return
+        }
+        schedulePointerGestureFinish()
+      }
+
+      const handlePointerOut = (event: PointerEvent): void => {
+        // A null relatedTarget means the pointer left the document, where the
+        // window may not receive the eventual pointerup.
+        if (
+          event.relatedTarget !== null ||
+          event.pointerId !== activePointerId
+        ) {
+          return
+        }
+        schedulePointerGestureFinish()
+      }
+
+      const handleWindowBlur = (): void => {
+        schedulePointerGestureFinish()
+      }
+
+      const handleContextMenu = (): void => {
+        if (isPointerDown) {
+          schedulePointerGestureFinish()
+        } else {
+          handleDiscreteInput()
+        }
+      }
+
+      const container = vegaView.container()
+      container?.addEventListener("pointerdown", handlePointerDown, {
+        capture: true,
+        passive: true,
+      })
+      container?.addEventListener("pointerout", handlePointerOut, {
+        passive: true,
+      })
+      container?.addEventListener("contextmenu", handleContextMenu, {
+        capture: true,
+        passive: true,
+      })
+      DISCRETE_INPUT_EVENTS.forEach(type =>
+        container?.addEventListener(type, handleDiscreteInput, {
+          capture: true,
+          passive: true,
+        })
+      )
+      CONTINUOUS_INPUT_EVENTS.forEach(type =>
+        container?.addEventListener(type, handleContinuousInput, {
+          capture: true,
+          passive: true,
+        })
+      )
+      // Window-level listeners catch releases after a drag leaves the chart.
+      window.addEventListener("pointerup", handlePointerRelease)
+      window.addEventListener("pointercancel", handlePointerRelease)
+      window.addEventListener("pointerout", handlePointerOut)
+      window.addEventListener("blur", handleWindowBlur)
+
       // Add listeners for all selection events. Find out more here:
       // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
       selectionMode.forEach(param => {
-        vegaView.addSignalListener(
-          param,
-          debounce(DEBOUNCE_TIME_MS, (name: string, value: SignalValue) => {
-            // Store the current chart selection state with the widget manager so that it
-            // can be used for restoring the state when the component unmounted and
-            // created again. This can happen when elements are added before it within
-            // the delta path. The viewState is only stored in the frontend, and not
-            // synced to the backend.
-            const viewState = vegaView.getState({
-              // There are also `signals` data, but I believe its
-              // not relevant for restoring the selection state.
-              data: (nameArg?: string, _operator?: unknown) => {
-                // Vega lite stores the selection state in a <param name>_store parameter
-                // under `data` that can be retrieved via the getState method.
-                // https://vega.github.io/vega/docs/api/view/#view_getState
-                return selectionMode.some(mode => `${mode}_store` === nameArg)
-              },
-              // Don't include subcontext data since it will lead to exceptions
-              // when loading the state.
-              recurse: false,
-            })
-
-            if (notNullOrUndefined(viewState)) {
-              widgetMgr.setElementState(chartId, "viewState", viewState)
-            }
-
-            // If selection encodings are correctly specified, vega-lite will return
-            // a list of selected points within the vlPoint.or property:
-            // https://github.com/vega/altair/blob/f1b4e2c84da2fba220022c8a285cc8280f824ed8/altair/utils/selection.py#L50
-            // We want to just return this list of points instead of the entire object
-            // since the other parts of the selection object are not useful.
-            let processedSelection = value
-            if ("vlPoint" in value && "or" in value.vlPoint) {
-              processedSelection = value.vlPoint.or
-            }
-
-            const widgetInfo: WidgetInfo = { id: chartId, formId }
-
-            // Get the current widget state
-            const currentWidgetState = JSON.parse(
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank widget state parses as an empty object
-              widgetMgr.getStringValue(widgetInfo) || "{}"
-            )
-
-            // Update the component-internal selection state
-            const updatedSelections = {
-              selection: {
-                ...currentWidgetState?.selection,
-                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy signal still falls back to an empty selection
-                [name]: processedSelection || {},
-              } as VegaLiteState,
-            }
-
-            // Update the widget state if the selection state has changed
-            // compared to the last update. This selection state will be synced
-            // with the backend.
-            if (!isEqual(currentWidgetState, updatedSelections)) {
-              widgetMgr.setStringValue(
-                widgetInfo.id,
-                JSON.stringify(updatedSelections),
-                {
-                  formId: widgetInfo.formId,
-                  fragmentId,
-                  fromUser: true,
-                }
-              )
-            }
-          })
-        )
+        const handleSignal = (name: string, value: SignalValue): void => {
+          if (!isActive) {
+            return
+          }
+          clearDebouncedSelection(name)
+          // Forms stage every change immediately. Otherwise, pointer gestures
+          // send their latest values on release, clicks and keys send in the
+          // same task, and hover, wheel, and bindings use a trailing debounce.
+          if (isValidFormId(formId)) {
+            sendSelection(name, value)
+          } else if (isPointerDown) {
+            heldSelections.set(name, value)
+          } else if (isDiscreteInputTask) {
+            sendSelection(name, value)
+          } else {
+            debounceSelection(name, value)
+          }
+        }
+        signalListeners.set(param, handleSignal)
+        vegaView.addSignalListener(param, handleSignal)
       })
+
+      teardownRef.current = () => {
+        if (!isActive) {
+          return
+        }
+        isActive = false
+
+        container?.removeEventListener("pointerdown", handlePointerDown, true)
+        container?.removeEventListener("pointerout", handlePointerOut)
+        container?.removeEventListener("contextmenu", handleContextMenu, true)
+        DISCRETE_INPUT_EVENTS.forEach(type =>
+          container?.removeEventListener(type, handleDiscreteInput, true)
+        )
+        CONTINUOUS_INPUT_EVENTS.forEach(type =>
+          container?.removeEventListener(type, handleContinuousInput, true)
+        )
+        window.removeEventListener("pointerup", handlePointerRelease)
+        window.removeEventListener("pointercancel", handlePointerRelease)
+        window.removeEventListener("pointerout", handlePointerOut)
+        window.removeEventListener("blur", handleWindowBlur)
+        signalListeners.forEach((listener, param) => {
+          vegaView.removeSignalListener(param, listener)
+        })
+
+        clearDiscreteInput()
+        const selections = new Map(heldSelections)
+        heldSelections.clear()
+        debouncedSelections.forEach((debouncedSelection, name) => {
+          clearTimeout(debouncedSelection.timerId)
+          selections.set(name, debouncedSelection.value)
+        })
+        debouncedSelections.clear()
+        try {
+          sendSelections(selections)
+        } catch (error) {
+          LOG.warn("Failed to flush Vega selections during teardown", error)
+        }
+      }
 
       // Try to load the previous state of the chart from the element state.
       // This is useful to restore the selection state when the component is re-mounted
@@ -154,7 +478,7 @@ export const useVegaLiteSelections = (
 
       return vegaView
     },
-    [chartId, selectionMode, widgetMgr, formId, fragmentId]
+    [chartId, selectionMode, widgetMgr, formId, fragmentId, teardownSelections]
   )
 
   const onFormCleared = useCallback(() => {
@@ -186,5 +510,5 @@ export const useVegaLiteSelections = (
     }
   }, [chartId, formId, fragmentId, selectionMode, widgetMgr])
 
-  return { maybeConfigureSelections, onFormCleared }
+  return { maybeConfigureSelections, teardownSelections, onFormCleared }
 }
