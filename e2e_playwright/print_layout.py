@@ -83,7 +83,7 @@ with st.container(key="plotly_row"):
 
 st.markdown("After the Plotly row")
 
-with st.container(horizontal=True, key="horizontal_chart"):
+with st.container(horizontal=True, height=180, key="horizontal_chart"):
     st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
     with st.container():
         st.markdown("Beside the horizontal chart")

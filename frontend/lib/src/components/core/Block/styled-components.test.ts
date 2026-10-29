@@ -42,6 +42,9 @@ const cssAddedBy = (renderCall: () => void): string => {
     .join("\n")
 }
 
+/** A print `display:block` on the wrapper's own class, not a nested rule. */
+const WRAPPER_OWN_PRINT_BLOCK = /@media print\{\.[\w-]+\{[^}]*display:block/
+
 describe("StyledFlexContainerBlock print layout", () => {
   it("only stacks a column row that holds a dataframe, table, or chart", () => {
     const css = cssAddedBy(() =>
@@ -95,7 +98,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // `.stColumn` rule. Each stacked child prints full width, and the gap
     // becomes a bottom margin.
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block/
+      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block;height:auto;overflow:visible/
     )
     expect(css).toMatch(
       /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{width:100%/
@@ -320,12 +323,12 @@ describe("StyledLayoutWrapper print layout", () => {
 
     // Stays flex so its child retains the fixed height.
     expect(css).toContain("height:300px")
-    expect(css).not.toContain("display:block")
+    expect(css).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
 
     const contentHeight = cssAddedBy(() =>
       render(createElement(StyledLayoutWrapper, { height: "auto" }))
     )
-    expect(contentHeight).toMatch(/@media print\{[^}]*display:block/)
+    expect(contentHeight).toMatch(WRAPPER_OWN_PRINT_BLOCK)
 
     const stretchInDefiniteParent = cssAddedBy(() =>
       render(
@@ -337,6 +340,21 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
     expect(stretchInDefiniteParent).toContain("flex:0 1 100%")
-    expect(stretchInDefiniteParent).not.toContain("display:block")
+    expect(stretchInDefiniteParent).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
+  })
+
+  it("releases a fixed height around a horizontal container that stacks a chart", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledLayoutWrapper, {
+          height: "250px",
+          flex: "0 0 250px",
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /:has\(> ?\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
+    )
   })
 })
