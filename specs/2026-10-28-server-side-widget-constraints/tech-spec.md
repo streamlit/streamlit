@@ -518,11 +518,12 @@ Trigger widgets need no re-sync: a trigger resets anyway. Some widgets have no
 `set_value` channel: `st.data_editor`, `st.tabs` (`TabContainer` has no `set_value`,
 and `Tabs.tsx` re-syncs only when `default_tab_index` changes), the open state of
 `st.expander` and `st.popover`, `st.file_uploader`, `st.camera_input`, `st.audio_input`,
-and chart selections (item 12). The browser keeps showing a refused change for them
+and dataframe and chart selections (items 8 and 12). `Dataframe.selection_state` does
+not qualify: `DataFrame.tsx` skips a value it already applied, so a second correction to
+the same value would not show. The browser keeps showing a refused change for them
 until they remount or the user changes them again. For `st.data_editor`, item 6
 therefore drops only the refused entries. A frontend re-sync for the others, such as a
-forced flag on `TabContainer`, is a follow-up. Dataframe selections (item 8) re-sync
-through `Dataframe.selection_state`, which the frontend already applies.
+forced flag on `TabContainer`, is a follow-up.
 
 ### Other value sources: URL binding and session state
 
@@ -709,8 +710,8 @@ agent sessions, which the agent spec lists as follow-up #8.
 
 **Item 8: selections.** `_validate_selection_state` (`elements/arrow.py:463`) already
 checks mode and bounds, but only for programmatic selections. The dataframe selection
-serde's `validate` calls it for client values, and a refused selection re-syncs through
-`selection_state`. A `ButtonColumn` click is checked for `row < num_rows`.
+serde's `validate` calls it for client values. A `ButtonColumn` click is checked for
+`row < num_rows`.
 
 **Item 9: fragments.** `AppSession.request_rerun` accepts a `fragment_id` only if the
 fragment was registered by the last run that covered it. Item 9 also clears stale

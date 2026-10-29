@@ -110,9 +110,9 @@ own, provided each reports the violation and lets the caller decide."
    - Its callback does not run, and the value does not count as changed for this run.
    - The browser is told which value the server holds. Widgets with no channel for
      that are the exception: `st.data_editor`, `st.tabs`, the open state of
-     `st.expander` and `st.popover`, the file, camera, and audio inputs, and chart
-     selections. A refused change stays visible in them until they remount or the user
-     changes them again (see the [tech spec](tech-spec.md#browser-re-sync)).
+     `st.expander` and `st.popover`, the file, camera, and audio inputs, and dataframe
+     and chart selections. A refused change stays visible in them until they remount or
+     the user changes them again (see the [tech spec](tech-spec.md#browser-re-sync)).
    - Nothing raises in the app. This generalizes what [#16209](https://github.com/streamlit/streamlit/pull/16209)
      does for `disabled`, and it is what the browser itself does when it blocks a commit:
      it sends nothing.
