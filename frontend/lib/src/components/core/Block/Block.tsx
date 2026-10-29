@@ -28,6 +28,7 @@ import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
+  getHasDefiniteHeight,
 } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
@@ -197,9 +198,7 @@ export const ContainerContentsWrapper = (
     // unless they have a definite height themselves.
     hasDefiniteHeight:
       isColumn ||
-      heightContextProps.hasFixedHeight ||
-      (heightContextProps.hasStretchHeight &&
-        parentContext?.hasDefiniteHeight === true),
+      getHasDefiniteHeight({ ...heightContextProps, parentContext }),
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
     justify: notNullOrUndefined(columnAlignment)

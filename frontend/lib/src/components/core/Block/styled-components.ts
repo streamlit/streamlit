@@ -69,11 +69,12 @@ const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_
  */
 const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
 
+const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
+
 /** Element types whose container is `display: none` in print. */
 export const PRINT_HIDDEN_ELEMENT_TYPES = new Set([
   "empty",
-  "balloons",
-  "snow",
+  ...GLOBAL_ELEMENTS,
 ])
 
 /** Marks an element container that takes no space on the printed page. */
@@ -164,7 +165,6 @@ export const StyledSpace = styled.div({
   height: "100%",
 })
 
-const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({
     theme,
