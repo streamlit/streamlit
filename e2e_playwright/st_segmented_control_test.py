@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -215,6 +215,15 @@ def test_adjacent_selected_segmented_control_inner_border_regression_snapshot(
     )
 
 
+def _is_top_most_at(locator: Locator, x: float, y: float) -> bool:
+    """Return whether the element hit at viewport point (x, y) is inside locator."""
+    return bool(
+        locator.evaluate(
+            "(el, [x, y]) => el.contains(document.elementFromPoint(x, y))", [x, y]
+        )
+    )
+
+
 def test_element_toolbar_renders_above_selected_segment(app: Page):
     """Ensure an element toolbar paints above the selected segment it overlaps."""
     container = get_element_by_key(app, "segmented_control_toolbar_overlap")
@@ -225,9 +234,21 @@ def test_element_toolbar_renders_above_selected_segment(app: Page):
     expect(selected_segment).to_have_attribute("data-selected", "true")
 
     toolbar = container.get_by_test_id("stElementToolbar")
-    # Negative check: the toolbar stays hidden until the dataframe is hovered.
+    dataframe = container.get_by_test_id("stDataFrame")
     expect(toolbar).to_have_css("opacity", "0")
-    container.get_by_test_id("stDataFrame").hover()
+
+    # Negative check: the hidden toolbar overlaps the top of the dataframe
+    # header but must not take clicks from it.
+    hidden_button_box = toolbar.locator("button").last.bounding_box()
+    dataframe_box = dataframe.bounding_box()
+    assert hidden_button_box is not None
+    assert dataframe_box is not None
+    hidden_x = hidden_button_box["x"] + hidden_button_box["width"] / 2
+    hidden_y = hidden_button_box["y"] + hidden_button_box["height"] / 2
+    assert hidden_y > dataframe_box["y"]
+    assert not _is_top_most_at(toolbar, hidden_x, hidden_y)
+
+    dataframe.hover()
     expect(toolbar).to_have_css("opacity", "1")
 
     toolbar_box = toolbar.get_by_test_id(
@@ -252,13 +273,7 @@ def test_element_toolbar_renders_above_selected_segment(app: Page):
 
     # If the selected segment painted over the toolbar (the bug),
     # elementFromPoint would return the segment instead of a toolbar node.
-    is_toolbar_on_top = bool(
-        toolbar.evaluate(
-            "(el, [x, y]) => el.contains(document.elementFromPoint(x, y))",
-            [(left + right) / 2, (top + bottom) / 2],
-        )
-    )
-    assert is_toolbar_on_top
+    assert _is_top_most_at(toolbar, (left + right) / 2, (top + bottom) / 2)
 
 
 def test_click_single_icon_segment_and_take_snapshot(

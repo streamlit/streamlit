@@ -34,31 +34,34 @@ export interface StyledToolbarWrapperProps {
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   ({ theme, locked = false, target }) => {
     const topDistance = getOverlayToolbarTopDistance(theme)
+    // The shown toolbar overlaps the bottom of the preceding element. Match
+    // the z-index of its raised parts (e.g. the selected segmented control
+    // option) so the later DOM position paints the toolbar on top, while
+    // staying below app chrome like the sticky bottom container.
+    const shownZIndex = theme.zIndices.priority
+    const shownStyles = {
+      // The hidden toolbar overlaps the top of its own element (e.g. the
+      // dataframe header). Raise it only once `top` has moved it above the
+      // element, so the not-yet-visible toolbar never takes those clicks.
+      transition: "opacity 150ms 100ms, top 100ms 100ms, z-index 0ms 200ms",
+      opacity: 1,
+      top: topDistance,
+      zIndex: shownZIndex,
+    }
     return {
       padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
       position: "absolute",
       top: locked ? topDistance : "-1rem",
       right: theme.spacing.none,
-      // The toolbar overlaps the bottom of the preceding element. Match the
-      // z-index of its raised parts (e.g. the selected segmented control
-      // option) so the later DOM position paints the toolbar on top, while
-      // staying below app chrome like the sticky bottom container.
-      zIndex: theme.zIndices.priority,
       transition: "none",
+      // Numeric rather than `auto` so the shown state can transition it.
+      zIndex: locked ? shownZIndex : 0,
       ...(!locked && {
         opacity: 0,
-        "&:active, &:focus-visible, &:hover": {
-          transition: "opacity 150ms 100ms, top 100ms 100ms",
-          opacity: 1,
-          top: topDistance,
-        },
+        "&:active, &:focus-visible, &:hover": shownStyles,
         ...(target && {
           [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]:
-            {
-              transition: "opacity 150ms 100ms, top 100ms 100ms",
-              opacity: 1,
-              top: topDistance,
-            },
+            shownStyles,
         }),
       }),
     }
