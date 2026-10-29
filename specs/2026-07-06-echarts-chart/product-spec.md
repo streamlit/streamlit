@@ -285,16 +285,19 @@ st.echarts_chart({
   strings pass through, and missing or non-finite values show `-`. One format applies to every
   value of a series (ECharts doesn't tell the formatter which dimension a value belongs to), so
   `encode.tooltip` chooses the dimensions to show. The frontend drops any other value (not a
-  named format and no `%` placeholder, rejected by sprintf, or not a string) and logs a browser
-  console warning, so the default formatting applies. Python logs a warning for the cases it
-  can detect, everything except sprintf syntax errors. ECharts escapes the returned text.
+  named format and no `%` placeholder other than an escaped `%%`, rejected by sprintf, or not
+  a string) and logs a browser console warning, so the default formatting applies. Python logs
+  a warning for these values too. It checks printf strings against sprintf's token grammar, so
+  it misses named, numbered, or extra placeholders that have no value to read (`%(price).2f`,
+  `%2$d`, `%d / %d`). ECharts escapes the returned text.
 - **`{@dim}` / `{@[n]}` in tooltip templates.** A string `tooltip.formatter` that contains `{@`
   becomes a function that runs ECharts' own string-template steps (time tokens on time axes,
   then `{a}`/`{b}`/`{c}`/`{d}` via the public `echarts.format.formatTpl`), then expands the
   placeholders the way labels do: index or dimension name over array rows, object rows, or a
   single value. Missing values print as an empty string. In an axis tooltip the placeholders
   read the first series, as `{c}` means `{c0}`. Expanded values are HTML-escaped. Templates
-  without `{@` stay strings, so existing charts don't change. Values are inserted unformatted.
+  without `{@` stay strings, so existing charts don't change. Values are inserted without a
+  number format.
 
 Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOption` /
 `options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`

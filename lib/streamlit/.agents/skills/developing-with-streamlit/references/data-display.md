@@ -103,7 +103,7 @@ Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JS
 
 Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
 
-To format tooltip values without JavaScript, set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format, such as `"dollar"`, `"compact"`, or `"%,d visits"`. Tooltip `formatter` templates also expand `{@dimension}` and `{@[index]}`, but print values unformatted.
+To format tooltip values without JavaScript, set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format, such as `"dollar"`, `"compact"`, or `"%,d visits"`. Tooltip `formatter` templates also expand `{@dimension}` and `{@[index]}`, and insert those values as plain text (no number format).
 
 ```python
 st.echarts_chart(

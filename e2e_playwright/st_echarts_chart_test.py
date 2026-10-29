@@ -351,9 +351,7 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(template_tooltip).to_have_text(
         f"Mon · 654 sessions · {_XSS_TEMPLATE_PAYLOAD}"
     )
-    # Must NOT happen: a placeholder printed literally, or the expanded payload
-    # turned into markup.
-    expect(template_tooltip).not_to_contain_text("{@")
+    # Must NOT happen: the expanded payload turned into markup.
     expect(template_tooltip.locator("img")).to_have_count(0)
 
     format_chart = _get_chart(app, "c_tooltip_value_format")
@@ -361,7 +359,7 @@ def test_tooltip_formatting_without_javascript(app: Page):
     format_chart.hover()
     format_tooltip = format_chart.locator(".echarts-value-format-tooltip")
     expect(format_tooltip).to_contain_text("$1,234.57")
-    # The theme's default number shortening would print the raw decimals.
+    # Dollar format rounds to cents, so the unrounded grouped value must not remain.
     expect(format_tooltip).not_to_contain_text("1,234.567")
 
 

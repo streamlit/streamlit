@@ -18,7 +18,11 @@ import * as echarts from "echarts"
 import { isPlainObject, omit } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { formatNumber, isNumericString } from "~lib/util/formatNumber"
+import {
+  formatNumber,
+  isNumericString,
+  NAMED_NUMBER_FORMATS,
+} from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { type EChartsOptionObject, formatTooltipItem } from "./CustomTheme"
@@ -30,25 +34,6 @@ const LOG = getLogger("EChartsChart")
  * ``{@[2]}``. ECharts matches label placeholders with the same pattern.
  */
 const DIMENSION_PLACEHOLDER = /\{@(.+?)\}/g
-
-/**
- * The named formats of ``formatNumber``, the same set ``st.metric`` accepts.
- * Mirrors ``NumberFormat`` in ``lib/streamlit/elements/lib/column_types.py``,
- * which the Python warning reads. Keep both in sync.
- */
-const NAMED_NUMBER_FORMATS = new Set([
-  "plain",
-  "localized",
-  "dollar",
-  "euro",
-  "yen",
-  "percent",
-  "compact",
-  "scientific",
-  "engineering",
-  "accounting",
-  "bytes",
-])
 
 type TooltipFormatterCallback = (params: unknown) => string
 
@@ -162,10 +147,14 @@ function buildTemplateFormatter(
  *
  * Returns ``null`` for a string that is not a number format: a template
  * without a ``%`` placeholder (printf would print the same text for every
- * value) or a malformed printf string.
+ * value, and an escaped ``%%`` is not a placeholder) or a malformed printf
+ * string.
  */
 function buildValueFormatter(format: string): TooltipValueFormatter | null {
-  if (!NAMED_NUMBER_FORMATS.has(format) && !format.includes("%")) {
+  if (
+    !NAMED_NUMBER_FORMATS.has(format) &&
+    !format.replaceAll("%%", "").includes("%")
+  ) {
     return null
   }
   try {
@@ -203,7 +192,7 @@ function mapPreservingIdentity(
  * Copy ``target`` with ``key`` set to ``value``. Returns ``target`` itself when
  * the value is unchanged, so callers can detect that nothing was converted.
  */
-function withChangedProperty(
+function withProperty(
   target: Record<string, unknown>,
   key: string,
   value: unknown
@@ -260,7 +249,7 @@ function withSeriesTooltipFormatters(
     return series
   }
   const seriesObject = series as Record<string, unknown>
-  return withChangedProperty(
+  return withProperty(
     seriesObject,
     "tooltip",
     withTooltipFormatters(seriesObject.tooltip, useUTC)
@@ -275,12 +264,12 @@ function convertOptionTooltips(
   const { tooltip, series } = target
   const convertSeries = (entry: unknown): unknown =>
     withSeriesTooltipFormatters(entry, useUTC)
-  const withTooltip = withChangedProperty(
+  const withTooltip = withProperty(
     target,
     "tooltip",
     withTooltipFormatters(tooltip, useUTC)
   )
-  return withChangedProperty(
+  return withProperty(
     withTooltip,
     "series",
     Array.isArray(series)
@@ -305,7 +294,7 @@ function convertOptionAndMediaTooltips(
     }
     const mediaEntry = entry as Record<string, unknown>
     return isPlainObject(mediaEntry.option)
-      ? withChangedProperty(
+      ? withProperty(
           mediaEntry,
           "option",
           convertOptionTooltips(
@@ -315,7 +304,7 @@ function convertOptionAndMediaTooltips(
         )
       : mediaEntry
   }
-  return withChangedProperty(
+  return withProperty(
     result,
     "media",
     mapPreservingIdentity(media, convertMediaEntry)
@@ -355,23 +344,19 @@ export function applyTooltipFormatters(
   const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
     convertOptionAndMediaTooltips(variant, useUTC)
 
-  // This walks the same locations as Python's ``_iter_option_variants``, which
-  // logs the warnings for these values. With a declared ``baseOption``,
-  // ECharts ignores the root's own tooltips and ``baseOption.media``.
-  // Converting those as well is harmless and keeps both sides aligned.
+  // Convert every location Python's ``_iter_option_variants`` warns about, so
+  // both sides agree. That includes the root tooltips and ``baseOption.media``,
+  // which ECharts ignores when ``baseOption`` is set; converting them is
+  // harmless.
   let result = convertVariant(option)
   if (baseOption) {
-    result = withChangedProperty(
-      result,
-      "baseOption",
-      convertVariant(baseOption)
-    )
+    result = withProperty(result, "baseOption", convertVariant(baseOption))
   }
   const { options } = result
   if (Array.isArray(options)) {
     const convertTimelineOption = (tick: unknown): unknown =>
       isPlainObject(tick) ? convertVariant(tick as EChartsOptionObject) : tick
-    result = withChangedProperty(
+    result = withProperty(
       result,
       "options",
       mapPreservingIdentity(options, convertTimelineOption)

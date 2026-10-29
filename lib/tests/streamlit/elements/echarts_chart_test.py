@@ -930,6 +930,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         [
             ("named_format", {"valueFormatter": "dollar"}),
             ("printf_format", {"valueFormatter": "%,d sessions"}),
+            ("printf_with_escaped_percent", {"valueFormatter": "%.1f%%"}),
             ("null", {"valueFormatter": None}),
             ("dimension_template", {"formatter": "{b}: {@[2]} sessions"}),
         ]
@@ -965,6 +966,10 @@ class EChartsChartTest(DeltaGeneratorTestCase):
                 {"media": [{"option": {"tooltip": {"valueFormatter": "{value} €"}}}]},
             ),
             ("non_string", {"tooltip": {"valueFormatter": 42}}),
+            ("printf_trailing_percent", {"tooltip": {"valueFormatter": "100%"}}),
+            ("printf_unknown_type", {"tooltip": {"valueFormatter": "%q"}}),
+            ("printf_escaped_only", {"tooltip": {"valueFormatter": "100%%"}}),
+            ("empty_string", {"tooltip": {"valueFormatter": ""}}),
         ]
     )
     def test_warns_on_unsupported_tooltip_value_formatter(

@@ -266,6 +266,7 @@ describe("applyTooltipFormatters", () => {
     it.each([
       ["a template without a placeholder", "{value} €"],
       ["a malformed printf string", "100%"],
+      ["a printf string with only an escaped percent sign", "100%%"],
       ["a JavaScript arrow function", "(v) => v + '%'"],
       ["a non-string value", 42],
     ])("drops %s with a warning", (_case, valueFormatter) => {

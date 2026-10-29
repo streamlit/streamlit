@@ -135,10 +135,18 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
 # The named formats a tooltip ``valueFormatter`` string accepts (the same set as
-# ``st.metric``). Any string with a ``%`` passes as a printf-style format here;
-# the frontend validates its placeholders. Mirrors ``NAMED_NUMBER_FORMATS`` in the
-# frontend's ``EChartsChart/tooltipFormatters.ts``.
+# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
+# ``util/formatNumber.ts``.
 _NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# One token of a printf-style format string: literal text, an escaped ``%%``, or
+# a placeholder. The alternatives and their order mirror the parser of the
+# frontend's vendored sprintf (``frontend/lib/src/vendor/sprintf.js``), so a
+# string this rejects would also fail there.
+_PRINTF_TOKEN: Final = re.compile(
+    r"[^%]+|%%|(?P<placeholder>%(?:[1-9][0-9]*\$|\([^)]+\))?\+?(?:0|'[^$])?-?"
+    r"[,_]?[0-9]*(?:\.[0-9]+)?[b-gijostTuvxX])"
+)
 
 
 class EChartsCompatible(Protocol):
@@ -662,22 +670,40 @@ def _iter_tooltips(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
         yield from _iter_config_entries(series.get("tooltip"))
 
 
+def _is_printf_format(value: str) -> bool:
+    """Whether ``value`` parses as printf and has at least one placeholder.
+
+    A string without a placeholder (an escaped ``%%`` is not one) would print
+    the same text for every value.
+    """
+    has_placeholder = False
+    position = 0
+    while position < len(value):
+        token = _PRINTF_TOKEN.match(value, position)
+        if token is None:
+            return False
+        has_placeholder = has_placeholder or token["placeholder"] is not None
+        position = token.end()
+    return has_placeholder
+
+
+def _is_number_format(value: Any) -> bool:
+    """Whether ``value`` is a named number format or a printf-style string."""
+    return isinstance(value, str) and (
+        value in _NAMED_NUMBER_FORMATS or _is_printf_format(value)
+    )
+
+
 def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
     """Log tooltip ``valueFormatter`` values that are not number formats.
 
     ECharts only accepts a function there, which a JSON spec cannot carry, so
-    Streamlit reads a string as a number format (a named format or a
-    printf-style string). This warns only for values that are certainly not
-    number formats. The frontend also validates printf placeholders, drops any
-    value it cannot use, and keeps the default tooltip formatting, so the chart
-    still renders.
+    Streamlit reads a string as a number format. The frontend drops any other
+    value and keeps the default tooltip formatting, so the chart still renders.
     """
     for tooltip in _iter_tooltips(option):
         value_formatter = tooltip.get("valueFormatter")
-        if value_formatter is None or (
-            isinstance(value_formatter, str)
-            and (value_formatter in _NAMED_NUMBER_FORMATS or "%" in value_formatter)
-        ):
+        if value_formatter is None or _is_number_format(value_formatter):
             continue
         message = (
             "The provided ECharts spec sets a tooltip `valueFormatter` of "
@@ -957,8 +983,8 @@ class EChartsMixin:
         .. note::
             Streamlit extends two tooltip options so you can format tooltips
             without JavaScript. Both work in ``tooltip`` and
-            ``series[i].tooltip``, but not in per-item tooltips inside
-            ``series[i].data``:
+            ``series[i].tooltip``. Per-item tooltips inside ``series[i].data``
+            support neither, so set these options on the series instead:
 
             - ``valueFormatter`` accepts a number format string, which formats
               each value in the default tooltip. Use a named format
@@ -976,7 +1002,9 @@ class EChartsMixin:
               ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
               otherwise supports only in series labels (e.g.
               ``"{b}: {@[2]} sessions"``). In an axis tooltip, they read the
-              first series. Template values are inserted unformatted.
+              first series. Template values are inserted as escaped text,
+              without a number format. The template itself is HTML, as in any
+              other ECharts tooltip string.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
