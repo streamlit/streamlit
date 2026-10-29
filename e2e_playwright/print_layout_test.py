@@ -276,7 +276,18 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     expect(content_value).to_be_visible()
     expect(sparkline_graphic).to_be_visible()
 
+    content_value_text = content_value.locator(".stMarkdownEllipsis").first
+    unscaled_font_size = float(
+        content_value.evaluate("element => getComputedStyle(element).fontSize")[:-2]
+    )
+
     def metrics_fit_their_columns() -> None:
+        # The figure is wider than the printed column, so it only fits if
+        # print scales it down.
+        font_size = content_value_text.evaluate(
+            "element => getComputedStyle(element).fontSize"
+        )
+        assert float(font_size[:-2]) < unscaled_font_size
         _assert_inside(content_value, content_column)
         _assert_inside(sparkline, chart_column)
         _assert_inside(sparkline_graphic, chart_column)
@@ -303,7 +314,9 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     wait_until(app, plotly_row_stacks)
 
     # A horizontal container with a chart stacks like a column row, and the
-    # chart spans the container. One without a chart stays side by side.
+    # chart spans the container. Its fixed height fits the row but not the
+    # stacked children, so it grows to fit them. One without a chart stays
+    # side by side.
     horizontal_chart = get_element_by_key(app, "horizontal_chart")
     horizontal_parts = [
         horizontal_chart.get_by_test_id("stVegaLiteChart"),
@@ -324,6 +337,10 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         assert after_box is not None
         assert chart_box["width"] > container_box["width"] * 0.9
         assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
+        assert (
+            beside_box["y"] + beside_box["height"]
+            <= container_box["y"] + container_box["height"] + 1
+        )
         assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
     wait_until(app, horizontal_chart_stacks)

@@ -84,7 +84,12 @@ st.markdown("After the chart row")
 
 with st.container(key="metric_extras"):
     content_column, chart_column = st.columns(2, border=True)
-    content_column.metric("Content width", "1,234,567,890", "12%", width="content")
+    content_column.metric(
+        "Content width",
+        "123,456,789,012,345,678,901,234,567,890",
+        "12%",
+        width="content",
+    )
     chart_column.metric(
         "Sparkline", "42", "3%", chart_data=[1, 5, 2, 6, 3, 7, 4], chart_type="area"
     )
@@ -98,7 +103,7 @@ with st.container(key="plotly_row"):
 
 st.markdown("After the Plotly row")
 
-with st.container(horizontal=True, key="horizontal_chart"):
+with st.container(horizontal=True, height=180, key="horizontal_chart"):
     st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
     with st.container():
         st.markdown("Beside the horizontal chart")

@@ -16,6 +16,7 @@
 
 import { createElement } from "react"
 
+import type { RenderResult } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -32,19 +33,28 @@ import {
   StyledLayoutWrapper,
 } from "./styled-components"
 
-/** Only the `<style>` tags a render call adds, not earlier tests' leftovers. */
-const cssAddedBy = (renderCall: () => void): string => {
-  const before = document.querySelectorAll("style").length
-  renderCall()
+/**
+ * The CSS rules of the rendered component's own emotion classes. Emotion
+ * shares a class between identical styles, so the result does not depend on
+ * which other tests rendered first.
+ */
+const cssOf = ({ container }: RenderResult): string => {
+  const classNames = [...(container.firstElementChild?.classList ?? [])]
+    .filter(className => className.startsWith("css-"))
+    .map(className => new RegExp(`\\.${className}(?![\\w-])`))
+  expect(classNames).not.toHaveLength(0)
   return [...document.querySelectorAll("style")]
-    .slice(before)
     .map(style => style.textContent ?? "")
+    .filter(rule => classNames.some(className => className.test(rule)))
     .join("\n")
 }
 
+/** A print `display:block` on the wrapper's own class, not a nested rule. */
+const WRAPPER_OWN_PRINT_BLOCK = /@media print\{\.[\w-]+\{[^}]*display:block/
+
 describe("StyledFlexContainerBlock print layout", () => {
   it("only stacks a column row that holds a dataframe, table, or chart", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.HORIZONTAL,
@@ -79,13 +89,11 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("stacks a horizontal container that holds a chart", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.HORIZONTAL,
           border: false,
-          // A gap no other horizontal test uses, so emotion adds a new style
-          // tag instead of reusing an earlier one.
           gap: { pixelGap: 20 },
         })
       )
@@ -95,7 +103,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // `.stColumn` rule. Each stacked child prints full width, and the gap
     // becomes a bottom margin.
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block/
+      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block;height:auto;overflow:visible/
     )
     expect(css).toMatch(
       /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{width:100%/
@@ -104,7 +112,7 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("keeps a bordered chart card on one page unless it holds a print table", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -122,7 +130,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
     expect(css).not.toContain("orientation")
 
-    const plain = cssAddedBy(() =>
+    const plain = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -134,13 +142,11 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("keeps bordered chart columns and a side-by-side card row on one page", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.HORIZONTAL,
           border: false,
-          // A gap the other horizontal test does not use, so emotion adds
-          // a new style tag instead of reusing that one.
           gap: { pixelGap: 12 },
         })
       )
@@ -160,7 +166,7 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("keeps a centered container's flex alignment and gaps with margin", () => {
-    const centered = cssAddedBy(() =>
+    const centered = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -175,7 +181,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(centered).toContain(":has(.stDataFramePrintTable)")
     expect(centered).not.toContain("display:block")
 
-    const gapped = cssAddedBy(() =>
+    const gapped = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -200,7 +206,7 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("keeps flex when a vertical container has a fixed height", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -223,7 +229,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("margin-bottom:16px")
     expect(css).toContain("margin-bottom:calc(16px - 0.375rem)")
 
-    const aligned = cssAddedBy(() =>
+    const aligned = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -242,7 +248,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(aligned).not.toContain("display:block")
     expect(aligned).not.toContain("margin-bottom")
 
-    const verticallyCentered = cssAddedBy(() =>
+    const verticallyCentered = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -264,7 +270,7 @@ describe("StyledFlexContainerBlock print layout", () => {
   it("keeps flex for a percentage height only when it is definite", () => {
     // A form, expander, or chat message passes height 100%, which resolves
     // to auto in a content-height parent.
-    const contentSized = cssAddedBy(() =>
+    const contentSized = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -277,7 +283,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // The block's own print rule, not the print-table `:has()` override.
     expect(contentSized).toMatch(/@media print\{\.[\w-]+\{display:block/)
 
-    const definite = cssAddedBy(() =>
+    const definite = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -292,7 +298,7 @@ describe("StyledFlexContainerBlock print layout", () => {
   })
 
   it("uses block layout for a content-height container that only aligns vertically", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
           direction: Direction.VERTICAL,
@@ -308,7 +314,7 @@ describe("StyledFlexContainerBlock print layout", () => {
 
 describe("StyledElementContainer print layout", () => {
   it("hides a balloons or snow container so the print gap leaves no blank strip", () => {
-    const balloons = cssAddedBy(() =>
+    const balloons = cssOf(
       render(
         createElement(StyledElementContainer, {
           isStale: false,
@@ -323,7 +329,7 @@ describe("StyledElementContainer print layout", () => {
     expect(balloons).toContain("@media print")
     expect(balloons).toContain("display:none")
 
-    const text = cssAddedBy(() =>
+    const text = cssOf(
       render(
         createElement(StyledElementContainer, {
           isStale: false,
@@ -340,7 +346,7 @@ describe("StyledElementContainer print layout", () => {
 
 describe("StyledColumn print layout", () => {
   it("has no print rule of its own; the enclosing row drives it", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledColumn, {
           weight: 0.5,
@@ -358,7 +364,7 @@ describe("StyledColumn print layout", () => {
 
 describe("StyledLayoutWrapper print layout", () => {
   it("keeps flex for a fixed-height wrapper", () => {
-    const css = cssAddedBy(() =>
+    const css = cssOf(
       render(
         createElement(StyledLayoutWrapper, {
           height: "300px",
@@ -372,8 +378,14 @@ describe("StyledLayoutWrapper print layout", () => {
     expect(css).toMatch(
       /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;height:auto;max-height:none/
     )
+    expect(css).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
 
-    const stretchInDefiniteParent = cssAddedBy(() =>
+    const contentHeight = cssOf(
+      render(createElement(StyledLayoutWrapper, { height: "auto" }))
+    )
+    expect(contentHeight).toMatch(WRAPPER_OWN_PRINT_BLOCK)
+
+    const stretchInDefiniteParent = cssOf(
       render(
         createElement(StyledLayoutWrapper, {
           height: "auto",
@@ -383,8 +395,21 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
     expect(stretchInDefiniteParent).toContain("flex:0 1 100%")
-    expect(stretchInDefiniteParent).not.toMatch(
-      /@media print\{\.[\w-]+\{display:block/
+    expect(stretchInDefiniteParent).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
+  })
+
+  it("releases a fixed height around a horizontal container that stacks a chart", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledLayoutWrapper, {
+          height: "250px",
+          flex: "0 0 250px",
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /:has\(> ?\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
     )
   })
 })
