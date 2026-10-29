@@ -747,6 +747,11 @@ filled, belongs to item 7.
     as `None` (`()` for a range), and a `required` range with only a start date is
     empty, as in the browser's `isRequiredEmptyDateValue`.
   - `st.pills` and `st.segmented_control`: `[]` is a deselection, whatever the default.
+    Inside a form, a required one without a default may return to that empty default:
+    a form that clears on submit restores it, and the browser does not keep a form from
+    submitting while these widgets are empty. Outside a form, the browser never deselects
+    a required one. Limiting this to forms that clear on submit needs the form's
+    `clear_on_submit` on the server, which item 7 can bring with form membership.
   - Text: emptiness is checked before the exemption for the author's value, so a
     required text input whose default is `""` still refuses a change to `""`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the

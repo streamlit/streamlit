@@ -1550,6 +1550,58 @@ def test_a_key_that_turns_required_on_keeps_its_empty_value(
     assert "(empty_required)" in refusal_logs[0]
 
 
+def _clearing_form_app() -> None:
+    import streamlit as st
+
+    with st.form("survey", clear_on_submit=True):
+        st.pills("Mood", ["calm", "busy"], key="mood", required=True)
+        st.pills("Pace", ["slow", "fast"], default="slow", key="pace", required=True)
+        st.form_submit_button("Send", key="send")
+
+
+def test_a_required_selection_in_a_form_can_return_to_an_empty_default(
+    refusal_logs: list[str],
+) -> None:
+    """A form that clears on submit restores the empty default, which the browser submits.
+
+    The browser does not keep the form from submitting while the pills are
+    empty. A default with a selection is restored instead, so `[]` is still
+    refused for one.
+    """
+    at = AppTest.from_function(_clearing_form_app).run()
+    mood_id, pace_id, send_id = (
+        _widget_id(at, key) for key in ("mood", "pace", "send")
+    )
+
+    def submit(**fields: list[str]) -> None:
+        at._run(
+            widget_state=forged_many(
+                *(
+                    WidgetState(id=widget_id, string_array_value=_labels(*labels))
+                    for widget_id, labels in zip(
+                        (mood_id, pace_id), fields.values(), strict=True
+                    )
+                ),
+                WidgetState(id=send_id, trigger_value=True),
+            )
+        )
+
+    with patch_config_options({"global.e2eTest": True}):
+        submit(mood=["calm"], pace=["fast"])
+        assert (at.session_state.mood, at.session_state.pace) == ("calm", "fast")
+
+        submit(mood=[], pace=["slow"])
+        assert at.session_state.mood is None
+        assert refusal_logs == []
+
+        submit(mood=["busy"], pace=[])
+
+    assert not at.exception
+    assert (at.session_state.mood, at.session_state.pace) == ("busy", "slow")
+    assert len(refusal_logs) == 1
+    assert "pace (empty_required)" in refusal_logs[0]
+
+
 def test_a_new_session_drops_programmatic_empty_text_for_a_required_widget() -> None:
     """App code may empty a required widget, but a new session refuses the echo.
 

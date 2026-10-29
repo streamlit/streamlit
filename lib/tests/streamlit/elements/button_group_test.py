@@ -178,24 +178,30 @@ class TestButtonGroupSerde:
         )
 
     @pytest.mark.parametrize(
-        ("default_option_index", "ui_value", "empty"),
+        ("default_option_index", "in_form", "ui_value", "empty"),
         [
             # `[]` is a deselection, whatever the default.
-            (None, [], True),
-            (0, [], True),
+            (None, False, [], True),
+            (0, False, [], True),
             # An unset value reads as the default.
-            (None, None, True),
-            (0, None, False),
-            (None, ["Banana"], False),
+            (None, False, None, True),
+            (0, False, None, False),
+            (None, False, ["Banana"], False),
+            # A form that clears on submit restores an empty default.
+            (None, True, [], False),
+            (None, True, None, False),
+            # It restores a default with a selection, never `[]`.
+            (0, True, [], True),
         ],
     )
     def test_single_select_validate_refuses_clearing_a_required_widget(
         self,
         default_option_index: int | None,
+        in_form: bool,
         ui_value: list[str] | None,
         empty: bool,
     ) -> None:
-        """A required single selection cannot be cleared."""
+        """A required single selection cannot be cleared, except to its default in a form."""
         formatted_options = ["Apple", "Banana"]
 
         def _serde(*, required: bool) -> _SingleSelectButtonGroupSerde[str]:
@@ -205,6 +211,7 @@ class TestButtonGroupSerde:
                 formatted_option_to_option_index={"Apple": 0, "Banana": 1},
                 default_option_index=default_option_index,
                 required=required,
+                in_form=in_form,
             )
 
         wire = None if ui_value is None else _wire(*ui_value)

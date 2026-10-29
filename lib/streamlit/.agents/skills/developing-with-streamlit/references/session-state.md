@@ -95,7 +95,7 @@ Still not enforced on the server, so check these yourself when they matter:
 - `validate` on `st.text_input`, including the email or URL check `type` implies. It runs only in the browser.
 - `step`: any value within the bounds is accepted.
 - `st.data_editor` edits and column constraints, and dataframe or chart selections.
-- An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it, and only the browser blocks a form submit while it is empty.
+- An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it. Only the browser blocks a form submit while a required field is empty, and a required `st.pills` or `st.segmented_control` without a default can return to empty inside a form.
 - Authorization, file contents, and business rules, such as whether *this* user may pick an option:
 
 ```python

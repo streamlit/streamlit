@@ -94,11 +94,14 @@ st.write("pills-disabled:", str(s3))
 
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
+    # Required, so the second submit in test_pills_work_in_forms sends the
+    # empty selection the form cleared to.
     st.pills(
         "Elements  (label hidden)",
         ["Water", "Fire", "Earth", "Air"],
         key="pills_in_form",
         label_visibility="hidden",
+        required=True,
     )
     st.form_submit_button("Submit")
 

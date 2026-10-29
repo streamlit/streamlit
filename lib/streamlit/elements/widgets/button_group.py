@@ -30,7 +30,7 @@ from typing import (
 
 from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib import agent_spec
-from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
     Width,
     create_layout_config,
@@ -111,6 +111,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     format_func: Callable[[Any], str]
     session_state_fallback: T | None
     required: bool
+    in_form: bool
 
     def __init__(
         self,
@@ -122,6 +123,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         format_func: Callable[[Any], str] = str,
         session_state_fallback: T | None = None,
         required: bool = False,
+        in_form: bool = False,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
@@ -130,6 +132,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
         self.required = required
+        self.in_form = in_form
 
     @cached_property
     def _label_counts(self) -> Counter[str]:
@@ -142,18 +145,20 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     ) -> Violation | None:
         """Refuse a label a client was not shown, more than one, or none.
 
-        A required widget is never cleared.
+        A required widget is never cleared, except back to an empty default
+        inside a form.
         """
-        if ui_value is None:
-            # An unset value reads as the default, so it is empty only without one.
-            if self.default_option_index is None:
-                return widget_checks.filled(None, required=self.required)
+        if ui_value is not None and len(ui_value) > 0:
+            return widget_checks.items_of(self._label_counts, ui_value, max_items=1)
+        # No selection. An unset value reads as the default, and `[]` is a
+        # deselection, whatever the default.
+        if ui_value is None and self.default_option_index is not None:
             return None
-        # `[]` is a deselection, whatever the default.
-        violation = widget_checks.filled(ui_value, required=self.required)
-        return violation or widget_checks.items_of(
-            self._label_counts, ui_value, max_items=1
-        )
+        if self.in_form and self.default_option_index is None:
+            # A form that clears on submit restores the empty default, and the
+            # browser submits the form while this widget is empty.
+            return None
+        return widget_checks.filled(None, required=self.required)
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -585,10 +590,12 @@ class ButtonGroupMixin:
             exception is raised.
 
             .. note::
-               Streamlit refuses a change that clears a required selection,
-               also from a modified client. A widget that starts without a
-               selection still returns ``None`` until the user picks an
-               option.
+               Outside a form, Streamlit refuses a change that clears a
+               required selection, also from a modified client. Inside a
+               form, a widget without a default can return to no selection,
+               as when a form with ``clear_on_submit=True`` clears it. A
+               widget that starts without a selection returns ``None`` until
+               the user picks an option.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -1018,10 +1025,12 @@ class ButtonGroupMixin:
             exception is raised.
 
             .. note::
-               Streamlit refuses a change that clears a required selection,
-               also from a modified client. A widget that starts without a
-               selection still returns ``None`` until the user picks an
-               option.
+               Outside a form, Streamlit refuses a change that clears a
+               required selection, also from a modified client. Inside a
+               form, a widget without a default can return to no selection,
+               as when a form with ``clear_on_submit=True`` clears it. A
+               widget that starts without a selection returns ``None`` until
+               the user picks an option.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -1384,6 +1393,7 @@ class ButtonGroupMixin:
                 format_func=actual_format_func,
                 session_state_fallback=_ss_fallback_single,
                 required=required,
+                in_form=is_in_form(self.dg),
             )
             serializer = single_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", single_serde.deserialize)

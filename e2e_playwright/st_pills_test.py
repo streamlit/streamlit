@@ -190,6 +190,14 @@ def test_pills_work_in_forms(app: Page):
     wait_for_app_run(app)
     expect_markdown(app, "pills-in-form: Air")
 
+    # The form cleared the required pills to no selection, which the browser
+    # submits. Inside a form, a required widget without a default may return
+    # to it, so the server takes it.
+    expect(get_pill_button(pills, "Air")).not_to_have_attribute("data-selected", "true")
+    click_form_button(app, "Submit")
+    wait_for_app_run(app)
+    expect_markdown(app, "pills-in-form: None")
+
 
 def test_pills_work_with_fragments(app: Page):
     expect_markdown(app, "pills-in-fragment: None")
