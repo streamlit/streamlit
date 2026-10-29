@@ -472,6 +472,7 @@ right now. Naming follows the public API, for the reason above:
               "label_visibility": "visible",
               "accept_new_options": false,
               "filter_mode": "fuzzy",
+              "required": false,
               "on_change": "rerun"
             },
             "value_schema": { "type": "string" },
@@ -1061,13 +1062,11 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. The session, timeout, and TTL options become
-public once the API is documented, so an operator can tune them, and stay hidden with
-`server.enableAgentApi` until then; the defaults are what v1 ships. The wait timeout
-bounds how long one request waits, not how long the run may take, so it sits below
-clients' own timeouts rather than growing to fit the slowest app. The preview size is a
-hidden option: the default is meant to be right, and the setting is there for operators
-and tests rather than for tuning per app.
+Every bound v1 applies, in one place. All agent API options are public, so operators
+can tune them; the defaults are what v1 ships. The wait timeout bounds how long one
+request waits, not how long the run may take, so it sits below clients' own timeouts
+rather than growing to fit the slowest app. The preview size's default is meant to be
+right; the setting is there for operators and tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -1077,7 +1076,7 @@ and tests rather than for tuning per app.
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
 | Request body                           | 25 MB, then `request_too_large`; the bound on a message a browser sends | `server.maxWidgetStateSize`                                 |
-| Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
+| Preview rows per table                 | 100                                                   | `server.agentPreviewRows`                                                     |
 | Data served behind `data.url`          | 200 MB per element, then `too_large_to_serve`         | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed; follow-up #9 serves large ones behind `data.url`                       |
 | Response size                          | No cap                                                | Follow-up #9                                                                  |

@@ -1476,7 +1476,7 @@ class SessionState:
 
         try:
             new_val = self._new_widget_state.get(wid)
-        except KeyError:
+        except KeyError:  # pragma: no cover - defensive, Mapping.get returns None
             new_val = None
         old_val = self._old_state.get(wid)
 
@@ -1589,7 +1589,7 @@ class SessionState:
                 user_key = wid_key_map[key]
                 try:
                     preserved_by_key[user_key] = self._getitem(key, user_key)
-                except KeyError:
+                except KeyError:  # pragma: no cover - defensive, key is in _old_state
                     preserved_by_key[user_key] = self._old_state[key]
                 self._persist_tracker.note_preserved_value(
                     key, user_key, ctx.page_script_hash

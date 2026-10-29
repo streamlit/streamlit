@@ -958,6 +958,33 @@ class WidgetWritesTest(SnapshotCase):
 
     @parameterized.expand(
         [
+            ("out_of_range_slider_value_resets", "amount", 500, 0),
+            ("fraction_to_an_integer_slider_truncates", "amount", 2.5, 2),
+            ("short_slider_range_resets", "range", [30], (20, 80)),
+            ("reversed_slider_range_is_kept", "range", [80, 20], (80, 20)),
+            ("malformed_date_resets", "day", "2026-13-45", dt.date(2026, 1, 2)),
+            ("malformed_color_resets", "color", "red", "#000000"),
+        ]
+    )
+    def test_values_the_widget_adjusts_are_applied_as_the_app_applies_them(
+        self, _name: str, key: str, sent: Any, expected: Any
+    ) -> None:
+        """A value of the right type that the widget's own rules adjust is
+        accepted, and the app reads what the widget makes of it, as the
+        OpenAPI document's `widget_state` description says.
+        """
+        render_value_widgets()
+        self._check({key: sent}, expected)
+
+    def test_an_out_of_range_number_input_value_resets(self) -> None:
+        """A number outside a bounded `st.number_input` is accepted and reset
+        to the widget's default, as the OpenAPI document says.
+        """
+        st.number_input("Bounded", min_value=0, max_value=10, value=5, key="bounded")
+        self._check({"bounded": 50}, 5)
+
+    @parameterized.expand(
+        [
             ("button", {"key": "go"}, True),
             (
                 "button_with_a_value",

@@ -455,6 +455,11 @@ def test_validate_refuses_navigation_with_widget_changes(
     ("request_body", "fragment"),
     [
         ({"session_id": 1}, "`session_id` must be a string"),
+        ({"session_id": None}, "Omit it to create a session"),
+        (
+            {"session_id": None, "widget_state": {"region": "EMEA"}},
+            "Omit it to create a session",
+        ),
         ({"page": 3}, "`page` must be a string"),
         ({"query_params": ["a"]}, "`query_params` must be an object"),
         ({"query_params": {"a": "1"}}, "must be a list of strings"),
@@ -682,6 +687,8 @@ def test_resolve_page_defers_only_on_a_creating_call_before_navigation() -> None
     with pytest.raises(AgentRequestError) as raised:
         interaction._resolve_page(default_only, "report", can_defer=False, listed=[])
     assert raised.value.code == "unknown_page"
+    # An untitled page still has a `title`, which a `Page` always carries.
+    assert raised.value.details == {"pages": [{"url_path": "", "title": ""}]}
 
 
 def test_resolve_page_refuses_an_unknown_page_once_pages_are_declared() -> None:

@@ -357,6 +357,9 @@ class SnapshotBuilderTest(SnapshotCase):
     def test_clearable_records_an_empty_default_the_value_hides(self) -> None:
         """A chosen value hides an empty default, so `clearable` says null empties it."""
         st.selectbox("City", ["Paris"], index=None, key="optional_city")
+        st.selectbox(
+            "Needed city", ["Paris"], index=None, required=True, key="needed_city"
+        )
         st.selectbox("Home", ["Paris"], key="home_city")
         st.radio("Choice", ["a"], index=None, key="choice")
         st.number_input("Count", value=None, key="count")
@@ -373,6 +376,9 @@ class SnapshotBuilderTest(SnapshotCase):
         optional = _one_keyed(snapshot.document, "selectbox", "optional_city")
         assert optional["clearable"] is True
         assert _state(snapshot, "selectbox", "optional_city").clearable is True
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "selectbox", "needed_city"
+        )
         assert "clearable" not in _one_keyed(
             snapshot.document, "selectbox", "home_city"
         )

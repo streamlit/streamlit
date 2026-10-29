@@ -329,10 +329,10 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
 
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
-- `st.text_area`: `required` and `max_chars`. `st.chat_input`: `max_chars`.
+- `st.text_area`: `required` and `max_chars`. `st.selectbox`: `required`. `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
 - `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
-- `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
+- `required=True` does not change the default: `st.selectbox` still starts on its first option, `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` (`index=None` for `st.selectbox`) together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
 - `st.data_editor`: the same kinds of limits via `st.column_config`.
 - `st.file_uploader`: `type` rejects a disallowed file before upload.
 
@@ -347,7 +347,7 @@ The server also refuses values that break most of these limits, but not `validat
 
 **This is critical and often missed.**
 
-By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` always render all their content, even when hidden or collapsed.
+By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
 
 ### Tabs with expensive content
 

@@ -159,9 +159,31 @@ class DataEditorUtilTest(unittest.TestCase):
                 date(2021, 1, 1),
             ),
             (
-                100000,
+                7200,
                 ColumnDataKind.TIMEDELTA,
-                pd.Timedelta(100000),
+                pd.Timedelta(hours=2),
+            ),
+            (
+                1.5,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(seconds=1.5),
+            ),
+            (
+                # Rounds to the nearest nanosecond instead of truncating
+                # 1.005 s to 1.004999999 s.
+                1.005,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(milliseconds=1005),
+            ),
+            (
+                -7200,
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=-2),
+            ),
+            (
+                "2 hours",
+                ColumnDataKind.TIMEDELTA,
+                pd.Timedelta(hours=2),
             ),
             (
                 [1, 2, 3],
@@ -226,6 +248,14 @@ class DataEditorUtilTest(unittest.TestCase):
         """Test that _parse_value parses the input to the correct type."""
         result = _parse_value(value, column_data_kind)
         assert result == expected
+
+    @parameterized.expand(
+        [(float("inf"),), (float("-inf"),), (float("nan"),), (1e300,)]
+    )
+    def test_parse_value_raises_for_out_of_range_timedelta_seconds(self, value: float):
+        """An out-of-range duration raises so callers skip it instead of storing NaT."""
+        with pytest.raises((OverflowError, ValueError)):
+            _parse_value(value, ColumnDataKind.TIMEDELTA)
 
     def test_data_editor_serde_serialize_round_trips(self):
         """``DataEditorSerde.serialize`` produces JSON containing all editing-state keys."""
@@ -393,6 +423,107 @@ class DataEditorUtilTest(unittest.TestCase):
         # List values should remain lists
         assert df.iat[0, 2] == ["a", "b"]
         assert isinstance(df.iat[0, 2], list)
+
+    def test_apply_cell_edits_incompatible_timedelta_does_not_raise(self):
+        """A finer-than-dtype duration edit must not crash the app."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 90}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=90)
+        # pandas 2+ may ignore 90.5s; older pandas may accept or upcast it.
+        _apply_cell_edits(df, {0: {"duration": 90.5}}, dataframe_schema)
+        # Either way, the cell holds the old or the new value, never a
+        # cleared or truncated one.
+        assert df.iat[0, 0] in {pd.Timedelta(seconds=90), pd.Timedelta(seconds=90.5)}
+
+    def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
+        """A finer-than-dtype duration row add must not crash the app."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype="timedelta64[s]")}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(df, [{"duration": 90}], dataframe_schema)
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
+        # pandas 2+ may skip 90.5s; older pandas may accept or upcast it.
+        _apply_row_additions(df, [{"duration": 90.5}], dataframe_schema)
+        # Either way, existing rows are unchanged and an added row (if any)
+        # holds exactly 90.5 seconds.
+        assert list(df["duration"].iloc[:2]) == [
+            pd.Timedelta(seconds=5),
+            pd.Timedelta(seconds=90),
+        ]
+        assert len(df) in {2, 3}
+        assert df["duration"].iloc[2:].eq(pd.Timedelta(seconds=90.5)).all()
+
+    @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
+    def test_apply_cell_edits_fractional_seconds_on_timedelta(self, dtype: str):
+        """A fractional second edit that the column unit can store is applied exactly."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype=dtype)}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 1.005}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(milliseconds=1005)
+
+    @parameterized.expand(["timedelta64[ms]", "timedelta64[us]", "timedelta64[ns]"])
+    def test_apply_row_additions_fractional_seconds_on_timedelta(self, dtype: str):
+        """A fractional second row value that the column unit can store is added exactly."""
+        df = pd.DataFrame(
+            {"duration": pd.Series([pd.Timedelta(seconds=5)], dtype=dtype)}
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(df, [{"duration": 1.005}], dataframe_schema)
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(milliseconds=1005)
+
+    def test_apply_cell_edits_out_of_range_timedelta_keeps_value(self):
+        """An out-of-range duration edit is skipped instead of clearing the cell."""
+        df = pd.DataFrame({"duration": [pd.Timedelta(seconds=5)]})
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {0: {"duration": 1e300}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=5)
+        _apply_cell_edits(df, {0: {"duration": float("nan")}}, dataframe_schema)
+        assert df.iat[0, 0] == pd.Timedelta(seconds=5)
+
+        # A real clear still stores a missing value.
+        _apply_cell_edits(df, {0: {"duration": None}}, dataframe_schema)
+        assert pd.isna(df.iat[0, 0])
+
+    def test_apply_cell_edits_skips_index_edit_that_fails_to_parse(self):
+        """An index edit whose value cannot be parsed is skipped, not raised."""
+        df = pd.DataFrame(
+            {"col": [1, 2]},
+            index=pd.TimedeltaIndex([pd.Timedelta(seconds=1), pd.Timedelta(seconds=2)]),
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(
+            df,
+            {0: {INDEX_IDENTIFIER: 1e300, "col": 10}},
+            dataframe_schema,
+        )
+        assert df.index[0] == pd.Timedelta(seconds=1)
+        # Other edits in the same row still apply.
+        assert df.iat[0, 0] == 10
+
+    def test_apply_row_additions_out_of_range_timedelta_skips_row(self):
+        """An added row with an out-of-range duration is skipped, later rows are kept."""
+        df = pd.DataFrame({"duration": [pd.Timedelta(seconds=5)]})
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_row_additions(
+            df, [{"duration": 1e300}, {"duration": 90}], dataframe_schema
+        )
+        assert len(df) == 2
+        assert df.iat[1, 0] == pd.Timedelta(seconds=90)
 
     def test_apply_row_additions(self):
         """Test applying row additions to a DataFrame."""
