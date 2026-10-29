@@ -249,6 +249,27 @@ class TestWithBaseUrl:
             assert response.status_code == 200
             assert response.text == "<html>Base</html>"
 
+    def test_reserved_paths_under_a_base_url_tell_root_from_page(
+        self, tmp_path: Path
+    ) -> None:
+        """Under a base URL, a reserved path at the app's root keeps the
+        static files' 405 for a `POST`, and one under a page's URL is a 404.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Base</html>")
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url="myapp"
+        )
+        app = Starlette(routes=[Mount("/myapp", app=static_files)])
+
+        with TestClient(app) as client:
+            root = client.post("/myapp/_stcore/health")
+            under_a_page = client.post("/myapp/page2/_stcore/agent/mcp", json={})
+
+        assert root.status_code == 405
+        assert under_a_page.status_code == 404
+
     def test_no_redirect_loop_when_mounted(self, tmp_path: Path) -> None:
         """Test that mount root with trailing slash doesn't cause redirect loop.
 

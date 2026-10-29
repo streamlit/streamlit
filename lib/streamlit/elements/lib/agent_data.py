@@ -354,8 +354,9 @@ def read_arrow_stream(arrow_bytes: bytes) -> pa.Table:
     """Read an Arrow IPC stream into a table.
 
     Streamlit's serializer writes an uncompressed stream, so the table's
-    buffers point into ``arrow_bytes`` rather than copying it, and reading a
-    few rows of a large stream costs about as much as reading a small one.
+    buffers point into ``arrow_bytes`` rather than copying it. The whole
+    stream is still read, batch by batch; callers convert only the rows they
+    need.
 
     Parameters
     ----------

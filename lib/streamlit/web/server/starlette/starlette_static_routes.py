@@ -41,11 +41,10 @@ if TYPE_CHECKING:
 # Pattern for files that should not be cached (HTML and manifest.json)
 _NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
 
-# Reserved paths that should return 404 instead of index.html fallback. The
-# agent API's routes are among them because the app's HTML tells a reader
-# without JavaScript where to find them: appended to a page's URL rather than
-# the app's, the path would otherwise answer with the app's HTML and a 200,
-# which reads as success.
+# Reserved paths that return 404 instead of falling back to index.html. They
+# include the agent API routes, so a client that appends one to a page's URL
+# (such as `/page2/_stcore/agent/mcp`) gets a 404 rather than the app's HTML
+# and a 200, which would read as success.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = (
     "_stcore/health",
     "_stcore/host-config",

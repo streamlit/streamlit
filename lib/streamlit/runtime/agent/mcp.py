@@ -70,10 +70,11 @@ INTERNAL_ERROR: Final = -32603
 _METHODS: Final = frozenset({"initialize", "ping", "tools/list", "tools/call"})
 
 # The probe that clients of the draft `2026-07-28` revision send first.
-# `request_refusal` answers it with HTTP 400 and -32600, which those clients
-# read as "fall back to `initialize`". They do not fall back from a 401, 403,
-# or 5xx, or from -32022, the unsupported-version error, when the revisions it
-# lists include `2026-07-28` or a later one.
+# `request_refusal` answers it with HTTP 400 and -32600, an answer those
+# clients read as "fall back to `initialize`". They do not fall back from:
+# - a 401, 403, or 5xx;
+# - -32022 (unsupported version) whose listed revisions include `2026-07-28`
+#   or a later one.
 _DISCOVER_METHOD: Final = "server/discover"
 
 # What `get_data` returns at most: rows per table page, characters in a page's
@@ -91,7 +92,7 @@ PAGE_FIELDS: Final = ("columns", "row_count", "offset", "rows", "next_offset")
 # The most rows converted at a time while a page fills. Chunks start at one
 # row and double, so a page converts at most about twice the rows it holds,
 # however large its cells or its `limit`.
-_ROW_CHUNK: Final = 100
+_MAX_ROW_CHUNK: Final = 100
 
 # What media storage names a file by: a 32-character hex digest, followed in a
 # URL by the extension of its type, if the type has one. Extensions come from
@@ -128,7 +129,7 @@ _NOT_A_MEDIA_FILE_MESSAGE: Final = (
     "external URL, or a `data:` URL, so do not call `get_data` for it again: "
     "the same argument fails the same way."
 )
-_GONE_MESSAGE: Final = (
+_FILE_GONE_MESSAGE: Final = (
     "No stored file has this id: a later run may have replaced it, or a run "
     "in progress has not re-created it yet. Pass `url` as the latest result "
     "shows it. If a run is still in progress, call `interact` with only "
@@ -174,8 +175,9 @@ class GetDataArguments(NamedTuple):
 
     session_id: str
     url: str
-    # As sent, or the default when omitted or null. Only a table read checks
-    # them; other files ignore them, even when they are invalid.
+    # Only table reads validate `offset` and `limit`; other files ignore them,
+    # even invalid ones. They hold the values sent, or the defaults when
+    # omitted or `null`.
     offset: Any
     limit: Any
 
@@ -232,7 +234,10 @@ def _is_request_id(value: Any) -> bool:
 
 
 def negotiate(requested: Any) -> str:
-    """The protocol revision to answer an ``initialize`` that asked for ``requested``."""
+    """The protocol revision to answer an ``initialize`` that asked for
+    ``requested``: that revision if this server speaks it, or else the newest
+    one it speaks.
+    """
     return requested if requested in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0]
 
 
@@ -497,7 +502,7 @@ def _read(
         raise _ReadRefusedError("unknown_file", _NOT_A_MEDIA_FILE_MESSAGE)
     stored = media.read_file(file_id)
     if stored is None:
-        raise _ReadRefusedError("unknown_file", _GONE_MESSAGE)
+        raise _ReadRefusedError("unknown_file", _FILE_GONE_MESSAGE)
 
     # The type the file was stored with, compared as the content-type check
     # compares it: without regard to case, and without parameters.
@@ -584,8 +589,8 @@ def _encoded_rows(table: pa.Table, *, start: int, end: int) -> Iterator[str]:
     chunks as the caller consumes them.
 
     The first chunk is one row, and each next one doubles, up to
-    ``_ROW_CHUNK``, so a caller that stops early has converted few rows past
-    the ones it took.
+    ``_MAX_ROW_CHUNK``, so a caller that stops early has converted few rows
+    past the ones it took.
 
     Raises
     ------
@@ -610,7 +615,7 @@ def _encoded_rows(table: pa.Table, *, start: int, end: int) -> Iterator[str]:
         for row in chunk:
             yield json_encoding.dumps(row)
         chunk_start += size
-        chunk_size = min(2 * chunk_size, _ROW_CHUNK)
+        chunk_size = min(2 * chunk_size, _MAX_ROW_CHUNK)
 
 
 def _file_content(stored: MemoryFile, file_id: str, media_type: str) -> dict[str, Any]:

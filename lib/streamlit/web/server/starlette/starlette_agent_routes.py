@@ -75,9 +75,10 @@ _T = TypeVar("_T")
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/openapi.json"
-# Beside the interact route, so the media URLs a result carries, relative to
-# the request, climb back to the app's root the same way from both. The MCP
-# route tests resolve those URLs from this route, so they fail if it moves.
+# Must stay at the same depth as `_ROUTE_AGENT_INTERACT`: the `interact` tool
+# returns the interact route's response body unchanged, and its media URLs
+# (`../../media/<id>`) are relative to the request path. The MCP route tests
+# resolve those URLs from this path and fail if it moves.
 _ROUTE_AGENT_MCP: Final = "_stcore/agent/mcp"
 
 # Every method a route registers, so none falls through to the static files
@@ -250,7 +251,7 @@ def _jsonrpc_error_response(
     return _jsonrpc_response(status, mcp.jsonrpc_error(request_id, code, message))
 
 
-def _jsonrpc_refusal(
+def _jsonrpc_pre_parse_refusal(
     code: errors.AgentErrorCode, message: str, *, status: int | None = None
 ) -> Response:
     """The MCP route's JSON-RPC error for a request refused before its body
@@ -619,10 +620,12 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # 400 rather than the interact route's 403: MCP clients read a 403
             # as an authorization failure, and neither fall back to
             # `initialize` nor show the message.
-            return _jsonrpc_refusal("not_available", _DISABLED_MESSAGE, status=400)
+            return _jsonrpc_pre_parse_refusal(
+                "not_available", _DISABLED_MESSAGE, status=400
+            )
         refusal = _refused_caller(request)
         if refusal is not None:
-            return _jsonrpc_refusal(*refusal)
+            return _jsonrpc_pre_parse_refusal(*refusal)
 
         max_request_bytes = runtime_util.get_max_widget_state_size_bytes()
         try:
@@ -631,7 +634,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # Nobody reads this: the client left while sending the body.
             return Response(status_code=400)
         except _BodyTooLargeError:
-            return _jsonrpc_refusal(
+            return _jsonrpc_pre_parse_refusal(
                 "request_too_large",
                 f"The request body exceeds {max_request_bytes} bytes.",
             )
