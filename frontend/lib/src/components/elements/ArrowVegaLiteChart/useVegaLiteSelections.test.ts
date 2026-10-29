@@ -1155,6 +1155,40 @@ describe("useVegaLiteSelections", () => {
       expect(signals("brush_point_tuple")).toBe(false)
     })
 
+    it("does not persist nested point-param transients under an interval prefix", () => {
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+          brush_Horsepower: [80, 150],
+          brush_point_tuple: {},
+          brush_point_toggle: {},
+          brush_point_modify: {},
+        },
+      })
+      configure(view, { selectionMode: ["brush", "brush_point"] })
+      const { signals } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(true)
+      expect(signals("brush_Horsepower")).toBe(true)
+      expect(signals("brush_point_tuple")).toBe(false)
+      expect(signals("brush_point_toggle")).toBe(false)
+      expect(signals("brush_point_modify")).toBe(false)
+    })
+
+    it("does not persist extents when the channel scale is unknown", () => {
+      const view = createIntervalView()
+      view.scale.mockImplementation(() => {
+        throw new Error('Unrecognized scale: "x"')
+      })
+      configure(view)
+      const { signals, data } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(false)
+      expect(signals("brush_y")).toBe(false)
+      expect(signals("brush_Horsepower")).toBe(false)
+      expect(data("brush_store")).toBe(true)
+    })
+
     it("persists data-space extents whose field names look like transients", () => {
       const view = createIntervalView({
         presentSignals: {

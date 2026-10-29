@@ -108,7 +108,8 @@ const isNonContinuousChannelScale = (
       NON_CONTINUOUS_SCALE_TYPES.has(scale.type)
     )
   } catch {
-    return false
+    // Unknown scale names (layered/independent scales) are not restorable.
+    return true
   }
 }
 
@@ -121,51 +122,59 @@ const isNonContinuousChannelScale = (
 const getRestorableIntervalParams = (
   view: VegaView,
   selectionMode: readonly string[]
-): string[] =>
-  selectionMode.filter(param => {
-    const xIsVisual = hasSignal(view, `${param}_x`)
-    const yIsVisual = hasSignal(view, `${param}_y`)
-    if (!xIsVisual && !yIsVisual) {
-      return false
-    }
-    return !(
-      (xIsVisual && isNonContinuousChannelScale(view, "x")) ||
-      (yIsVisual && isNonContinuousChannelScale(view, "y"))
-    )
-  })
+): Set<string> =>
+  new Set(
+    selectionMode.filter(param => {
+      const xIsVisual = hasSignal(view, `${param}_x`)
+      const yIsVisual = hasSignal(view, `${param}_y`)
+      if (!xIsVisual && !yIsVisual) {
+        return false
+      }
+      return !(
+        (xIsVisual && isNonContinuousChannelScale(view, "x")) ||
+        (yIsVisual && isNonContinuousChannelScale(view, "y"))
+      )
+    })
+  )
 
-const matchingIntervalParam = (
-  intervalParams: readonly string[],
+const longestFirst = (params: readonly string[]): string[] =>
+  [...params].toSorted((left, right) => right.length - left.length)
+
+/** Longest param prefix wins, so `brush` does not match `brush_point_*`. */
+const matchingSelectionParam = (
+  selectionParams: readonly string[],
   name: string
 ): string | undefined =>
-  intervalParams
-    .toSorted((left, right) => right.length - left.length)
-    .find(param => name.startsWith(`${param}_`))
+  selectionParams.find(param => name.startsWith(`${param}_`))
 
 /**
  * Whether `name` is a stable interval extent for one of `intervalParams`:
  * visual `{param}_x` / `{param}_y` ranges and matching `{param}_{field}`
- * data-space ranges. Uses the longest param prefix so `brush` does not
- * claim `brush_point_*`. Point, legend, and input-bound params have no
- * visual extents, so they stay on the store-only path.
+ * data-space ranges. Matches the longest selection-mode prefix first so a
+ * nested point/legend param such as `brush_point` is not claimed by `brush`.
  */
 const isPersistedIntervalExtentSignal = (
   view: VegaView,
-  intervalParams: readonly string[],
+  intervalParams: ReadonlySet<string>,
+  selectionParams: readonly string[],
   name: string
 ): boolean => {
   if (!hasSignal(view, name)) {
     return false
   }
-  const param = matchingIntervalParam(intervalParams, name)
-  if (param === undefined) {
+  const param = matchingSelectionParam(selectionParams, name)
+  if (param === undefined || !intervalParams.has(param)) {
     return false
   }
   const suffix = name.slice(param.length + 1)
   return suffix.length > 0 && !INTERVAL_TRANSIENT_SIGNAL_SUFFIXES.has(suffix)
 }
 
-const selectionStoreData = (
+/**
+ * Keeps only the `{param}_store` datasets for the chart's selection params.
+ * Other snapshot data is never restored.
+ */
+const pickSelectionStores = (
   data: unknown,
   selectionMode: readonly string[]
 ): unknown => {
@@ -190,15 +199,21 @@ const sanitizeViewStateForRestore = (
   viewState: VegaViewState,
   selectionMode: readonly string[]
 ): VegaViewState => {
-  const data = selectionStoreData(viewState.data, selectionMode)
+  const data = pickSelectionStores(viewState.data, selectionMode)
   if (isNullOrUndefined(viewState.signals)) {
     return { data }
   }
 
   const intervalParams = getRestorableIntervalParams(view, selectionMode)
+  const selectionParams = longestFirst(selectionMode)
   const signals = Object.fromEntries(
     Object.entries(viewState.signals).filter(([name]) =>
-      isPersistedIntervalExtentSignal(view, intervalParams, name)
+      isPersistedIntervalExtentSignal(
+        view,
+        intervalParams,
+        selectionParams,
+        name
+      )
     )
   )
   if (Object.keys(signals).length === 0) {
@@ -377,6 +392,7 @@ export const useVegaLiteSelections = (
           vegaView,
           selectionMode
         )
+        const selectionParams = longestFirst(selectionMode)
 
         const viewState = vegaView.getState({
           data: (nameArg?: string, _operator?: unknown) => {
@@ -386,7 +402,12 @@ export const useVegaLiteSelections = (
           },
           signals: (name?: string) =>
             typeof name === "string" &&
-            isPersistedIntervalExtentSignal(vegaView, intervalParams, name),
+            isPersistedIntervalExtentSignal(
+              vegaView,
+              intervalParams,
+              selectionParams,
+              name
+            ),
           // Restoring subcontext data can cause Vega to throw.
           recurse: false,
         })
@@ -658,6 +679,8 @@ export const useVegaLiteSelections = (
             sanitizeViewStateForRestore(vegaView, viewState, selectionMode)
           )
         } catch (e) {
+          // setState applies asynchronously via runAsync; this catch only
+          // handles a synchronous throw. Invalid keys are filtered above.
           isRestoreSuppressed = false
           LOG.warn("Failed to restore view state", e)
           widgetMgr.deleteElementState(chartId, "viewState")

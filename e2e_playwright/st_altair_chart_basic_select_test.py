@@ -662,10 +662,10 @@ def test_x_interval_overlay_remains_after_unmounting(
 
     chart.dblclick(position={"x": 130, "y": 100})
     wait_for_app_run(app)
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
+    cleared_selection = app.get_by_test_id("stMarkdownContainer").filter(
         has_text=expected_selection
     )
-    expect(selection_text).to_have_count(0)
+    expect(cleared_selection).to_have_count(0)
     chart.scroll_into_view_if_needed()
     app.mouse.move(0, 0)
     app.wait_for_timeout(250)
