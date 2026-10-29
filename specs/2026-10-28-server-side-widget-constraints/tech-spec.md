@@ -244,8 +244,9 @@ class CheckResult(NamedTuple):
 A rejection is logged at debug level when a correct browser can cause it
 (`not_rendered`, and option or bound violations, which a sync race can produce). It is
 logged at warning level otherwise, once per widget per session. That dedup set only holds
-IDs with metadata, because an unknown or forged ID is never checked at the boundary. So
-the set is bounded by the widgets this session registered, not by what a client sends.
+IDs with metadata: an unknown ID is never checked at the boundary, and a trigger dropped
+for having none is not logged. So the set is bounded by the widgets this session
+registered, not by what a client sends.
 
 ### Where constraints live: in each widget's serde
 
@@ -385,7 +386,9 @@ a browser session whose widgets never change pays nothing. Counts rather than a 
 because `ambiguous_option` needs to know when a label is shared, as
 `widget_writes._validate_options` does today. `one_of` and `items_of` report
 `ambiguous_option` only when the value has no other violation, so a browser session can
-accept it. With `accept_new`, which `accept_new_options` sets, any non-empty label is
+accept it. A shared label repeated at most as often as options share it is
+`ambiguous_option` too, not `duplicate_items`: the multiselect's "Select all" adds every
+option's label. With `accept_new`, which `accept_new_options` sets, any non-empty label is
 legal, because the browser lets the user type one. `max_items` and `unique` still apply.
 
 **The previous value.** Check 3 already passes unchanged values, so a validator sees only
@@ -637,7 +640,8 @@ Items 1–3 are covered above.
   `None`.
 - `max_chars`: counted in UTF-16 code units (`len(text.encode("utf-16-le")) // 2`), as
   the browser counts them, so an astral character counts as two and nothing a browser
-  accepts is refused.
+  accepts is refused. `0` means no limit, as in the browser (`maxChars !== 0`), although
+  the text serdes truncate to `""` today.
 - The deserializers stop replacing refused values and keep their conversions, such as
   `int()`. See [above](#where-constraints-live-in-each-widgets-serde).
 
@@ -648,14 +652,15 @@ passes check 3, so an empty default is never refused. An agent's `null` sent to 
 widget is a no-op, and its `null` sent to a filled one with an empty default is
 `empty_required`. The stricter form rule, that a submit needs every required field
 filled, belongs to item 7.
-- Emptiness follows the widget: `None`, `[]`, or text that is only whitespace. An unset
-  value reads as the widget's default, because the browser commits the default when the
-  user empties a field that has one, so it is empty only when the default is. Two
-  `date_input` cases differ: `[]` is empty even with a default, because `DateInputSerde`
-  reads it as `None`, and a `required` range with only a start date is empty, as in the
-  browser's `isRequiredEmptyDateValue`.
+- Emptiness follows the widget: `None`, `[]`, `()`, or text that is only whitespace. An
+  unset value reads as the widget's default, because the browser commits the default
+  when the user empties a field that has one, so it is empty only when the default is.
+  Two `date_input` cases differ: `[]` is empty even with a default, because
+  `DateInputSerde` reads it as `None` (`()` for a range), and a `required` range with
+  only a start date is empty, as in the browser's `isRequiredEmptyDateValue`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the
-  browser. Python's `str.strip()` strips a slightly different set.
+  browser. Python's `str.strip()` also strips `U+001C`–`U+001F` and `U+0085`, which the
+  browser keeps, and keeps `U+FEFF`, which the browser strips.
 - `required` stays out of keyed identity, per the
   [required spec](../2026-08-18-required-widgets/product-spec.md). So a key whose
   `required` flips from false to true keeps its empty value until the user changes it.
@@ -715,9 +720,10 @@ serde's `validate` calls it for client values. A `ButtonColumn` click is checked
 
 **Item 9: fragments.** `AppSession.request_rerun` accepts a `fragment_id` only if the
 fragment was registered by the last run that covered it. Item 9 also clears stale
-fragments when a run ends with `st.stop()` or an exception. Today that path re-raises
-before `FragmentStorage.clear()` and skips it (`script_runner.py:925-936`). Dialog
-fragments and `run_every` fragments need tests.
+fragments when a full-script run ends with `st.stop()` or an exception. Today that path
+re-raises before `FragmentStorage.clear()` and skips it (`script_runner.py:925-936`). A
+fragment run already prunes its own in `clear_stale_descendants`. Dialog fragments and
+`run_every` fragments need tests.
 
 **Items 10–12** need their own designs:
 - **Data editor cells (10)** must mirror each column type's browser semantics. Some clamp,
@@ -776,8 +782,9 @@ budget is no measurable regression in the unchanged case.
   every integer-valued widget, and a `json_value` that fails `json.loads`. Accept cases
   include every sentinel and layout the shipped frontend sends, because the browser
   parity run only catches an over-strict validator when some e2e app happens to send that
-  value. Examples are the `st.feedback` clear `""`, a shared `format_func` label, a new
-  option on an `accept_new_options` widget, and each date and time layout above.
+  value. Examples are the `st.feedback` clear `""`, a shared `format_func` label, also
+  repeated by "Select all", a new option on an `accept_new_options` widget, `max_chars=0`,
+  and each date and time layout above.
 - **Per widget**, forged `WidgetStates` through `AppTest._run(widget_state=...)`. Assert
   that the callback did not fire, the previous value was kept, and `set_value` was sent,
   also while the widget still holds its default. Also assert that an unchanged default
