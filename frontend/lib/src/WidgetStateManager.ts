@@ -981,6 +981,19 @@ export class WidgetStateManager {
   }
 
   /**
+   * True if the widget's form holds a value for it that waits for the form's
+   * submit.
+   */
+  public hasPendingFormValue(widget: WidgetInfo): boolean {
+    if (!isValidFormId(widget.formId)) {
+      return false
+    }
+    return notNullOrUndefined(
+      this.forms.get(widget.formId)?.widgetStates.getState(widget.id)
+    )
+  }
+
+  /**
    * Get the WidgetState proto for the given widget ID, if it exists.
    */
   private getWidgetState(widget: WidgetInfo): WidgetState | undefined {

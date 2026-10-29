@@ -422,6 +422,83 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
     })
   })
 
+  describe("remount with a value staged in a form", () => {
+    const element: MockProto = {
+      formId: "form-4",
+      setValue: false,
+      id: "widget-14",
+      value: "",
+      default: "",
+    }
+    const readString = (wm: WidgetStateManager, el: MockProto): MockValue =>
+      wm.getStringValue(el) ?? ""
+    const writeString = (
+      el: MockProto,
+      wm: WidgetStateManager,
+      vws: ValueWithSource<MockValue>
+    ): void => {
+      wm.setStringValue(el.id, vws.value as string, {
+        formId: el.formId,
+        fromUser: vws.fromUser,
+        fragmentId: undefined,
+      })
+    }
+    const mount = (): void => {
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr: readString,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState: writeString,
+          element,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+        })
+      )
+    }
+    const sentValue = (): string | null | undefined =>
+      widgetMgr.getActiveWidgetStates(new Set([element.id])).widgets[0]
+        ?.stringValue
+
+    it("keeps the staged value out of the next rerun", () => {
+      widgetMgr.setStringValue(element.id, "submitted", {
+        formId: element.formId,
+        fromUser: false,
+        fragmentId: undefined,
+      })
+      widgetMgr.setStringValue(element.id, "staged", {
+        formId: element.formId,
+        fromUser: true,
+        fragmentId: undefined,
+      })
+
+      mount()
+
+      // A rerun still sends the submitted value, and the form keeps the
+      // staged one for its submit.
+      expect(sentValue()).toBe("submitted")
+      expect(widgetMgr.hasPendingFormValue(element)).toBe(true)
+      act(() => {
+        widgetMgr.submitForm(element.formId, undefined)
+      })
+      expect(sentValue()).toBe("staged")
+    })
+
+    it("still writes its value when nothing is staged", () => {
+      widgetMgr.setStringValue(element.id, "submitted", {
+        formId: element.formId,
+        fromUser: false,
+        fragmentId: undefined,
+      })
+
+      mount()
+
+      expect(sentValue()).toBe("submitted")
+      expect(widgetMgr.hasPendingFormValue(element)).toBe(false)
+    })
+  })
+
   describe("query param binding integration", () => {
     it("registers binding when queryParamBinding config is provided", () => {
       const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
