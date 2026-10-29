@@ -988,6 +988,7 @@ _SPEC_EXAMPLE: Final = json.loads(
               "label_visibility": "visible",
               "accept_new_options": false,
               "filter_mode": "fuzzy",
+              "required": false,
               "on_change": "rerun"
             },
             "value_schema": { "type": "string" },
