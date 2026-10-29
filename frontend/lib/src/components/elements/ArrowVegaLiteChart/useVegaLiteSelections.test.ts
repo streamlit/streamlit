@@ -15,8 +15,8 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import { getLogger } from "loglevel"
-import type { View as VegaView } from "vega"
+import { parse, type View as VegaView, View } from "vega"
+import { compile, type TopLevelSpec } from "vega-lite"
 import type { Mock, Mocked } from "vitest"
 
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -960,65 +960,94 @@ describe("useVegaLiteSelections", () => {
     })
   })
 
-  describe("interval view state capture and restore", () => {
+  describe("interval brush restore with compiled Vega-Lite views", () => {
+    const VALUES = [
+      {
+        a: 0,
+        b: 0,
+        c: "A",
+        x: 0,
+        init: 0,
+        "Miles per Gallon": 0,
+        t: "2020-01-01",
+      },
+      {
+        a: 100,
+        b: 100,
+        c: "B",
+        x: 100,
+        init: 100,
+        "Miles per Gallon": 100,
+        t: "2022-01-01",
+      },
+    ]
+
     const cleanups: Array<() => void> = []
 
-    const BRUSH_SIGNALS: Record<string, unknown> = {
-      brush: {},
-      brush_x: [10, 80],
-      brush_y: [20, 90],
-      brush_Horsepower: [80, 150],
-      brush_Miles_per_Gallon: [15, 30],
-      brush_tuple: {},
-      brush_tuple_fields: [],
-      brush_scale_trigger: {},
-      brush_modify: {},
-      brush_translate_anchor: {},
-      brush_translate_delta: {},
-      brush_zoom_anchor: {},
-      brush_zoom_delta: {},
-      unit: {},
+    const intervalSpec = ({
+      width = 300,
+      xField = "a",
+      xType = "quantitative",
+      encodings = ["x", "y"],
+      extraParams = [],
+      bindScales = false,
+      params,
+      opacityParam = "brush",
+    }: {
+      width?: number
+      xField?: string
+      xType?: "quantitative" | "nominal" | "temporal"
+      encodings?: ReadonlyArray<"x" | "y">
+      extraParams?: readonly object[]
+      bindScales?: boolean
+      params?: readonly object[]
+      opacityParam?: string
+    } = {}): TopLevelSpec =>
+      ({
+        data: { values: VALUES },
+        mark: "point",
+        width,
+        height: 200,
+        params: params ?? [
+          {
+            name: "brush",
+            select: { type: "interval", encodings },
+            ...(bindScales ? { bind: "scales" } : {}),
+          },
+          ...extraParams,
+        ],
+        encoding: {
+          x: {
+            field: xField,
+            type: xType,
+            ...(xType === "temporal" ? { timeUnit: "yearmonth" } : {}),
+          },
+          y: { field: "b", type: "quantitative" },
+          // Evaluating the selection test caches a getter on each stored
+          // field, as in Streamlit's selection-aware charts.
+          opacity: {
+            condition: { param: opacityParam, value: 1 },
+            value: 0.3,
+          },
+        },
+      }) as TopLevelSpec
+
+    const createView = async (spec: TopLevelSpec): Promise<VegaView> => {
+      const view = new View(parse(compile(spec).spec), { renderer: "none" })
+      await view.runAsync()
+      cleanups.push(() => view.finalize())
+      return view
     }
 
-    const createIntervalView = ({
-      presentSignals = BRUSH_SIGNALS,
-      getStateResult = { some: "state" },
-    }: {
-      presentSignals?: Record<string, unknown>
-      getStateResult?: unknown
-    } = {}): Mocked<VegaView> =>
-      ({
-        addSignalListener: vi.fn().mockReturnThis(),
-        removeSignalListener: vi.fn().mockReturnThis(),
-        getState: vi.fn(() => getStateResult),
-        setState: vi.fn().mockReturnThis(),
-        container: vi.fn(() => null),
-        scale: vi.fn((channel: string) => {
-          if (channel === "x" || channel === "y") {
-            return { type: "linear" }
-          }
-          throw new Error(`Unrecognized scale: "${channel}"`)
-        }),
-        signal: vi.fn((name: string) => {
-          if (!Object.hasOwn(presentSignals, name)) {
-            throw new Error(`Unrecognized signal name: "${name}"`)
-          }
-          return presentSignals[name]
-        }),
-      }) as unknown as Mocked<VegaView>
-
     const configure = (
-      view: Mocked<VegaView>,
-      {
-        selectionMode = ["brush"],
-        formId = "formId",
-      }: { selectionMode?: string[]; formId?: string } = {}
+      view: VegaView,
+      selectionMode: string[] = ["brush"]
     ): { current: ReturnType<typeof useVegaLiteSelections> } => {
       const { result, unmount } = renderHook(() =>
         useVegaLiteSelections(
           {
             id: "chartId",
-            formId,
+            formId: "formId",
             selectionMode,
           } as VegaLiteChartElement,
           mockWidgetMgr
@@ -1034,429 +1063,329 @@ describe("useVegaLiteSelections", () => {
       return result
     }
 
-    const fireFirstListener = (
-      view: Mocked<VegaView>,
-      value: unknown = { Horsepower: [80, 150] }
-    ): void => {
-      const [[param, listener]] = (view.addSignalListener as Mock).mock.calls
-      act(() => {
-        listener(param, value)
+    /** Draws a brush through its pixel signals and returns the saved view state. */
+    const brushAndCapture = async (
+      view: VegaView,
+      pixels: Readonly<Partial<Record<string, readonly number[]>>>
+    ): Promise<{ data?: Record<string, unknown> }> => {
+      Object.entries(pixels).forEach(([name, value]) => {
+        if (value) {
+          view.signal(name, [...value])
+        }
       })
+      await view.runAsync()
+      const calls = mockWidgetMgr.setElementState.mock.calls
+      expect(calls.length).toBeGreaterThan(0)
+      return calls.at(-1)?.[2] as { data?: Record<string, unknown> }
     }
 
-    const getStateOptions = (
-      view: Mocked<VegaView>
-    ): {
-      data: (name?: string) => boolean
-      signals: (name?: string) => boolean
-      recurse: boolean
-    } => {
-      fireFirstListener(view)
-      return (view.getState as Mock).mock.calls[0][0] as {
-        data: (name?: string) => boolean
-        signals: (name?: string) => boolean
-        recurse: boolean
-      }
+    /** Restores a snapshot into `view` and settles it like useVegaEmbed does. */
+    const restoreInto = async (
+      view: VegaView,
+      viewState: unknown,
+      selectionMode: string[] = ["brush"]
+    ): Promise<{
+      result: { current: ReturnType<typeof useVegaLiteSelections> }
+      restoredSignals: Record<string, unknown> | undefined
+    }> => {
+      mockWidgetMgr.getElementState.mockReturnValue(viewState)
+      mockWidgetMgr.setStringValue.mockClear()
+      const setStateSpy = vi.spyOn(view, "setState")
+      const result = configure(view, selectionMode)
+      await view.resize().runAsync()
+      const restoredState = setStateSpy.mock.calls[0]?.[0] as
+        | { signals?: Record<string, unknown> }
+        | undefined
+      return { result, restoredSignals: restoredState?.signals }
     }
 
     afterEach(() => {
       cleanups.splice(0).forEach(cleanup => cleanup())
     })
 
-    it("captures 2D visual and data-space extents and skips transients", () => {
-      const view = createIntervalView()
+    it("persists only selection stores, never Vega signals", async () => {
+      const view = await createView(intervalSpec())
       configure(view)
-      const { data, signals, recurse } = getStateOptions(view)
+      const viewState = await brushAndCapture(view, {
+        brush_x: [60, 120],
+        brush_y: [150, 50],
+      })
 
-      expect(signals("brush_x")).toBe(true)
-      expect(signals("brush_y")).toBe(true)
-      expect(signals("brush_Horsepower")).toBe(true)
-      expect(signals("brush_Miles_per_Gallon")).toBe(true)
-      expect(signals("brush")).toBe(false)
-      expect(signals("brush_tuple")).toBe(false)
-      expect(signals("brush_translate_anchor")).toBe(false)
-      expect(signals("brush_zoom_delta")).toBe(false)
-      expect(signals("brush_scale_trigger")).toBe(false)
-      expect(signals("brush_modify")).toBe(false)
-      expect(signals("unit")).toBe(false)
-      expect(data("brush_store")).toBe(true)
-      expect(data("source_0")).toBe(false)
-      expect(recurse).toBe(false)
+      expect(viewState).not.toHaveProperty("signals")
+      expect(Object.keys(viewState.data ?? {})).toEqual(["brush_store"])
     })
 
     it.each([
       {
-        axis: "x",
-        selectionMode: ["xbrush"],
-        presentSignals: {
-          xbrush_x: [10, 80],
-          xbrush_Horsepower: [80, 150],
-          xbrush_tuple: {},
-        },
-        kept: ["xbrush_x", "xbrush_Horsepower"],
-        dropped: "xbrush_y",
+        label: "a 2D brush",
+        spec: {},
+        pixels: { brush_x: [60, 120], brush_y: [150, 50] },
+        extents: [
+          { data: "brush_a", pixel: "brush_x", channel: "x" },
+          { data: "brush_b", pixel: "brush_y", channel: "y" },
+        ],
       },
       {
-        axis: "y",
-        selectionMode: ["ybrush"],
-        presentSignals: {
-          ybrush_y: [20, 90],
-          ybrush_Miles_per_Gallon: [15, 30],
-        },
-        kept: ["ybrush_y", "ybrush_Miles_per_Gallon"],
-        dropped: "ybrush_x",
+        label: "an x-only brush",
+        spec: { encodings: ["x"] },
+        pixels: { brush_x: [60, 120] },
+        extents: [{ data: "brush_a", pixel: "brush_x", channel: "x" }],
       },
-    ])(
-      "captures $axis-only extents and rejects a missing opposite-axis signal",
-      ({ selectionMode, presentSignals, kept, dropped }) => {
-        const view = createIntervalView({ presentSignals })
-        configure(view, { selectionMode })
-        const { signals } = getStateOptions(view)
+      {
+        label: "a y-only brush",
+        spec: { encodings: ["y"] },
+        pixels: { brush_y: [150, 50] },
+        extents: [{ data: "brush_b", pixel: "brush_y", channel: "y" }],
+      },
+      {
+        label: "a field named like its channel",
+        spec: { encodings: ["x"], xField: "x" },
+        pixels: { brush_x_1: [60, 120] },
+        extents: [{ data: "brush_x", pixel: "brush_x_1", channel: "x" }],
+      },
+      {
+        label: "a field named like a Vega-Lite signal suffix",
+        spec: { encodings: ["x"], xField: "init" },
+        pixels: { brush_x: [60, 120] },
+        extents: [{ data: "brush_init", pixel: "brush_x", channel: "x" }],
+      },
+      {
+        label: "a field name Vega-Lite sanitizes",
+        spec: { encodings: ["x"], xField: "Miles per Gallon" },
+        pixels: { brush_x: [60, 120] },
+        extents: [
+          { data: "brush_Miles_per_Gallon", pixel: "brush_x", channel: "x" },
+        ],
+      },
+      {
+        label: "a temporal field with a time unit",
+        spec: { encodings: ["x"], xField: "t", xType: "temporal" },
+        pixels: { brush_x: [60, 120] },
+        extents: [
+          { data: "brush_yearmonth_t", pixel: "brush_x", channel: "x" },
+        ],
+      },
+    ] as const)(
+      "rebuilds $label at the new view's size without a widget update",
+      async ({ spec, pixels, extents }) => {
+        const source = await createView(intervalSpec({ ...spec, width: 300 }))
+        configure(source)
+        const viewState = await brushAndCapture(source, pixels)
 
-        kept.forEach(name => expect(signals(name)).toBe(true))
-        expect(signals(dropped)).toBe(false)
+        const target = await createView(intervalSpec({ ...spec, width: 600 }))
+        const { result, restoredSignals } = await restoreInto(
+          target,
+          viewState
+        )
+
+        expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual(
+          extents.flatMap(({ data, pixel }) => [data, pixel]).toSorted()
+        )
+        extents.forEach(({ data, pixel, channel }) => {
+          const scale = target.scale(channel)
+          // Vega's selection test converts stored dates to timestamps.
+          expect((target.signal(data) as unknown[]).map(Number)).toEqual(
+            (source.signal(data) as unknown[]).map(Number)
+          )
+          expect(target.signal(pixel)).toEqual(
+            (target.signal(data) as unknown[]).map(value => scale(value))
+          )
+        })
+        expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+        // Restoring the store fires the `brush` listener; it must not reach Python.
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+        act(() => result.current.endSelectionRestore())
+        target.signal(extents[0].pixel, [0, 30])
+        await target.runAsync()
+        expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
       }
     )
 
-    it("does not persist extents when an interval channel uses a band scale", () => {
-      const view = createIntervalView()
-      view.scale.mockImplementation((channel: string) => {
-        if (channel === "x") {
-          return { type: "band" }
-        }
-        if (channel === "y") {
-          return { type: "linear" }
-        }
-        throw new Error(`Unrecognized scale: "${channel}"`)
-      })
-      configure(view)
-      const { signals, data } = getStateOptions(view)
+    it("doubles the pixel extent when the restored view is twice as wide", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
 
-      expect(signals("brush_x")).toBe(false)
-      expect(signals("brush_y")).toBe(false)
-      expect(signals("brush_Horsepower")).toBe(false)
-      expect(data("brush_store")).toBe(true)
-    })
-
-    it("matches the longest param prefix so nested names stay distinct", () => {
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-          brush_Horsepower: [80, 150],
-          brush_point_x: [12, 40],
-          brush_point_tuple: {},
-        },
-      })
-      configure(view, { selectionMode: ["brush", "brush_point"] })
-      const { signals } = getStateOptions(view)
-
-      expect(signals("brush_x")).toBe(true)
-      expect(signals("brush_point_x")).toBe(true)
-      expect(signals("brush_point_tuple")).toBe(false)
-    })
-
-    it("does not persist nested point-param transients under an interval prefix", () => {
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-          brush_Horsepower: [80, 150],
-          brush_point_tuple: {},
-          brush_point_toggle: {},
-          brush_point_modify: {},
-        },
-      })
-      configure(view, { selectionMode: ["brush", "brush_point"] })
-      const { signals } = getStateOptions(view)
-
-      expect(signals("brush_x")).toBe(true)
-      expect(signals("brush_Horsepower")).toBe(true)
-      expect(signals("brush_point_tuple")).toBe(false)
-      expect(signals("brush_point_toggle")).toBe(false)
-      expect(signals("brush_point_modify")).toBe(false)
-    })
-
-    it("does not persist extents when the channel scale is unknown", () => {
-      const view = createIntervalView()
-      view.scale.mockImplementation(() => {
-        throw new Error('Unrecognized scale: "x"')
-      })
-      configure(view)
-      const { signals, data } = getStateOptions(view)
-
-      expect(signals("brush_x")).toBe(false)
-      expect(signals("brush_y")).toBe(false)
-      expect(signals("brush_Horsepower")).toBe(false)
-      expect(data("brush_store")).toBe(true)
-    })
-
-    it("persists data-space extents whose field names look like transients", () => {
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-          brush_release_init: ["a", "b"],
-        },
-      })
-      configure(view)
-      const { signals } = getStateOptions(view)
-
-      expect(signals("brush_x")).toBe(true)
-      expect(signals("brush_release_init")).toBe(true)
-    })
-
-    it("captures extents for multiple interval params on one view", () => {
-      const view = createIntervalView({
-        presentSignals: {
-          xsel_x: [10, 80],
-          xsel_Horsepower: [80, 150],
-          ysel_y: [20, 90],
-          ysel_Miles_per_Gallon: [15, 30],
-        },
-      })
-      configure(view, { selectionMode: ["xsel", "ysel"] })
-      const { signals, data } = getStateOptions(view)
-
-      expect(signals("xsel_x")).toBe(true)
-      expect(signals("ysel_y")).toBe(true)
-      expect(data("xsel_store")).toBe(true)
-      expect(data("ysel_store")).toBe(true)
-    })
-
-    it("does not persist signals for point selections", () => {
-      const view = createIntervalView({
-        presentSignals: {
-          pts: {},
-          pts_tuple: {},
-          pts_toggle: {},
-          pts_modify: {},
-        },
-        getStateResult: { data: { pts_store: [{ values: [1] }] } },
-      })
-      configure(view, { selectionMode: ["pts"] })
-      const { signals, data } = getStateOptions(view)
-
-      expect(signals("pts")).toBe(false)
-      expect(signals("pts_tuple")).toBe(false)
-      expect(signals("pts_toggle")).toBe(false)
-      expect(signals("pts_modify")).toBe(false)
-      expect(signals("pts_x")).toBe(false)
-      expect(data("pts_store")).toBe(true)
-      expect(mockWidgetMgr.setElementState).toHaveBeenCalledWith(
-        "chartId",
-        "viewState",
-        { data: { pts_store: [{ values: [1] }] } }
+      const target = await createView(
+        intervalSpec({ encodings: ["x"], width: 600 })
       )
+      await restoreInto(target, viewState)
+
+      expect(target.signal("brush_x")).toEqual([120, 240])
     })
 
-    it("restores signals and data without writing the widget value", () => {
-      const restoredState = {
-        signals: {
-          brush_x: [10, 80],
-          brush_y: [20, 90],
-          brush_Horsepower: [80, 150],
-        },
-        data: { brush_store: [{ values: [1] }] },
-      }
-      mockWidgetMgr.getElementState.mockReturnValue(restoredState)
-      const view = createIntervalView()
-      configure(view)
+    it.each([
+      {
+        label: "a band-scale interval",
+        source: { encodings: ["x"], xField: "c", xType: "nominal" },
+        target: { encodings: ["x"], xField: "c", xType: "nominal" },
+      },
+      {
+        label: "an interval whose encoded field changed",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x"], xField: "init" },
+      },
+      {
+        label: "an interval that now projects another channel",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x", "y"] },
+      },
+      {
+        label: "an interval now bound to scales",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x"], bindScales: true },
+      },
+    ] as const)(
+      "restores only the store for $label",
+      async ({ source: sourceSpec, target: targetSpec }) => {
+        const source = await createView(intervalSpec(sourceSpec))
+        configure(source)
+        const viewState = await brushAndCapture(source, { brush_x: [10, 250] })
 
-      expect(view.setState).toHaveBeenCalledWith(restoredState)
+        const target = await createView(
+          intervalSpec({ ...targetSpec, width: 600 })
+        )
+        const { restoredSignals } = await restoreInto(target, viewState)
+
+        expect(restoredSignals).toBeUndefined()
+        expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      }
+    )
+
+    it("does not restore extents for a layered chart with independent scales", async () => {
+      const layer = (field: string): object => ({
+        mark: "point",
+        encoding: {
+          x: { field, type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+        },
+      })
+      const spec = (width: number): TopLevelSpec =>
+        ({
+          data: { values: VALUES },
+          width,
+          height: 200,
+          resolve: { scale: { x: "independent" } },
+          layer: [
+            {
+              ...layer("a"),
+              params: [
+                {
+                  name: "brush",
+                  select: { type: "interval", encodings: ["x"] },
+                },
+              ],
+            },
+            layer("x"),
+          ],
+        }) as TopLevelSpec
+      const source = await createView(spec(300))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
+
+      const target = await createView(spec(600))
+      const { restoredSignals } = await restoreInto(target, viewState)
+
+      expect(restoredSignals).toBeUndefined()
+      expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+    })
+
+    it("restores a cleared brush as empty", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      await brushAndCapture(source, { brush_x: [60, 120] })
+      const viewState = await brushAndCapture(source, { brush_x: [0, 0] })
+      expect(viewState.data).toEqual({ brush_store: [] })
+
+      const target = await createView(intervalSpec({ encodings: ["x"] }))
+      const { restoredSignals } = await restoreInto(target, viewState)
+
+      expect(restoredSignals).toBeUndefined()
+      expect(target.signal("brush_x")).toEqual([])
+      expect(target.data("brush_store")).toEqual([])
+    })
+
+    it("restores an interval and a point param whose name extends it", async () => {
+      const extraParams = [
+        { name: "brush_point", select: { type: "point", fields: ["a"] } },
+      ]
+      const selectionMode = ["brush", "brush_point"]
+      const source = await createView(intervalSpec({ extraParams }))
+      configure(source, selectionMode)
+      const viewState = await brushAndCapture(source, {
+        brush_x: [60, 120],
+        brush_y: [150, 50],
+      })
+
+      const target = await createView(
+        intervalSpec({ extraParams, width: 600 })
+      )
+      const { restoredSignals } = await restoreInto(
+        target,
+        viewState,
+        selectionMode
+      )
+
+      expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual([
+        "brush_a",
+        "brush_b",
+        "brush_x",
+        "brush_y",
+      ])
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
 
-    it("suppresses restore-triggered listeners until endSelectionRestore", () => {
-      const restoredState = {
-        signals: { brush_x: [10, 80] },
-        data: { brush_store: [{ values: [1] }] },
-      }
-      mockWidgetMgr.getElementState.mockReturnValue(restoredState)
-      mockWidgetMgr.getStringValue.mockReturnValue("")
-
-      const view = createIntervalView()
-      view.addSignalListener.mockImplementation(
-        (
-          _name: string,
-          listener: (name: string, value: unknown) => void
-        ): VegaView => {
-          view.setState.mockImplementation((): VegaView => {
-            listener("brush", { Horsepower: [80, 150] })
-            return view
-          })
-          return view
-        }
-      )
-
-      const result = configure(view)
-      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
-
-      act(() => {
-        result.current.endSelectionRestore()
-      })
-      fireFirstListener(view, { Horsepower: [80, 150] })
-      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        "chartId",
-        JSON.stringify({
-          selection: { brush: { Horsepower: [80, 150] } },
-        }),
-        { formId: "formId", fragmentId: undefined, fromUser: true }
-      )
-
-      mockWidgetMgr.setStringValue.mockClear()
-      mockWidgetMgr.getStringValue.mockReturnValue(
-        JSON.stringify({
-          selection: { brush: { Horsepower: [80, 150] } },
+    it("restores each interval param of a chart independently", async () => {
+      const spec = (width: number): TopLevelSpec =>
+        intervalSpec({
+          width,
+          params: [
+            { name: "xsel", select: { type: "interval", encodings: ["x"] } },
+            { name: "ysel", select: { type: "interval", encodings: ["y"] } },
+          ],
+          opacityParam: "xsel",
         })
-      )
-      fireFirstListener(view, { Horsepower: [80, 150] })
-      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
-    })
+      const selectionMode = ["xsel", "ysel"]
+      const source = await createView(spec(300))
+      configure(source, selectionMode)
+      const viewState = await brushAndCapture(source, {
+        xsel_x: [60, 120],
+        ysel_y: [150, 50],
+      })
 
-    it("captures empty extents on clear and restores that snapshot", () => {
-      const emptyState = {
-        signals: { brush_x: [0, 0], brush_Horsepower: null },
-        data: { brush_store: [] },
-      }
-      const view = createIntervalView({ getStateResult: emptyState })
-      configure(view)
-      fireFirstListener(view, null)
-
-      expect(mockWidgetMgr.setElementState).toHaveBeenCalledWith(
-        "chartId",
-        "viewState",
-        emptyState
+      const target = await createView(spec(600))
+      const { restoredSignals } = await restoreInto(
+        target,
+        viewState,
+        selectionMode
       )
 
-      mockWidgetMgr.getElementState.mockReturnValue(emptyState)
-      const restoreView = createIntervalView()
-      configure(restoreView)
-      expect(restoreView.setState).toHaveBeenCalledWith(emptyState)
+      expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual([
+        "xsel_a",
+        "xsel_x",
+        "ysel_b",
+        "ysel_y",
+      ])
+      expect(target.signal("xsel_x")).toEqual([120, 240])
     })
 
-    it("drops incompatible signal keys and still restores store data", () => {
-      mockWidgetMgr.getElementState.mockReturnValue({
-        signals: {
-          brush_x: [10, 80],
-          brush_y: [20, 90],
-          stale_y: [1, 2],
-          param_1_y: [3, 4],
-        },
-        data: { brush_store: [{ values: [1] }] },
-      })
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-        },
-      })
-      configure(view)
+    it("ignores signals saved in a snapshot", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
 
-      expect(view.setState).toHaveBeenCalledWith({
-        signals: { brush_x: [10, 80] },
-        data: { brush_store: [{ values: [1] }] },
-      })
-    })
-
-    it("drops transient snapshot signals even when the view still defines them", () => {
-      mockWidgetMgr.getElementState.mockReturnValue({
-        signals: {
-          brush_x: [10, 80],
-          brush_tuple: {},
-          brush_scale_trigger: {},
-          brush_translate_anchor: { x: 1, y: 2 },
-        },
-        data: {
-          brush_store: [{ values: [1] }],
-          extra_store: [{ values: [2] }],
-        },
-      })
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-          brush_tuple: {},
-          brush_scale_trigger: {},
-          brush_translate_anchor: { x: 1, y: 2 },
-        },
-      })
-      configure(view)
-
-      expect(view.setState).toHaveBeenCalledWith({
-        signals: { brush_x: [10, 80] },
-        data: { brush_store: [{ values: [1] }] },
-      })
-    })
-
-    it("restores a data-space field whose name looks like a transient suffix", () => {
-      mockWidgetMgr.getElementState.mockReturnValue({
-        signals: {
-          brush_x: [10, 80],
-          brush_release_init: ["a", "b"],
-        },
-        data: { brush_store: [{ values: [1] }] },
-      })
-      const view = createIntervalView({
-        presentSignals: {
-          brush_x: [10, 80],
-          brush_release_init: ["a", "b"],
-        },
-      })
-      configure(view)
-
-      expect(view.setState).toHaveBeenCalledWith({
-        signals: {
-          brush_x: [10, 80],
-          brush_release_init: ["a", "b"],
-        },
-        data: { brush_store: [{ values: [1] }] },
-      })
-    })
-
-    it("restores data only when no persisted interval signals exist", () => {
-      mockWidgetMgr.getElementState.mockReturnValue({
-        signals: { param_1_y: [20, 90] },
-        data: {
-          brush_store: [{ values: [1] }],
-          pts_store: [{ values: [2] }],
-        },
-      })
-      const view = createIntervalView({
-        presentSignals: { pts_tuple: {} },
-      })
-      configure(view, { selectionMode: ["pts"] })
-
-      expect(view.setState).toHaveBeenCalledWith({
-        data: { pts_store: [{ values: [2] }] },
-      })
-    })
-
-    it("warns and deletes viewState when setState throws", () => {
-      const log = getLogger("useVegaLiteSelections")
-      const warnSpy = vi.spyOn(log, "warn").mockImplementation(() => {})
-      mockWidgetMgr.getElementState.mockReturnValue({
-        signals: { brush_x: [10, 80] },
-        data: { brush_store: [] },
-      })
-      const view = createIntervalView()
-      view.setState.mockImplementation(() => {
-        throw new Error("incompatible state")
+      const target = await createView(intervalSpec({ encodings: ["x"] }))
+      const { restoredSignals } = await restoreInto(target, {
+        ...viewState,
+        signals: { brush_x: [1, 2], brush_tuple: null, brush_zoom_delta: 4 },
       })
 
-      configure(view)
-
-      expect(warnSpy).toHaveBeenCalled()
-      expect(mockWidgetMgr.deleteElementState).toHaveBeenCalledWith(
-        "chartId",
-        "viewState"
-      )
-      warnSpy.mockRestore()
-    })
-
-    it("restores legacy snapshots that have only data", () => {
-      const legacyState = { data: { brush_store: [{ values: [1] }] } }
-      mockWidgetMgr.getElementState.mockReturnValue(legacyState)
-      const view = createIntervalView()
-      configure(view)
-
-      expect(view.setState).toHaveBeenCalledWith(legacyState)
-      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(restoredSignals).toEqual({
+        brush_a: [20, 40],
+        brush_x: [60, 120],
+      })
     })
   })
 })

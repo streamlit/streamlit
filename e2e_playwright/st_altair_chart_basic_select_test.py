@@ -27,6 +27,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     click_form_button,
@@ -136,6 +137,30 @@ def _selection_markdown_text(app: Page, pattern: re.Pattern[str]) -> str:
     locator = app.get_by_test_id("stMarkdownContainer").filter(has_text=pattern)
     expect(locator).to_have_count(1)
     return locator.inner_text()
+
+
+def _x_interval_brush_extent(chart: Locator) -> tuple[float, float] | None:
+    """Return the x-interval brush edges as fractions of the plot width.
+
+    The fractions only depend on the selected data range, so they stay the same
+    when the chart is redrawn at another size.
+    """
+    brush_box = chart.locator("g.x_interval_brush").bounding_box()
+    plot_box = chart.locator("g.role-axis:not([aria-label])").first.bounding_box()
+    if brush_box is None or plot_box is None or brush_box["width"] == 0:
+        return None
+    left = (brush_box["x"] - plot_box["x"]) / plot_box["width"]
+    return left, left + brush_box["width"] / plot_box["width"]
+
+
+def _wait_for_x_interval_brush_extent(
+    app: Page, chart: Locator, expected: tuple[float, float]
+) -> None:
+    def matches() -> bool:
+        extent = _x_interval_brush_extent(chart)
+        return extent is not None and extent == pytest.approx(expected, abs=0.01)
+
+    wait_until(app, matches)
 
 
 def _assert_restore_did_not_rerun(app: Page, runs_text: str) -> None:
@@ -643,6 +668,8 @@ def test_x_interval_overlay_remains_after_unmounting(
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
     selection_text = _selection_markdown_text(app, expected_selection)
+    brush_extent = _x_interval_brush_extent(chart)
+    assert brush_extent is not None
     app.mouse.move(0, 0)
     app.wait_for_timeout(250)
     assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_selection")
@@ -653,6 +680,7 @@ def test_x_interval_overlay_remains_after_unmounting(
     ).to_be_visible()
     _assert_restore_did_not_rerun(app, "Runs: 3")
     chart.scroll_into_view_if_needed()
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
     # Use a distinct name from the pre-unmount selection snapshot. Remount
     # can shift the chart enough to exceed the default image threshold.
     assert_snapshot(
@@ -670,6 +698,46 @@ def test_x_interval_overlay_remains_after_unmounting(
     app.mouse.move(0, 0)
     app.wait_for_timeout(250)
     assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_cleared")
+
+
+def test_x_interval_overlay_keeps_its_data_range_in_fullscreen(app: Page):
+    element = get_element_by_key(app, "scatter_interval_x")
+    chart = _get_x_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+    expected_selection = re.compile(
+        r"\{'selection': \{'x_interval': \{'Horsepower': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, "Scatter chart with x-interval:", expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    inline_box = chart.bounding_box()
+    brush_extent = _x_interval_brush_extent(chart)
+    assert inline_box is not None
+    assert brush_extent is not None
+
+    # Fullscreen recreates the view at a larger size, so the restored brush must
+    # be redrawn from its data range rather than its old pixel position. Run
+    # counts are not asserted: when an active brush is resized, Vega-Lite
+    # re-derives its data range from pixels, and the rounding can rerun the app.
+    element.hover()
+    element.get_by_role("button", name="Fullscreen").click()
+    expect(element.get_by_role("button", name="Close fullscreen")).to_be_visible()
+    wait_until(
+        app,
+        lambda: (
+            (box := chart.bounding_box()) is not None
+            and box["width"] > inline_box["width"] * 1.2
+        ),
+    )
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
+
+    element.get_by_role("button", name="Close fullscreen").click()
+    expect(element.get_by_role("button", name="Fullscreen")).to_be_visible()
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
+    expect_prefixed_markdown(app, "Scatter chart with x-interval:", expected_selection)
 
 
 def test_bar_interval_selection_remains_after_unmounting(app: Page):

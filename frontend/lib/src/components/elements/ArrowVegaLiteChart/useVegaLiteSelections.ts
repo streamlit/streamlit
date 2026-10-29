@@ -19,12 +19,9 @@ import { useCallback, useRef } from "react"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import type { SignalValue, View as VegaView } from "vega"
+import { varName } from "vega-lite"
 
-import {
-  isNullOrUndefined,
-  isValidFormId,
-  notNullOrUndefined,
-} from "~lib/util/utils"
+import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { VegaLiteChartElement } from "./arrowUtils"
@@ -56,38 +53,25 @@ interface UseVegaLiteSelectionsOutput {
   endSelectionRestore: () => void
 }
 
+/** Vega view state persisted in element state to restore selections on remount. */
 interface VegaViewState {
-  signals?: Record<string, unknown> | null
+  signals?: Record<string, unknown>
   data?: unknown
 }
 
 /**
- * Suffixes of interval-param signals that are not extents. Restoring them
- * would resume a drag, pulse scale-trigger, or notify Streamlit's named-param
- * listener.
+ * One projection of a Vega-Lite selection, as listed by its
+ * `{param}_tuple_fields` signal and by each `{param}_store` tuple. `type` is
+ * `"R"` for a ranged interval on a continuous scale and `"E"` for enumerated
+ * values (points and band, point, or ordinal intervals).
  */
-const INTERVAL_TRANSIENT_SIGNAL_SUFFIXES = new Set([
-  "tuple",
-  "tuple_fields",
-  "scale_trigger",
-  "modify",
-  "translate_anchor",
-  "translate_delta",
-  "zoom_anchor",
-  "zoom_delta",
-  "toggle",
-  "init",
-])
+interface SelectionProjection {
+  field: string
+  channel?: string
+  type: string
+}
 
-/** Scale types whose interval scale-trigger zeros the pixel extent on resize. */
-const NON_CONTINUOUS_SCALE_TYPES = new Set([
-  "band",
-  "point",
-  "ordinal",
-  "bin-ordinal",
-])
-
-/** True when Vega knows this signal. View.signal throws otherwise. */
+/** Returns whether the view defines this signal; Vega throws for unknown signals. */
 const hasSignal = (view: VegaView, name: string): boolean => {
   try {
     view.signal(name)
@@ -97,77 +81,116 @@ const hasSignal = (view: VegaView, name: string): boolean => {
   }
 }
 
-const isNonContinuousChannelScale = (
-  view: VegaView,
-  channel: "x" | "y"
-): boolean => {
-  try {
-    const scale = view.scale(channel) as { type?: string }
+const isRangedXYProjection = ({
+  type,
+  channel,
+}: SelectionProjection): boolean =>
+  type === "R" && (channel === "x" || channel === "y")
+
+/**
+ * Compares projections by field, channel, and type only. Vega caches a
+ * `getter` function on each stored field once marks test the selection.
+ */
+const sameProjections = (
+  stored: unknown,
+  projections: readonly SelectionProjection[]
+): boolean =>
+  Array.isArray(stored) &&
+  stored.length === projections.length &&
+  projections.every(({ field, channel, type }, index) => {
+    const candidate = stored[index] as Partial<SelectionProjection> | null
     return (
-      typeof scale.type === "string" &&
-      NON_CONTINUOUS_SCALE_TYPES.has(scale.type)
+      candidate?.field === field &&
+      candidate.channel === channel &&
+      candidate.type === type
     )
-  } catch {
-    // Unknown scale names (layered/independent scales) are not restorable.
-    return true
+  })
+
+/**
+ * Names of the data-space and pixel extent signals Vega-Lite compiles for each
+ * projection of an interval param. Mirrors Vega-Lite's projection compiler:
+ * names are `varName("{param}_{field}")` then `varName("{param}_{channel}")`,
+ * with `_1`, `_2`, ... appended on collision (for example, a field named `x`).
+ */
+const intervalExtentSignalNames = (
+  param: string,
+  projections: readonly SelectionProjection[]
+): Array<{ data: string; pixel: string }> => {
+  const usedNames = new Set<string>()
+  const nextName = (suffix: string): string => {
+    let name = varName(`${param}_${suffix}`)
+    for (let counter = 1; usedNames.has(name); counter++) {
+      name = varName(`${param}_${suffix}_${counter}`)
+    }
+    usedNames.add(name)
+    return name
   }
+  return projections.map(({ field, channel }) => ({
+    data: nextName(field),
+    pixel: nextName(channel ?? ""),
+  }))
 }
 
 /**
- * Interval params whose overlay can be restored from extents. Band, point,
- * and ordinal interval channels stay on the store-only path: Vega-Lite's
- * scale-trigger sets their pixel extent to `[0, 0]` on resize, which nulls
- * the data extent and would clear the restored store.
+ * Rebuilds the brush extent signals of one interval param from its restored
+ * `{param}_store`, using the new view's scales so the pixel extent fits the
+ * view's current size.
+ *
+ * Returns `undefined`, restoring only the store, unless the store holds one
+ * tuple whose projections match the view's `{param}_tuple_fields`, every
+ * projection is a ranged x/y interval, and the view defines every extent
+ * signal and scale. Enumerated intervals stay store-only because Vega-Lite
+ * resets their pixel extent when the scale changes, which clears the store.
  */
-const getRestorableIntervalParams = (
+const intervalExtentsFromStore = (
   view: VegaView,
-  selectionMode: readonly string[]
-): Set<string> =>
-  new Set(
-    selectionMode.filter(param => {
-      const xIsVisual = hasSignal(view, `${param}_x`)
-      const yIsVisual = hasSignal(view, `${param}_y`)
-      if (!xIsVisual && !yIsVisual) {
-        return false
-      }
-      return !(
-        (xIsVisual && isNonContinuousChannelScale(view, "x")) ||
-        (yIsVisual && isNonContinuousChannelScale(view, "y"))
-      )
-    })
-  )
-
-const longestFirst = (params: readonly string[]): string[] =>
-  [...params].toSorted((left, right) => right.length - left.length)
-
-/** Longest param prefix wins, so `brush` does not match `brush_point_*`. */
-const matchingSelectionParam = (
-  selectionParams: readonly string[],
-  name: string
-): string | undefined =>
-  selectionParams.find(param => name.startsWith(`${param}_`))
-
-/**
- * Whether `name` is a stable interval extent for one of `intervalParams`:
- * visual `{param}_x` / `{param}_y` ranges and matching `{param}_{field}`
- * data-space ranges. Matches the longest selection-mode prefix first so a
- * nested point/legend param such as `brush_point` is not claimed by `brush`.
- */
-const isPersistedIntervalExtentSignal = (
-  view: VegaView,
-  intervalParams: ReadonlySet<string>,
-  selectionParams: readonly string[],
-  name: string
-): boolean => {
-  if (!hasSignal(view, name)) {
-    return false
+  param: string,
+  store: unknown
+): Record<string, unknown> | undefined => {
+  const tupleFieldsSignal = `${param}_tuple_fields`
+  if (
+    !Array.isArray(store) ||
+    store.length !== 1 ||
+    !hasSignal(view, tupleFieldsSignal)
+  ) {
+    return undefined
   }
-  const param = matchingSelectionParam(selectionParams, name)
-  if (param === undefined || !intervalParams.has(param)) {
-    return false
+  const [tuple] = store as Array<{ fields?: unknown; values?: unknown }>
+  const projections = view.signal(tupleFieldsSignal) as SelectionProjection[]
+  if (
+    !Array.isArray(projections) ||
+    projections.length === 0 ||
+    !projections.every(isRangedXYProjection) ||
+    !sameProjections(tuple.fields, projections) ||
+    !Array.isArray(tuple.values)
+  ) {
+    return undefined
   }
-  const suffix = name.slice(param.length + 1)
-  return suffix.length > 0 && !INTERVAL_TRANSIENT_SIGNAL_SUFFIXES.has(suffix)
+
+  const values: unknown[] = tuple.values
+  const signals: Record<string, unknown> = {}
+  const names = intervalExtentSignalNames(param, projections)
+  for (const [index, { data, pixel }] of names.entries()) {
+    const extent = values[index]
+    if (
+      !Array.isArray(extent) ||
+      extent.length !== 2 ||
+      !hasSignal(view, data) ||
+      !hasSignal(view, pixel)
+    ) {
+      return undefined
+    }
+    let scale: (value: unknown) => number
+    try {
+      scale = view.scale(projections[index].channel as string)
+    } catch {
+      // Layered charts with independent scales use other scale names.
+      return undefined
+    }
+    signals[data] = extent
+    signals[pixel] = extent.map(value => scale(value))
+  }
+  return signals
 }
 
 /**
@@ -189,37 +212,28 @@ const pickSelectionStores = (
 }
 
 /**
- * Drops snapshot signals the new view does not define, and drops transient
- * or non-restorable interval machinery, so a structural change cannot apply
- * stale pixels. Legacy snapshots without `signals` restore selection-store
- * data only.
+ * Builds the state to apply to a new view: the snapshot's `{param}_store`
+ * datasets plus brush extents rebuilt from each interval store. Snapshot
+ * signals are ignored, so a resized view or changed spec cannot apply stale
+ * pixels.
  */
-const sanitizeViewStateForRestore = (
+const buildRestoreState = (
   view: VegaView,
   viewState: VegaViewState,
   selectionMode: readonly string[]
 ): VegaViewState => {
   const data = pickSelectionStores(viewState.data, selectionMode)
-  if (isNullOrUndefined(viewState.signals)) {
+  if (data === null || typeof data !== "object") {
     return { data }
   }
-
-  const intervalParams = getRestorableIntervalParams(view, selectionMode)
-  const selectionParams = longestFirst(selectionMode)
-  const signals = Object.fromEntries(
-    Object.entries(viewState.signals).filter(([name]) =>
-      isPersistedIntervalExtentSignal(
-        view,
-        intervalParams,
-        selectionParams,
-        name
-      )
+  const stores = data as Record<string, unknown>
+  const signals: Record<string, unknown> = Object.assign(
+    {},
+    ...selectionMode.map(param =>
+      intervalExtentsFromStore(view, param, stores[`${param}_store`])
     )
   )
-  if (Object.keys(signals).length === 0) {
-    return { data }
-  }
-  return { data, signals }
+  return Object.keys(signals).length > 0 ? { data, signals } : { data }
 }
 
 interface DebouncedSelection {
@@ -385,29 +399,15 @@ export const useVegaLiteSelections = (
           return
         }
 
-        // Persist selection-store data plus stable interval extents so remounts
-        // and fullscreen can restore selected marks and the brush overlay
-        // without syncing view state to Python.
-        const intervalParams = getRestorableIntervalParams(
-          vegaView,
-          selectionMode
-        )
-        const selectionParams = longestFirst(selectionMode)
-
+        // Preserve the selection stores locally so remounts and fullscreen
+        // changes can restore the selection, including the interval brush,
+        // without syncing the view state to Python.
         const viewState = vegaView.getState({
           data: (nameArg?: string, _operator?: unknown) => {
             // Vega-Lite stores each selection in `<param name>_store`.
             // https://vega.github.io/vega/docs/api/view/#view_getState
             return selectionMode.some(mode => `${mode}_store` === nameArg)
           },
-          signals: (name?: string) =>
-            typeof name === "string" &&
-            isPersistedIntervalExtentSignal(
-              vegaView,
-              intervalParams,
-              selectionParams,
-              name
-            ),
           // Restoring subcontext data can cause Vega to throw.
           recurse: false,
         })
@@ -664,10 +664,10 @@ export const useVegaLiteSelections = (
         }
       }
 
-      // Restore selected marks and interval extents after remount or fullscreen.
-      // Suppress widget updates until endSelectionRestore: setState skips
-      // listeners for its own pulse, but follow-up runAsync/resize can still
-      // notify.
+      // Restore selected marks and the interval brush after a remount or
+      // fullscreen change. Restoring a store notifies its selection listener,
+      // so widget updates stay suppressed until useVegaEmbed calls
+      // endSelectionRestore after the view's first resize.
       const viewState = widgetMgr.getElementState<VegaViewState>(
         chartId,
         "viewState"
@@ -676,14 +676,11 @@ export const useVegaLiteSelections = (
         isRestoreSuppressed = true
         try {
           return vegaView.setState(
-            sanitizeViewStateForRestore(vegaView, viewState, selectionMode)
+            buildRestoreState(vegaView, viewState, selectionMode)
           )
         } catch (e) {
-          // setState applies asynchronously via runAsync; this catch only
-          // handles a synchronous throw. Invalid keys are filtered above.
           isRestoreSuppressed = false
           LOG.warn("Failed to restore view state", e)
-          widgetMgr.deleteElementState(chartId, "viewState")
         }
       }
 
