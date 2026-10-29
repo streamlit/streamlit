@@ -325,8 +325,9 @@ register_widget(
 ```
 
 **`deserialize` converts and never replaces.** It keeps its conversions, such as `int()`
-or sorting a reversed range, but it no longer falls back to the default, or truncates to
-`max_chars`, for a value `validate` refuses. Check 3 compares its result with the stored
+or sorting a reversed range, but it no longer falls back to the default for a value
+`validate` refuses. The text serdes drop their `max_chars` slice entirely, since URL
+seeding takes over truncation. Check 3 compares its result with the stored
 value, so a replaced value would read as unchanged whenever the widget holds its default,
 with no log and no re-sync, and a correct browser can send such a value in a sync race.
 A conversion can still map a forged value onto the stored one, but a correct browser
@@ -640,10 +641,11 @@ Items 1–3 are covered above.
   `None`.
 - `max_chars`: counted in UTF-16 code units (`len(text.encode("utf-16-le")) // 2`), as
   the browser counts them, so an astral character counts as two and nothing a browser
-  accepts is refused. `0` means no limit, as in the browser (`maxChars !== 0`), although
-  the text serdes truncate to `""` today.
+  accepts is refused. `0` means no limit, as in the browser (`maxChars !== 0`). The text
+  serdes truncate to `""` today; item 4 drops that slice along with the rest.
 - The deserializers stop replacing refused values and keep their conversions, such as
-  `int()`. See [above](#where-constraints-live-in-each-widgets-serde).
+  `int()`, and the text serdes stop slicing to `max_chars`. See
+  [above](#where-constraints-live-in-each-widgets-serde).
 
 **Item 5: `required`.** `required` limits what a user can submit, not what the widget
 holds, so an untouched required widget legitimately stays empty. The check is therefore a
