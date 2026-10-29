@@ -69,7 +69,12 @@ st.markdown("After the chart row")
 
 with st.container(key="metric_extras"):
     content_column, chart_column = st.columns(2, border=True)
-    content_column.metric("Content width", "1,234,567,890", "12%", width="content")
+    content_column.metric(
+        "Content width",
+        "123,456,789,012,345,678,901,234,567,890",
+        "12%",
+        width="content",
+    )
     chart_column.metric(
         "Sparkline", "42", "3%", chart_data=[1, 5, 2, 6, 3, 7, 4], chart_type="area"
     )

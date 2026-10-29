@@ -98,6 +98,10 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
               // calc(), so tan(atan2(a, b)) gives the unitless ratio a / b.
               // A card wider than the figure stays at 1em.
               fontSize: `min(1em, calc(1em * tan(atan2(100cqi, var(${METRIC_TEXT_WIDTH_VAR}, 100cqi)))))`,
+              // Without a recorded width (no beforeprint, e.g. a headless PDF
+              // export), the figure keeps 1em. Clipping it then keeps a long
+              // figure out of the neighboring card.
+              overflow: "hidden",
             },
           }),
     },
