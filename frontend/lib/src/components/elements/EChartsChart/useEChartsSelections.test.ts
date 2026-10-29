@@ -22,9 +22,11 @@ import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import type { EChartsSelectionInstance } from "./selectionBinding"
 import {
-  type EChartsSelectionInstance,
   useEChartsSelections,
+  type UseEChartsSelectionsOptions,
+  type UseEChartsSelectionsOutput,
 } from "./useEChartsSelections"
 
 const DEBOUNCE_TIME_MS = 150
@@ -233,6 +235,7 @@ describe("useEChartsSelections", () => {
       setElementState: vi.fn(),
       addFormSubmitValidator: vi.fn(),
       removeFormSubmitValidator: vi.fn(),
+      addFormClearedListener: vi.fn(() => ({ disconnect: vi.fn() })),
     } as unknown as Mocked<WidgetStateManager>
   })
 
@@ -240,6 +243,36 @@ describe("useEChartsSelections", () => {
     vi.clearAllTimers()
     vi.useRealTimers()
   })
+
+  /**
+   * Render the hook the way EChartsChart does: without an instance first,
+   * then ``bind(chart)`` passes the instance in and ``unbind()`` drops it.
+   */
+  const renderSelections = (
+    element: EChartsChartProto = createElement(),
+    options: Omit<
+      UseEChartsSelectionsOptions,
+      "element" | "widgetMgr" | "chart"
+    > = {}
+  ): {
+    result: { current: UseEChartsSelectionsOutput }
+    bind: (chart: EChartsSelectionInstance) => void
+    unbind: () => void
+  } => {
+    const { result, rerender } = renderHook<
+      UseEChartsSelectionsOutput,
+      { chart: EChartsSelectionInstance | null }
+    >(
+      ({ chart }) =>
+        useEChartsSelections({ element, widgetMgr, chart, ...options }),
+      { initialProps: { chart: null } }
+    )
+    return {
+      result,
+      bind: chart => rerender({ chart }),
+      unbind: () => rerender({ chart: null }),
+    }
+  }
 
   const flush = (): void => {
     act(() => {
@@ -261,55 +294,41 @@ describe("useEChartsSelections", () => {
   }
 
   it("binds no handlers for display-only or disabled charts", () => {
-    const { result: displayResult } = renderHook(() =>
-      useEChartsSelections(createElement(""), widgetMgr)
-    )
+    const display = renderSelections(createElement(""))
     const displayChart = createFakeChart()
-    let cleanup: () => void = () => {}
 
-    act(() => {
-      cleanup = displayResult.current.bindSelections(displayChart)
-    })
-
-    expect(displayResult.current.isSelectionActivated).toBe(false)
+    display.bind(displayChart)
     expect(displayChart.on).not.toHaveBeenCalled()
     act(() => {
-      cleanup()
+      display.unbind()
     })
     expect(displayChart.off).not.toHaveBeenCalled()
 
-    const { result: disabledResult } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr, undefined, true)
-    )
+    const disabled = renderSelections(createElement(), { disabled: true })
     const disabledChart = createFakeChart()
-    act(() => {
-      disabledResult.current.bindSelections(disabledChart)
-    })
-
-    expect(disabledResult.current.isSelectionActivated).toBe(false)
+    disabled.bind(disabledChart)
     expect(disabledChart.on).not.toHaveBeenCalled()
+    act(() => {
+      disabled.unbind()
+    })
+    expect(disabledChart.off).not.toHaveBeenCalled()
   })
 
   it("does not treat a keyed display-only chart as a selection widget", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(
-        new EChartsChartProto({
-          id: "styled_chart",
-          formId: "",
-          selectionActivated: false,
-        }),
-        widgetMgr
-      )
+    const { result, bind } = renderSelections(
+      new EChartsChartProto({
+        id: "styled_chart",
+        formId: "",
+        selectionActivated: false,
+      })
     )
     const chart = createFakeChart()
-    act(() => {
-      result.current.bindSelections(chart)
-    })
-
-    expect(result.current.isSelectionActivated).toBe(false)
+    bind(chart)
     expect(chart.on).not.toHaveBeenCalled()
     expect(
-      result.current.configureSelectionOption({ series: [{ type: "bar" }] })
+      result.current.applyDisplayOnlyCursorDefault({
+        series: [{ type: "bar" }],
+      })
     ).toEqual({
       series: [{ type: "bar", cursor: "default" }],
     })
@@ -339,22 +358,18 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(
-        new EChartsChartProto({
-          id: "styled_chart",
-          formId: "",
-          selectionActivated: false,
-        }),
-        widgetMgr
-      )
+    const { result, bind } = renderSelections(
+      new EChartsChartProto({
+        id: "styled_chart",
+        formId: "",
+        selectionActivated: false,
+      })
     )
     const chart = createFakeChart()
+    bind(chart)
     act(() => {
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
-
-    expect(result.current.isSelectionActivated).toBe(false)
     expect(widgetMgr.getElementState).not.toHaveBeenCalled()
     expect(chart.dispatchAction).not.toHaveBeenCalled()
   })
@@ -375,16 +390,19 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr, undefined, true)
-    )
+    const { result, bind } = renderSelections(createElement(), {
+      disabled: true,
+    })
     const chart = createFakeChart()
 
+    bind(chart)
+    // Binding restores, and so does each later restore call.
+    expect(chart.dispatchAction).toHaveBeenCalledTimes(2)
     act(() => {
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
-
-    expect(result.current.isSelectionActivated).toBe(false)
+    expect(chart.dispatchAction).toHaveBeenCalledTimes(4)
+    expect(chart.on).not.toHaveBeenCalled()
     expect(chart.dispatchAction).toHaveBeenCalledWith({
       type: "select",
       seriesIndex: 0,
@@ -398,17 +416,10 @@ describe("useEChartsSelections", () => {
   })
 
   it("binds and cleans up all selection listeners", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
-    let cleanup: () => void = () => {}
 
-    act(() => {
-      cleanup = result.current.bindSelections(chart)
-    })
-
-    expect(result.current.isSelectionActivated).toBe(true)
+    bind(chart)
     for (const event of ["selectchanged", "brushSelected", "brushEnd"]) {
       expect(chart.on).toHaveBeenCalledWith(event, expect.any(Function))
     }
@@ -416,7 +427,7 @@ describe("useEChartsSelections", () => {
     expect(chart.zr.on).toHaveBeenCalledWith("dblclick", expect.any(Function))
 
     act(() => {
-      cleanup()
+      unbind()
     })
 
     expect(chart.off).toHaveBeenCalledTimes(3)
@@ -424,50 +435,44 @@ describe("useEChartsSelections", () => {
   })
 
   it("skips listener cleanup after the chart is disposed", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
-    let cleanup: () => void = () => {}
-    act(() => {
-      cleanup = result.current.bindSelections(chart)
-    })
+    bind(chart)
 
     chart.isDisposed.mockReturnValue(true)
     act(() => {
-      cleanup()
+      unbind()
     })
 
     expect(chart.off).not.toHaveBeenCalled()
     expect(chart.zr.off).not.toHaveBeenCalled()
   })
 
-  it("keeps bindSelections stable across spec changes and still writes a pending selection", () => {
+  it("keeps the binding across spec changes and still writes a pending selection", () => {
     const firstSpec = JSON.stringify({
       series: [{ type: "bar", data: [1] }],
     })
     const secondSpec = JSON.stringify({
       series: [{ type: "bar", data: [9] }],
     })
+    const chart = createFakeChart()
     const { result, rerender } = renderHook(
       ({ spec }) =>
-        useEChartsSelections(
-          new EChartsChartProto({
+        useEChartsSelections({
+          element: new EChartsChartProto({
             id: "chart-id",
             formId: "",
             spec,
             selectionActivated: true,
           }),
-          widgetMgr
-        ),
+          widgetMgr,
+          chart,
+        }),
       { initialProps: { spec: firstSpec } }
     )
-    const chart = createFakeChart()
-    const bindSelections = result.current.bindSelections
-    const prune = result.current.prunePixelOnlyBrushAfterResize
+    const { restoreSelection, pruneAfterResize } = result.current
 
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [0] }],
       })
@@ -475,8 +480,10 @@ describe("useEChartsSelections", () => {
 
     rerender({ spec: secondSpec })
 
-    expect(result.current.bindSelections).toBe(bindSelections)
-    expect(result.current.prunePixelOnlyBrushAfterResize).toBe(prune)
+    expect(result.current.restoreSelection).toBe(restoreSelection)
+    expect(result.current.pruneAfterResize).toBe(pruneAfterResize)
+    // A rebind would have unbound the handlers and flushed the write early.
+    expect(chart.off).not.toHaveBeenCalled()
     expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
 
     flush()
@@ -497,13 +504,10 @@ describe("useEChartsSelections", () => {
   })
 
   it("flushes a pending selection write on bindSelections cleanup", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
-    let cleanup: () => void = () => {}
+    bind(chart)
     act(() => {
-      cleanup = result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [0] }],
       })
@@ -512,7 +516,7 @@ describe("useEChartsSelections", () => {
     expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
 
     act(() => {
-      cleanup()
+      unbind()
     })
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -531,13 +535,10 @@ describe("useEChartsSelections", () => {
   })
 
   it("flushes a pending selection write on cleanup even if the chart is disposed", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
-    let cleanup: () => void = () => {}
+    bind(chart)
     act(() => {
-      cleanup = result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [0] }],
       })
@@ -545,7 +546,7 @@ describe("useEChartsSelections", () => {
 
     chart.isDisposed.mockReturnValue(true)
     act(() => {
-      cleanup()
+      unbind()
     })
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -565,12 +566,10 @@ describe("useEChartsSelections", () => {
   })
 
   it("leaves a selection widget option untouched", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result } = renderSelections()
     const option = { series: [{ type: "bar", data: [1, 2, 3] }] }
 
-    const configured = result.current.configureSelectionOption(option)
+    const configured = result.current.applyDisplayOnlyCursorDefault(option)
 
     expect(configured).toBe(option)
     expect(configured.brush).toBeUndefined()
@@ -581,12 +580,10 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not rewrite a disabled selection widget's option", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr, undefined, true)
-    )
+    const { result } = renderSelections(createElement(), { disabled: true })
     const option = { series: [{ type: "bar", data: [1, 2, 3] }] }
 
-    const configured = result.current.configureSelectionOption(option)
+    const configured = result.current.applyDisplayOnlyCursorDefault(option)
 
     expect(configured).toBe(option)
     const series = configured.series as Array<Record<string, unknown>>
@@ -594,11 +591,9 @@ describe("useEChartsSelections", () => {
   })
 
   it("uses a default cursor only for display-only series without one", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(""), widgetMgr)
-    )
+    const { result } = renderSelections(createElement(""))
 
-    const configured = result.current.configureSelectionOption({
+    const configured = result.current.applyDisplayOnlyCursorDefault({
       series: [
         { type: "bar", data: [1] },
         { type: "line", data: [2], cursor: "crosshair" },
@@ -608,21 +603,21 @@ describe("useEChartsSelections", () => {
     expect(series[0].cursor).toBe("default")
     expect(series[1].cursor).toBe("crosshair")
 
-    const single = result.current.configureSelectionOption({
+    const single = result.current.applyDisplayOnlyCursorDefault({
       series: { type: "pie", data: [] },
     })
     expect((single.series as Record<string, unknown>).cursor).toBe("default")
 
     const noSeries = {}
-    expect(result.current.configureSelectionOption(noSeries)).toBe(noSeries)
+    expect(result.current.applyDisplayOnlyCursorDefault(noSeries)).toBe(
+      noSeries
+    )
   })
 
   it("applies the default cursor inside timeline baseOption and options", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(""), widgetMgr)
-    )
+    const { result } = renderSelections(createElement(""))
 
-    const configured = result.current.configureSelectionOption({
+    const configured = result.current.applyDisplayOnlyCursorDefault({
       baseOption: { series: [{ type: "bar", data: [1] }] },
       options: [{ series: [{ type: "line", data: [2] }] }],
     })
@@ -643,9 +638,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("reports explicit series metadata and sanitizes invalid metadata", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [
@@ -655,8 +648,8 @@ describe("useEChartsSelections", () => {
         { id: "", name: null },
       ],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [
           { seriesIndex: 0, dataIndex: [4] },
@@ -727,23 +720,20 @@ describe("useEChartsSelections", () => {
   ])(
     "resolves series metadata from getOption for a %s spec",
     (_name, spec) => {
-      const { result } = renderHook(() =>
-        useEChartsSelections(
-          new EChartsChartProto({
-            id: "chart-id",
-            formId: "",
-            spec: JSON.stringify(spec),
-            selectionActivated: true,
-          }),
-          widgetMgr
-        )
+      const { bind } = renderSelections(
+        new EChartsChartProto({
+          id: "chart-id",
+          formId: "",
+          spec: JSON.stringify(spec),
+          selectionActivated: true,
+        })
       )
       const chart = createFakeChart()
       chart.getOption.mockReturnValue({
         series: [{ id: "sales", name: "Sales" }],
       })
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         chart.trigger("selectchanged", {
           selected: [{ seriesIndex: 0, dataIndex: [4] }],
         })
@@ -767,33 +757,30 @@ describe("useEChartsSelections", () => {
   )
 
   it("resolves series metadata from getOption when media overrides top-level series", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(
-        new EChartsChartProto({
-          id: "chart-id",
-          formId: "",
-          spec: JSON.stringify({
-            series: [{ type: "bar", id: "desktop", name: "Desktop" }],
-            media: [
-              {
-                query: { maxWidth: 600 },
-                option: {
-                  series: [{ type: "bar", id: "mobile", name: "Mobile" }],
-                },
+    const { bind } = renderSelections(
+      new EChartsChartProto({
+        id: "chart-id",
+        formId: "",
+        spec: JSON.stringify({
+          series: [{ type: "bar", id: "desktop", name: "Desktop" }],
+          media: [
+            {
+              query: { maxWidth: 600 },
+              option: {
+                series: [{ type: "bar", id: "mobile", name: "Mobile" }],
               },
-            ],
-          }),
-          selectionActivated: true,
+            },
+          ],
         }),
-        widgetMgr
-      )
+        selectionActivated: true,
+      })
     )
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [{ id: "mobile", name: "Mobile" }],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [4] }],
       })
@@ -816,9 +803,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("groups selections deterministically and sorts and deduplicates indices", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [
@@ -826,8 +811,8 @@ describe("useEChartsSelections", () => {
         { id: "other", name: "Other" },
       ],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [
           { seriesIndex: 0, dataType: "node", dataIndex: [3, 1, 3] },
@@ -879,9 +864,7 @@ describe("useEChartsSelections", () => {
   it.each(["graph", "sankey"] as const)(
     "tracks %s node and edge actions as independent data types",
     seriesType => {
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
+      const { bind } = renderSelections()
       const chart = createFakeChart()
       chart.getOption.mockReturnValue({
         series: [
@@ -895,8 +878,8 @@ describe("useEChartsSelections", () => {
           },
         ],
       })
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         chart.trigger("selectchanged", {
           fromAction: "select",
           fromActionPayload: {
@@ -1001,9 +984,7 @@ describe("useEChartsSelections", () => {
   it.each(["graph", "sankey"] as const)(
     "replaces the previous %s data type in single-selection mode",
     seriesType => {
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
+      const { bind } = renderSelections()
       const chart = createFakeChart()
       chart.getOption.mockReturnValue({
         series: [
@@ -1015,8 +996,8 @@ describe("useEChartsSelections", () => {
           },
         ],
       })
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         chart.trigger("selectchanged", {
           fromAction: "select",
           fromActionPayload: {
@@ -1066,9 +1047,7 @@ describe("useEChartsSelections", () => {
   )
 
   it("uses graph node and edge lengths for whole-series selection", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [
@@ -1083,8 +1062,8 @@ describe("useEChartsSelections", () => {
         },
       ],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         fromAction: "select",
         fromActionPayload: {
@@ -1123,9 +1102,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("toggles a graph series selection off on a second click", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [
@@ -1149,8 +1126,8 @@ describe("useEChartsSelections", () => {
         { seriesIndex: 0, dataType: "edge", dataIndex: [0] },
       ],
     }
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", toggleEvent)
     })
     flush()
@@ -1239,9 +1216,7 @@ describe("useEChartsSelections", () => {
           },
         ],
       })
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
+      const { bind } = renderSelections()
       const networkGroups = [
         {
           series_index: 0,
@@ -1259,8 +1234,8 @@ describe("useEChartsSelections", () => {
         },
       ]
 
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         chart.dispatchAction({
           type: "select",
           seriesIndex: 0,
@@ -1313,13 +1288,11 @@ describe("useEChartsSelections", () => {
   })
 
   it("persists native points without clearing the brush cache", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const selected = [{ seriesIndex: 0, dataIndex: [2] }]
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", { selected })
     })
     flush()
@@ -1338,9 +1311,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("emits the deduplicated union of native and brush selections", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [
@@ -1361,8 +1332,8 @@ describe("useEChartsSelections", () => {
       selected: selectedWithMainHits([3, 2]),
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [3, 1] }],
       })
@@ -1392,9 +1363,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("orders areas by brush index while preserving component area order", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const polygon = {
       brushType: "polygon",
@@ -1435,8 +1404,8 @@ describe("useEChartsSelections", () => {
       areas: [zeroHitArea],
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", {
         batch: [brush2, brush0, brush1],
       })
@@ -1473,9 +1442,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("keeps a pixel-only brush area out of the public payload but still restores it", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
     const pixelOnly = createBrushSelection({
       brushId: "brush-0",
@@ -1491,8 +1458,8 @@ describe("useEChartsSelections", () => {
       ],
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [pixelOnly] })
       chart.trigger("brushEnd", {
         brushId: pixelOnly.brushId,
@@ -1517,7 +1484,7 @@ describe("useEChartsSelections", () => {
     )
     chart.dispatchAction.mockClear()
     act(() => {
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
     expect(chart.dispatchAction).toHaveBeenCalledWith({
       type: "brush",
@@ -1527,9 +1494,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not emit an in-progress brush when a point selection writes", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const committedArea = {
       brushType: "lineX" as const,
@@ -1548,8 +1513,8 @@ describe("useEChartsSelections", () => {
       areas: [inProgressArea],
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [committedBrush] })
       chart.trigger("brushEnd", {
         brushId: committedBrush.brushId,
@@ -1610,13 +1575,12 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "brushSelection" ? [pixelOnly, withCoord] : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
 
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
@@ -1658,16 +1622,15 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "brushSelection" ? [pixelOnly, withCoord] : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr, undefined, true)
-    )
+    const { result, bind } = renderSelections(createElement(), {
+      disabled: true,
+    })
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
-
-    expect(result.current.isSelectionActivated).toBe(false)
     expect(widgetMgr.setElementState).toHaveBeenCalledWith(
       "chart-id",
       "brushSelection",
@@ -1712,14 +1675,12 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
     flush()
 
@@ -1767,24 +1728,22 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "brushSelection" ? [pixelOnly] : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind, unbind } = renderSelections()
     const chart = createFakeChart()
-    let cleanup: () => void = () => {}
 
+    bind(chart)
     act(() => {
-      cleanup = result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
     ;(widgetMgr.setStringValue as Mock).mockClear()
     widgetMgr.getElementState.mockReturnValue(undefined)
 
     const area = { brushType: "lineX", coordRange: [0, 2] }
     const brush = createBrushSelection({ areas: [area] })
+    unbind()
+    expect(chart.off).toHaveBeenCalledWith("brushEnd", expect.any(Function))
+    bind(chart)
     act(() => {
-      cleanup()
-      result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
     })
     flush()
@@ -1840,9 +1799,7 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
     chart.dispatchAction.mockImplementation(
       (action: Record<string, unknown>) => {
@@ -1852,9 +1809,9 @@ describe("useEChartsSelections", () => {
       }
     )
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
     flush()
 
@@ -1945,13 +1902,13 @@ describe("useEChartsSelections", () => {
         brushModel.option.throttleType = "debounce"
         brushModel.option.throttleDelay = 10_000
 
-        const { result } = renderHook(() =>
-          useEChartsSelections(createElement(), widgetMgr, undefined, disabled)
-        )
+        const { result, bind } = renderSelections(createElement(), {
+          disabled: disabled,
+        })
 
+        bind(chart)
         act(() => {
-          result.current.bindSelections(chart)
-          result.current.prunePixelOnlyBrushAfterResize(chart)
+          result.current.pruneAfterResize()
         })
 
         // One write on the resize turn, already carrying the hit-test of the
@@ -2045,16 +2002,14 @@ describe("useEChartsSelections", () => {
       const brushSelected = vi.fn()
       chart.on("selectchanged", selectChanged)
       chart.on("brushSelected", brushSelected)
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
+      const { result, bind } = renderSelections()
 
+      // Binding restores while its handlers are already attached; a data-only
+      // rerun then replaces the option and restores again.
+      bind(chart)
       act(() => {
-        // Bind before the option-replacing setOption and restore, the
-        // reverse of a fresh instance's effect order.
-        result.current.bindSelections(chart)
         chart.setOption(option, { notMerge: true })
-        result.current.restoreSelection(chart)
+        result.current.restoreSelection()
       })
       flush()
 
@@ -2107,9 +2062,7 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
     // Prune hit-tests synchronously, so its snapshot arrives inside the
     // dispatch.
@@ -2121,9 +2074,9 @@ describe("useEChartsSelections", () => {
       }
     )
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
       "chart-id",
@@ -2194,14 +2147,14 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
+    const { result, bind } = renderSelections(
+      createElement("chart-id", "form-id")
     )
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.prunePixelOnlyBrushAfterResize(chart)
+      result.current.pruneAfterResize()
     })
 
     expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
@@ -2236,9 +2189,7 @@ describe("useEChartsSelections", () => {
   ])(
     "commits one update in either ECharts event order (%s)",
     (_name, order) => {
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
+      const { bind } = renderSelections()
       const chart = createFakeChart()
       const area = {
         brushType: "rect",
@@ -2253,8 +2204,8 @@ describe("useEChartsSelections", () => {
         areas: [area],
         selected: selectedWithMainHits([2, 1]),
       })
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         triggerBrushGesture(chart, brush, order)
       })
       flush()
@@ -2282,9 +2233,7 @@ describe("useEChartsSelections", () => {
   )
 
   it("matches brushEnd geometry against model-enriched brush areas", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const eventArea = {
       brushType: "rect",
@@ -2309,8 +2258,8 @@ describe("useEChartsSelections", () => {
       selected: selectedWithMainHits([1]),
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [brush] })
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
@@ -2341,9 +2290,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("commits a final polygon snapshot whose vertices differ from brushEnd", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const endArea = {
       brushType: "polygon",
@@ -2367,8 +2314,8 @@ describe("useEChartsSelections", () => {
       selected: selectedWithMainHits([1, 2]),
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushEnd", {
         brushId: finalBrush.brushId,
         areas: [endArea],
@@ -2399,16 +2346,14 @@ describe("useEChartsSelections", () => {
   })
 
   it("waits for brushEnd before committing a non-empty brush snapshot", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const brush = createBrushSelection({
       areas: [{ brushType: "lineX", coordRange: [1, 3] }],
       selected: selectedWithMainHits([1, 2]),
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [brush] })
     })
     flush()
@@ -2425,16 +2370,14 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not rerun for an initial empty toolbox-activation snapshot", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const emptyBrush = createBrushSelection({
       areas: [],
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [emptyBrush] })
     })
     flush()
@@ -2443,15 +2386,13 @@ describe("useEChartsSelections", () => {
   })
 
   it("handles toolbox clear without brushEnd and preserves native selection", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [{ id: "native", name: "Native" }],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [4] }],
       })
@@ -2497,9 +2438,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("preserves brush selection when the native selection is cleared", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const area = {
       brushType: "rect",
@@ -2512,8 +2451,8 @@ describe("useEChartsSelections", () => {
       areas: [area],
       selected: selectedWithMainHits([2]),
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [1] }],
       })
@@ -2549,9 +2488,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("keeps all brush components when one component emits brushEnd", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const brush0 = createBrushSelection({
       brushId: "brush-0",
@@ -2563,8 +2500,8 @@ describe("useEChartsSelections", () => {
       brushIndex: 1,
       areas: [{ brushType: "lineY", coordRange: [3, 5] }],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushEnd", {
         brushId: brush1.brushId,
         areas: brush1.areas,
@@ -2631,13 +2568,12 @@ describe("useEChartsSelections", () => {
         return undefined
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
 
     expect(chart.dispatchAction).toHaveBeenCalledWith({
@@ -2668,9 +2604,7 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "selectedPoints" ? selectedPoints : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
     chart.dispatchAction.mockImplementation(
       (payload: Record<string, unknown>) => {
@@ -2679,9 +2613,9 @@ describe("useEChartsSelections", () => {
         }
       }
     )
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
     flush()
 
@@ -2697,9 +2631,7 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "brushSelection" ? [brush] : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { result, bind } = renderSelections()
     const chart = createFakeChart()
     chart.dispatchAction.mockImplementation(
       (payload: Record<string, unknown>) => {
@@ -2708,9 +2640,9 @@ describe("useEChartsSelections", () => {
         }
       }
     )
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
-      result.current.restoreSelection(chart)
+      result.current.restoreSelection()
     })
     flush()
 
@@ -2730,15 +2662,13 @@ describe("useEChartsSelections", () => {
     widgetMgr.getStringValue.mockReturnValue(
       JSON.stringify({ selection: { selected, areas: [] } })
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [{ id: "sales", name: "Sales" }],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [3] }],
       })
@@ -2753,9 +2683,7 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "selectedPoints" ? persistedPoints : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [{ id: "sales", name: "Sales" }],
@@ -2765,8 +2693,8 @@ describe("useEChartsSelections", () => {
       areas: [area],
       selected: selectedWithMainHits([2]),
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
     })
     flush()
@@ -2807,15 +2735,13 @@ describe("useEChartsSelections", () => {
     widgetMgr.getElementState.mockImplementation((_id: string, key: string) =>
       key === "brushSelection" ? [persistedBrush] : undefined
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     chart.getOption.mockReturnValue({
       series: [{ id: "sales", name: "Sales" }],
     })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [0] }],
       })
@@ -2856,12 +2782,10 @@ describe("useEChartsSelections", () => {
         },
       })
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("dblclick", {})
     })
     flush()
@@ -2889,9 +2813,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not clear a lasso completed by the same double-click", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const polygon = {
       brushType: "polygon",
@@ -2902,8 +2824,8 @@ describe("useEChartsSelections", () => {
       ],
     }
     const brush = createBrushSelection({ areas: [polygon] })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [brush] })
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
@@ -2931,9 +2853,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not clear when double-click is delivered before brushEnd", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const polygon = {
       brushType: "polygon",
@@ -2944,8 +2864,8 @@ describe("useEChartsSelections", () => {
       ],
     }
     const brush = createBrushSelection({ areas: [polygon] })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushSelected", { batch: [brush] })
       chart.trigger("dblclick", {})
       chart.trigger("brushEnd", {
@@ -2972,9 +2892,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("clears a drag-completed lasso on a later double-click", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const polygon = {
       brushType: "polygon",
@@ -2985,8 +2903,8 @@ describe("useEChartsSelections", () => {
       ],
     }
     const brush = createBrushSelection({ areas: [polygon] })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
     })
     flush()
@@ -3028,9 +2946,7 @@ describe("useEChartsSelections", () => {
   })
 
   it("clears a finished lasso when the active polygon tool re-commits it", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind } = renderSelections()
     const chart = createFakeChart()
     const polygon = {
       brushType: "polygon",
@@ -3041,8 +2957,8 @@ describe("useEChartsSelections", () => {
       ],
     }
     const brush = createBrushSelection({ areas: [polygon] })
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       triggerBrushGesture(chart, brush)
     })
     flush()
@@ -3083,13 +2999,11 @@ describe("useEChartsSelections", () => {
   })
 
   it("writes selection immediately when the chart is in a form", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-    )
+    const { bind } = renderSelections(createElement("chart-id", "form-id"))
     const chart = createFakeChart()
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [2] }],
       })
@@ -3123,9 +3037,7 @@ describe("useEChartsSelections", () => {
         submitValidator = validator
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-    )
+    const { bind } = renderSelections(createElement("chart-id", "form-id"))
     const chart = createFakeChart()
     const area = {
       brushType: "rect",
@@ -3146,8 +3058,8 @@ describe("useEChartsSelections", () => {
       }
     )
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
         areas: brush.areas,
@@ -3229,9 +3141,7 @@ describe("useEChartsSelections", () => {
         submitValidator = validator
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-    )
+    const { bind } = renderSelections(createElement("chart-id", "form-id"))
     const chart = createFakeChart()
     const clearScheduledHitTest = vi.fn()
     ;(
@@ -3260,8 +3170,8 @@ describe("useEChartsSelections", () => {
       selected: selectedWithMainHits([4]),
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       triggerBrushGesture(chart, previous)
     })
     expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
@@ -3329,9 +3239,7 @@ describe("useEChartsSelections", () => {
         submitValidator = validator
       }
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-    )
+    const { bind } = renderSelections(createElement("chart-id", "form-id"))
     const chart = createFakeChart()
     const brushOption = { throttleType: "debounce", throttleDelay: 400 }
     const brushModel = { option: { ...brushOption } }
@@ -3368,8 +3276,8 @@ describe("useEChartsSelections", () => {
       }
     })
 
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
         areas: brush.areas,
@@ -3463,12 +3371,10 @@ describe("useEChartsSelections", () => {
       brushModel.option.throttleType = "debounce"
       brushModel.option.throttleDelay = 10_000
 
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-      )
+      const { bind } = renderSelections(createElement("chart-id", "form-id"))
 
+      bind(chart)
       act(() => {
-        result.current.bindSelections(chart)
         // Throttled in-progress snapshot. It must not win over the finished
         // areas once submit asks for a fresh hit-test.
         chart.dispatchAction({
@@ -3573,13 +3479,10 @@ describe("useEChartsSelections", () => {
       brushModel.option.throttleType = "debounce"
       brushModel.option.throttleDelay = 10_000
 
-      const { result } = renderHook(() =>
-        useEChartsSelections(createElement(), widgetMgr)
-      )
-      let cleanup: () => void = () => {}
+      const { bind, unbind } = renderSelections()
 
+      bind(chart)
       act(() => {
-        cleanup = result.current.bindSelections(chart)
         chart.dispatchAction({
           type: "brush",
           brushId: brushModel.id,
@@ -3597,7 +3500,7 @@ describe("useEChartsSelections", () => {
       expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
 
       act(() => {
-        cleanup()
+        unbind()
       })
 
       expect(brushModel.option).toMatchObject({
@@ -3637,17 +3540,14 @@ describe("useEChartsSelections", () => {
   })
 
   it("does not hit-test a pending brush on cleanup after the chart is disposed", () => {
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement(), widgetMgr)
-    )
+    const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
     const brush = createBrushSelection({
       areas: [{ brushType: "lineX", coordRange: [0, 2] }],
     })
-    let cleanup: () => void = () => {}
 
+    bind(chart)
     act(() => {
-      cleanup = result.current.bindSelections(chart)
       chart.trigger("brushEnd", {
         brushId: brush.brushId,
         areas: brush.areas,
@@ -3656,7 +3556,7 @@ describe("useEChartsSelections", () => {
 
     chart.isDisposed.mockReturnValue(true)
     act(() => {
-      cleanup()
+      unbind()
     })
 
     expect(chart.dispatchAction).not.toHaveBeenCalled()
@@ -3672,10 +3572,14 @@ describe("useEChartsSelections", () => {
         },
       })
     )
-    const { result } = renderHook(() =>
-      useEChartsSelections(createElement("chart-id", "form-id"), widgetMgr)
-    )
+    const { bind } = renderSelections(createElement("chart-id", "form-id"))
     const chart = createFakeChart()
+    expect(widgetMgr.addFormClearedListener).toHaveBeenCalledWith(
+      "form-id",
+      expect.any(Function)
+    )
+    const [, handleFormCleared] = (widgetMgr.addFormClearedListener as Mock)
+      .mock.calls[0] as [string, () => void]
 
     chart.dispatchAction.mockImplementation(
       (payload: Record<string, unknown>) => {
@@ -3684,12 +3588,12 @@ describe("useEChartsSelections", () => {
         }
       }
     )
+    bind(chart)
     act(() => {
-      result.current.bindSelections(chart)
       chart.trigger("selectchanged", {
         selected: [{ seriesIndex: 0, dataIndex: [2] }],
       })
-      result.current.onFormCleared()
+      handleFormCleared()
     })
     flush()
 
