@@ -1,6 +1,6 @@
 ---
 name: developing-with-streamlit
-description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
+description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, testing, beautifying, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
 ---
 
 # Developing with Streamlit
@@ -13,6 +13,7 @@ Invoke this skill when the user's request involves:
 - Creating a new Streamlit app
 - Editing or modifying an existing Streamlit app
 - Debugging Streamlit issues (errors, session state bugs, performance problems)
+- Verifying that an app works after a change, or writing tests for it
 - Beautifying or improving the visual design of a Streamlit app
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
@@ -41,7 +42,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` for fixed grids, precise width ratios, or side-by-side cards that must share a width.
 - Align elements placed side by side: use `vertical_alignment="bottom"` for rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content (for example, all metrics with or all without `delta`) or `height="stretch"`. See "Aligning elements side by side" in `references/layouts.md`.
 - Prefer `st.navigation` and `st.Page` with an `app_pages/` folder over the legacy `pages/` directory, `st.page_link`, or other multipage-app v1 patterns.
-- Do not put expensive work unguarded inside `st.tabs`, `st.expander`, or `st.popover`: hidden, collapsed, or closed content still computes on every rerun, and caching doesn't change that. Pass `on_change="rerun"` and render each body only when the container's `.open` is `True`, or switch to `st.segmented_control` or `st.toggle` with an `if`.
+- Do not put expensive work unguarded inside `st.tabs`, `st.expander`, or `st.popover`. By default, the app script still enters hidden, collapsed, or closed bodies on every rerun. Set `on_change="rerun"` so `.open` reports each container's current state, then run that body only when `.open` is `True`. Alternatively, use `st.segmented_control` or `st.toggle` with an `if`.
 - Always cache compute-intensive or expensive data-loading code. Use `st.cache_data` for serializable data and `st.cache_resource` for shared resources like API clients, raw connectors, and models; do not wrap `st.connection`, which is already cached. Cache the expensive source data, then apply cheap interactive filters outside the cached function.
 - Use `ttl` for freshness and `max_entries` when the workload gives a practical entry-count bound. For `st.cache_data`, use `max_size` only when the user provides a byte budget or deployment memory constraints and the intended allocation across caches determine a per-cache budget. It limits serialized bytes for one decorated function, not total process memory. Do not guess it from source dataset size, representative or example values, or arbitrary constants; ask the user when the memory budget is unknown. Combine limits when they address different risks. For `st.cache_resource`, use `max_entries`.
 - Order scripts so fast UI (titles, layout, widgets) renders before slow computation. Streamlit streams elements top to bottom and temporarily greys out (marks stale) not-yet-redrawn elements from the previous run while a slow step is in progress, clearing each as the new run recreates it; put slow work last, reserve output slots with `st.container()`, or isolate slow sections in fragments.
@@ -57,6 +58,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 - Type-check edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one.
+- Before reporting a change as done, check it in the running app with the agent API and watch the server's console output for warnings (see [Step 4](#step-4-verify-the-change-in-the-running-app)).
 
 ## Proactively Look Up API Details
 
@@ -79,7 +81,9 @@ Step 2: Identify task type and load appropriate reference(s)
     ↓
 Step 3: Apply guidance from reference to edit code
     ↓
-Step 4: Check if app is running and offer to run it
+Step 4: Verify the change in the running app (agent API)
+    ↓
+Step 5: Check if app is running and offer to run it
 ```
 
 ### Step 1: Locate the Streamlit Source Code (if needed)
@@ -161,7 +165,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Streamlit CLI and configuration** — `streamlit run`, `streamlit config`, looking up docstrings (`streamlit docs <command>`), `.streamlit/config.toml` (script-level and project-level), port settings, and server options | read `references/cli.md` |
 | **Advanced server configuration** — `st.App`, ASGI entry points, custom HTTP routes, middleware, lifespan hooks, programmatic secrets, exception handlers, and FastAPI/Starlette mounting | read `references/server-asgi.md` |
 | **Requiring users to sign in** — `st.login`/`st.logout`/`st.user` with OIDC, gating on `st.user.is_logged_in`, and `[auth]` secrets configuration (not a hand-rolled password gate) | read `references/authentication.md` |
-| **Writing automated tests for an app** — `st.testing.v1.AppTest` for headless, in-process tests (simulate widgets, assert on elements) instead of launching a browser/server | read `references/testing.md` |
+| **Checking that a change works, debugging a running app, or writing automated tests** — the agent API (`--server.enableAgentApi=true`, `POST /_stcore/agent/interact`) to drive the real app over HTTP while you develop, and `st.testing.v1.AppTest` for headless, in-process tests (simulate widgets, assert on elements) instead of launching a browser | read `references/testing.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
@@ -222,7 +226,28 @@ For **performance optimization**, read:
 3. Preserve existing functionality while adding improvements
 4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so wrong API use is reported before the app runs. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.
 
-### Step 4: Check Running Apps and Offer to Run
+### Step 4: Verify the Change in the Running App
+
+**Goal:** Confirm the edited app runs and behaves as intended in the real Streamlit runtime before you report the task as done.
+
+The agent API drives the app over HTTP without a browser. It returns the finished page as JSON, with elements named after `st.*` commands and widgets you set by key. For the workflow and limits, read "Check a running app with the agent API" in `references/testing.md`. For every request field, response field, and error code, fetch the running app's `/_stcore/agent/openapi.json` once.
+
+1. **Start** a headless instance in the background, bound to localhost and separate from any app the user is running. Keep its console output where you can read it:
+   ```bash
+   streamlit run [path/to/app.py] --server.headless=true --server.address=127.0.0.1 --server.port=8765 --server.enableAgentApi=true
+   ```
+   Pass these flags on the command line; don't add `enableAgentApi` to `.streamlit/config.toml`, where it would turn the API on wherever the app is deployed. Wait until `curl -s http://127.0.0.1:8765/_stcore/health` prints `ok`. If the port is taken, pick another one.
+2. **Load** the app and check that `status` is `"ready"`:
+   ```bash
+   curl -s -X POST http://127.0.0.1:8765/_stcore/agent/interact -H 'Content-Type: application/json' -d '{}'
+   ```
+3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. Edits need no restart, but after each one send only `session_id` first: requests are checked against the last snapshot, so new options and changed keys show up only after that rerun.
+4. **Check the console output** after each request. Streamlit logs warnings and tracebacks there that the snapshot doesn't show, such as deprecations and ignored parameters. Fix or report anything new.
+5. **Stop** the instance when you're done.
+
+For purely visual changes (theme, CSS, spacing), this only confirms that the app still runs; checking the look needs a browser. If the app needs credentials, secrets, or services you don't have, or you can't run a background process, say so instead of changing the code to make it run.
+
+### Step 5: Check Running Apps and Offer to Run
 
 **Goal:** Help the user see their changes by checking if their app is running.
 
@@ -258,7 +283,8 @@ For **performance optimization**, read:
 
 ## Stopping Points
 
-- **Step 4**: Ask before starting the Streamlit app
+- **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers.
+- **Step 5**: Ask before starting the Streamlit app for the user
 
 ## Resources
 
