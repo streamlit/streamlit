@@ -69,10 +69,11 @@ INTERNAL_ERROR: Final = -32603
 
 _METHODS: Final = frozenset({"initialize", "ping", "tools/list", "tools/call"})
 
-# The `2026-07-28` revision's probe. `request_refusal` answers it with HTTP 400
-# and -32600, which `2026-07-28` clients read as "fall back to `initialize`".
-# They do not fall back from a -32022 that lists a revision of that era, or
-# from a 401, 403, or 5xx.
+# The probe that clients of the draft `2026-07-28` revision send first.
+# `request_refusal` answers it with HTTP 400 and -32600, which those clients
+# read as "fall back to `initialize`". They do not fall back from a 401, 403,
+# or 5xx, or from -32022, the unsupported-version error, when the revisions it
+# lists include `2026-07-28` or a later one.
 _DISCOVER_METHOD: Final = "server/discover"
 
 # What `get_data` returns at most: rows per table page, characters in a page's
@@ -87,8 +88,9 @@ GET_DATA_FIELDS: Final = ("session_id", "url", "offset", "limit")
 # A table page's fields, in the order its text lists them.
 PAGE_FIELDS: Final = ("columns", "row_count", "offset", "rows", "next_offset")
 
-# Rows converted at a time while a page fills, so a large `limit` on a wide
-# table converts little more than the rows that fit.
+# The most rows converted at a time while a page fills. Chunks start at one
+# row and double, so a page converts at most about twice the rows it holds,
+# however large its cells or its `limit`.
 _ROW_CHUNK: Final = 100
 
 # What media storage names a file by: a 32-character hex digest, followed in a
@@ -137,6 +139,12 @@ _FILE_TOO_LARGE_MESSAGE: Final = (
     f"This file makes a result past {MAX_RESULT_BYTES // 1_000_000} MB, which "
     "`get_data` does not return, so neither a retry nor a smaller `limit` helps."
 )
+_UNCONVERTIBLE_ROWS_MESSAGE: Final = (
+    "This table holds values the server cannot convert to JSON, such as a "
+    "timestamp in a time zone it does not know, so `get_data` cannot return "
+    "its rows and a retry fails the same way. Report that the table's rows "
+    "cannot be read."
+)
 
 MessageKind: TypeAlias = Literal[
     "request", "notification", "response", "batch", "invalid"
@@ -166,18 +174,20 @@ class GetDataArguments(NamedTuple):
 
     session_id: str
     url: str
-    # As sent, or the default when omitted or null: they are checked only for
-    # a table, since every other file ignores them, invalid values included.
+    # As sent, or the default when omitted or null. Only a table read checks
+    # them; other files ignore them, even when they are invalid.
     offset: Any
     limit: Any
 
 
-class ReadRefusedError(Exception):
-    """A ``get_data`` read refused with one of the MCP-only error codes."""
+class _ReadRefusedError(Exception):
+    """A refused ``get_data`` read, with the error code its result carries."""
 
-    def __init__(self, code: errors.McpErrorCode, message: str) -> None:
+    def __init__(
+        self, code: errors.AgentErrorCode | errors.McpErrorCode, message: str
+    ) -> None:
         super().__init__(message)
-        self.code = code
+        self.code: errors.AgentErrorCode | errors.McpErrorCode = code
         self.message = message
 
 
@@ -406,15 +416,20 @@ def unknown_session_message() -> str:
 def media_file_id(url: str) -> str | None:
     """The media-file id ``url`` names, or None if it names none.
 
-    Read from its shape alone, never fetched or joined to a path: a bare id,
-    or the last segment of a URL, relative or absolute, whose path ends in
-    ``media/<id>``, each with at most one extension. So
+    ``url`` names one when it is a bare id, or a relative or absolute URL
+    whose path ends in ``media/<id>``, each with at most one extension. So
     ``../../media/<id>.png``, that URL resolved behind any prefix, and
-    ``<id>`` name the same file. Only the id grants access, so reading it
-    from an absolute URL adds no exposure.
+    ``<id>`` name the same file. The URL is never fetched or joined to a
+    path; only the id is looked up. The id alone grants access, so reading
+    it from an absolute URL adds no exposure.
     """
     if "/" in url:
-        segments = urlsplit(url).path.split("/")
+        try:
+            path = urlsplit(url).path
+        except ValueError:
+            # Such as an unclosed IPv6 host, which names no media file.
+            return None
+        segments = path.split("/")
         if len(segments) < 2 or segments[-2] != "media":
             return None
         url = segments[-1]
@@ -441,7 +456,7 @@ def render_get_data(
     table_offset: int | None = None
     try:
         result, table_offset = _read(media, arguments)
-    except (AgentRequestError, ReadRefusedError) as exc:
+    except (AgentRequestError, _ReadRefusedError) as exc:
         result = tool_error(exc.code, exc.message)
     except Exception:
         _LOGGER.exception("The MCP endpoint's get_data tool failed to read a file.")
@@ -469,20 +484,20 @@ def _read(
     media: MediaFileManager, arguments: GetDataArguments
 ) -> tuple[dict[str, Any], int | None]:
     """The tool result for a file, and the offset of its page if it is a table."""
-    # Checked before the argument is read, so an id in a custom storage's own
-    # format is never called "not a media file".
+    # Refuse a custom storage before reading `url`, so an id in that storage's
+    # own format is `read_unsupported`, not `unknown_file`.
     if not media.can_read_files:
         # The catalog's meaning is the whole message: nothing in the call
         # changes what the model should do.
-        raise ReadRefusedError(
+        raise _ReadRefusedError(
             "read_unsupported", errors.MCP_ERROR_CATALOG["read_unsupported"]
         )
     file_id = media_file_id(arguments.url)
     if file_id is None:
-        raise ReadRefusedError("unknown_file", _NOT_A_MEDIA_FILE_MESSAGE)
+        raise _ReadRefusedError("unknown_file", _NOT_A_MEDIA_FILE_MESSAGE)
     stored = media.read_file(file_id)
     if stored is None:
-        raise ReadRefusedError("unknown_file", _GONE_MESSAGE)
+        raise _ReadRefusedError("unknown_file", _GONE_MESSAGE)
 
     # The type the file was stored with, compared as the content-type check
     # compares it: without regard to case, and without parameters.
@@ -490,8 +505,8 @@ def _read(
     if media_type == agent_data.ARROW_MIMETYPE:
         table = _arrow_table(stored.content)
         if table is not None:
-            offset = _page_bound(arguments.offset, name="offset", minimum=0)
-            limit = _page_bound(arguments.limit, name="limit", minimum=1)
+            offset = _validated_page_bound(arguments.offset, name="offset", minimum=0)
+            limit = _validated_page_bound(arguments.limit, name="limit", minimum=1)
             text = table_page(table, offset=offset, limit=limit)
             return tool_result(text, is_error=False), offset
     content = _file_content(stored, file_id, media_type)
@@ -508,8 +523,8 @@ def _arrow_table(content: bytes) -> pa.Table | None:
         return None
 
 
-def _page_bound(value: Any, *, name: str, minimum: int) -> int:
-    """A table page's ``offset`` or ``limit``.
+def _validated_page_bound(value: Any, *, name: str, minimum: int) -> int:
+    """A table page's ``offset`` or ``limit``, checked and read as an integer.
 
     A number without a fraction is an integer, as in JSON Schema, so ``100.0``
     is ``100``; a boolean is not one.
@@ -565,15 +580,37 @@ def table_page(table: pa.Table, *, offset: int, limit: int) -> str:
 
 
 def _encoded_rows(table: pa.Table, *, start: int, end: int) -> Iterator[str]:
-    """The JSON text of each row from ``start`` up to ``end``, converted
-    ``_ROW_CHUNK`` rows at a time as the caller consumes them.
+    """The JSON text of each row from ``start`` up to ``end``, converted in
+    chunks as the caller consumes them.
+
+    The first chunk is one row, and each next one doubles, up to
+    ``_ROW_CHUNK``, so a caller that stops early has converted few rows past
+    the ones it took.
+
+    Raises
+    ------
+    _ReadRefusedError
+        ``internal_error`` for rows that cannot be converted, such as a
+        timestamp in a time zone neither Python nor Arrow knows.
     """
-    for chunk_start in range(start, end, _ROW_CHUNK):
-        chunk = agent_data.arrow_rows(
-            table, offset=chunk_start, limit=min(end - chunk_start, _ROW_CHUNK)
-        )
+    chunk_start = start
+    chunk_size = 1
+    while chunk_start < end:
+        size = min(end - chunk_start, chunk_size)
+        try:
+            chunk = agent_data.arrow_rows(table, offset=chunk_start, limit=size)
+        except Exception as exc:
+            # Logged at debug level, as the snapshot's failed preview of the
+            # same table is: every read of this table fails the same way, so
+            # a traceback per call would only flood the log.
+            _LOGGER.debug("Could not convert a table's rows.", exc_info=True)
+            raise _ReadRefusedError(
+                "internal_error", _UNCONVERTIBLE_ROWS_MESSAGE
+            ) from exc
         for row in chunk:
             yield json_encoding.dumps(row)
+        chunk_start += size
+        chunk_size = min(2 * chunk_size, _ROW_CHUNK)
 
 
 def _file_content(stored: MemoryFile, file_id: str, media_type: str) -> dict[str, Any]:
@@ -608,8 +645,8 @@ def _base64(content: bytes) -> str:
     """``content`` as base64, refused before encoding if it is past the cap,
     so a result too large to send never costs its encoded copy.
     """
-    # Four characters for every three bytes, the last group padded.
+    # Base64's length is `4 * ceil(len / 3)`, computed with integers.
     encoded_size = 4 * -(-len(content) // 3)
     if encoded_size > MAX_RESULT_BYTES:
-        raise ReadRefusedError("result_too_large", _FILE_TOO_LARGE_MESSAGE)
+        raise _ReadRefusedError("result_too_large", _FILE_TOO_LARGE_MESSAGE)
     return base64.b64encode(content).decode("ascii")

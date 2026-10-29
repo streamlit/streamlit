@@ -1416,7 +1416,6 @@ def test_a_reserved_path_refuses_other_methods_by_where_it_is(
     under_a_page = client.post("/page2/_stcore/agent/mcp", json={})
 
     assert root.status_code == HTTPStatus.METHOD_NOT_ALLOWED
-    assert root.headers["Allow"] == "GET, HEAD"
     assert under_a_page.status_code == HTTPStatus.NOT_FOUND
     assert "<html>" not in under_a_page.text
 

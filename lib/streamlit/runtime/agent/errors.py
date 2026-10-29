@@ -194,7 +194,8 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
 # Codes only the MCP endpoint's `get_data` tool returns, as code -> meaning. No
 # HTTP route answers with them, so unlike `ERROR_CATALOG` they have no status,
 # and the OpenAPI document lists them apart from the `Error` schema's `code`
-# enum. A refused read also reuses `invalid_request` and `unknown_session`.
+# enum. A refused read also reuses `invalid_request`, `unknown_session`, and
+# `internal_error`.
 McpErrorCode: TypeAlias = Literal[
     "unknown_file", "result_too_large", "read_unsupported"
 ]

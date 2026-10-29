@@ -76,7 +76,8 @@ _T = TypeVar("_T")
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/openapi.json"
 # Beside the interact route, so the media URLs a result carries, relative to
-# the request, climb back to the app's root the same way from both.
+# the request, climb back to the app's root the same way from both. The MCP
+# route tests resolve those URLs from this route, so they fail if it moves.
 _ROUTE_AGENT_MCP: Final = "_stcore/agent/mcp"
 
 # Every method a route registers, so none falls through to the static files
@@ -252,11 +253,13 @@ def _jsonrpc_error_response(
 def _jsonrpc_refusal(
     code: errors.AgentErrorCode, message: str, *, status: int | None = None
 ) -> Response:
-    """The MCP route's answer to a request refused before it was parsed.
+    """The MCP route's JSON-RPC error for a request refused before its body
+    is parsed.
 
-    Its `id` cannot be read yet, so the error has `id: null`, notifications
-    included. The agent API's code leads the message, which says what to do.
-    The HTTP status is the code's unless ``status`` is given.
+    The error has `id: null`, since the request's `id` cannot be read yet,
+    and the JSON-RPC code -32600. Its message starts with the agent API's
+    code, such as `host_not_allowed: `, followed by what to do. The HTTP
+    status is the agent API code's unless ``status`` is given.
     """
     return _jsonrpc_error_response(
         errors.error_status(code) if status is None else status,
@@ -442,10 +445,10 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         return protocol.build_mcp_tools(session_ttl=session_ttl)
 
     def error_response(code: errors.AgentErrorCode, message: str) -> Response:
-        status, body = refused(code, message)
+        status, body = http_refusal(code, message)
         return Response(body, status_code=status, media_type="application/json")
 
-    def refused(
+    def http_refusal(
         code: errors.AgentErrorCode,
         message: str,
         *,
@@ -480,11 +483,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # Nobody reads this. A retry collects the run of a session the
             # client already held; a creating call's session is closed instead,
             # since the client never received its `session_id`.
-            return refused(
+            return http_refusal(
                 "wait_timed_out", "The client disconnected before the run settled."
             )
         except errors.AgentRequestError as exc:
-            return refused(
+            return http_refusal(
                 exc.code,
                 exc.message,
                 session_id=exc.session_id,
@@ -493,7 +496,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except Exception:
             _LOGGER.exception("Agent API interaction failed.")
             # The cause is in the server log; the response does not name it.
-            return refused("internal_error", "The interaction could not be completed.")
+            return http_refusal(
+                "internal_error", "The interaction could not be completed."
+            )
         return 200, body
 
     async def call_tool(

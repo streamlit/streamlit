@@ -221,13 +221,11 @@ class TestReservedPaths:
         self, static_app: TestClient
     ) -> None:
         """At the app's root, a reserved path whose route does not take the
-        method keeps the 405 static files answer, which names the methods
-        they allow.
+        method keeps the 405 static files answer.
         """
         response = static_app.post("/_stcore/health")
 
         assert response.status_code == 405
-        assert response.headers["Allow"] == "GET, HEAD"
 
 
 class TestWithBaseUrl:

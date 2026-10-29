@@ -342,6 +342,7 @@ def test_media_file_id_reads_an_id_bare_or_in_a_media_url(url: str) -> None:
         f"../../media/{_FILE_ID}0",
         f"../../media/{_FILE_ID}/",
         f"{_FILE_ID}.png?x=1",
+        f"http://[::1/media/{_FILE_ID}",
     ],
     ids=[
         "empty",
@@ -355,6 +356,7 @@ def test_media_file_id_reads_an_id_bare_or_in_a_media_url(url: str) -> None:
         "too_long",
         "trailing_slash",
         "bare_with_query",
+        "unclosed_ipv6_host",
     ],
 )
 def test_media_file_id_rejects_anything_else(url: str) -> None:
@@ -524,6 +526,25 @@ def test_a_page_holds_at_least_one_row(
 
     assert page["rows"] == [["x" * 50_000]]
     assert page["next_offset"] == 1
+
+
+def test_a_page_of_large_cells_converts_few_rows_past_it(
+    storage: MemoryMediaFileStorage, media: MediaFileManager
+) -> None:
+    """Rows are converted in chunks that grow from one row, so a page that
+    ends after one large row converts only a few of the rows after it.
+    """
+    frame = pd.DataFrame({"text": [f"{n:03}" + "x" * 30_000 for n in range(300)]})
+    url = _store(storage, _arrow(frame), _ARROW)
+
+    with patch.object(
+        agent_data, "arrow_rows", wraps=agent_data.arrow_rows
+    ) as arrow_rows:
+        page = _page(media, url, offset=10)
+
+    assert page["rows"] == [[f"010{'x' * 30_000}"]]
+    assert page["next_offset"] == 11
+    assert sum(call.kwargs["limit"] for call in arrow_rows.call_args_list) <= 3
 
 
 def test_a_row_past_the_size_cap_is_refused_by_its_offset(
@@ -795,6 +816,27 @@ def test_an_unexpected_failure_hides_its_cause(
     message = _refused(result, "internal_error")
     assert "secret detail" not in message
     log_exception.assert_called_once()
+
+
+def test_rows_that_cannot_be_converted_say_so_without_a_traceback(
+    storage: MemoryMediaFileStorage, media: MediaFileManager
+) -> None:
+    """A table whose rows neither Python nor Arrow can convert, as its
+    snapshot preview could not, is refused with what to do, and is not
+    logged as an unexpected failure on every read.
+    """
+    unknown_zone = pa.timestamp("s", tz="Not/AZone")
+    table = pa.table({"at": pa.array([0, None], unknown_zone)})
+    url = _store(
+        storage, dataframe_util.convert_arrow_table_to_arrow_bytes(table), _ARROW
+    )
+
+    with patch.object(mcp._LOGGER, "exception") as log_exception:
+        message = _refused(_get_data(media, url), "internal_error")
+
+    assert "cannot convert to JSON" in message
+    assert "Report that" in message
+    log_exception.assert_not_called()
 
 
 def test_the_documented_size_cap_is_the_enforced_one() -> None:
