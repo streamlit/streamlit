@@ -744,9 +744,9 @@ class SessionState:
     # The widget's next registration tells the browser the server's value.
     _pending_resync: set[str] = field(default_factory=set)
 
-    # Client values for widgets this session never registered, such as the
-    # widget map a browser resends to a new session. Each is checked when its
-    # widget registers in this run.
+    # Client values and triggers for widgets this session never registered,
+    # such as the widget map a browser resends to a new session. Each is
+    # checked when its widget registers in this run.
     _unregistered_client_ids: set[str] = field(default_factory=set)
 
     # Widgets whose refused value was already logged at warning level, so each
@@ -1027,10 +1027,11 @@ class SessionState:
         nothing reads it again. A refused one is dropped, so the widget keeps
         its previous value, and is logged without the value.
 
-        A value for a widget this session never registered, as a browser sends
-        to a new session, is left for ``register_widget`` to check against this
-        run's metadata. A trigger for one is dropped: a correct browser sends a
-        trigger once, for a widget it was shown.
+        A value or trigger for a widget this session never registered, as a
+        browser sends to a new session after a reconnect, is left for
+        ``register_widget`` to check against this run's metadata. It fires no
+        callback, and it is dropped at the end of a run that does not register
+        its widget.
 
         Returns
         -------
@@ -1052,11 +1053,7 @@ class SessionState:
             state = wstate.value
             metadata = metadata_by_id.get(widget_id)
             if metadata is None:
-                if _has_active_trigger_value(state):
-                    widget_state.drop(widget_id)
-                    rejected.add(widget_id)
-                else:
-                    self._unregistered_client_ids.add(widget_id)
+                self._unregistered_client_ids.add(widget_id)
                 continue
 
             is_rendered = widget_id in rendered_ids
@@ -1187,11 +1184,14 @@ class SessionState:
             # it while folding the batch.
             if votes.requested_targeted:
                 # A refused trigger is left out, or it would come back unchecked
-                # in the next run.
+                # in the next run. So is a trigger for a widget this session never
+                # registered: it is checked when its widget registers, and a
+                # replay skips that check.
                 current_replay_trigger_states = (
                     self._filter_active_trigger_widget_states(
                         self._current_interaction_widget_states,
-                        exclude=self._rejected_client_values,
+                        exclude=self._rejected_client_values
+                        | self._unregistered_client_ids,
                     )
                 )
                 current_replay_trigger_values = self._capture_replay_trigger_values(
@@ -1834,7 +1834,8 @@ class SessionState:
         if widget_id in self._unregistered_client_ids:
             self._unregistered_client_ids.discard(widget_id)
             if self._check_unregistered_client_value(metadata):
-                client_value_refused = True
+                # A trigger resets anyway, so only a value is re-synced.
+                client_value_refused = metadata.value_type not in _TRIGGER_PROTO_FIELDS
                 # The captured wire labels belong to the refused value, so
                 # option reconciliation must not fall back to them.
                 incoming_serialized_value = None
@@ -2049,6 +2050,11 @@ class SessionState:
         metadata, and compared with the widget's default: no earlier run stored
         a value. An accepted value is cached deserialized, and a refused one is
         dropped as if never sent.
+
+        A trigger is checked the same way, so a click that is the first
+        interaction after a reconnect to a new session counts: the widget
+        returns it in this run. Its callback does not run, because callbacks run
+        before the script body, while the widget has no metadata yet.
 
         Returns
         -------

@@ -26,8 +26,10 @@ from e2e_playwright.conftest import build_app_url, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    click_form_button,
     expect_connection_status,
     expect_markdown,
+    get_element_by_key,
     get_text_input,
     select_selectbox_option,
 )
@@ -69,8 +71,7 @@ def test_values_survive_a_reconnect_to_a_new_session(
     expect_markdown(app, "changes: 3")
     sessions_before = _new_session_count(app, app_base_url)
 
-    expect_connection_status(app, "CONNECTING", _DISCONNECT_WEBSOCKET)
-    expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
+    _reconnect_to_a_new_session(app)
     # An interaction sends the browser's whole widget map to the new session.
     click_button(app, "Rerun")
 
@@ -78,3 +79,41 @@ def test_values_survive_a_reconnect_to_a_new_session(
     expect_markdown(app, "values: Ann, b, True")
     # The new session's state starts over, and no callback ran for the values.
     expect_markdown(app, "changes: 0")
+    # The click reached a session that had registered nothing, and still counts.
+    expect_markdown(app, "clicked: True")
+
+
+def _reconnect_to_a_new_session(app: Page) -> None:
+    """Drop the connection, so the browser reconnects to a new session."""
+    expect_connection_status(app, "CONNECTING", _DISCONNECT_WEBSOCKET)
+    expect(app.get_by_test_id("stStatusWidget")).not_to_be_attached()
+
+
+def test_the_first_trigger_after_a_reconnect_lands(
+    app: Page, app_base_url: str
+) -> None:
+    """A form submit or chat message that is the first interaction is not lost.
+
+    The browser does not rerun when it reconnects, so the trigger reaches a
+    session that registered no widget yet.
+    """
+    get_text_input(app, "City").locator("input").first.fill("Bern")
+    expect_markdown(app, re.compile(r"^submitted: False,$"))
+    sessions_before = _new_session_count(app, app_base_url)
+
+    _reconnect_to_a_new_session(app)
+    click_form_button(app, "Submit")
+
+    assert _new_session_count(app, app_base_url) > sessions_before
+    expect_markdown(app, "submitted: True, Bern")
+    expect_markdown(app, "clicked: False")
+
+    _reconnect_to_a_new_session(app)
+    chat_input = get_element_by_key(app, "chat").locator("textarea").first
+    chat_input.fill("hi")
+    chat_input.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "message: hi")
+    # A form submit is a trigger too, so it does not come back.
+    expect_markdown(app, "submitted: False, Bern")

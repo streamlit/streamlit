@@ -6761,10 +6761,10 @@ def test_boundary_judges_a_repeated_id_on_its_last_entry(
     assert ss["w"] == ("new" if accepted else "previous")
 
 
-def test_boundary_drops_an_unknown_trigger_and_keeps_an_unknown_value(
+def test_boundary_leaves_unknown_triggers_and_values_for_registration(
     refusal_logs: list[str],
 ) -> None:
-    """With no metadata, a trigger is dropped and a value waits for registration."""
+    """With no metadata, a trigger waits for registration, like a value."""
     ss = _session_with()
 
     ss.on_script_will_rerun(
@@ -6774,11 +6774,134 @@ def test_boundary_drops_an_unknown_trigger_and_keeps_an_unknown_value(
         )
     )
 
-    assert "button" not in ss._new_widget_state.states
-    assert ss._rejected_client_values == frozenset({"button"})
+    assert isinstance(ss._new_widget_state.states["button"], Serialized)
     assert isinstance(ss._new_widget_state.states["text"], Serialized)
-    assert ss._unregistered_client_ids == {"text"}
+    assert ss._unregistered_client_ids == {"button", "text"}
+    assert ss._rejected_client_values == frozenset()
     assert refusal_logs == []
+
+
+def _button_metadata(
+    widget_id: str,
+    *,
+    callback: Callable[[], None] | None = None,
+    disabled: bool = False,
+    validator: Any = None,
+) -> WidgetMetadata:
+    """Metadata of a button, whose unfired state is False."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=bool,
+        serializer=bool,
+        value_type="trigger_value",
+        callback=callback,
+        disabled=disabled,
+        validator=validator,
+    )
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_counts_a_click_when_its_widget_registers(
+    _mock_ctx: MagicMock,
+) -> None:
+    """A click that is the first interaction after a reconnect is returned.
+
+    No widget had metadata when callbacks ran, so the click's callback does
+    not run, and the trigger resets at the end of the run.
+    """
+    callback = MagicMock()
+    ss = _session_with()
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="button", trigger_value=True)))
+    result = ss.register_widget(_button_metadata("button", callback=callback), None)
+
+    assert result.value is True
+    # A trigger resets anyway, so the browser needs no re-sync.
+    assert result.value_changed is False
+    callback.assert_not_called()
+    _finish_run(ss, "button")
+    assert ss["button"] is False
+
+
+@pytest.mark.parametrize(
+    ("metadata", "kind"),
+    [
+        (_button_metadata("button", disabled=True), "disabled"),
+        (
+            _button_metadata(
+                "button",
+                validator=lambda *_args, **_kwargs: widget_checks.Violation(
+                    "not_an_option"
+                ),
+            ),
+            "not_an_option",
+        ),
+    ],
+)
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_refuses_a_click_its_widget_does_not_accept(
+    _mock_ctx: MagicMock,
+    metadata: WidgetMetadata,
+    kind: str,
+    refusal_logs: list[str],
+) -> None:
+    """The check at registration still applies `disabled` and the validator."""
+    ss = _session_with()
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(WidgetStateProto(id="button", trigger_value=True))
+        )
+        result = ss.register_widget(metadata, None)
+
+    assert result.value is False
+    assert result.value_changed is False
+    assert len(refusal_logs) == 1
+    assert f"button ({kind})" in refusal_logs[0]
+
+
+def test_a_new_session_drops_a_click_whose_widget_never_registers() -> None:
+    """A trigger for a widget the run does not render is gone after the run."""
+    ss = _session_with()
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="button", trigger_value=True)))
+    _finish_run(ss, "other")
+
+    assert "button" not in ss._new_widget_state.states
+
+
+def test_replay_capture_skips_a_trigger_for_an_unregistered_widget() -> None:
+    """A trigger that waits for registration is not replayed past that check."""
+    ss = _session_with(
+        _boundary_metadata(
+            "target", value_type="trigger_value", callback=_raise_targeted_rerun
+        ),
+        old_state={"target": False},
+    )
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            _message(
+                WidgetStateProto(id="unregistered", trigger_value=True),
+                WidgetStateProto(id="target", trigger_value=True),
+            )
+        )
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert [state.id for state in replay.widgets] == ["target"]
 
 
 def test_callbacks_run_in_message_order() -> None:
@@ -7217,7 +7340,7 @@ def test_a_new_session_checks_its_values_at_registration_not_at_the_gate(
     """A reconnect's widget map has no metadata yet, so nothing is rendered either.
 
     Its values wait for registration, which renders the widget, and a trigger
-    in the map is dropped without a log line.
+    whose widget does not register is dropped without a log line.
     """
     callback = MagicMock()
     ss = _session_with()
@@ -7230,9 +7353,11 @@ def test_a_new_session_checks_its_values_at_registration_not_at_the_gate(
             )
         )
         result = ss.register_widget(_boundary_metadata("w", callback=callback), None)
+        ss.on_script_finished(frozenset({"w"}))
 
     assert result.value == "restored"
     assert ss._new_widget_state.rendered_ids == {"w"}
+    assert "button" not in ss._new_widget_state.states
     callback.assert_not_called()
     assert refusal_logs == []
     assert ss._warned_widget_ids == set()

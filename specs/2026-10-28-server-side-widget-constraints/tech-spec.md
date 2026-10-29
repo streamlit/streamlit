@@ -86,13 +86,9 @@ def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]
         state = wstate.value
         metadata = self._new_widget_state.widget_metadata.get(widget_id)
         if metadata is None:
-            # Never registered in this session: a value is checked when its
-            # widget registers. A correct browser never resends a trigger.
-            if _has_active_trigger_value(state):
-                self._new_widget_state.drop(widget_id)
-                rejected.add(widget_id)
-            else:
-                self._unregistered_client_ids.add(widget_id)
+            # Never registered in this session, as after a reconnect: a value
+            # or trigger is checked when its widget registers.
+            self._unregistered_client_ids.add(widget_id)
             continue
         is_rendered = widget_id in self._new_widget_state.rendered_ids
         result = widget_checks.check_client_value(
@@ -202,31 +198,47 @@ never resends, so keeping them would only hold the files until the session ends.
 
 **Widgets this session never registered.** An entry with no metadata skips the boundary
 check. This is what a browser sends when it reconnects to a new session, after a server
-restart or an expired `server.disconnectedSessionTTL`: it resends its whole widget map.
-When the widget registers, its value runs through checks 1, 2, 3, 5, and 6 against this
-run's metadata. Check 3 compares it with the default, so an untouched, empty `required`
-widget passes. A violation is handled as at the boundary: `ambiguous_option` is
-accepted, and any other violation drops the value as never sent, which in a new session
-means the default, and re-syncs the browser. The drop also clears
-`incoming_serialized_value(s)`, as the `disabled` discard does today, so option
-reconciliation cannot fall back to the refused label. So state restoration keeps
-working, and skipping the boundary is safe:
+restart, a move to another replica, or an expired `server.disconnectedSessionTTL`. The
+browser does not rerun when it reconnects, so the user's first interaction carries its
+whole widget map, and the trigger of that interaction if it is a click, a form submit, a
+`st.menu_button` pick, or a chat message, to a session that has registered nothing. When
+the widget registers, its value or trigger runs through checks 1, 2, 3, 5, and 6 against
+this run's metadata, and check 4 passes, because registering renders the widget. Check 3
+compares it with the default, so an untouched, empty `required` widget passes, and an
+active trigger always differs from its unfired default. A violation is handled as at the
+boundary: `ambiguous_option` is accepted, and any other violation drops the value as never
+sent, which in a new session means the default. A refused value re-syncs the browser; a
+refused trigger needs no re-sync. The drop also clears `incoming_serialized_value(s)`, as
+the `disabled` discard does today, so option reconciliation cannot fall back to the
+refused label. So state restoration keeps working, and skipping the boundary is safe:
 
 - No callback can fire for the entry, because `_call_callbacks` needs metadata.
-- A value whose widget never registers is discarded at the end of the run, because
-  `_is_stale_widget` treats missing metadata as stale.
+- An entry whose widget never registers is discarded at the end of the run, because
+  `_is_stale_widget` treats missing metadata as stale. A forged trigger for a widget the
+  run does not render therefore does nothing, and one for a disabled widget is refused
+  when the widget registers.
 
-A trigger with no metadata is dropped at the boundary instead. A correct browser sends a
-trigger once and never resends it, so such a trigger is forged, or it is a click on a
-stale element right after a reconnect, before the new session registered the widget.
-Today it makes the widget return `True` without running its callback.
+An accepted trigger counts in the run: the button returns `True`, the form submits with
+the values the message carries, `st.menu_button` returns its label, and `st.chat_input`
+returns the message. Its callback does not run, which is what happens without this spec
+too. Callbacks run before the script body, and a widget gets metadata only when the body
+registers it. Running the callback at registration instead would run it in the middle of
+the script, after the elements above the widget were sent, and a callback that sets one
+of their keys, such as clearing a text input, would raise
+`StreamlitWidgetAlreadyInstantiatedError`. So the trigger keeps its return value only.
+Firing the callback would need a run that registers the widgets first and a rerun with
+the trigger after it, or a frontend that reruns when it reconnects; both are follow-ups.
 
 Replayed trigger states (`replay_trigger_states`) are server-held and were checked when
 they first arrived, so they skip the check. That holds only if replay capture skips the
 rejected entries: it reads the raw message (`_current_interaction_widget_states`), so it
 takes the last entry per ID, as the boundary does, and filters out the IDs in
 `_rejected_client_values`. Otherwise a rejected trigger sent beside a legal callback that
-requests a targeted rerun would come back unchecked in the next run.
+requests a targeted rerun would come back unchecked in the next run. It filters out
+triggers for widgets this session never registered too: they wait for the check at
+registration, which a replay skips. The targeted rerun preempts the body they would
+register in, so such a trigger is lost, which only a session that has already registered
+some widgets, and so not a fresh reconnect, can see.
 
 ### Violations
 
@@ -269,9 +281,9 @@ identity). It is logged at warning level otherwise, once per widget per session:
 `wrong_type`, `unreadable`, `duplicate_items`, `bad_shape`, and `malformed`, which a
 correct browser never sends. Under the hidden `global.e2eTest` option every rejection is
 logged at warning level and never deduplicated, for the e2e parity gate. That dedup set only holds
-IDs with metadata: an unknown ID is never checked at the boundary, and a trigger dropped
-for having none is not logged. So the set is bounded by the widgets this session
-registered, not by what a client sends.
+IDs with metadata: an unknown ID is checked only when its widget registers, and an entry
+whose widget never registers is discarded without a log line. So the set is bounded by
+the widgets this session registered, not by what a client sends.
 
 ### Where constraints live: in each widget's serde
 
@@ -949,8 +961,10 @@ a client value no longer rebuilds the widget's metadata.
   passes.
 - **Session state**: a widget map sent to a new session keeps its values, including an
   empty `required` default and a shared `format_func` label, and fires no callback. A
-  violating entry falls back to the default at registration, and a trigger in that map is
-  dropped. A message that repeats an ID is judged on its last entry only, for callbacks
+  violating entry falls back to the default at registration. A trigger in that map is
+  returned by its widget without its callback, refused at registration for a disabled
+  widget or one whose validator refuses it, and dropped when its widget does not
+  register. A message that repeats an ID is judged on its last entry only, for callbacks
   and for replay capture alike. A value refused for a widget outside a fragment is
   corrected at the next full run. A run that ends in `st.stop()` or an exception before a
   widget registers keeps that widget's value, and a forged trigger for it is then
@@ -980,7 +994,9 @@ a client value no longer rebuilds the widget's metadata.
   `@pytest.mark.allow_refused_widget_values(reason=...)`, and that list should stay short. Forged values cannot be sent from a browser, so
   the new e2e tests cover only what a correct browser can produce: re-sync, values that
   survive a reconnect to a new session (`websocket_reconnects_test.py` only resumes the
-  same session), a self-disabling button that returns `True`, and a link that names a
+  same session), a click, form submit, and chat message that land as the first
+  interaction after such a reconnect, a self-disabling button that returns `True`, and a
+  link that names a
   disabled bound widget. The `run_every` hide race is timing-dependent, so a
   session-state test replays its message order instead.
 

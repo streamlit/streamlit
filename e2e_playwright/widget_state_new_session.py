@@ -25,7 +25,16 @@ def on_change() -> None:
 name = st.text_input("Name", key="name", on_change=on_change)
 pick = st.selectbox("Pick", ["a", "b", "c"], key="pick", on_change=on_change)
 agree = st.checkbox("Agree", key="agree", on_change=on_change)
-st.button("Rerun")
+clicked = st.button("Rerun")
+
+with st.form("form"):
+    city = st.text_input("City", key="city")
+    submitted = st.form_submit_button("Submit")
+
+message = st.chat_input("Say something", key="chat")
 
 st.write(f"values: {name}, {pick}, {agree}")
 st.write(f"changes: {st.session_state.changes}")
+st.write(f"clicked: {clicked}")
+st.write(f"submitted: {submitted}, {city}")
+st.write(f"message: {message}")

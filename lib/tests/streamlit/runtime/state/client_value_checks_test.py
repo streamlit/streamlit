@@ -170,8 +170,8 @@ def _restored_app() -> None:
 def test_a_new_session_keeps_the_browser_values_it_is_sent() -> None:
     """A browser's map resent to a new session restores values without callbacks.
 
-    A violating entry falls back to the default and re-syncs, and a trigger in
-    the map is dropped.
+    A violating entry falls back to the default and re-syncs, and a click in
+    the map counts, without its callback.
     """
     first = AppTest.from_function(_restored_app).run()
     first.text_input[0].input("Ann")
@@ -193,7 +193,100 @@ def test_a_new_session_keeps_the_browser_values_it_is_sent() -> None:
     assert fresh.slider[0].value == 5
     assert fresh.slider[0].proto.set_value is True
     assert fresh.text_input[0].proto.set_value is False
-    assert fresh.markdown[0].value == "clicked=False"
+    assert fresh.markdown[0].value == "clicked=True"
+    assert "callbacks" not in fresh.session_state
+
+
+def _first_trigger_app() -> None:
+    import streamlit as st
+
+    def record(name: str) -> None:
+        st.session_state.callbacks = [*st.session_state.get("callbacks", []), name]
+
+    with st.form("form"):
+        name = st.text_input("Name", key="name")
+        submitted = st.form_submit_button("Submit", on_click=record, args=("submit",))
+    choice = st.menu_button(
+        "Actions", ["Edit", "Delete"], key="actions", on_click=record, args=("menu",)
+    )
+    message = st.chat_input(
+        "Say", key="chat", max_chars=5, on_submit=record, args=("chat",)
+    )
+    locked = st.button("Locked", key="locked", disabled=True)
+    st.write(
+        f"submitted={submitted} name={name} choice={choice} message={message} "
+        f"locked={locked}"
+    )
+
+
+def _trigger_ids() -> dict[str, str]:
+    """The element IDs of ``_first_trigger_app``'s widgets."""
+    at = AppTest.from_function(_first_trigger_app).run()
+    return {
+        "name": at.text_input[0].id,
+        "submit": at.button(key="FormSubmitter:form-Submit").id,
+        "actions": at.menu_button[0].id,
+        "chat": at.chat_input[0].id,
+        "locked": at.button(key="locked").id,
+    }
+
+
+def _chat(element_id: str, text: str) -> WidgetState:
+    state = WidgetState(id=element_id)
+    state.chat_input_value.data = text
+    return state
+
+
+def _menu(element_id: str, label: str) -> WidgetState:
+    state = WidgetState(id=element_id)
+    state.string_trigger_value.data = label
+    return state
+
+
+@pytest.mark.parametrize(
+    ("trigger", "expected"),
+    [
+        (
+            "submit",
+            "submitted=True name=Ann choice=None message=None locked=False",
+        ),
+        ("menu", "submitted=False name= choice=Delete message=None locked=False"),
+        ("chat", "submitted=False name= choice=None message=hi locked=False"),
+        # Each trigger is checked at registration, against this run's widget.
+        ("locked", "submitted=False name= choice=None message=None locked=False"),
+        (
+            "unknown_label",
+            "submitted=False name= choice=None message=None locked=False",
+        ),
+        ("too_long", "submitted=False name= choice=None message=None locked=False"),
+    ],
+)
+def test_a_trigger_counts_as_the_first_interaction_in_a_new_session(
+    trigger: str, expected: str
+) -> None:
+    """After a reconnect to a new session, the first trigger is not lost.
+
+    The browser does not rerun when it reconnects, so the first interaction
+    reaches a session that registered nothing. The widget returns the trigger
+    once it registers; its callback does not run.
+    """
+    ids = _trigger_ids()
+    states = {
+        "submit": [
+            WidgetState(id=ids["name"], string_value="Ann"),
+            WidgetState(id=ids["submit"], trigger_value=True),
+        ],
+        "menu": [_menu(ids["actions"], "Delete")],
+        "chat": [_chat(ids["chat"], "hi")],
+        "locked": [WidgetState(id=ids["locked"], trigger_value=True)],
+        "unknown_label": [_menu(ids["actions"], "Drop table")],
+        "too_long": [_chat(ids["chat"], "far too long")],
+    }[trigger]
+
+    fresh = AppTest.from_function(_first_trigger_app)
+    fresh._run(widget_state=forged_many(*states))
+
+    assert fresh.markdown[0].value == expected
     assert "callbacks" not in fresh.session_state
 
 

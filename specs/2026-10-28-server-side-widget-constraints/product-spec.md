@@ -376,9 +376,11 @@ bound, a form's staged values when it remounts, and the sync races. App code als
 one: the Components v2 trigger key. A browser that reconnects to a new session, after a
 server restart or an expired `server.disconnectedSessionTTL`, keeps its values as
 today, apart from text past `max_chars`, or an empty value for a required widget whose
-default is not empty, that app code wrote. No callback fires for them, and each is
-checked when its widget registers. The other changes affect only forged values,
-`AppTest`, and the agent API.
+default is not empty, that app code wrote. Its first interaction counts as today too,
+even when it is a click, a form submit, or a chat message: the widget returns it. No
+callback fires for these values and triggers, also as today, and each is checked when
+its widget registers. The other changes affect only forged values, `AppTest`, and the
+agent API.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -443,10 +445,9 @@ checked when its widget registers. The other changes affect only forged values,
   to remove or reset that widget anyway. The same holds for a user's own rerun: a second
   click on a button in a dialog its first click closed is dropped. The message that
   changes the page is still checked against the previous page, so a change it carries
-  for that page's widgets still lands. A click on a stale element right after a
-  reconnect, before the new session registered the widget, is dropped too. Rejections a
-  correct browser can cause are logged at debug level; the rest are logged at warning
-  level, without the value, which may be a password.
+  for that page's widgets still lands. Rejections a correct browser can cause are logged
+  at debug level; the rest are logged at warning level, without the value, which may be
+  a password.
 
 ## Open questions
 
@@ -497,7 +498,7 @@ checked when its widget registers. The other changes affect only forged values,
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote. |
+| Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
 | No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
