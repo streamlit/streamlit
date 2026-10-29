@@ -155,12 +155,14 @@ const INLINE_MATH_PATTERN = /(?<!\$)\$(?![\s$])[^$\n]*?[^\s$]\$(?!\d)/
 
 /**
  * While streaming, a possible dollar amount cut off at its closing `$`, as in
- * "$5-$" before "10" arrives: a span that starts with a digit, whose closing
- * `$` is followed only by non-space characters, such as closing `**` from
- * remend or a `st.write_stream` cursor. Capture group 1 is the span without
- * that closing `$`.
+ * "$5-$" before "10" arrives. It matches the last `$` pair when:
+ * - the span starts with a digit and has no LaTeX markers (`\`, `^`, `{`, `}`,
+ *   `=`), so a formula like "$2^n$" still counts
+ * - only non-space characters follow the closing `$`, such as closing `**`
+ *   from remend or a `st.write_stream` cursor
+ * Capture group 1 is the span without that closing `$`.
  */
-const UNFINISHED_AMOUNT_PATTERN = /(\$\d[^$\n]*)\$(?=\S*$)/
+const UNFINISHED_AMOUNT_PATTERN = /(\$\d[^$\n\\^{}=]*)\$(?=[^\s$]*$)/
 
 /**
  * Detects whether the markdown source contains a math formula, ignoring `$` in

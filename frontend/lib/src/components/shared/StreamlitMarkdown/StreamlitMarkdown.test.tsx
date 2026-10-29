@@ -296,6 +296,10 @@ describe("containsMathSyntax", () => {
       description: "a dollar range in a link that remend closed",
     },
     { input: "Range $5-$▌", description: "a dollar range before a cursor" },
+    {
+      input: "Plans: $10/mo, $15-$",
+      description: "a dollar range after another amount",
+    },
   ])(
     "holds back a possible dollar amount while streaming: $description",
     ({ input }: { input: string }) => {
@@ -307,6 +311,11 @@ describe("containsMathSyntax", () => {
   it.each([
     { input: "Energy: $E=mc^2$", description: "a formula at the end" },
     { input: "**Area: $x^2$**", description: "a formula in bold" },
+    {
+      input: "Result: **$2^n$**",
+      description: "a formula in bold that starts with a digit",
+    },
+    { input: "$10^6$▌", description: "a formula before a cursor" },
     { input: "$5-$\nnext", description: "a span on a finished line" },
   ])(
     "detects math while streaming: $description",
@@ -1576,6 +1585,21 @@ describe("StreamlitMarkdown", () => {
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container.querySelector("strong")).toHaveTextContent("Price: $5-$")
     expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders a finished formula in bold mid-stream", async () => {
+    render(
+      <StreamlitMarkdown
+        source="Result: **$2^n$"
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector("strong .katex")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$")
   })
 
   it("renders an unfinished display math block while streaming", async () => {
