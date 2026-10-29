@@ -89,6 +89,7 @@ The server checks every value a client sends, including a bound URL parameter, a
 - `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range
 - `required`: a client can't empty a required widget
 - `disabled`: a disabled widget accepts nothing
+- Rendering: a widget the latest run didn't render, such as a button behind `if is_admin:`, after `st.stop()`, or in a closed dialog, accepts no click or change
 
 Still not enforced on the server, so check these yourself when they matter:
 
