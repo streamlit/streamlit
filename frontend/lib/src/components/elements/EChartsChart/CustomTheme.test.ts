@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
+import * as echarts from "echarts"
+import type { EChartsOption, EChartsType } from "echarts"
+
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { getGray30, getGray70 } from "~lib/theme/getColors"
+import {
+  getDecreasingRed,
+  getGray30,
+  getGray70,
+  getIncreasingGreen,
+} from "~lib/theme/getColors"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { convertRemToPx } from "~lib/theme/utils"
 
@@ -89,6 +97,25 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(axisLabel.margin).toBe(convertRemToPx(theme.spacing.sm))
     expect(axisLabel.textBorderColor).toBe(theme.colors.bgColor)
     expect(axisLabel.textBorderWidth).toBe(2)
+  })
+
+  it("dims toggled-off legend entries and the inactive page arrow", () => {
+    const { colors } = darkTheme.emotion
+    const legend = buildStreamlitEChartsTheme(darkTheme.emotion).legend as {
+      textStyle: { color: string }
+      inactiveColor: string
+      lineStyle: { inactiveColor: string }
+      pageIconColor: string
+      pageIconInactiveColor: string
+    }
+
+    // ECharts' fixed light gray barely differs from an active dark-mode label.
+    expect(legend.inactiveColor).toBe(colors.fadedText20)
+    expect(legend.inactiveColor).not.toBe(legend.textStyle.color)
+    expect(legend.lineStyle.inactiveColor).toBe(colors.fadedText20)
+    // The active page arrow must stand out from the disabled one.
+    expect(legend.pageIconColor).toBe(legend.textStyle.color)
+    expect(legend.pageIconInactiveColor).toBe(colors.fadedText20)
   })
 
   it("seeds the continuous color scale from the sequential palette", () => {
@@ -217,13 +244,95 @@ describe("buildStreamlitEChartsTheme", () => {
       itemStyle: { color: string }
     }
     expect(boxplot.itemStyle.color).toBe(theme.colors.bgColor)
+  })
 
-    // Funnel labels sit on palette colors of varying lightness, so they get the
-    // same dark-text-plus-halo treatment as sunburst labels.
-    const funnel = echartsTheme.funnel as {
-      label: { textBorderWidth: number }
+  it("separates funnel stages and sunburst segments with the app background", () => {
+    const { colors } = darkTheme.emotion
+    const echartsTheme = buildStreamlitEChartsTheme(darkTheme.emotion)
+
+    for (const seriesType of ["funnel", "sunburst"]) {
+      const series = echartsTheme[seriesType] as {
+        itemStyle: { borderColor: string }
+      }
+      expect(series.itemStyle.borderColor).toBe(colors.bgColor)
+      // ECharts' white separators glare on a dark background.
+      expect(series.itemStyle.borderColor).not.toBe(colors.white)
     }
-    expect(funnel.label.textBorderWidth).toBeGreaterThan(0)
+  })
+
+  it.each([
+    "bar",
+    "pictorialBar",
+    "scatter",
+    "heatmap",
+    "funnel",
+    "sankey",
+    "graph",
+  ])("outlines a selected %s item in the body text color", seriesType => {
+    // ECharts' fixed near-black outline barely shows in dark mode.
+    for (const emotionTheme of [lightTheme.emotion, darkTheme.emotion]) {
+      const series = buildStreamlitEChartsTheme(emotionTheme)[seriesType] as {
+        select: { itemStyle: { borderColor: string } }
+      }
+      expect(series.select.itemStyle.borderColor).toBe(
+        emotionTheme.colors.bodyText
+      )
+    }
+  })
+
+  it.each(["funnel", "pie", "tree"])(
+    "styles %s labels for the default position on the app background",
+    seriesType => {
+      const echartsTheme = buildStreamlitEChartsTheme(darkTheme.emotion)
+
+      const series = echartsTheme[seriesType] as {
+        label: Record<string, unknown>
+      }
+      // These labels sit on the app background, so they use the plain themed
+      // label style instead of ECharts' fixed grays or an on-fill halo.
+      expect(series.label.color).toBe(getGray70(darkTheme.emotion))
+      expect(series.label.textBorderWidth).toBeUndefined()
+    }
+  )
+
+  it("styles axis pointer labels like the tooltip", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    const axisPointer = echartsTheme.axisPointer as {
+      label: Record<string, unknown>
+    }
+    const tooltip = echartsTheme.tooltip as Record<string, unknown>
+    expect(axisPointer.label.backgroundColor).toBe(tooltip.backgroundColor)
+    expect(axisPointer.label.borderColor).toBe(tooltip.borderColor)
+    expect(axisPointer.label.color).toBe(theme.colors.bodyText)
+  })
+
+  it.each([
+    ["light", lightTheme.emotion],
+    ["dark", darkTheme.emotion],
+  ] as const)(
+    "colors rising candles green and falling ones red (%s)",
+    (_name, emotionTheme) => {
+      const candlestick = buildStreamlitEChartsTheme(emotionTheme)
+        .candlestick as { itemStyle: Record<string, unknown> }
+
+      // ECharts names the rising candle `color` and the falling one `color0`.
+      expect(candlestick.itemStyle).toEqual({
+        color: getIncreasingGreen(emotionTheme),
+        borderColor: getIncreasingGreen(emotionTheme),
+        color0: getDecreasingRed(emotionTheme),
+        borderColor0: getDecreasingRed(emotionTheme),
+      })
+    }
+  )
+
+  it("fills line markers on a dark background only", () => {
+    // ECharts fills its hollow default marker with white, which reads as a
+    // white dot in dark mode but as hollow on a light background.
+    expect(buildStreamlitEChartsTheme(darkTheme.emotion).line).toEqual({
+      symbol: "circle",
+    })
+    expect(buildStreamlitEChartsTheme(lightTheme.emotion).line).toBeUndefined()
   })
 
   it("themes components that ECharts renders with its own fixed tokens", () => {
@@ -285,6 +394,19 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(hovered.borderColor).not.toBe(toolbox.iconStyle.borderColor)
   })
 
+  it("themes the toolbox data view panel", () => {
+    const { colors } = darkTheme.emotion
+    const toolbox = buildStreamlitEChartsTheme(darkTheme.emotion).toolbox as {
+      feature: { dataView: Record<string, unknown> }
+    }
+
+    const { dataView } = toolbox.feature
+    expect(dataView.backgroundColor).toBe(colors.bgColor)
+    expect(dataView.textColor).toBe(colors.bodyText)
+    expect(dataView.textareaColor).toBe(colors.secondaryBg)
+    expect(dataView.buttonColor).toBe(colors.primary)
+  })
+
   it("adds a readable halo to sunburst labels", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
@@ -308,6 +430,215 @@ describe("buildStreamlitEChartsTheme", () => {
     // segments (so an explicit user color array replaces it wholesale).
     const axisLine = gauge.axisLine as Record<string, Record<string, unknown>>
     expect(axisLine.lineStyle.color).toEqual([[1, getGray30(theme)]])
+  })
+})
+
+/**
+ * These render through real ECharts to pin how its theme merge applies the
+ * Streamlit theme: which keys reach which model, and which beat ECharts' own
+ * series defaults.
+ */
+describe("Streamlit theme resolved by ECharts", () => {
+  interface ResolvedModel {
+    get: (path: string | string[]) => unknown
+  }
+
+  const charts: EChartsType[] = []
+
+  afterEach(() => {
+    charts.splice(0).forEach(chart => chart.dispose())
+  })
+
+  /** Render ``option`` with the dark Streamlit theme and option defaults. */
+  function renderThemed(option: EChartsOptionObject): {
+    component: (mainType: string) => ResolvedModel
+    series: (index: number) => ResolvedModel
+  } {
+    const emotionTheme = darkTheme.emotion
+    const chart = echarts.init(
+      null,
+      buildStreamlitEChartsTheme(emotionTheme),
+      { renderer: "svg", ssr: true, width: 400, height: 300 }
+    )
+    charts.push(chart)
+    chart.setOption(
+      applyStreamlitOptionDefaults(
+        option,
+        STREAMLIT_THEME,
+        emotionTheme
+      ) as EChartsOption
+    )
+    const model = (
+      chart as unknown as {
+        getModel: () => {
+          getComponent: (mainType: string) => ResolvedModel
+          getSeriesByIndex: (index: number) => ResolvedModel
+        }
+      }
+    ).getModel()
+    return {
+      component: mainType => model.getComponent(mainType),
+      series: index => model.getSeriesByIndex(index),
+    }
+  }
+
+  it("styles the data view panel without enabling a data view button", () => {
+    const withDataView = renderThemed({
+      toolbox: { feature: { dataView: {} } },
+      series: [],
+    })
+    expect(
+      withDataView
+        .component("toolbox")
+        .get(["feature", "dataView", "backgroundColor"])
+    ).toBe(darkTheme.emotion.colors.bgColor)
+
+    // Must NOT happen: the themed feature adds a button the spec didn't enable.
+    const withoutDataView = renderThemed({
+      toolbox: { feature: { saveAsImage: {} } },
+      series: [],
+    })
+    expect(
+      Object.keys(
+        withoutDataView.component("toolbox").get("feature") as object
+      )
+    ).toEqual(["saveAsImage"])
+  })
+
+  it("outlines a selected bar in the body text color over ECharts' default", () => {
+    const { series } = renderThemed({
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: { type: "value" },
+      series: [{ type: "bar", selectedMode: "single", data: [1] }],
+    })
+
+    expect(series(0).get(["select", "itemStyle", "borderColor"])).toBe(
+      darkTheme.emotion.colors.bodyText
+    )
+    // ECharts' own 2px outline width is kept.
+    expect(series(0).get(["select", "itemStyle", "borderWidth"])).toBe(2)
+  })
+
+  it.each(["funnel", "pie"])(
+    "labels outside %s series plainly and inside ones with the halo",
+    seriesType => {
+      const emotionTheme = darkTheme.emotion
+      const data = [{ name: "A", value: 1 }]
+      const { series } = renderThemed({
+        series: [
+          { type: seriesType, data },
+          { type: seriesType, label: { position: "inside" }, data },
+        ],
+      })
+
+      expect(series(0).get(["label", "color"])).toBe(getGray70(emotionTheme))
+      expect(series(0).get(["label", "textBorderWidth"])).toBeUndefined()
+      expect(series(1).get(["label", "color"])).toBe(
+        emotionTheme.colors.gray100
+      )
+      expect(series(1).get(["label", "textBorderColor"])).toBe(
+        emotionTheme.colors.white
+      )
+    }
+  )
+
+  it("gives a funnel data item that moves its label inside the halo", () => {
+    const emotionTheme = darkTheme.emotion
+    const { series } = renderThemed({
+      series: [
+        {
+          type: "funnel",
+          data: [
+            { name: "A", value: 2, label: { position: "inside" } },
+            { name: "B", value: 1 },
+          ],
+        },
+      ],
+    })
+
+    const itemLabelColor = (index: number): unknown =>
+      (
+        series(0) as unknown as {
+          getData: () => { getItemModel: (index: number) => ResolvedModel }
+        }
+      )
+        .getData()
+        .getItemModel(index)
+        .get(["label", "color"])
+    expect(itemLabelColor(0)).toBe(emotionTheme.colors.gray100)
+    // Must NOT happen: the halo leaks onto the outside label of another item.
+    expect(itemLabelColor(1)).toBe(getGray70(emotionTheme))
+  })
+
+  it("resolves the candlestick colors and dark line markers over ECharts' defaults", () => {
+    const emotionTheme = darkTheme.emotion
+    const { series } = renderThemed({
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: { type: "value" },
+      series: [
+        { type: "candlestick", data: [[1, 2, 0, 3]] },
+        { type: "line", data: [1] },
+        {
+          type: "candlestick",
+          itemStyle: { color: "#123456" },
+          data: [[1, 2, 0, 3]],
+        },
+      ],
+    })
+
+    expect(series(0).get(["itemStyle", "color"])).toBe(
+      getIncreasingGreen(emotionTheme)
+    )
+    expect(series(0).get(["itemStyle", "color0"])).toBe(
+      getDecreasingRed(emotionTheme)
+    )
+    expect(series(1).get("symbol")).toBe("circle")
+    // The spec's rising color wins, and the keys it leaves out stay themed.
+    expect(series(2).get(["itemStyle", "color"])).toBe("#123456")
+    expect(series(2).get(["itemStyle", "color0"])).toBe(
+      getDecreasingRed(emotionTheme)
+    )
+  })
+
+  it("themes a scrolling legend over its own page arrow defaults", () => {
+    const { component } = renderThemed({
+      legend: { type: "scroll" },
+      series: [],
+    })
+
+    expect(component("legend").get("pageIconInactiveColor")).toBe(
+      darkTheme.emotion.colors.fadedText20
+    )
+    expect(component("legend").get("inactiveColor")).toBe(
+      darkTheme.emotion.colors.fadedText20
+    )
+  })
+
+  it("themes the global axis pointer label that cross tooltips inherit", () => {
+    const { component } = renderThemed({
+      tooltip: { trigger: "axis", axisPointer: { type: "cross" } },
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: { type: "value" },
+      series: [{ type: "line", data: [1] }],
+    })
+
+    const { bgColor } = darkTheme.emotion.colors
+    expect(component("axisPointer").get(["label", "backgroundColor"])).toBe(
+      bgColor
+    )
+    // Each axis resolves its chip through its own axisPointer option and the
+    // tooltip's before the global one, so an axis-level default would shadow
+    // the theme. Check the per-axis models ECharts draws the chips from.
+    const { coordSysAxesInfo } = component("axisPointer") as unknown as {
+      coordSysAxesInfo: {
+        axesInfo: Record<string, { axisPointerModel: ResolvedModel }>
+      }
+    }
+    expect(
+      Object.values(coordSysAxesInfo.axesInfo).map(({ axisPointerModel }) =>
+        axisPointerModel.get(["label", "backgroundColor"])
+      )
+    ).toEqual([bgColor, bgColor])
   })
 })
 
@@ -921,6 +1252,108 @@ describe("applyStreamlitOptionDefaults", () => {
     expect((baseOption.grid as Record<string, unknown>).left).toBe(gridLeft)
     expect(result.aria).toBeUndefined()
     expect(result.grid).toBeUndefined()
+  })
+
+  it("gives inside funnel labels the on-fill halo without overriding user label keys", () => {
+    const insideLabel = { position: "inside", color: "#123456" }
+    const result = applyDefaults({
+      series: [
+        { type: "funnel", data: [] },
+        { type: "funnel", label: { position: "outer" }, data: [] },
+        { type: "funnel", label: insideLabel, data: [] },
+      ],
+    })
+
+    const series = result.series as Array<{ label?: Record<string, unknown> }>
+    // Outside labels keep the theme's plain body label style.
+    expect(series[0].label).toBeUndefined()
+    expect(series[1].label).toEqual({ position: "outer" })
+    // The user's label color wins, and the halo fills the remaining keys.
+    expect(series[2].label).toEqual({
+      position: "inside",
+      color: "#123456",
+      textBorderColor: theme.colors.white,
+      textBorderWidth: 2,
+    })
+    expect(insideLabel).toEqual({ position: "inside", color: "#123456" })
+  })
+
+  it("gives inside pie labels the halo but keeps a donut center label plain", () => {
+    const centerLabel = { position: "center" }
+    const result = applyDefaults({
+      series: [
+        { type: "pie", label: { position: "inner" }, data: [] },
+        { type: "pie", label: centerLabel, data: [] },
+        // Must NOT happen: a series type without inside labels gets the halo.
+        { type: "bar", label: { position: "inside" }, data: [] },
+      ],
+    })
+
+    const series = result.series as Array<{ label: Record<string, unknown> }>
+    expect(series[0].label).toEqual({
+      position: "inner",
+      color: theme.colors.gray100,
+      textBorderColor: theme.colors.white,
+      textBorderWidth: 2,
+    })
+    // The center label sits in the donut hole, on the app background.
+    expect(series[1].label).toBe(centerLabel)
+    expect(series[2].label).toEqual({ position: "inside" })
+  })
+
+  it("gives inside funnel data item labels the halo under user series label keys", () => {
+    const outsideData = [{ name: "A", value: 1 }, 2]
+    const insideItem = { name: "B", value: 1, label: { position: "center" } }
+    const result = applyDefaults({
+      series: [
+        { type: "funnel", data: outsideData },
+        {
+          type: "funnel",
+          label: { color: "#123456" },
+          data: [{ name: "A", value: 2 }, insideItem, 3],
+        },
+      ],
+    })
+
+    const series = result.series as Array<{ data: unknown[] }>
+    // A funnel without inside item labels keeps its data array.
+    expect(series[0].data).toBe(outsideData)
+    // The item inherits the user's series label color, so the halo adds only
+    // the border keys.
+    expect(series[1].data[1]).toEqual({
+      ...insideItem,
+      label: {
+        position: "center",
+        textBorderColor: theme.colors.white,
+        textBorderWidth: 2,
+      },
+    })
+    expect(series[1].data[0]).toEqual({ name: "A", value: 2 })
+    expect(series[1].data[2]).toBe(3)
+    expect(insideItem.label).toEqual({ position: "center" })
+  })
+
+  it("styles inside funnel labels in timeline variants, not when theme is None", () => {
+    const funnel = { type: "funnel", label: { position: "center" }, data: [] }
+    const typelessTick = { series: [{ label: { position: "inside" } }] }
+    const result = applyDefaults({
+      baseOption: { series: [funnel] },
+      options: [{ series: [funnel] }, typelessTick],
+    })
+
+    const labelOf = (target: unknown): Record<string, unknown> =>
+      (target as { series: Array<{ label: Record<string, unknown> }> })
+        .series[0].label
+    expect(labelOf(result.baseOption).textBorderWidth).toBe(2)
+    expect(labelOf((result.options as unknown[])[0]).textBorderColor).toBe(
+      theme.colors.white
+    )
+    // A per-tick override without `type` merges into a series by index, so
+    // the pass can't tell it is a funnel and leaves it as written.
+    expect((result.options as unknown[])[1]).toEqual(typelessTick)
+
+    const unthemed = applyDefaults({ series: [funnel] }, "")
+    expect((unthemed.series as unknown[])[0]).toBe(funnel)
   })
 
   it("leaves an array of grids untouched", () => {

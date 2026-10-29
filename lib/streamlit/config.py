@@ -857,6 +857,25 @@ _create_option(
 )
 
 _create_option(
+    "runner.connectionDefaultTTL",
+    description="""
+        Default time to live, in seconds, for ``st.connection`` when its
+        ``ttl`` argument is omitted entirely.
+
+        ``None`` (default) leaves such connections cached until they are
+        cleared. Passing ``ttl`` explicitly to ``st.connection`` -- including
+        ``ttl=None`` -- always uses that value and ignores this default.
+
+        This default applies to every connection type, including caller's-rights
+        connections and the Snowflake connection in Streamlit in Snowflake.
+        Expiry closes the connection, and the next ``st.connection`` call opens
+        a new one. Pass an explicit ``ttl`` to override it for one connection.
+    """,
+    default_val=None,
+    type_=float,
+)
+
+_create_option(
     "runner.cacheHashSeed",
     description="""
         Escape hatch for an app whose @st.cache_data / @st.cache_resource cache

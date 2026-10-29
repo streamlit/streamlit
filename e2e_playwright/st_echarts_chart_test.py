@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 23
+_EXPECTED_CHART_COUNT = 24
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 
@@ -428,6 +428,9 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Radar exercises non-cartesian theming (split areas, spokes, names),
         # which must stay subtle/legible in both light and dark mode.
         "c_radar": "st_echarts_chart-radar",
+        # Funnel stage separators must follow the app background instead of
+        # ECharts' white lines, and outside labels must stay legible on it.
+        "c_funnel": "st_echarts_chart-funnel",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
