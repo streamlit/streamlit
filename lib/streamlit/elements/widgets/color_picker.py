@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -48,11 +48,13 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 # Compiled regex for validating hex colors (#RGB or #RRGGBB format)
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
@@ -69,18 +71,28 @@ def _normalize_hex_color(color: str) -> str:
 class ColorPickerSerde:
     value: str
 
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a color the picker never sends: anything but #rgb or #rrggbb.
+
+        The author's ``value`` is accepted as written, because the browser
+        sends it back as it received it.
+        """
+        # None or an empty string is unset and reads as the default.
+        if not ui_value or ui_value == self.value:
+            return None
+        return widget_checks.hex_color(ui_value)
+
     def serialize(self, v: str) -> str:
         return str(v)
 
     def deserialize(self, ui_value: str | None) -> str:
+        # Converts but never replaces a value: validate refuses what a client
+        # may not send, and URL seeding validates the result.
         # None or empty string means use default
         if ui_value is None or ui_value == "":
             return self.value
-        # Normalize first (add # prefix if missing), then validate
-        normalized = _normalize_hex_color(ui_value)
-        if not _HEX_COLOR_RE.match(normalized):
-            return self.value
-        return normalized
+        # A URL value may leave out the "#", which a link has to escape.
+        return _normalize_hex_color(ui_value)
 
 
 class ColorPickerMixin:
@@ -382,6 +394,7 @@ class ColorPickerMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,

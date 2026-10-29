@@ -356,8 +356,8 @@ with no log and no re-sync, and a correct browser can send such a value in a syn
 A conversion can still map a forged value onto the stored one, but a correct browser
 never sends that form, so nothing needs a re-sync. A value a deserializer cannot
 represent, such as an unknown `select_slider` label, passes through as the label, as
-`selectbox` already does, and a slider value with the wrong number of items passes
-through as a tuple of its items. `st.feedback` keeps an index outside its options, and
+`selectbox` already does, and an `st.slider` or `st.select_slider` value with the wrong
+number of items passes through as a tuple of its items. `st.feedback` keeps an index outside its options, and
 `st.menu_button` still reads an unknown label as no click: a trigger resets anyway, and
 the agent API's wire comparison still reaches its validator.
 

@@ -110,16 +110,34 @@ class SelectSliderSerde(Generic[T]):
         # nothing for it.
         return Counter(self.formatted_options)
 
+    @property
+    def _is_range(self) -> bool:
+        return len(self.default_indices) >= 2
+
     def validate(
         self, ui_value: Sequence[str] | None, **_kwargs: Any
     ) -> Violation | None:
-        """Refuse a label a client was not shown.
+        """Refuse a label a client was not shown, or a value of the wrong shape.
 
-        A range may repeat a label, as both ends of an empty range do.
+        A single slider sends one label. A range sends two, its lower end
+        first, and may repeat a label, as both ends of an empty range do.
         """
         if ui_value is None:
             return None
-        return widget_checks.items_of(self._label_counts, ui_value, unique=False)
+        violation = widget_checks.item_count(
+            ui_value, allowed=(2,) if self._is_range else (1,)
+        )
+        if violation is not None:
+            return violation
+        violation = widget_checks.items_of(self._label_counts, ui_value, unique=False)
+        if widget_checks.browser_refuses(violation) or not self._is_range:
+            return violation
+        # Every label names an option here. A shared one is ordered by the
+        # option it resolves to, as the deserializer reads it.
+        order = widget_checks.ordered(
+            [self.formatted_option_to_index[label] for label in ui_value]
+        )
+        return order or violation
 
     def _get_default(self, is_range: bool) -> T | tuple[T, T]:
         """Return the default value based on default_indices."""
@@ -159,18 +177,13 @@ class SelectSliderSerde(Generic[T]):
     def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T] | str:
         """Convert formatted string list back to option value(s).
 
-        A label that names no option passes through as the label, so it
-        never reads as the stored value: ``validate`` refuses it.
+        A label that names no option passes through as the label, and a
+        wrong number of labels as a tuple, so neither reads as the stored
+        value: ``validate`` refuses both.
         """
-        is_range = len(self.default_indices) >= 2
+        is_range = self._is_range
 
-        if not ui_value:
-            return self._get_default(is_range=is_range)
-
-        expected_len = 2 if is_range else 1
-        if len(ui_value) != expected_len:
-            # Wrong number of values (e.g. single URL param for a range
-            # select_slider); fall back to default so the URL param is cleared.
+        if ui_value is None:
             return self._get_default(is_range=is_range)
 
         # Look up each string value. An unknown label keeps no index.
@@ -181,6 +194,9 @@ class SelectSliderSerde(Generic[T]):
                 results.append((idx, self.options[idx]))
             else:
                 results.append((None, s))
+
+        if len(results) != (2 if is_range else 1):
+            return cast("tuple[T, T]", tuple(item for _, item in results))
 
         if is_range:
             (start_idx, start), (end_idx, end) = results

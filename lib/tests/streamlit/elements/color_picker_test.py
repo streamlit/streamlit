@@ -28,6 +28,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state.widget_checks import Violation
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -278,12 +279,44 @@ class ColorPickerTest(DeltaGeneratorTestCase):
 class TestColorPickerSerde:
     """Tests for the ColorPickerSerde serializer/deserializer."""
 
-    def test_invalid_value_falls_back_to_default(self) -> None:
-        """Test that invalid UI values fall back to default."""
+    def test_invalid_value_passes_through_for_validate_to_refuse(self) -> None:
+        """An invalid color is normalized but never replaced by the default."""
         serde = ColorPickerSerde("#000000")
 
-        assert serde.deserialize("notacolor") == "#000000"
-        assert serde.deserialize("notacolor") != "notacolor"
+        assert serde.deserialize("notacolor") == "#notacolor"
+        assert serde.validate("#notacolor") == Violation(
+            "malformed", {"expected": "a hex color as #rgb or #rrggbb"}
+        )
+
+    @pytest.mark.parametrize(
+        ("ui_value", "is_valid"),
+        [
+            (None, True),
+            # An empty string is unset and reads as the default.
+            ("", True),
+            ("#abc", True),
+            ("#ABCDEF", True),
+            ("#a1b2c3", True),
+            # Matched in full, so a trailing newline is refused.
+            ("#ffffff\n", False),
+            ("red", False),
+            ("ffffff", False),
+            ("##000000", False),
+            ("#abcd", False),
+        ],
+    )
+    def test_validate(self, ui_value: str | None, is_valid: bool) -> None:
+        """#rgb or #rrggbb in either case, as the picker sends them."""
+        serde = ColorPickerSerde("#000000")
+
+        assert (serde.validate(ui_value) is None) is is_valid
+
+    def test_validate_accepts_the_authors_value_as_written(self) -> None:
+        """The browser sends the author's value back as it received it."""
+        serde = ColorPickerSerde("#fff\n")
+
+        assert serde.validate("#fff\n") is None
+        assert serde.validate("#000\n") is not None
 
     def test_value_is_normalized_with_hash_prefix(self) -> None:
         """Test that valid hex values are normalized with a # prefix."""
@@ -307,11 +340,11 @@ class TestColorPickerSerde:
 
         assert deserialized == original
 
-    def test_double_hash_falls_back_to_default(self) -> None:
-        """Test that a double hash (##000000) falls back to default."""
+    def test_double_hash_passes_through(self) -> None:
+        """A double hash (##000000) is kept for validate to refuse."""
         serde = ColorPickerSerde("#ff0000")
 
-        assert serde.deserialize("##000000") == "#ff0000"
+        assert serde.deserialize("##000000") == "##000000"
 
 
 class ColorPickerOnChangeModeTest(DeltaGeneratorTestCase):

@@ -590,6 +590,10 @@ def _chosen_values(at: AppTest) -> dict[str, Any]:
     ("key", "field", "resyncs"),
     [
         ("level", {"string_array_value": _labels("b", "zzz")}, True),
+        # A range is two labels, lower end first.
+        ("level", {"string_array_value": _labels("d", "b")}, True),
+        ("level", {"string_array_value": _labels("b")}, True),
+        ("level", {"string_array_value": _labels("a", "b", "c")}, True),
         # The empty label a browser sends for an index past the options.
         ("level", {"string_array_value": _labels("")}, True),
         # A keyed button group reads a label it cannot resolve as the
@@ -645,6 +649,10 @@ def test_a_menu_click_on_an_unknown_option_is_no_click() -> None:
         ("level", ["zzz", "a"], ("a", "b"), ["a", "b"]),
         # A repaired value that equals the default clears the param.
         ("level", ["zzz", "c"], ("b", "c"), None),
+        # A reversed range is sorted; a wrong number of labels clears the param.
+        ("level", ["d", "a"], ("a", "d"), ["a", "d"]),
+        ("level", "a", ("b", "c"), None),
+        ("level", ["a", "b", "c"], ("b", "c"), None),
         ("pill", "zzz", None, None),
         # Unknown items are filtered from a multi-select array.
         ("segments", ["a", "zzz"], ["a"], "a"),
@@ -1112,3 +1120,68 @@ def test_a_bound_url_date_or_time_is_repaired_or_cleared(
     assert not at.exception
     assert at.session_state[key] == expected_value
     assert at.query_params.get(key) == expected_param
+
+
+def _color_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.color_picker(
+        "Color", "#00FF00", key="color", on_change=on_change, args=["color"]
+    )
+
+
+_LEGAL_COLOR: dict[str, dict[str, Any]] = {"color": {"string_value": "#123456"}}
+
+
+@pytest.mark.parametrize(
+    "color",
+    ["red", "#12345", "#ffffff\n", "##123456", "654321", "#12345g"],
+)
+def test_a_color_the_picker_never_sends_is_refused(color: str) -> None:
+    """A malformed color runs no callback, keeps the previous one, and re-syncs."""
+    at = AppTest.from_function(_color_app).run()
+    _send_legal_values(at, _LEGAL_COLOR)
+
+    _assert_refused_and_resynced(at, "color", {"string_value": color}, _LEGAL_COLOR)
+
+
+@pytest.mark.parametrize("color", ["#abc", "#ABCDEF", "#00FF00"])
+def test_a_color_in_either_case_and_length_is_accepted(color: str) -> None:
+    """#rgb and #rrggbb in either case pass, and so does the author's value."""
+    at = AppTest.from_function(_color_app).run()
+    _send_legal_values(at, _LEGAL_COLOR)
+
+    at._run(widget_state=forged(_widget_id(at, "color"), string_value=color))
+
+    assert at.session_state.calls == ["color", "color"]
+    assert at.session_state.color == color
+
+
+@pytest.mark.parametrize(
+    ("url_value", "expected_value", "expected_param"),
+    [
+        # A link may leave out the "#", and the URL is corrected.
+        ("ff0000", "#ff0000", "#ff0000"),
+        ("#abc", "#abc", "#abc"),
+        ("red", "#00FF00", None),
+        # Matched in full, so a trailing newline no longer seeds.
+        ("#ffffff\n", "#00FF00", None),
+    ],
+)
+def test_a_bound_url_color_is_normalized_or_cleared(
+    url_value: str, expected_value: str, expected_param: str | None
+) -> None:
+    """A link is checked with the picker's validator after the "#" is added."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        "st.color_picker('Color', '#00FF00', key='color', bind='query-params')\n"
+    )
+    at.query_params["color"] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state.color == expected_value
+    assert at.query_params.get("color") == expected_param

@@ -829,16 +829,27 @@ def test_select_slider_serde_deserialize_none_returns_range_default() -> None:
     assert serde.deserialize(None) == ("a", "d")
 
 
-def test_select_slider_serde_deserialize_wrong_length_falls_back_to_default() -> None:
-    """deserialize returns the default when the value count mismatches the range arity."""
+@pytest.mark.parametrize(
+    ("default_indices", "labels", "expected"),
+    [
+        ([0, 3], ["b"], ("b",)),
+        ([0, 3], ["a", "b", "c"], ("a", "b", "c")),
+        ([0, 3], [], ()),
+        ([1], ["a", "b"], ("a", "b")),
+        ([1], [], ()),
+    ],
+)
+def test_select_slider_serde_deserialize_passes_a_wrong_length_through(
+    default_indices: list[int], labels: list[str], expected: tuple[str, ...]
+) -> None:
+    """A wrong number of labels reads as a tuple of them, never as the default."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c", "d"],
         formatted_options=["a", "b", "c", "d"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
-        default_indices=[0, 3],
+        default_indices=default_indices,
     )
-    # A range serde expects two values; a single value triggers the fallback.
-    assert serde.deserialize(["b"]) == ("a", "d")
+    assert serde.deserialize(labels) == expected
 
 
 def test_select_slider_serde_deserialize_unknown_value_passes_through() -> None:
@@ -864,35 +875,49 @@ def test_select_slider_serde_deserialize_range_with_unknown_value() -> None:
     assert serde.deserialize(["unknown", "b"]) == ("unknown", "b")
 
 
+_SHARED_OPTIONS_MISSING = {"options": ("a", "b", "X", "c")}
+
+
 @pytest.mark.parametrize(
-    ("labels", "expected"),
+    ("is_range", "labels", "expected"),
     [
-        (None, None),
-        (["b"], None),
-        # An empty range lists one label twice.
-        (["b", "b"], None),
+        (False, None, None),
+        (False, ["b"], None),
         # A shared label is accepted in a browser session.
-        (["X"], Violation("ambiguous_option", {"positions": (0,)})),
-        (
-            ["b", "zz"],
-            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (1,)}),
-        ),
+        (False, ["X"], Violation("ambiguous_option", {"positions": (0,)})),
         # The empty label a browser sends for an index past the options.
         (
+            False,
             [""],
-            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (0,)}),
+            Violation("not_an_option", {**_SHARED_OPTIONS_MISSING, "positions": (0,)}),
         ),
+        (False, ["a", "b"], Violation("bad_shape", {"item_counts": (1,)})),
+        (False, [], Violation("bad_shape", {"item_counts": (1,)})),
+        (True, ["a", "c"], None),
+        # An empty range lists one label twice.
+        (True, ["b", "b"], None),
+        (True, ["c", "a"], Violation("bad_shape", {"order": True})),
+        (
+            True,
+            ["b", "zz"],
+            Violation("not_an_option", {**_SHARED_OPTIONS_MISSING, "positions": (1,)}),
+        ),
+        (True, ["b"], Violation("bad_shape", {"item_counts": (2,)})),
+        (True, ["a", "b", "c"], Violation("bad_shape", {"item_counts": (2,)})),
+        # A shared label is ordered by the option it resolves to, the last.
+        (True, ["X", "c"], Violation("ambiguous_option", {"positions": (0,)})),
+        (True, ["c", "X"], Violation("bad_shape", {"order": True})),
     ],
 )
 def test_select_slider_serde_validate(
-    labels: list[str] | None, expected: Violation | None
+    is_range: bool, labels: list[str] | None, expected: Violation | None
 ) -> None:
-    """validate checks that each label names an option, and allows repeats."""
+    """Each label names an option, in the shape and order the slider sends."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
-        ["a", "b", "x1", "x2"],
-        formatted_options=["a", "b", "X", "X"],
-        formatted_option_to_index={"a": 0, "b": 1, "X": 3},
-        default_indices=[0],
+        ["a", "b", "x1", "x2", "c"],
+        formatted_options=["a", "b", "X", "X", "c"],
+        formatted_option_to_index={"a": 0, "b": 1, "X": 3, "c": 4},
+        default_indices=[0, 4] if is_range else [0],
     )
     ui_value = (
         None
