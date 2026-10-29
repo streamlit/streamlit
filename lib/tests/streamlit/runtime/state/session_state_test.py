@@ -3431,7 +3431,6 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
     def cb_b() -> None:
         calls.append("b")
 
-    ss = SessionState()
     wid = "w-json"
     meta = WidgetMetadata(
         id=wid,
@@ -3441,11 +3440,8 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
         callbacks={"a": cb_a, "b": cb_b},
     )
 
-    # Register metadata
-    ss._set_widget_metadata(meta)
-
     # Old state: {value: {a:1, b:2}}
-    ss._old_state[wid] = {"value": {"a": 1, "b": 2}}
+    ss = _session_with(meta, old_state={wid: {"value": {"a": 1, "b": 2}}})
     # New state: {value: {a:1, b:3}}
     ss._new_widget_state.set_from_value(wid, {"value": {"a": 1, "b": 3}})
 
@@ -3502,7 +3498,6 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     def cb_submit() -> None:
         called.append("submit")
 
-    ss = SessionState()
     wid = "w-trig"
     meta = WidgetMetadata(
         id=wid,
@@ -3512,8 +3507,7 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
         value_type="json_trigger_value",
         callbacks={"click": cb_click, "submit": cb_submit},
     )
-
-    ss._set_widget_metadata(meta)
+    ss = _session_with(meta)
 
     # Emulate serialized proto received from frontend
     ws = WidgetStateProto(id=wid)
