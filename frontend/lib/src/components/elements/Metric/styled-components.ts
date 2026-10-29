@@ -19,6 +19,10 @@ import styled from "@emotion/styled"
 import type { Metric as MetricProto } from "@streamlit/protobuf"
 
 import {
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
+import {
   StyledWidgetLabel,
   type StyledWidgetProps,
 } from "~lib/components/widgets/BaseWidget/styled-components"
@@ -26,7 +30,10 @@ import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
-/** Rendered width of the metric value at its unscaled font size, recorded on beforeprint for the print scale. */
+/**
+ * Width of the metric value at its unscaled font size. Recorded on
+ * `beforeprint` for the print scale.
+ */
 export const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
 
 /**
@@ -38,11 +45,11 @@ export const METRIC_AVAILABLE_VAR = "--st-metric-available"
 interface StyledMetricContainerProps {
   showBorder: boolean
   /** A content-width card is sized by its figure, so print must not contain it. */
-  contentWidth?: boolean
+  isContentWidth?: boolean
 }
 
 export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
-  ({ theme, showBorder, contentWidth }) => ({
+  ({ theme, showBorder, isContentWidth }) => ({
     height: "100%",
     ...(showBorder && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -72,7 +79,7 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
       // content-width card is sized by that value, so containing it would
       // shrink the card to the label. The figure still scales when the
       // printed column, recorded in `--st-metric-available`, is narrower.
-      ...(contentWidth === true
+      ...(isContentWidth === true
         ? {
             "& .stMetricValue .stMarkdownEllipsis": {
               fontSize: `min(1em, calc(1em * tan(atan2(var(${METRIC_AVAILABLE_VAR}, var(${METRIC_TEXT_WIDTH_VAR}, 100vw)), var(${METRIC_TEXT_WIDTH_VAR}, 100vw)))))`,
@@ -109,6 +116,12 @@ export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     marginTop: showBorder ? undefined : theme.spacing.lg,
     marginBottom: showBorder ? theme.spacing.twoXL : undefined,
+    // The sparkline keeps the pixel width measured on screen. The printed
+    // card is often narrower and no longer clips, so cap the chart and its
+    // SVG or canvas to the card.
+    ...printWidthCapStyles,
+    "& .vega-embed": printWidthCapStyles,
+    "& svg, & canvas": printGraphicFitStyles,
   })
 )
 

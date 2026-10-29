@@ -42,6 +42,7 @@ import {
   DynamicIcon,
   IsSidebarContext,
   NavigationContext,
+  PRINT_INACTIVE_ATTRIBUTE,
   SidebarConfigContext,
   useEmotionTheme,
   useScrollbarGutterSize,
@@ -268,7 +269,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       data-collapsed={isCollapsed ? "true" : "false"}
       // Marks a collapsed sidebar as unprinted, so print layout ignores its
       // charts and dataframes. Closed tabs use the same marker.
-      data-st-inactive={isCollapsed ? "" : undefined}
+      {...{ [PRINT_INACTIVE_ATTRIBUTE]: isCollapsed ? "" : undefined }}
       enable={{
         top: false,
         right: true,

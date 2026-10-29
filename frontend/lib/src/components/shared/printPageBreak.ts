@@ -17,16 +17,23 @@
 import type { CSSObject } from "@emotion/styled"
 
 /**
+ * Marks a subtree that stays mounted but is not on the printed page: a
+ * closed tab panel or a collapsed sidebar.
+ */
+export const PRINT_INACTIVE_ATTRIBUTE = "data-st-inactive"
+
+/**
  * Excludes an element that is mounted but not on the printed page: inside a
  * closed tab, a collapsed sidebar, or a collapsed expander.
  */
-export const PRINT_VISIBLE_FILTER =
-  ":not([data-st-inactive] *):not(details:not([open]) *)"
+export const PRINT_VISIBLE_FILTER = `:not([${PRINT_INACTIVE_ATTRIBUTE}] *):not(details:not([open]) *)`
 
 /**
  * Charts by their own element classes. A chart's SVG or canvas prints as one
  * piece, so the browser moves it to the next page instead of splitting it.
- * `st.bokeh_chart` is not a built-in element, so there is no class to match.
+ * Only built-in chart renderers with a stable frontend class are listed. A
+ * new chart element must be added here to stack its column row and stay on
+ * one page in print.
  */
 export const PRINT_CHART_SELECTOR =
   ":is(.stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)"
