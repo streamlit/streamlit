@@ -15,7 +15,7 @@
  */
 
 import { transparentize } from "color2k"
-import { isPlainObject } from "lodash-es"
+import { isPlainObject, omit } from "lodash-es"
 
 import {
   getDecreasingRed,
@@ -229,9 +229,9 @@ function buildChartTitleDefaults(theme: EmotionTheme): {
  * with a light halo stays readable on every palette color, whereas any single
  * fixed color disappears on part of the palette.
  *
- * Both colors are primitives that are the same in light and dark mode, so
- * ``withInsideFunnelLabelStyle`` can write them into the option, which
- * EChartsChart doesn't rebuild when only the theme colors change.
+ * Both colors must stay the same in light and dark mode:
+ * ``withInsideFunnelLabelStyle`` writes them into the option, and
+ * EChartsChart doesn't rebuild the option on a color-only theme change.
  */
 function buildOnFillLabelStyle(theme: EmotionTheme): {
   color: string
@@ -287,9 +287,9 @@ export function buildStreamlitEChartsTheme(
     fontFamily: genericFonts.bodyFont,
     fontSize: bodyFontSize,
   }
-  // ECharts outlines a selected item in a fixed dark gray, which barely shows
-  // on a dark background. The body text color looks the same in light mode
-  // and stays visible in dark mode.
+  // ECharts outlines a selected item in a fixed dark gray that disappears on a
+  // dark background. Body text stays near-black in light mode and turns light
+  // in dark mode, so the outline stays visible in both.
   const selectStyle = {
     select: {
       itemStyle: {
@@ -468,8 +468,8 @@ export function buildStreamlitEChartsTheme(
       },
     },
     // Funnel labels sit outside the stages by default, on the app background.
-    // Inside labels get the on-fill halo per series (see
-    // `withInsideFunnelLabelStyle`), since a theme can't see the position.
+    // The theme can't branch on the label position, so inside labels get the
+    // on-fill halo in the option instead (see `withInsideFunnelLabelStyle`).
     funnel: {
       label: bodyTextStyle,
       itemStyle: {
@@ -1331,7 +1331,7 @@ export function applyStreamlitOptionDefaults(
  * Funnel label positions that draw the text on the stage itself. Mirrors
  * ``isLabelInside`` in ECharts' ``funnelLayout``.
  */
-const INSIDE_FUNNEL_LABEL_POSITIONS: ReadonlySet<unknown> = new Set([
+const INSIDE_FUNNEL_LABEL_POSITIONS: ReadonlySet<string> = new Set([
   "inner",
   "inside",
   "center",
@@ -1339,28 +1339,64 @@ const INSIDE_FUNNEL_LABEL_POSITIONS: ReadonlySet<unknown> = new Set([
   "insideRight",
 ])
 
+/** The ``label`` of a series or data item, or an empty object if it has none. */
+function getLabelObject(entry: unknown): Record<string, unknown> {
+  if (!isPlainObject(entry)) {
+    return {}
+  }
+  const { label } = entry as Record<string, unknown>
+  return isPlainObject(label) ? (label as Record<string, unknown>) : {}
+}
+
+/** Whether a funnel series or data item draws its label on the stage. */
+function hasInsideFunnelLabel(entry: unknown): boolean {
+  const { position } = getLabelObject(entry)
+  return (
+    typeof position === "string" && INSIDE_FUNNEL_LABEL_POSITIONS.has(position)
+  )
+}
+
 /**
- * Give funnel series with inside labels the on-fill label style.
+ * Give inside funnel labels the on-fill label style.
  *
  * The theme styles funnel labels for ECharts' default outside position, on
- * the app background. A theme can't see a series' label position, so a series
- * that moves its labels onto the palette-colored stages gets the on-fill halo
- * here. Label keys the user set win. A data item that sets its own
- * ``label.position`` keeps the series style.
+ * the app background. The init theme can't branch on a label's position, so
+ * this option-level pass adds the on-fill halo when a series places its
+ * labels inside, or when a data item moves its own label inside. Label keys
+ * the user set on the series or the item win. A data item that moves its
+ * label outside a series with inside labels keeps the series' halo.
  */
 function withInsideFunnelLabelStyle(
   option: EChartsOptionObject,
   theme: EmotionTheme
 ): EChartsOptionObject {
+  const onFillLabel = buildOnFillLabelStyle(theme)
   return mapOptionSeries(option, series => {
-    if (series.type !== "funnel" || !isPlainObject(series.label)) {
+    if (series.type !== "funnel") {
       return series
     }
-    const label = series.label as Record<string, unknown>
-    if (!INSIDE_FUNNEL_LABEL_POSITIONS.has(label.position)) {
+    const seriesLabel = getLabelObject(series)
+    if (hasInsideFunnelLabel(series)) {
+      // Data items inherit the series label, halo included.
+      return { ...series, label: { ...onFillLabel, ...seriesLabel } }
+    }
+    const { data } = series
+    if (!Array.isArray(data) || !data.some(hasInsideFunnelLabel)) {
       return series
     }
-    return { ...series, label: { ...buildOnFillLabelStyle(theme), ...label } }
+    // Items inherit the series label, so a key the user set there still wins.
+    const itemDefaults = omit(onFillLabel, Object.keys(seriesLabel))
+    return {
+      ...series,
+      data: data.map((item: unknown) =>
+        hasInsideFunnelLabel(item)
+          ? {
+              ...(item as Record<string, unknown>),
+              label: { ...itemDefaults, ...getLabelObject(item) },
+            }
+          : item
+      ),
+    }
   })
 }
 
@@ -1412,7 +1448,8 @@ function fillOptionDefaults(
  *
  * Besides the root ``series``, timeline specs nest series under
  * ``baseOption`` and per-tick ``options[*]``, and responsive specs nest them
- * under ``media[*].option`` at either level. Non-object entries are kept.
+ * under ``media[*].option`` at either level. Non-object entries are returned
+ * unchanged.
  */
 function mapOptionSeries(
   option: EChartsOptionObject,

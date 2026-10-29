@@ -408,8 +408,8 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Radar exercises non-cartesian theming (split areas, spokes, names),
         # which must stay subtle/legible in both light and dark mode.
         "c_radar": "st_echarts_chart-radar",
-        # ECharts separates funnel stages with white lines, and outside labels
-        # sit on the page background.
+        # Funnel stage separators must follow the app background instead of
+        # ECharts' white lines, and outside labels must stay legible on it.
         "c_funnel": "st_echarts_chart-funnel",
     }
     for key, name in snapshots.items():

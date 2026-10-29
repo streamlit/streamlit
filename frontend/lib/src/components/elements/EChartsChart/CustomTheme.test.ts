@@ -284,9 +284,9 @@ describe("buildStreamlitEChartsTheme", () => {
     const echartsTheme = buildStreamlitEChartsTheme(darkTheme.emotion)
 
     const funnel = echartsTheme.funnel as { label: Record<string, unknown> }
-    // Outside labels sit on the app background like other component labels,
+    // Outside funnel labels sit on the app background, so they use the plain
+    // themed label style without an on-fill halo.
     expect(funnel.label.color).toBe(getGray70(darkTheme.emotion))
-    // so they skip the on-fill halo, which smears on a dark background.
     expect(funnel.label.textBorderWidth).toBeUndefined()
   })
 
@@ -530,6 +530,54 @@ describe("Streamlit theme resolved by ECharts", () => {
     expect(series(1).get(["label", "textBorderColor"])).toBe(
       emotionTheme.colors.white
     )
+  })
+
+  it("gives a funnel data item that moves its label inside the halo", () => {
+    const emotionTheme = darkTheme.emotion
+    const { series } = renderThemed({
+      series: [
+        {
+          type: "funnel",
+          data: [
+            { name: "A", value: 2, label: { position: "inside" } },
+            { name: "B", value: 1 },
+          ],
+        },
+      ],
+    })
+
+    const itemLabelColor = (index: number): unknown =>
+      (
+        series(0) as unknown as {
+          getData: () => { getItemModel: (index: number) => ResolvedModel }
+        }
+      )
+        .getData()
+        .getItemModel(index)
+        .get(["label", "color"])
+    expect(itemLabelColor(0)).toBe(emotionTheme.colors.gray100)
+    // Must NOT happen: the halo leaks onto the outside label of another item.
+    expect(itemLabelColor(1)).toBe(getGray70(emotionTheme))
+  })
+
+  it("resolves the candlestick colors and dark line markers over ECharts' defaults", () => {
+    const emotionTheme = darkTheme.emotion
+    const { series } = renderThemed({
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: { type: "value" },
+      series: [
+        { type: "candlestick", data: [[1, 2, 0, 3]] },
+        { type: "line", data: [1] },
+      ],
+    })
+
+    expect(series(0).get(["itemStyle", "color"])).toBe(
+      getIncreasingGreen(emotionTheme)
+    )
+    expect(series(0).get(["itemStyle", "color0"])).toBe(
+      getDecreasingRed(emotionTheme)
+    )
+    expect(series(1).get("symbol")).toBe("circle")
   })
 
   it("themes a scrolling legend over its own page arrow defaults", () => {
@@ -1194,6 +1242,38 @@ describe("applyStreamlitOptionDefaults", () => {
       textBorderWidth: 2,
     })
     expect(insideLabel).toEqual({ position: "inside", color: "#123456" })
+  })
+
+  it("gives inside funnel data item labels the halo under user series label keys", () => {
+    const outsideData = [{ name: "A", value: 1 }, 2]
+    const insideItem = { name: "B", value: 1, label: { position: "center" } }
+    const result = applyDefaults({
+      series: [
+        { type: "funnel", data: outsideData },
+        {
+          type: "funnel",
+          label: { color: "#123456" },
+          data: [{ name: "A", value: 2 }, insideItem, 3],
+        },
+      ],
+    })
+
+    const series = result.series as Array<{ data: unknown[] }>
+    // A funnel without inside item labels keeps its data array.
+    expect(series[0].data).toBe(outsideData)
+    // The item inherits the user's series label color, so the halo adds only
+    // the border keys.
+    expect(series[1].data[1]).toEqual({
+      ...insideItem,
+      label: {
+        position: "center",
+        textBorderColor: theme.colors.white,
+        textBorderWidth: 2,
+      },
+    })
+    expect(series[1].data[0]).toEqual({ name: "A", value: 2 })
+    expect(series[1].data[2]).toBe(3)
+    expect(insideItem.label).toEqual({ position: "center" })
   })
 
   it("styles inside funnel labels in timeline variants, not when theme is None", () => {

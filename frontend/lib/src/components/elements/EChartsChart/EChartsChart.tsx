@@ -303,8 +303,9 @@ export function EChartsChart({
       prepared = applyAltToOption(prepared, element.alt)
     }
     return prepared
-    // `theme` is read for rem→px insets (spacing, title size, baseFontSize) and
-    // for the inside funnel label colors, which are the same in light and dark.
+    // Rebuild only when layout tokens change. `theme` is read for rem→px insets
+    // (spacing, title size, baseFontSize) and for the inside funnel label
+    // colors, which are the same in light and dark mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,
