@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import builtins
 import contextlib
+import contextvars
 import inspect
 import sys
+import threading
 import unittest
 from collections import Counter
 from datetime import date, datetime
@@ -50,13 +52,22 @@ from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.media_file_storage import MediaFileStorageError
-from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
+from streamlit.runtime.scriptrunner import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    magic_funcs,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    ScriptRunContext,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web import skills
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import create_pep649_function
+from tests.testutil import create_mock_script_run_ctx, create_pep649_function
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -72,10 +83,22 @@ def _mock_script_run_ctx() -> MagicMock:
     """Build a script run context for ``gather_metrics`` tests."""
     ctx = MagicMock()
     ctx.gather_usage_stats = True
-    ctx.command_tracking_deactivated = False
     ctx.shared = SharedRunState()
     ctx.fragment_ids_this_run = []
+    ThreadState.initialize()
     return ctx
+
+
+def _tracking_ctx() -> ScriptRunContext:
+    """Attach a real ScriptRunContext with usage-stats gathering enabled."""
+    ctx = create_mock_script_run_ctx()
+    ctx.gather_usage_stats = True
+    add_script_run_ctx(threading.current_thread(), ctx)
+    return ctx
+
+
+def _command_names(ctx: ScriptRunContext) -> list[str]:
+    return [command.name.split(":")[-1] for command in ctx.shared.tracked_commands]
 
 
 class MetricsUtilTest(unittest.TestCase):
@@ -844,6 +867,200 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
 
     assert len(ctx.shared.tracked_commands) == 1
     assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+
+
+def test_nested_commands_are_suppressed_in_the_same_context() -> None:
+    """Nested commands in one execution context record only the outer command."""
+    ctx = _tracking_ctx()
+
+    @metrics_util.gather_metrics("inner")
+    def inner() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        assert ThreadState.get().command_tracking_deactivated is True
+        inner()
+
+    outer()
+
+    assert _command_names(ctx) == ["outer"]
+    assert ThreadState.get().command_tracking_deactivated is False
+
+
+def test_main_script_command_tracking_uses_initialized_thread_state() -> None:
+    """Main-script execution tracks commands through the initialized ThreadState."""
+    ctx = _tracking_ctx()
+    assert ThreadState.get().command_tracking_deactivated is False
+
+    @metrics_util.gather_metrics("main_cmd")
+    def main_cmd() -> str:
+        assert ThreadState.get().command_tracking_deactivated is True
+        return "ok"
+
+    assert main_cmd() == "ok"
+    assert _command_names(ctx) == ["main_cmd"]
+    assert ThreadState.get().command_tracking_deactivated is False
+
+
+def test_parallel_contexts_record_independent_top_level_commands() -> None:
+    """Two copied execution contexts record overlapping top-level commands."""
+    ctx = _tracking_ctx()
+    overlap = threading.Barrier(2)
+    copied_a = contextvars.copy_context()
+    copied_b = contextvars.copy_context()
+
+    @metrics_util.gather_metrics("worker_a")
+    def worker_a() -> None:
+        overlap.wait()
+        overlap.wait()
+
+    @metrics_util.gather_metrics("worker_b")
+    def worker_b() -> None:
+        overlap.wait()
+        overlap.wait()
+
+    errors: list[BaseException] = []
+
+    def run(copied: contextvars.Context, fn: Callable[[], None]) -> None:
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied.run(fn)
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=run, args=(copied_a, worker_a)),
+        threading.Thread(target=run, args=(copied_b, worker_b)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    if errors:
+        raise errors[0]
+
+    assert set(_command_names(ctx)) == {"worker_a", "worker_b"}
+
+
+def test_finishing_one_context_does_not_reactivate_nested_tracking() -> None:
+    """One context restoring tracking must not un-suppress another context's nesting."""
+    ctx = _tracking_ctx()
+    both_inside = threading.Barrier(2)
+    a_finished = threading.Event()
+    copied_a = contextvars.copy_context()
+    copied_b = contextvars.copy_context()
+
+    @metrics_util.gather_metrics("nested_b")
+    def nested_b() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer_a")
+    def outer_a() -> None:
+        both_inside.wait()
+
+    @metrics_util.gather_metrics("outer_b")
+    def outer_b() -> None:
+        both_inside.wait()
+        a_finished.wait()
+        nested_b()
+
+    def run_a() -> None:
+        setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+        copied_a.run(outer_a)
+        a_finished.set()
+
+    def run_b() -> None:
+        setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+        copied_b.run(outer_b)
+
+    threads = [threading.Thread(target=run_a), threading.Thread(target=run_b)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert set(_command_names(ctx)) == {"outer_a", "outer_b"}
+
+
+def test_command_tracking_flag_restored_after_exception() -> None:
+    """An exception in a tracked command must restore nested-command tracking."""
+    ctx = _tracking_ctx()
+
+    @metrics_util.gather_metrics("boom")
+    def boom() -> None:
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        boom()
+
+    assert ThreadState.get().command_tracking_deactivated is False
+    assert _command_names(ctx) == ["boom"]
+
+    @metrics_util.gather_metrics("after_boom")
+    def after_boom() -> None:
+        pass
+
+    after_boom()
+    assert _command_names(ctx) == ["boom", "after_boom"]
+
+
+def test_command_tracking_flag_restored_after_rerun_exception() -> None:
+    """A RerunException must restore nested-command tracking for later commands."""
+    ctx = _tracking_ctx()
+
+    @metrics_util.gather_metrics("rerun_cmd")
+    def rerun_cmd() -> None:
+        raise RerunException(None)
+
+    with pytest.raises(RerunException):
+        rerun_cmd()
+
+    assert ThreadState.get().command_tracking_deactivated is False
+    assert _command_names(ctx) == ["rerun_cmd"]
+
+
+def test_gather_metrics_without_script_run_context_does_not_raise() -> None:
+    """Commands without an active ScriptRunContext stay untracked without raising."""
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=None):
+
+        @metrics_util.gather_metrics("no_ctx")
+        def no_ctx() -> str:
+            return "ok"
+
+        assert no_ctx() == "ok"
+
+
+def test_gather_metrics_without_thread_state_does_not_raise() -> None:
+    """A ScriptRunContext without ThreadState must not raise into the wrapped call."""
+    ctx = MagicMock()
+    ctx.gather_usage_stats = True
+    ctx.shared = SharedRunState()
+    result: list[int] = []
+    error: list[BaseException] = []
+
+    def run_in_fresh_thread() -> None:
+        try:
+            with patch(
+                "streamlit.runtime.metrics_util.get_script_run_ctx",
+                return_value=ctx,
+            ):
+
+                @metrics_util.gather_metrics("no_thread_state")
+                def no_thread_state() -> int:
+                    return 7
+
+                result.append(no_thread_state())
+        except BaseException as exc:
+            error.append(exc)
+
+    thread = threading.Thread(target=run_in_fresh_thread)
+    thread.start()
+    thread.join()
+    if error:
+        raise error[0]
+    assert result == [7]
+    assert ctx.shared.tracked_commands == ()
 
 
 @pytest.mark.parametrize(

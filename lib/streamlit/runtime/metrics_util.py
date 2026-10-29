@@ -32,7 +32,10 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -685,19 +688,31 @@ def gather_metrics(
         exec_start = timer()
         ctx = get_script_run_ctx(suppress_warning=True)
 
+        command_tracking_deactivated = False
+        thread_state_available = False
+        if ctx is not None:
+            try:
+                command_tracking_deactivated = (
+                    ThreadState.get().command_tracking_deactivated
+                )
+                thread_state_available = True
+            except RuntimeError:
+                # Tracking is skipped when this thread has a ScriptRunContext
+                # but no ThreadState, rather than raising into user code.
+                pass
+
         tracking_activated = (
             ctx is not None
+            and thread_state_available
             and ctx.gather_usage_stats
-            and not ctx.command_tracking_deactivated
+            and not command_tracking_deactivated
             and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
         command_telemetry: Command | None = None
-        # This flag is needed to make sure that only the command (the outermost command)
-        # that deactivated tracking (via ctx.command_tracking_deactivated) is able to reset it
-        # again. This is important to prevent nested commands from reactivating tracking.
-        # At this point, we don't know yet if the command will deactivated tracking.
+        # Only the command that deactivated tracking may restore it, so nested
+        # commands cannot reactivate tracking for an outer command.
         has_set_command_tracking_deactivated = False
 
         if ctx and tracking_activated:
@@ -712,10 +727,7 @@ def gather_metrics(
 
                 ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
-                ctx.command_tracking_deactivated = True
-                # The ctx.command_tracking_deactivated flag was set to True,
-                # we also need to set has_set_command_tracking_deactivated to True
-                # to make sure that this command is able to reset it again.
+                ThreadState.update(command_tracking_deactivated=True)
                 has_set_command_tracking_deactivated = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
@@ -730,11 +742,9 @@ def gather_metrics(
                 command_telemetry.time = to_microseconds(timer() - exec_start)
             raise
         finally:
-            # Activate tracking again if command executes without any exceptions
-            # we only want to do that if this command has set the
-            # flag to deactivate tracking.
-            if ctx and has_set_command_tracking_deactivated:
-                ctx.command_tracking_deactivated = False
+            if has_set_command_tracking_deactivated:
+                with contextlib.suppress(RuntimeError):
+                    ThreadState.update(command_tracking_deactivated=False)
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value

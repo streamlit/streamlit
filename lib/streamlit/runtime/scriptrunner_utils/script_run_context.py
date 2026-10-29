@@ -112,6 +112,8 @@ class FragmentThreadState:
     # _check_not_parallel_worker() to gate APIs that are unsafe during
     # concurrent execution (e.g. st.dialog, st.switch_page).
     is_parallel_worker: bool = False
+    # True while this execution context is inside an outer tracked command.
+    command_tracking_deactivated: bool = False
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -135,6 +137,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
+    command_tracking_deactivated: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
@@ -251,7 +254,6 @@ class ScriptRunContext:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     context_info: ContextInfo | None = None
     gather_usage_stats: bool = False
-    command_tracking_deactivated: bool = False
     _has_script_started: bool = False
     shared: SharedRunState = field(default_factory=SharedRunState)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
@@ -321,7 +323,6 @@ class ScriptRunContext:
             max_workers=config.get_option("runner.parallelMaxWorkers"),
         )
         self._has_script_started = False
-        self.command_tracking_deactivated: bool = False
         self.fragment_ids_this_run = fragment_ids_this_run
         self.is_history_navigation = is_history_navigation
         self.has_dialog_opened = False
