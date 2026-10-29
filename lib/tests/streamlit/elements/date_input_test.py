@@ -33,6 +33,8 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1014,8 +1016,8 @@ class TestDateInputSerdeISO:
         result = serde.deserialize(["2025-03-01", "2025-03-15"])
         assert result == (date(2025, 3, 1), date(2025, 3, 15))
 
-    def test_deserialize_invalid_format_reverts_to_default(self):
-        """Test that invalid date strings silently revert to the default value."""
+    def test_deserialize_invalid_format_raises(self):
+        """Unparseable text raises, which URL seeding catches and clears."""
         values = _DateInputValues(
             value=(date(2025, 1, 15),),
             is_range=False,
@@ -1023,8 +1025,20 @@ class TestDateInputSerdeISO:
             max=date(2030, 12, 31),
         )
         serde = DateInputSerde(values)
-        result = serde.deserialize(["not-a-date"])
-        assert result == date(2025, 1, 15)
+        with pytest.raises(ValueError, match="Unable to parse") as raised:
+            serde.deserialize(["not-a-date"])
+        assert "not-a-date" not in str(raised.value)
+
+    def test_deserialize_reads_the_legacy_layout(self):
+        """The legacy YYYY/MM/DD layout of old links is still read."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2030, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2025/01/16"]) == date(2025, 1, 16)
 
     def test_deserialize_none_returns_default(self):
         """Test that None ui_value returns the default value."""
@@ -1050,33 +1064,98 @@ class TestDateInputSerdeISO:
         result = serde.deserialize([])
         assert result == ()
 
-    def test_deserialize_out_of_bounds_reverts_to_default_single(self):
-        """Test that a date beyond max_value reverts to default (single mode)."""
-        values = _DateInputValues(
-            value=(date(2025, 1, 15),),
-            is_range=False,
-            min=date(2020, 1, 1),
-            max=date(2026, 12, 31),
+    def test_deserialize_passes_out_of_bounds_dates_through(self):
+        """Out-of-bounds and reversed dates are validate's to refuse."""
+        single = DateInputSerde(
+            _DateInputValues(
+                value=(date(2025, 1, 15),),
+                is_range=False,
+                min=date(2020, 1, 1),
+                max=date(2026, 12, 31),
+            )
         )
-        serde = DateInputSerde(values)
-        # Above max
-        assert serde.deserialize(["2030-06-15"]) == date(2025, 1, 15)
-        # Below min
-        assert serde.deserialize(["2019-06-15"]) == date(2025, 1, 15)
-
-    def test_deserialize_out_of_bounds_reverts_to_default_range(self):
-        """Test that an out-of-bounds date reverts to default (range mode)."""
-        values = _DateInputValues(
-            value=(date(2025, 3, 1), date(2025, 3, 15)),
-            is_range=True,
-            min=date(2020, 1, 1),
-            max=date(2026, 12, 31),
+        span = DateInputSerde(
+            _DateInputValues(
+                value=(date(2025, 3, 1), date(2025, 3, 15)),
+                is_range=True,
+                min=date(2020, 1, 1),
+                max=date(2026, 12, 31),
+            )
         )
-        serde = DateInputSerde(values)
-        # One date below min
-        assert serde.deserialize(["2019-01-01", "2025-03-15"]) == (
-            date(2025, 3, 1),
+        assert single.deserialize(["2030-06-15"]) == date(2030, 6, 15)
+        assert span.deserialize(["2025-03-15", "2019-01-01"]) == (
             date(2025, 3, 15),
+            date(2019, 1, 1),
+        )
+
+    @pytest.mark.parametrize(
+        ("is_range", "ui_value", "expected"),
+        [
+            (False, None, None),
+            (False, [], None),
+            (False, ["2024-06-15"], None),
+            # The bounds are inclusive.
+            (False, ["2020-01-01"], None),
+            (False, ["2026-12-31"], None),
+            (False, ["2024-06-15", "2024-06-16"], {"item_counts": (0, 1)}),
+            (False, ["2027-01-01"], "out_of_range"),
+            (False, ["2019-12-31"], "out_of_range"),
+            # The legacy layout is only read from links, never sent.
+            (False, ["2024/06/15"], "malformed"),
+            (False, ["2024-6-15"], "malformed"),
+            (False, ["2024-06-15T00:00"], "malformed"),
+            # A range may be empty or hold only its start, as while picking.
+            (True, [], None),
+            (True, ["2024-06-15"], None),
+            (True, ["2024-06-15", "2024-06-15"], None),
+            (True, ["2024-06-15", "2024-06-20"], None),
+            (True, ["2024-06-20", "2024-06-15"], {"order": True}),
+            (
+                True,
+                ["2024-06-15", "2024-06-16", "2024-06-17"],
+                {"item_counts": (0, 1, 2)},
+            ),
+            (True, ["2024-06-15", "2027-01-01"], "out_of_range"),
+        ],
+    )
+    def test_validate(
+        self, is_range: bool, ui_value: list[str] | None, expected: Any
+    ) -> None:
+        """Dates in the browser's layout, within the bounds, in a valid shape."""
+        serde = DateInputSerde(
+            _DateInputValues(
+                value=None,
+                is_range=is_range,
+                min=date(2020, 1, 1),
+                max=date(2026, 12, 31),
+            )
+        )
+        # A protobuf array, as the boundary passes it.
+        violation = serde.validate(
+            None
+            if ui_value is None
+            else WidgetState(
+                string_array_value={"data": ui_value}
+            ).string_array_value.data
+        )
+        if expected is None:
+            assert violation is None
+        elif isinstance(expected, dict):
+            assert violation == Violation("bad_shape", expected)
+        else:
+            assert violation is not None
+            assert violation.kind == expected
+
+    def test_validate_names_the_bounds(self) -> None:
+        """An out-of-range date reports both bounds."""
+        serde = DateInputSerde(
+            _DateInputValues(
+                value=None, is_range=False, min=date(2020, 1, 1), max=date(2026, 12, 31)
+            )
+        )
+        assert serde.validate(["2027-01-01"]) == Violation(
+            "out_of_range",
+            {"min_value": date(2020, 1, 1), "max_value": date(2026, 12, 31)},
         )
 
     def test_deserialize_in_bounds_succeeds(self):

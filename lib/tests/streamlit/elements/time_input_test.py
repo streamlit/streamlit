@@ -501,11 +501,34 @@ class TestTimeInputSerdeDeserialization:
         result = serde.deserialize("09:10")
         assert result == time(9, 10)
 
-    def test_deserialize_invalid_format_reverts_to_default(self):
-        """Test that unparseable strings revert to the default value."""
+    def test_deserialize_invalid_format_raises(self):
+        """Unparseable text raises, which URL seeding catches and clears."""
         serde = TimeInputSerde(value=time(8, 45))
-        result = serde.deserialize("not-a-time")
-        assert result == time(8, 45)
+        with pytest.raises(ValueError, match="does not match format"):
+            serde.deserialize("not-a-time")
+
+    @pytest.mark.parametrize(
+        ("ui_value", "step", "is_valid"),
+        [
+            (None, 900, True),
+            ("14:30", 900, True),
+            # Either layout is accepted for any step.
+            ("14:30:00", 60, True),
+            ("14:30", 30, True),
+            ("14:30:15", 30, True),
+            ("24:00", 900, False),
+            ("2:30", 900, False),
+            ("14:30\n", 900, False),
+            ("14:30:00.5", 30, False),
+        ],
+    )
+    def test_validate(self, ui_value: str | None, step: int, is_valid: bool):
+        """HH:MM and HH:MM:SS, as the browser sends them."""
+        violation = TimeInputSerde(value=time(8, 45), step=step).validate(ui_value)
+        assert (violation is None) is is_valid
+        if not is_valid:
+            assert violation is not None
+            assert violation.kind == "malformed"
 
 
 @pytest.mark.parametrize(

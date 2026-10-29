@@ -690,6 +690,9 @@ Items 1–3 are covered above.
   - The deserializers also read the legacy `YYYY/MM/DD` and `YYYY/MM/DD, HH:MM`, which
     only URL values use. URL seeding validates them after deserializing, so those links
     keep working.
+  - Text in no layout a deserializer reads makes it raise instead of falling back to
+    the default. The boundary refuses that as `unreadable`, and URL seeding clears the
+    parameter.
 - `color_picker`: `#rgb` or `#rrggbb` in either case, as `_HEX_COLOR_RE` accepts, checked
   with `fullmatch`, which also fixes `$` matching before a trailing newline.
 - `pagination`: an integer in `1..num_pages`.

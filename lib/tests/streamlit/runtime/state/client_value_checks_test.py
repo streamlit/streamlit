@@ -20,6 +20,7 @@ real script runner, the way a browser message reaches the session.
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import math
 from typing import TYPE_CHECKING, Any
@@ -921,6 +922,188 @@ def test_a_bound_url_value_outside_the_bounds_is_cleared(
         "st.slider('Level', 0, 100, 10, key='level', bind='query-params')\n"
         "st.slider('Span', 0, 100, (20, 80), key='span', bind='query-params')\n"
         "st.pagination(5, key='page', bind='query-params')\n"
+    )
+    at = AppTest.from_string(script)
+    at.query_params[key] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state[key] == expected_value
+    assert at.query_params.get(key) == expected_param
+
+
+def _temporal_app() -> None:
+    import datetime as dt
+
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.date_input(
+        "Day",
+        dt.date(2026, 1, 15),
+        min_value=dt.date(2026, 1, 1),
+        max_value=dt.date(2026, 12, 31),
+        key="day",
+        on_change=on_change,
+        args=["day"],
+    )
+    st.date_input(
+        "Trip",
+        (dt.date(2026, 3, 1), dt.date(2026, 3, 5)),
+        min_value=dt.date(2026, 1, 1),
+        max_value=dt.date(2026, 12, 31),
+        key="trip",
+        on_change=on_change,
+        args=["trip"],
+    )
+    st.datetime_input(
+        "When",
+        dt.datetime(2026, 1, 15, 9, 30),
+        min_value=dt.datetime(2026, 1, 1),
+        max_value=dt.datetime(2026, 12, 31, 23, 59),
+        key="when",
+        on_change=on_change,
+        args=["when"],
+    )
+    st.time_input(
+        "Alarm", dt.time(7, 0), key="alarm", on_change=on_change, args=["alarm"]
+    )
+
+
+# A legal value other than the default for each widget in _temporal_app.
+_LEGAL_TEMPORAL: dict[str, dict[str, Any]] = {
+    "day": {"string_array_value": _labels("2026-02-01")},
+    "trip": {"string_array_value": _labels("2026-04-01", "2026-04-10")},
+    "when": {"string_array_value": _labels("2026-02-01T10:15")},
+    "alarm": {"string_value": "08:15"},
+}
+
+
+@pytest.mark.parametrize(
+    ("key", "field"),
+    [
+        ("day", {"string_array_value": _labels("2027-01-01")}),
+        ("day", {"string_array_value": _labels("2025-12-31")}),
+        # The legacy layout is only read from links.
+        ("day", {"string_array_value": _labels("2026/02/02")}),
+        ("day", {"string_array_value": _labels("2026-2-2")}),
+        ("day", {"string_array_value": _labels("2026-02-02", "2026-02-03")}),
+        ("day", {"string_array_value": _labels("not-a-date")}),
+        ("trip", {"string_array_value": _labels("2026-04-10", "2026-04-01")}),
+        (
+            "trip",
+            {"string_array_value": _labels("2026-04-01", "2026-04-02", "2026-04-03")},
+        ),
+        ("trip", {"string_array_value": _labels("2026-04-01", "2027-01-01")}),
+        ("when", {"string_array_value": _labels("2027-01-01T00:00")}),
+        ("when", {"string_array_value": _labels("2026/02/02, 10:15")}),
+        ("when", {"string_array_value": _labels("2026-02-01T10:15:00")}),
+        (
+            "when",
+            {"string_array_value": _labels("2026-02-03T10:15", "2026-02-04T10:15")},
+        ),
+        ("alarm", {"string_value": "9:15"}),
+        ("alarm", {"string_value": "25:00"}),
+    ],
+)
+def test_a_date_or_time_outside_its_layout_or_bounds_is_refused(
+    key: str, field: dict[str, Any]
+) -> None:
+    """A forged date or time runs no callback, keeps the previous value, and re-syncs."""
+    at = AppTest.from_function(_temporal_app).run()
+    _send_legal_values(at, _LEGAL_TEMPORAL)
+
+    _assert_refused_and_resynced(at, key, field, _LEGAL_TEMPORAL)
+
+
+@pytest.mark.parametrize(
+    ("key", "field", "expected"),
+    [
+        # A range may hold only its start, as while picking.
+        (
+            "trip",
+            {"string_array_value": _labels("2026-04-01")},
+            (dt.date(2026, 4, 1),),
+        ),
+        (
+            "day",
+            {"string_array_value": _labels("2026-12-31")},
+            dt.date(2026, 12, 31),
+        ),
+        (
+            "when",
+            {"string_array_value": _labels("2026-12-31T23:59")},
+            dt.datetime(2026, 12, 31, 23, 59),
+        ),
+        # Seconds are accepted for any step, and dropped for a minute step.
+        ("alarm", {"string_value": "08:15:30"}, dt.time(8, 15)),
+    ],
+)
+def test_a_date_or_time_the_browser_sends_is_accepted(
+    key: str, field: dict[str, Any], expected: Any
+) -> None:
+    """Partial ranges, bounds, and both time layouts run the callback."""
+    at = AppTest.from_function(_temporal_app).run()
+
+    at._run(widget_state=forged(_widget_id(at, key), **field))
+
+    assert at.session_state.calls == [key]
+    assert at.session_state[key] == expected
+
+
+@pytest.mark.parametrize(
+    ("key", "url_value", "expected_value", "expected_param"),
+    [
+        # Old links in the legacy layouts keep working, and are corrected.
+        ("day", "2026/02/02", dt.date(2026, 2, 2), "2026-02-02"),
+        ("day", "2027-01-01", dt.date(2026, 1, 15), None),
+        ("day", "not-a-date", dt.date(2026, 1, 15), None),
+        # A reversed range is sorted, as the browser sends it.
+        (
+            "trip",
+            ["2026-04-10", "2026-04-01"],
+            (dt.date(2026, 4, 1), dt.date(2026, 4, 10)),
+            ["2026-04-01", "2026-04-10"],
+        ),
+        (
+            "trip",
+            ["2026-04-01", "2026-04-02", "2026-04-03"],
+            (dt.date(2026, 3, 1), dt.date(2026, 3, 5)),
+            None,
+        ),
+        ("trip", "2026-04-01", (dt.date(2026, 4, 1),), "2026-04-01"),
+        (
+            "when",
+            "2026/02/01, 10:15",
+            dt.datetime(2026, 2, 1, 10, 15),
+            "2026-02-01T10:15",
+        ),
+        ("when", "2027-01-01T00:00", dt.datetime(2026, 1, 15, 9, 30), None),
+        ("alarm", "8:15", dt.time(8, 15), "08:15"),
+        ("alarm", "25:00", dt.time(7, 0), None),
+    ],
+)
+def test_a_bound_url_date_or_time_is_repaired_or_cleared(
+    key: str,
+    url_value: str | list[str],
+    expected_value: Any,
+    expected_param: str | list[str] | None,
+) -> None:
+    """A link is read in any layout it used to be read in, then checked."""
+    script = (
+        "import datetime as dt\n"
+        "import streamlit as st\n"
+        "st.date_input('Day', dt.date(2026, 1, 15), min_value=dt.date(2026, 1, 1), "
+        "max_value=dt.date(2026, 12, 31), key='day', bind='query-params')\n"
+        "st.date_input('Trip', (dt.date(2026, 3, 1), dt.date(2026, 3, 5)), "
+        "min_value=dt.date(2026, 1, 1), max_value=dt.date(2026, 12, 31), "
+        "key='trip', bind='query-params')\n"
+        "st.datetime_input('When', dt.datetime(2026, 1, 15, 9, 30), "
+        "min_value=dt.datetime(2026, 1, 1), max_value=dt.datetime(2026, 12, 31, 23, 59), "
+        "key='when', bind='query-params')\n"
+        "st.time_input('Alarm', dt.time(7, 0), key='alarm', bind='query-params')\n"
     )
     at = AppTest.from_string(script)
     at.query_params[key] = url_value

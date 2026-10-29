@@ -67,12 +67,14 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 # Type for things that point to a specific time (even if a default time, though not None).
 TimeValue: TypeAlias = time | datetime | str | Literal["now"]
@@ -488,23 +490,37 @@ class DateTimeInputSerde:
     min: datetime
     max: datetime
 
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse what the browser never sends.
+
+        The browser sends ``[]`` or one ``YYYY-MM-DDTHH:MM`` within the bounds.
+        """
+        if ui_value is None:
+            return None
+        violation = widget_checks.item_count(ui_value, allowed=(0, 1))
+        if violation is not None or not ui_value:
+            return violation
+        parsed = widget_checks.iso_datetime_minutes(ui_value[0])
+        if isinstance(parsed, widget_checks.Violation):
+            return parsed
+        return widget_checks.within(parsed, self.min, self.max)
+
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
-        if ui_value is not None and len(ui_value) > 0:
-            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
-                try:
-                    deserialized = _normalize_datetime_value(
-                        datetime.strptime(ui_value[0], fmt)
-                    )
-                    break
-                except ValueError:
-                    continue
-            else:
-                # Unparseable URL query param value — revert to default.
-                return self.value
-            if deserialized < self.min or deserialized > self.max:
-                return self.value
-            return deserialized
-        return self.value
+        # Converts but never replaces a value: the boundary compares the
+        # result with the stored value, and validate refuses what a client
+        # may not send. The legacy layout is read for URL values, which
+        # URL seeding validates after serializing them again.
+        if ui_value is None or len(ui_value) == 0:
+            return self.value
+        for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
+            try:
+                return _normalize_datetime_value(datetime.strptime(ui_value[0], fmt))
+            except ValueError:
+                continue
+        # The value is left out of the message, which the boundary never logs.
+        raise ValueError("Unable to parse the date and time.")
 
     def serialize(self, v: datetime | None) -> list[str]:
         if v is None:
@@ -521,24 +537,29 @@ class TimeInputSerde:
     def _wire_fmt(self) -> str:
         return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
 
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a time that is not ``HH:MM`` or ``HH:MM:SS``, for any ``step``."""
+        if ui_value is None:
+            return None
+        parsed = widget_checks.iso_time(ui_value)
+        return parsed if isinstance(parsed, widget_checks.Violation) else None
+
     def deserialize(self, ui_value: str | None) -> time | None:
+        # Converts but never replaces a value: the boundary compares the
+        # result with the stored value, and validate refuses what a client
+        # may not send.
         if ui_value is None:
             return self.value
         # Try HH:MM:SS first (sub-minute step), fall back to HH:MM for backward compat.
+        # Text in neither layout raises a ValueError.
         # TODO(query-params): URL values that don't align to the step
         # (e.g., ?time=14:37 with step=900) are accepted as-is.
         # Consider snapping to the nearest valid step for consistency
         # with the UI. See also SliderSerde.deserialize.
-        parsed: time | None = None
         try:
             parsed = datetime.strptime(ui_value, "%H:%M:%S").time()
         except ValueError:
-            try:
-                parsed = datetime.strptime(ui_value, "%H:%M").time()
-            except ValueError:
-                pass  # Neither format matched; handled below.
-        if parsed is None:
-            return self.value
+            parsed = datetime.strptime(ui_value, "%H:%M").time()
         # Strip seconds when step is minute-granular so the returned value is
         # consistent regardless of how the value arrived (query-param, session state).
         if self.step % 60 == 0:
@@ -685,25 +706,44 @@ class DateInputSerde:
                 return datetime.strptime(value, fmt).date()
             except ValueError:
                 continue
-        raise ValueError(f"Unable to parse date: {value}")
+        # The value is left out of the message, which the boundary never logs.
+        raise ValueError("Unable to parse the date.")
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse what the browser never sends.
+
+        The browser sends ``YYYY-MM-DD`` dates within the bounds: none or one,
+        or for a range none, its start, or both ends in order.
+        """
+        if ui_value is None:
+            return None
+        violation = widget_checks.item_count(
+            ui_value, allowed=(0, 1, 2) if self.value.is_range else (0, 1)
+        )
+        if violation is not None:
+            return violation
+        dates: list[date] = []
+        for text in ui_value:
+            parsed = widget_checks.iso_date(text)
+            if isinstance(parsed, widget_checks.Violation):
+                return parsed
+            violation = widget_checks.within(parsed, self.value.min, self.value.max)
+            if violation is not None:
+                return violation
+            dates.append(parsed)
+        return widget_checks.ordered(dates)
 
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
+        # Converts but never replaces a value: the boundary compares the
+        # result with the stored value, and validate refuses what a client
+        # may not send. Text in neither layout raises a ValueError. The
+        # legacy layout is read for URL values, which URL seeding validates
+        # after serializing them again.
         return_value: Sequence[date] | None
         if ui_value is not None:
-            try:
-                return_value = tuple(self._parse_date(v) for v in ui_value)
-            except ValueError:
-                # Invalid URL query param value (e.g. "not-a-date") — revert to default.
-                return_value = self.value.value
-            else:
-                # Reject out-of-range dates from URL query params — revert to default.
-                # Matches SliderSerde.deserialize which validates bounds in the
-                # deserializer so _seed_widget_from_url can detect default equality
-                # and clear the URL param via _clear_url_param.
-                if return_value and any(
-                    d < self.value.min or d > self.value.max for d in return_value
-                ):
-                    return_value = self.value.value
+            return_value = tuple(self._parse_date(v) for v in ui_value)
         else:
             return_value = self.value.value
 
@@ -1184,6 +1224,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
@@ -1710,6 +1751,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,
@@ -2314,6 +2356,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,
