@@ -108,6 +108,17 @@ describe("StyledFlexContainerBlock print layout", () => {
       cssOf(
         render(
           createElement(StyledFlexContainerBlock, {
+            direction: Direction.HORIZONTAL,
+            border: false,
+            isContentSized: true,
+          })
+        )
+      )
+    ).not.toContain("container-type")
+    expect(
+      cssOf(
+        render(
+          createElement(StyledFlexContainerBlock, {
             direction: Direction.VERTICAL,
             border: false,
           })

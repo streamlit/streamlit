@@ -306,6 +306,9 @@ export const FlexBoxContainer = (
   const hasFixedWidth =
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
+  const isContentSized =
+    hasContentWidth ||
+    (!hasFixedWidth && parentContext?.isInContentWidthContainer === true)
 
   return (
     <FlexContextProvider
@@ -319,6 +322,7 @@ export const FlexBoxContainer = (
     >
       <StyledFlexContainerBlock
         {...styles}
+        isContentSized={isContentSized}
         className={[
           getClassnamePrefix(direction),
           convertKeyToClassName(userKey),
