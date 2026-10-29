@@ -49,7 +49,10 @@ export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
       zIndex: shownZIndex,
     }
     return {
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
+      // The bottom padding matches the gap in `getOverlayToolbarTopDistance`,
+      // so the shown wrapper ends exactly at the element's top edge: it
+      // bridges the hover gap without covering the element.
+      padding: `${theme.spacing.sm} 0 ${theme.spacing.twoXS} ${theme.spacing.sm}`,
       position: "absolute",
       top: locked ? topDistance : "-1rem",
       right: theme.spacing.none,

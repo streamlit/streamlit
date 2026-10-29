@@ -279,6 +279,11 @@ def test_element_toolbar_renders_above_selected_segment(app: Page):
         lambda: _is_top_most_at(toolbar, (left + right) / 2, (top + bottom) / 2),
     )
 
+    # Negative check: the raised toolbar must not take clicks on the top edge
+    # of its own dataframe.
+    toolbar_center_x = toolbar_box["x"] + toolbar_box["width"] / 2
+    assert not _is_top_most_at(toolbar, toolbar_center_x, dataframe_box["y"] + 2)
+
 
 def test_click_single_icon_segment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
