@@ -568,6 +568,11 @@ describe("Streamlit theme resolved by ECharts", () => {
       series: [
         { type: "candlestick", data: [[1, 2, 0, 3]] },
         { type: "line", data: [1] },
+        {
+          type: "candlestick",
+          itemStyle: { color: "#123456" },
+          data: [[1, 2, 0, 3]],
+        },
       ],
     })
 
@@ -578,6 +583,11 @@ describe("Streamlit theme resolved by ECharts", () => {
       getDecreasingRed(emotionTheme)
     )
     expect(series(1).get("symbol")).toBe("circle")
+    // The spec's rising color wins, and the keys it leaves out stay themed.
+    expect(series(2).get(["itemStyle", "color"])).toBe("#123456")
+    expect(series(2).get(["itemStyle", "color0"])).toBe(
+      getDecreasingRed(emotionTheme)
+    )
   })
 
   it("themes a scrolling legend over its own page arrow defaults", () => {
@@ -602,9 +612,23 @@ describe("Streamlit theme resolved by ECharts", () => {
       series: [{ type: "line", data: [1] }],
     })
 
+    const { bgColor } = darkTheme.emotion.colors
     expect(component("axisPointer").get(["label", "backgroundColor"])).toBe(
-      darkTheme.emotion.colors.bgColor
+      bgColor
     )
+    // Each axis resolves its chip through its own axisPointer option and the
+    // tooltip's before the global one, so an axis-level default would shadow
+    // the theme. Check the per-axis models ECharts draws the chips from.
+    const { coordSysAxesInfo } = component("axisPointer") as unknown as {
+      coordSysAxesInfo: {
+        axesInfo: Record<string, { axisPointerModel: ResolvedModel }>
+      }
+    }
+    expect(
+      Object.values(coordSysAxesInfo.axesInfo).map(({ axisPointerModel }) =>
+        axisPointerModel.get(["label", "backgroundColor"])
+      )
+    ).toEqual([bgColor, bgColor])
   })
 })
 
@@ -1278,9 +1302,10 @@ describe("applyStreamlitOptionDefaults", () => {
 
   it("styles inside funnel labels in timeline variants, not when theme is None", () => {
     const funnel = { type: "funnel", label: { position: "center" }, data: [] }
+    const typelessTick = { series: [{ label: { position: "inside" } }] }
     const result = applyDefaults({
       baseOption: { series: [funnel] },
-      options: [{ series: [funnel] }],
+      options: [{ series: [funnel] }, typelessTick],
     })
 
     const labelOf = (target: unknown): Record<string, unknown> =>
@@ -1290,6 +1315,9 @@ describe("applyStreamlitOptionDefaults", () => {
     expect(labelOf((result.options as unknown[])[0]).textBorderColor).toBe(
       theme.colors.white
     )
+    // A per-tick override without `type` merges into a series by index, so
+    // the pass can't tell it is a funnel and leaves it as written.
+    expect((result.options as unknown[])[1]).toEqual(typelessTick)
 
     const unthemed = applyDefaults({ series: [funnel] }, "")
     expect((unthemed.series as unknown[])[0]).toBe(funnel)

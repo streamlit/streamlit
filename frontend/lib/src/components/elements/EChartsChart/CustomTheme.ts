@@ -297,6 +297,13 @@ export function buildStreamlitEChartsTheme(
       },
     },
   }
+  // Line markers default to `emptyCircle`, whose hollow center ECharts fills
+  // with white. On a dark background that reads as a white dot, so use a
+  // filled marker there, as ECharts' own dark theme does. Light mode keeps
+  // ECharts' line defaults.
+  const lineMarkerDefaults = hasLightBackgroundColor(theme)
+    ? {}
+    : { line: { symbol: "circle" } }
 
   return {
     // Series palette (shared with Plotly/Vega/Altair, honors config overrides).
@@ -453,10 +460,7 @@ export function buildStreamlitEChartsTheme(
     scatter: selectStyle,
     heatmap: selectStyle,
     graph: selectStyle,
-    // Line markers default to `emptyCircle`, whose hollow center ECharts fills
-    // with white. On a dark background that reads as a white dot, so use a
-    // filled marker there, as ECharts' own dark theme does.
-    ...(!hasLightBackgroundColor(theme) && { line: { symbol: "circle" } }),
+    ...lineMarkerDefaults,
     // ECharts separates sunburst segments and funnel stages with a white line,
     // which glares on a dark background. The app background reads as a gap,
     // as it does for treemap tiles. Sunburst labels sit on the segments, so
@@ -1365,6 +1369,10 @@ function hasInsideFunnelLabel(entry: unknown): boolean {
  * labels inside, or when a data item moves its own label inside. Label keys
  * the user set on the series or the item win. A data item that moves its
  * label outside a series with inside labels keeps the series' halo.
+ *
+ * Each series entry is styled on its own. A data item's halo keys skip only
+ * label keys set on the same entry, so a timeline or ``media`` override that
+ * restyles that series' label doesn't reach the item, whose keys win.
  */
 function withInsideFunnelLabelStyle(
   option: EChartsOptionObject,
