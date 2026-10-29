@@ -623,17 +623,32 @@ describe("hydrateArrowDatasetSources", () => {
 
   const DATASETS = [namedDataset("h1", FIRST), namedDataset("h2", SECOND)]
 
-  it("replaces a top-level placeholder with rows", () => {
+  it("replaces a top-level placeholder with rows and keeps the app's dimensions", () => {
     const option: Record<string, unknown> = {
-      dataset: { source: { name: "h1" }, dimensions: ["product", "sales"] },
+      dataset: { source: { name: "h1" }, dimensions: ["sales", "product"] },
     }
 
     hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual({
       source: FIRST_ROWS,
-      dimensions: ["product", "sales"],
+      dimensions: ["sales", "product"],
     })
+  })
+
+  it("sets the default dimensions to the data column names, without index columns", () => {
+    const option: Record<string, unknown> = {
+      dataset: { source: { name: "indexed" } },
+    }
+
+    hydrateArrowDatasetSources(option, [namedDataset("indexed", NAMED_INDEX)])
+
+    const { source, dimensions } = option.dataset as {
+      source: Record<string, unknown>[]
+      dimensions: string[]
+    }
+    expect(dimensions).toEqual(Object.keys(source[0]))
+    expect(dimensions).not.toContain("INDEX")
   })
 
   it("hydrates every dataset of a dataset list and leaves inline sources alone", () => {
@@ -650,9 +665,9 @@ describe("hydrateArrowDatasetSources", () => {
     hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual([
-      { source: FIRST_ROWS },
+      { source: FIRST_ROWS, dimensions: ["product", "sales"] },
       { source: inline },
-      { source: SECOND_ROWS },
+      { source: SECOND_ROWS, dimensions: ["x"] },
       { transform: { type: "filter" } },
     ])
   })

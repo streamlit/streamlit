@@ -74,6 +74,9 @@ type EChartsSourceValue =
 /** One `dataset.source` row, keyed by Arrow field name. */
 type EChartsSourceRow = Record<string, EChartsSourceValue>
 
+/** The rows of a sent dataset and its data column names, in column order. */
+type HydratedSource = { rows: EChartsSourceRow[]; dimensions: string[] }
+
 /** Converts one decoded Arrow cell of a known column type. */
 type CellConverter = (content: DataType) => EChartsSourceValue
 
@@ -274,21 +277,25 @@ function getCellConverter(type: ArrowType): CellConverter {
   return content => (isNullOrUndefined(content) ? null : convert(content))
 }
 
+/** Returns the data column types of a Quiver, which lists index columns first. */
+function getDataColumnTypes(quiver: Quiver): ArrowType[] {
+  return quiver.columnTypes.slice(quiver.dimensions.numIndexColumns)
+}
+
 /**
  * Converts the data columns of a Quiver into ECharts `dataset.source` rows.
  *
- * Index columns are never emitted, matching how Python sends dataframes
- * without their index. Row keys are the Arrow field names, which are the same
- * strings Python puts in `dataset.dimensions`.
+ * Index columns are skipped, so a PyArrow table built from an indexed pandas
+ * dataframe charts only its data columns. Row keys are the Arrow field names,
+ * which `hydrateArrowDatasetSources` also uses as the default
+ * `dataset.dimensions`.
  *
  * @param quiver The parsed Arrow table.
  * @returns One plain object of JSON-like values per data row.
  */
 export function quiverToEChartsRows(quiver: Quiver): EChartsSourceRow[] {
-  const { numIndexColumns, numDataRows, numDataColumns } = quiver.dimensions
-  const columns = Array.from({ length: numDataColumns }, (_, index) => {
-    // Column types list the index columns first.
-    const type = quiver.columnTypes[numIndexColumns + index]
+  const { numDataRows } = quiver.dimensions
+  const columns = getDataColumnTypes(quiver).map((type, index) => {
     const key = type.arrowField.name
     return {
       key,
@@ -405,6 +412,9 @@ function getPlaceholderName(source: unknown): string | null {
  * Replaces the `dataset.source` placeholders of a freshly parsed option with
  * rows from the matching Arrow datasets.
  *
+ * A dataset without `dimensions` gets the data column names, so ECharts keeps
+ * the dataframe's column order.
+ *
  * The option is mutated in place, so pass an object nobody else holds (for
  * example, the result of `JSON.parse`). Each dataset is parsed once, and
  * placeholders that share a name share one rows array.
@@ -430,10 +440,10 @@ export function hydrateArrowDatasetSources(
     }
   }
 
-  const rowsByName = new Map<string, EChartsSourceRow[]>()
+  const sourcesByName = new Map<string, HydratedSource>()
   /** Parses a sent dataset on first use; `undefined` if none has `name`. */
-  const getRows = (name: string): EChartsSourceRow[] | undefined => {
-    const cached = rowsByName.get(name)
+  const getSource = (name: string): HydratedSource | undefined => {
+    const cached = sourcesByName.get(name)
     if (cached !== undefined) {
       return cached
     }
@@ -441,9 +451,13 @@ export function hydrateArrowDatasetSources(
     if (dataset === undefined) {
       return undefined
     }
-    const rows = quiverToEChartsRows(parseDataset(dataset))
-    rowsByName.set(name, rows)
-    return rows
+    const quiver = parseDataset(dataset)
+    const source = {
+      rows: quiverToEChartsRows(quiver),
+      dimensions: getDataColumnTypes(quiver).map(type => type.arrowField.name),
+    }
+    sourcesByName.set(name, source)
+    return source
   }
 
   for (const variant of getOptionVariants(option)) {
@@ -457,9 +471,12 @@ export function hydrateArrowDatasetSources(
       const name = getPlaceholderName(datasetOption.source)
       // Only names that were sent count. A user-authored one-row source such
       // as `{"name": "Matcha"}` stays untouched.
-      const rows = name === null ? undefined : getRows(name)
-      if (rows !== undefined) {
-        datasetOption.source = rows
+      const source = name === null ? undefined : getSource(name)
+      if (source !== undefined) {
+        datasetOption.source = source.rows
+        if (datasetOption.dimensions === undefined) {
+          datasetOption.dimensions = source.dimensions
+        }
       }
     }
   }

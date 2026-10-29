@@ -449,61 +449,11 @@ def _ensure_unique_dataset_labels(labels: list[str]) -> None:
         )
 
 
-def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
-    """Remove pandas index fields so only data columns reach the chart.
-
-    ``pyarrow.Table.from_pandas`` can store the dataframe index as real fields.
-    The index entries are removed from the pandas metadata too, rather than
-    dropping the metadata: the browser needs its type tags (for example, for
-    period columns) but fails to parse metadata that names missing fields.
-    """
-    metadata = table.schema.metadata or {}
-    raw_pandas_metadata = metadata.get(b"pandas")
-    if raw_pandas_metadata is None:
-        # Polars or plain Arrow tables have no pandas index.
-        return table
-
-    index_fields: set[str] = set()
-    try:
-        pandas_metadata = json.loads(raw_pandas_metadata)
-        index_columns = pandas_metadata.get("index_columns") or []
-        if not index_columns:
-            return table
-        # A RangeIndex is stored as a dict without a physical field.
-        index_fields = {column for column in index_columns if isinstance(column, str)}
-        pandas_metadata["index_columns"] = []
-        pandas_metadata["columns"] = [
-            column
-            for column in pandas_metadata.get("columns") or []
-            if column.get("field_name") not in index_fields
-        ]
-        new_metadata = {**metadata, b"pandas": json.dumps(pandas_metadata).encode()}
-    except (ValueError, TypeError, AttributeError):
-        # Malformed pandas metadata would also fail to parse in the browser,
-        # so drop it and send the table as plain Arrow. Index fields already
-        # read from it are still dropped below.
-        new_metadata = {
-            key: value for key, value in metadata.items() if key != b"pandas"
-        }
-
-    if index_fields:
-        # Select by position so duplicate data field names survive until the
-        # duplicate-label check reports them.
-        table = table.select(
-            [
-                position
-                for position, name in enumerate(table.column_names)
-                if name not in index_fields
-            ]
-        )
-    return table.replace_schema_metadata(new_metadata)
-
-
 def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
     """Convert a dataframe-like ``dataset.source`` to an Arrow table.
 
-    Only data columns are kept: the dataframe index never becomes a column of
-    the chart's source rows or ``dimensions``.
+    Pandas dataframes are converted without their index. A PyArrow table is
+    sent as-is; the browser skips the index fields its pandas metadata names.
     """
     import pandas as pd
     import pyarrow as pa
@@ -521,7 +471,7 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
                 exc_info=True,
             )
     elif isinstance(source, pa.Table):
-        return _drop_pandas_index_fields(source)
+        return source
 
     df = dataframe_util.convert_anything_to_pandas_df(source)
     labels = [str(column) for column in df.columns]
@@ -562,10 +512,9 @@ def _convert_single_dataset(
     )
     try:
         table = _dataset_source_to_arrow_table(source)
-        # The browser keys each row by Arrow field name, so ``dimensions`` and
-        # the duplicate check use those names.
-        labels = table.column_names
-        _ensure_unique_dataset_labels(labels)
+        # The browser keys each row, and the default ``dimensions``, by Arrow
+        # field name, so the duplicate check uses those names.
+        _ensure_unique_dataset_labels(table.column_names)
         data_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
     except conversion_errors as ex:
         raise StreamlitDataframeConversionError(
@@ -579,9 +528,6 @@ def _convert_single_dataset(
     name = calc_hash(data_bytes)
     arrow_datasets.setdefault(name, data_bytes)
     dataset["source"] = {"name": name}
-    # Preserve column order via ``dimensions`` unless the user set it explicitly.
-    if "dimensions" not in dataset:
-        dataset["dimensions"] = labels
 
 
 def _iter_sequence_entries(value: Any, key: str) -> Iterator[Any]:
