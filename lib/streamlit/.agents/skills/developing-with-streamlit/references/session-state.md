@@ -93,6 +93,7 @@ The server checks every value a client sends, including a bound URL parameter, a
 Still not enforced on the server, so check these yourself when they matter:
 
 - `validate` on `st.text_input`, including the email or URL check `type` implies. It runs only in the browser.
+- `step`: any value within the bounds is accepted.
 - `st.data_editor` edits and column constraints, and dataframe or chart selections.
 - An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it, and only the browser blocks a form submit while it is empty.
 - Authorization, file contents, and business rules, such as whether *this* user may pick an option:
