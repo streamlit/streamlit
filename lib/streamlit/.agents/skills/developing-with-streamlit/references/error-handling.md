@@ -5,21 +5,24 @@ By default, an uncaught exception renders a full traceback right in the app. Tha
 
 ## Wrap risky operations in try/except
 
-Anything that can fail at runtime should be guarded: external API calls, database and `st.connection` queries, and parsing of files or other user-supplied data. Catch the specific exceptions you expect — never a bare `except:`, which also catches the exceptions that `st.stop()` and `st.rerun()` use to halt the script, swallows `KeyboardInterrupt`, and hides real bugs.
+Anything that can fail at runtime should be guarded: external API calls, database and `st.connection` queries, and parsing of files or other user-supplied data. Catch the specific exceptions you expect — never a bare `except:`, which also catches the exceptions that `st.stop()` and `st.rerun()` use to halt the script, swallows `KeyboardInterrupt`, and hides real bugs. Keep the exception text out of the message: it often contains URLs, query parameters, or keys. Log it to the console instead.
 
 ```python
-# BAD: any failure dumps a traceback into the app and keeps running
+# BAD: any failure dumps a traceback into the app
 data = requests.get(url).json()
 df = pd.DataFrame(data)
 st.line_chart(df)
 
-# GOOD: handle the expected failure, then halt cleanly
+# GOOD: handle the expected failure, log the details, then halt cleanly
+logger = logging.getLogger(__name__)
+
 try:
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     data = response.json()
-except requests.RequestException as e:
-    st.error(f"Couldn't reach the data service. Try again shortly. ({e})")
+except requests.RequestException:
+    logger.exception("Data service request failed")
+    st.error("Couldn't reach the data service. Try again shortly.")
     st.stop()
 
 df = pd.DataFrame(data)
