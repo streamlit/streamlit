@@ -210,9 +210,9 @@ def _assert_inside(inner: Locator, outer: Locator) -> None:
     )
 
 
-def test_print_fits_metrics_plotly_and_trailing_placeholder(app: Page) -> None:
-    """Metric variants fit their card, Plotly rows stack, and a trailing
-    placeholder adds no gap.
+def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
+    """Metric variants fit their card, Plotly rows and horizontal containers
+    with a chart stack, and a trailing placeholder adds no gap.
     """
     expect(app.get_by_text("After the Plotly row", exact=True)).to_be_visible()
 
@@ -255,6 +255,41 @@ def test_print_fits_metrics_plotly_and_trailing_placeholder(app: Page) -> None:
         assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
     wait_until(app, plotly_row_stacks)
+
+    # A horizontal container with a chart stacks like a column row, and the
+    # chart spans the container. One without a chart stays side by side.
+    horizontal_chart = get_element_by_key(app, "horizontal_chart")
+    horizontal_parts = [
+        horizontal_chart.get_by_test_id("stVegaLiteChart"),
+        horizontal_chart.get_by_text("Beside the horizontal chart", exact=True),
+        app.get_by_text("After the horizontal chart", exact=True),
+    ]
+    for part in horizontal_parts:
+        expect(part).to_be_visible()
+
+    def horizontal_chart_stacks() -> None:
+        container_box = horizontal_chart.bounding_box()
+        assert container_box is not None
+        chart_box, beside_box, after_box = (
+            part.bounding_box() for part in horizontal_parts
+        )
+        assert chart_box is not None
+        assert beside_box is not None
+        assert after_box is not None
+        assert chart_box["width"] > container_box["width"] * 0.9
+        assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
+        assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, horizontal_chart_stacks)
+
+    buttons = get_element_by_key(app, "horizontal_buttons").get_by_test_id("stButton")
+    expect(buttons).to_have_count(2)
+    first_button = buttons.nth(0).bounding_box()
+    second_button = buttons.nth(1).bounding_box()
+    assert first_button is not None
+    assert second_button is not None
+    assert abs(first_button["y"] - second_button["y"]) < 2
+    assert second_button["x"] >= first_button["x"] + first_button["width"] - 1
 
     # The print gap margin only goes on a child with a printed sibling after
     # it, so a hidden trailing placeholder leaves no blank strip.
