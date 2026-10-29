@@ -273,3 +273,250 @@ def test_a_wrong_type_for_a_disabled_widget_does_not_stick_the_session() -> None
 
     assert not at.exception
     assert at.slider[0].value == 10
+
+
+def _labels(*labels: str) -> dict[str, list[str]]:
+    """A ``string_array_value`` for ``forged``."""
+    return {"data": list(labels)}
+
+
+# The key of each widget in the option apps, which its callback records.
+_OPTION_KEYS = {"selectbox": "pick", "radio": "size", "multiselect": "tags"}
+
+
+def _option_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.selectbox(
+        "Pick", ["a", "b", "c"], key="pick", on_change=on_change, args=["pick"]
+    )
+    st.radio("Size", ["S", "M", "L"], key="size", on_change=on_change, args=["size"])
+    st.multiselect(
+        "Tags",
+        ["x", "y", "z"],
+        max_selections=2,
+        key="tags",
+        on_change=on_change,
+        args=["tags"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("widget", "field"),
+    [
+        ("selectbox", {"string_value": "zzz"}),
+        ("radio", {"string_value": "XL"}),
+        ("multiselect", {"string_array_value": _labels("x", "q")}),
+        # Over `max_selections`, which no longer raises for a client value.
+        ("multiselect", {"string_array_value": _labels("x", "y", "z")}),
+        ("multiselect", {"string_array_value": _labels("y", "y")}),
+    ],
+)
+def test_a_value_outside_the_options_is_refused(
+    widget: str, field: dict[str, Any]
+) -> None:
+    """A forged choice runs no callback, keeps the previous value, and re-syncs."""
+    at = AppTest.from_function(_option_app).run()
+    at.selectbox[0].select("b")
+    at.radio[0].set_value("M")
+    at.multiselect[0].select("y")
+    at.run()
+    assert at.session_state.calls == ["pick", "size", "tags"]
+
+    at._run(widget_state=forged(at.get(widget)[0].id, **field))
+
+    assert not at.exception
+    assert at.session_state.calls == ["pick", "size", "tags"]
+    assert at.selectbox[0].value == "b"
+    assert at.radio[0].value == "M"
+    assert at.multiselect[0].value == ["y"]
+    assert at.get(widget)[0].proto.set_value is True
+
+
+@pytest.mark.parametrize(
+    ("widget", "field", "expected"),
+    [
+        ("selectbox", {"string_value": "c"}, "c"),
+        ("radio", {"string_value": "L"}, "L"),
+        ("multiselect", {"string_array_value": _labels("z", "x")}, ["z", "x"]),
+    ],
+)
+def test_one_of_the_options_is_accepted(
+    widget: str, field: dict[str, Any], expected: Any
+) -> None:
+    """A legal choice runs its callback once, and then passes as unchanged."""
+    at = AppTest.from_function(_option_app).run()
+
+    at._run(widget_state=forged(at.get(widget)[0].id, **field))
+
+    assert at.get(widget)[0].value == expected
+    assert at.session_state.calls == [_OPTION_KEYS[widget]]
+    at.run()
+    assert at.session_state.calls == [_OPTION_KEYS[widget]]
+
+
+def _shared_label_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    def parity(number: int) -> str:
+        return "odd" if number % 2 else "even"
+
+    for widget, key in [
+        ("selectbox", "pick"),
+        ("radio", "size"),
+        ("multiselect", "tags"),
+    ]:
+        getattr(st, widget)(
+            widget,
+            [1, 2, 3],
+            format_func=parity,
+            key=key,
+            on_change=on_change,
+            args=[key],
+        )
+
+
+@pytest.mark.parametrize(
+    ("widget", "field", "expected"),
+    [
+        # Selectbox and radio resolve a shared label to its last option.
+        ("selectbox", {"string_value": "odd"}, 3),
+        ("radio", {"string_value": "odd"}, 3),
+        # A multiselect resolves it to the first, also for "Select all", which
+        # lists the shared label once per option.
+        ("multiselect", {"string_array_value": _labels("odd")}, [1]),
+        (
+            "multiselect",
+            {"string_array_value": _labels("odd", "even", "odd")},
+            [1, 2, 1],
+        ),
+    ],
+)
+def test_a_shared_label_is_accepted(
+    widget: str, field: dict[str, Any], expected: Any
+) -> None:
+    """A browser sends a shared format_func label as shown, so it is kept."""
+    at = AppTest.from_function(_shared_label_app).run()
+
+    at._run(widget_state=forged(at.get(widget)[0].id, **field))
+
+    assert at.get(widget)[0].value == expected
+    assert at.session_state.calls == [_OPTION_KEYS[widget]]
+    assert at.get(widget)[0].proto.set_value is False
+
+
+def test_a_shared_label_repeated_past_its_options_is_refused() -> None:
+    """A label is listed at most as often as options show it."""
+    at = AppTest.from_function(_shared_label_app).run()
+
+    at._run(
+        widget_state=forged(
+            at.multiselect[0].id, string_array_value=_labels("odd", "odd", "odd")
+        )
+    )
+
+    assert at.multiselect[0].value == []
+    assert "calls" not in at.session_state
+
+
+def test_a_new_session_keeps_a_shared_label() -> None:
+    """A browser map with shared labels, resent to a new session, keeps them."""
+    first = AppTest.from_function(_shared_label_app).run()
+    first.selectbox[0].set_value(1)
+    first.multiselect[0].set_value([1, 3])
+    first.run()
+    restored = first._tree.get_widget_states()
+
+    fresh = AppTest.from_function(_shared_label_app)
+    fresh._run(widget_state=restored)
+
+    # Each label resolves as it does for a browser.
+    assert fresh.selectbox[0].value == 3
+    assert fresh.multiselect[0].value == [1, 1]
+    assert "calls" not in fresh.session_state
+
+
+def _new_option_app() -> None:
+    import streamlit as st
+
+    def on_change() -> None:
+        st.session_state.changes = st.session_state.get("changes", 0) + 1
+
+    st.selectbox(
+        "City",
+        ["Paris", "Berlin"],
+        accept_new_options=True,
+        key="city",
+        on_change=on_change,
+    )
+    st.multiselect(
+        "Tags", ["a", "b"], accept_new_options=True, key="tags", on_change=on_change
+    )
+
+
+@pytest.mark.parametrize(
+    ("widget", "field", "expected"),
+    [
+        # The browser sends typed text as it is, untrimmed.
+        ("selectbox", {"string_value": " Rome "}, " Rome "),
+        ("multiselect", {"string_array_value": _labels("a", "new")}, ["a", "new"]),
+    ],
+)
+def test_accept_new_options_takes_new_text(
+    widget: str, field: dict[str, Any], expected: Any
+) -> None:
+    """With accept_new_options, any non-empty text is legal."""
+    at = AppTest.from_function(_new_option_app).run()
+
+    at._run(widget_state=forged(at.get(widget)[0].id, **field))
+
+    assert at.get(widget)[0].value == expected
+    assert at.session_state.changes == 1
+
+
+@pytest.mark.parametrize(
+    ("widget", "field"),
+    [
+        ("selectbox", {"string_value": ""}),
+        ("multiselect", {"string_array_value": _labels("new", "new")}),
+    ],
+)
+def test_accept_new_options_refuses_empty_or_repeated_text(
+    widget: str, field: dict[str, Any]
+) -> None:
+    """Empty text is no option, and a new option can be listed once."""
+    at = AppTest.from_function(_new_option_app).run()
+
+    at._run(widget_state=forged(at.get(widget)[0].id, **field))
+
+    assert at.selectbox[0].value == "Paris"
+    assert at.multiselect[0].value == []
+    assert "changes" not in at.session_state
+
+
+def _narrowing_app() -> None:
+    import streamlit as st
+
+    def narrow() -> None:
+        st.session_state.narrow = True
+
+    options = ["a", "b"] if st.session_state.get("narrow") else ["a", "b", "c"]
+    st.selectbox("Pick", options, key="pick", on_change=narrow)
+
+
+def test_a_choice_is_checked_against_the_options_the_user_saw() -> None:
+    """Options the click itself removes are reconciled after the callback runs."""
+    at = AppTest.from_function(_narrowing_app).run()
+
+    at._run(widget_state=forged(at.selectbox[0].id, string_value="c"))
+
+    assert at.session_state.narrow is True
+    assert at.selectbox[0].options == ["a", "b"]
+    assert at.selectbox[0].value == "a"
+    assert at.selectbox[0].proto.set_value is True

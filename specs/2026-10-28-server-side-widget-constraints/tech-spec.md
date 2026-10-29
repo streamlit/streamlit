@@ -253,7 +253,7 @@ class CheckResult(NamedTuple):
 | `disabled` | gate | drop | `disabled_widget` |
 | `wrong_type`, `unreadable` | integrity | drop, warning | `invalid_value` |
 | `not_an_option`, `too_many_items`, `duplicate_items` | options | drop | `invalid_value`, with the options listed |
-| `ambiguous_option` | options | **accepted**: duplicate `format_func` labels are legal, the browser sends the shared label, and `create_mappings` resolves it to the last option with that label, as today | `invalid_value`, as today |
+| `ambiguous_option` | options | **accepted**: duplicate `format_func` labels are legal, the browser sends the shared label, and the widget resolves it as today: `st.multiselect` to the first option with that label, the other option widgets to the last (`create_mappings`) | `invalid_value`, as today |
 | `out_of_range`, `bad_shape`, `malformed`, `too_long` | bounds, shapes, length | drop | `invalid_value`, with the bound |
 | `empty_required` | `required` | drop | `invalid_value` |
 | `form_not_submitted`, `form_invalid` | forms (item 7) | drop the form's changes | `missing_form_submit`, `invalid_value` |

@@ -13,6 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+from collections import Counter
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -67,6 +69,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
@@ -75,6 +78,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 
@@ -85,6 +89,7 @@ class SelectboxSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    accept_new_options: bool
 
     def __init__(
         self,
@@ -94,6 +99,7 @@ class SelectboxSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        accept_new_options: bool = False,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -119,6 +125,8 @@ class SelectboxSerde(Generic[T]):
             string representation instead of using == directly. This is necessary because
             widget values are deepcopied, and for custom classes without __eq__, the
             deepcopied instances would fail identity comparison.
+        accept_new_options : bool, optional
+            Whether a client may send text that is not one of the options.
         """
 
         self.options = options
@@ -126,6 +134,21 @@ class SelectboxSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.accept_new_options = accept_new_options
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a label that is not one of the options a client was shown."""
+        if ui_value is None:
+            return None
+        return widget_checks.one_of(
+            self._label_counts, ui_value, accept_new=self.accept_new_options
+        )
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -772,6 +795,7 @@ class SelectboxMixin:
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            accept_new_options=accept_new_options,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -780,6 +804,7 @@ class SelectboxMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
