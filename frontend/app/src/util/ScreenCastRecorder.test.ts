@@ -104,7 +104,7 @@ const installMediaMocks = (): void => {
       options?: { once?: boolean }
     ): void {
       const wrapped = (event: Event): void => {
-        if (options?.once) {
+        if (options?.once === true) {
           this.listeners.set(
             type,
             (this.listeners.get(type) ?? []).filter(item => item !== wrapped)

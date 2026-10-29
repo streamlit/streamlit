@@ -31,7 +31,8 @@ function acceptTabbableNode(node: Node): number {
   if (node.tabIndex < 0) return NodeFilter.FILTER_SKIP
   if ("disabled" in node && (node as HTMLButtonElement).disabled)
     return NodeFilter.FILTER_SKIP
-  if (node.hidden) return NodeFilter.FILTER_SKIP
+  // `hidden` is `true` or `"until-found"` when set; both hide the node.
+  if (node.hidden !== false) return NodeFilter.FILTER_SKIP
   if (node.closest("[inert], [aria-hidden='true']"))
     return NodeFilter.FILTER_REJECT
   if (

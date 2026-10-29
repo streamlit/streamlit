@@ -49,6 +49,7 @@ import {
   removeCachedTheme,
   setCachedThemeSelection,
   sortThemeInputKeys,
+  stockSidebarChrome,
   stockSidebarSurfaces,
   toThemeInput,
 } from "~lib/theme/utils"
@@ -864,14 +865,19 @@ describe("createEmotionTheme", () => {
 
   // == Theme border/underline properties ==
 
-  it("showSidebarBorder config is set to false by default", () => {
+  it("showSidebarBorder config is set to true by default", () => {
     const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
+    expect(theme.showSidebarBorder).toBe(true)
   })
 
   it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
     const theme = createEmotionTheme({ showSidebarBorder: true })
     expect(theme.showSidebarBorder).toBe(true)
+  })
+
+  it("sets the showSidebarBorder config to false if showSidebarBorder=false", () => {
+    const theme = createEmotionTheme({ showSidebarBorder: false })
+    expect(theme.showSidebarBorder).toBe(false)
   })
 
   it("linkUnderline config is set to true by default", () => {
@@ -1132,6 +1138,7 @@ describe("createEmotionTheme", () => {
       expect(theme.colors.bodyText).toBe("orange")
       expect(theme.colors.secondaryBg).toBe("blue")
       expect(theme.colors.bgColor).toBe("pink")
+      // Invalid borderColor is ignored; custom surfaces still derive chrome.
       expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
     })
   })
@@ -1248,7 +1255,7 @@ describe("createEmotionTheme", () => {
 
   it("uses default codeBackgroundColor if not configured", () => {
     const theme = createEmotionTheme({})
-    expect(theme.colors.codeBackgroundColor).toBe(theme.colors.bgMix)
+    expect(theme.colors.codeBackgroundColor).toBe("#F7F7F6")
   })
 
   it("sets the dataframeHeaderBackgroundColor if configured", () => {
@@ -1262,9 +1269,7 @@ describe("createEmotionTheme", () => {
 
   it("uses default dataframeHeaderBackgroundColor if not configured", () => {
     const theme = createEmotionTheme({})
-    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
-      theme.colors.bgMix
-    )
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe("#F7F7F6")
   })
 
   it("sets the dataframeHeaderTextColor if configured", () => {
@@ -1310,7 +1315,7 @@ describe("createEmotionTheme", () => {
   })
 
   it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
-    "derives %s from custom secondaryBackgroundColor",
+    "derives %s from surfaces when chrome keys are unset",
     colorKey => {
       const themeInput: Partial<CustomThemeConfig> = {
         backgroundColor: "#ffffff",
@@ -1318,13 +1323,29 @@ describe("createEmotionTheme", () => {
       }
 
       const theme = createEmotionTheme(themeInput)
-      const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
-      expect(theme.colors[colorKey]).toBe(expectedBgMix)
+      // Partial custom themes still retint unset chrome from bgMix.
+      expect(theme.colors[colorKey]).toBe(mix("#ffffff", "#FAFAF9", 0.5))
       expect(theme.colors[colorKey]).not.toBe(
         lightTheme.emotion.colors[colorKey]
       )
     }
   )
+
+  it("derives border chrome from surfaces when borderColor is unset", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      backgroundColor: "#ffffff",
+      secondaryBackgroundColor: "#FAFAF9",
+      textColor: "#111111",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
+    expect(theme.colors.borderColorLight).toBe(theme.colors.fadedText05)
+    expect(theme.colors.dataframeBorderColor).toBe(theme.colors.fadedText05)
+    expect(theme.colors.borderColor).not.toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+  })
 
   it("sets the borderColor properties based on borderColor config", () => {
     const themeInput: Partial<CustomThemeConfig> = {
@@ -1336,10 +1357,93 @@ describe("createEmotionTheme", () => {
 
     expect(theme.colors.borderColor).toBe("blue")
     expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
-    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
-    // not configured
+    // Unset dataframeBorderColor follows borderColorLight for custom borderColor.
     expect(theme.colors.dataframeBorderColor).toBe(
       theme.colors.borderColorLight
+    )
+  })
+  it("uses stock chrome for border and dataframe when neither is configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.borderColor).toBe("#DCD8D4")
+    expect(theme.colors.dataframeBorderColor).toBe("#E8E5E2")
+    expect(theme.colors.link).toBe(theme.colors.blueTextColor)
+    expect(theme.colors.codeTextColor).toBe("#2F2D2B")
+    expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
+  })
+
+  it("keeps stock chrome when only textColor is configured", () => {
+    const theme = createEmotionTheme({ textColor: "#111111" })
+
+    expect(theme.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.colors.dataframeBorderColor).toBe(
+      lightTheme.emotion.colors.dataframeBorderColor
+    )
+    expect(theme.colors.codeBackgroundColor).toBe(
+      lightTheme.emotion.colors.codeBackgroundColor
+    )
+    expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
+      lightTheme.emotion.colors.dataframeHeaderBackgroundColor
+    )
+    // Unset code text follows body text; borders/fills stay on stock chrome.
+    expect(theme.colors.codeTextColor).toBe(theme.colors.bodyText)
+    // Header text still tracks the configured body text via fadedText60.
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+  })
+
+  it("keeps stock chrome through createTheme when surfaces match the base", () => {
+    // createTheme → completeThemeInput fills stock primary/bg/secondary even
+    // when the author left them unset; those filled-in values must not flip
+    // chrome onto fadedText*/bgMix.
+    const theme = createTheme("Custom", {})
+    expect(theme.emotion.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.emotion.colors.dataframeBorderColor).toBe(
+      lightTheme.emotion.colors.dataframeBorderColor
+    )
+    expect(theme.emotion.colors.codeBackgroundColor).toBe(
+      lightTheme.emotion.colors.codeBackgroundColor
+    )
+    expect(theme.emotion.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
+  })
+
+  it("keeps stock chrome through createTheme when only textColor is set", () => {
+    const theme = createTheme("Custom", { textColor: "#111111" })
+    expect(theme.emotion.colors.borderColor).toBe(
+      lightTheme.emotion.colors.borderColor
+    )
+    expect(theme.emotion.colors.codeTextColor).toBe(
+      theme.emotion.colors.bodyText
+    )
+  })
+
+  it("derives unset chrome through createTheme when a surface differs from stock", () => {
+    const theme = createTheme("Custom", {
+      backgroundColor: "#eeeeee",
+      secondaryBackgroundColor: "#FAFAF9",
+    })
+    expect(theme.emotion.colors.borderColor).toBe(
+      theme.emotion.colors.fadedText10
+    )
+    expect(theme.emotion.colors.codeBackgroundColor).toBe(
+      theme.emotion.colors.bgMix
+    )
+  })
+
+  it("derives unset chrome through createTheme when primaryColor differs from stock", () => {
+    const theme = createTheme("Custom", {
+      primaryColor: "#7c3aed",
+      greenTextColor: "#00aa00",
+    })
+    expect(theme.emotion.colors.codeTextColor).toBe("#00aa00")
+    expect(theme.emotion.colors.borderColor).toBe(
+      theme.emotion.colors.fadedText10
     )
   })
 
@@ -1361,6 +1465,16 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
+  })
+
+  it("syncs widgetBorderColor to borderColor when showWidgetBorder is omitted", () => {
+    const theme = createEmotionTheme({ borderColor: "purple" })
+    expect(theme.colors.widgetBorderColor).toBe("purple")
+  })
+
+  it("clears widgetBorderColor when showWidgetBorder is false", () => {
+    const theme = createEmotionTheme({ showWidgetBorder: false })
+    expect(theme.colors.widgetBorderColor).toBeUndefined()
   })
 
   // Background theme colors
@@ -2065,18 +2179,31 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.greenTextColor).toBe("#00aa00")
   })
 
-  it("falls back to configured greenTextColor when codeTextColor not provided", () => {
+  it("keeps stock codeTextColor when greenTextColor is configured without codeTextColor", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       greenTextColor: "#00aa00",
       // codeTextColor intentionally not set
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
 
-    expect(theme.colors.codeTextColor).toBe("#00aa00")
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
     expect(theme.colors.greenTextColor).toBe("#00aa00")
   })
 
-  it("falls back to greenTextColor derived from greenColor when codeTextColor & greenTextColor not provided (light theme)", () => {
+  it("follows greenTextColor for codeTextColor when surfaces are customized", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      backgroundColor: "#ffffff",
+      secondaryBackgroundColor: "#FAFAF9",
+      greenTextColor: "#00aa00",
+      // codeTextColor intentionally not set
+    }
+    const theme = createEmotionTheme(themeInput, lightTheme)
+
+    expect(theme.colors.codeTextColor).toBe("#00aa00")
+  })
+  it("keeps stock codeTextColor when greenColor is configured without codeTextColor (light theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       greenColor: "#29b09d", // green70
@@ -2086,10 +2213,12 @@ describe("createEmotionTheme", () => {
 
     const expectedDerivedGreenTextColor = darken("#29b09d", 0.15)
     expect(theme.colors.greenTextColor).toBe(expectedDerivedGreenTextColor)
-    expect(theme.colors.codeTextColor).toBe(expectedDerivedGreenTextColor)
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
   })
 
-  it("falls back to greenTextColor derived from greenColor when codeTextColor & greenTextColor not provided (dark theme)", () => {
+  it("keeps stock codeTextColor when greenColor is configured without codeTextColor (dark theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.DARK,
       greenColor: "#177233", // green100
@@ -2099,10 +2228,12 @@ describe("createEmotionTheme", () => {
 
     const expectedDerivedGreenTextColor = lighten("#177233", 0.15)
     expect(theme.colors.greenTextColor).toBe(expectedDerivedGreenTextColor)
-    expect(theme.colors.codeTextColor).toBe(expectedDerivedGreenTextColor)
+    expect(theme.colors.codeTextColor).toBe(
+      darkTheme.emotion.colors.codeTextColor
+    )
   })
 
-  it("falls back to default greenTextColor when no code or green colors configured (light theme)", () => {
+  it("uses stock codeTextColor when no code or green colors configured (light theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       // No codeTextColor, greenColor, or greenTextColor configured
@@ -2110,14 +2241,14 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput, lightTheme)
 
     expect(theme.colors.codeTextColor).toBe(
-      lightTheme.emotion.colors.greenTextColor
+      lightTheme.emotion.colors.codeTextColor
     )
     expect(theme.colors.greenTextColor).toBe(
       lightTheme.emotion.colors.greenTextColor
     )
   })
 
-  it("falls back to default greenTextColor when no code or green colors configured (dark theme)", () => {
+  it("uses stock codeTextColor when no code or green colors configured (dark theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.DARK,
       // No codeTextColor, greenColor, or greenTextColor configured
@@ -2125,7 +2256,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput, darkTheme)
 
     expect(theme.colors.codeTextColor).toBe(
-      darkTheme.emotion.colors.greenTextColor
+      darkTheme.emotion.colors.codeTextColor
     )
     expect(theme.colors.greenTextColor).toBe(
       darkTheme.emotion.colors.greenTextColor
@@ -2156,7 +2287,7 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.codeTextColor).toBe("#ff0000") // Should use explicit codeTextColor
   })
 
-  it("handles invalid codeTextColor by logging warning and falling back to default greenTextColor", () => {
+  it("handles invalid codeTextColor by logging warning and keeping stock codeTextColor", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
     const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "invalid-color",
@@ -2167,12 +2298,14 @@ describe("createEmotionTheme", () => {
     expect(logWarningSpy).toHaveBeenCalledWith(
       `Invalid color passed for codeTextColor in theme: "invalid-color"`
     )
-    // Should fall back to greenTextColor since codeTextColor is invalid
-    expect(theme.colors.codeTextColor).toBe("#00aa00")
+    // Invalid codeTextColor is ignored; stock code text is kept (not green).
+    expect(theme.colors.codeTextColor).toBe(
+      lightTheme.emotion.colors.codeTextColor
+    )
     expect(theme.colors.greenTextColor).toBe("#00aa00")
   })
 
-  it("falls back to default when both codeTextColor and greenTextColor are invalid", () => {
+  it("falls back to stock defaults when both codeTextColor and greenTextColor are invalid", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
     const themeInput: Partial<CustomThemeConfig.$Properties> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
@@ -2188,12 +2321,11 @@ describe("createEmotionTheme", () => {
       `Invalid color passed for greenTextColor in theme: "invalid-green-color"`
     )
 
-    // Should use default greenTextColor since both colors are invalid
     expect(theme.colors.greenTextColor).toBe(
       lightTheme.emotion.colors.greenTextColor
     )
     expect(theme.colors.codeTextColor).toBe(
-      lightTheme.emotion.colors.greenTextColor
+      lightTheme.emotion.colors.codeTextColor
     )
   })
 
@@ -4837,6 +4969,69 @@ describe("Sidebar theme creation", () => {
       )
     })
 
+    it("derives sidebar chrome when only primaryColor differs from stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "#7c3aed",
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Surfaces stay stock (test above); chrome follows main derivation so
+      // primaryColor-only themes do not split opaque sidebar vs derived main.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        mainTheme.emotion.colors.codeTextColor
+      )
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        mainTheme.emotion.colors.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
+    })
+
+    it("derives sidebar chrome when only sidebar primaryColor differs from stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: { primaryColor: "#7c3aed" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockChrome.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        sidebarTheme.emotion.colors.greenTextColor
+      )
+    })
+
+    it("inherits a valid main borderColor when the sidebar borderColor is invalid", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "purple",
+        sidebar: { borderColor: "not-a-color" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.widgetBorderColor).toBe("purple")
+    })
+
+    it("aligns unset sidebar codeTextColor with sidebar textColor when both sections set text", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        textColor: "#005500",
+        sidebar: { textColor: "#2F2D2B" },
+      })
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Stock sidebar surfaces still apply; code text follows the sidebar body
+      // color rather than the main area's resolved codeTextColor.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe("#2F2D2B")
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        sidebarTheme.emotion.colors.bodyText
+      )
+      expect(sidebarTheme.emotion.colors.codeTextColor).not.toBe(
+        mainTheme.emotion.colors.codeTextColor
+      )
+    })
+
     it("uses stock sidebar surfaces for preset light and dark themes", () => {
       const lightSidebarTheme = createSidebarTheme(lightTheme)
       const darkSidebarTheme = createSidebarTheme(darkTheme)
@@ -4845,6 +5040,164 @@ describe("Sidebar theme creation", () => {
       expect(lightSidebarTheme.emotion.colors.secondaryBg).toBe("#F1F0EE")
       expect(darkSidebarTheme.emotion.colors.bgColor).toBe("#21201D")
       expect(darkSidebarTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
+    })
+
+    it("matches stock sidebar surfaces when configured without a # prefix", () => {
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+      // Hashless hex is accepted by theme config (parseColor adds # later).
+      // Comparing before that step must not throw or miss the stock pair.
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: {
+          secondaryBackgroundColor: "F1F0EE",
+        },
+      })
+
+      expect(() => createSidebarTheme(mainTheme)).not.toThrow()
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe(
+        stockLight.backgroundColor
+      )
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F1F0EE")
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+    })
+
+    it("does not throw when a sidebar surface color is invalid", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        sidebar: {
+          secondaryBackgroundColor: "not-a-color",
+        },
+      })
+
+      expect(() => createSidebarTheme(mainTheme)).not.toThrow()
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Invalid secondary still flows through; stock chrome is skipped.
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
+    })
+
+    it("keeps stock sidebar chrome when an invalid main borderColor is set", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "not-a-color",
+      })
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Invalid main border is treated as unset for the stock-chrome gate.
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+    })
+
+    it("applies stock sidebar chrome when sidebar surfaces are explicitly the stock pair", () => {
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+      const stockChrome = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+      // Custom main surfaces normally skip stock sidebar chrome, but an
+      // explicit stock sidebar pair should still receive it.
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          backgroundColor: stockLight.backgroundColor,
+          secondaryBackgroundColor: stockLight.secondaryBackgroundColor,
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe(
+        stockChrome.borderColor
+      )
+      expect(sidebarTheme.emotion.colors.codeBackgroundColor).toBe(
+        stockChrome.codeBackgroundColor
+      )
+    })
+
+    it("applies stock sidebar chrome when main surfaces are built-in", () => {
+      const lightSidebarTheme = createSidebarTheme(lightTheme)
+      const darkSidebarTheme = createSidebarTheme(darkTheme)
+      const stockLight = stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+      const stockDark = stockSidebarChrome[CustomThemeConfig.BaseTheme.DARK]
+
+      expect(lightSidebarTheme.emotion.colors.borderColor).toBe(
+        stockLight.borderColor
+      )
+      expect(lightSidebarTheme.emotion.colors.widgetBorderColor).toBe(
+        stockLight.borderColor
+      )
+      expect(lightSidebarTheme.emotion.colors.dataframeBorderColor).toBe(
+        stockLight.dataframeBorderColor
+      )
+      expect(
+        lightSidebarTheme.emotion.colors.dataframeHeaderBackgroundColor
+      ).toBe(stockLight.dataframeHeaderBackgroundColor)
+      expect(lightSidebarTheme.emotion.colors.codeBackgroundColor).toBe(
+        stockLight.codeBackgroundColor
+      )
+      expect(lightSidebarTheme.emotion.colors.codeTextColor).toBe(
+        lightSidebarTheme.emotion.colors.bodyText
+      )
+
+      expect(darkSidebarTheme.emotion.colors.borderColor).toBe(
+        stockDark.borderColor
+      )
+      expect(darkSidebarTheme.emotion.colors.widgetBorderColor).toBe(
+        stockDark.borderColor
+      )
+      expect(darkSidebarTheme.emotion.colors.dataframeBorderColor).toBe(
+        stockDark.dataframeBorderColor
+      )
+      expect(
+        darkSidebarTheme.emotion.colors.dataframeHeaderBackgroundColor
+      ).toBe(stockDark.dataframeHeaderBackgroundColor)
+      expect(darkSidebarTheme.emotion.colors.codeBackgroundColor).toBe(
+        stockDark.codeBackgroundColor
+      )
+      expect(darkSidebarTheme.emotion.colors.codeTextColor).toBe(
+        darkSidebarTheme.emotion.colors.bodyText
+      )
+    })
+
+    it("inherits main-only borderColor into the sidebar when surfaces stay stock", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        borderColor: "purple",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.borderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.widgetBorderColor).toBe("purple")
+      // Unset dataframeBorderColor follows borderColorLight for custom borderColor.
+      expect(sidebarTheme.emotion.colors.dataframeBorderColor).toBe(
+        sidebarTheme.emotion.colors.borderColorLight
+      )
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
+    })
+
+    it("does not force stock sidebar chrome when main surfaces are customized", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        borderColor: "purple",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Classic swap + inherit main border (no stock sidebar chrome hex).
+      expect(sidebarTheme.emotion.colors.borderColor).toBe("purple")
+      expect(sidebarTheme.emotion.colors.borderColor).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT].borderColor
+      )
     })
 
     it("uses configured sidebar backgroundColor when provided", () => {
@@ -4879,6 +5232,29 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.bgColor).toBe("darkblue")
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe(
         stockLight.secondaryBackgroundColor
+      )
+    })
+
+    it("does not paint stock light chrome onto a customized dark sidebar", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        // Leave main surfaces on the built-in light pair.
+        sidebar: {
+          backgroundColor: "darkblue",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Custom sidebar surfaces derive unset chrome from the dark base — not
+      // light stock chrome.
+      expect(sidebarTheme.emotion.colors.codeTextColor).toBe(
+        sidebarTheme.emotion.colors.greenTextColor
+      )
+      expect(
+        sidebarTheme.emotion.colors.dataframeHeaderBackgroundColor
+      ).not.toBe(
+        stockSidebarChrome[CustomThemeConfig.BaseTheme.LIGHT]
+          .dataframeHeaderBackgroundColor
       )
     })
 

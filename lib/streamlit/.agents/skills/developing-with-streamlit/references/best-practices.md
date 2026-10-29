@@ -8,6 +8,7 @@ Use this reference when reviewing an app, starting a new app, or applying the qu
 
 - [Styling and copy](#styling-and-copy)
 - [HTML and iframes](#html-and-iframes)
+- [Custom components](#custom-components)
 - [Layout](#layout)
 - [Navigation and pages](#navigation-and-pages)
 - [Performance](#performance)
@@ -89,6 +90,12 @@ Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` c
 
 - Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
+
+## Custom components
+
+When a native Streamlit command covers the behavior, use it instead of a third-party package or a new custom component. Most community packages are not maintained by Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
+
+Common replacements are `@st.fragment(run_every=...)` for `streamlit-autorefresh`, `st.dataframe` or `st.data_editor` for `streamlit-aggrid`, and `st.map` or `st.pydeck_chart` for `streamlit-folium`. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
 
 ## Layout
 
@@ -251,7 +258,7 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script.
+Use fragments for independent sections that can rerun separately from the page. For a timer, refresh that section with `@st.fragment(run_every=...)` instead of looping the script or adding `streamlit-autorefresh`.
 
 ```python
 # BAD: Blocks the script in an endless loop
@@ -322,7 +329,7 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description).
+Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
 
 ```python
 # GOOD: Native charts for common cases
