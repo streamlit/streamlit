@@ -29,7 +29,8 @@ There are two motivations, weighted equally:
   hear about a violation instead of reading a silent correction as success.
 
 The full per-widget research is in [constraint-inventory.md](constraint-inventory.md). The
-mechanism is in [tech-spec.md](tech-spec.md).
+mechanism is in the tech spec, which lands with the Phase 1 implementation in the PR
+stacked on this one.
 
 ## Problem
 
@@ -112,7 +113,7 @@ own, provided each reports the violation and lets the caller decide."
      that are the exception: `st.data_editor`, `st.tabs`, the open state of
      `st.expander` and `st.popover`, the file, camera, and audio inputs, and dataframe
      and chart selections. A refused change stays visible in them until they remount or
-     the user changes them again (see the [tech spec](tech-spec.md#browser-re-sync)).
+     the user changes them again (see the tech spec's *Browser re-sync* section).
    - Nothing raises in the app. This generalizes what [#16209](https://github.com/streamlit/streamlit/pull/16209)
      does for `disabled`, and it is what the browser itself does when it blocks a commit:
      it sends nothing.
@@ -120,7 +121,7 @@ own, provided each reports the violation and lets the caller decide."
    means.** Each widget states what it accepts inside its own implementation, beside how
    it reads its value. That place is the widget's serde: the per-widget object, such as
    `NumberInputSerde`, that already holds `serialize` and `deserialize` (see the
-   [tech spec](tech-spec.md#where-constraints-live-in-each-widgets-serde)).
+   tech spec's *Where constraints live* section).
    The check reports a violation; it does not act on it.
    - A browser session drops the value, as in (2).
    - The agent API refuses the whole request with `invalid_value` before anything runs,
@@ -249,15 +250,15 @@ Why this order:
   binding.
 - **Item 3 is the most serious finding**, but it is ranked third because it changes
   behavior in a real race. When a server-initiated rerun hides a widget, a click the user
-  made just before is now ignored. The [tech spec](tech-spec.md#rendered-widget-gate)
-  walks through the races.
+  made just before is now ignored. The tech spec's *Rendered-widget gate*
+  section walks through the races.
 - **Items 4 and 5 add little security on their own,** since most of item 4 is already
   coerced. Their value is the agent half: no silent corrections, `required` enforced, and
   a `value_schema` that can finally state `minimum`, `maximum`, and `maxLength` truthfully.
 - **Item 6 leads Phase 2** because it is the largest security gap left after Phase 1:
   data editors feed database write-back, and a disabled column or a fixed row count
   protects nothing today. It is also a prerequisite for agent edits. It sits outside
-  Phase 1 only because it needs its own policy design (see the [tech spec](tech-spec.md#per-item-notes)).
+  Phase 1 only because it needs its own policy design (see the tech spec's *Per-item notes*).
 - **Item 7 completes `required` inside forms.** A field-level rule cannot catch a submit
   with a required field that was never filled, because that field never changes.
 - **Item 8 unblocks agent selections** and is small.
@@ -267,7 +268,7 @@ Why this order:
   and 4 already have the query parameter path call each widget's validator. The refactor
   moves its remaining checks there, and three metadata fields that exist only for them go
   away (see the
-  [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)). It does
+  tech spec's *Other value sources* section). It does
   not change what a URL can set.
 
 ### Rollout
@@ -286,7 +287,7 @@ option:
     must never be refused, including after a later frontend change.
   - **Accepted wire fields.** Item 1 derives each widget's accepted wire fields from what
     the frontend actually sends, audited per widget, not from the registered
-    `value_type` (see the [tech spec](tech-spec.md#the-boundary-check)).
+    `value_type` (see the tech spec's *The boundary check* section).
   - **Separate releases.** Items 1, 3, and 7 land in different releases, so a regression
     bisects to one item, and a patch release can revert it. Platforms that pin a
     version, such as SiS, get that revert later.
@@ -437,7 +438,7 @@ widget registers. The other changes affect only forged values and `AppTest`.
   or it raises a raw `TypeError`. The per-widget validators make one rule possible.
   Turning the raw `TypeError`s into clear errors is a safe papercut. Deciding whether an
   explicit invalid write should raise or reset changes API behavior, so it needs its own
-  spec (see the [tech spec](tech-spec.md#other-value-sources-url-binding-and-session-state)).
+  spec (see the tech spec's *Other value sources* section).
 - **`AppTest.set_value` raising for an invalid value.** Phase 1 keeps the logic simple:
   `AppTest` drops an invalid value, exactly as the browser path does. A follow-up makes
   `set_value` raise through the same check the agent API uses, because a test that sets
