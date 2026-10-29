@@ -34,6 +34,7 @@ from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 def forged(element_id: str, **field: Any) -> WidgetStates:
@@ -1655,3 +1656,152 @@ def test_a_bound_url_value_cannot_empty_a_required_widget(
     assert not at.exception
     assert at.session_state[key] == expected
     assert at.query_params.get(key) is None
+
+
+# region Rendered-widget gate
+
+
+def _admin_app() -> None:
+    import streamlit as st
+
+    def delete_all() -> None:
+        st.session_state.deleted = True
+
+    if st.toggle("Admin", key="admin"):
+        st.button("Delete all", key="delete", on_click=delete_all)
+
+
+def test_a_hidden_admin_button_does_not_fire() -> None:
+    """A trigger for a button behind a condition that is now false runs nothing."""
+    at = AppTest.from_function(_admin_app).run()
+    at.toggle(key="admin").set_value(True).run()
+    delete_id = at.button(key="delete").id
+    at.toggle(key="admin").set_value(False).run()
+
+    at._run(widget_state=forged(delete_id, trigger_value=True))
+
+    assert "deleted" not in at.session_state
+    assert not at.button
+
+
+def test_a_shown_admin_button_still_fires_a_forged_click() -> None:
+    """The control for the hidden case: the same message fires a rendered button."""
+    at = AppTest.from_function(_admin_app).run()
+    at.toggle(key="admin").set_value(True).run()
+
+    at._run(widget_state=forged(at.button(key="delete").id, trigger_value=True))
+
+    assert at.session_state.deleted is True
+
+
+def _dialog_app() -> None:
+    import streamlit as st
+
+    def delete_all() -> None:
+        st.session_state.deleted = True
+
+    @st.dialog("Confirm")
+    def confirm() -> None:
+        st.button("Delete all", key="delete", on_click=delete_all)
+
+    if st.button("Open", key="open"):
+        confirm()
+
+
+def test_a_button_in_a_dialog_a_full_rerun_closed_does_not_fire() -> None:
+    """A dialog that a rerun did not open again no longer renders its widgets."""
+    at = AppTest.from_function(_dialog_app).run()
+    at.button(key="open").click().run()
+    delete_id = at.button(key="delete").id
+    at.run()
+
+    at._run(widget_state=forged(delete_id, trigger_value=True))
+
+    assert "deleted" not in at.session_state
+
+
+def _gated_app() -> None:
+    import streamlit as st
+
+    def go() -> None:
+        st.session_state.went = True
+
+    if not st.toggle("Logged in", key="logged_in"):
+        st.stop()
+    st.text_input("Name", key="name")
+    st.button("Go", key="go", on_click=go)
+
+
+def test_a_widget_after_st_stop_keeps_its_value_but_takes_no_click() -> None:
+    """st.stop() before a widget registers keeps its value and refuses its trigger."""
+    at = AppTest.from_function(_gated_app).run()
+    at.toggle(key="logged_in").set_value(True).run()
+    at.text_input(key="name").input("Ada").run()
+    go_id = at.button(key="go").id
+    at.toggle(key="logged_in").set_value(False).run()
+
+    at._run(widget_state=forged(go_id, trigger_value=True))
+
+    assert "went" not in at.session_state
+    at.toggle(key="logged_in").set_value(True).run()
+    assert at.text_input(key="name").value == "Ada"
+
+
+def _placeholder_app() -> None:
+    import streamlit as st
+
+    def go() -> None:
+        st.session_state.went = True
+
+    slot = st.empty()
+    slot.button("Go", key="go", on_click=go)
+    slot.empty()
+
+
+def test_a_widget_replaced_later_in_the_same_run_still_counts_as_rendered() -> None:
+    """The gate names registration: a widget the run emitted and then replaced."""
+    at = AppTest.from_function(_placeholder_app).run()
+    assert not at.button
+
+    at._run(widget_state=forged(_widget_id(at, "go"), trigger_value=True))
+
+    assert at.session_state.went is True
+
+
+def _write_two_pages(tmp_path: Path) -> Path:
+    main_script = tmp_path / "main.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    main_script.write_text(
+        "import streamlit as st\n"
+        "def delete_all():\n"
+        "    st.session_state.deleted = st.session_state.get('deleted', 0) + 1\n"
+        "st.button('Delete all', key='delete', on_click=delete_all)\n",
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        "import streamlit as st\nst.text('other')\n", encoding="utf-8"
+    )
+    return main_script
+
+
+def test_a_button_on_the_previous_page_does_not_fire(tmp_path: Path) -> None:
+    """Once the new page's run completes, the previous page's widgets take no click.
+
+    The page-change message itself is checked against the previous page, which
+    no run has covered since the browser showed it, so a click in it lands, as
+    it would have one message earlier.
+    """
+    at = AppTest.from_file(_write_two_pages(tmp_path)).run()
+    delete_id = at.button(key="delete").id
+
+    at.switch_page("pages/other.py")
+    at._run(widget_state=forged(delete_id, trigger_value=True))
+    assert at.session_state.deleted == 1
+    assert at.text[0].value == "other"
+
+    at._run(widget_state=forged(delete_id, trigger_value=True))
+    assert at.session_state.deleted == 1
+
+
+# endregion Rendered-widget gate

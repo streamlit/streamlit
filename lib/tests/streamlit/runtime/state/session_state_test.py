@@ -106,6 +106,15 @@ def _changed_ids(ss: SessionState) -> list[str]:
     ]
 
 
+def _render(ss: SessionState, *widget_ids: str) -> None:
+    """Mark widgets as rendered, as registering them in a run does.
+
+    Tests that set metadata directly need it for a change to pass the
+    boundary check.
+    """
+    ss._new_widget_state.rendered_ids.update(widget_ids)
+
+
 def _raw_session_state() -> SessionState:
     """Return the SessionState instance within the current ScriptRunContext's
     SafeSessionState wrapper.
@@ -1673,6 +1682,7 @@ def test_fresh_callbacks_run_before_replay_overlay() -> None:
             )
         )
         ss._old_state[wid] = False
+    _render(ss, "fresh", "replay")
 
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="fresh", trigger_value=True)
@@ -1701,6 +1711,7 @@ def test_active_fresh_trigger_wins_over_replay_with_same_id() -> None:
         )
     )
     ss._old_state["trigger"] = None
+    _render(ss, "trigger")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="trigger").string_trigger_value.data = "new"
     replay = WidgetStatesProto()
@@ -1727,6 +1738,7 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
         )
     )
     ss._old_state["chat"] = None
+    _render(ss, "chat")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="chat").chat_input_value.data = "new"
     replay = WidgetStatesProto()
@@ -1813,6 +1825,7 @@ def test_callback_mutation_survives_replay_overlay() -> None:
         )
     )
     ss._old_state["replay"] = False
+    _render(ss, "fresh", "replay")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="fresh", trigger_value=True)
     replay = WidgetStatesProto()
@@ -2154,6 +2167,7 @@ def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
             )
         )
         ss._old_state[wid] = 0
+    _render(ss, "field", "submit")
     mock_ctx = MagicMock()
     mock_ctx.fragment_ids_this_run = None
     mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
@@ -3762,6 +3776,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         )
         self.session_state._old_state["bound_widget"] = "previous"
         self.session_state._old_state["plain_widget"] = "previous"
+        _render(self.session_state, "bound_widget", "plain_widget")
 
         self.session_state.on_script_will_rerun(
             widget_states, is_history_navigation=True
@@ -6317,6 +6332,7 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         )
         self.session_state._old_state[widget_id] = "old"
         self.session_state._new_widget_state.set_widget_metadata(metadata)
+        _render(self.session_state, widget_id)
         self.session_state.on_script_will_rerun(
             WidgetStatesProto(
                 widgets=[WidgetStateProto(id=widget_id, string_value="new")]
@@ -6355,6 +6371,7 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         )
         self.session_state._set_widget_metadata(metadata)
         self.session_state._old_state[widget_id] = {"value": {"a": 1, "b": 2}}
+        _render(self.session_state, widget_id)
 
         self.session_state.on_script_will_rerun(
             WidgetStatesProto(
@@ -6485,6 +6502,7 @@ def _session_with(
     ss = SessionState()
     for widget_metadata in metadata:
         ss._set_widget_metadata(widget_metadata)
+        _render(ss, widget_metadata.id)
     ss._old_state.update(old_state or {})
     return ss
 
@@ -6907,6 +6925,163 @@ def test_an_early_stop_prunes_rendered_widgets_and_keeps_values() -> None:
 
     assert ss._new_widget_state.rendered_ids == {"before"}
     assert ss["after"] == "kept"
+
+
+def test_a_change_for_a_widget_the_run_hid_is_refused(
+    refusal_logs: list[str],
+) -> None:
+    """A run that stops rendering a widget refuses its next change, at debug level."""
+    callback = MagicMock()
+    ss = _registered(
+        _boundary_metadata("hidden", callback=callback),
+        _boundary_metadata("hidden_button", value_type="trigger_value"),
+    )
+    _finish_run(ss)
+    ss._old_state.update({"hidden": "previous", "hidden_button": False})
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="hidden", string_value="new"),
+            WidgetStateProto(id="hidden_button", trigger_value=True),
+        )
+    )
+
+    callback.assert_not_called()
+    assert ss["hidden"] == "previous"
+    assert ss["hidden_button"] is False
+    assert ss._rejected_client_values == frozenset({"hidden", "hidden_button"})
+    # Nothing to correct in the browser, which removed it.
+    assert ss._pending_resync == set()
+    assert refusal_logs == []
+    assert "hidden" not in ss._warned_widget_ids
+
+
+def test_an_unchanged_value_for_a_hidden_widget_passes() -> None:
+    """The browser resends values for widgets it still shows, unchanged."""
+    ss = _registered(_boundary_metadata("hidden"))
+    _finish_run(ss)
+    ss._old_state["hidden"] = "same"
+
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="hidden", string_value="same"))
+    )
+
+    assert ss._rejected_client_values == frozenset()
+    assert ss["hidden"] == "same"
+
+
+def test_a_refusal_for_a_hidden_widget_is_a_warning_under_the_parity_gate(
+    refusal_logs: list[str],
+) -> None:
+    """The e2e parity gate sees a correct browser refused as not rendered."""
+    ss = _registered(_boundary_metadata("hidden"))
+    _finish_run(ss)
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(WidgetStateProto(id="hidden", string_value="new"))
+        )
+
+    assert len(refusal_logs) == 1
+    assert "hidden (not_rendered)" in refusal_logs[0]
+
+
+def test_the_run_every_hide_race_drops_the_click() -> None:
+    """A fragment's auto-rerun hides a button just before its click arrives.
+
+    The message order is replayed: the click was made on the page the browser
+    still showed, but the fragment run had already removed the button.
+    """
+    clicked = MagicMock()
+    outside_changed = MagicMock()
+    ss = _registered(
+        _boundary_metadata(
+            "button", value_type="trigger_value", callback=clicked, fragment_id="f"
+        ),
+        _boundary_metadata("outside", callback=outside_changed),
+    )
+    _finish_run(ss, "button", "outside")
+    # The run_every rerun of fragment "f" no longer renders the button.
+    _finish_run(ss, fragment_ids_this_run=["f"])
+    ss._old_state.update({"button": False, "outside": "old"})
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="button", trigger_value=True),
+            WidgetStateProto(id="outside", string_value="new"),
+        )
+    )
+
+    clicked.assert_not_called()
+    outside_changed.assert_called_once()
+
+
+def test_an_interrupted_run_keeps_accepting_the_widgets_it_did_not_reach() -> None:
+    """st.rerun() before a widget registers leaves it rendered, so its change lands."""
+    callback = MagicMock()
+    ss = _registered(_boundary_metadata("later", callback=callback))
+    _finish_run(ss, remove_stale_widgets=False)
+    ss._old_state["later"] = "old"
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="later", string_value="new")))
+
+    callback.assert_called_once()
+
+
+def test_a_value_refused_outside_a_fragment_is_corrected_at_the_next_full_run() -> None:
+    """A fragment run keeps the re-sync of a widget outside it until it registers."""
+    outside = _boundary_metadata("outside")
+    ss = _registered(outside)
+    ss._old_state["outside"] = "previous"
+
+    # A fragment run receives the browser's whole map, with a refused value.
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="outside", bool_value=True)))
+    _finish_run(ss, fragment_ids_this_run=["f"])
+    assert ss._pending_resync == {"outside"}
+
+    # The next full run registers the widget and tells the browser its value.
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="outside", string_value="previous"))
+    )
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    ):
+        result = ss.register_widget(outside, None)
+
+    assert (result.value, result.value_changed) == ("previous", True)
+    assert ss._pending_resync == set()
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_checks_its_values_at_registration_not_at_the_gate(
+    _mock_ctx: MagicMock, refusal_logs: list[str]
+) -> None:
+    """A reconnect's widget map has no metadata yet, so nothing is rendered either.
+
+    Its values wait for registration, which renders the widget, and a trigger
+    in the map is dropped without a log line.
+    """
+    callback = MagicMock()
+    ss = _session_with()
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(
+                WidgetStateProto(id="w", string_value="restored"),
+                WidgetStateProto(id="button", trigger_value=True),
+            )
+        )
+        result = ss.register_widget(_boundary_metadata("w", callback=callback), None)
+
+    assert result.value == "restored"
+    assert ss._new_widget_state.rendered_ids == {"w"}
+    callback.assert_not_called()
+    assert refusal_logs == []
+    assert ss._warned_widget_ids == set()
 
 
 # endregion Rendered widgets

@@ -714,6 +714,27 @@ class WidgetWritesTest(SnapshotCase):
         error = self._refusal({"agree": True}, snapshot=snapshot)
         assert error.code == "disabled_widget"
 
+    def test_a_widget_the_latest_run_did_not_render_is_not_on_the_page(self) -> None:
+        """The shared check refuses a widget the snapshot shows but no run rendered.
+
+        The snapshot check answers first for an element it does not show, so
+        this only covers an element the session no longer counts as rendered.
+        """
+        st.checkbox("Agree", key="agree")
+        st.button("Go", key="go")
+        snapshot = self._build()
+        rendered_ids = self._session_state()._new_widget_state.rendered_ids
+        rendered_ids.discard(self._element_id("agree"))
+        rendered_ids.discard(self._element_id("go"))
+
+        for request in ({"widget_state": {"agree": True}}, {"trigger": {"key": "go"}}):
+            error = self._refusal(**request, snapshot=snapshot)
+            assert error.code == "not_on_page"
+            assert "the latest run did not render it" in error.message
+        # A value that reads as the stored one changes nothing, so it passes.
+        (encoded,) = self._write({"agree": False}, snapshot=snapshot).widgets
+        assert encoded.bool_value is False
+
     @parameterized.expand(
         [
             ("non_clearable_resets", "text", None, None, "hello"),

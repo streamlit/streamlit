@@ -25,8 +25,9 @@ The checks run in this order, and the first violation wins:
 1. The wire field is one the widget accepts (``wrong_type``).
 2. The widget's deserializer can read the value (``unreadable``).
 3. An unchanged value passes.
-4. The widget is not disabled (``disabled``).
-5. The widget's own validator, ``WidgetMetadata.validator``.
+4. The latest run that covered the widget rendered it (``not_rendered``).
+5. The widget is not disabled (``disabled``).
+6. The widget's own validator, ``WidgetMetadata.validator``.
 
 Validators share small helpers, such as ``one_of`` and ``items_of`` for a
 widget with a closed set of options, ``within`` for bounds, ``iso_date`` for the
@@ -72,6 +73,9 @@ ViolationKind: TypeAlias = Literal[
     "wrong_type",
     # Unpacking the value or running the widget's deserializer raised.
     "unreadable",
+    # The latest run that covered the widget did not render it, such as a
+    # button behind a condition that is now false, or on another page.
+    "not_rendered",
     # The widget was disabled in the run the client was shown.
     "disabled",
     # The value is not one of the widget's options.
@@ -145,6 +149,7 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 # arrives. They are logged at debug level.
 _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
     {
+        "not_rendered",
         "disabled",
         "not_an_option",
         "too_many_items",
@@ -172,6 +177,7 @@ _NOT_ISO_DATETIME: Final = _malformed("a date and time as YYYY-MM-DDTHH:MM")
 _NOT_HEX_COLOR: Final = _malformed("a hex color as #rgb or #rrggbb")
 _UNORDERED: Final = Violation("bad_shape", MappingProxyType({"order": True}))
 _EMPTY_REQUIRED: Final = Violation("empty_required")
+_NOT_RENDERED: Final = Violation("not_rendered")
 
 # The characters JavaScript's `String.prototype.trim()` removes, which is how
 # the browser decides that text is empty. Python's `str.strip()` also removes
@@ -207,6 +213,10 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
         "The widget could not read it. The Streamlit frontend never sends "
         "that, so the message was forged or came from a different frontend "
         "version."
+    ),
+    "not_rendered": (
+        "The latest run that covered the widget did not render it. A rerun can "
+        "hide a widget just before a user's change arrives."
     ),
     "disabled": "The widget was disabled when the client sent it.",
     "not_an_option": (
@@ -601,6 +611,7 @@ def check_client_value(
     *,
     metadata: WidgetMetadata[Any],
     previous: Any,
+    is_rendered: bool,
     compare_wire: bool = False,
     stored_state: WidgetStateProto | None = None,
 ) -> CheckResult:
@@ -617,6 +628,9 @@ def check_client_value(
         The metadata of the run that rendered the widget.
     previous : Any
         The widget's stored value, deserialized.
+    is_rendered : bool
+        Whether the latest run that covered the widget registered it. A widget
+        registering in the current run is rendered.
     compare_wire : bool
         How an unchanged value is recognized. ``False`` compares the
         deserialized value with ``previous``, which a browser session uses.
@@ -667,6 +681,12 @@ def check_client_value(
             return CheckResult(None, value)
     elif _unchanged(value, previous):
         return CheckResult(None, value)
+
+    # A widget the latest run did not render accepts no change, such as a
+    # trigger for a button behind a condition that is now false. Its metadata
+    # outlives it, so the metadata alone cannot tell.
+    if not is_rendered:
+        return CheckResult(_NOT_RENDERED, value)
 
     # A disabled widget accepts no client input. The metadata is from the run
     # the client was shown, so a widget that disables itself in the callback

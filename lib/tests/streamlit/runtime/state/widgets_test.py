@@ -158,6 +158,8 @@ class WidgetManagerTests(unittest.TestCase):
                     callback_kwargs=kwargs,
                 )
             )
+            # The previous run rendered the widget, as registering it does.
+            session_state._new_widget_state.rendered_ids.add(widget_id)
 
         states = WidgetStates()
         _create_widget("trigger", states).trigger_value = True

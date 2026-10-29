@@ -94,11 +94,12 @@ def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]
             else:
                 self._unregistered_client_ids.add(widget_id)
             continue
+        is_rendered = widget_id in self._new_widget_state.rendered_ids
         result = widget_checks.check_client_value(
             state,
             metadata=metadata,
             previous=self._old_state.get(widget_id),
-            is_rendered=widget_id in self._new_widget_state.rendered_ids,
+            is_rendered=is_rendered,
         )
         # A browser sends a shared format_func label as is; only the agent API
         # refuses it. browser_refuses says which kinds a browser session drops.
@@ -120,7 +121,7 @@ def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]
         else:
             self._new_widget_state.drop(widget_id)  # previous value stays in _old_state
             rejected.add(widget_id)
-            if metadata.value_type not in _TRIGGER_PROTO_FIELDS:
+            if is_rendered and metadata.value_type not in _TRIGGER_PROTO_FIELDS:
                 self._pending_resync.add(widget_id)  # see Browser re-sync
         # Never logs the value. The dedup set holds only IDs with metadata.
         widget_checks.log_violation(
@@ -492,20 +493,30 @@ The set changes at three points:
     marked runner prunes nothing. The user's stop button takes the same path, which
     only leaves the set larger than the page.
   - `ScriptRunner._on_script_finished` and AppTest's copy of it apply the same rule.
-  - Pruning rather than replacing matters on a page transition. There,
-    `script_runner.py` calls `on_script_finished` with IDs taken from the client's
-    `rerun_data.widget_states`, before `on_script_will_rerun` runs the check. Replacing
-    the set with those IDs would let a forged ID into `rendered_ids` just before the
-    check. Only registration adds an ID.
-  - The page-change message itself is therefore checked against the previous page's
-    widgets: no run has covered them since the browser showed them. A trigger for one of
-    them passes, as it would have one message earlier, so a client gains nothing. The
-    new page's first completed run prunes them.
-  - When a run's widget list is incomplete (`remove_stale_widgets=False`: the body never
-    ran, or `st.rerun()` interrupted it), the set is not pruned, exactly as states are
-    not pruned.
+
+Pruning rather than replacing matters on a page transition. There, `script_runner.py`
+calls `on_script_finished` with IDs taken from the client's `rerun_data.widget_states`,
+before `on_script_will_rerun` runs the check. Replacing the set with those IDs would let
+a forged ID into `rendered_ids` just before the check. Only registration adds an ID.
+
+- The page-change message itself is therefore checked against the previous page's
+  widgets: no run has covered them since the browser showed them. A trigger for one of
+  them passes, as it would have one message earlier, so a client gains nothing. The new
+  page's first completed run prunes them.
+- When a run's widget list is incomplete (`remove_stale_widgets=False`: the body never
+  ran, or `st.rerun()` interrupted it), the set is not pruned, exactly as states are not
+  pruned.
 
 Metadata itself stays, because `persist_state` and page-scoped values need it.
+
+Check 4 refuses a change for a widget outside `rendered_ids` as `not_rendered`. It runs
+after check 3, so a value the browser resends unchanged, as it does for every widget it
+holds, passes. The boundary passes `is_rendered=widget_id in rendered_ids`, and the
+check of a widget this session never registered passes `True`, because it runs while
+the widget registers. The agent API asks `SessionState.is_widget_rendered`. A refusal is
+logged at debug level, a correct browser causes one only in the races below, and a
+refused widget waits for a re-sync only if it is rendered: the browser removed the
+others.
 
 A dialog closed by a full rerun stops rendering its widgets, so they leave the set at
 the next cleanup. A dialog the browser dismissed with `on_dismiss="ignore"` is unknown to
@@ -937,8 +948,10 @@ a client value no longer rebuilds the widget's metadata.
   as text past `max_chars`, is refused as a whole. A trigger in the form that is not a
   submit button commits no field changes.
 - **Script runner**: a page-change message adds no ID to `rendered_ids`, and the previous
-  page's widgets are refused once the new page's run completes. `AppTest` does not
-  exercise this ordering.
+  page's widgets are refused once the new page's run completes. `AppTest`'s runner
+  inherits `ScriptRunner._run_script`, so `switch_page` followed by a forged message
+  takes this path. The early-stop prune is tested on both runners' `_on_script_finished`,
+  including a stop the session requested.
 - **Agent API**: new `invalid_value` cases for each item, and the deleted checks keep
   their behavior. `query_params` on a navigation request cannot set a disabled bound
   widget.

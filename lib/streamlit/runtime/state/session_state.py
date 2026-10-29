@@ -1022,9 +1022,10 @@ class SessionState:
         """Check the client values ``set_widgets_from_proto`` just stored.
 
         Each value is checked against the metadata of the run that rendered its
-        widget. An accepted value is cached deserialized, so nothing reads it
-        again. A refused one is dropped, so the widget keeps its previous value,
-        and is logged without the value.
+        widget, and a change is refused for a widget the latest run that
+        covered it did not render. An accepted value is cached deserialized, so
+        nothing reads it again. A refused one is dropped, so the widget keeps
+        its previous value, and is logged without the value.
 
         A value for a widget this session never registered, as a browser sends
         to a new session, is left for ``register_widget`` to check against this
@@ -1039,6 +1040,7 @@ class SessionState:
         """
         widget_state = self._new_widget_state
         metadata_by_id = widget_state.widget_metadata
+        rendered_ids = widget_state.rendered_ids
         changed: list[str] = []
         rejected: set[str] = set()
         # The states hold this message only, with the last entry of a repeated
@@ -1057,8 +1059,12 @@ class SessionState:
                     self._unregistered_client_ids.add(widget_id)
                 continue
 
+            is_rendered = widget_id in rendered_ids
             result = widget_checks.check_client_value(
-                state, metadata=metadata, previous=self._old_state.get(widget_id)
+                state,
+                metadata=metadata,
+                previous=self._old_state.get(widget_id),
+                is_rendered=is_rendered,
             )
             violation = result.violation
             if widget_checks.browser_refuses(violation):
@@ -1067,9 +1073,9 @@ class SessionState:
                 widget_checks.log_violation(
                     widget_id, violation, warned=self._warned_widget_ids
                 )
-                # A trigger resets anyway, so only a value needs the browser
-                # to be told what the server holds.
-                if metadata.value_type not in _TRIGGER_PROTO_FIELDS:
+                # Only a rendered widget shows the browser a value to correct,
+                # and a trigger resets anyway.
+                if is_rendered and metadata.value_type not in _TRIGGER_PROTO_FIELDS:
                     self._pending_resync.add(widget_id)
                 continue
             widget_state.cache_value(widget_id, result.value, state.WhichOneof("value"))
@@ -1701,6 +1707,13 @@ class SessionState:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
 
+    def is_widget_rendered(self, widget_id: str) -> bool:
+        """Whether the latest run that covered a widget registered it.
+
+        Metadata outlives the widget, so it cannot answer this.
+        """
+        return widget_id in self._new_widget_state.rendered_ids
+
     def get_widget_id_from_key(self, user_key: str) -> str | None:
         """Return the element ID the widget with ``user_key`` last registered under.
 
@@ -2046,8 +2059,12 @@ class SessionState:
         if not isinstance(wstate, Serialized):
             return False
         state = wstate.value
+        # The widget is registering in this run, which renders it.
         result = widget_checks.check_client_value(
-            state, metadata=metadata, previous=metadata.deserializer(None)
+            state,
+            metadata=metadata,
+            previous=metadata.deserializer(None),
+            is_rendered=True,
         )
         violation = result.violation
         if widget_checks.browser_refuses(violation):

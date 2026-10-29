@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import logging
 import math
@@ -116,7 +117,9 @@ def test_the_registered_field_and_the_cleared_form_are_accepted(
     value_type: ValueFieldName, state: WidgetStateProto, expected: Any
 ) -> None:
     """A value in the registered field, or with no field set, is read."""
-    result = check_client_value(state, metadata=_metadata(value_type), previous="old")
+    result = check_client_value(
+        state, metadata=_metadata(value_type), previous="old", is_rendered=True
+    )
 
     assert result.violation is None
     assert result.value == expected
@@ -141,7 +144,10 @@ def test_a_field_the_widget_does_not_read_is_wrong_type(
     deserializer = MagicMock()
 
     result = check_client_value(
-        state, metadata=_metadata(value_type, deserializer=deserializer), previous=None
+        state,
+        metadata=_metadata(value_type, deserializer=deserializer),
+        previous=None,
+        is_rendered=True,
     )
 
     assert result.violation is not None
@@ -171,7 +177,9 @@ def test_numeric_fields_are_interchangeable_within_double_precision(
     value_type: ValueFieldName, state: WidgetStateProto, accepted: bool
 ) -> None:
     """An int and a double field accept each other within ±2**53."""
-    result = check_client_value(state, metadata=_metadata(value_type), previous=None)
+    result = check_client_value(
+        state, metadata=_metadata(value_type), previous=None, is_rendered=True
+    )
 
     if accepted:
         assert result.violation is None
@@ -196,7 +204,9 @@ def test_accepted_value_fields_overrides_the_registered_field(
         accepted_value_fields=frozenset({"json_value", "bytes_value", "arrow_value"}),
     )
 
-    result = check_client_value(state, metadata=metadata, previous=None)
+    result = check_client_value(
+        state, metadata=metadata, previous=None, is_rendered=True
+    )
 
     assert result.violation is None
 
@@ -204,7 +214,10 @@ def test_accepted_value_fields_overrides_the_registered_field(
 def test_json_that_does_not_parse_is_unreadable() -> None:
     """A json_value that fails json.loads is refused, not raised."""
     result = check_client_value(
-        _state(json_value="{not json"), metadata=_metadata("json_value"), previous=None
+        _state(json_value="{not json"),
+        metadata=_metadata("json_value"),
+        previous=None,
+        is_rendered=True,
     )
 
     assert result.violation == Violation("unreadable")
@@ -230,6 +243,7 @@ def test_a_deserializer_that_raises_makes_the_value_unreadable(
         _state(string_value="a"),
         metadata=_metadata(deserializer=deserializer),
         previous=None,
+        is_rendered=True,
     )
 
     assert result.violation == Violation("unreadable")
@@ -243,6 +257,7 @@ def test_an_unchanged_value_passes_without_the_validator() -> None:
         _state(string_value="same"),
         metadata=_metadata(validator=validator),
         previous="same",
+        is_rendered=True,
     )
 
     assert result == (None, "same", False)
@@ -264,6 +279,7 @@ def test_a_comparison_that_raises_counts_as_a_change() -> None:
             deserializer=lambda _value: _Incomparable(), validator=validator
         ),
         previous="a",
+        is_rendered=True,
     )
 
     assert result.changed is True
@@ -278,6 +294,7 @@ def test_the_validator_receives_the_wire_value_previous_and_deserialized() -> No
         _state(string_value="3"),
         metadata=_metadata(deserializer=int, validator=validator),
         previous=2,
+        is_rendered=True,
     )
 
     validator.assert_called_once_with("3", previous=2, value=3)
@@ -292,6 +309,7 @@ def test_a_validator_violation_refuses_the_value() -> None:
         _state(string_value="a"),
         metadata=_metadata(validator=lambda _ui, **_kwargs: violation),
         previous=None,
+        is_rendered=True,
     )
 
     assert result == (violation, "a", False)
@@ -302,11 +320,42 @@ def test_the_first_violation_wins() -> None:
     validator = MagicMock(return_value=Violation("unreadable"))
 
     result = check_client_value(
-        _state(bool_value=True), metadata=_metadata(validator=validator), previous=None
+        _state(bool_value=True),
+        metadata=_metadata(validator=validator),
+        previous=None,
+        is_rendered=True,
     )
 
     assert result.violation is not None
     assert result.violation.kind == "wrong_type"
+    validator.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("state", "previous", "expected_kind"),
+    [
+        # A browser resends every value, also for a widget no longer shown.
+        (_state(string_value="same"), "same", None),
+        # Refused before `disabled` and the widget's own rules.
+        (_state(string_value="new"), "old", "not_rendered"),
+        # A wire field the widget never reads is reported first.
+        (_state(bool_value=True), "old", "wrong_type"),
+    ],
+)
+def test_a_widget_that_is_not_rendered_takes_no_change(
+    state: WidgetStateProto, previous: str, expected_kind: ViolationKind | None
+) -> None:
+    """Check 4 refuses a change for a widget the latest run did not render."""
+    validator = MagicMock(return_value=None)
+    metadata = dataclasses.replace(_metadata(validator=validator), disabled=True)
+
+    result = check_client_value(
+        state, metadata=metadata, previous=previous, is_rendered=False
+    )
+
+    kind = None if result.violation is None else result.violation.kind
+    assert kind == expected_kind
+    assert result.changed is False
     validator.assert_not_called()
 
 
@@ -322,6 +371,7 @@ def test_a_validator_that_raises_is_logged_without_the_value(
         _state(string_value="secret-password"),
         metadata=_metadata(validator=validator),
         previous=None,
+        is_rendered=True,
     )
 
     assert result.violation == Violation("unreadable")
@@ -364,6 +414,7 @@ def test_wire_comparison(
         previous="same",
         compare_wire=True,
         stored_state=stored,
+        is_rendered=True,
     )
 
     assert result.violation is None
@@ -389,6 +440,7 @@ def test_the_unset_form_is_compared_after_deserializing() -> None:
             previous=previous,
             compare_wire=True,
             stored_state=_state(string_value=previous),
+            is_rendered=True,
         )
 
     check("")
@@ -415,14 +467,15 @@ def test_an_unreadable_value_is_logged_once_per_widget_at_warning(
     assert warned == {_ID, "$$ID-other-None"}
 
 
+@pytest.mark.parametrize("kind", ["not_rendered", "disabled"])
 def test_a_race_kind_is_logged_at_debug_and_not_deduplicated(
-    records: list[logging.LogRecord],
+    records: list[logging.LogRecord], kind: ViolationKind
 ) -> None:
     """A violation a correct browser can cause is logged at debug level each time."""
     warned: set[str] = set()
 
-    log_violation(_ID, Violation("disabled"), warned=warned)
-    log_violation(_ID, Violation("disabled"), warned=warned)
+    log_violation(_ID, Violation(kind), warned=warned)
+    log_violation(_ID, Violation(kind), warned=warned)
 
     assert [r.levelno for r in records] == [logging.DEBUG, logging.DEBUG]
     assert warned == set()
@@ -555,6 +608,7 @@ def test_an_ambiguous_label_is_accepted_and_counts_as_a_change() -> None:
             validator=lambda ui, **_kwargs: widget_checks.one_of(_COUNTS, ui)
         ),
         previous="a",
+        is_rendered=True,
     )
 
     assert result == (Violation("ambiguous_option"), "X", True)
@@ -872,10 +926,10 @@ def test_an_empty_required_value_is_refused_only_when_changed() -> None:
     )
 
     unchanged = check_client_value(
-        _state(string_value=""), metadata=metadata, previous=""
+        _state(string_value=""), metadata=metadata, previous="", is_rendered=True
     )
     emptied = check_client_value(
-        _state(string_value=" "), metadata=metadata, previous="Ada"
+        _state(string_value=" "), metadata=metadata, previous="Ada", is_rendered=True
     )
 
     assert unchanged.violation is None

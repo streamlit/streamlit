@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import itertools
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
 
@@ -51,7 +53,10 @@ def _register(
     widget_id: str,
     serde: Any,
     value_type: ValueFieldName,
+    *,
+    fragment_id: str | None = None,
 ) -> None:
+    """Set a widget's metadata and mark it rendered, as registering does."""
     ss._set_widget_metadata(
         WidgetMetadata(
             id=widget_id,
@@ -60,8 +65,10 @@ def _register(
             value_type=value_type,
             callback=lambda: None,
             validator=getattr(serde, "validate", None),
+            fragment_id=fragment_id,
         )
     )
+    ss._new_widget_state.rendered_ids.add(widget_id)
 
 
 def _rerun_with(ss: SessionState, messages: list[WidgetStates]) -> Callable[[], None]:
@@ -144,3 +151,33 @@ def test_a_large_unchanged_data_editor_payload(benchmark: BenchmarkFixture) -> N
     rerun()  # The first rerun stores the payload, so every measured one is unchanged.
 
     benchmark(rerun)
+
+
+@pytest.mark.performance
+@pytest.mark.parametrize("fragment_ids_this_run", [None, ["fragment"]])
+def test_pruning_a_thousand_rendered_widgets(
+    benchmark: BenchmarkFixture, fragment_ids_this_run: list[str] | None
+) -> None:
+    """The rendered-widget prune at the end of a full run and of a fragment run.
+
+    Half of the widgets are in the fragment. Every widget registered, so the
+    prune keeps the set as it is, as in a run that rendered the same page.
+    """
+    ss = SessionState()
+    for index in range(1_000):
+        _register(
+            ss,
+            f"text-{index}",
+            TextInputSerde(value=""),
+            "string_value",
+            fragment_id="fragment" if index % 2 else None,
+        )
+    registered = frozenset(ss._new_widget_state.rendered_ids)
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=SimpleNamespace(fragment_ids_this_run=fragment_ids_this_run),
+    ):
+        benchmark(ss.prune_rendered_widgets, registered)
+
+    assert ss._new_widget_state.rendered_ids == registered

@@ -211,6 +211,16 @@ def _refused_disabled(_violation: Violation, sent: _Sent) -> AgentRequestError:
     return _disabled(sent.key)
 
 
+def _not_rendered(_violation: Violation, sent: _Sent) -> AgentRequestError:
+    # The snapshot check answers first for an element the snapshot does not
+    # show, so this is an element the latest run no longer rendered.
+    return AgentRequestError(
+        "not_on_page",
+        f"The element with key {sent.key!r} is not on the page: the latest run "
+        "did not render it. Read `actions` from the latest snapshot.",
+    )
+
+
 def _sent_item(violation: Violation, sent: _Sent) -> Any:
     """The item of the sent value that a violation's ``positions`` names."""
     positions = violation.detail.get("positions")
@@ -325,6 +335,7 @@ _VIOLATION_ERRORS: Final[
 ] = {
     "wrong_type": _refused_value,
     "unreadable": _refused_value,
+    "not_rendered": _not_rendered,
     "disabled": _refused_disabled,
     "not_an_option": _not_an_option,
     "too_many_items": _too_many_items,
@@ -370,6 +381,7 @@ def _check_with_widget(
         encoded,
         metadata=metadata,
         previous=stored,
+        is_rendered=session_state.is_widget_rendered(encoded.id),
         compare_wire=True,
         stored_state=stored_state,
     )
