@@ -309,7 +309,7 @@ class SliderSerde:
     step: float = 1.0
 
     @cached_property
-    def _browser_bounds(self) -> tuple[float, float]:
+    def _browser_range(self) -> tuple[float, float]:
         return _browser_bounds(self.min_value, self.max_value, self.step)
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
@@ -320,7 +320,7 @@ class SliderSerde:
         if self.data_type == SliderProto.FLOAT:
             # The browser commits a bound rounded to the step's precision,
             # which can fall just past it. The user chose that bound.
-            low, high = self._browser_bounds
+            low, high = self._browser_range
             if low <= value < self.min_value:
                 return self.min_value
             if self.max_value < value <= high:
@@ -356,7 +356,7 @@ class SliderSerde:
         )
         if violation is not None:
             return violation
-        low, high = self._browser_bounds
+        low, high = self._browser_range
         for item in ui_value:
             violation = widget_checks.finite(item)
             if violation is None and self.data_type == SliderProto.INT:
