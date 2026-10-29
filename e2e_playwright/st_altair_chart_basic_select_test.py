@@ -121,6 +121,17 @@ def _get_in_fragment_chart(app: Page) -> Locator:
     return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(11))
 
 
+def _get_x_interval_scatter_chart(app: Page) -> Locator:
+    return get_vega_graphics_document(get_element_by_key(app, "scatter_interval_x"))
+
+
+def _click_unmount_button(app: Page) -> None:
+    app.get_by_test_id("stButton").filter(
+        has_text="Create some elements to unmount component"
+    ).locator("button").click()
+    wait_for_app_run(app, wait_delay=4000)
+
+
 def test_point_bar_chart_displays_selection_text(app: Page):
     chart = _get_selection_point_bar_chart(app)
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
@@ -564,6 +575,85 @@ def test_binding_widgets_not_duplicated_with_on_select(app: Page):
 
     select_chart.get_by_role("combobox").select_option("Europe")
     _assert_single_region_bind(select_chart, role="combobox", count=1)
+
+
+@pytest.mark.skip_browser("firefox")
+def test_interval_overlay_remains_after_unmounting_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = _get_selection_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+
+    expected_prefix = "Scatter chart with selection_interval:"
+    expected_selection = re.compile(
+        r"\{'selection': \{'param_1': \{'Horsepower': \[.+, .+\], 'Miles_per_Gallon': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
+
+    _click_unmount_button(app)
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    chart.scroll_into_view_if_needed()
+    # Remount can shift the chart a few pixels, so allow a slightly higher
+    # image threshold.
+    assert_snapshot(
+        chart,
+        name="st_altair_chart-scatter_interval_selection",
+        image_threshold=0.041,
+    )
+
+
+@pytest.mark.skip_browser("firefox")
+def test_x_interval_overlay_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = _get_x_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+
+    expected_prefix = "Scatter chart with x-interval:"
+    expected_selection = re.compile(
+        r"\{'selection': \{'x_interval': \{'Horsepower': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    app.mouse.move(0, 0)
+    app.wait_for_timeout(250)
+    assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_selection")
+
+    _click_unmount_button(app)
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    app.wait_for_timeout(200)
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    chart.scroll_into_view_if_needed()
+    assert_snapshot(
+        chart,
+        name="st_altair_chart-scatter_x_interval_selection",
+        image_threshold=0.041,
+    )
+
+    chart.dblclick(position={"x": 130, "y": 100})
+    wait_for_app_run(app)
+    selection_text = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected_selection
+    )
+    expect(selection_text).to_have_count(0)
+    chart.scroll_into_view_if_needed()
+    app.mouse.move(0, 0)
+    app.wait_for_timeout(250)
+    assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_cleared")
 
 
 def test_legend_bound_selection_reaches_python(app: Page):

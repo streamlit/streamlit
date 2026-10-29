@@ -88,8 +88,12 @@ export function useVegaEmbed(
   const [isCreatingView, setIsCreatingView] = useState(false)
 
   // Setup interactivity for the chart if it supports selections
-  const { maybeConfigureSelections, teardownSelections, onFormCleared } =
-    useVegaLiteSelections(inputElement, widgetMgr, fragmentId)
+  const {
+    maybeConfigureSelections,
+    teardownSelections,
+    onFormCleared,
+    endSelectionRestore,
+  } = useVegaLiteSelections(inputElement, widgetMgr, fragmentId)
 
   useFormClearHelper({ widgetMgr, element: inputElement, onFormCleared })
 
@@ -324,6 +328,12 @@ export function useVegaEmbed(
         // Fix bug where the "..." menu button overlaps with charts where width is
         // set to -1 on first load.
         await createdView.resize().runAsync()
+        // Keep restore suppression through this first resize so scale-trigger
+        // rewrites cannot emit a widget update. Skip if this createView was
+        // superseded so we do not unsuppress the replacement view.
+        if (!isSuperseded()) {
+          endSelectionRestore()
+        }
         if (isSuperseded()) {
           return vegaViewRef.current
         }
@@ -353,12 +363,22 @@ export function useVegaEmbed(
 
         return createdView
       } finally {
+        // End restore for this generation when createView returns or throws
+        // before the resize pulse. A superseded generation must not
+        // unsuppress the replacement view.
         if (generation === createGenerationRef.current) {
+          endSelectionRestore()
           setIsCreatingView(false)
         }
       }
     },
-    [finalizeView, maybeConfigureSelections, syncViewData, teardownSelections]
+    [
+      endSelectionRestore,
+      finalizeView,
+      maybeConfigureSelections,
+      syncViewData,
+      teardownSelections,
+    ]
   )
 
   const updateView = useCallback(

@@ -20,7 +20,11 @@ import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import type { SignalValue, View as VegaView } from "vega"
 
-import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
+import {
+  isNullOrUndefined,
+  isValidFormId,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type { VegaLiteChartElement } from "./arrowUtils"
@@ -46,6 +50,97 @@ interface UseVegaLiteSelectionsOutput {
   /** Flushes queued changes and removes listeners from the active view. */
   teardownSelections: () => void
   onFormCleared: () => void
+  /**
+   * Ends restore suppression so later user gestures can update the widget.
+   */
+  endSelectionRestore: () => void
+}
+
+interface VegaViewState {
+  signals?: Record<string, unknown> | null
+  data?: unknown
+}
+
+/**
+ * Suffixes of interval-param signals that are not extents. Restoring them
+ * would resume a drag, pulse scale-trigger, or notify Streamlit's named-param
+ * listener.
+ */
+const INTERVAL_TRANSIENT_SIGNAL_SUFFIXES = new Set([
+  "tuple",
+  "tuple_fields",
+  "scale_trigger",
+  "modify",
+  "translate_anchor",
+  "translate_delta",
+  "zoom_anchor",
+  "zoom_delta",
+  "toggle",
+  "init",
+])
+
+/** True when Vega knows this signal. View.signal throws otherwise. */
+const hasSignal = (view: VegaView, name: string): boolean => {
+  try {
+    view.signal(name)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const isTransientIntervalSignalName = (name: string): boolean =>
+  Array.from(INTERVAL_TRANSIENT_SIGNAL_SUFFIXES).some(suffix =>
+    name.endsWith(`_${suffix}`)
+  )
+
+/**
+ * Whether `name` is a stable interval extent for one of `intervalParams`:
+ * visual `{param}_x` / `{param}_y` ranges and matching `{param}_{field}`
+ * data-space ranges. Point, legend, and input-bound params have no visual
+ * extents, so they stay on the store-only path.
+ */
+const isPersistedIntervalExtentSignal = (
+  view: VegaView,
+  intervalParams: readonly string[],
+  name: string
+): boolean => {
+  if (!hasSignal(view, name)) {
+    return false
+  }
+  return intervalParams.some(param => {
+    const prefix = `${param}_`
+    if (!name.startsWith(prefix)) {
+      return false
+    }
+    const suffix = name.slice(prefix.length)
+    return suffix.length > 0 && !INTERVAL_TRANSIENT_SIGNAL_SUFFIXES.has(suffix)
+  })
+}
+
+/**
+ * Drops snapshot signals the new view does not define, and drops transient
+ * interval machinery, so a structural change cannot apply stale pixels.
+ * Legacy snapshots without `signals` restore selection-store data only.
+ */
+const sanitizeViewStateForRestore = (
+  view: VegaView,
+  viewState: VegaViewState
+): VegaViewState => {
+  if (isNullOrUndefined(viewState.signals)) {
+    return { data: viewState.data }
+  }
+
+  const signals = Object.fromEntries(
+    Object.entries(viewState.signals).filter(
+      ([name]) => hasSignal(view, name) && !isTransientIntervalSignalName(name)
+    )
+  )
+  if (Object.keys(signals).length === 0) {
+    return { data: viewState.data }
+  }
+
+  return { data: viewState.data, signals }
 }
 
 interface DebouncedSelection {
@@ -69,10 +164,18 @@ export const useVegaLiteSelections = (
 ): UseVegaLiteSelectionsOutput => {
   const { id: chartId, formId, selectionMode } = element
   const teardownRef = useRef<(() => void) | null>(null)
+  const endSelectionRestoreRef = useRef<(() => void) | null>(null)
 
   const teardownSelections = useCallback(() => {
     teardownRef.current?.()
     teardownRef.current = null
+    // Drop the restore-end callback so a superseded createView cannot
+    // unsuppress the next view's restore window.
+    endSelectionRestoreRef.current = null
+  }, [])
+
+  const endSelectionRestore = useCallback(() => {
+    endSelectionRestoreRef.current?.()
   }, [])
 
   const maybeConfigureSelections = useCallback(
@@ -84,6 +187,7 @@ export const useVegaLiteSelections = (
       }
 
       let isActive = true
+      let isRestoreSuppressed = false
       let isPointerDown = false
       let activePointerId: number | null = null
       let pointerGestureId = 0
@@ -202,14 +306,24 @@ export const useVegaLiteSelections = (
           return
         }
 
-        // Preserve the Vega state locally so remounts and fullscreen changes can
-        // restore the selection without syncing the full view state to Python.
+        // Persist selection-store data plus stable interval extents so remounts
+        // and fullscreen can restore selected marks and the brush overlay
+        // without syncing view state to Python.
+        const intervalParams = selectionMode.filter(
+          param =>
+            hasSignal(vegaView, `${param}_x`) ||
+            hasSignal(vegaView, `${param}_y`)
+        )
+
         const viewState = vegaView.getState({
           data: (nameArg?: string, _operator?: unknown) => {
             // Vega-Lite stores each selection in `<param name>_store`.
             // https://vega.github.io/vega/docs/api/view/#view_getState
             return selectionMode.some(mode => `${mode}_store` === nameArg)
           },
+          signals: (name?: string) =>
+            typeof name === "string" &&
+            isPersistedIntervalExtentSignal(vegaView, intervalParams, name),
           // Restoring subcontext data can cause Vega to throw.
           recurse: false,
         })
@@ -402,7 +516,7 @@ export const useVegaLiteSelections = (
       // https://vega.github.io/vega/docs/api/view/#view_addSignalListener
       selectionMode.forEach(param => {
         const handleSignal = (name: string, value: SignalValue): void => {
-          if (!isActive) {
+          if (!isActive || isRestoreSuppressed) {
             return
           }
           clearDebouncedSelection(name)
@@ -423,11 +537,16 @@ export const useVegaLiteSelections = (
         vegaView.addSignalListener(param, handleSignal)
       })
 
+      endSelectionRestoreRef.current = () => {
+        isRestoreSuppressed = false
+      }
+
       teardownRef.current = () => {
         if (!isActive) {
           return
         }
         isActive = false
+        isRestoreSuppressed = false
 
         container?.removeEventListener("pointerdown", handlePointerDown, true)
         container?.removeEventListener("pointerout", handlePointerOut)
@@ -461,18 +580,24 @@ export const useVegaLiteSelections = (
         }
       }
 
-      // Try to load the previous state of the chart from the element state.
-      // This is useful to restore the selection state when the component is re-mounted
-      // or when its put into fullscreen mode.
-      const viewState = widgetMgr.getElementState<{
-        signals?: unknown
-        data?: unknown
-      }>(chartId, "viewState")
+      // Restore selected marks and interval extents after remount or fullscreen.
+      // Suppress widget updates until endSelectionRestore: setState skips
+      // listeners for its own pulse, but follow-up runAsync/resize can still
+      // notify.
+      const viewState = widgetMgr.getElementState<VegaViewState>(
+        chartId,
+        "viewState"
+      )
       if (notNullOrUndefined(viewState)) {
+        isRestoreSuppressed = true
         try {
-          return vegaView.setState(viewState)
+          return vegaView.setState(
+            sanitizeViewStateForRestore(vegaView, viewState)
+          )
         } catch (e) {
+          isRestoreSuppressed = false
           LOG.warn("Failed to restore view state", e)
+          widgetMgr.deleteElementState(chartId, "viewState")
         }
       }
 
@@ -482,6 +607,7 @@ export const useVegaLiteSelections = (
   )
 
   const onFormCleared = useCallback(() => {
+    widgetMgr.deleteElementState(chartId, "viewState")
     const emptySelectionState: VegaLiteState = {
       selection: {},
     }
@@ -510,5 +636,10 @@ export const useVegaLiteSelections = (
     }
   }, [chartId, formId, fragmentId, selectionMode, widgetMgr])
 
-  return { maybeConfigureSelections, teardownSelections, onFormCleared }
+  return {
+    maybeConfigureSelections,
+    teardownSelections,
+    onFormCleared,
+    endSelectionRestore,
+  }
 }

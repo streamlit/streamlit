@@ -15,6 +15,7 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
+import { getLogger } from "loglevel"
 import type { View as VegaView } from "vega"
 import type { Mock, Mocked } from "vitest"
 
@@ -36,6 +37,7 @@ describe("useVegaLiteSelections", () => {
     mockWidgetMgr = {
       getElementState: vi.fn(),
       setElementState: vi.fn(),
+      deleteElementState: vi.fn(),
       setStringValue: vi.fn(),
       getStringValue: vi.fn(),
       addFormClearedListener: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
@@ -317,6 +319,10 @@ describe("useVegaLiteSelections", () => {
         },
       }),
       { formId: "formId", fragmentId: undefined, fromUser: true }
+    )
+    expect(mockWidgetMgr.deleteElementState).toHaveBeenCalledWith(
+      "chartId",
+      "viewState"
     )
   })
 
@@ -951,6 +957,384 @@ describe("useVegaLiteSelections", () => {
 
       advanceTimers(DEBOUNCE_TIME_MS)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe("interval view state capture and restore", () => {
+    const cleanups: Array<() => void> = []
+
+    const BRUSH_SIGNALS: Record<string, unknown> = {
+      brush: {},
+      brush_x: [10, 80],
+      brush_y: [20, 90],
+      brush_Horsepower: [80, 150],
+      brush_Miles_per_Gallon: [15, 30],
+      brush_tuple: {},
+      brush_tuple_fields: [],
+      brush_scale_trigger: {},
+      brush_modify: {},
+      brush_translate_anchor: {},
+      brush_translate_delta: {},
+      brush_zoom_anchor: {},
+      brush_zoom_delta: {},
+      unit: {},
+    }
+
+    const createIntervalView = ({
+      presentSignals = BRUSH_SIGNALS,
+      getStateResult = { some: "state" },
+    }: {
+      presentSignals?: Record<string, unknown>
+      getStateResult?: unknown
+    } = {}): Mocked<VegaView> =>
+      ({
+        addSignalListener: vi.fn().mockReturnThis(),
+        removeSignalListener: vi.fn().mockReturnThis(),
+        getState: vi.fn(() => getStateResult),
+        setState: vi.fn().mockReturnThis(),
+        container: vi.fn(() => null),
+        signal: vi.fn((name: string) => {
+          if (!Object.hasOwn(presentSignals, name)) {
+            throw new Error(`Unrecognized signal name: "${name}"`)
+          }
+          return presentSignals[name]
+        }),
+      }) as unknown as Mocked<VegaView>
+
+    const configure = (
+      view: Mocked<VegaView>,
+      {
+        selectionMode = ["brush"],
+        formId = "formId",
+      }: { selectionMode?: string[]; formId?: string } = {}
+    ): { current: ReturnType<typeof useVegaLiteSelections> } => {
+      const { result, unmount } = renderHook(() =>
+        useVegaLiteSelections(
+          {
+            id: "chartId",
+            formId,
+            selectionMode,
+          } as VegaLiteChartElement,
+          mockWidgetMgr
+        )
+      )
+      act(() => {
+        result.current.maybeConfigureSelections(view)
+      })
+      cleanups.push(() => {
+        act(() => result.current.teardownSelections())
+        unmount()
+      })
+      return result
+    }
+
+    const fireFirstListener = (
+      view: Mocked<VegaView>,
+      value: unknown = { Horsepower: [80, 150] }
+    ): void => {
+      const [[param, listener]] = (view.addSignalListener as Mock).mock.calls
+      act(() => {
+        listener(param, value)
+      })
+    }
+
+    const getStateOptions = (
+      view: Mocked<VegaView>
+    ): {
+      data: (name?: string) => boolean
+      signals: (name?: string) => boolean
+      recurse: boolean
+    } => {
+      fireFirstListener(view)
+      return (view.getState as Mock).mock.calls[0][0] as {
+        data: (name?: string) => boolean
+        signals: (name?: string) => boolean
+        recurse: boolean
+      }
+    }
+
+    afterEach(() => {
+      cleanups.splice(0).forEach(cleanup => cleanup())
+    })
+
+    it("captures 2D visual and data-space extents and skips transients", () => {
+      const view = createIntervalView()
+      configure(view)
+      const { data, signals, recurse } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(true)
+      expect(signals("brush_y")).toBe(true)
+      expect(signals("brush_Horsepower")).toBe(true)
+      expect(signals("brush_Miles_per_Gallon")).toBe(true)
+      expect(signals("brush")).toBe(false)
+      expect(signals("brush_tuple")).toBe(false)
+      expect(signals("brush_translate_anchor")).toBe(false)
+      expect(signals("brush_zoom_delta")).toBe(false)
+      expect(signals("brush_scale_trigger")).toBe(false)
+      expect(signals("brush_modify")).toBe(false)
+      expect(signals("unit")).toBe(false)
+      expect(data("brush_store")).toBe(true)
+      expect(data("source_0")).toBe(false)
+      expect(recurse).toBe(false)
+    })
+
+    it.each([
+      {
+        axis: "x",
+        selectionMode: ["xbrush"],
+        presentSignals: {
+          xbrush_x: [10, 80],
+          xbrush_Horsepower: [80, 150],
+          xbrush_tuple: {},
+        },
+        kept: ["xbrush_x", "xbrush_Horsepower"],
+        dropped: "xbrush_y",
+      },
+      {
+        axis: "y",
+        selectionMode: ["ybrush"],
+        presentSignals: {
+          ybrush_y: [20, 90],
+          ybrush_Miles_per_Gallon: [15, 30],
+        },
+        kept: ["ybrush_y", "ybrush_Miles_per_Gallon"],
+        dropped: "ybrush_x",
+      },
+    ])(
+      "captures $axis-only extents and rejects a missing opposite-axis signal",
+      ({ selectionMode, presentSignals, kept, dropped }) => {
+        const view = createIntervalView({ presentSignals })
+        configure(view, { selectionMode })
+        const { signals } = getStateOptions(view)
+
+        kept.forEach(name => expect(signals(name)).toBe(true))
+        expect(signals(dropped)).toBe(false)
+      }
+    )
+
+    it("captures extents for multiple interval params on one view", () => {
+      const view = createIntervalView({
+        presentSignals: {
+          xsel_x: [10, 80],
+          xsel_Horsepower: [80, 150],
+          ysel_y: [20, 90],
+          ysel_Miles_per_Gallon: [15, 30],
+        },
+      })
+      configure(view, { selectionMode: ["xsel", "ysel"] })
+      const { signals, data } = getStateOptions(view)
+
+      expect(signals("xsel_x")).toBe(true)
+      expect(signals("ysel_y")).toBe(true)
+      expect(data("xsel_store")).toBe(true)
+      expect(data("ysel_store")).toBe(true)
+    })
+
+    it("does not persist signals for point selections", () => {
+      const view = createIntervalView({
+        presentSignals: {
+          pts: {},
+          pts_tuple: {},
+          pts_toggle: {},
+          pts_modify: {},
+        },
+        getStateResult: { data: { pts_store: [{ values: [1] }] } },
+      })
+      configure(view, { selectionMode: ["pts"] })
+      const { signals, data } = getStateOptions(view)
+
+      expect(signals("pts")).toBe(false)
+      expect(signals("pts_tuple")).toBe(false)
+      expect(signals("pts_toggle")).toBe(false)
+      expect(signals("pts_modify")).toBe(false)
+      expect(signals("pts_x")).toBe(false)
+      expect(data("pts_store")).toBe(true)
+      expect(mockWidgetMgr.setElementState).toHaveBeenCalledWith(
+        "chartId",
+        "viewState",
+        { data: { pts_store: [{ values: [1] }] } }
+      )
+    })
+
+    it("restores signals and data without writing the widget value", () => {
+      const restoredState = {
+        signals: {
+          brush_x: [10, 80],
+          brush_y: [20, 90],
+          brush_Horsepower: [80, 150],
+        },
+        data: { brush_store: [{ values: [1] }] },
+      }
+      mockWidgetMgr.getElementState.mockReturnValue(restoredState)
+      const view = createIntervalView()
+      configure(view)
+
+      expect(view.setState).toHaveBeenCalledWith(restoredState)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("suppresses restore-triggered listeners until endSelectionRestore", () => {
+      const restoredState = {
+        signals: { brush_x: [10, 80] },
+        data: { brush_store: [{ values: [1] }] },
+      }
+      mockWidgetMgr.getElementState.mockReturnValue(restoredState)
+      mockWidgetMgr.getStringValue.mockReturnValue("")
+
+      const view = createIntervalView()
+      view.addSignalListener.mockImplementation(
+        (
+          _name: string,
+          listener: (name: string, value: unknown) => void
+        ): VegaView => {
+          view.setState.mockImplementation((): VegaView => {
+            listener("brush", { Horsepower: [80, 150] })
+            return view
+          })
+          return view
+        }
+      )
+
+      const result = configure(view)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      act(() => {
+        result.current.endSelectionRestore()
+      })
+      fireFirstListener(view, { Horsepower: [80, 150] })
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        "chartId",
+        JSON.stringify({
+          selection: { brush: { Horsepower: [80, 150] } },
+        }),
+        { formId: "formId", fragmentId: undefined, fromUser: true }
+      )
+
+      mockWidgetMgr.setStringValue.mockClear()
+      mockWidgetMgr.getStringValue.mockReturnValue(
+        JSON.stringify({
+          selection: { brush: { Horsepower: [80, 150] } },
+        })
+      )
+      fireFirstListener(view, { Horsepower: [80, 150] })
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("captures empty extents on clear and restores that snapshot", () => {
+      const emptyState = {
+        signals: { brush_x: [0, 0], brush_Horsepower: null },
+        data: { brush_store: [] },
+      }
+      const view = createIntervalView({ getStateResult: emptyState })
+      configure(view)
+      fireFirstListener(view, null)
+
+      expect(mockWidgetMgr.setElementState).toHaveBeenCalledWith(
+        "chartId",
+        "viewState",
+        emptyState
+      )
+
+      mockWidgetMgr.getElementState.mockReturnValue(emptyState)
+      const restoreView = createIntervalView()
+      configure(restoreView)
+      expect(restoreView.setState).toHaveBeenCalledWith(emptyState)
+    })
+
+    it("drops incompatible signal keys and still restores store data", () => {
+      mockWidgetMgr.getElementState.mockReturnValue({
+        signals: {
+          brush_x: [10, 80],
+          brush_y: [20, 90],
+          stale_y: [1, 2],
+          param_1_y: [3, 4],
+        },
+        data: { brush_store: [{ values: [1] }] },
+      })
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+        },
+      })
+      configure(view)
+
+      expect(view.setState).toHaveBeenCalledWith({
+        signals: { brush_x: [10, 80] },
+        data: { brush_store: [{ values: [1] }] },
+      })
+    })
+
+    it("drops transient snapshot signals even when the view still defines them", () => {
+      mockWidgetMgr.getElementState.mockReturnValue({
+        signals: {
+          brush_x: [10, 80],
+          brush_tuple: {},
+          brush_scale_trigger: {},
+          brush_translate_anchor: { x: 1, y: 2 },
+        },
+        data: { brush_store: [{ values: [1] }] },
+      })
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+          brush_tuple: {},
+          brush_scale_trigger: {},
+          brush_translate_anchor: { x: 1, y: 2 },
+        },
+      })
+      configure(view)
+
+      expect(view.setState).toHaveBeenCalledWith({
+        signals: { brush_x: [10, 80] },
+        data: { brush_store: [{ values: [1] }] },
+      })
+    })
+
+    it("restores data only when no persisted interval signals exist", () => {
+      mockWidgetMgr.getElementState.mockReturnValue({
+        signals: { param_1_y: [20, 90] },
+        data: { brush_store: [{ values: [1] }] },
+      })
+      const view = createIntervalView({
+        presentSignals: { pts_tuple: {} },
+      })
+      configure(view, { selectionMode: ["pts"] })
+
+      expect(view.setState).toHaveBeenCalledWith({
+        data: { brush_store: [{ values: [1] }] },
+      })
+    })
+
+    it("warns and deletes viewState when setState throws", () => {
+      const log = getLogger("useVegaLiteSelections")
+      const warnSpy = vi.spyOn(log, "warn").mockImplementation(() => {})
+      mockWidgetMgr.getElementState.mockReturnValue({
+        signals: { brush_x: [10, 80] },
+        data: { brush_store: [] },
+      })
+      const view = createIntervalView()
+      view.setState.mockImplementation(() => {
+        throw new Error("incompatible state")
+      })
+
+      configure(view)
+
+      expect(warnSpy).toHaveBeenCalled()
+      expect(mockWidgetMgr.deleteElementState).toHaveBeenCalledWith(
+        "chartId",
+        "viewState"
+      )
+      warnSpy.mockRestore()
+    })
+
+    it("restores legacy snapshots that have only data", () => {
+      const legacyState = { data: { brush_store: [{ values: [1] }] } }
+      mockWidgetMgr.getElementState.mockReturnValue(legacyState)
+      const view = createIntervalView()
+      configure(view)
+
+      expect(view.setState).toHaveBeenCalledWith(legacyState)
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
   })
 })

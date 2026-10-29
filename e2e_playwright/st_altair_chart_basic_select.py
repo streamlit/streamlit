@@ -453,3 +453,32 @@ legend_selection_state = st.altair_chart(
     width="stretch",
 )
 st.write("Legend-bound selection:", str(legend_selection_state))
+
+# Keep this chart last so existing .nth() locators stay valid.
+st.subheader("Scatter chart with x-only interval")
+x_interval = alt.selection_interval(encodings=["x"], name="x_interval")
+x_interval_chart = (
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Horsepower:Q",
+        y="Miles_per_Gallon:Q",
+        color=alt.condition(x_interval, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .add_params(x_interval)
+)
+st.altair_chart(
+    x_interval_chart,
+    on_select="rerun",
+    key="scatter_interval_x",
+    width="stretch",
+)
+if (
+    "scatter_interval_x" in st.session_state
+    and len(st.session_state.scatter_interval_x.selection) > 0
+):
+    st.write(
+        "Scatter chart with x-interval:",
+        str(st.session_state.scatter_interval_x),
+    )
