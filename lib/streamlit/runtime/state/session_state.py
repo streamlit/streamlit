@@ -1678,7 +1678,8 @@ class SessionState:
         Parameters
         ----------
         widget_ids_this_run : frozenset[str]
-            The IDs of the widgets the run registered.
+            The IDs of the widgets the run registered. On a page change, the
+            IDs in the client's message.
         """
         ctx = get_script_run_ctx()
         if ctx is None:
