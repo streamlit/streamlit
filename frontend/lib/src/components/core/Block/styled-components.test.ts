@@ -78,6 +78,31 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("margin-bottom:1rem")
   })
 
+  it("stacks a horizontal container that holds a chart", () => {
+    const css = cssAddedBy(() =>
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+          // A gap no other horizontal test uses, so emotion adds a new style
+          // tag instead of reusing an earlier one.
+          gap: { pixelGap: 20 },
+        })
+      )
+    )
+
+    // A columns row is excluded, because its columns stack through the
+    // `.stColumn` rule. Each stacked child prints full width, and the gap
+    // becomes a bottom margin.
+    expect(css).toMatch(
+      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block/
+    )
+    expect(css).toMatch(
+      /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{width:100%/
+    )
+    expect(css).toContain("margin-bottom:20px")
+  })
+
   it("keeps a bordered chart card on one page", () => {
     const css = cssAddedBy(() =>
       render(

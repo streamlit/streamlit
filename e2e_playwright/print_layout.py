@@ -83,6 +83,17 @@ with st.container(key="plotly_row"):
 
 st.markdown("After the Plotly row")
 
+with st.container(horizontal=True, key="horizontal_chart"):
+    st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
+    with st.container():
+        st.markdown("Beside the horizontal chart")
+
+st.markdown("After the horizontal chart")
+
+with st.container(horizontal=True, key="horizontal_buttons"):
+    st.button("First button")
+    st.button("Second button")
+
 with st.container(border=True, key="trailing_empty"):
     st.markdown("Text above a trailing placeholder")
     st.empty()
