@@ -469,10 +469,10 @@ path, so the guarantee names registration instead.
 
 The prune reads registration from `widget_ids_this_run`, which every widget enters when
 its ID is computed. A Components v2 component also registers a trigger aggregator under
-an ID derived from its own, which skipped that set, so the end of every run counted it
-as not rendered and its triggers were refused. The component now records the
-aggregator's ID there too. The aggregator then also outlives stale cleanup as an unfired
-trigger and reserves its derived key once it renders, as a button does.
+an ID derived from its own, so the component records that ID in the set as well, and
+the aggregator is rendered exactly when its component is. Like a button, the aggregator
+therefore keeps its unfired state across stale cleanup and reserves its derived key once
+it renders.
 
 The set changes at three points:
 
