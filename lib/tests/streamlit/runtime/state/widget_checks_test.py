@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,6 +31,7 @@ from streamlit.runtime.state.common import WidgetMetadata
 from streamlit.runtime.state.widget_checks import (
     REFUSAL_LOG_MARKER,
     Violation,
+    ViolationKind,
     check_client_value,
     log_violation,
 )
@@ -410,6 +411,12 @@ def test_e2e_tests_log_every_refusal_at_warning(
 
     assert [r.levelno for r in records] == [logging.WARNING] * 3
     assert all(REFUSAL_LOG_MARKER in r.getMessage() for r in records)
+
+
+def test_every_violation_kind_has_a_log_explanation() -> None:
+    """log_violation can explain every kind, so logging a refusal never raises."""
+    assert set(widget_checks._EXPLANATIONS) == set(get_args(ViolationKind))
+    assert set(get_args(ViolationKind)) >= widget_checks._RACE_KINDS
 
 
 def test_the_e2e_parity_gate_looks_for_the_refusal_marker() -> None:

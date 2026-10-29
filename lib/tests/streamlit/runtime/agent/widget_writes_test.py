@@ -19,7 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, get_args
 from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
@@ -32,7 +32,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.session_state import WStates
-from streamlit.runtime.state.widget_checks import Violation
+from streamlit.runtime.state.widget_checks import Violation, ViolationKind
 from tests.streamlit.runtime.agent.snapshot_test_case import (
     SnapshotCase,
     _one,
@@ -537,6 +537,10 @@ class WidgetWritesTest(SnapshotCase):
         assert error.code == "invalid_value"
         assert "not one it accepts" in error.message
         assert "Bob" not in error.message
+
+    def test_every_violation_kind_maps_to_an_agent_error(self) -> None:
+        """Each kind the shared check reports has an agent error, so none escapes."""
+        assert set(widget_writes._VIOLATION_ERRORS) == set(get_args(ViolationKind))
 
     def test_a_widget_registered_as_disabled_is_refused(self) -> None:
         """The shared check refuses a disabled widget the snapshot missed."""
