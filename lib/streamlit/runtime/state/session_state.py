@@ -90,6 +90,7 @@ _LOGGER: Final = get_logger(__name__)
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner import RerunData
     from streamlit.runtime.session_manager import SessionManager
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
@@ -140,10 +141,9 @@ def _sanitize_url_array(
 def _validate_url_value(metadata: WidgetMetadata[T], value: T) -> tuple[T, bool]:
     """Check a value seeded from the URL against the widget's validator.
 
-    A label several options share is valid, as at the boundary. A widget that
-    is never empty, such as ``st.select_slider``, holds a value of its
-    default's shape, so an item that names no option is repaired to the
-    default's item at that position.
+    A label several options share is valid, as at the boundary. What a
+    deserializer used to repair is repaired here (``_repair_url_wire``), and
+    the repaired value is checked again.
 
     Returns
     -------
@@ -155,23 +155,42 @@ def _validate_url_value(metadata: WidgetMetadata[T], value: T) -> tuple[T, bool]
         return value, True
     wire = metadata.serializer(value)
     violation = validator(wire, value=value)
-    positions = violation.detail.get("positions") if violation else None
+    repaired = _repair_url_wire(metadata, wire, violation)
+    if repaired is not None:
+        value = metadata.deserializer(repaired)
+        violation = validator(metadata.serializer(value), value=value)
+    return value, not widget_checks.browser_refuses(violation)
+
+
+def _repair_url_wire(
+    metadata: WidgetMetadata[Any], wire: Any, violation: Violation | None
+) -> Any:
+    """Return the wire form of a URL value with ``violation`` repaired, or None.
+
+    - A widget that is never empty, such as ``st.select_slider``, holds a value
+      of its default's shape, so an item that names no option is replaced by
+      the default's item at that position.
+    - A range whose ends are reversed is sorted, as the browser sends it.
+    """
+    if violation is None:
+        return None
+    positions = violation.detail.get("positions")
     if (
-        violation is not None
-        and violation.kind == "not_an_option"
+        violation.kind == "not_an_option"
         and positions is not None
         and metadata.value_type == "string_array_value"
         and not metadata.clearable
     ):
         default_wire = metadata.serializer(metadata.deserializer(None))
-        if len(default_wire) == len(wire):
-            repaired = [
-                default_wire[position] if position in positions else item
-                for position, item in enumerate(wire)
-            ]
-            value = metadata.deserializer(repaired)
-            violation = validator(metadata.serializer(value), value=value)
-    return value, not widget_checks.browser_refuses(violation)
+        if len(default_wire) != len(wire):
+            return None
+        return [
+            default_wire[position] if position in positions else item
+            for position, item in enumerate(wire)
+        ]
+    if violation.kind == "bad_shape" and violation.detail.get("order"):
+        return sorted(wire)
+    return None
 
 
 @dataclass(frozen=True, slots=True)

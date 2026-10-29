@@ -2666,8 +2666,9 @@ class Pagination(Widget):
         #   it into 0 or 1.
         # - Leave ints outside protobuf sint64 unset. Assigning them raises
         #   ValueError.
-        # - Still send other out-of-range ints. PaginationSerde maps them to that
-        #   same default.
+        # - Still send other out-of-range ints. The session drops them as a
+        #   browser value, and st.pagination resets a session-state value out
+        #   of range to that same default.
         try:
             value = self.value
         except KeyError:

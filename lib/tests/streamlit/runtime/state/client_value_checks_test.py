@@ -21,6 +21,7 @@ real script runner, the way a browser message reaches the session.
 from __future__ import annotations
 
 import logging
+import math
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -754,3 +755,177 @@ def test_a_language_switch_keeps_pills_without_a_refusal(
     assert [group.value for group in at.button_group] == ["B", ["A", "B"], "B", ["A"]]
     assert at.button_group[0].options == ["manzana", "naranja"]
     assert refusal_logs == []
+
+
+def _numbers(*values: float) -> dict[str, list[float]]:
+    """A ``double_array_value`` for ``forged``."""
+    return {"data": list(values)}
+
+
+def _send_legal_values(at: AppTest, legal: dict[str, dict[str, Any]]) -> None:
+    """Change each widget in ``legal`` away from its default, as a browser does."""
+    at._run(
+        widget_state=forged_many(
+            *(
+                WidgetState(id=_widget_id(at, key), **field)
+                for key, field in legal.items()
+            )
+        )
+    )
+    assert at.session_state.calls == list(legal)
+
+
+def _assert_refused_and_resynced(
+    at: AppTest, key: str, field: dict[str, Any], legal: dict[str, dict[str, Any]]
+) -> None:
+    """Send ``field`` for ``key``, and check that nothing changed but a re-sync."""
+    held = {name: at.session_state[name] for name in legal}
+
+    at._run(widget_state=forged(_widget_id(at, key), **field))
+
+    assert not at.exception
+    assert at.session_state.calls == list(legal)
+    assert {name: at.session_state[name] for name in legal} == held
+    assert at.get_by_key(key).proto.set_value is True
+
+
+def _bounded_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.number_input("Count", 0, 10, 5, key="count", on_change=on_change, args=["count"])
+    st.number_input(
+        "Ratio", 0.0, 1.0, 0.5, key="ratio", on_change=on_change, args=["ratio"]
+    )
+    st.slider("Level", 0, 100, 10, key="level", on_change=on_change, args=["level"])
+    st.slider("Span", 0, 100, (20, 80), key="span", on_change=on_change, args=["span"])
+    st.pagination(5, key="page", on_change=on_change, args=["page"])
+
+
+# A legal value other than the default for each widget in _bounded_app, in the
+# field the browser sends it in.
+_LEGAL_BOUNDED: dict[str, dict[str, Any]] = {
+    "count": {"int_value": 7},
+    "ratio": {"double_value": 0.25},
+    "level": {"double_array_value": _numbers(30.0)},
+    "span": {"double_array_value": _numbers(30.0, 60.0)},
+    "page": {"int_value": 3},
+}
+
+
+@pytest.mark.parametrize(
+    ("key", "field"),
+    [
+        ("count", {"int_value": 11}),
+        ("count", {"int_value": -1}),
+        # The int and double fields accept each other, but not a fraction.
+        ("count", {"double_value": 8.5}),
+        ("count", {"double_value": 1e9}),
+        ("ratio", {"double_value": math.nan}),
+        ("ratio", {"double_value": math.inf}),
+        ("ratio", {"double_value": 1.5}),
+        ("level", {"double_array_value": _numbers(101.0)}),
+        ("level", {"double_array_value": _numbers(40.5)}),
+        ("level", {"double_array_value": _numbers(math.nan)}),
+        ("level", {"double_array_value": _numbers(30.0, 40.0)}),
+        ("span", {"double_array_value": _numbers(60.0, 30.0)}),
+        ("span", {"double_array_value": _numbers(50.0)}),
+        ("span", {"double_array_value": _numbers(10.0, 20.0, 30.0)}),
+        ("page", {"int_value": 0}),
+        ("page", {"int_value": 6}),
+        ("page", {"double_value": 2.5}),
+    ],
+)
+def test_a_value_outside_the_bounds_or_shape_is_refused(
+    key: str, field: dict[str, Any]
+) -> None:
+    """A forged number runs no callback, keeps the previous value, and re-syncs."""
+    at = AppTest.from_function(_bounded_app).run()
+    _send_legal_values(at, _LEGAL_BOUNDED)
+
+    _assert_refused_and_resynced(at, key, field, _LEGAL_BOUNDED)
+
+
+@pytest.mark.parametrize(
+    ("key", "field", "expected"),
+    [
+        # AppTest and the agent API send an integer input's value as a double.
+        ("count", {"double_value": 10.0}, 10),
+        ("count", {"int_value": 0}, 0),
+        ("level", {"double_array_value": _numbers(100.0)}, 100),
+        # An empty range has equal ends.
+        ("span", {"double_array_value": _numbers(50.0, 50.0)}, (50, 50)),
+        ("page", {"int_value": 5}, 5),
+    ],
+)
+def test_a_value_within_the_bounds_is_accepted(
+    key: str, field: dict[str, Any], expected: Any
+) -> None:
+    """Values at the bounds, in either numeric field, run the callback."""
+    at = AppTest.from_function(_bounded_app).run()
+
+    at._run(widget_state=forged(_widget_id(at, key), **field))
+
+    assert at.session_state.calls == [key]
+    assert at.session_state[key] == expected
+
+
+def test_a_fraction_that_truncates_to_the_held_value_changes_nothing() -> None:
+    """A conversion can map a forged value onto the held one, which is unchanged.
+
+    The browser never sends a fraction, so there is nothing to re-sync.
+    """
+    at = AppTest.from_function(_bounded_app).run()
+    _send_legal_values(at, _LEGAL_BOUNDED)
+
+    at._run(widget_state=forged(_widget_id(at, "count"), double_value=7.5))
+
+    assert at.session_state.calls == list(_LEGAL_BOUNDED)
+    assert at.session_state.count == 7
+    assert at.number_input(key="count").proto.set_value is False
+
+
+@pytest.mark.parametrize(
+    ("key", "url_value", "expected_value", "expected_param"),
+    [
+        # An integer input still truncates a fraction, and the URL is corrected.
+        ("count", "2.9", 2, "2"),
+        ("count", "1e9", 5, None),
+        ("count", "inf", 5, None),
+        ("count", "nan", 5, None),
+        ("ratio", "0.75", 0.75, "0.75"),
+        ("ratio", "1.5", 0.5, None),
+        ("level", "101", 10, None),
+        ("level", ["40", "50"], 10, None),
+        # A reversed range is sorted, as the browser sends it.
+        ("span", ["80", "30"], (30, 80), ["30", "80"]),
+        ("span", "50", (20, 80), None),
+        ("page", "0", 1, None),
+        ("page", "6", 1, None),
+        ("page", "3", 3, "3"),
+    ],
+)
+def test_a_bound_url_value_outside_the_bounds_is_cleared(
+    key: str,
+    url_value: str | list[str],
+    expected_value: Any,
+    expected_param: str | list[str] | None,
+) -> None:
+    """A link is checked against the bounds, as a browser value is."""
+    script = (
+        "import streamlit as st\n"
+        "st.number_input('Count', 0, 10, 5, key='count', bind='query-params')\n"
+        "st.number_input('Ratio', 0.0, 1.0, 0.5, key='ratio', bind='query-params')\n"
+        "st.slider('Level', 0, 100, 10, key='level', bind='query-params')\n"
+        "st.slider('Span', 0, 100, (20, 80), key='span', bind='query-params')\n"
+        "st.pagination(5, key='page', bind='query-params')\n"
+    )
+    at = AppTest.from_string(script)
+    at.query_params[key] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state[key] == expected_value
+    assert at.query_params.get(key) == expected_param

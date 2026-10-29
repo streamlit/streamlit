@@ -14,6 +14,7 @@
 
 """number_input unit test."""
 
+import math
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -35,6 +36,7 @@ from streamlit.errors import (
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -989,30 +991,73 @@ class NumberInputOnChangeModeTest(DeltaGeneratorTestCase):
 @pytest.mark.parametrize(
     ("ui_value", "expected"),
     [
-        (150, 50),  # Above max -> reset to default
-        (-50, 50),  # Below min -> reset to default
-        (50, 50),  # In range -> unchanged
-        (0, 0),  # At min -> unchanged
-        (100, 100),  # At max -> unchanged
-        (None, 50),  # None -> returns default value
+        (None, 50),
+        (42.0, 42),
+        # A conversion, so a URL value of 2.9 still seeds 2.
+        (2.9, 2),
+        # Out of range is validate's to refuse, so it passes through.
+        (150, 150),
+        (-50, -50),
     ],
 )
-def test_serde_resets_out_of_range_to_default(ui_value, expected):
-    """Test that NumberInputSerde.deserialize resets out-of-range values to default."""
+def test_serde_deserialize_converts_and_never_replaces(
+    ui_value: float | None, expected: int
+) -> None:
+    """An integer input truncates to int but never falls back to its default."""
     serde = NumberInputSerde(
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
-    assert serde.deserialize(ui_value) == expected
+    result = serde.deserialize(ui_value)
+    assert result == expected
+    assert type(result) is int
+
+
+@pytest.mark.parametrize("data_type", [NumberInput.INT, NumberInput.FLOAT])
+@pytest.mark.parametrize(
+    "ui_value",
+    [math.nan, math.inf, -math.inf],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_serde_deserialize_passes_a_non_finite_number_through(
+    data_type: int, ui_value: float
+) -> None:
+    """NaN and infinity reach validate unconverted, even for an integer input.
+
+    ``int(math.inf)`` would raise ``OverflowError`` for a URL value.
+    """
+    serde = NumberInputSerde(value=0, data_type=data_type, min_value=0, max_value=1)
+    assert serde.deserialize(ui_value) is ui_value
+
+
+_OUT_OF_INT_RANGE = Violation("out_of_range", {"min_value": 0, "max_value": 100})
+_NOT_FINITE = Violation("malformed", {"expected": "a finite number"})
 
 
 @pytest.mark.parametrize(
-    "ui_value",
-    [float("nan"), float("inf"), -float("inf")],
-    ids=["nan", "positive_inf", "negative_inf"],
+    ("data_type", "ui_value", "expected"),
+    [
+        (NumberInput.INT, None, None),
+        (NumberInput.INT, 50, None),
+        # The bounds are inclusive, and a double holding a whole number is fine.
+        (NumberInput.INT, 0, None),
+        (NumberInput.INT, 100.0, None),
+        (NumberInput.INT, 150, _OUT_OF_INT_RANGE),
+        (NumberInput.INT, -50, _OUT_OF_INT_RANGE),
+        (NumberInput.INT, 2.5, Violation("malformed", {"expected": "a whole number"})),
+        (NumberInput.INT, float("inf"), _NOT_FINITE),
+        (NumberInput.FLOAT, 2.5, None),
+        (NumberInput.FLOAT, float("nan"), _NOT_FINITE),
+        (NumberInput.FLOAT, -float("inf"), _NOT_FINITE),
+        (
+            NumberInput.FLOAT,
+            100.5,
+            Violation("out_of_range", {"min_value": 0, "max_value": 100}),
+        ),
+    ],
 )
-def test_serde_resets_non_finite_float_to_default(ui_value: float) -> None:
-    """Test that NumberInputSerde.deserialize resets non-finite floats to default."""
-    serde = NumberInputSerde(
-        value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
-    )
-    assert serde.deserialize(ui_value) == 0.5
+def test_serde_validate(
+    data_type: int, ui_value: float | None, expected: Violation | None
+) -> None:
+    """A finite number within the bounds, and a whole one for an integer input."""
+    serde = NumberInputSerde(value=50, data_type=data_type, min_value=0, max_value=100)
+    assert serde.validate(ui_value) == expected

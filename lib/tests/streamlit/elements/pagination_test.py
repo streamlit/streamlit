@@ -31,6 +31,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.runtime.state.widget_checks import Violation
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -58,10 +59,28 @@ class TestPaginationSerde:
         [0, -1, 11, 100],
         ids=["zero", "negative", "exceeds_max", "far_exceeds_max"],
     )
-    def test_deserialize_out_of_range_returns_default(self, ui_value: int):
-        """Test that out-of-range values return default."""
+    def test_deserialize_passes_an_out_of_range_page_through(self, ui_value: int):
+        """An out-of-range page is validate's to refuse, never read as the default."""
         serde = PaginationSerde(default=1, num_pages=10)
-        assert serde.deserialize(ui_value) == 1
+        assert serde.deserialize(ui_value) == ui_value
+
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
+        [
+            (None, None),
+            (1, None),
+            (10, None),
+            # The int and double fields accept each other.
+            (3.0, None),
+            (0, Violation("out_of_range", {"min_value": 1, "max_value": 10})),
+            (11, Violation("out_of_range", {"min_value": 1, "max_value": 10})),
+            (2.5, Violation("malformed", {"expected": "a whole number"})),
+        ],
+    )
+    def test_validate(self, ui_value: float | None, expected: Violation | None):
+        """A page is a whole number in 1..num_pages."""
+        serde = PaginationSerde(default=1, num_pages=10)
+        assert serde.validate(ui_value) == expected
 
 
 class TestPaginationCommand(DeltaGeneratorTestCase):

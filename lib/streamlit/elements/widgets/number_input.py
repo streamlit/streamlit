@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast, overload
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -59,11 +59,13 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -77,27 +79,40 @@ class NumberInputSerde:
     min_value: Number
     max_value: Number
 
+    def validate(self, ui_value: Number | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a number the browser would not commit.
+
+        The browser commits only finite numbers within the bounds it was sent,
+        and only whole numbers for an integer input. The bounds include the
+        JavaScript safe-number limits that stand in for unset ones.
+        """
+        if ui_value is None:
+            return None
+        # NaN fails every comparison, and an integer input can receive a
+        # double such as 2.5, because the int and double fields accept each
+        # other.
+        violation = widget_checks.finite(ui_value)
+        if violation is None and self.data_type == NumberInputProto.INT:
+            violation = widget_checks.whole_number(ui_value)
+        return violation or widget_checks.within(
+            ui_value, self.min_value, self.max_value
+        )
+
     def serialize(self, v: Number | None) -> Number | None:
         return v
 
     def deserialize(self, ui_value: Number | None) -> Number | None:
+        # Converts but never replaces a value: the boundary compares the
+        # result with the stored value, and validate refuses what a client
+        # may not send. URL seeding validates the result.
         val: Number | None = ui_value if ui_value is not None else self.value
-
-        if val is not None:
-            if self.data_type == NumberInputProto.INT:
-                val = int(val)
-            # Reset to default if outside [min_value, max_value]. This
-            # rejects out-of-range values seeded from URL query params;
-            # a no-op for frontend values since the UI enforces bounds.
-            # Returning the default triggers _seed_widget_from_url's
-            # "deserialized == default" check, which clears the URL param.
-            if (
-                (self.data_type == NumberInputProto.FLOAT and not math.isfinite(val))
-                or val < self.min_value
-                or val > self.max_value
-            ):
-                return self.value
-
+        if (
+            self.data_type == NumberInputProto.INT
+            and val is not None
+            and math.isfinite(val)
+        ):
+            # A URL value of 2.9 still seeds 2.
+            val = int(val)
         return val
 
 
@@ -904,6 +919,7 @@ class NumberInputMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="double_value",
             disabled=disabled,
@@ -918,11 +934,10 @@ class NumberInputMixin:
         # If the value is no longer valid (outside bounds), reset to default.
         # This handles the case where min_value/max_value change dynamically
         # and the previously entered value is no longer within bounds.
-        # Note: This is NOT redundant with the serde bounds check — the
-        # serde only runs on serialized values (URL seeding, frontend
-        # submissions), while this catches already-deserialized values
-        # carried over from a previous rerun with different bounds.
-        # Both paths reset to the widget's default value for consistency.
+        # Note: This is NOT redundant with the serde's validate, which checks
+        # client and URL values against the bounds the client was shown. This
+        # reconciles a value carried over from a previous rerun, or set
+        # through session state, with this run's bounds.
         current_value = widget_state.value
         value_needs_reset = False
 

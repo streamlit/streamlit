@@ -416,7 +416,12 @@ class WidgetWritesTest(SnapshotCase):
             ("null_inside_a_list", "many", ["a", None], _Refused("null inside")),
             ("one_item_list_for_one_value", "select", ["b"], "b"),
             ("longer_list_for_one_value", "select", ["a", "b"], _Refused("one value")),
-            ("fraction_to_a_whole_number_truncates", "whole", 2.5, 2),
+            (
+                "fraction_to_a_whole_number_is_refused",
+                "whole",
+                2.5,
+                _Refused("not one it accepts"),
+            ),
             ("number_to_a_datetime_input", "when", 5, _Refused("must be a string")),
             (
                 "number_in_a_date_range",
@@ -767,8 +772,13 @@ class WidgetWritesTest(SnapshotCase):
             ("decimal_label", "rate", "0.10", "0.10"),
             ("decimal_label_as_a_number", "rate", 0.1, _Refused("0.1 is not one")),
             ("largest_safe_integer", "whole", 2**53 - 1, 2**53 - 1),
-            # Past 2**53 it rounds to a double, and the widget's bounds reset it.
-            ("integer_past_int64_resets", "whole", 2**63, 3),
+            # Past 2**53 it rounds to a double, which is past the widget's bounds.
+            (
+                "integer_past_int64_is_refused",
+                "whole",
+                2**63,
+                _Refused("not one it accepts"),
+            ),
             (
                 "integer_past_int64_on_pagination",
                 "page",

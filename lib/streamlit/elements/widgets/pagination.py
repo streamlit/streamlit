@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -42,12 +42,14 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
     from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 @dataclass
@@ -57,16 +59,22 @@ class PaginationSerde:
     default: int
     num_pages: int
 
+    def validate(self, ui_value: float | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a page the client was not shown: a whole number in ``1..num_pages``."""
+        if ui_value is None:
+            return None
+        return widget_checks.whole_number(ui_value) or widget_checks.within(
+            ui_value, 1, self.num_pages
+        )
+
     def serialize(self, value: int) -> int:
         return value
 
     def deserialize(self, ui_value: int | None) -> int:
+        # Never replaces a value: validate refuses a page the client was not
+        # shown, and the widget reconciles a stored page past a lower
+        # num_pages after registration.
         if ui_value is None:
-            return self.default
-        # Clamp to valid range if num_pages changed
-        if ui_value < 1:
-            return self.default
-        if ui_value > self.num_pages:
             return self.default
         return ui_value
 
@@ -364,6 +372,7 @@ class PaginationMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="int_value",
             disabled=disabled,

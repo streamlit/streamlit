@@ -356,7 +356,8 @@ with no log and no re-sync, and a correct browser can send such a value in a syn
 A conversion can still map a forged value onto the stored one, but a correct browser
 never sends that form, so nothing needs a re-sync. A value a deserializer cannot
 represent, such as an unknown `select_slider` label, passes through as the label, as
-`selectbox` already does. `st.feedback` keeps an index outside its options, and
+`selectbox` already does, and a slider value with the wrong number of items passes
+through as a tuple of its items. `st.feedback` keeps an index outside its options, and
 `st.menu_button` still reads an unknown label as no click: a trigger resets anyway, and
 the agent API's wire comparison still reaches its validator.
 
@@ -373,7 +374,10 @@ after the array repairs it already makes (`_sanitize_url_array` filters, dedupli
 and truncates a multiselect's or button group's array until the URL-binding refactor
 below), and repairs what today's deserializers repair: text is truncated to `max_chars`,
 and an unknown `select_slider` label falls back to that position's default, because a
-widget that is never empty keeps its default's shape. Truncation counts
+widget that is never empty keeps its default's shape. It also sorts a range whose ends are
+reversed, as the browser sends it: the `st.slider` and `st.date_input` deserializers
+never sorted, so such a link used to seed the reversed range unchecked. A wrong number of
+items clears the parameter. Truncation counts
 UTF-16 code units, as the check does, and never splits a character, so a repaired value
 is valid text that always passes the check, including when a reconnect to a new session
 checks it at registration. For text with astral characters, such as emoji, that keeps

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -47,6 +48,8 @@ from streamlit.errors import (
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1053,59 +1056,124 @@ def test_slider_serde_deserialize_returns_default_when_ui_value_none() -> None:
 @pytest.mark.parametrize(
     ("default", "single_value", "ui_value", "expected"),
     [
-        ([7], True, [1, 2], 7),
-        ([3, 8], False, [5], (3, 8)),
+        ([7], True, [1, 2], (1, 2)),
+        ([3, 8], False, [5], (5,)),
+        ([3, 8], False, [], ()),
     ],
-    ids=["single_value_too_many", "range_too_few"],
+    ids=["single_value_too_many", "range_too_few", "range_empty"],
 )
-def test_slider_serde_deserialize_falls_back_on_wrong_length(
+def test_slider_serde_deserialize_passes_a_wrong_length_through(
     default: list[float],
     single_value: bool,
     ui_value: list[float],
-    expected: int | tuple[int, int],
+    expected: tuple[int, ...],
 ) -> None:
-    """ui_value lists with the wrong length revert to the default."""
+    """A wrong number of values reads as a tuple, never as the default."""
     serde = _make_int_serde(value=default, single_value=single_value)
     assert serde.deserialize(ui_value) == expected
 
 
 @pytest.mark.parametrize(
-    "ui_value",
-    [[5], [200]],
-    ids=["below_min", "above_max"],
+    ("ui_value", "expected"),
+    [([5], 5), ([200.0], 200), ([80, 20], (80, 20))],
+    ids=["below_min", "above_max", "reversed"],
 )
-def test_slider_serde_deserialize_resets_out_of_range(
-    ui_value: list[float],
+def test_slider_serde_deserialize_converts_and_never_replaces(
+    ui_value: list[float], expected: int | tuple[int, int]
 ) -> None:
-    """Out-of-range ui_values revert to the default."""
-    serde = _make_int_serde(value=[20], min_value=10, max_value=100)
-    assert serde.deserialize(ui_value) == 20
+    """Out-of-range and reversed values are validate's to refuse."""
+    single = _make_int_serde(value=[20], min_value=10, max_value=100)
+    span = _make_int_serde(value=[20, 30], single_value=False)
+    serde = span if len(ui_value) == 2 else single
+    assert serde.deserialize(ui_value) == expected
+
+
+def test_slider_serde_deserialize_passes_a_non_finite_value_through() -> None:
+    """NaN and infinity reach validate, also for an integer slider."""
+    assert math.isinf(_make_int_serde(value=[20]).deserialize([math.inf]))
+    assert math.isnan(_make_float_serde(value=[0.5]).deserialize([math.nan]))
+
+
+def test_slider_serde_deserialize_still_raises_for_text() -> None:
+    """URL seeding relies on a TypeError for a value that is not a number."""
+    with pytest.raises(TypeError):
+        _make_int_serde(value=[20]).deserialize(["abc"])  # type: ignore[list-item]
+
+
+def _doubles(*values: float) -> Any:
+    """Values as a validator receives them: a protobuf array, not a list."""
+    return WidgetState(
+        double_array_value={"data": list(values)}
+    ).double_array_value.data
 
 
 @pytest.mark.parametrize(
-    "ui_value",
-    [[float("nan")], [float("inf")], [-float("inf")]],
-    ids=["nan", "positive_inf", "negative_inf"],
+    ("single_value", "ui_value", "expected"),
+    [
+        (True, None, None),
+        (True, _doubles(50.0), None),
+        (True, _doubles(10.0), None),
+        (True, _doubles(100.0), None),
+        (
+            True,
+            _doubles(5.0),
+            Violation("out_of_range", {"min_value": 10, "max_value": 100}),
+        ),
+        (
+            True,
+            _doubles(2.5 + 10),
+            Violation("malformed", {"expected": "a whole number"}),
+        ),
+        (
+            True,
+            _doubles(math.inf),
+            Violation("malformed", {"expected": "a finite number"}),
+        ),
+        (True, _doubles(20.0, 30.0), Violation("bad_shape", {"item_counts": (1,)})),
+        (True, _doubles(), Violation("bad_shape", {"item_counts": (1,)})),
+        (False, _doubles(20.0, 30.0), None),
+        (False, _doubles(30.0, 30.0), None),
+        (False, _doubles(30.0, 20.0), Violation("bad_shape", {"order": True})),
+        (False, _doubles(20.0), Violation("bad_shape", {"item_counts": (2,)})),
+        (
+            False,
+            _doubles(20.0, 30.0, 40.0),
+            Violation("bad_shape", {"item_counts": (2,)}),
+        ),
+    ],
 )
-def test_slider_serde_deserialize_resets_non_finite_value(
-    ui_value: list[float],
+def test_slider_serde_validate(
+    single_value: bool, ui_value: Any, expected: Violation | None
 ) -> None:
-    """Non-finite float ui_values revert to the default."""
-    serde = _make_float_serde(value=[0.5])
-    assert serde.deserialize(ui_value) == 0.5
+    """One value or an ordered range, each a whole number within the bounds."""
+    serde = _make_int_serde(
+        value=[20] if single_value else [20, 30],
+        single_value=single_value,
+        min_value=10,
+        max_value=100,
+    )
+    assert serde.validate(ui_value) == expected
 
 
-@pytest.mark.parametrize(
-    "ui_value",
-    [[float("nan"), 0.8], [0.2, float("inf")], [-float("inf"), float("nan")]],
-    ids=["nan_first", "inf_second", "both_non_finite"],
-)
-def test_slider_serde_deserialize_resets_non_finite_value_range(
-    ui_value: list[float],
-) -> None:
-    """Non-finite float values in a range slider revert to the default."""
-    serde = _make_float_serde(value=[0.2, 0.8], single_value=False)
-    assert serde.deserialize(ui_value) == (0.2, 0.8)
+def test_slider_serde_validate_reports_temporal_bounds_in_their_own_type() -> None:
+    """A date slider's bounds are microseconds on the wire, but dates in a refusal."""
+    serde = SliderSerde(
+        value=[0.0],
+        data_type=SliderProto.DATE,
+        single_value=True,
+        orig_tz=None,
+        min_value=0.0,
+        max_value=86_400_000_000.0,
+    )
+
+    assert serde.validate(_doubles(86_400_000_000.0)) is None
+    assert serde.validate(_doubles(2 * 86_400_000_000.0)) == Violation(
+        "out_of_range",
+        {"min_value": date(1970, 1, 1), "max_value": date(1970, 1, 2)},
+    )
+    # Only an integer slider refuses a fraction. A date slider truncates its
+    # microseconds, as before.
+    assert serde.validate(_doubles(0.5)) is None
 
 
 def test_slider_serde_deserialize_passes_through_in_range_value() -> None:

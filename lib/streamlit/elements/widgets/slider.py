@@ -19,6 +19,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from numbers import Integral, Real
+from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -66,6 +67,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 
@@ -73,6 +75,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import DateTimeFormat, NumberFormat
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
+    from streamlit.runtime.state.widget_checks import Violation
 
 SliderNumericT = TypeVar("SliderNumericT", int, float)
 SliderDatelikeT = TypeVar("SliderDatelikeT", date, time, datetime)
@@ -242,6 +245,10 @@ class SliderSerde:
     max_value: float
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
+        # NaN and infinity pass through for validate to refuse. A value that
+        # is not a number, such as text from a URL, raises a TypeError here.
+        if not math.isfinite(value):
+            return value
         if self.data_type == SliderProto.INT:
             return int(value)
         if self.data_type == SliderProto.DATETIME:
@@ -256,35 +263,55 @@ class SliderSerde:
             )
         return value
 
-    def deserialize(self, ui_value: list[float] | None) -> Any:
-        if ui_value is not None:
-            val = ui_value
-            expected_len = 1 if self.single_value else 2
-            if len(val) != expected_len:
-                # Wrong number of values (e.g. single URL param for a range
-                # slider); fall back to default so the URL param is cleared.
-                val = self.value
-            else:
-                # Reset to default if any value is outside [min_value, max_value].
-                # This rejects out-of-range values seeded from URL query params;
-                # a no-op for frontend values since the UI enforces bounds.
-                # TODO(query-params): URL values that pass bounds checking but
-                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
-                # accepted as-is. Consider snapping to the nearest valid step
-                # for consistency with the UI.
-                for v in val:
-                    if not math.isfinite(v) or v < self.min_value or v > self.max_value:
-                        val = self.value
-                        break
-        else:
-            # Widget has not been used; fallback to the original value,
-            val = self.value
+    def validate(
+        self, ui_value: Sequence[float] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse values the browser would not send.
 
-        # The widget always returns a float array, so fix the return type if necessary
-        deserialized_values = [self.deserialize_single_value(v) for v in val]
-        return (
-            deserialized_values[0] if self.single_value else tuple(deserialized_values)
+        The browser sends one value, or a range's two ends lowest first, each
+        a finite number within the bounds. ``step`` is not checked.
+        """
+        if ui_value is None:
+            return None
+        violation = widget_checks.item_count(
+            ui_value, allowed=(1,) if self.single_value else (2,)
         )
+        if violation is not None:
+            return violation
+        for item in ui_value:
+            violation = widget_checks.finite(item)
+            if violation is None and self.data_type == SliderProto.INT:
+                violation = widget_checks.whole_number(item)
+            if violation is not None:
+                return violation
+            if widget_checks.within(item, self.min_value, self.max_value) is not None:
+                # Dates and times are microseconds on the wire, so the bounds
+                # are reported in the slider's own type.
+                return widget_checks.Violation(
+                    "out_of_range",
+                    MappingProxyType(
+                        {
+                            "min_value": self.deserialize_single_value(self.min_value),
+                            "max_value": self.deserialize_single_value(self.max_value),
+                        }
+                    ),
+                )
+        return widget_checks.ordered(ui_value)
+
+    def deserialize(self, ui_value: list[float] | None) -> Any:
+        # Converts but never replaces a value: the boundary compares the
+        # result with the stored value, and validate refuses what a client
+        # may not send. URL seeding validates the result.
+        # TODO(query-params): URL values that don't align to the step (e.g.,
+        # ?val=0.15 with step=0.1) are accepted as-is. Consider snapping to the
+        # nearest valid step for consistency with the UI.
+        val = ui_value if ui_value is not None else self.value
+        deserialized_values = [self.deserialize_single_value(v) for v in val]
+        # A wrong number of values passes through as a tuple, which validate
+        # refuses, so it never reads as a single value.
+        if self.single_value and len(deserialized_values) == 1:
+            return deserialized_values[0]
+        return tuple(deserialized_values)
 
     def serialize(self, v: Any) -> list[Any]:
         range_value = isinstance(v, (list, tuple))
@@ -1248,6 +1275,7 @@ class SliderMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="double_array_value",
             disabled=disabled,

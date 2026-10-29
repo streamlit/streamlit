@@ -121,6 +121,7 @@ def _create_test_widget_metadata(
     formatted_options: list[str] | None = None,
     clearable: bool = False,
     max_array_length: int | None = None,
+    validator=None,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for query param binding tests."""
     return WidgetMetadata(
@@ -132,6 +133,7 @@ def _create_test_widget_metadata(
         formatted_options=formatted_options,
         clearable=clearable,
         max_array_length=max_array_length,
+        validator=validator,
     )
 
 
@@ -5366,21 +5368,19 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "my_bool" not in self.query_params._query_params
 
-    def test_seed_widget_clears_invalid_value_that_falls_back_to_default(self) -> None:
-        """Test that invalid URL values are cleared when deserializer falls back."""
+    def test_seed_widget_clears_a_value_the_validator_refuses(self) -> None:
+        """A deserializer passes an invalid value through, and validate refuses it."""
         self.query_params._query_params["color"] = "invalid"
-
-        def color_deserializer(value):
-            default = "#000000"
-            if value is None:
-                return default
-            return value if value.startswith("#") else default
 
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="string_value",
-            deserializer=color_deserializer,
-            serializer=lambda x: x,
+            deserializer=lambda value: "#000000" if value is None else value,
+            validator=lambda ui_value, **_kwargs: (
+                None
+                if ui_value.startswith("#")
+                else widget_checks.Violation("malformed")
+            ),
         )
 
         seeded = self.session_state._seed_widget_from_url(
@@ -5389,6 +5389,27 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "color" not in self.query_params._query_params
+        assert "widget_1" not in self.session_state._new_widget_state
+
+    def test_seed_widget_sorts_a_reversed_range(self) -> None:
+        """A range with reversed ends is sorted and checked again."""
+        self.query_params._query_params["span"] = ["80", "20"]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="double_array_value",
+            deserializer=lambda value: (0.0, 100.0) if value is None else tuple(value),
+            serializer=list,
+            validator=lambda ui_value, **_kwargs: widget_checks.ordered(ui_value),
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "span", "widget_1", ["80", "20"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == (20.0, 80.0)
+        assert self.query_params._query_params["span"] == ["20", "80"]
 
     def test_seed_widget_clears_valid_value_that_equals_default(self) -> None:
         """Test that valid URL values matching the default are cleared from the URL."""
