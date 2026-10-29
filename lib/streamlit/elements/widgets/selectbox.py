@@ -90,6 +90,7 @@ class SelectboxSerde(Generic[T]):
     default_option_index: int | None
     format_func: Callable[[Any], str]
     accept_new_options: bool
+    required: bool
 
     def __init__(
         self,
@@ -100,6 +101,7 @@ class SelectboxSerde(Generic[T]):
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
         accept_new_options: bool = False,
+        required: bool = False,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -127,6 +129,8 @@ class SelectboxSerde(Generic[T]):
             deepcopied instances would fail identity comparison.
         accept_new_options : bool, optional
             Whether a client may send text that is not one of the options.
+        required : bool, optional
+            Whether a client may clear the selection.
         """
 
         self.options = options
@@ -135,6 +139,7 @@ class SelectboxSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.accept_new_options = accept_new_options
+        self.required = required
 
     @cached_property
     def _label_counts(self) -> Counter[str]:
@@ -143,9 +148,17 @@ class SelectboxSerde(Generic[T]):
         return Counter(self.formatted_options)
 
     def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
-        """Refuse a label that is not one of the options a client was shown."""
+        """Refuse a label that is not one of the options a client was shown.
+
+        A required selectbox is never cleared.
+        """
         if ui_value is None:
-            return None
+            # An unset value reads as the default, which is empty only without
+            # a default option. Any label is a selection, even blank text: the
+            # browser treats only a missing value as empty.
+            if self.default_option_index is not None and len(self.options) > 0:
+                return None
+            return widget_checks.filled(None, required=self.required)
         return widget_checks.one_of(
             self._label_counts, ui_value, accept_new=self.accept_new_options
         )
@@ -529,9 +542,12 @@ class SelectboxMixin:
             ``required=True`` for an empty required selectbox.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that clears a required selection,
+               also from a modified client. A selectbox the user never filled
+               still returns its empty default (``None``), and only the
+               browser blocks a form submit while it is empty. If
+               requiredness is security-relevant, also check for ``None`` in
+               your app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -830,6 +846,7 @@ class SelectboxMixin:
             default_option_index=index,
             format_func=format_func,
             accept_new_options=accept_new_options,
+            required=required,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -904,9 +921,6 @@ class SelectboxMixin:
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",
                 disabled=disabled,
-                # Checked by the browser, not by this interface: `null` still
-                # resets the widget to its default, which is empty for
-                # `index=None`.
                 required=required,
                 label_visibility=label_visibility,
                 accept_new_options=accept_new_options,

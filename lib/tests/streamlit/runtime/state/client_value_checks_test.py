@@ -1421,6 +1421,7 @@ def _required_app() -> None:
     st.datetime_input("When", value=None, key="when", args=["when"], **kw)
     st.pills("Mood", ["calm", "busy"], key="mood", args=["mood"], **kw)
     st.segmented_control("Mode", ["a", "b"], key="mode", args=["mode"], **kw)
+    st.selectbox("Pick", ["x", "y"], index=None, key="pick", args=["pick"], **kw)
 
 
 # A legal value for each widget in _required_app, which starts empty.
@@ -1434,6 +1435,7 @@ _LEGAL_REQUIRED: dict[str, dict[str, Any]] = {
     "when": {"string_array_value": _labels("2026-01-05T10:15")},
     "mood": {"string_array_value": _labels("calm")},
     "mode": {"string_array_value": _labels("a")},
+    "pick": {"string_value": "x"},
 }
 
 
@@ -1457,6 +1459,7 @@ _LEGAL_REQUIRED: dict[str, dict[str, Any]] = {
         ("mood", {"string_array_value": _labels()}),
         ("mood", {}),
         ("mode", {"string_array_value": _labels()}),
+        ("pick", {}),
     ],
 )
 def test_a_change_that_empties_a_required_widget_is_refused(
@@ -1491,6 +1494,7 @@ def test_an_untouched_required_widget_keeps_its_empty_default(
         assert app.number_input(key="age").value is None
         assert app.date_input(key="trip").value == ()
         assert app.button_group[0].value is None
+        assert app.selectbox(key="pick").value is None
     assert refusal_logs == []
 
 
@@ -1508,6 +1512,7 @@ def test_a_new_session_keeps_filled_required_values() -> None:
     assert fresh.text_input(key="name").value == "Ada"
     assert fresh.number_input(key="age").value == 30.0
     assert fresh.session_state.mood == "calm"
+    assert fresh.selectbox(key="pick").value == "x"
 
 
 def _flipping_required_app() -> None:
@@ -1605,6 +1610,47 @@ def test_a_required_selection_in_a_form_can_return_to_an_empty_default(
     assert "pace (empty_required)" in refusal_logs[0]
 
 
+def _clearing_selectbox_form_app() -> None:
+    import streamlit as st
+
+    with st.form("order", clear_on_submit=True):
+        st.selectbox("City", ["Paris", "Rome"], index=None, key="city", required=True)
+        st.form_submit_button("Send", key="send")
+
+
+def test_a_required_selectbox_in_a_form_cannot_return_to_empty(
+    refusal_logs: list[str],
+) -> None:
+    """Unlike pills, a required selectbox stays filled inside a form.
+
+    A form that clears on submit restores its empty default, but the browser
+    keeps the form from submitting while the selectbox is empty, so a submit
+    that clears it is refused.
+    """
+    at = AppTest.from_function(_clearing_selectbox_form_app).run()
+    city_id, send_id = (_widget_id(at, key) for key in ("city", "send"))
+
+    def submit(**city: str) -> None:
+        at._run(
+            widget_state=forged_many(
+                WidgetState(id=city_id, **city),
+                WidgetState(id=send_id, trigger_value=True),
+            )
+        )
+
+    with patch_config_options({"global.e2eTest": True}):
+        submit(string_value="Rome")
+        assert at.session_state.city == "Rome"
+        assert refusal_logs == []
+
+        submit()
+
+    assert not at.exception
+    assert at.session_state.city == "Rome"
+    assert len(refusal_logs) == 1
+    assert "city (empty_required)" in refusal_logs[0]
+
+
 def test_a_new_session_drops_programmatic_empty_text_for_a_required_widget() -> None:
     """App code may empty a required widget, but a new session refuses the echo.
 
@@ -1636,6 +1682,7 @@ def test_a_new_session_drops_programmatic_empty_text_for_a_required_widget() -> 
         # A range link with only its start is empty.
         ("trip", "2026-02-01", (dt.date(2026, 1, 5), dt.date(2026, 1, 9))),
         ("mood", "", "calm"),
+        ("pick", "", "y"),
     ],
 )
 def test_a_bound_url_value_cannot_empty_a_required_widget(
@@ -1651,6 +1698,8 @@ def test_a_bound_url_value_cannot_empty_a_required_widget(
         "key='trip', required=True, bind='query-params')\n"
         "st.pills('Mood', ['calm', 'busy'], default='calm', key='mood', "
         "required=True, bind='query-params')\n"
+        "st.selectbox('Pick', ['x', 'y'], index=1, key='pick', required=True, "
+        "bind='query-params')\n"
     )
     at.query_params[key] = url_value
     at.run()

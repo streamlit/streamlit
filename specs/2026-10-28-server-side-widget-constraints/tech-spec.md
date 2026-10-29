@@ -765,13 +765,13 @@ widget is a no-op, and its `null` sent to a filled one with an empty default is
 `empty_required`. The stricter form rule, that a submit needs every required field
 filled, belongs to item 7.
 - The widgets with `required` are `text_input`, `text_area`, `number_input`,
-  `date_input`, `time_input`, `datetime_input`, and single-select `st.pills` and
-  `st.segmented_control`. Each serde holds the flag, and `validate` checks emptiness
-  first with `filled`.
+  `selectbox`, `date_input`, `time_input`, `datetime_input`, and single-select
+  `st.pills` and `st.segmented_control`. Each serde holds the flag, and `validate`
+  checks emptiness first with `filled`.
 - Emptiness follows the widget: `None`, `[]`, `()`, or text that is only whitespace. An
   unset value reads as the widget's default, because the browser commits the default
   when the user empties a field that has one, so it is empty only when the default is.
-  `datetime_input` reads `[]` as its default too. Three cases differ:
+  `datetime_input` reads `[]` as its default too. Four cases differ:
   - `date_input`: `[]` is empty even with a default, because `DateInputSerde` reads it
     as `None` (`()` for a range), and a `required` range with only a start date is
     empty, as in the browser's `isRequiredEmptyDateValue`.
@@ -781,6 +781,11 @@ filled, belongs to item 7.
     submitting while these widgets are empty. Outside a form, the browser never deselects
     a required one. Limiting this to forms that clear on submit needs the form's
     `clear_on_submit` on the server, which item 7 can bring with form membership.
+  - `selectbox`: only an unset value is empty, and only without a default option
+    (`index=None`). Any label is a selection, even blank text, as in the browser,
+    which checks for a missing value. Inside a form it gets no exception: the browser
+    keeps a form from submitting while a required selectbox is empty, so a form that
+    clears on submit never sends it empty.
   - Text: emptiness is checked before the exemption for the author's value, so a
     required text input whose default is `""` still refuses a change to `""`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the

@@ -627,6 +627,7 @@ class WidgetWritesTest(SnapshotCase):
             ("null_to_an_empty_number", "empty_age", None, None),
             ("null_to_empty_pills", "empty_mood", None, None),
             ("null_to_an_empty_date", "empty_day", None, None),
+            ("null_to_an_empty_selectbox", "empty_pick", None, None),
             ("text_to_an_empty_input", "empty_name", "Bob", "Bob"),
             (
                 "empty_text",
@@ -639,6 +640,9 @@ class WidgetWritesTest(SnapshotCase):
             ("null_to_a_filled_text_input", "filled_name", None, _Refused("required")),
             ("null_to_a_filled_number", "filled_age", None, _Refused("required")),
             ("null_to_filled_pills", "filled_mood", None, _Refused("required")),
+            ("null_to_a_filled_selectbox", "filled_pick", None, _Refused("required")),
+            # A default option is not empty, so `null` resets to it.
+            ("null_to_a_selectbox_with_a_default", "first_pick", None, "x"),
             (
                 "start_of_a_range",
                 "trip",
@@ -660,6 +664,14 @@ class WidgetWritesTest(SnapshotCase):
         st.pills("Filled mood", ["calm", "busy"], key="filled_mood", required=True)
         st.date_input("Empty day", value=None, key="empty_day", required=True)
         st.date_input("Trip", value=[], key="trip", required=True)
+        options = ["x", "y"]
+        st.selectbox("Empty pick", options, index=None, key="empty_pick", required=True)
+        st.session_state.filled_pick = "y"
+        st.selectbox(
+            "Filled pick", options, index=None, key="filled_pick", required=True
+        )
+        st.session_state.first_pick = "y"
+        st.selectbox("First pick", options, key="first_pick", required=True)
         self._check({key: sent}, expected)
 
     def test_a_value_the_widget_cannot_read_is_refused(self) -> None:
