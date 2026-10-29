@@ -65,7 +65,13 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 })
 
-function formatTooltipItem(value: unknown): string {
+/**
+ * Format one tooltip value as plain text.
+ *
+ * Shortens numbers, renders blank and unsupported values as ``-``, and passes
+ * other strings and booleans through.
+ */
+export function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }
@@ -116,9 +122,9 @@ function formatTooltipNumber(value: number): string {
  * Tooltip ``valueFormatter`` for the Streamlit theme.
  *
  * Returns plain text that ECharts escapes: one string, or one string per
- * entry for multi-value points such as candlesticks. An option
- * ``tooltip.formatter`` replaces this. ``tooltip.valueFormatter`` would too,
- * but the chart spec is JSON and cannot carry that callback.
+ * entry for multi-value points such as candlesticks. An author's
+ * ``tooltip.formatter`` replaces this, as does a ``tooltip.valueFormatter``
+ * number format (``applyTooltipFormatters`` turns it into a function).
  */
 export function formatEChartsTooltipValue(value: unknown): string | string[] {
   if (Array.isArray(value)) {

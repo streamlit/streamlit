@@ -26,11 +26,12 @@ from typing import (
     Protocol,
     TypeAlias,
     cast,
+    get_args,
     overload,
 )
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_data, agent_spec
+from streamlit.elements.lib import agent_data, agent_spec, column_types
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -132,6 +133,20 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 # pyecharts ``JsCode`` wraps JavaScript as ``--x_x--<code>--x_x--``.
 # ``dump_options_with_quotes`` emits that encoding as a JSON string value.
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
+
+# The named formats a tooltip ``valueFormatter`` string accepts (the same set as
+# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
+# ``util/formatNumber.ts``.
+_NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# One token of a printf-style format string: literal text, an escaped ``%%``, or
+# a placeholder. The alternatives and their order mirror the parser of the
+# frontend's vendored sprintf (``frontend/lib/src/vendor/sprintf.js``), so a
+# string this rejects would also fail there.
+_PRINTF_TOKEN: Final = re.compile(
+    r"[^%]+|%%|(?P<placeholder>%(?:[1-9][0-9]*\$|\([^)]+\))?\+?(?:0|'[^$])?-?"
+    r"[,_]?[0-9]*(?:\.[0-9]+)?[b-gijostTuvxX])"
+)
 
 
 class EChartsCompatible(Protocol):
@@ -518,12 +533,15 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
             yield from _iter_media_options(timeline_option)
 
 
-def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
-    """Yield series configs from a ``series`` value (object, list, or tuple)."""
-    if isinstance(series, dict):
-        yield series
-    elif isinstance(series, (list, tuple)):
-        for entry in series:
+def _iter_config_entries(value: Any) -> Iterator[dict[str, Any]]:
+    """Yield the dicts of a value that is one dict or a list or tuple of dicts.
+
+    Used for option keys such as ``series`` and ``tooltip``.
+    """
+    if isinstance(value, dict):
+        yield value
+    elif isinstance(value, (list, tuple)):
+        for entry in value:
             if isinstance(entry, dict):
                 yield entry
 
@@ -550,7 +568,7 @@ def _author_aria_label_description(option: dict[str, Any]) -> str | None:
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
-        yield from _iter_series_entries(variant.get("series"))
+        yield from _iter_config_entries(variant.get("series"))
 
 
 def _enables_selection(option: dict[str, Any]) -> bool:
@@ -641,6 +659,62 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
+def _iter_tooltips(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield top-level and series tooltip configs across option variants.
+
+    Skips per-data-item tooltips, which the frontend does not convert either.
+    """
+    for variant in _iter_option_variants(option):
+        yield from _iter_config_entries(variant.get("tooltip"))
+    for series in _iter_series(option):
+        yield from _iter_config_entries(series.get("tooltip"))
+
+
+def _is_printf_format(value: str) -> bool:
+    """Whether ``value`` parses as printf and has at least one placeholder.
+
+    A string without a placeholder (an escaped ``%%`` is not one) would print
+    the same text for every value.
+    """
+    has_placeholder = False
+    position = 0
+    while position < len(value):
+        token = _PRINTF_TOKEN.match(value, position)
+        if token is None:
+            return False
+        has_placeholder = has_placeholder or token["placeholder"] is not None
+        position = token.end()
+    return has_placeholder
+
+
+def _is_number_format(value: Any) -> bool:
+    """Whether ``value`` is a named number format or a printf-style string."""
+    return isinstance(value, str) and (
+        value in _NAMED_NUMBER_FORMATS or _is_printf_format(value)
+    )
+
+
+def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
+    """Log tooltip ``valueFormatter`` values that are not number formats.
+
+    ECharts only accepts a function there, which a JSON spec cannot carry, so
+    Streamlit reads a string as a number format. The frontend drops any other
+    value and keeps the default tooltip formatting, so the chart still renders.
+    """
+    for tooltip in _iter_tooltips(option):
+        value_formatter = tooltip.get("valueFormatter")
+        if value_formatter is None or _is_number_format(value_formatter):
+            continue
+        message = (
+            "The provided ECharts spec sets a tooltip `valueFormatter` of "
+            f"{value_formatter!r}, which is not a number format, so Streamlit "
+            "ignores it and uses the default tooltip formatting. Use a named "
+            'format such as "dollar" or "compact", or a printf-style string '
+            'such as "%.2f" (for example, "%.2f €" instead of "{value} €").'
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
 def _convert_datasets_in_variant(option: dict[str, Any]) -> None:
     """Convert dataframe-like ``dataset.source`` values on a single option variant."""
     dataset = option.get("dataset")
@@ -721,6 +795,7 @@ def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
         )
 
     _validate_supported_features(option)
+    _warn_on_unsupported_value_formatters(option)
     _convert_dataset_sources(option)
     return option
 
@@ -886,8 +961,9 @@ class EChartsMixin:
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
-            ``renderItem``) is not supported. Most formatting needs are covered
-            by ECharts' string-template formatters (e.g. ``"formatter": "{b}: {c}"``).
+            ``renderItem``) is not supported. Use ECharts' string templates
+            instead (e.g. ``"formatter": "{b}: {c}"``). To format tooltip
+            values, see the tooltip note below.
 
             Consequently, three families of ECharts charts are unavailable and
             raise an error: ``custom`` series (which require a ``renderItem``
@@ -903,6 +979,35 @@ class EChartsMixin:
 
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
+
+        .. note::
+            Streamlit extends two tooltip options so you can format tooltips
+            without JavaScript. Both work in ``tooltip`` and
+            ``series[i].tooltip``. Per-item tooltips inside ``series[i].data``
+            support neither, so set these options on the series instead:
+
+            - ``valueFormatter`` accepts a number format string, which formats
+              each value in the default tooltip. Use a named format
+              (``"plain"``, ``"localized"``, ``"dollar"``, ``"euro"``,
+              ``"yen"``, ``"percent"``, ``"compact"``, ``"scientific"``,
+              ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
+              printf-style format string (e.g. ``"%,d sessions"``). These are
+              the same formats as in |st.metric|_. ``"percent"`` multiplies
+              values by 100. One format applies to every value of a series, so
+              use ``encode.tooltip`` to choose which dimensions the tooltip
+              shows. Streamlit ignores any other value, including a malformed
+              printf-style string, and the tooltip keeps its default
+              formatting.
+            - String ``formatter`` templates in tooltips expand the
+              ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
+              otherwise supports only in series labels (e.g.
+              ``"{b}: {@[2]} sessions"``). In an axis tooltip, they read the
+              first series. Template values are inserted as escaped text,
+              without a number format. The template itself is HTML, as in any
+              other ECharts tooltip string.
+
+            .. |st.metric| replace:: ``st.metric``
+            .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
 
         Parameters
         ----------
@@ -973,8 +1078,9 @@ class EChartsMixin:
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened. Set
-            ``tooltip.formatter`` to a string template (for example
-            ``"{b}: {c}"``) to use your own formatting.
+            ``tooltip.valueFormatter`` to a number format (for example
+            ``"dollar"``) or ``tooltip.formatter`` to a string template (for
+            example ``"{b}: {c}"``) to use your own formatting.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

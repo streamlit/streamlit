@@ -64,6 +64,7 @@ import {
   StyledEChartsError,
   StyledEChartsErrorOverlay,
 } from "./styled-components"
+import { applyTooltipFormatters } from "./tooltipFormatters"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -283,9 +284,11 @@ export function EChartsChart({
     prunePixelOnlyBrushAfterResize,
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
-  // The option handed to setOption: Streamlit theme defaults, plus a
-  // non-pointer series cursor on display-only charts so they do not look
-  // clickable. Selection widgets pass the option through unchanged.
+  // The option handed to setOption:
+  // - Streamlit theme defaults.
+  // - Tooltip string formatters turned into functions.
+  // - On display-only charts, a non-pointer series cursor so they don't look
+  //   clickable. Selection widgets keep the author's cursor.
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
   // or configured base font size change — not on every new theme object (a
   // light/dark switch would re-apply the option and replay entry animations).
@@ -295,7 +298,9 @@ export function EChartsChart({
       return null
     }
     let prepared = configureSelectionOption(
-      applyStreamlitOptionDefaults(option, element.theme, theme)
+      applyTooltipFormatters(
+        applyStreamlitOptionDefaults(option, element.theme, theme)
+      )
     )
     // Proto `alt` wins over generated / author aria.label.description and
     // forces aria.enabled so the chart stays named.
