@@ -23,10 +23,13 @@ and the whole request is refused if any part of it is not legal. This covers:
   display-only is refused with the code that names why, and so is a value sent
   to a trigger, a trigger fired as a value, or one element set twice.
 - Values and triggers (``build_widget_states``): each value must have the
-  JSON type its ``value_schema`` states, be one of its options, and be readable
-  by the widget's own deserializer, and ``null`` resets or clears it. Accepted
-  values and the one trigger are encoded in each widget's wire type, in
-  snapshot order, as the ``WidgetStates`` a browser would send.
+  JSON type its ``value_schema`` states and be one of its options, and ``null``
+  resets or clears it. Accepted values and the one trigger are encoded in each
+  widget's wire type, in snapshot order, as the ``WidgetStates`` a browser
+  would send. Each encoded state then passes the check a browser value passes
+  (``widget_checks.check_client_value``): the widget's wire field, its
+  deserializer, ``disabled``, and its own validator. Only a value whose wire
+  form equals the stored one skips the validator.
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
@@ -35,8 +38,8 @@ and the whole request is refused if any part of it is not legal. This covers:
 
 Every acceptance decision comes from the last snapshot's ``ElementState``,
 because the snapshot is the document the client wrote against. The widget
-registry supplies only the codec: each widget's wire type, serializer, and
-deserializer.
+registry supplies the codec, each widget's wire type, serializer, and
+deserializer, and the widget's own checks.
 
 Constraints a widget owns are left to the widget, which resets, truncates, or
 trims the value for browsers and agents alike: bounds, fractions sent to an
@@ -55,10 +58,11 @@ from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.state import widget_checks
 from streamlit.runtime.state.common import (
     is_array_value_field_name,
     is_element_id,
-    unpack_widget_state_value,
+    pack_widget_state_value,
     user_key_from_element_id,
 )
 
@@ -68,6 +72,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.agent.snapshot import BlockedReason, ElementState
     from streamlit.runtime.state.common import ValueFieldName, WidgetMetadata
     from streamlit.runtime.state.session_state import SessionState
+    from streamlit.runtime.state.widget_checks import Violation, ViolationKind
 
 
 # Value types that carry bytes or uploads, which a JSON request cannot express.
@@ -172,6 +177,71 @@ def _not_accepted(key: str) -> AgentRequestError:
     )
 
 
+def _disabled(key: str) -> AgentRequestError:
+    return AgentRequestError(
+        "disabled_widget",
+        f"The element with key {key!r} is on the page but disabled. It "
+        "accepts nothing until the app enables it.",
+    )
+
+
+def _refused_value(key: str, _violation: Violation) -> AgentRequestError:
+    return _not_accepted(key)
+
+
+def _refused_disabled(key: str, _violation: Violation) -> AgentRequestError:
+    return _disabled(key)
+
+
+# How each violation the shared check reports is refused. A message names the
+# constraint, never the sent value, which may be a password.
+_VIOLATION_ERRORS: Final[
+    Mapping[ViolationKind, Callable[[str, Violation], AgentRequestError]]
+] = {
+    "wrong_type": _refused_value,
+    "unreadable": _refused_value,
+    "disabled": _refused_disabled,
+}
+
+
+def _check_with_widget(
+    session_state: SessionState,
+    key: str,
+    metadata: WidgetMetadata[Any],
+    encoded: WidgetState,
+) -> None:
+    """Refuse an encoded state that the widget's own checks refuse.
+
+    This is the check a browser value passes at the boundary, against the
+    stored value, so a write the widget would drop is refused before anything
+    runs. The comparison is on the wire: a value counts as unchanged only if it
+    equals the stored value serialized, so a value the deserializer would
+    convert onto the stored one still reaches the widget's validator.
+    """
+    stored_state: WidgetState | None = None
+    try:
+        stored = session_state.get_widget_value(encoded.id)
+    except KeyError:
+        stored = None
+    else:
+        try:
+            stored_state = pack_widget_state_value(
+                encoded.id, metadata.value_type, metadata.serializer(stored)
+            )
+        except Exception:
+            # With no stored wire form, the value counts as changed.
+            stored_state = None
+    result = widget_checks.check_client_value(
+        encoded,
+        metadata=metadata,
+        previous=stored,
+        compare_wire=True,
+        stored_state=stored_state,
+    )
+    if result.violation is not None:
+        raise _VIOLATION_ERRORS[result.violation.kind](key, result.violation)
+
+
 def _require_actionable(
     session_state: SessionState,
     element_id: str,
@@ -231,11 +301,7 @@ def _require_actionable(
     if state.blocked_by is not None and state.action is not None:
         raise _blocked(key, state.blocked_by)
     if state.disabled:
-        raise AgentRequestError(
-            "disabled_widget",
-            f"The element with key {key!r} is on the page but disabled. It "
-            "accepts nothing until the app enables it.",
-        )
+        raise _disabled(key)
     # Some elements with no action still register a widget, such as
     # `st.download_button(on_click="ignore")`, so the description decides.
     if state.action is None or metadata is None:
@@ -299,7 +365,7 @@ def build_widget_states(
 
     Session state is read without the lock ``SafeSessionState`` takes, so call
     this while no run can start. Validation runs each addressed widget's
-    deserializer, which is widget code.
+    deserializer and validator, which are widget code.
 
     Parameters
     ----------
@@ -382,7 +448,7 @@ def build_widget_states(
             clearable=state.clearable,
             as_list=state.schema_type == "array",
         )
-        _check_readable(key, metadata, encoded)
+        _check_with_widget(session_state, key, metadata, encoded)
         values[element_id] = encoded
         touched_forms.add(state.form_id or "")
 
@@ -411,15 +477,15 @@ def build_widget_states(
                 "through `widget_state` instead of firing it.",
             )
 
-        states.widgets.append(
-            _encode_trigger(
-                element_id,
-                metadata.value_type,
-                trigger.get("value"),
-                trigger_key,
-                options=state.options,
-            )
+        encoded_trigger = _encode_trigger(
+            element_id,
+            metadata.value_type,
+            trigger.get("value"),
+            trigger_key,
+            options=state.options,
         )
+        _check_with_widget(session_state, trigger_key, metadata, encoded_trigger)
+        states.widgets.append(encoded_trigger)
         submitted_form = state.form_id or ""
         touched_forms.add(submitted_form)
 
@@ -649,24 +715,6 @@ def _validate_options(
                 f"Several options for {key!r} display as {candidate!r}, so it "
                 "does not identify one.",
             )
-
-
-def _check_readable(
-    key: str, metadata: WidgetMetadata[Any], state: WidgetState
-) -> None:
-    """Refuse a value the widget's own deserializer cannot read.
-
-    The deserializer runs when the app reads the widget, so a value it cannot
-    read raises inside the run instead of here. It also stays in session state,
-    so every later run raises again and the session is stuck. The value is
-    unpacked by the same helper session state uses.
-    """
-    if state.WhichOneof("value") is None:
-        return
-    try:
-        metadata.deserializer(unpack_widget_state_value(state))
-    except Exception as exc:
-        raise _not_accepted(key) from exc
 
 
 def _parse_iso(value: Any) -> dt.date | dt.time | None:

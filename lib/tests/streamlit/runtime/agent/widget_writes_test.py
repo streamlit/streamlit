@@ -20,6 +20,7 @@ import datetime as dt
 import math
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -31,6 +32,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.session_state import WStates
+from streamlit.runtime.state.widget_checks import Violation
 from tests.streamlit.runtime.agent.snapshot_test_case import (
     SnapshotCase,
     _one,
@@ -497,6 +499,53 @@ class WidgetWritesTest(SnapshotCase):
         error = self._refusal({"code": "abc"})
         assert error.code == "invalid_value"
         assert "not one it accepts" in error.message
+
+    def test_a_trigger_the_widget_cannot_read_is_refused(self) -> None:
+        """A fired trigger passes the same checks as a value."""
+        st.button("Go", key="go")
+
+        def _unreadable(_value: Any) -> bool:
+            raise ValueError("cannot read")
+
+        self._patch_metadata("go", deserializer=_unreadable)
+
+        error = self._refusal(trigger={"key": "go"})
+        assert error.code == "invalid_value"
+        assert "not one it accepts" in error.message
+
+    def test_the_widget_validator_sees_only_changed_wire_values(self) -> None:
+        """A write equal to the stored value on the wire never reaches the validator."""
+        st.text_input("Name", value="Ada", key="name")
+        validator = MagicMock(return_value=None)
+        self._patch_metadata("name", validator=validator)
+
+        (unchanged,) = self._write({"name": "Ada"}).widgets
+        validator.assert_not_called()
+        (changed,) = self._write({"name": "Bob"}).widgets
+
+        validator.assert_called_once()
+        assert (unchanged.string_value, changed.string_value) == ("Ada", "Bob")
+
+    def test_a_value_the_widget_validator_refuses_is_refused(self) -> None:
+        """A violation from the widget's own validator refuses the request."""
+        st.text_input("Name", key="name")
+        self._patch_metadata(
+            "name", validator=lambda _ui, **_kwargs: Violation("wrong_type")
+        )
+
+        error = self._refusal({"name": "Bob"})
+        assert error.code == "invalid_value"
+        assert "not one it accepts" in error.message
+        assert "Bob" not in error.message
+
+    def test_a_widget_registered_as_disabled_is_refused(self) -> None:
+        """The shared check refuses a disabled widget the snapshot missed."""
+        st.checkbox("Agree", key="agree")
+        snapshot = self._build()
+        self._patch_metadata("agree", disabled=True)
+
+        error = self._refusal({"agree": True}, snapshot=snapshot)
+        assert error.code == "disabled_widget"
 
     @parameterized.expand(
         [
