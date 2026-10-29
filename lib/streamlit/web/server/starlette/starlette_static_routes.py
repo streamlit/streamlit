@@ -54,6 +54,22 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = (
 )
 
 
+def _collapse_leading_slashes(directory: str) -> str:
+    r"""Return ``directory`` with a leading ``//`` reduced to ``/`` on POSIX.
+
+    Starlette's ``StaticFiles`` checks that a file is inside its directory by
+    comparing ``os.path.abspath`` (which keeps a leading ``//``) with
+    ``os.path.commonpath`` (which collapses it). A ``//``-prefixed directory
+    therefore rejects every file. Python yields such paths when it is started
+    as ``.venv/bin/python`` from the working directory ``/``, which puts
+    ``//.venv/...`` on ``sys.path``. Windows is left alone, where a leading
+    ``\\`` names a UNC share.
+    """
+    if os.sep == "/" and directory.startswith("//"):
+        return "/" + directory.lstrip("/")
+    return directory
+
+
 def create_streamlit_static_handler(
     directory: str, base_url: str | None
 ) -> StaticFiles:
@@ -75,6 +91,7 @@ def create_streamlit_static_handler(
             # follow_symlink=True restores Tornado parity for Bazel/Nix-style deployments
             # where the static directory may contain or be a symlink. The static dir is
             # read-only package content, not user-controlled, so this is safe.
+            directory = _collapse_leading_slashes(directory)
             super().__init__(directory=directory, html=True, follow_symlink=True)
             self._base_url = (base_url or "").strip("/")
             self._index_path = os.path.join(directory, "index.html")

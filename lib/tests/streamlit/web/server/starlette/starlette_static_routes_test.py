@@ -30,6 +30,7 @@ from starlette.testclient import TestClient
 from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+    _collapse_leading_slashes,
     create_streamlit_static_assets_routes,
     create_streamlit_static_handler,
 )
@@ -702,3 +703,53 @@ class TestStaticHandlerSecurityAndLifecycle:
             lambda: "/definitely/not/a/real/static/dir",
         )
         assert create_streamlit_static_assets_routes(base_url=None) == []
+
+
+@pytest.mark.skipif(os.sep != "/", reason="A leading // names a UNC share on Windows.")
+def test_serves_files_when_directory_starts_with_two_slashes(tmp_path: Path) -> None:
+    """A ``//``-prefixed static directory serves its files, not the index.html fallback.
+
+    Python yields such a directory when it is started as ``.venv/bin/python``
+    from the working directory ``/``.
+    """
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>Home</html>")
+    (static_dir / "app.abc123.js").write_text("console.log('app')")
+    doubled = "/" + str(static_dir)
+    assert doubled.startswith("//")
+
+    static_files = create_streamlit_static_handler(directory=doubled, base_url=None)
+    app = Starlette(routes=[Mount("/", app=static_files)])
+
+    with TestClient(app) as client:
+        response = client.get("/app.abc123.js")
+
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+    assert response.text == "console.log('app')"
+
+
+@pytest.mark.skipif(os.sep != "/", reason="POSIX path semantics.")
+@pytest.mark.parametrize(
+    ("directory", "expected"),
+    [
+        ("//venv/static", "/venv/static"),
+        ("///venv/static", "/venv/static"),
+        ("/venv/static", "/venv/static"),
+        ("venv/static", "venv/static"),
+    ],
+)
+def test_collapse_leading_slashes(directory: str, expected: str) -> None:
+    """Only a leading run of slashes is collapsed, to a single slash."""
+    assert _collapse_leading_slashes(directory) == expected
+
+
+def test_collapse_leading_slashes_keeps_windows_unc_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """On Windows a leading double separator names a UNC share and is kept."""
+    monkeypatch.setattr(
+        "streamlit.web.server.starlette.starlette_static_routes.os.sep", "\\"
+    )
+    assert _collapse_leading_slashes("//server/share/static") == "//server/share/static"
