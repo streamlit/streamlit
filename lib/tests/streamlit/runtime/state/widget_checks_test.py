@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import logging
+import math
 from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, get_args
@@ -420,12 +422,16 @@ def test_e2e_tests_log_every_refusal_at_warning(
         ("not_an_option", logging.DEBUG),
         ("too_many_items", logging.DEBUG),
         ("duplicate_items", logging.WARNING),
+        ("out_of_range", logging.DEBUG),
+        ("too_long", logging.DEBUG),
+        ("bad_shape", logging.WARNING),
+        ("malformed", logging.WARNING),
     ],
 )
-def test_option_kinds_log_at_their_level(
+def test_option_and_bound_kinds_log_at_their_level(
     records: list[logging.LogRecord], kind: ViolationKind, level: int
 ) -> None:
-    """A sync race can change the options, but no browser repeats an option."""
+    """A sync race can change options, bounds, or max_chars, but not a shape."""
     log_violation(_ID, Violation(kind), warned=set())
 
     assert [r.levelno for r in records] == [level]
@@ -525,6 +531,238 @@ def test_an_ambiguous_label_is_accepted_and_counts_as_a_change() -> None:
     assert result == (Violation("ambiguous_option"), "X", True)
     assert not widget_checks.browser_refuses(result.violation)
     assert widget_checks.browser_refuses(Violation("not_an_option"))
+
+
+def _out_of_range(min_value: Any, max_value: Any) -> Violation:
+    return Violation("out_of_range", {"min_value": min_value, "max_value": max_value})
+
+
+@pytest.mark.parametrize(
+    ("value", "min_value", "max_value", "expected"),
+    [
+        (5, 0, 10, None),
+        # Both bounds are inclusive.
+        (0, 0, 10, None),
+        (10.0, 0, 10, None),
+        (-1, 0, 10, _out_of_range(0, 10)),
+        (10.5, 0, 10, _out_of_range(0, 10)),
+        (math.nan, 0, 10, _out_of_range(0, 10)),
+        (-(10**9), None, 10, None),
+        (-(10**9), 0, None, _out_of_range(0, None)),
+        (10**9, None, 10, _out_of_range(None, 10)),
+        (dt.date(2026, 1, 1), dt.date(2026, 1, 1), dt.date(2026, 12, 31), None),
+        (
+            dt.date(2025, 12, 31),
+            dt.date(2026, 1, 1),
+            dt.date(2026, 12, 31),
+            _out_of_range(dt.date(2026, 1, 1), dt.date(2026, 12, 31)),
+        ),
+    ],
+)
+def test_within(
+    value: Any, min_value: Any, max_value: Any, expected: Violation | None
+) -> None:
+    """A value is within inclusive bounds; the violation names both bounds."""
+    assert widget_checks.within(value, min_value, max_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "finite", "whole"),
+    [
+        (2, True, True),
+        (2.0, True, True),
+        (-0.0, True, True),
+        (2**53, True, True),
+        (2.5, True, False),
+        (math.nan, False, False),
+        (math.inf, False, False),
+        (-math.inf, False, False),
+    ],
+)
+def test_finite_and_whole_number(value: float, finite: bool, whole: bool) -> None:
+    """NaN and infinity are malformed, and so is a fraction for a whole number."""
+    assert (widget_checks.finite(value) is None) is finite
+    assert (widget_checks.whole_number(value) is None) is whole
+    if not whole:
+        assert widget_checks.whole_number(value) == Violation(
+            "malformed", {"expected": "a whole number"}
+        )
+
+
+def test_item_count_names_the_allowed_counts() -> None:
+    """A wrong item count reports the counts the widget takes, in order."""
+    assert widget_checks.item_count(_labels("a", "b"), allowed={2}) is None
+    assert widget_checks.item_count(_labels(), allowed={0, 1, 2}) is None
+    assert widget_checks.item_count(_labels("a", "b", "c"), allowed={2, 0, 1}) == (
+        Violation("bad_shape", {"item_counts": (0, 1, 2)})
+    )
+
+
+@pytest.mark.parametrize(
+    ("values", "is_ordered"),
+    [
+        ((), True),
+        ((1.0,), True),
+        ((20.0, 80.0), True),
+        # An empty range has equal ends.
+        ((5.0, 5.0), True),
+        ((80.0, 20.0), False),
+        ((math.nan, 1.0), False),
+    ],
+)
+def test_ordered(values: tuple[float, ...], is_ordered: bool) -> None:
+    """A range lists its lower end first; a protobuf array works as a list does."""
+    array = _state(double_array_value=list(values)).double_array_value.data
+    result = widget_checks.ordered(array)
+    assert result == (None if is_ordered else Violation("bad_shape", {"order": True}))
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("2026-10-29", dt.date(2026, 10, 29)),
+        ("0001-01-01", dt.date(1, 1, 1)),
+        # The legacy URL layout is read by the deserializer, never sent.
+        ("2026/10/29", None),
+        ("2026-1-5", None),
+        ("20261029", None),
+        ("2026-02-30", None),
+        ("2026-10-29\n", None),
+        ("2026-10-29T00:00", None),
+        # Arabic-Indic digits, which `\d` would match.
+        (
+            "2026-10-29".translate({ord("0") + d: 0x0660 + d for d in range(10)}),
+            None,
+        ),
+    ],
+)
+def test_iso_date(text: str, expected: dt.date | None) -> None:
+    """Only the YYYY-MM-DD layout the browser sends is read."""
+    result = widget_checks.iso_date(text)
+    if expected is None:
+        assert result == Violation("malformed", {"expected": "a date as YYYY-MM-DD"})
+    else:
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("10:00", dt.time(10, 0)),
+        # Seconds are accepted for any step, such as step=60.
+        ("10:00:00", dt.time(10, 0)),
+        ("23:59:59", dt.time(23, 59, 59)),
+        ("24:00", None),
+        ("10:60", None),
+        ("10:00:60", None),
+        ("1:00", None),
+        ("10:00:00.5", None),
+        ("10:00\n", None),
+        ("10:00+01:00", None),
+    ],
+)
+def test_iso_time(text: str, expected: dt.time | None) -> None:
+    """HH:MM and HH:MM:SS are read; nothing else is."""
+    result = widget_checks.iso_time(text)
+    if expected is None:
+        assert isinstance(result, Violation)
+        assert result.kind == "malformed"
+    else:
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("2026-10-29T10:15", dt.datetime(2026, 10, 29, 10, 15)),
+        ("2026-10-29T10:15:00", None),
+        ("2026-10-29 10:15", None),
+        ("2026/10/29, 10:15", None),
+        ("2026-10-29", None),
+        ("2026-10-29T10:15+01:00", None),
+        ("2026-10-29T25:00", None),
+    ],
+)
+def test_iso_datetime_minutes(text: str, expected: dt.datetime | None) -> None:
+    """Only the YYYY-MM-DDTHH:MM layout the browser sends is read."""
+    result = widget_checks.iso_datetime_minutes(text)
+    if expected is None:
+        assert isinstance(result, Violation)
+        assert result.kind == "malformed"
+    else:
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "is_color"),
+    [
+        ("#fff", True),
+        ("#FFF", True),
+        ("#a1B2c3", True),
+        ("#ffffff\n", False),
+        ("red", False),
+        ("ffffff", False),
+        ("#ffff", False),
+        ("##fff", False),
+        ("", False),
+    ],
+)
+def test_hex_color(text: str, is_color: bool) -> None:
+    """#rgb and #rrggbb in either case, matched in full."""
+    assert (widget_checks.hex_color(text) is None) is is_color
+
+
+@pytest.mark.parametrize(
+    ("text", "max_chars", "fits"),
+    [
+        ("abc", 3, True),
+        ("abcd", 3, False),
+        # An emoji is two UTF-16 code units, as the browser counts it.
+        ("😀", 1, False),
+        ("😀", 2, True),
+        ("😀😀", 3, False),
+        ("é", 1, True),
+        # 0 and None mean no limit, as in the browser.
+        ("x" * 100, 0, True),
+        ("x" * 100, None, True),
+        ("", 1, True),
+    ],
+)
+def test_text_length(text: str, max_chars: int | None, fits: bool) -> None:
+    """max_chars counts UTF-16 code units."""
+    result = widget_checks.text_length(text, max_chars)
+    if fits:
+        assert result is None
+    else:
+        assert result == Violation("too_long", {"max_chars": max_chars})
+
+
+def test_utf16_length_counts_astral_characters_twice() -> None:
+    """A character outside the Basic Multilingual Plane counts as two units."""
+    assert widget_checks.utf16_length("a😀é") == 4
+    assert widget_checks.utf16_length("") == 0
+
+
+@pytest.mark.parametrize(
+    ("text", "max_chars", "expected"),
+    [
+        ("abcd", 3, "abc"),
+        ("abc", 3, "abc"),
+        ("abc", 0, ""),
+        # The emoji does not fit in what is left, so it is left out whole.
+        ("a😀b", 2, "a"),
+        ("a😀b", 3, "a😀"),
+        ("😀😀", 3, "😀"),
+    ],
+)
+def test_truncate_utf16_never_splits_a_character(
+    text: str, max_chars: int, expected: str
+) -> None:
+    """Truncated text is valid text within max_chars."""
+    truncated = widget_checks.truncate_utf16(text, max_chars)
+
+    assert truncated == expected
+    assert widget_checks.utf16_length(truncated) <= max_chars
 
 
 def test_every_violation_kind_has_a_log_explanation() -> None:

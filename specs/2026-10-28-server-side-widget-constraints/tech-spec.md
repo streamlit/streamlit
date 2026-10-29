@@ -414,10 +414,17 @@ times.
 **Shared helpers** keep serdes from repeating the same comparisons. They are small pure
 functions that return a `Violation` with its details:
 
-- `within(value, min, max)`, `one_of(counts, value, accept_new)`,
+- `one_of(counts, value, accept_new)`,
   `items_of(counts, values, max_items, unique, accept_new)`
-- `iso_date`, `iso_time`, `hex_color`
-- `text_length(text, max_chars)`, `is_empty(value)`
+- `within(value, min, max)`, `finite`, `whole_number`, `item_count(values, allowed)`,
+  `ordered(values)`
+- `iso_date`, `iso_time`, `iso_datetime_minutes`, `hex_color`, each a full match of
+  the one layout the browser sends
+- `text_length(text, max_chars)`, `truncate_utf16(text, max_chars)`, `is_empty(value)`
+
+Bound and shape details name the constraint, never the value: `out_of_range` carries
+`min_value` and `max_value`, `bad_shape` the allowed `item_counts` or `order`,
+`malformed` what the widget `expected`, and `too_long` its `max_chars`.
 
 An options serde builds its label counts (a `Counter`) lazily with a `cached_property`, so
 a browser session whose widgets never change pays nothing. Counts rather than a set,

@@ -29,13 +29,18 @@ The checks run in this order, and the first violation wins:
 5. The widget's own validator, ``WidgetMetadata.validator``.
 
 Validators share small helpers, such as ``one_of`` and ``items_of`` for a
-widget with a closed set of options.
+widget with a closed set of options, ``within`` for bounds, ``iso_date`` for the
+layouts the browser sends, and ``text_length`` for ``max_chars``.
 """
 
 from __future__ import annotations
 
+import datetime as dt
+import math
+import re
 import traceback
 from collections import Counter
+from itertools import pairwise
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
@@ -53,7 +58,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.state.common import ValueFieldName, unpack_widget_state_value
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Collection, Mapping, Sequence, Sized
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.common import WidgetMetadata
@@ -78,6 +83,17 @@ ViolationKind: TypeAlias = Literal[
     # option it means. A browser sends a shared label as shown, and the widget
     # resolves it, so only the agent API refuses it.
     "ambiguous_option",
+    # The value is outside the widget's bounds, such as a number above
+    # `max_value` or a date before `min_value`.
+    "out_of_range",
+    # The value has the wrong number of items, such as one end of a range, or
+    # the ends of a range are reversed.
+    "bad_shape",
+    # The value is not in a form the widget's frontend sends, such as a
+    # fraction for a whole number or a date that is not YYYY-MM-DD.
+    "malformed",
+    # The text is longer than the widget's `max_chars`.
+    "too_long",
 ]
 
 
@@ -124,11 +140,36 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 # disables a widget, or changes its options, just before the user's change
 # arrives. They are logged at debug level.
 _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
-    {"disabled", "not_an_option", "too_many_items"}
+    {"disabled", "not_an_option", "too_many_items", "out_of_range", "too_long"}
 )
 
 # A single label needs no position, so `one_of`'s reports share one Violation.
 _AMBIGUOUS: Final = Violation("ambiguous_option")
+
+
+def _malformed(expected: str) -> Violation:
+    return Violation("malformed", MappingProxyType({"expected": expected}))
+
+
+# Reports that carry no fact about the widget share one Violation each. Their
+# `expected` says what the widget takes, never what was sent.
+_NOT_FINITE: Final = _malformed("a finite number")
+_NOT_WHOLE: Final = _malformed("a whole number")
+_NOT_ISO_DATE: Final = _malformed("a date as YYYY-MM-DD")
+_NOT_ISO_TIME: Final = _malformed("a time as HH:MM or HH:MM:SS")
+_NOT_ISO_DATETIME: Final = _malformed("a date and time as YYYY-MM-DDTHH:MM")
+_NOT_HEX_COLOR: Final = _malformed("a hex color as #rgb or #rrggbb")
+_UNORDERED: Final = Violation("bad_shape", MappingProxyType({"order": True}))
+
+# The layouts the browser sends. `[0-9]` rather than `\d`, which also matches
+# the digits of other scripts. Each is matched in full, so a trailing newline
+# is refused too.
+_ISO_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+_ISO_TIME: Final = re.compile(r"[0-9]{2}:[0-9]{2}(?::[0-9]{2})?")
+_ISO_DATETIME_MINUTES: Final = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+)
+_HEX_COLOR: Final = re.compile(r"#(?:[0-9a-fA-F]{3}){1,2}")
 
 # The fixed text that starts every refusal log line. The e2e parity gate looks
 # for it in the server output.
@@ -161,6 +202,24 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
     ),
     "ambiguous_option": (
         "Several options show its label, so it does not say which option it means."
+    ),
+    "out_of_range": (
+        "It is outside the widget's bounds. A rerun can change the bounds just "
+        "before a user's change arrives."
+    ),
+    "bad_shape": (
+        "It has the wrong number of items, or the ends of its range are "
+        "reversed. The Streamlit frontend never sends that, so the message was "
+        "forged or came from a different frontend version."
+    ),
+    "malformed": (
+        "It is not in a form the widget's frontend sends. The Streamlit frontend "
+        "never sends that, so the message was forged or came from a different "
+        "frontend version."
+    ),
+    "too_long": (
+        "It is longer than the widget's max_chars. A rerun can lower the limit "
+        "just before a user's change arrives."
     ),
 }
 
@@ -294,6 +353,191 @@ def items_of(
             "ambiguous_option", MappingProxyType({"positions": (ambiguous,)})
         )
     return None
+
+
+def within(
+    value: Any,
+    min_value: Any,
+    max_value: Any,
+) -> Violation | None:
+    """Check a value against a widget's bounds, which are inclusive.
+
+    Parameters
+    ----------
+    value : Any
+        The value the client sent, such as a number or a date.
+    min_value, max_value : Any
+        The widget's bounds, or ``None`` for no bound.
+
+    Returns
+    -------
+    Violation or None
+        ``out_of_range`` with the ``min_value`` and ``max_value``, or ``None``.
+        A value that compares with nothing, such as NaN, is out of range.
+    """
+    if (min_value is None or min_value <= value) and (
+        max_value is None or value <= max_value
+    ):
+        return None
+    return Violation(
+        "out_of_range",
+        MappingProxyType({"min_value": min_value, "max_value": max_value}),
+    )
+
+
+def finite(value: float) -> Violation | None:
+    """Refuse NaN and infinity as ``malformed``."""
+    return None if math.isfinite(value) else _NOT_FINITE
+
+
+def whole_number(value: float) -> Violation | None:
+    """Refuse a number with a fraction, NaN, or infinity as ``malformed``.
+
+    A widget that holds whole numbers can still receive a ``double_value``,
+    because the int and double fields accept each other.
+    """
+    if isinstance(value, int) or float(value).is_integer():
+        return None
+    return _NOT_WHOLE
+
+
+def item_count(values: Sized, *, allowed: Collection[int]) -> Violation | None:
+    """Check how many items a value has.
+
+    Returns
+    -------
+    Violation or None
+        ``bad_shape`` with the allowed ``item_counts`` in order, or ``None``.
+    """
+    if len(values) in allowed:
+        return None
+    return Violation(
+        "bad_shape", MappingProxyType({"item_counts": tuple(sorted(allowed))})
+    )
+
+
+def ordered(values: Sequence[Any]) -> Violation | None:
+    """Check that a range lists its lower end first.
+
+    Equal ends are ordered, as in an empty range.
+
+    Returns
+    -------
+    Violation or None
+        ``bad_shape`` with ``order`` set, or ``None``.
+    """
+    if all(low <= high for low, high in pairwise(values)):
+        return None
+    return _UNORDERED
+
+
+def iso_date(text: str) -> dt.date | Violation:
+    """Read a date in the one layout the browser sends, ``YYYY-MM-DD``.
+
+    Returns
+    -------
+    date or Violation
+        The date, or ``malformed``.
+    """
+    if _ISO_DATE.fullmatch(text):
+        try:
+            return dt.date.fromisoformat(text)
+        except ValueError:
+            pass
+    return _NOT_ISO_DATE
+
+
+def iso_time(text: str) -> dt.time | Violation:
+    """Read a time in a layout the browser sends, ``HH:MM`` or ``HH:MM:SS``.
+
+    The browser adds the seconds when ``step`` is not a whole number of
+    minutes. Either layout is accepted for any ``step``.
+
+    Returns
+    -------
+    time or Violation
+        The time, or ``malformed``.
+    """
+    if _ISO_TIME.fullmatch(text):
+        try:
+            return dt.time.fromisoformat(text)
+        except ValueError:
+            pass
+    return _NOT_ISO_TIME
+
+
+def iso_datetime_minutes(text: str) -> dt.datetime | Violation:
+    """Read a date and time in the layout the browser sends, ``YYYY-MM-DDTHH:MM``.
+
+    Returns
+    -------
+    datetime or Violation
+        The naive datetime, or ``malformed``.
+    """
+    if _ISO_DATETIME_MINUTES.fullmatch(text):
+        try:
+            return dt.datetime.fromisoformat(text)
+        except ValueError:
+            pass
+    return _NOT_ISO_DATETIME
+
+
+def hex_color(text: str) -> Violation | None:
+    """Check a hex color, ``#rgb`` or ``#rrggbb`` in either case.
+
+    Returns
+    -------
+    Violation or None
+        ``malformed``, or ``None``.
+    """
+    return None if _HEX_COLOR.fullmatch(text) else _NOT_HEX_COLOR
+
+
+def utf16_length(text: str) -> int:
+    """The length of ``text`` as a browser counts it, in UTF-16 code units.
+
+    A character outside the Basic Multilingual Plane, such as most emoji,
+    counts as two.
+    """
+    return len(text.encode("utf-16-le", "surrogatepass")) // 2
+
+
+def text_length(text: str, max_chars: int | None) -> Violation | None:
+    """Check text against a widget's ``max_chars``, counted as a browser counts it.
+
+    Parameters
+    ----------
+    text : str
+        The text the client sent.
+    max_chars : int or None
+        The most UTF-16 code units the widget takes. ``0`` or ``None`` means
+        no limit, as in the browser.
+
+    Returns
+    -------
+    Violation or None
+        ``too_long`` with ``max_chars``, or ``None``.
+    """
+    # No character takes more than two code units, so short text needs no count.
+    if not max_chars or len(text) * 2 <= max_chars:
+        return None
+    if utf16_length(text) <= max_chars:
+        return None
+    return Violation("too_long", MappingProxyType({"max_chars": max_chars}))
+
+
+def truncate_utf16(text: str, max_chars: int) -> str:
+    """Cut text to at most ``max_chars`` UTF-16 code units.
+
+    A character is never split, so the result is valid text that
+    ``text_length`` accepts.
+    """
+    units = 0
+    for index, char in enumerate(text):
+        units += 2 if ord(char) > 0xFFFF else 1
+        if units > max_chars:
+            return text[:index]
+    return text
 
 
 def check_client_value(

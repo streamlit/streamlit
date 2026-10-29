@@ -267,6 +267,10 @@ _VIOLATION_ERRORS: Final[
     "too_many_items": _too_many_items,
     "duplicate_items": _duplicate_items,
     "ambiguous_option": _ambiguous_option,
+    "out_of_range": _refused_value,
+    "bad_shape": _refused_value,
+    "malformed": _refused_value,
+    "too_long": _refused_value,
 }
 
 
