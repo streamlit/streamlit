@@ -1185,8 +1185,8 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
 
-    def test_agent_api_options_are_hidden_with_their_defaults(self) -> None:
-        """The agent API options stay hidden and default to the documented values."""
+    def test_agent_api_options_are_visible_with_their_defaults(self) -> None:
+        """The agent API options are public and default to the documented values."""
         expected_defaults = {
             "server.enableAgentApi": False,
             "server.agentWaitTimeout": 30,
@@ -1196,7 +1196,7 @@ class ConfigTest(unittest.TestCase):
         }
         for key, default_val in expected_defaults.items():
             option = config._config_options[key]
-            assert option.visibility == "hidden"
+            assert option.visibility == "visible"
             assert option.default_val == default_val
             assert config.get_option(key) == default_val
 

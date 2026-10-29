@@ -1299,7 +1299,6 @@ _create_option(
         Note: This is an experimental feature. The API and its options are
         subject to change.
     """,
-    visibility="hidden",
     default_val=False,
     type_=bool,
 )
@@ -1307,14 +1306,20 @@ _create_option(
 _create_option(
     "server.agentWaitTimeout",
     description="""
-        Maximum number of seconds an agent API request waits for the app's run
-        chain to settle before returning `wait_timed_out`.
+        Maximum number of seconds an agent API request waits for the app to
+        finish running, including any reruns it triggers, before returning
+        `wait_timed_out`.
 
-        This bounds the wait, not the run: the app keeps running, and a retry
-        of the same request waits for it instead of starting it over. Keep it
-        below the request timeout of the clients you expect.
+        This bounds the wait, not the run: the app keeps running. To keep
+        waiting, send only the `session_id` from the `wait_timed_out`
+        response; that request waits for the same run instead of starting
+        another. Resending a request without a `session_id` starts a new
+        session and runs the app again. Keep this below the request timeout
+        of the clients you expect.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=30,
     type_=int,
 )
@@ -1324,10 +1329,13 @@ _create_option(
     description="""
         TTL in seconds for idle agent API sessions.
 
-        An agent session is reclaimed after this much time without an
-        interaction, so clients do not have to close sessions explicitly.
+        Streamlit closes an agent session after it has been idle this long, so
+        clients do not have to close sessions. A later request with that
+        session's ID gets `unknown_session`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=900,
     type_=int,
 )
@@ -1337,12 +1345,15 @@ _create_option(
     description="""
         Maximum number of agent API sessions the server holds at once.
 
-        An agent session outlives the request that created it, so this bounds
-        what a loop of creating calls can hold in memory. When the limit is
-        reached, sessions idle past `server.agentSessionTTL` are reclaimed
-        first, and new sessions are then refused.
+        Each session stays in memory after the request that created it, so
+        this limit caps the memory a client can use by creating sessions
+        repeatedly. At the limit, Streamlit first closes sessions idle longer
+        than `server.agentSessionTTL`, then refuses new ones with
+        `too_many_sessions`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=100,
     type_=int,
 )
@@ -1350,16 +1361,18 @@ _create_option(
 _create_option(
     "server.agentPreviewRows",
     description="""
-        Maximum number of rows an agent API response includes inline, as the
-        `data.preview` of each element whose data is serialized as Arrow:
-        `st.dataframe`, `st.data_editor`, `st.table`, and Vega-Lite charts
-        (`st.altair_chart`, `st.vega_lite_chart`, and built-in charts such as
-        `st.line_chart`).
+        Maximum number of rows an agent API response includes inline in the
+        `data.preview` of a table or chart: `st.dataframe`, `st.data_editor`,
+        `st.table`, and Vega-Lite charts (`st.altair_chart`,
+        `st.vega_lite_chart`, and built-in charts such as `st.line_chart`).
 
-        An element with more rows is reported as incomplete. Its full data is
-        at `data.url`, unless `data.unavailable` says why it cannot be served.
+        For an element with more rows, the response reports
+        `data.complete: false` and serves the full data at `data.url`, unless
+        `data.unavailable` says why it cannot.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=100,
     type_=int,
 )
