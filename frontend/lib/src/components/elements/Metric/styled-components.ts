@@ -92,7 +92,8 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
         // the measured slot and the printed column: a side-by-side column is
         // a size container in print, so `100cqi` resolves at paper width. The
         // card's border and padding sit between the column and the value.
-        // Outside a column, `100cqi` falls back to the page width.
+        // Outside such a column (including in a content-width container),
+        // `100cqi` falls back to the page width.
         ...(isContentWidth === true
           ? {
               [`& .stMetricValue ${ELLIPSIS_SELECTOR}`]: {
