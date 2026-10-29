@@ -1,6 +1,6 @@
 # Streamlit WCAG theme & shell chrome inventory
 
-Last updated: 2026-10-06. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
+Last updated: 2026-10-16. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
@@ -53,7 +53,7 @@ Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (
 | Role | Typical tokens / config | Criterion | Floor | Required surfaces |
 | ---- | ----------------------- | --------- | ----- | ----------------- |
 | Body text | `textColor` / `bodyText` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
-| Secondary / muted UI text | `fadedText60`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, `bgMix`, dataframe header |
+| Secondary / muted UI text | `fadedText60`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, dataframe header (stock fill when unset) |
 | Link text | `linkColor` / `blueTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
 | Code text on code fill | Inline `codeTextColor` on `codeBackgroundColor` | 1.4.3 | ≥ 4.5:1 | Code background |
 | Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
@@ -66,7 +66,7 @@ Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (
 
 Icon strokes do not use opaque `darkenedBgMix100`. Shell code only mixes it translucently (for example, dataframe hover). The opaque token is about 2.2–2.5:1 on the light page, under the 3:1 icon floor, so leave it out of the icon-stroke pass.
 
-Surfaces for pairings: `backgroundColor` (page), `secondaryBackgroundColor` (secondary / default sidebar / many widgets), and role-specific fills (code, status, dataframe header `bgMix` when unset).
+Surfaces for pairings: `backgroundColor` (page), `secondaryBackgroundColor` (secondary / default sidebar / many widgets), and role-specific fills (code, status, and the stock dataframe-header / code backgrounds when those keys are unset).
 
 ## Known library gaps
 
@@ -76,12 +76,10 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 
 - **1.4.3 Light-theme secondary text is below 4.5:1.** `fadedText60` / `grayTextColor` / default dataframe header text on default light page, secondary, and mixed backgrounds. Shared by placeholders, file-uploader hints, character counts, tabs, and similar (related issues [#8249](https://github.com/streamlit/streamlit/issues/8249), [#8276](https://github.com/streamlit/streamlit/issues/8276), [#8288](https://github.com/streamlit/streamlit/issues/8288), [#8289](https://github.com/streamlit/streamlit/issues/8289)). Dark-theme muted text **meets** 1.4.3. Ratios: [1.4.3 scorecard](#143-contrast-minimum).
 - **1.4.3 Status text on translucent status fills fails on the page and/or default sidebar.** Fills are translucent: 10% opacity in light and 20% in dark (`primarybg`: 10% / 30%). See the [1.4.3 scorecard](#143-contrast-minimum) for per-color results. Call sites: markdown badges, metric deltas (`getMetricTextColor` / `getMetricBackgroundColor`), and `AlertContainer`.
-- **1.4.3 White label on primary fill fails in both themes.** See the [1.4.3 scorecard](#143-contrast-minimum) (`StyledPrimaryButton`).
-- **1.4.3 `primary` as text fails 4.5:1 on the page (light) and on secondary / default sidebar (both themes).** Includes the file-uploader drag overlay. See the [1.4.3 scorecard](#143-contrast-minimum). Separate from primary-on-`primarybg` status fills.
+- **1.4.3 `primary` as text fails 4.5:1 on the dark page and on dark secondary / default sidebar.** Light primary on the light page and light secondary meets 1.4.3. Includes the file-uploader drag overlay. See the [1.4.3 scorecard](#143-contrast-minimum). Separate from primary-on-`primarybg` status fills.
 - **1.4.3 Named markdown text colors can fail 4.5:1 as plain text** (for example `:orange[…]` on the light page / sidebar). Distinct from text-on-status-fill. See the [1.4.3 scorecard](#143-contrast-minimum).
-- **1.4.11 Light primary chrome on the default sidebar fails 3:1.** See the [1.4.11 scorecard](#1411-non-text-contrast).
-- **1.4.11 Control borders use `borderColor` (default `fadedText10`, body text at 20% opacity) below 3:1** on light and dark. Affects unchecked checkbox/radio indicator strokes and other chrome that always uses `borderColor`. With default `showWidgetBorder` off, many input outlines use `secondaryBg` instead (see [Theme config notes](#theme-config-notes) and the default input-boundary scorecard row). Unset `dataframeBorderColor` is a separate, even fainter token (`fadedText05`) — raising `borderColor` alone does not clear default dataframe gridlines.
-- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page (sidebar primary chrome is the 1.4.11 gap above). Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
+- **1.4.11 Control borders use opaque `borderColor` (light `#DCD8D4`, dark `#4A4742`), about 1.4:1 on the light page and about 2.0:1 on the dark page, below 3:1.** Affects unchecked checkbox/radio indicator strokes, default widget outlines (`showWidgetBorder` on unless set to false), and other chrome that uses `borderColor`. Unset `dataframeBorderColor` is a separate stock hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor`, an unset dataframe border follows `borderColorLight` (`transparentize(borderColor, 0.55)`), not the full `borderColor` (see [Theme config notes](#theme-config-notes)).
+- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
 - **1.4.11 Enabled close icons that paint `fadedText40` fail 3:1 in light.** Toast and skills-nudge close controls; dark meets. See the [1.4.11 scorecard](#1411-non-text-contrast).
 - **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
 - **2.5.8 Visible checkbox, radio, and toggle labels, plus collapsed checkbox/toggle tracks, are under 24×24 CSS px.** Label paragraphs inherit `fontSizes.sm` (14px) from `isLabel`; see the [2.5.8 scorecard](#258-target-size-minimum).
@@ -95,14 +93,14 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | Role | Light | Dark | Bucket | Note |
 | ---- | ----- | ---- | ------ | ---- |
 | Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
-| White label on primary fill | Fail (~3.30) | Fail (~3.30) | Library blocks | `StyledPrimaryButton` and similar |
-| `primary` as **text** | Fail page ~3.30; fail secondary ~2.95 | Pass page ~5.7; fail secondary ~4.49 | Library blocks | File-uploader drag overlay is primary on `secondaryBg`. Not primary-on-`primarybg` |
+| White label on primary fill | Pass (~5.18) | Pass (~4.62) | Library meets | `StyledPrimaryButton` and similar (`#C53948` / `#CF4250`) |
+| `primary` as **text** | Pass page ~5.18; pass secondary ~4.88 | Fail page ~3.92; fail secondary ~3.06 | Library blocks (dark) | File-uploader drag overlay is primary on `secondaryBg`. Not primary-on-`primarybg` |
 | Status text on status fill — **page** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
 | Status text on status fill — **default sidebar** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
 | Body text on page / secondary | Pass (~12.5 / 11.2) | Pass (~18.1 / 14.2) | Library meets | |
 | Link text | Pass (~7.5 page / ~6.7 secondary) | Pass (~6.6 page / ~5.2 secondary) | Library meets | Markdown / in-app links |
 | Named markdown text color (`:orange[…]` and similar) | Fail orange ~3.42 page / ~3.05 secondary; yellow/green fail on secondary only (~4.29 / ~4.38) | Pass for orange/yellow/green on page | Library blocks | Unfilled color directives as plain text; not the status-fill table |
-| Inline `codeTextColor` on `codeBackgroundColor` (`bgMix`) | Pass (~4.7) | Pass (~10.5) | Library meets | Default inline code paint only. Block syntax tokens in `StyledPre` are not scored here |
+| Inline `codeTextColor` on `codeBackgroundColor` | Pass (~12+ on stock fills) | Pass (~12+ on stock fills) | Library meets | Stock code text matches body text on the built-in code fill. Block syntax tokens in `StyledPre` are not scored here |
 
 Per-color status text on status fill (painted pairs only: markdown badges, metric deltas, `AlertContainer`). Floor is 4.5:1. Light-page green is **4.497:1** (below 4.5:1). Markdown has no `:purple[` / `:purple-background[`; those tokens are rainbow-gradient stops only and are not scored here.
 
@@ -125,14 +123,14 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 
 | Role | Light | Dark | Bucket | Note |
 | ---- | ----- | ---- | ------ | ---- |
-| Control border (`borderColor`) | Fail (~1.45) | Fail (~1.8) | Library blocks | Includes unchecked checkbox/radio indicator strokes; many inputs only when `showWidgetBorder` is on |
+| Control border (`borderColor`) | Fail (~1.4) | Fail (~2.0) | Library blocks | Opaque stock `#DCD8D4` / `#4A4742`. Includes unchecked checkbox/radio strokes and default widget outlines (`showWidgetBorder` on) |
 | Soft focus ring (`focusRing`) | Fail (~1.9) | Fail (~2.2) | Library blocks | Sole focus indicator on many controls |
 | Soft muted focus ring (`focusRingMuted`) | Fail (~1.5) | Fail (~1.8) | Library blocks | Header icon buttons, main menu, sidebar nav, skills nudge. `focusRingSubtle` is defined in `getShadows.ts` and unused (unscored on purpose) |
-| Primary as control on default sidebar | Fail (~2.95) | Pass (~4.49) | Library blocks | Sidebar bg defaults to `secondaryBackgroundColor` |
-| Default input boundary (`showWidgetBorder` off) | Fail (~1.12) | Fail (~1.27) | Library blocks | Resting outline is `secondaryBg` on page (`getBorderColor`); fill is the same token. Turning the border on paints `borderColor` (row above) |
+| Primary as control on default sidebar | Pass (~4.88) | Pass (~3.53) | Library meets | Sidebar page background is `#F8F8F7` / `#21201D` (Pass ~4.88 / ~3.53) |
+| Input boundary with `showWidgetBorder = false` | Fail (~1.12) | Fail (~1.27) | Library blocks | Opt-out: resting outline is `secondaryBg` on page (`getBorderColor`). Default (flag unset/true) uses `borderColor` (row above) |
 | Enabled close icon (`fadedText40`) | Fail (~2.2) | Pass (~3.7) | Library blocks | `StyledCloseButton` (toast) and `StyledSkillsNudgeClose` on toast / nudge card (`bgColor`) |
 | Muted icon stroke (`fadedText60`) | Pass (~3.5–3.7) | Pass (~6.1–7.0) | Library meets | Header, toolbar, and link/help icons that use this token only (page ~3.69, secondary ~3.56). [#16149](https://github.com/streamlit/streamlit/issues/16149) is **not** a default 1.4.11 fail for this token |
-| Primary as control / solid focus outline on page | Pass (~3.30) | Pass (~5.7) | Library meets | Page background only |
+| Primary as control / solid focus outline on page | Pass (~5.18) | Pass (~3.92) | Library meets | Page background only |
 
 ### 2.5.8 Target Size (Minimum)
 
@@ -168,19 +166,19 @@ Core color keys (`primaryColor`, `textColor`, `linkColor`, `borderColor`, status
 When unset:
 
 - `dataframeHeaderTextColor` → faded `textColor` (`fadedText60`) — same light **1.4.3** muted-text Library blocks gap
-- `dataframeHeaderBackgroundColor` → `bgMix` (`mix(backgroundColor, secondaryBackgroundColor, 0.5)`)
-- `dataframeBorderColor` → `fadedText05` (body text at 10% opacity, ≈ 1.20:1 on the page) — **not** `borderColor` (`fadedText10`, body text at 20% opacity, ≈ 1.45:1). Dataframe/table borders use that fainter token by default. They switch to `transparentize(borderColor, 0.55)` only when the author sets `theme.borderColor` (`createEmotionTheme`). Raising the default `borderColor` alone does **not** clear default dataframe gridlines.
-- Off `st.toggle` track uses `fadedText10` via `getToggleTrackColor`, not `borderColor`. Same default look and 1.4.11 fail as the border token; a custom `theme.borderColor` does not restyle it. Selected tracks use `primary` (sidebar 1.4.11 row).
+- `dataframeHeaderBackgroundColor` → stock chrome hex (light `#F7F7F6`, dark `#2D2B27`) while surfaces and `primaryColor` stay on the built-in palette. If any of those differ and this key is unset, the header fill is `bgMix`
+- `dataframeBorderColor` → stock chrome hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor` and leaves `dataframeBorderColor` unset, dataframe borders follow `borderColorLight` (`transparentize(borderColor, 0.55)`)
+- Off `st.toggle` track uses `fadedText10` via `getToggleTrackColor`, not `borderColor`. A custom `theme.borderColor` does not restyle it. Selected tracks use `primary` (sidebar 1.4.11 row).
 
 Raising muted text (or shipping a stronger default header text color) clears the header text gap together with placeholders and related chrome.
 
 ### `showWidgetBorder`
 
-Default is **off** (`widgetBorderColor` unset). Many inputs then outline with `secondaryBg` (`getBorderColor`) and fill with the same token, so the weak default `borderColor` is **not** that outline. The resting control edge against the **page** is still a 1.4.11 fail (see the default input-boundary scorecard row).
+Default is **on** (unset or `true` paints `widgetBorderColor` from the resolved `borderColor`). Set `showWidgetBorder = false` to hide input outlines; many inputs then fall back to `secondaryBg` (`getBorderColor`).
 
-Checkbox/radio **indicator** strokes and other chrome that always use `borderColor` still fail **1.4.11**. Turning `showWidgetBorder` on paints those inputs with `borderColor` — authors who enable it inherit the same sub-3:1 border unless they also raise `borderColor`.
+Checkbox/radio **indicator** strokes and other chrome that always use `borderColor` still fail **1.4.11** at the stock opaque hex. Authors who raise `borderColor` strengthen both indicators and default widget outlines together.
 
-`showSidebarBorder` only toggles the sidebar separator; it was not measured as its own row (separator uses border-family paint when shown).
+`showSidebarBorder` defaults **on** and only toggles the sidebar separator; it was not measured as its own row (separator uses border-family paint when shown).
 
 ### Author must / out of scope on this page
 
