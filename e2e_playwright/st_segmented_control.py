@@ -209,6 +209,18 @@ adjacent_selected_border_multi = st.segmented_control(
 )
 st.write(f"Adjacent selected border multi selection: {adjacent_selected_border_multi}")
 
+# The dataframe's hover toolbar overlaps the bottom of the selected segment.
+with st.container(key="segmented_control_toolbar_overlap"):
+    st.segmented_control(
+        "Toolbar overlap",
+        ["Left", "Right"],
+        key="segmented_control_toolbar_overlap_sc",
+        default="Right",
+        width="stretch",
+        label_visibility="collapsed",
+    )
+    st.dataframe({"a": [1, 2, 3]})
+
 
 st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
 if st.button("Create some elements to unmount component"):

@@ -215,6 +215,52 @@ def test_adjacent_selected_segmented_control_inner_border_regression_snapshot(
     )
 
 
+def test_element_toolbar_renders_above_selected_segment(app: Page):
+    """Ensure an element toolbar paints above the selected segment it overlaps."""
+    container = get_element_by_key(app, "segmented_control_toolbar_overlap")
+    container.scroll_into_view_if_needed()
+    selected_segment = get_segment_button(
+        get_button_group(app, "segmented_control_toolbar_overlap_sc"), "Right"
+    )
+    expect(selected_segment).to_have_attribute("data-selected", "true")
+
+    toolbar = container.get_by_test_id("stElementToolbar")
+    # Negative check: the toolbar stays hidden until the dataframe is hovered.
+    expect(toolbar).to_have_css("opacity", "0")
+    container.get_by_test_id("stDataFrame").hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    toolbar_box = toolbar.get_by_test_id(
+        "stElementToolbarButtonContainer"
+    ).bounding_box()
+    segment_box = selected_segment.bounding_box()
+    assert toolbar_box is not None
+    assert segment_box is not None
+    left = max(toolbar_box["x"], segment_box["x"])
+    right = min(
+        toolbar_box["x"] + toolbar_box["width"],
+        segment_box["x"] + segment_box["width"],
+    )
+    top = max(toolbar_box["y"], segment_box["y"])
+    bottom = min(
+        toolbar_box["y"] + toolbar_box["height"],
+        segment_box["y"] + segment_box["height"],
+    )
+    # The scenario only covers the regression if the toolbar overlaps the segment.
+    assert left < right
+    assert top < bottom
+
+    # If the selected segment painted over the toolbar (the bug),
+    # elementFromPoint would return the segment instead of a toolbar node.
+    is_toolbar_on_top = bool(
+        toolbar.evaluate(
+            "(el, [x, y]) => el.contains(document.elementFromPoint(x, y))",
+            [(left + right) / 2, (top + bottom) / 2],
+        )
+    )
+    assert is_toolbar_on_top
+
+
 def test_click_single_icon_segment_and_take_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):

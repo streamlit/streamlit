@@ -39,6 +39,11 @@ export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
       position: "absolute",
       top: locked ? topDistance : "-1rem",
       right: theme.spacing.none,
+      // The toolbar overlaps the bottom of the preceding element. Match the
+      // z-index of its raised parts (e.g. the selected segmented control
+      // option) so the later DOM position paints the toolbar on top, while
+      // staying below app chrome like the sticky bottom container.
+      zIndex: theme.zIndices.priority,
       transition: "none",
       ...(!locked && {
         opacity: 0,
@@ -72,7 +77,6 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",
-  zIndex: theme.zIndices.sidebar + 1,
   padding: theme.spacing.twoXS,
 }))
 
