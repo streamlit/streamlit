@@ -515,3 +515,75 @@ with st.container(key="c_echarts_alt_overrides_description"):
         height=_HEIGHT,
         alt="Streamlit alt overrides description",
     )
+
+# A funnel with outside labels. Guards the stage separators (white by default
+# in ECharts) and the themed outside label color.
+with st.container(key="c_funnel"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "funnel",
+                    "data": [
+                        {"name": "Leads", "value": 100},
+                        {"name": "Qualified", "value": 70},
+                        {"name": "Proposal", "value": 45},
+                        {"name": "Won", "value": 30},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="funnel",
+        height=_HEIGHT,
+    )
+
+# Tooltip formatting without JavaScript. One item fills each chart, so hovering
+# the chart center lands on it.
+# - The template chart expands a ``{@[n]}`` placeholder, which ECharts expands
+#   only in labels. Streamlit builds that HTML itself, so the cell also carries
+#   an HTML payload that ``{@[3]}`` must print as text.
+# - Its ``visualMap.dimension`` points at the value column, because it defaults
+#   to the last column (the text payload) and would leave the cell undrawn.
+# - The bar chart formats its value with the ``"dollar"`` number format.
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
+with st.container(key="c_tooltip_template"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-template-tooltip",
+                "formatter": "{a} · {@[2]} sessions · {@[3]}",
+            },
+            "xAxis": {"type": "category", "data": ["11:00"]},
+            "yAxis": {"type": "category", "data": ["Mon"]},
+            "visualMap": {"min": 0, "max": 1000, "show": False, "dimension": 2},
+            "series": [
+                {
+                    "type": "heatmap",
+                    "name": "Mon",
+                    "data": [[0, 0, 654, _XSS_TEMPLATE_PAYLOAD]],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="tooltip_template",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_tooltip_value_format"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-value-format-tooltip",
+                "valueFormatter": "dollar",
+            },
+            "xAxis": {"type": "category", "data": ["Revenue"]},
+            "yAxis": {"type": "value", "max": 1300},
+            "series": [{"type": "bar", "barWidth": "90%", "data": [1234.567]}],
+            **_NO_ANIM,
+        },
+        key="tooltip_value_format",
+        height=_HEIGHT,
+    )

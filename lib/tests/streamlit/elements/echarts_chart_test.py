@@ -935,6 +935,82 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    @parameterized.expand(
+        [
+            ("named_format", {"valueFormatter": "dollar"}),
+            ("printf_format", {"valueFormatter": "%,d sessions"}),
+            ("printf_with_escaped_percent", {"valueFormatter": "%.1f%%"}),
+            ("null", {"valueFormatter": None}),
+            ("dimension_template", {"formatter": "{b}: {@[2]} sessions"}),
+        ]
+    )
+    def test_no_warning_for_supported_tooltip_formatters(
+        self, _name: str, tooltip: dict[str, Any]
+    ) -> None:
+        """Number formats and dimension templates are supported, so nothing logs."""
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart({**_BASIC_SPEC, "tooltip": tooltip})
+
+        mock_warning.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("top_level", {"tooltip": {"valueFormatter": "{value} €"}}),
+            ("tooltip_list", {"tooltip": [{"valueFormatter": "{value} €"}]}),
+            (
+                "series",
+                {
+                    "series": [
+                        {"type": "bar", "tooltip": {"valueFormatter": "{value} €"}}
+                    ]
+                },
+            ),
+            ("timeline", {"baseOption": {"tooltip": {"valueFormatter": "{value} €"}}}),
+            (
+                "timeline_option",
+                {"options": [{"tooltip": {"valueFormatter": "{value} €"}}]},
+            ),
+            (
+                "media",
+                {"media": [{"option": {"tooltip": {"valueFormatter": "{value} €"}}}]},
+            ),
+            ("non_string", {"tooltip": {"valueFormatter": 42}}),
+            ("printf_trailing_percent", {"tooltip": {"valueFormatter": "100%"}}),
+            ("printf_unknown_type", {"tooltip": {"valueFormatter": "%q"}}),
+            ("printf_escaped_only", {"tooltip": {"valueFormatter": "100%%"}}),
+            ("empty_string", {"tooltip": {"valueFormatter": ""}}),
+        ]
+    )
+    def test_warns_on_unsupported_tooltip_value_formatter(
+        self, _name: str, spec: dict[str, Any]
+    ) -> None:
+        """A valueFormatter that is not a number format is logged, not raised."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 1
+        assert "is not a number format" in logs.output[0]
+        # The chart still renders, and the spec reaches the frontend unchanged.
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec == spec
+
+    def test_does_not_warn_for_per_item_tooltips(self) -> None:
+        """Per-data-item tooltips are not walked, matching the frontend."""
+        spec = {
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [{"value": 1, "tooltip": {"valueFormatter": "{value} €"}}],
+                }
+            ]
+        }
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec)
+
+        mock_warning.assert_not_called()
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""

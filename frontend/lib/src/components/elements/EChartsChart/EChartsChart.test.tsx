@@ -472,6 +472,21 @@ describe("EChartsChart", () => {
     expect(appliedOption.grid).toBeUndefined()
   })
 
+  it.each([
+    ["the Streamlit theme", "streamlit"],
+    ["theme=None", ""],
+  ])("turns string tooltip formatters into functions with %s", (_, theme) => {
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      tooltip: { formatter: "{b}: {@[1]}", valueFormatter: "%d units" },
+    })
+    render(<Wrapper element={createElement({ spec, theme })} />)
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.tooltip.formatter).toBeTypeOf("function")
+    expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
+  })
+
   it("leaves the chart container's role to ECharts", () => {
     render(<Wrapper element={createElement()} />)
 
