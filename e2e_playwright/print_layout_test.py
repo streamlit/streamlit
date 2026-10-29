@@ -230,7 +230,18 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     expect(content_value).to_be_visible()
     expect(sparkline_graphic).to_be_visible()
 
+    content_value_text = content_value.locator(".stMarkdownEllipsis").first
+    unscaled_font_size = float(
+        content_value.evaluate("element => getComputedStyle(element).fontSize")[:-2]
+    )
+
     def metrics_fit_their_columns() -> None:
+        # The figure is wider than the printed column, so it only fits if
+        # print scales it down.
+        font_size = content_value_text.evaluate(
+            "element => getComputedStyle(element).fontSize"
+        )
+        assert float(font_size[:-2]) < unscaled_font_size
         _assert_inside(content_value, content_column)
         _assert_inside(sparkline, chart_column)
         _assert_inside(sparkline_graphic, chart_column)

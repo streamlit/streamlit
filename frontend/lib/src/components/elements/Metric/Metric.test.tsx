@@ -218,6 +218,8 @@ describe("Metric element", () => {
       .find(rule => rule.includes("atan2(100cqi, var(--st-metric-text-width"))
     expect(fontRule).toBeDefined()
     expect(fontRule).not.toContain(".stMarkdownEllipsis p")
+    // Clips the figure if no width was recorded, instead of overlapping.
+    expect(fontRule).toContain("overflow:hidden")
     expect(screen.getByTestId("stMetricValue")).toHaveClass("stMetricValue")
 
     const rect = vi
@@ -297,6 +299,7 @@ describe("Metric element", () => {
     expect(css).not.toContain("container-type:inline-size")
     expect(css).toContain("--st-metric-available")
     expect(css).not.toContain("100cqi")
+    expect(css).not.toContain("overflow:hidden")
 
     const column = document.createElement("div")
     Object.defineProperty(column, "clientWidth", { value: 80 })
