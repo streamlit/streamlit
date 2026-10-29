@@ -26,8 +26,9 @@ session has no browser. The next decisions need data:
 - **Transport:** whether agents connect over HTTP or over the
   [Model Context Protocol (MCP) endpoint](https://github.com/streamlit/streamlit/pull/17510).
   The MCP spec asks for the transport to be recorded once agent metrics exist.
-- **Default-on:** parent follow-up #1 turns the API on for every app. Today nothing
-  measures whether agents try to use apps that have it off, which is the demand that
+- **Default-on:** the parent spec's first
+  [follow-up](../2026-08-28-agent-app-interface/product-spec.md#follow-ups) turns the
+  API on for every app. Today nothing measures whether agents try to use apps that have it off, which is the demand that
   follow-up is meant to serve.
 
 One part is already measured. The page profile's `config` field lists every option
@@ -44,11 +45,11 @@ reports a page profile after each script run.
 
 One module, `streamlit/runtime/agent/usage.py`, holds each process's counters.
 
-| Counter             | Incremented when                                                                                                                               | Answers                                                    |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `http_interactions` | `interaction.interact()` is called from `POST /_stcore/agent/interact` while the API is on, or that route refuses with `403 not_available` while it is off | Is it used, and how much? Do agents try apps that have it off? |
-| `mcp_interactions`  | The MCP `interact` tool calls `interaction.interact()` while the API is on, or the MCP route refuses a request while it is off                | Which transport do agents use?                             |
-| `sessions`          | `AgentSessionRegistry.create()` returns a session                                                                                              | Many agents, or one long loop?                             |
+| Counter             | Incremented when                                                                                          | Answers                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `http_interactions` | `POST /_stcore/agent/interact` calls `interaction.interact()`, or refuses because the API is off          | Is it used, and how much? Do agents try apps that have it off? |
+| `mcp_interactions`  | The MCP `interact` tool calls `interaction.interact()`, or the MCP route refuses because the API is off   | Which transport do agents use?                                 |
+| `sessions`          | `AgentSessionRegistry.create()` returns a session                                                         | Many agents, or one long loop?                                 |
 
 - **Counted on the shared path.** The parent and MCP specs require one code path for
   both transports, `interaction.interact()`. A new keyword-only argument,
@@ -62,9 +63,10 @@ One module, `streamlit/runtime/agent/usage.py`, holds each process's counters.
   web page, not from an agent.
 - **With the API off, the same counters count the refusals.** The routes are registered
   even then, so that the discovery link always works, and counting costs one increment
-  in the `not_available` branch. That branch answers before the Host and Origin checks,
-  so it runs them before counting, and its response stays the same: a web page or a
-  refused `Host` is not an agent. An MCP client stops after its first refused
+  in the `not_available` branch. That branch returns before the Host, Origin, and
+  content-type checks today, so the implementation runs those checks first and counts
+  the request only when they pass. The response is `not_available` either way: a web
+  page or a refused `Host` is not an agent. An MCP client stops after its first refused
   `initialize`, so the MCP count is about one per attempt. `config` in the same event
   says whether the API was on, so no separate counter is needed. Fetching the schema
   (`GET openapi.json`) is not counted; see [Out of scope](#out-of-scope).
@@ -103,6 +105,7 @@ message AgentApiUsage {
 
 // MetricsEvent.proto, which already imports PageProfile.proto
 AgentApiUsage agent_api_usage = 49;
+// Next ID: 50
 ```
 
 - **Backend:** `create_page_profile_message` calls `agent_usage.fill_page_profile(...)`.
@@ -117,13 +120,13 @@ AgentApiUsage agent_api_usage = 49;
 
 ```python
 # lib/streamlit/runtime/agent/usage.py (sketch)
-Counter: TypeAlias = Literal["http_interactions", "mcp_interactions", "sessions"]
+UsageCounter: TypeAlias = Literal["http_interactions", "mcp_interactions", "sessions"]
 
-_counts: dict[Counter, int] = dict.fromkeys(get_args(Counter), 0)
+_counts: dict[UsageCounter, int] = dict.fromkeys(get_args(UsageCounter), 0)
 _instance_id: str | None = None
 
 
-def record(counter: Counter) -> None:
+def record(counter: UsageCounter) -> None:
     """Count one event. Callers must be on the runtime's event loop."""
     global _instance_id
     if not config.get_option("browser.gatherUsageStats"):
@@ -154,20 +157,23 @@ def fill_page_profile(page_profile: PageProfile) -> None:
 ### Analysis
 
 For the data team, from `pageProfile` events. The fields arrive as
-`agentApiUsage.httpInteractions` and so on, and a count of zero is omitted.
+`agentApiUsage.httpInteractions` and so on, as decimal strings like `execTime`. A count
+of zero is omitted, so treat a missing count as 0.
 
 - **Apps with agent traffic:** distinct apps (`report_hash`, or `app_id` where the host
-  sets it) whose `config` lists `server.enableAgentApi`, with any event where
-  `http_interactions + mcp_interactions > 0`.
-- **Reported activity in a window:** for each counter and `instance_id`, the largest
-  value in the window minus the largest value before it (0 if there is none), summed
-  over instances. Reports arrive late, so this is the activity reported in the window,
-  not the activity that happened in it. See [Limitations](#limitations).
+  sets it) whose `config` lists `server.enableAgentApi` (not `:default`), with any
+  event where `http_interactions + mcp_interactions > 0`.
+- **Reported activity in a window:** for each counter and `instance_id`, subtract the
+  largest value from before the window (0 if there is none) from the largest value in
+  the window, then sum over instances. Reports arrive late, so this is the activity
+  reported in the window, not the activity that happened in it. See
+  [Limitations](#limitations).
 - **Steps per session:** on apps with the API on, interactions divided by `sessions`.
 - **Unmet demand:** apps whose `config` does not enable the API
   (`server.enableAgentApi` absent or `:default`), with
   `http_interactions + mcp_interactions > 0`. This reading holds while off is the
-  default.
+  default. It is a lower bound: an agent that reads `openapi.json` first learns that
+  the API is off, and may never send a request.
 
 ### Limitations
 
@@ -181,6 +187,10 @@ For the data team, from `pageProfile` events. The fields arrive as
   activity, not when the activity happens. An idle tab sends nothing until it reruns.
 - **Replicas report separately.** With several replicas, each browser session reports
   only its own process. `instance_id` keeps those reports apart.
+- **An edit before a restart is misread.** The routes read `server.enableAgentApi`
+  once at startup, but `config` follows `config.toml`, which is reloaded while the
+  server runs. Between an edit and the restart that applies it, refusals read as
+  usage, or usage as unmet demand.
 
 ### Privacy
 
@@ -210,11 +220,11 @@ For the data team, from `pageProfile` events. The fields arrive as
     a refused call.
   - `AgentSessionRegistry.create()`: increments `sessions` only when it succeeds, not
     when it fails with `too_many_sessions`.
-  - The disabled route: increments `http_interactions`. A request it would refuse as
-    `host_not_allowed` or `origin_not_allowed` increments nothing, and is still
+  - The disabled route: increments `http_interactions`. A request that the Host,
+    Origin, or content-type check would refuse increments nothing, and is still
     answered `not_available`.
-- **Frontend unit test:** a `pageProfile` event forwards `agentApiUsage`, and omits it
-  when the message has none.
+- **Frontend unit test:** a `pageProfile` event forwards `agentApiUsage` through
+  `MetricsEvent.toJSON()`, and omits it when the message has none.
 - **No e2e test:** the field adds no UI, and the unit tests on both sides cover the
   path from the counter to the event.
 
