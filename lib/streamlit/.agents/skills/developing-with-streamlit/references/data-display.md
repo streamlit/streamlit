@@ -6,6 +6,7 @@ Present data clearly.
 
 - [Accessible names (alt)](#accessible-names-alt)
 - [Native charts first](#native-charts-first)
+- [Maps: st.map for geographic points](#maps-stmap-for-geographic-points)
 - [Human-readable labels](#human-readable-labels)
 - [Altair for complex charts](#altair-for-complex-charts)
 - [Apache ECharts](#apache-echarts)
@@ -60,13 +61,13 @@ For scatter points on a tiled geographic map (cities, stores, events by latitude
 
 ```python
 # df has columns: lat, lon, population
-st.map(df, latitude="lat", longitude="lon", size="population", color="#ff4b4b")
+df["radius_m"] = df["population"] ** 0.5 * 20
+st.map(df, size="radius_m", alt="Cities sized by population")
 ```
 
-- `size=` accepts a **column name** (radius scales with that column's values — e.g. bigger dots for larger cities) or a single fixed value. Sizes are **in meters**, not pixels, so markers keep their real-world footprint as the map zooms. This is how you make marker size reflect a quantity.
-- `color=` accepts a column name or a fixed color.
+- `size=` accepts a **column name** (each marker's radius comes from that column) or a single fixed value. Sizes are **radii in meters**, not pixels, so markers scale with the map as the user zooms. Convert the quantity to a sensible radius first: passing raw populations would draw circles thousands of kilometers wide.
+- `color=` accepts a column name or a fixed color. Omit it to use the theme's primary color.
 - `st.map` auto-detects only these column names: `lat`/`latitude` and `lon`/`longitude`, plus their uppercase forms (`LAT`/`LATITUDE`, `LON`/`LONGITUDE`). Any other spelling — including `lng` — needs an explicit `latitude=`/`longitude=`.
-
 
 ## Human-readable labels
 
