@@ -65,8 +65,6 @@ from streamlit.runtime.state import (
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -449,28 +447,25 @@ def _ensure_unique_dataset_labels(labels: list[str]) -> None:
         )
 
 
-def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
-    """Convert a dataframe-like ``dataset.source`` to an Arrow table.
+def _prepare_dataset_source(source: Any) -> Any:
+    """Prepare a dataframe-like ``dataset.source`` for Arrow conversion.
 
-    Pandas dataframes are converted without their index. A PyArrow table is
-    sent as-is; the browser skips the index fields its pandas metadata names.
+    Rejects column labels that would collide in the browser. PyArrow tables
+    and Polars objects are returned unchanged. Anything else becomes a pandas
+    dataframe with ``str(column)`` labels and no index.
     """
     import pandas as pd
     import pyarrow as pa
 
-    if dataframe_util.is_polars_lazyframe(source):
-        source = dataframe_util.collect_polars_lazyframe(source)
-    if dataframe_util.is_polars_series(source):
-        source = source.to_frame()
-    if dataframe_util.is_polars_dataframe(source):
-        try:
-            return cast("pa.Table", source.to_arrow())
-        except Exception:
-            _LOGGER.debug(
-                "Direct Polars→Arrow conversion failed, falling back to pandas",
-                exc_info=True,
-            )
-    elif isinstance(source, pa.Table):
+    if isinstance(source, pa.Table):
+        _ensure_unique_dataset_labels(source.column_names)
+        return source
+    if (
+        dataframe_util.is_polars_dataframe(source)
+        or dataframe_util.is_polars_series(source)
+        or dataframe_util.is_polars_lazyframe(source)
+    ):
+        # Polars column names are already unique strings.
         return source
 
     df = dataframe_util.convert_anything_to_pandas_df(source)
@@ -478,14 +473,17 @@ def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
     # Check before converting: PyArrow raises a bare ValueError for exact
     # duplicates, which would otherwise surface as a conversion error.
     _ensure_unique_dataset_labels(labels)
+    # The shallow copy leaves the caller's dataframe unchanged.
+    df = df.copy(deep=False)
     if any(isinstance(column, (tuple, bytes)) for column in df.columns):
         # Keep `str(column)` names such as `"(1, 2)"`, which apps write in
         # `encode` and `dimensions`. PyArrow would name tuple labels (MultiIndex
-        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels. The
-        # shallow copy leaves the caller's dataframe unchanged.
-        df = df.copy(deep=False)
+        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels.
         df.columns = pd.Index(labels)
-    return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=False)
+    # The chart never shows the index, so don't send it. A RangeIndex is stored
+    # only in the pandas metadata.
+    df.index = pd.RangeIndex(len(df))
+    return df
 
 
 def _convert_single_dataset(
@@ -511,11 +509,9 @@ def _convert_single_dataset(
         ValueError,
     )
     try:
-        table = _dataset_source_to_arrow_table(source)
-        # The browser keys each row, and the default ``dimensions``, by Arrow
-        # field name, so the duplicate check uses those names.
-        _ensure_unique_dataset_labels(table.column_names)
-        data_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(
+            _prepare_dataset_source(source)
+        )
     except conversion_errors as ex:
         raise StreamlitDataframeConversionError(
             "The provided ECharts `dataset.source` could not be converted for "

@@ -1087,10 +1087,13 @@ _MULTI_INDEXED_DF = pd.DataFrame(
 )
 def test_dataset_source_drops_pandas_index(source: pd.DataFrame) -> None:
     """A pandas dataframe is sent without its index."""
+    index = source.index.copy()
+
     _, table = _convert_source(source)
 
     assert table.column_names == ["v"]
-    assert table.schema.pandas_metadata["index_columns"] == []
+    # The caller's dataframe keeps its index.
+    assert source.index.equals(index)
 
 
 @pytest.mark.parametrize(
@@ -1285,7 +1288,7 @@ def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
         patch.object(
             echarts_chart_module.dataframe_util,
             "convert_anything_to_pandas_df",
-            lambda _value: df,
+            lambda *_args: df,
         ),
     ):
         option, arrow_datasets = _normalize_spec(original)
