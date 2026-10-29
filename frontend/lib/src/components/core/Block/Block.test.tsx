@@ -562,6 +562,54 @@ describe("FlexBoxContainer layout props", () => {
       expect(printDeclarations(innerBlock)).not.toContain("display:block")
     })
 
+    it.each([
+      ["makes", "a stretch-width", {}, true],
+      [
+        "does not make",
+        "a content-width",
+        { widthConfig: { useContent: true } },
+        false,
+      ],
+    ])(
+      "%s the columns size containers in %s parent",
+      (_verb, _parent, parentProps, isContainer) => {
+        renderWithContexts(
+          makeVerticalBlockComponent(
+            makeVerticalBlock(
+              [
+                makeVerticalBlock([], {
+                  flexContainer: {
+                    direction: BlockProto.FlexContainer.Direction.HORIZONTAL,
+                  },
+                }),
+              ],
+              {
+                ...parentProps,
+                flexContainer: {
+                  direction: BlockProto.FlexContainer.Direction.VERTICAL,
+                },
+              }
+            )
+          )
+        )
+
+        // Containment would drop the columns' content width, which a
+        // content-width parent is sized by.
+        const row = screen.getByTestId("stHorizontalBlock")
+        const css = [...document.querySelectorAll("style")]
+          .map(style => style.textContent ?? "")
+          .filter(rule =>
+            [...row.classList].some(
+              className =>
+                className.startsWith("css-") && rule.includes(`.${className}`)
+            )
+          )
+          .join("\n")
+        expect(css).toContain("@media print")
+        expect(css.includes("container-type:inline-size")).toBe(isContainer)
+      }
+    )
+
     it("uses block layout for a stretch-height container in a content-height parent", () => {
       renderWithContexts(
         makeVerticalBlockComponent(makeVerticalBlock([stretchChild()]))

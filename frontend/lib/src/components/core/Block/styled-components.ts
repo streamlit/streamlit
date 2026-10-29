@@ -399,6 +399,13 @@ export interface StyledFlexContainerBlockProps {
    * definite inside a definite-height parent, which the style cannot see.
    */
   hasDefiniteHeight?: boolean
+  /**
+   * Whether the block's width comes from its contents, because it or an
+   * ancestor without a fixed width is content-width. Print does not make
+   * its columns size containers, since containment would drop their
+   * contents' width and collapse the row.
+   */
+  isContentSized?: boolean
 }
 
 function isFixedLengthHeight(
@@ -426,6 +433,7 @@ export const StyledFlexContainerBlock =
       overflow,
       overflowX,
       hasDefiniteHeight,
+      isContentSized = false,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -442,8 +450,9 @@ export const StyledFlexContainerBlock =
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
       //   dataframe, or table stacks into full-width children. Columns of a
-      //   row that stays side by side are size containers, so a
-      //   content-width metric can scale to its printed column.
+      //   row that stays side by side are size containers (unless the row
+      //   is content-sized), so a content-width metric can scale to its
+      //   printed column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -460,9 +469,11 @@ export const StyledFlexContainerBlock =
               [`> .stColumn.${PRINT_CARD_CLASS}`]: {
                 [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
               },
-              [`&:not(:has(${PRINT_STACK_TRIGGER_SELECTOR})) > .stColumn`]: {
-                containerType: "inline-size",
-              },
+              ...(!isContentSized && {
+                [`&:not(:has(${PRINT_STACK_TRIGGER_SELECTOR})) > .stColumn`]: {
+                  containerType: "inline-size",
+                },
+              }),
               // A row of bordered cards that stays side by side prints like
               // one card, so a page break does not cut every card at once.
               [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_SELECTOR}))`]:
