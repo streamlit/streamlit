@@ -6819,14 +6819,12 @@ def test_clear_resets_the_pending_client_value_sets() -> None:
 # region Rendered widgets
 
 
-def _registered(
-    *metadata: WidgetMetadata, fragment_ids_this_run: list[str] | None = None
-) -> SessionState:
+def _registered(*metadata: WidgetMetadata) -> SessionState:
     """A SessionState in which a run registered ``metadata``."""
     ss = _session_with()
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run),
+        return_value=MockScriptRunCtx(),
     ):
         for widget_metadata in metadata:
             ss.register_widget(widget_metadata, None)
