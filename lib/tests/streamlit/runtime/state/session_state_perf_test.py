@@ -59,6 +59,7 @@ def _register(
             serializer=serde.serialize,
             value_type=value_type,
             callback=lambda: None,
+            validator=getattr(serde, "validate", None),
         )
     )
 
@@ -100,23 +101,31 @@ def test_a_thousand_widgets_with_one_change(benchmark: BenchmarkFixture) -> None
 
 @pytest.mark.performance
 def test_a_large_selectbox_that_changes(benchmark: BenchmarkFixture) -> None:
-    """A selectbox with 10,000 options whose value changes on every rerun."""
+    """A selectbox with 10,000 options whose value changes on every rerun.
+
+    Each run registers a new serde, so its validator builds its label counts
+    again, as in an app.
+    """
     options = [f"option {index}" for index in range(10_000)]
-    serde = SelectboxSerde(
-        options,
-        formatted_options=options,
-        formatted_option_to_option_index={label: i for i, label in enumerate(options)},
-        default_option_index=0,
-    )
+    index_by_label = {label: i for i, label in enumerate(options)}
     ss = SessionState()
-    _register(ss, "select", serde, "string_value")
-    rerun = _rerun_with(
+    rerun_once = _rerun_with(
         ss,
         [
             WidgetStates(widgets=[WidgetState(id="select", string_value=label)])
             for label in ("option 1", "option 9999")
         ],
     )
+
+    def rerun() -> None:
+        serde = SelectboxSerde(
+            options,
+            formatted_options=options,
+            formatted_option_to_option_index=index_by_label,
+            default_option_index=0,
+        )
+        _register(ss, "select", serde, "string_value")
+        rerun_once()
 
     benchmark(rerun)
 
