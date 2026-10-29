@@ -812,13 +812,14 @@ does next, and such an element cannot be set while it is on the page either.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
-`validate` match is not a question about this interface. Today the runtime quietly resets
-some violations to the widget's default — an out-of-range number, an unknown option — and
-only the frontend checks the rest;
-[#16203](https://github.com/streamlit/streamlit/issues/16203) moves them all server-side.
-The agent path should call those validators rather than keep its own, provided each
-reports the violation and lets the caller decide: the browser path coerces, and the agent
-path rejects with `invalid_value`, because a silently reset value reads as success.
+`validate` match is not a question about this interface. Each widget checks its own
+constraints on the server for every client
+([#16203](https://github.com/streamlit/streamlit/issues/16203)): its options and
+`max_selections`, bounds, layouts, ranges, `max_chars`, and `required`. The agent path
+calls those validators rather than keep its own. Each reports the violation and lets the
+caller decide: the browser path drops the value, and the agent path rejects with
+`invalid_value`, because a silently reset value reads as success. Only `validate` and the
+form rules are still left to the browser.
 
 **Every element that takes a value carries its JSON Schema, describing shape, not legal
 values.** Sending the wrong JSON type is the commonest invalid request, and the element
@@ -845,13 +846,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   dates, two items for a slider's range, and up to two for a date range, which may be
   empty or hold only its start.
 - **It says what to send, not what the server refuses.** The checks below decide what
-  is refused; a value they let through that the widget then adjusts shows in the next
-  `value`.
+  is refused.
 - **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
-  `max_value`, and `max_chars` are already there under the names models know, copying
-  an option list would double the largest part of many snapshots, and bounds would make
-  the schema stricter than v1, which resets an out-of-range number rather than refusing
-  it.
+  `max_value`, and `max_chars` are already there under the names models know, and
+  copying an option list would double the largest part of many snapshots.
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
   `null` resets a widget to its default, as the browser does, except where a browser
   user can empty a widget that has one: a single-select `st.segmented_control` or
@@ -866,8 +864,8 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   one. A value with a richer shape, such as a dataframe selection once it can be sent,
   is declared the same way.
 
-Until #16203 moves the checks into the widgets, v1 checks three things itself, each
-refused with `invalid_value`:
+v1 refuses each of these with `invalid_value`. It checks the JSON type itself, and the
+widget's own checks, which a browser value passes too, decide the rest:
 
 - **The JSON type**, which the element's `value_schema` states:
   - A number is not text except where it names an option, and text is not a number, so
@@ -885,15 +883,18 @@ refused with `invalid_value`:
   `max_selections`. A widget with `accept_new_options` takes any text instead, as it
   does in the browser, so a number there does not name an option, and a label several
   options share resolves as it does for a browser.
+- **The bounds, layouts, and lengths.** A number outside `min_value` and `max_value`, a
+  fraction for a whole number, a range with the wrong number of ends or its higher end
+  first, a date or color in another layout, and text past `max_chars`. The error names
+  the constraint.
+- **`required`.** A request cannot empty a required widget, `null` included where the
+  default is empty. An untouched one keeps its empty default.
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 
-Everything else shows in the next snapshot's `value`: an out-of-range number, a
-malformed `st.date_input` date or color string, or a slider range with too few values
-is reset to the default, a fraction sent to an integer `st.number_input` or slider is
-truncated, and text past `max_chars` is cut. A reversed slider range is stored as sent,
-so a client sends its two values lowest first. A per-key note saying how each value
-landed is a potential follow-up.
+Nothing else is adjusted, except when the run the request caused changes a widget's
+constraints, which shows in the next snapshot's `value`. A per-key note saying how each
+value landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1052,8 +1053,8 @@ back to a browser rather than mistake it for missing content:
 | Sources Streamlit collects only part of                                    | A table, chart, or map over a Snowpark, PySpark, Dask, or Modin DataFrame, a DuckDB relation, a database cursor, or another unevaluated source gets only its first 10,000 rows, or 100 in `st.table`, in the browser and in `data` alike. `data` reports those rows as the whole source: its `row_count`, `complete`, and `url` cover only them, and the "Showing only … rows" caption, a separate element, is the only sign of the cut. Lazily loading these sources, and reporting the cut where they still get one, are follow-ups. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
-| Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
-| Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. A widget that accepts new options reads it as typed text and resolves it as it does for a browser. |
+| Validation only the browser performs                                       | `validate` is reported but not enforced, so a test that relies on it proves less than it appears to. A request cannot empty a `required` widget, but a form submit with a required field that was never filled is still accepted until the form rule ([#16203](https://github.com/streamlit/streamlit/issues/16203), item 7 of [server-side widget constraints](../2026-10-28-server-side-widget-constraints/product-spec.md#ranked-delivery-plan)). |
+| Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. Sending back the value the widget holds is still accepted. A widget that accepts new options reads it as typed text and resolves it as it does for a browser. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`, and a table's rows beyond the preview are `unavailable: "undescribed"`. A chart, a map, or a lazily loaded table reports no `data` then, since its command builds that while describing itself. |
@@ -1102,13 +1103,12 @@ This is a new programmatic execution surface and needs an explicit review.
   authored key is. Reject stale, disabled, removed, wrong-type, cross-form,
   cross-dialog, and oversized requests atomically, before any callback runs — against
   the last snapshot rather than live widget state, for the reasons in
-  [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
-  the browser today ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That
-  gap predates this interface and is reachable by anyone scripting the WebSocket, so this
-  interface neither creates nor widens it, and the fix belongs in the widgets, where both
-  paths share it. Meanwhile the guidance for authors is unchanged: a widget's range or
-  option list is a UI affordance, not an access control, so anything that actually
-  matters belongs in app code.
+  [Actions in v1](#actions-in-v1). The widgets check their own constraints on the
+  server for every client ([#16203](https://github.com/streamlit/streamlit/issues/16203)),
+  and this interface runs the same check, so it neither creates nor widens a gap. What
+  they leave to the browser, `validate` and the form rules, is reachable by anyone
+  scripting the WebSocket. An option list is still not an access control: whether this
+  user may pick an option, and anything else that actually matters, belongs in app code.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
   session's client, with the same error redaction. No secrets, session state, Python
   values, local paths, or source.
@@ -1394,17 +1394,14 @@ than ranked, and say where one builds on another.
 Smaller potential follow-ups and alternatives considered:
 
 - **Values:** a per-key note on how each sent value landed, including a key the batch
-  itself removed; refusing values that do not match `value_schema` — a fraction for a
-  whole number, a malformed date, a too-short or reversed range — rather than letting
-  the widget adjust them; widget constraints checked server-side
-  ([#16203](https://github.com/streamlit/streamlit/issues/16203)); the limits a widget
-  enforces that cost a few bytes also stated in `value_schema` under the standard
-  keywords (`maxLength` from `max_chars`, `minimum` and `maximum` from the bounds,
-  `maxItems` from `max_selections`), but never `enum`, which would copy an option list
-  `props` already carries, so a client that generates input from the schema stays
-  within them, best together with #16203 so the server refuses what the schema rules
-  out; and integers beyond
-  ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
+  itself removed; the limits a widget enforces that cost a few bytes also stated in
+  `value_schema` under the standard keywords (`maxLength` from `max_chars`, `minimum`
+  and `maximum` from the bounds, `maxItems` from `max_selections`), but never `enum`,
+  which would copy an option list `props` already carries, so a client that generates
+  input from the schema stays within them, now that the server refuses what the schema
+  would rule out ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and
+  integers beyond ±(2^53−1) as decimal strings, which JavaScript clients otherwise
+  round.
 - **Data:** running queries over a large table on the server instead of paging it to
   the model; recommending dataframe-backed charts for apps agents read; serving each
   dataset of a layered chart under `data.datasets`, with its own columns, preview, and
