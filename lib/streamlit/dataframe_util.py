@@ -889,8 +889,11 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
     import pyarrow as pa
 
     def _downcast_type(arrow_type: pa.DataType) -> pa.DataType:
-        if isinstance(arrow_type, pa.LargeListType):
-            return pa.list_(_downcast_type(arrow_type.value_type))
+        # Regular lists are rebuilt too, so a large_list nested inside one
+        # (for example, `list<large_list>`) is also downcast.
+        if isinstance(arrow_type, (pa.ListType, pa.LargeListType)):
+            value_field = arrow_type.value_field
+            return pa.list_(value_field.with_type(_downcast_type(value_field.type)))
         return arrow_type
 
     new_fields = [f.with_type(_downcast_type(f.type)) for f in schema]

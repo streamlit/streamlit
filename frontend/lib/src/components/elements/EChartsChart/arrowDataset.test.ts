@@ -26,6 +26,7 @@ import {
   Float64,
   Int64,
   Int8,
+  LargeList,
   List,
   Null,
   Struct,
@@ -512,6 +513,22 @@ describe("quiverToEChartsRows", () => {
         ]),
       },
       expected: ['{"a":1,"b":"x"}', null],
+    },
+    {
+      // Python sends Polars struct columns with list fields as
+      // struct<large_list> without downcasting them.
+      name: "Struct with a LargeList child",
+      column: {
+        values: [{ v: [BigInt(1), null, BigInt(3)] }, { v: [] }, null],
+        type: new Struct([
+          new Field(
+            "v",
+            new LargeList(new Field("item", new Int64(), true)),
+            true
+          ),
+        ]),
+      },
+      expected: ['{"v":[1,null,3]}', '{"v":[]}', null],
     },
     {
       name: "Dictionary<Timestamp>",
