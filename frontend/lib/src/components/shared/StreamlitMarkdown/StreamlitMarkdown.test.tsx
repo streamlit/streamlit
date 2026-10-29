@@ -153,6 +153,41 @@ describe("containsMathSyntax", () => {
       expected: true,
       description: "a formula after backticks in the middle of a line",
     },
+    {
+      input: "Price: \\$$p$",
+      expected: true,
+      description: "a formula right after an escaped dollar sign",
+    },
+    {
+      input: "\\\\$x$",
+      expected: true,
+      description: "a formula after an escaped backslash",
+    },
+    {
+      input: "$x \\\\$",
+      expected: true,
+      description: "inline math ending in a LaTeX line break",
+    },
+    {
+      input: "$$a \\\\$$",
+      expected: true,
+      description: "display math ending in a LaTeX line break",
+    },
+    {
+      input: "$$$\nx\n$$$",
+      expected: true,
+      description: "display math with a longer fence",
+    },
+    {
+      input: "\\`$x$\\`",
+      expected: true,
+      description: "a formula between escaped backticks",
+    },
+    {
+      input: "    ```\n$x$",
+      expected: true,
+      description: "a formula after an indented code block",
+    },
 
     // Invalid math syntax - should return false (avoid false positives)
     {
@@ -200,6 +235,16 @@ describe("containsMathSyntax", () => {
       expected: false,
       description: "dollar signs in an unclosed fenced code block",
     },
+    {
+      input: "``$x$`` and $5 and $10",
+      expected: false,
+      description: "dollar signs in double-backtick inline code",
+    },
+    {
+      input: "`C:\\` costs $5 and `$x$`",
+      expected: false,
+      description: "a backslash at the end of inline code",
+    },
     { input: "$$$$", expected: false, description: "price tier symbols" },
     {
       input: "the price is between $5 and $10",
@@ -240,19 +285,35 @@ describe("containsMathSyntax", () => {
   )
 
   it.each([
-    { input: "$5-$", description: "dollar range cut off mid-stream" },
+    { input: "$5-$", description: "a dollar range cut off" },
     { input: "US$5 and US$", description: "prefixed amounts cut off" },
+    {
+      input: "**Price: $5-$**",
+      description: "a dollar range in bold that remend closed",
+    },
+    {
+      input: "[Price $5-$](streamdown:incomplete-link)",
+      description: "a dollar range in a link that remend closed",
+    },
+    { input: "Range $5-$▌", description: "a dollar range before a cursor" },
   ])(
-    "ignores a closing $ at the end while streaming: $description",
+    "holds back a possible dollar amount while streaming: $description",
     ({ input }: { input: string }) => {
       expect(containsMathSyntax(input, { isStreaming: true })).toBe(false)
       expect(containsMathSyntax(input)).toBe(true)
     }
   )
 
-  it("detects a finished formula while streaming", () => {
-    expect(containsMathSyntax("$x$ and", { isStreaming: true })).toBe(true)
-  })
+  it.each([
+    { input: "Energy: $E=mc^2$", description: "a formula at the end" },
+    { input: "**Area: $x^2$**", description: "a formula in bold" },
+    { input: "$5-$\nnext", description: "a span on a finished line" },
+  ])(
+    "detects math while streaming: $description",
+    ({ input }: { input: string }) => {
+      expect(containsMathSyntax(input, { isStreaming: true })).toBe(true)
+    }
+  )
 })
 
 describe("containsEmojiShortcodes", () => {
@@ -1443,13 +1504,27 @@ describe("StreamlitMarkdown", () => {
     })
   })
 
-  it("renders dollar amounts as plain text when there is no formula", () => {
-    render(
-      <StreamlitMarkdown source="$315K of $1.46M quota" allowHTML={false} />
-    )
+  it.each([
+    { source: "$315K of $1.46M quota", description: "dollar amounts" },
+    { source: "$ x + y $", description: "a padded formula" },
+  ])(
+    "renders $description as plain text when there is no formula",
+    ({ source }: { source: string }) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container).toHaveTextContent(source)
+      expect(container.querySelector("code")).toBeNull()
+    }
+  )
+
+  it("renders a formula right after an escaped dollar sign", async () => {
+    render(<StreamlitMarkdown source={"Price: \\$$p$"} allowHTML={false} />)
     const container = screen.getByTestId("stMarkdownContainer")
-    expect(container).toHaveTextContent("$315K of $1.46M quota")
-    expect(container.querySelector("code")).toBeNull()
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).toHaveTextContent("Price: $")
+    expect(container.querySelectorAll(".katex")).toHaveLength(1)
   })
 
   it("renders math when the source contains a formula", async () => {
@@ -1487,6 +1562,19 @@ describe("StreamlitMarkdown", () => {
     )
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container).toHaveTextContent("Buy for $5 or $10")
+    expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders a bold dollar range cut off mid-stream as text", () => {
+    render(
+      <StreamlitMarkdown
+        source="**Price: $5-$"
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("strong")).toHaveTextContent("Price: $5-$")
     expect(container.querySelector("code")).toBeNull()
   })
 

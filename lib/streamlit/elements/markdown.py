@@ -152,8 +152,9 @@ class MarkdownMixin:
               at https://katex.org/docs/supported.html. An expression in "$"
               can't start or end with a space, and its closing "$" can't be
               followed by a digit, so text like "$5 and $10" is displayed
-              as-is. Once the text contains a LaTeX expression, every "$"
-              pair is parsed as LaTeX, so escape other dollar signs as ``\$``.
+              as-is. One LaTeX expression turns LaTeX parsing on for the
+              whole text, so escape any other dollar signs as ``\$``
+              (``"\\$"`` in a regular Python string).
 
             - Colored text and background colors for text. There are two ways
               to apply colors:

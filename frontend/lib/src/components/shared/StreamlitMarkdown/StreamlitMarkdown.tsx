@@ -122,43 +122,55 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Matches fenced code blocks (opened at the start of a line) and inline code,
- * whose `$` signs are never math. An unclosed fence, common while streaming,
- * runs to the end of the source.
+ * Approximates the Markdown that hides `$` signs from math parsing. One regex
+ * scans left to right like the parser, so an escaped backtick doesn't open
+ * code and a backslash inside code doesn't escape anything:
+ * - a fenced code block that starts a line (indented up to 3 spaces). An
+ *   unclosed fence, common while streaming, runs to the end of the source.
+ * - single-line inline code: a backtick run, content without backticks, and a
+ *   backtick run of the same length
+ * - a backslash that escapes a backslash, `$`, or backtick
+ *
+ * This isn't a full CommonMark code matcher: indented code blocks, fences
+ * inside blockquotes or nested lists, and inline code that contains backticks
+ * aren't matched. Their `$` signs stay in the check, which can only turn math
+ * parsing on (never hide a real formula).
  */
-const CODE_PATTERN =
-  /(?<=^|\n)[ \t]*(`{3,}|~{3,})[\s\S]*?(?:\n[ \t]*\1|$)|`[^`\n]+`/g
+const CODE_OR_ESCAPE_PATTERN =
+  /(?<=^|\n) {0,3}(`{3,}|~{3,})[\s\S]*?(?:\n[ \t]*\1|$)|(?<!`)(`+)[^`\n]+\2(?!`)|\\[\\$`]/g
 
 /**
- * Display math: an unescaped `$$` pair. A `$$` next to another `$` doesn't
- * count, so price tiers like "$$$$" stay plain text.
+ * Display math: a run of two or more `$`, then content, then another `$$`. A
+ * lone run like "$$$$" (price tiers) doesn't count.
  */
-const DISPLAY_MATH_PATTERN = /(?<![\\$])\$\$(?!\$)[\s\S]*?(?<!\\)\$\$/
+const DISPLAY_MATH_PATTERN = /(?<!\$)\$\$+(?!\$)[\s\S]*?\$\$/
 
 /**
  * Inline math, following Pandoc's rule so dollar amounts like "$5 and $10" or
  * "$5-$10" don't count as a formula:
- * - the opening `$` is unescaped and followed by a non-space
- * - the closing `$` is unescaped, preceded by a non-space, and not followed by
- *   a digit
+ * - the opening `$` is followed by a non-space
+ * - the closing `$` is preceded by a non-space and not followed by a digit
  */
-const INLINE_MATH_PATTERN = /(?<![\\$])\$(?![\s$])[^$\n]*?[^\s\\$]\$(?!\d)/
+const INLINE_MATH_PATTERN = /(?<!\$)\$(?![\s$])[^$\n]*?[^\s$]\$(?!\d)/
 
 /**
- * Inline math while streaming: a closing `$` at the end of the source doesn't
- * count yet, because the next chunk may start with a digit (as in "$5-$10").
+ * While streaming, a possible dollar amount cut off at its closing `$`, as in
+ * "$5-$" before "10" arrives: a span that starts with a digit, whose closing
+ * `$` is followed only by non-space characters, such as closing `**` from
+ * remend or a `st.write_stream` cursor. Capture group 1 is the span without
+ * that closing `$`.
  */
-const STREAMING_INLINE_MATH_PATTERN =
-  /(?<![\\$])\$(?![\s$])[^$\n]*?[^\s\\$]\$(?!\d|$)/
+const UNFINISHED_AMOUNT_PATTERN = /(\$\d[^$\n]*)\$(?=\S*$)/
 
 /**
  * Detects whether the markdown source contains a math formula, ignoring `$` in
- * code and escaped `\$`. RenderedMarkdown enables math parsing (remark-math)
- * and KaTeX only when this returns true, so dollar signs in a source without a
- * formula render as plain text.
+ * code and escaped `\$`. RenderedMarkdown runs remark-math and KaTeX only when
+ * this returns true, so dollar signs in text without a formula stay plain.
  *
  * @param source - The markdown source string to check
- * @param options.isStreaming - Whether more content may still be appended
+ * @param options - Detection options
+ * @param options.isStreaming - Whether more content may still be appended. If
+ *   so, a span that may still turn into a dollar amount doesn't count yet.
  * @returns true if math syntax is detected, false otherwise
  */
 export function containsMathSyntax(
@@ -168,11 +180,16 @@ export function containsMathSyntax(
   if (!source.includes("$")) {
     return false
   }
-  const text = source.replaceAll(CODE_PATTERN, "")
-  const inlineMathPattern = isStreaming
-    ? STREAMING_INLINE_MATH_PATTERN
-    : INLINE_MATH_PATTERN
-  return DISPLAY_MATH_PATTERN.test(text) || inlineMathPattern.test(text)
+  // Replace code and escapes with a placeholder that is neither a space nor
+  // a `$`, so they count as plain text next to a delimiter.
+  const text = source.replaceAll(CODE_OR_ESCAPE_PATTERN, "_")
+  if (DISPLAY_MATH_PATTERN.test(text)) {
+    return true
+  }
+  const inlineText = isStreaming
+    ? text.replace(UNFINISHED_AMOUNT_PATTERN, "$1")
+    : text
+  return INLINE_MATH_PATTERN.test(inlineText)
 }
 
 export enum Tags {
