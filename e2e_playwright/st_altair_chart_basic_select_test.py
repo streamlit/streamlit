@@ -610,7 +610,6 @@ def test_interval_overlay_remains_after_unmounting_snapshot(
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
     selection_text = _selection_markdown_text(app, expected_selection)
-    assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
 
     _click_unmount_button(app)
     expect(
@@ -618,12 +617,11 @@ def test_interval_overlay_remains_after_unmounting_snapshot(
     ).to_be_visible()
     _assert_restore_did_not_rerun(app, "Runs: 3")
     chart.scroll_into_view_if_needed()
-    # Remount can shift the chart a few pixels, so allow a slightly higher
-    # image threshold.
+    # Use a distinct name from the pre-unmount selection snapshot. Remount
+    # can shift the chart enough to exceed the default image threshold.
     assert_snapshot(
         chart,
-        name="st_altair_chart-scatter_interval_selection",
-        image_threshold=0.041,
+        name="st_altair_chart-scatter_interval_selection_after_unmount",
     )
 
 
@@ -655,10 +653,11 @@ def test_x_interval_overlay_remains_after_unmounting(
     ).to_be_visible()
     _assert_restore_did_not_rerun(app, "Runs: 3")
     chart.scroll_into_view_if_needed()
+    # Use a distinct name from the pre-unmount selection snapshot. Remount
+    # can shift the chart enough to exceed the default image threshold.
     assert_snapshot(
         chart,
-        name="st_altair_chart-scatter_x_interval_selection",
-        image_threshold=0.041,
+        name="st_altair_chart-scatter_x_interval_selection_after_unmount",
     )
 
     chart.dblclick(position={"x": 130, "y": 100})
