@@ -691,8 +691,10 @@ def _wait_timeout() -> float:
 
 
 def format_duration(seconds: float) -> str:
-    """Phrase a number of seconds for a message or description, such as
-    "15 minutes".
+    """Format ``seconds`` as a short phrase, such as ``15 minutes``.
+
+    An exact non-zero number of minutes is phrased in minutes. Every other
+    duration is phrased in seconds.
     """
     if seconds and seconds % 60 == 0:
         amount, unit = seconds / 60, "minute"

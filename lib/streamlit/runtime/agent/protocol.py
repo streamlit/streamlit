@@ -483,7 +483,9 @@ def build_openapi_document(
         "title": "Streamlit agent API",
         "version": str(snapshot.SCHEMA_VERSION),
         "summary": "Drive a running Streamlit app without a browser.",
-        "description": _API_DESCRIPTION + _MCP_NOTICE if enabled else _DISABLED_NOTICE,
+        "description": (
+            (_API_DESCRIPTION + _MCP_NOTICE) if enabled else _DISABLED_NOTICE
+        ),
         "license": {"name": "Apache 2.0", "identifier": "Apache-2.0"},
         "x-streamlit-agent-api": "available" if enabled else "disabled",
     }

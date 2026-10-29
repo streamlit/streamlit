@@ -73,8 +73,8 @@ _METHODS: Final = frozenset({"initialize", "ping", "tools/list", "tools/call"})
 # `request_refusal` answers it with HTTP 400 and -32600, an answer those
 # clients read as "fall back to `initialize`". They do not fall back from:
 # - a 401, 403, or 5xx;
-# - -32022 (unsupported version) whose listed revisions include `2026-07-28`
-#   or a later one.
+# - error -32022 (unsupported version) whose listed revisions include
+#   `2026-07-28` or a later one.
 _DISCOVER_METHOD: Final = "server/discover"
 
 # What `get_data` returns at most: rows per table page, characters in a page's
@@ -458,9 +458,9 @@ def render_get_data(
     ``MAX_RESULT_BYTES`` is refused whole rather than cut short, so no cell
     value is silently lost.
     """
-    table_offset: int | None = None
+    page_of: tuple[pa.Table, int] | None = None
     try:
-        result, table_offset = _read(media, arguments)
+        result, page_of = _read(media, arguments)
     except (AgentRequestError, _ReadRefusedError) as exc:
         result = tool_error(exc.code, exc.message)
     except Exception:
@@ -470,9 +470,10 @@ def render_get_data(
     body = json_encoding.response_body(jsonrpc_result(request_id, result))
     if len(body) <= MAX_RESULT_BYTES:
         return body
-    if table_offset is None:
+    if page_of is None or _columns_pass_the_cap(request_id, *page_of):
         message = _FILE_TOO_LARGE_MESSAGE
     else:
+        table_offset = page_of[1]
         # Only a page's first row can pass the cap: a page of several rows
         # stays within its character budget, far below it.
         message = (
@@ -485,10 +486,27 @@ def render_get_data(
     )
 
 
+def _columns_pass_the_cap(
+    request_id: str | int | None, table: pa.Table, offset: int
+) -> bool:
+    """Whether a page of ``table`` without rows already makes a response past
+    ``MAX_RESULT_BYTES``. Every page repeats the columns, so then no offset
+    helps.
+    """
+    # Past the last row, so the page has none. An offset at least as long as
+    # the one asked for keeps the size from falling short of that page's.
+    columns_only = table_page(table, offset=max(offset, table.num_rows), limit=1)
+    result = tool_result(columns_only, is_error=False)
+    body = json_encoding.response_body(jsonrpc_result(request_id, result))
+    return len(body) > MAX_RESULT_BYTES
+
+
 def _read(
     media: MediaFileManager, arguments: GetDataArguments
-) -> tuple[dict[str, Any], int | None]:
-    """The tool result for a file, and the offset of its page if it is a table."""
+) -> tuple[dict[str, Any], tuple[pa.Table, int] | None]:
+    """The tool result for a file, and the table and offset of its page if it
+    is a table.
+    """
     # Refuse a custom storage before reading `url`, so an id in that storage's
     # own format is `read_unsupported`, not `unknown_file`.
     if not media.can_read_files:
@@ -513,7 +531,7 @@ def _read(
             offset = _validated_page_bound(arguments.offset, name="offset", minimum=0)
             limit = _validated_page_bound(arguments.limit, name="limit", minimum=1)
             text = table_page(table, offset=offset, limit=limit)
-            return tool_result(text, is_error=False), offset
+            return tool_result(text, is_error=False), (table, offset)
     content = _file_content(stored, file_id, media_type)
     return {"content": [content], "isError": False}, None
 

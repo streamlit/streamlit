@@ -369,13 +369,15 @@ async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
     raise _ClientGoneError
 
 
-def _tool_text_body(
-    request_id: str | int | None, text: bytes, *, is_error: bool
+def _interact_tool_body(
+    request_id: str | int | None, body: bytes, *, is_error: bool
 ) -> bytes:
-    """The JSON-RPC response for a tool call whose text is the interact
-    route's response body, unchanged.
+    """The JSON-RPC response for an ``interact`` tool call.
+
+    ``body`` is the interact route's response body. It is decoded and placed
+    in the tool result unchanged.
     """
-    result = mcp.tool_result(text.decode("utf-8"), is_error=is_error)
+    result = mcp.tool_result(body.decode("utf-8"), is_error=is_error)
     return json_encoding.response_body(mcp.jsonrpc_result(request_id, result))
 
 
@@ -518,19 +520,20 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             status, body = await run_interaction(
                 request, session_registry, call.arguments
             )
-            # Off the event loop, since a snapshot can be hundreds of KB. A
-            # 202 `wait_timed_out` is not a failure: its text says how to
+            # Rendered off the event loop: a snapshot can be hundreds of KB.
+            # A 202 `wait_timed_out` is not an error; its text says how to
             # collect the run.
             rendered = await asyncio.to_thread(
-                _tool_text_body, message.id, body, is_error=status >= 400
+                _interact_tool_body, message.id, body, is_error=status >= 400
             )
             return Response(rendered, media_type="application/json")
 
         try:
             arguments = mcp.parse_get_data_arguments(call.arguments)
-            # The identity check `interact` applies, and a use of the session
-            # that restarts its idle timer, but not its in-flight lock: a read
-            # runs no app code, and clients often call tools in parallel.
+            # The identity check `interact` applies, which also restarts the
+            # session's idle timer, and a check that the runtime still has its
+            # app session. Not the in-flight lock: a read runs no app code, and
+            # clients often call tools in parallel.
             session = session_registry.get(arguments.session_id, _user_info(request))
             session_registry.app_session(session)
         except errors.AgentRequestError as exc:

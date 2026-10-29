@@ -563,6 +563,27 @@ def test_a_row_past_the_size_cap_is_refused_by_its_offset(
     assert _page(media, url, offset=2)["rows"] == [["small"]]
 
 
+def test_columns_past_the_size_cap_are_refused_as_the_whole_file(
+    storage: MemoryMediaFileStorage, media: MediaFileManager
+) -> None:
+    """When a table's columns alone make the response pass 5 MB, the refusal
+    does not blame a row and point to the next offset, since every page
+    repeats the columns.
+    """
+    name_length = 10_000
+    names = [
+        f"{index:04d}{'c' * name_length}"
+        for index in range(mcp.MAX_RESULT_BYTES // name_length + 1)
+    ]
+    frame = pd.DataFrame([range(len(names))], columns=names)
+    url = _store(storage, _arrow(frame), _ARROW)
+
+    message = _refused(_get_data(media, url), "result_too_large")
+
+    assert "offset" not in message
+    assert "neither a retry nor a smaller `limit` helps" in message
+
+
 @pytest.mark.parametrize(
     ("offset", "limit"),
     [(-1, 10), (True, 10), (1.5, 10), ("1", 10), (0, 0), (0, False)],
