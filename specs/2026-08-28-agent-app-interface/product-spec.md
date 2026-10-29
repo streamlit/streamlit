@@ -472,6 +472,7 @@ right now. Naming follows the public API, for the reason above:
               "label_visibility": "visible",
               "accept_new_options": false,
               "filter_mode": "fuzzy",
+              "required": false,
               "on_change": "rerun"
             },
             "value_schema": { "type": "string" },
