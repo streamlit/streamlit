@@ -1,7 +1,7 @@
 
 # Streamlit input widgets
 
-The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, time, or string. For choosing from a fixed set of options (single/multi-select), see [selection-widgets.md](selection-widgets.md). For buttons and other triggers (action menus, downloads, links), see [trigger-widgets.md](trigger-widgets.md).
+The right widget for the value you're collecting. This covers value-entry widgets — where the user types or picks a number, date, time, or string. For choosing from a fixed set of options (single/multi-select) or a yes/no `st.toggle` / `st.checkbox`, see [selection-widgets.md](selection-widgets.md).
 
 The core rule: match the widget to the data type. Don't collect numbers, dates, or times through `st.text_input` and parse the string yourself — that crashes on bad input and gives you no bounds or validation. Use a widget that returns the right Python type directly.
 
@@ -16,6 +16,7 @@ The core rule: match the widget to the data type. Don't collect numbers, dates, 
 | Date + time together | `st.datetime_input` | `datetime` |
 | Free text | `st.text_input` / `st.text_area` | `str` |
 | Secret / password entry | `st.text_input(type="password")` | `str` |
+| Email, URL, phone number, or search term | `st.text_input(type="email")` (or `"url"`, `"phone"`, `"search"`) | `str` |
 
 ## Numbers: st.number_input
 
@@ -32,7 +33,9 @@ age = st.number_input("Age", min_value=0, max_value=120, step=1)
 `format` is a printf-style spec for display only (the return value is still a number), and support is narrow: the formatted output must itself parse as a number. A bare numeric spec like `"%d"` or `"%.2f"` works, but a currency or suffix string like `"$%.2f"` or `"%.1f%%"` raises `StreamlitInvalidNumberFormatError`. For a currency or unit affordance, pair a plain numeric format with an `icon` (and put a `%` in the label):
 
 ```python
-price = st.number_input("Price", min_value=0.0, step=0.50, format="%.2f", icon=":material/attach_money:")
+price = st.number_input(
+    "Price", min_value=0.0, step=0.50, format="%.2f", icon=":material/attach_money:"
+)
 rate = st.number_input("Rate (%)", min_value=0.0, max_value=100.0, format="%.1f")
 ```
 
@@ -43,13 +46,17 @@ The return type follows `min_value`/`step`: integer args give an `int`, float ar
 Use a slider when the value lives in a known range and seeing the position helps (volume, thresholds, year ranges). Set `min_value`, `max_value`, `step`, and an initial `value`.
 
 ```python
-threshold = st.slider("Confidence threshold", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
+threshold = st.slider(
+    "Confidence threshold", min_value=0.0, max_value=1.0, value=0.5, step=0.05
+)
 ```
 
 Pass a tuple as `value` to get a range slider returning `(low, high)`:
 
 ```python
-low, high = st.slider("Price range", min_value=0, max_value=1000, value=(200, 800), step=50)
+low, high = st.slider(
+    "Price range", min_value=0, max_value=1000, value=(200, 800), step=50
+)
 ```
 
 `st.slider` also accepts `date`, `time`, and `datetime` bounds when you want a draggable range rather than a calendar.
@@ -66,10 +73,16 @@ start = datetime.strptime(st.text_input("Start date"), "%Y-%m-%d").date()
 start = st.date_input("Start date")
 ```
 
-`st.date_input` supports a date range by passing a tuple/list `value`; it then returns a `(start, end)` tuple:
+`st.date_input` supports a date range by passing a tuple/list `value`; it then returns a tuple of up to two dates. While the user is picking a new range, the tuple holds only the start date, so check its length before unpacking:
 
 ```python
-start, end = st.date_input("Reporting period", value=(date(2026, 1, 1), date(2026, 3, 31)))
+from datetime import date
+
+period = st.date_input("Reporting period", value=(date(2026, 1, 1), date(2026, 3, 31)))
+if len(period) != 2:
+    st.info("Pick an end date.")
+    st.stop()
+start, end = period
 ```
 
 `st.time_input` returns a `datetime.time` (use `step` to set the granularity). `st.datetime_input` collects a date and time together and returns a single `datetime`, replacing the old two-widget pattern.
@@ -78,7 +91,7 @@ start, end = st.date_input("Reporting period", value=(date(2026, 1, 1), date(202
 
 ## Free text: st.text_input / st.text_area
 
-`st.text_input` for one line, `st.text_area` for multi-line. Use `placeholder` for a hint, `max_chars` to cap length.
+`st.text_input` for one line, `st.text_area` for multi-line. Use `placeholder` for a hint, `max_chars` to cap length. `type="email"` and `type="url"` also check the format in the browser; for `required=True`, `validate=` patterns, and the other browser-side checks, see [Client-side validation](performance.md#client-side-validation).
 
 ```python
 name = st.text_input("Full name", placeholder="Jane Doe", max_chars=100)
@@ -93,13 +106,9 @@ api_key = st.text_input("API key", type="password")
 
 A masked text input is *not* authentication — it only hides characters on screen. For real sign-in (identity, protected pages), use `st.login` / `st.user`; see [authentication.md](authentication.md).
 
-## Actions and triggers
-
-For buttons and button-like trigger widgets — `st.button`, action/toolbar menus (`st.menu_button`), file downloads (`st.download_button`), and URL links (`st.link_button`) — see [trigger-widgets.md](trigger-widgets.md).
-
 ## Batching inputs
 
-Every widget interaction triggers a full rerun by default. To collect several inputs and rerun only once on submit, wrap them in `st.form` with an `st.form_submit_button` — see [performance.md](performance.md).
+Every widget interaction triggers a full rerun by default. To collect several inputs and rerun only once on submit, wrap them in `st.form` with an `st.form_submit_button` — see [Forms to batch interactions](performance.md#forms-to-batch-interactions).
 
 ## References
 
