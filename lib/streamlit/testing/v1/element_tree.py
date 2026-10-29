@@ -2855,6 +2855,7 @@ class SelectSlider(Widget, Generic[T]):
 
         serde = SelectSliderSerde(
             self.options,
+            formatted_options=self.options,
             formatted_option_to_index=formatted_option_to_index,
             default_indices=[0] if not is_range else [0, len(self.options) - 1],
             format_func=format_func,

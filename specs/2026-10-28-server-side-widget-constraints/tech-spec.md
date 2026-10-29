@@ -170,10 +170,11 @@ read it:
    stored, and `_call_callbacks` takes the changed IDs instead of comparing again. Both
    of its paths iterate those IDs. Its Components v2 path keeps its own per-key diff and
    sees only the changed entries the boundary kept: a dropped value diffed against the
-   old map would read as every key changing. So its `disabled` check goes away too. A deserializer never replaces a value its
-   validator refuses (see [below](#where-constraints-live-in-each-widgets-serde)), so a
-   violation cannot read as unchanged. Only a conversion can map a forged value onto the
-   stored one, such as `2.9` onto `2` for an `INT` input, and that changes nothing. Most
+   old map would read as every key changing. So its `disabled` check goes away too. A
+   deserializer never replaces a value its validator refuses, apart from the button
+   groups' stale-label recovery (see [below](#where-constraints-live-in-each-widgets-serde)),
+   so a violation cannot read as unchanged. Only a conversion can map a forged value onto
+   the stored one, such as `2.9` onto `2` for an `INT` input, and that changes nothing. Most
    entries end here: the browser resends its whole widget map on every rerun. An active
    trigger always differs, because `_reset_triggers` cleared the stored one first, and an
    inactive one, such as `trigger_value: false`, is unchanged.
@@ -355,10 +356,24 @@ with no log and no re-sync, and a correct browser can send such a value in a syn
 A conversion can still map a forged value onto the stored one, but a correct browser
 never sends that form, so nothing needs a re-sync. A value a deserializer cannot
 represent, such as an unknown `select_slider` label, passes through as the label, as
-`selectbox` already does. URL seeding relies on today's fallback and truncation, so it
+`selectbox` already does. `st.feedback` keeps an index outside its options, and
+`st.menu_button` still reads an unknown label as no click: a trigger resets anyway, and
+the agent API's wire comparison still reaches its validator.
+
+One deliberate exception stays. A keyed `st.pills` or `st.segmented_control` maps a
+label it cannot resolve to the selection it holds in session state. After a relabel, such
+as a language switch, a correct browser can echo the old labels until it applies the new
+ones, and the recovery reads that echo as unchanged, so it fires no `on_change` and is
+not refused. A forged unknown label therefore also reads as unchanged for these two
+widgets: no callback runs and the value is kept, but the browser is not re-synced.
+
+URL seeding relies on today's fallback and truncation, so it
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
-and repairs what today's deserializers repair: text is truncated to `max_chars`, and an
-unknown `select_slider` label falls back to that position's default. Truncation counts
+after the array repairs it already makes (`_sanitize_url_array` filters, deduplicates,
+and truncates a multiselect's or button group's array until the URL-binding refactor
+below), and repairs what today's deserializers repair: text is truncated to `max_chars`,
+and an unknown `select_slider` label falls back to that position's default, because a
+widget that is never empty keeps its default's shape. Truncation counts
 UTF-16 code units, as the check does, and never splits a character, so a repaired value
 is valid text that always passes the check, including when a reconnect to a new session
 checks it at registration. For text with astral characters, such as emoji, that keeps

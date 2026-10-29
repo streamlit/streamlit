@@ -32,6 +32,8 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -798,6 +800,7 @@ def test_select_slider_serde_serialize(
     """serialize handles known singles, unknown singles, and range sequences."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c"],
+        formatted_options=["a", "b", "c"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2},
         default_indices=[0],
     )
@@ -808,6 +811,7 @@ def test_select_slider_serde_deserialize_none_returns_single_default() -> None:
     """deserialize(None) returns the single-value default for a non-range serde."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c"],
+        formatted_options=["a", "b", "c"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2},
         default_indices=[1],
     )
@@ -818,6 +822,7 @@ def test_select_slider_serde_deserialize_none_returns_range_default() -> None:
     """deserialize(None) returns the range default for a range serde."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c", "d"],
+        formatted_options=["a", "b", "c", "d"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
         default_indices=[0, 3],
     )
@@ -828,6 +833,7 @@ def test_select_slider_serde_deserialize_wrong_length_falls_back_to_default() ->
     """deserialize returns the default when the value count mismatches the range arity."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c", "d"],
+        formatted_options=["a", "b", "c", "d"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
         default_indices=[0, 3],
     )
@@ -835,31 +841,72 @@ def test_select_slider_serde_deserialize_wrong_length_falls_back_to_default() ->
     assert serde.deserialize(["b"]) == ("a", "d")
 
 
-def test_select_slider_serde_deserialize_unknown_value_uses_default_index() -> None:
-    """deserialize falls back to the position's default index when a value is unknown."""
+def test_select_slider_serde_deserialize_unknown_value_passes_through() -> None:
+    """deserialize keeps a label that names no option, which validate refuses."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c"],
+        formatted_options=["a", "b", "c"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2},
         default_indices=[1],
     )
-    assert serde.deserialize(["unknown"]) == "b"
+    assert serde.deserialize(["unknown"]) == "unknown"
 
 
 def test_select_slider_serde_deserialize_range_with_unknown_value() -> None:
-    """deserialize a range with one unknown value falls back to that position's default."""
+    """A range with an unknown end keeps it, in the order it arrived."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c", "d"],
+        formatted_options=["a", "b", "c", "d"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
         default_indices=[0, 3],
     )
-    # The second value is unknown, so it falls back to default_indices[1] = 3 ("d").
-    assert serde.deserialize(["b", "unknown"]) == ("b", "d")
+    assert serde.deserialize(["c", "unknown"]) == ("c", "unknown")
+    assert serde.deserialize(["unknown", "b"]) == ("unknown", "b")
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        (None, None),
+        (["b"], None),
+        # An empty range lists one label twice.
+        (["b", "b"], None),
+        # A shared label is accepted in a browser session.
+        (["X"], Violation("ambiguous_option")),
+        (
+            ["b", "zz"],
+            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (1,)}),
+        ),
+        # The empty label a browser sends for an index past the options.
+        (
+            [""],
+            Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (0,)}),
+        ),
+    ],
+)
+def test_select_slider_serde_validate(
+    labels: list[str] | None, expected: Violation | None
+) -> None:
+    """validate checks that each label names an option, and allows repeats."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["a", "b", "x1", "x2"],
+        formatted_options=["a", "b", "X", "X"],
+        formatted_option_to_index={"a": 0, "b": 1, "X": 3},
+        default_indices=[0],
+    )
+    ui_value = (
+        None
+        if labels is None
+        else WidgetState(string_array_value={"data": labels}).string_array_value.data
+    )
+    assert serde.validate(ui_value) == expected
 
 
 def test_select_slider_serde_deserialize_range_sorts_ascending() -> None:
     """deserialize returns an out-of-order range in ascending option order."""
     serde: SelectSliderSerde[str] = SelectSliderSerde(
         ["a", "b", "c", "d"],
+        formatted_options=["a", "b", "c", "d"],
         formatted_option_to_index={"a": 0, "b": 1, "c": 2, "d": 3},
         default_indices=[0, 3],
     )

@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -61,6 +63,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
@@ -71,6 +74,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
     from streamlit.runtime.state.common import RegisterWidgetResult
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 
@@ -89,14 +93,33 @@ class SelectSliderSerde(Generic[T]):
         self,
         options: Sequence[T],
         *,
+        formatted_options: list[str],
         formatted_option_to_index: dict[str, int],
         default_indices: list[int],
         format_func: Callable[[Any], str] = str,
     ) -> None:
         self.options = options
+        self.formatted_options = formatted_options
         self.formatted_option_to_index = formatted_option_to_index
         self.default_indices = default_indices
         self.format_func = format_func
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse a label a client was not shown.
+
+        A range may repeat a label, as both ends of an empty range do.
+        """
+        if ui_value is None:
+            return None
+        return widget_checks.items_of(self._label_counts, ui_value, unique=False)
 
     def _get_default(self, is_range: bool) -> T | tuple[T, T]:
         """Return the default value based on default_indices."""
@@ -109,7 +132,7 @@ class SelectSliderSerde(Generic[T]):
             return (self.options[self.default_indices[0]], self.options[end_idx])
         return self.options[self.default_indices[0]]
 
-    def serialize(self, v: T | tuple[T, T] | list[T]) -> list[str]:
+    def serialize(self, v: T | tuple[T, T] | list[T] | str) -> list[str]:
         """Convert option value(s) to formatted string list."""
         # Check if v is a single option (handles options that are tuples/lists)
         try:
@@ -121,12 +144,24 @@ class SelectSliderSerde(Generic[T]):
 
         # Handle as range/sequence
         if isinstance(v, (tuple, list)):
-            return [self.format_func(x) for x in v]
+            return [self._format(x) for x in v]
 
-        return [self.format_func(v)]
+        return [self._format(v)]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T]:
-        """Convert formatted string list back to option value(s)."""
+    def _format(self, v: Any) -> str:
+        try:
+            return self.format_func(v)
+        except Exception:
+            # A label the deserializer passed through, which format_func may
+            # not read, such as a URL value that names no option.
+            return str(v)
+
+    def deserialize(self, ui_value: list[str] | None) -> T | tuple[T, T] | str:
+        """Convert formatted string list back to option value(s).
+
+        A label that names no option passes through as the label, so it
+        never reads as the stored value: ``validate`` refuses it.
+        """
         is_range = len(self.default_indices) >= 2
 
         if not ui_value:
@@ -138,24 +173,22 @@ class SelectSliderSerde(Generic[T]):
             # select_slider); fall back to default so the URL param is cleared.
             return self._get_default(is_range=is_range)
 
-        # Look up each string value
-        results: list[tuple[int, T]] = []
-        for i, s in enumerate(ui_value):
+        # Look up each string value. An unknown label keeps no index.
+        results: list[tuple[int | None, T | str]] = []
+        for s in ui_value:
             idx = self.formatted_option_to_index.get(s)
             if idx is not None and idx < len(self.options):
                 results.append((idx, self.options[idx]))
             else:
-                # Fallback to default for this position
-                default_idx = self.default_indices[
-                    min(i, len(self.default_indices) - 1)
-                ]
-                results.append((default_idx, self.options[default_idx]))
+                results.append((None, s))
 
         if is_range:
-            # Ensure start <= end by returning deserialized range value in ascending order
-            if results[0][0] > results[1][0]:
-                return (results[1][1], results[0][1])
-            return (results[0][1], results[1][1])
+            (start_idx, start), (end_idx, end) = results
+            # Ensure start <= end by returning deserialized range value in
+            # ascending order. A range with an unknown end has no order.
+            if start_idx is not None and end_idx is not None and start_idx > end_idx:
+                return cast("tuple[T, T]", (end, start))
+            return cast("tuple[T, T]", (start, end))
 
         return results[0][1]
 
@@ -566,6 +599,7 @@ class SelectSliderMixin:
 
         serde = SelectSliderSerde(
             opt,
+            formatted_options=formatted_options,
             formatted_option_to_index=formatted_option_to_option_index,
             default_indices=slider_value,
             format_func=format_func,
@@ -578,6 +612,7 @@ class SelectSliderMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,

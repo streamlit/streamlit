@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Sequence
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -69,6 +71,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import extract_leading_icon, to_help_str
 
@@ -84,7 +87,9 @@ if TYPE_CHECKING:
         RegisterWidgetResult,
         WidgetDeserializer,
         WidgetSerializer,
+        WidgetValidator,
     )
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 V = TypeVar("V")
@@ -123,6 +128,20 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
 
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse a label a client was not shown, or more than one."""
+        if ui_value is None:
+            return None
+        return widget_checks.items_of(self._label_counts, ui_value, max_items=1)
+
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
         if v is None:
@@ -143,7 +162,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
@@ -175,9 +194,9 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # actually had selected (e.g. user clicked "B" while default was "A").
         if self.session_state_fallback is not None:
             return self.session_state_fallback
-        if self.default_option_index is not None:
-            return self.options[self.default_option_index]
-        return None
+        # Any other unknown label passes through as the label, so it never reads
+        # as the stored value: validate refuses it.
+        return string_value
 
 
 class _MultiSelectButtonGroupSerde(Generic[T]):
@@ -210,6 +229,20 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse labels a client was not shown, or a repeated one."""
+        if ui_value is None:
+            return None
+        return widget_checks.items_of(self._label_counts, ui_value)
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -244,15 +277,18 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         if ui_value is None:
             return [self.options[i] for i in self.default_option_indices]
 
-        values: list[T | str] = []
+        # The resolved options, and the value with each unknown label kept as
+        # the label. An unknown label can be a stale wire value from a previous
+        # format_func mapping (e.g. a language switch).
+        values: list[T] = []
+        with_unknown: list[T | str] = []
         for v in ui_value:
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            # Silently drop values not found in the current options mapping.
-            # These are stale wire values from a previous format_func mapping
-            # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
-            # applies the same filter for invalid canonical values.
+                with_unknown.append(self.options[option_index])
+            else:
+                with_unknown.append(v)
 
         # A label change never changes the selection, so recover stale wire entries
         # from the last known session-state selection: that keeps the boundary
@@ -266,8 +302,8 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         #     Stale labels are opaque, so keep only the resolved survivors rather
         #     than risk restoring the option the user just removed (a still-selected
         #     option relabeled in the same rerun is dropped; this is rare).
-        # With no session-state fallback, use the configured default only if every
-        # entry was stale, mirroring _SingleSelectButtonGroupSerde.deserialize.
+        # With no session-state fallback, an unknown label passes through as the
+        # label, so it never reads as the stored value: validate refuses it.
         dropped_stale = len(values) < len(ui_value)
         if dropped_stale and self.session_state_fallback is not None:
             candidates = [o for o in self.session_state_fallback if o not in values]
@@ -276,9 +312,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
                 additions = [o for o in values if o not in self.session_state_fallback]
                 return list(self.session_state_fallback) + additions
             return values
-        if not values and ui_value and self.default_option_indices:
-            return [self.options[i] for i in self.default_option_indices]
-        return values
+        return with_unknown
 
 
 def _build_proto(
@@ -1272,10 +1306,10 @@ class ButtonGroupMixin:
             formatted_option_to_option_index[formatted] = index
 
         # Look up the currently-stored session-state value to use as a stale-wire
-        # fallback in the serde. When format_func changes dynamically and no default
-        # is configured, deserialize would otherwise return None/[] for stale wire
-        # values, so the boundary check would fire a spurious on_change callback.
-        # Using the last known valid value as a fallback keeps the comparison equal.
+        # fallback in the serde. When format_func changes dynamically, deserialize
+        # would otherwise pass a stale wire label through, so the boundary check
+        # would refuse a correct browser's echo of the selection it holds. Using the
+        # last known valid value as a fallback keeps the comparison equal.
         # Value resolution (this fallback, keeping on_change quiet) and label resync
         # (the wire-vs-fresh-serialization check in _button_group that decides whether
         # to resend set_value) are independent paths; both are required so on_change
@@ -1303,6 +1337,7 @@ class ButtonGroupMixin:
         # Create appropriate serde based on selection mode.
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
+        validator: WidgetValidator
         if selection_mode == "multi":
             multi_serde = _MultiSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1314,6 +1349,7 @@ class ButtonGroupMixin:
             )
             serializer = multi_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", multi_serde.deserialize)
+            validator = multi_serde.validate
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1325,6 +1361,7 @@ class ButtonGroupMixin:
             )
             serializer = single_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", single_serde.deserialize)
+            validator = single_serde.validate
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1339,6 +1376,7 @@ class ButtonGroupMixin:
             style=style,
             serializer=serializer,
             deserializer=deserializer,
+            validator=validator,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
@@ -1377,6 +1415,7 @@ class ButtonGroupMixin:
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
+        validator: WidgetValidator,
         on_change: WidgetCallback | OnChangeMode | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -1482,6 +1521,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             deserializer=deserializer,
             serializer=serializer,
+            validator=validator,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,

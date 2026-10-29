@@ -28,6 +28,7 @@ import pytest
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state import widget_checks
 from streamlit.testing.v1 import AppTest
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -520,3 +521,236 @@ def test_a_choice_is_checked_against_the_options_the_user_saw() -> None:
     assert at.selectbox[0].options == ["a", "b"]
     assert at.selectbox[0].value == "a"
     assert at.selectbox[0].proto.set_value is True
+
+
+def _widget_id(at: AppTest, key: str) -> str:
+    """The element ID of the widget with ``key``, also for a container."""
+    widget_id = at.session_state._state._state.get_widget_id_from_key(key)
+    assert widget_id is not None
+    return widget_id
+
+
+def _choice_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.select_slider(
+        "Level",
+        ["a", "b", "c", "d"],
+        value=("b", "c"),
+        key="level",
+        on_change=on_change,
+        args=["level"],
+    )
+    st.pills("Pill", ["a", "b"], key="pill", on_change=on_change, args=["pill"])
+    st.segmented_control(
+        "Segments",
+        ["a", "b", "c"],
+        selection_mode="multi",
+        key="segments",
+        on_change=on_change,
+        args=["segments"],
+    )
+    st.feedback("thumbs", key="thumbs", on_change=on_change, args=["thumbs"])
+    st.tabs(["A", "B"], key="tab", on_change=on_change, args=["tab"])
+    st.menu_button("Menu", ["x", "y"], key="menu", on_click=on_change, args=["menu"])
+
+
+# A legal value other than the default for each value widget in _choice_app.
+_LEGAL_CHOICES: dict[str, dict[str, Any]] = {
+    "level": {"string_array_value": _labels("a", "d")},
+    "pill": {"string_array_value": _labels("b")},
+    "segments": {"string_array_value": _labels("c")},
+    "thumbs": {"string_value": "0"},
+    "tab": {"string_value": "B"},
+}
+
+
+def _choose_legal_values(at: AppTest) -> None:
+    at._run(
+        widget_state=forged_many(
+            *(
+                WidgetState(id=_widget_id(at, key), **field)
+                for key, field in _LEGAL_CHOICES.items()
+            )
+        )
+    )
+    assert at.session_state.calls == list(_LEGAL_CHOICES)
+
+
+def _chosen_values(at: AppTest) -> dict[str, Any]:
+    return {key: at.session_state[key] for key in _LEGAL_CHOICES}
+
+
+@pytest.mark.parametrize(
+    ("key", "field", "resyncs"),
+    [
+        ("level", {"string_array_value": _labels("b", "zzz")}, True),
+        # The empty label a browser sends for an index past the options.
+        ("level", {"string_array_value": _labels("")}, True),
+        # A keyed button group reads a label it cannot resolve as the
+        # selection it holds, which keeps a relabel quiet, so it is unchanged.
+        ("pill", {"string_array_value": _labels("zzz")}, False),
+        ("pill", {"string_array_value": _labels("a", "b")}, True),
+        ("segments", {"string_array_value": _labels("a", "zzz")}, True),
+        ("segments", {"string_array_value": _labels("a", "a")}, True),
+        ("thumbs", {"string_value": "7"}, True),
+        # Text that int() reads but the browser never sends.
+        ("thumbs", {"string_value": "+1"}, True),
+        # Tabs have no channel to tell the browser.
+        ("tab", {"string_value": "C"}, False),
+    ],
+)
+def test_a_choice_outside_the_options_is_refused(
+    key: str, field: dict[str, Any], resyncs: bool
+) -> None:
+    """A forged choice runs no callback and keeps every previous value."""
+    at = AppTest.from_function(_choice_app).run()
+    _choose_legal_values(at)
+    chosen = _chosen_values(at)
+
+    at._run(widget_state=forged(_widget_id(at, key), **field))
+
+    assert not at.exception
+    assert at.session_state.calls == list(_LEGAL_CHOICES)
+    assert _chosen_values(at) == chosen
+    if key != "tab":
+        assert at.get_by_key(key).proto.set_value is resyncs
+
+
+def test_a_menu_click_on_an_unknown_option_is_no_click() -> None:
+    """A trigger for an option the menu never showed fires nothing."""
+    at = AppTest.from_function(_choice_app).run()
+
+    at._run(
+        widget_state=forged(
+            _widget_id(at, "menu"), string_trigger_value={"data": "zzz"}
+        )
+    )
+
+    assert "calls" not in at.session_state
+    assert at.menu_button[0].value is None
+
+
+@pytest.mark.parametrize(
+    ("key", "url_value", "expected_value", "expected_param"),
+    [
+        # An unknown end of a range falls back to that end's default, and
+        # the URL is corrected.
+        ("level", ["a", "zzz"], ("a", "c"), ["a", "c"]),
+        ("level", ["zzz", "a"], ("a", "b"), ["a", "b"]),
+        # A repaired value that equals the default clears the param.
+        ("level", ["zzz", "c"], ("b", "c"), None),
+        ("pill", "zzz", None, None),
+        # Unknown items are filtered from a multi-select array.
+        ("segments", ["a", "zzz"], ["a"], "a"),
+        ("thumbs", "7", None, None),
+        ("tab", "C", "A", None),
+        ("tab", "B", "B", "B"),
+    ],
+)
+def test_a_bound_url_value_outside_the_options_is_repaired_or_cleared(
+    key: str,
+    url_value: str | list[str],
+    expected_value: Any,
+    expected_param: str | list[str] | None,
+) -> None:
+    """A link is checked against the options, as a browser value is."""
+    script = (
+        "import streamlit as st\n"
+        "st.select_slider('Level', ['a', 'b', 'c', 'd'], value=('b', 'c'), "
+        "key='level', bind='query-params')\n"
+        "st.pills('Pill', ['a', 'b'], key='pill', bind='query-params')\n"
+        "st.segmented_control('Segments', ['a', 'b', 'c'], selection_mode='multi', "
+        "key='segments', bind='query-params')\n"
+        "st.feedback('thumbs', key='thumbs', bind='query-params')\n"
+        "st.tabs(['A', 'B'], key='tab', on_change='rerun', bind='query-params')\n"
+    )
+    at = AppTest.from_string(script)
+    at.query_params[key] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state[key] == expected_value
+    assert at.query_params.get(key) == expected_param
+
+
+def _language_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    labels = (
+        {"A": "manzana", "B": "naranja"}
+        if st.session_state.get("lang") == "es"
+        else {"A": "apple", "B": "orange"}
+    )
+    st.pills(
+        "Keyed",
+        ["A", "B"],
+        format_func=labels.get,
+        key="keyed",
+        on_change=on_change,
+        args=["keyed"],
+    )
+    st.pills(
+        "Keyed multi",
+        ["A", "B"],
+        format_func=labels.get,
+        selection_mode="multi",
+        key="keyed_multi",
+        on_change=on_change,
+        args=["keyed_multi"],
+    )
+    st.pills("Keyless", ["A", "B"], format_func=labels.get, default="B")
+    st.segmented_control(
+        "Keyless multi",
+        ["A", "B"],
+        format_func=labels.get,
+        selection_mode="multi",
+        default=["A"],
+    )
+
+
+def test_a_language_switch_keeps_pills_without_a_refusal(
+    refusal_logs: list[str],
+) -> None:
+    """Relabeled pills keep their selection, and a stale echo is not refused.
+
+    A browser can still send the old labels once the server holds the new
+    ones. The stale-label recovery reads that echo as the held value.
+    """
+    at = AppTest.from_function(_language_app).run()
+    keyed_id = at.button_group[0].id
+    keyed_multi_id = at.button_group[1].id
+    at._run(
+        widget_state=forged_many(
+            WidgetState(id=keyed_id, string_array_value=_labels("orange")),
+            WidgetState(
+                id=keyed_multi_id, string_array_value=_labels("apple", "orange")
+            ),
+        )
+    )
+    assert at.session_state.calls == ["keyed", "keyed_multi"]
+
+    with patch_config_options({"global.e2eTest": True}):
+        at.session_state["lang"] = "es"
+        at.run()
+        # The old labels again, as a browser that has not applied the relabel.
+        at._run(
+            widget_state=forged_many(
+                WidgetState(id=keyed_id, string_array_value=_labels("orange")),
+                WidgetState(
+                    id=keyed_multi_id, string_array_value=_labels("apple", "orange")
+                ),
+            )
+        )
+
+    assert not at.exception
+    assert at.session_state.calls == ["keyed", "keyed_multi"]
+    assert [group.value for group in at.button_group] == ["B", ["A", "B"], "B", ["A"]]
+    assert at.button_group[0].options == ["manzana", "naranja"]
+    assert refusal_logs == []

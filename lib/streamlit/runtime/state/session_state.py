@@ -137,6 +137,43 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
+def _validate_url_value(metadata: WidgetMetadata[T], value: T) -> tuple[T, bool]:
+    """Check a value seeded from the URL against the widget's validator.
+
+    A label several options share is valid, as at the boundary. A widget that
+    is never empty, such as ``st.select_slider``, holds a value of its
+    default's shape, so an item that names no option is repaired to the
+    default's item at that position.
+
+    Returns
+    -------
+    tuple[T, bool]
+        The value, repaired where it could be, and whether it is valid.
+    """
+    validator = metadata.validator
+    if validator is None:
+        return value, True
+    wire = metadata.serializer(value)
+    violation = validator(wire, value=value)
+    positions = violation.detail.get("positions") if violation else None
+    if (
+        violation is not None
+        and violation.kind == "not_an_option"
+        and positions is not None
+        and metadata.value_type == "string_array_value"
+        and not metadata.clearable
+    ):
+        default_wire = metadata.serializer(metadata.deserializer(None))
+        if len(default_wire) == len(wire):
+            repaired = [
+                default_wire[position] if position in positions else item
+                for position, item in enumerate(wire)
+            ]
+            value = metadata.deserializer(repaired)
+            violation = validator(metadata.serializer(value), value=value)
+    return value, not widget_checks.browser_refuses(violation)
+
+
 @dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
@@ -2078,7 +2115,8 @@ class SessionState:
         1. Checks if the URL value is empty and handles based on clearable
         2. Parses the raw URL string using the widget's value_type
         3. Deserializes to the widget's native value format
-        4. Handles invalid values (clears URL param, returns False)
+        4. Handles invalid values (clears URL param, returns False), checking
+           the value with the widget's validator and repairing what it can
         5. Stores valid values in both widget state and session state
         6. Auto-corrects the URL if the value was clamped/filtered
 
@@ -2151,6 +2189,16 @@ class SessionState:
                         self._clear_url_param(user_key)
                         return False
 
+            # The widget's own rules, after the array repairs above. A value
+            # they cannot repair clears the param, and so does a repaired value
+            # that equals the default.
+            deserialized_value, is_valid = _validate_url_value(
+                metadata, deserialized_value
+            )
+            if not is_valid or deserialized_value == default_value:
+                self._clear_url_param(user_key)
+                return False
+
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
             self._new_session_state[user_key] = deserialized_value
@@ -2161,11 +2209,14 @@ class SessionState:
             )
             return True
 
-        except (ValueError, TypeError, IndexError) as e:
+        except Exception as e:
+            # Any widget code may raise for a hand-edited URL: the parser, the
+            # deserializer, the serializer, or the validator. The message is
+            # left out because it may quote the value.
             _LOGGER.debug(
-                "Invalid URL value for bound widget '%s', clearing param: %s",
+                "Invalid URL value for bound widget '%s', clearing param (%s).",
                 user_key,
-                e,
+                type(e).__name__,
             )
             self._clear_url_param(user_key)
             return False

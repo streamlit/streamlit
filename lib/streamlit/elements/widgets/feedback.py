@@ -15,8 +15,11 @@
 from __future__ import annotations
 
 import numbers
+from collections import Counter
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     Literal,
     cast,
@@ -44,6 +47,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 
 if TYPE_CHECKING:
@@ -56,6 +60,7 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 # Number of options for each feedback type
@@ -100,22 +105,33 @@ class FeedbackSerde:
         self.num_options = num_options
         self.default_value = default_value
 
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Each option is sent as its index. Built on the first check, so a
+        # widget whose value never changes pays nothing for it.
+        return Counter(str(index) for index in range(self.num_options))
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse an index that names no option, such as "7" for "thumbs"."""
+        if ui_value is None or ui_value == "":
+            return None
+        return widget_checks.one_of(self._label_counts, ui_value)
+
     def serialize(self, value: int | None) -> str:
         """Serialize int value to string for wire format."""
         return "" if value is None else str(value)
 
     def deserialize(self, ui_value: str | None) -> int | None:
-        """Deserialize string wire format back to int value."""
+        """Deserialize string wire format back to int value.
+
+        An index outside the options is returned as is, so it never reads as
+        the stored value: ``validate`` refuses it.
+        """
         if ui_value is None:
             return self.default_value  # No UI interaction yet
         if ui_value == "":
             return None  # User explicitly cleared
-        value = int(ui_value)  # User selected a value
-        # An index outside the options (e.g. ?rating=4 in the URL of a "thumbs"
-        # widget) falls back to the default, so a bound URL param is cleared.
-        if not 0 <= value < self.num_options:
-            return self.default_value
-        return value
+        return int(ui_value)  # User selected a value
 
 
 class FeedbackMixin:
@@ -400,6 +416,7 @@ class FeedbackMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
