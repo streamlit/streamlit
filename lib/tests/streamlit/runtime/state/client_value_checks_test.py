@@ -21,12 +21,14 @@ real script runner, the way a browser message reaches the session.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import logging
 import math
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from streamlit.components.v2.bidi_component.main import _make_trigger_id
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state import widget_checks
 from streamlit.testing.v1 import AppTest
@@ -1802,6 +1804,40 @@ def test_a_button_on_the_previous_page_does_not_fire(tmp_path: Path) -> None:
 
     at._run(widget_state=forged(delete_id, trigger_value=True))
     assert at.session_state.deleted == 1
+
+
+def _component_app() -> None:
+    import streamlit as st
+
+    component = st.components.v2.component(
+        "gate_trigger", html="<button>fire</button>", js="export default () => {}"
+    )
+
+    def on_fired() -> None:
+        st.session_state.fired = st.session_state.get("fired", 0) + 1
+
+    if st.toggle("Show", value=True, key="show"):
+        component(key="cmp", on_fired_change=on_fired)
+
+
+def test_a_components_v2_trigger_follows_its_component() -> None:
+    """The trigger aggregator a component registers is rendered with the component.
+
+    Its ID is derived from the component's, so it fires after a completed run,
+    and stops firing once a run hides the component.
+    """
+    at = AppTest.from_function(_component_app).run()
+    trigger = forged(
+        _make_trigger_id(_widget_id(at, "cmp"), "events"),
+        json_trigger_value=json.dumps({"event": "fired", "value": True}),
+    )
+
+    at._run(widget_state=trigger)
+    assert at.session_state.fired == 1
+
+    at.toggle(key="show").set_value(False).run()
+    at._run(widget_state=trigger)
+    assert at.session_state.fired == 1
 
 
 # endregion Rendered-widget gate

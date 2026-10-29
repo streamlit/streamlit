@@ -510,6 +510,12 @@ class BidiComponentMixin:
         # ------------------------------------------------------------------
         trigger_vals: dict[str, Any] = {}
 
+        # The aggregator is a widget this run registers, like the component's
+        # own, but its ID is derived rather than computed, so it is recorded
+        # here. Otherwise the end of the run would count it as not rendered
+        # and refuse its triggers.
+        if ctx is not None:
+            ctx.shared.widget_ids_this_run.check_and_add(aggregator_id)
         trig_state = register_widget(
             aggregator_id,
             deserializer=deserialize_trigger_list,  # always returns list or None

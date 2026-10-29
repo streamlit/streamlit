@@ -467,6 +467,13 @@ written to the same placeholder: the app emitted it, and its ID stays in
 `widget_ids_this_run`. Tracking replaced delta paths would add cost to every run's hot
 path, so the guarantee names registration instead.
 
+The prune reads registration from `widget_ids_this_run`, which every widget enters when
+its ID is computed. A Components v2 component also registers a trigger aggregator under
+an ID derived from its own, which skipped that set, so the end of every run counted it
+as not rendered and its triggers were refused. The component now records the
+aggregator's ID there too. The aggregator then also outlives stale cleanup as an unfired
+trigger and reserves its derived key once it renders, as a button does.
+
 The set changes at three points:
 
 - **When a run registers a widget,** the widget is added. A run in progress, including
