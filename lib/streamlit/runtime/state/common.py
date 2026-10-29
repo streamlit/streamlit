@@ -268,10 +268,11 @@ class WidgetMetadata(Generic[T]):
     allow_url_duplicates: bool = False
 
     # Whether the widget is disabled. A disabled widget cannot be interacted with
-    # in the browser, so it must never accept a value coming from the frontend.
-    # This is enforced server-side (see SessionState.register_widget): any incoming
-    # value for a disabled widget is discarded and its on-change callback is
-    # suppressed, guarding against forged BackMsg/WidgetState values.
+    # in the browser, so it accepts no client value. The boundary check enforces
+    # this against the metadata of the run the client was shown (see
+    # `widget_checks`): a value sent while the widget was disabled is dropped and
+    # its callback does not run, which guards against forged WidgetState values.
+    # A bound widget also ignores its URL parameter while disabled.
     disabled: bool = False
 
     # What a client may send, usually the serde's `validate` method. The boundary

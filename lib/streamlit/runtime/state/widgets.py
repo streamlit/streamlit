@@ -126,10 +126,12 @@ def register_widget(
         **Required when bind='query-params'**, otherwise defaults to False.
     disabled : bool
         Whether the widget is disabled. A disabled widget cannot be interacted
-        with in the browser, so Streamlit enforces this server-side: any incoming
-        value from the frontend is discarded (the widget keeps its default/previous
-        value) and its on-change callback is not invoked. This guards against
-        forged widget values from a manipulated BackMsg. Defaults to False.
+        with in the browser, so Streamlit enforces this server-side, against the
+        run the client was shown: a client value sent while the widget was
+        disabled is dropped (the widget keeps its default or previous value) and
+        its callback is not invoked, and a bound widget ignores its URL
+        parameter. This guards against forged widget values from a manipulated
+        BackMsg. Defaults to False.
     validator : WidgetValidator or None
         What a client may send, usually the serde's ``validate`` method. It is
         called with the unpacked wire value of a changed client value before

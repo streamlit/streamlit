@@ -28,10 +28,10 @@ if "change" not in st.session_state:
     st.session_state["change"] = False
 
 
-# Apply tab mutations inside on_click callbacks, not from button return
-# values. Each button disables itself (disabled=st.session_state.add_tab),
-# so its trigger value is discarded on the run it becomes disabled.
-# Callbacks fire before re-registration — the reliable place to mutate.
+# Apply tab mutations inside on_click callbacks. Each button disables itself
+# (disabled=st.session_state.add_tab) from its own callback. The click was
+# legal when it was made, so the button still returns True in that run, but a
+# callback mutates state before the tabs render.
 def _append_tab(label: str) -> None:
     if label not in st.session_state.tabs:
         st.session_state.tabs.append(label)

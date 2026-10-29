@@ -1314,13 +1314,9 @@ _CURRENT_PAGE_HASH = "current-page-hash"
 
 
 def _state_with_changed_widgets(
-    widgets: list[tuple[str, Callable[[], None] | None]], *, disabled: bool = False
+    widgets: list[tuple[str, Callable[[], None] | None]],
 ) -> SessionState:
-    """Build a SessionState where every listed widget changed, with the given callbacks.
-
-    ``disabled`` applies to the callback-less widgets only, so a test can
-    verify that disabled widgets are filtered from processing.
-    """
+    """Build a SessionState where every listed widget changed, with the given callbacks."""
     ss = SessionState()
     for wid, cb in widgets:
         ss._set_widget_metadata(
@@ -1330,7 +1326,6 @@ def _state_with_changed_widgets(
                 serializer=lambda v: v,
                 value_type="int_value",
                 callback=cb,
-                disabled=disabled and cb is None,
             )
         )
         ss._old_state[wid] = 0
@@ -2137,14 +2132,46 @@ def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
     """A disabled widget's reported change is forged or stale, so it is ignored.
 
-    The disabled check prevents stale or forged widget values from being processed.
+    The boundary check refuses it, so its callback cannot vote for the
+    interaction's default rerun and escalate the targeted one.
     """
-
-    ss = _state_with_changed_widgets(
-        [("field", None), ("submit", _raise_targeted_rerun)], disabled=True
+    requeue_calls: list[RerunData] = []
+    ss = SessionState()
+    for wid, callback, disabled in [
+        ("field", lambda: None, True),
+        ("submit", _raise_targeted_rerun, False),
+    ]:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=callback,
+                disabled=disabled,
+            )
+        )
+        ss._old_state[wid] = 0
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
-    requeue_calls = _call_callbacks_in_main_script(ss)
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[
+                    WidgetStateProto(id="field", int_value=1),
+                    WidgetStateProto(id="submit", int_value=1),
+                ]
+            )
+        )
 
     assert len(requeue_calls) == 1
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
@@ -3675,6 +3702,8 @@ class MockScriptRunCtx:
     fragment_ids_this_run: list[str] | None = None
     page_script_hash: str = "page_1_hash"
     is_history_navigation: bool = False
+    # No script requests, so a callback's rerun request is not queued.
+    script_requests: None = None
 
 
 class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
@@ -5948,14 +5977,20 @@ def _create_disabled_test_metadata(
 class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     """Server-side enforcement of the ``disabled`` widget parameter.
 
-    A disabled widget cannot be interacted with in the browser, so any value
-    arriving from the frontend (e.g. from a stale UI or a forged BackMsg) must
-    be ignored while resolving the widget's value during registration.
+    A disabled widget cannot be interacted with in the browser, so a client
+    value sent while it was disabled (e.g. from a stale UI or a forged BackMsg)
+    is refused at the boundary, before the widget registers again.
     """
 
     def setUp(self) -> None:
         super().setUp()
         self.session_state = SessionState()
+
+    def _send(self, widget_id: str, **field: Any) -> None:
+        """Deliver a client message holding one widget state."""
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(widgets=[WidgetStateProto(id=widget_id, **field)])
+        )
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -5964,18 +5999,18 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_discards_incoming_value_for_disabled_widget(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A frontend value for a disabled widget is dropped, keeping the
-        widget's previous value, and the frontend is flagged for re-sync."""
+        """A client value for a disabled widget is dropped, keeping the
+        widget's previous value, and the frontend is flagged for re-sync.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
         # Run 1: register (seeds default), then a legit user value is stored.
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
 
-        # Run 2: the frontend sends a (forged) value while the widget is disabled.
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        # Run 2: the client sends a (forged) value while the widget is disabled.
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "user_value"
@@ -5990,18 +6025,18 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_accepts_incoming_value_for_enabled_widget(
         self, mock_ctx: MagicMock
     ) -> None:
-        """An enabled widget still accepts frontend values (anti-regression)."""
+        """An enabled widget still accepts client values (anti-regression)."""
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=False)
 
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="sent_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "forged_value"
+        assert result.value == "sent_value"
+        assert result.value_changed is False
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6009,14 +6044,17 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     )
     def test_disabled_widget_first_run_uses_default(self, mock_ctx: MagicMock) -> None:
         """On first registration a disabled widget falls back to its default,
-        even if a value is already present (e.g. from a reconnecting client)."""
+        even if a client sent a value (e.g. a browser reconnecting to a new
+        session). The value is checked against this run's metadata.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "default"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6026,19 +6064,19 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         self, mock_ctx: MagicMock
     ) -> None:
         """A programmatic st.session_state assignment is honored for a disabled
-        widget; only frontend-provided values are discarded."""
+        widget; only client values are refused.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key="cb")
-        self.session_state._compact_state()
 
-        # App sets the value programmatically, and the frontend also sends one.
+        # The client sends a value, then the app sets one programmatically.
+        self._send(widget_id, string_value="forged_value")
         self.session_state._new_session_state["cb"] = "programmatic"
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "programmatic"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6047,29 +6085,19 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_widget_drops_forged_value_alongside_programmatic_set(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A forged frontend value must not linger in widget state (or expose its
-        wire label) when a programmatic st.session_state assignment coexists. The
-        programmatic value still wins resolution, but the discarded frontend value
-        is removed from ``_new_widget_state`` rather than lingering until the next
-        compaction."""
+        """A forged client value must not linger in widget state (or expose its
+        wire label) when a programmatic st.session_state assignment coexists.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key="cb")
-        self.session_state._compact_state()
 
-        # App sets the value programmatically; the frontend also submits a forged
-        # value (delivered as a proto so its wire label is captured).
+        self._send(widget_id, string_value="forged_value")
         self.session_state._new_session_state["cb"] = "programmatic"
-        forged_proto = WidgetStateProto()
-        forged_proto.id = widget_id
-        forged_proto.string_value = "forged_value"
-        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "programmatic"
         assert result.incoming_serialized_value is None
-        # The forged frontend value must not linger in the current widget state.
         assert widget_id not in self.session_state._new_widget_state.states
 
     @patch(
@@ -6079,17 +6107,16 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_keyless_widget_discards_incoming_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """Keyless disabled widgets also drop frontend values."""
+        """Keyless disabled widgets also refuse client values."""
         widget_id = "$$ID-hash-None"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key=None)
-        self.session_state._compact_state()
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key=None)
 
         assert result.value == "default"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6102,7 +6129,8 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         preserved, not discarded. URL seeding writes into both widget state and
         session state, so it counts as a programmatic (app-driven) assignment
         rather than a frontend interaction — the enforcement guard must not fire
-        (and must not raise) in this case."""
+        (and must not raise) in this case.
+        """
         ThreadState.update(active_script_hash="main_hash")
         self.session_state.query_params.set_initial_query_params("cb=url_value")
 
@@ -6126,7 +6154,8 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         the frontend also submits a (forged) value on first registration. URL
         seeding normally yields to a frontend value, but a disabled widget can't
         be interacted with, so the URL must win instead of the widget falling back
-        to its default."""
+        to its default.
+        """
         ThreadState.update(active_script_hash="main_hash")
         self.session_state.query_params.set_initial_query_params("cb=url_value")
 
@@ -6148,30 +6177,37 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_widget_clears_incoming_serialized_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """When a disabled widget's forged frontend value is discarded, the
+        """When a disabled widget's forged client value is refused, the
         captured wire label must not leak to the caller. Otherwise an
         option-based widget (e.g. st.selectbox) could reconcile options against
         the attacker-controlled label via ``resolve_value_against_options``,
-        handing back an option that differs from the preserved value."""
+        handing back an option that differs from the preserved value.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
-        # Run 1: register (seeds default), then a legit user value is stored.
+        # The boundary refuses a value for a widget an earlier run registered.
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
+        self._send(widget_id, string_value="forged_value")
+        refused_at_boundary = self.session_state.register_widget(
+            metadata, user_key="cb"
+        )
 
-        # Run 2: the frontend sends a (forged) value while the widget is
-        # disabled. Deliver it as a serialized proto, mirroring the real
-        # frontend flow so the wire label is actually captured.
-        forged_proto = WidgetStateProto()
-        forged_proto.id = widget_id
-        forged_proto.string_value = "forged_value"
-        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
-        result = self.session_state.register_widget(metadata, user_key="cb")
+        # Registration refuses a value for a widget this session never
+        # registered, which is still in its wire form when the label is read.
+        fresh_state = SessionState()
+        fresh_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[WidgetStateProto(id=widget_id, string_value="forged_value")]
+            )
+        )
+        refused_at_registration = fresh_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "user_value"
-        assert result.incoming_serialized_value is None
+        assert refused_at_boundary.value == "user_value"
+        assert refused_at_boundary.incoming_serialized_value is None
+        assert refused_at_registration.value == "default"
+        assert refused_at_registration.incoming_serialized_value is None
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6182,7 +6218,8 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     ) -> None:
         """An enabled widget still exposes the incoming wire label so callers
         can reconcile options against it (anti-regression for the disabled
-        wire-label fix, which must not affect the enabled path)."""
+        wire-label fix, which must not affect the enabled path).
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=False)
 
@@ -6196,37 +6233,40 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
-    """A disabled widget's on-change callback must not fire for frontend
-    changes, guarding against forged values triggering side effects."""
+    """A disabled widget's on-change callback must not fire for client
+    changes, guarding against forged values triggering side effects.
+    """
 
     def setUp(self) -> None:
         super().setUp()
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
         self.session_state = SessionState()
 
-    def _stage_changed_widget(self, *, disabled: bool, callback: Any) -> None:
+    def _send_change(self, *, disabled: bool, callback: Any) -> None:
         widget_id = "$$ID-hash-w"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=disabled, callback=callback
         )
         self.session_state._old_state[widget_id] = "old"
-        self.session_state._new_widget_state.set_from_value(widget_id, "new")
         self.session_state._new_widget_state.set_widget_metadata(metadata)
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[WidgetStateProto(id=widget_id, string_value="new")]
+            )
+        )
 
     def test_disabled_widget_callback_is_suppressed(self) -> None:
         """The callback of a changed but disabled widget is not invoked."""
         callback = MagicMock()
-        self._stage_changed_widget(disabled=True, callback=callback)
-
-        self.session_state._call_callbacks(_changed_ids(self.session_state))
+        self._send_change(disabled=True, callback=callback)
 
         callback.assert_not_called()
+        assert self.session_state["$$ID-hash-w"] == "old"
 
     def test_enabled_widget_callback_is_called(self) -> None:
         """A changed enabled widget still invokes its callback (control)."""
         callback = MagicMock()
-        self._stage_changed_widget(disabled=False, callback=callback)
-
-        self.session_state._call_callbacks(_changed_ids(self.session_state))
+        self._send_change(disabled=False, callback=callback)
 
         callback.assert_called_once()
 
@@ -6247,11 +6287,16 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         )
         self.session_state._set_widget_metadata(metadata)
         self.session_state._old_state[widget_id] = {"value": {"a": 1, "b": 2}}
-        self.session_state._new_widget_state.set_from_value(
-            widget_id, {"value": {"a": 1, "b": 3}}
-        )
 
-        self.session_state._call_callbacks(_changed_ids(self.session_state))
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[
+                    WidgetStateProto(
+                        id=widget_id, json_value='{"value": {"a": 1, "b": 3}}'
+                    )
+                ]
+            )
+        )
 
         assert calls == []
 
@@ -6372,12 +6417,6 @@ def _session_with(
         ss._set_widget_metadata(widget_metadata)
     ss._old_state.update(old_state or {})
     return ss
-
-
-class _BoundaryCtx(MockScriptRunCtx):
-    """A script context for registration tests that queues no reruns."""
-
-    script_requests = None
 
 
 def _message(*states: WidgetStateProto) -> WidgetStatesProto:
@@ -6598,7 +6637,7 @@ def test_a_refused_fresh_trigger_does_not_block_a_replayed_one() -> None:
 
 @patch(
     "streamlit.runtime.state.session_state.get_script_run_ctx",
-    return_value=_BoundaryCtx(),
+    return_value=MockScriptRunCtx(),
 )
 def test_registration_checks_a_value_for_a_widget_never_registered(
     _mock_ctx: MagicMock,
@@ -6619,7 +6658,7 @@ def test_registration_checks_a_value_for_a_widget_never_registered(
 
 @patch(
     "streamlit.runtime.state.session_state.get_script_run_ctx",
-    return_value=_BoundaryCtx(),
+    return_value=MockScriptRunCtx(),
 )
 def test_registration_drops_a_refused_value_for_a_widget_never_registered(
     _mock_ctx: MagicMock, refusal_logs: list[str]
@@ -6638,7 +6677,7 @@ def test_registration_drops_a_refused_value_for_a_widget_never_registered(
 
 @patch(
     "streamlit.runtime.state.session_state.get_script_run_ctx",
-    return_value=_BoundaryCtx(),
+    return_value=MockScriptRunCtx(),
 )
 def test_a_refused_value_keeps_the_previous_value_and_resyncs_once(
     _mock_ctx: MagicMock,

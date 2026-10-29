@@ -25,7 +25,8 @@ The checks run in this order, and the first violation wins:
 1. The wire field is one the widget accepts (``wrong_type``).
 2. The widget's deserializer can read the value (``unreadable``).
 3. An unchanged value passes.
-4. The widget's own validator, ``WidgetMetadata.validator``.
+4. The widget is not disabled (``disabled``).
+5. The widget's own validator, ``WidgetMetadata.validator``.
 """
 
 from __future__ import annotations
@@ -215,6 +216,12 @@ def check_client_value(
             return CheckResult(None, value)
     elif _unchanged(value, previous):
         return CheckResult(None, value)
+
+    # A disabled widget accepts no client input. The metadata is from the run
+    # the client was shown, so a widget that disables itself in the callback
+    # its own click runs keeps the click.
+    if metadata.disabled:
+        return CheckResult(Violation("disabled"), value)
 
     # The widget's own rules.
     violation: Violation | None = None

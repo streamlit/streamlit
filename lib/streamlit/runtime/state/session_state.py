@@ -1025,23 +1025,13 @@ class SessionState:
         """
         votes = _CallbackRerunVotes()
 
-        # Skip callbacks for disabled widgets: a reported change can only come
-        # from a stale UI or a forged message. Callbacks run before widgets
-        # re-register, so the metadata read here is from the previous run. That
-        # is safe regardless of whether `disabled` is part of the widget id:
-        # for most widgets the id excludes `disabled` (so the id is stable and
-        # only the enabled<->disabled edges are ambiguous, an intentional
-        # trade-off), while for widgets that encode `disabled` in the id (e.g.
-        # st.popover) each id has a fixed `disabled` and is thus stable by
-        # construction. Either way, a disabled widget's forged change is
-        # suppressed.
-
         # Changed widgets, split by which dispatch path (if any) will handle them.
+        # A disabled widget's value never gets here: the boundary check refused it.
         changed_widget_ids_for_single_callback: list[str] = []
 
         for wid in changed_widget_ids:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if metadata is None or metadata.disabled:
+            if metadata is None:
                 continue
             if metadata.callback is not None:
                 changed_widget_ids_for_single_callback.append(wid)
@@ -1062,7 +1052,7 @@ class SessionState:
         # old map would fire every key's callback.
         for wid in changed_widget_ids:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if metadata is None or metadata.callbacks is None or metadata.disabled:
+            if metadata is None or metadata.callbacks is None:
                 continue
 
             args = metadata.callback_args or ()
@@ -1788,34 +1778,6 @@ class SessionState:
             # Widget stopped persisting — drop any stale tracking.
             self._persist_tracker.untrack(widget_id, user_key)
 
-        # Enforce `disabled` server-side. A disabled widget cannot be interacted
-        # with in the browser, so any value in widget state is a stale/forged
-        # frontend value and must be dropped, so resolution falls back to the
-        # widget's previous value (or its default on first registration).
-        # URL-seeded values are exempt: they populate widget state legitimately
-        # for bound widgets (url_binding_resolved). A programmatic st.session_state
-        # assignment lives in _new_session_state and still wins during
-        # resolution, so dropping the forged widget-state entry never affects it
-        # while preventing the forged value from lingering there until compaction.
-        disabled_value_discarded = False
-        if (
-            metadata.disabled
-            and widget_id in self._new_widget_state
-            and not url_binding_resolved
-        ):
-            del self._new_widget_state[widget_id]
-            # The captured wire labels belong to the dropped frontend value, so
-            # they must not leak to callers. Otherwise a caller like st.selectbox
-            # or st.multiselect could reconcile options against this attacker-
-            # controlled label (see resolve_value_against_options) and hand back
-            # an option that differs from the value we resolve below.
-            incoming_serialized_value = None
-            incoming_serialized_values = None
-            if user_key is None or user_key not in self._new_session_state:
-                # No programmatic value is taking over resolution, so the discard
-                # itself changes the resolved value; flag the frontend to re-sync.
-                disabled_value_discarded = True
-
         if (
             widget_id not in self
             and (user_key is None or user_key not in self)
@@ -1939,7 +1901,6 @@ class SessionState:
             or restored_bound_value
             or restored_session_state_value
             or dropped_page_scoped_value
-            or disabled_value_discarded
             or client_value_refused
         )
 

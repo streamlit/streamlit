@@ -258,9 +258,14 @@ class CheckResult(NamedTuple):
 | `empty_required` | `required` | drop | `invalid_value` |
 | `form_not_submitted`, `form_invalid` | forms (item 7) | drop the form's changes | `missing_form_submit`, `invalid_value` |
 
-A rejection is logged at debug level when a correct browser can cause it
-(`not_rendered`, and option or bound violations, which a sync race can produce). It is
-logged at warning level otherwise, once per widget per session. That dedup set only holds
+A rejection is logged at debug level when a correct browser can cause it in a sync race:
+`not_rendered`, `disabled` (a `run_every` rerun disables the widget before the click
+lands), `not_an_option`, `too_many_items`, `out_of_range`, `too_long` (a key keeps the
+ID while `max_chars` drops), and `empty_required` (`required` is outside keyed
+identity). It is logged at warning level otherwise, once per widget per session:
+`wrong_type`, `unreadable`, `duplicate_items`, `bad_shape`, and `malformed`, which a
+correct browser never sends. Under the hidden `global.e2eTest` option every rejection is
+logged at warning level and never deduplicated, for the e2e parity gate. That dedup set only holds
 IDs with metadata: an unknown ID is never checked at the boundary, and a trigger dropped
 for having none is not logged. So the set is bounded by the widgets this session
 registered, not by what a client sends.

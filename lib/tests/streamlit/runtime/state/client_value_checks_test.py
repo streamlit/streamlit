@@ -189,3 +189,87 @@ def test_a_new_session_keeps_the_browser_values_it_is_sent() -> None:
     assert fresh.text_input[0].proto.set_value is False
     assert fresh.markdown[0].value == "clicked=False"
     assert "callbacks" not in fresh.session_state
+
+
+def _self_disabling_app() -> None:
+    import streamlit as st
+
+    def lock() -> None:
+        st.session_state.locked = True
+
+    locked = st.session_state.get("locked", False)
+    clicked = st.button("Submit", key="submit", on_click=lock, disabled=locked)
+    agreed = st.checkbox("Agree", key="agree", on_change=lock, disabled=locked)
+    st.write(f"clicked={clicked} agreed={agreed}")
+
+
+def test_a_self_disabling_button_returns_true() -> None:
+    """A click was legal when it was made, so it counts in the run it causes."""
+    at = AppTest.from_function(_self_disabling_app).run()
+
+    at.button[0].click().run()
+
+    assert at.markdown[0].value == "clicked=True agreed=False"
+    assert at.button[0].disabled is True
+
+
+def test_a_widget_disabled_in_its_own_callback_keeps_the_value() -> None:
+    """A value sent while the widget was enabled is kept when its callback disables it."""
+    at = AppTest.from_function(_self_disabling_app).run()
+
+    at.checkbox[0].check().run()
+
+    assert at.markdown[0].value == "clicked=False agreed=True"
+    assert at.checkbox[0].disabled is True
+
+
+def _unlockable_app() -> None:
+    import streamlit as st
+
+    def unlock() -> None:
+        st.session_state.unlocked = True
+
+    def on_change() -> None:
+        st.session_state.changes = st.session_state.get("changes", 0) + 1
+
+    st.button("Unlock", key="unlock", on_click=unlock)
+    st.checkbox(
+        "Agree",
+        key="agree",
+        on_change=on_change,
+        disabled=not st.session_state.get("unlocked", False),
+    )
+
+
+def test_a_widget_disabled_when_shown_is_refused_after_it_is_enabled() -> None:
+    """The check uses the run the client saw, even if this run enables the widget."""
+    at = AppTest.from_function(_unlockable_app).run()
+
+    at._run(
+        widget_state=forged_many(
+            WidgetState(id=at.button[0].id, trigger_value=True),
+            WidgetState(id=at.checkbox[0].id, bool_value=True),
+        )
+    )
+
+    assert at.checkbox[0].disabled is False
+    assert at.checkbox[0].value is False
+    assert at.checkbox[0].proto.set_value is True
+    assert "changes" not in at.session_state
+
+
+def _disabled_slider_app() -> None:
+    import streamlit as st
+
+    st.slider("Level", 0, 100, 10, key="level", disabled=True)
+
+
+def test_a_wrong_type_for_a_disabled_widget_does_not_stick_the_session() -> None:
+    """A forged field for a disabled widget is refused without raising, then or later."""
+    at = AppTest.from_function(_disabled_slider_app).run()
+
+    at._run(widget_state=forged(at.slider[0].id, string_value="x"))
+    at.run()
+
+    assert not at.exception
+    assert at.slider[0].value == 10
