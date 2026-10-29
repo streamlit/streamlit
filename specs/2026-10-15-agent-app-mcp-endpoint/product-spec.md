@@ -96,11 +96,23 @@ Or in Cursor's `mcp.json`:
 
 The route follows the parent spec's rules for every agent route: it respects
 `server.baseUrlPath`, it is registered even with the API off so a probe gets an answer
-rather than the app's HTML, and its URL carries no version. Appended to a page's URL
-instead of the app's, such as `/page2/_stcore/agent/mcp`, it is a `404` rather than the
-app's HTML with a `200`, as the other agent routes are. A person pastes the URL
+rather than the app's HTML, and its URL carries no version. A person pastes the URL
 once; MCP negotiates its protocol revision on each connection, and clients read the tool
 list afresh every time, so the URL never has to change.
+
+Appended to a page's URL instead of the app's, such as `/page2/_stcore/agent/mcp`, it
+is a `404` for any method, rather than the app's HTML with a `200` or the static file
+server's `405`. MCP clients only `POST`, and today only a `GET` gets that `404` on the
+other agent routes: the static file server refuses other methods before it checks
+reserved paths, so `POST /page2/_stcore/agent/interact` answers `405`. Any method on a
+reserved path under a page's URL becomes a `404`, which changes that answer for
+`interact` too. At the app's root, a reserved path a route does not take keeps the
+static file server's answer: `POST /_stcore/health` stays a `405`.
+
+**A trailing slash does not connect.** `/_stcore/agent/mcp/` gets the static file
+server's `301`, as every route's slash variant does, and neither official SDK follows a
+`301` for a `POST`, so the client reports a generic connection failure. Paste the URL
+without the slash; accepting it is a [follow-up](#follow-ups).
 
 **Each app is its own server.** A user who adds three apps gets three `interact` tools,
 which clients keep apart by the name the user gave each server. A successful
@@ -142,7 +154,11 @@ The agent API's operation, unchanged:
 - **Input** is the request body of `POST /_stcore/agent/interact` — `session_id`,
   `widget_state`, `trigger`, `page`, `query_params`, `context` — with the same schema,
   made self-contained. MCP has no `components` section to point into, and not every
-  client resolves `$ref`, so referenced schemas are inlined.
+  client resolves `$ref`, so referenced schemas are inlined. The schema keeps the
+  OpenAPI document's JSON Schema dialect: type arrays, `anyOf` with `null`, and an
+  untyped `trigger.value`. Clients that accept only a strict subset, such as OpenAI's
+  strict mode and Gemini-based clients, may reject it, so they are on the list checked
+  by hand before shipping ([Rollout](#rollout)).
 - **Output** is the snapshot as one JSON text block, the same document the HTTP API
   returns.
 - **The same code path.** An `interact` call runs the same operation as
@@ -212,9 +228,10 @@ get_data(session_id, url, offset=0, limit=500)
 `get_data` runs no app code, and a create would be a second way to start a run. The
 arguments follow `interact`'s request rules:
 
-- A call without `arguments` is handled as `{}`.
-- A missing `session_id` or `url`, one that is not a string, or an unknown field is
-  `invalid_request`, the parent's code for a malformed request.
+- A call without `arguments`, or with `arguments: null`, is handled as `{}`, as for
+  `interact`.
+- A missing `session_id` or `url`, one that is not a string, including `null`, or an
+  unknown field is `invalid_request`, the parent's code for a malformed request.
 - An unknown, expired, or identity-mismatched `session_id` is `unknown_session`. Unlike
   the HTTP route's message, it does not say to omit `session_id`: it says `get_data`
   cannot start a session, and `interact` without `session_id` starts one whose result
@@ -227,10 +244,12 @@ Reads a media file the app still stores:
   below says how it reads the id.
 - **`offset` and `limit` apply only to tables.** On every other file the server ignores
   both, including invalid values and the defaults a client sends, so `limit: 0` on an
-  image is not an error. On a table, both must be integers, not booleans, with `offset`
-  at least 0 and `limit` at least 1; any other value is `invalid_request`. An `offset`
-  past the last row returns an empty page: `columns`, `row_count`, `offset`,
-  `rows: []`, and `next_offset: null`.
+  image is not an error. On a table, both must be integers, with `offset` at least 0
+  and `limit` at least 1. As in `interact`, a number with no fractional part, such as
+  `100.0`, counts as an integer, and `null` is the same as omitting the argument, so
+  the input schema types both as an integer or `null`. A boolean, a fraction, a string,
+  or a value out of range is `invalid_request`. An `offset` past the last row returns
+  an empty page: `columns`, `row_count`, `offset`, `rows: []`, and `next_offset: null`.
 - **Tables** come back as JSON rows in the stream's column order, the shape of
   `data.preview`, with `row_count` and the `next_offset` of the following page, `null`
   on the last.
@@ -280,17 +299,20 @@ Reads a media file the app still stores:
   - `image/png`, `image/jpeg`, `image/gif`, and `image/webp` are MCP image content, the
     types Anthropic's and OpenAI's vision inputs accept. `audio/wav` and `audio/mpeg`,
     also as `audio/x-wav` and `audio/mp3`, are audio content, the formats OpenAI's
-    audio input accepts. Both carry a base64 `data` and the file's `mimeType`. Other
-    image and audio types, such as a BMP or TIFF that `st.image` stored from a path or
-    an `audio/ogg` file, are embedded resources, because one image or audio block a
-    model API rejects can fail the whole turn in some clients.
+    audio input accepts. Both carry a base64 `data` and the normalized type as
+    `mimeType`, lowercased and without parameters, such as `image/png` for a file
+    stored as `IMAGE/PNG; foo=bar`, because model APIs match these strings exactly.
+    Other image and audio types, such as a BMP or TIFF that `st.image` stored from a
+    path or an `audio/ogg` file, are embedded resources, because one image or audio
+    block a model API rejects can fail the whole turn in some clients.
   - `text/*`, `application/json`, and `image/svg+xml`, which is XML text, are text
     content. v1 returns them whole, up to the 5 MB cap, though a file that size is far
     past the client limits in [Limits and result size](#limits-and-result-size).
     Paging them like tables is a [follow-up](#follow-ups). MCP text must be Unicode, so
     a file whose bytes are not valid UTF-8 comes back as an embedded resource instead.
   - Anything else, such as a PDF, is an embedded resource, whose `uri`, `mimeType`, and
-    base64 `blob` sit on a nested `resource` object:
+    base64 `blob` sit on a nested `resource` object. Its `mimeType` is the stored type
+    unchanged, since a parameter such as `charset` matters there:
     `{"type": "resource", "resource": {"uri": "urn:streamlit:media:<id>", "mimeType": "application/pdf", "blob": "<base64>"}}`.
     MCP requires an absolute URI there, and the app cannot always know its public URL,
     so the `uri` names the file and is never fetched. The server still advertises tools
@@ -325,7 +347,9 @@ Reads a media file the app still stores:
   reads the argument by its shape alone. A media-file id is the hex digest the built-in
   media store names a file by. Media URLs end in that id plus the file's extension
   where its type has one, such as `../../media/<id>.png`, and a table's has none:
-  `../../media/<id>`.
+  `../../media/<id>`. An extension is a dot followed by any run of characters without
+  a dot, not only letters and digits: the platform's MIME database yields extensions
+  such as `.sfd-hdstx`, which `/media` serves.
   - **A media-file id with at most one extension, bare or as the last segment of a URL,
     relative or absolute, whose path ends in `media/<id>`:** the server looks up that
     id, without the extension, in the media file manager. So `../../media/<id>.png`,
@@ -376,8 +400,8 @@ four places, in order of how reliably clients show them to the model:
 
 1. **The tool descriptions**, which every client passes to the model with the tool. The
    essentials come first, since some clients cut long descriptions. The `interact`
-   description is about 3 KB and states the server's idle-session limit; with both
-   tools' input schemas, the tool list is about 9 KB, roughly 2,000 tokens spent in
+   description is about 2 KB and states the server's idle-session limit; with both
+   tools' input schemas, the tool list is about 10 KB, roughly 2,500 tokens spent in
    every conversation the server is enabled in.
 2. **The input schema's property descriptions**, the same text as the OpenAPI request
    schema's.
@@ -432,9 +456,10 @@ session.
   `-32600`, echoing the request's `id`, which makes the client fall back to
   `initialize`.
   - That revision replaces the handshake with per-request metadata. Of the common
-    clients, only Claude Code defaults to it so far. It probes first with
-    `server/discover` and `MCP-Protocol-Version: 2026-07-28`, then falls back to the
-    handshake unless the probe is an authorization failure.
+    clients, Claude Code and the official Python SDK, from 2.3.0 in its default
+    `mode="auto"`, use it first so far. They probe with `server/discover` and
+    `MCP-Protocol-Version: 2026-07-28`, then fall back to the handshake unless the
+    probe is an authorization failure.
   - Its transport falls back to `initialize` on HTTP `400` when the body is not a
     recognized modern error — an unsupported version, a missing capability, or a
     header mismatch — and `-32600` is not one of those. The official TypeScript
@@ -444,14 +469,16 @@ session.
     `2026-07-28` would lose the fallback.
   - `server/discover` gets this `400` with `-32600` whatever `MCP-Protocol-Version` it
     carries, including none or `2025-11-25`, so every probe falls back the same way.
-  - An unsupported `MCP-Protocol-Version` on a method this server implements is the
-    same HTTP `400` with `-32600`.
+  - An unsupported `MCP-Protocol-Version` on `tools/list`, `tools/call`, or `ping` is
+    the same HTTP `400` with `-32600`. `initialize` ignores the header and negotiates
+    in its body, because a client falling back from the `2026-07-28` probe may still
+    send that probe's header.
   - Adding the revision once ChatGPT or the Claude apps default to it stays contained,
     because the endpoint already follows its stateless model: no protocol session,
     nothing sent unprompted, and `session_id` a server-minted handle passed as a tool
     argument, which is the pattern that revision prescribes.
 - **A missing `MCP-Protocol-Version` header** is handled as the newest supported
-  revision, `2025-11-25`. `initialize` never carries the header, and some clients omit
+  revision, `2025-11-25`. `initialize` need not carry the header, and some clients omit
   it on later calls. This server keeps no MCP session, so it cannot recall a version
   from `initialize`, and it does not assume `2025-03-26`, a revision it does not speak.
 - **No batches.** Only the `2025-03-26` revision had them, and answering one would run
@@ -470,7 +497,17 @@ A content type counts as JSON when its media type is `application/json`, whateve
 parameters, so `application/json; charset=utf-8` passes. Every refusal before parsing
 answers with `id: null`, as JSON-RPC prescribes when the request's `id` cannot be read,
 and it applies to notifications too: while the API is off, `notifications/initialized`
-gets the `400`, not `202`.
+gets the `400`, not `202`. Its message is `"<code>: <message>"`, the agent API's code
+and the HTTP route's message, such as `not_available: This app does not serve the agent
+API. …`, and it carries no `data` field: a `data.supported` list could make a
+`2026-07-28` client read the answer as `-32022` and skip the fallback to `initialize`.
+
+Unlike the HTTP route, which reads an empty body as `{}`, the MCP route answers an empty
+or whitespace-only body with `-32700`, since JSON-RPC has no empty message. Valid JSON
+that is not a JSON-RPC message gets `-32600` with `id: null`: a missing or wrong
+`jsonrpc`, an `id` that is neither a string nor an integer, such as `null`, a boolean,
+or `1.5`, a `method` that is not a string, or no `method` in something that is not a
+response.
 
 Every outcome at the HTTP level:
 
@@ -478,15 +515,16 @@ Every outcome at the HTTP level:
 | ----------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------- |
 | A request, answered                             | `200`                    | A JSON-RPC result or error                                                                           |
 | A notification or a response                    | `202`                    | None                                                                                                 |
-| `GET`, `DELETE`, or any other method            | `405`, with `Allow: POST` | None. A `GET` would open a stream for messages the server sends on its own, and this server sends none. |
+| `GET`, `DELETE`, or another method the route registers | `405`, with `Allow: POST` | None. A `GET` would open a stream for messages the server sends on its own, and this server sends none. The route registers the common methods, as the other agent routes do, so it refuses them itself. A rarer one, such as `TRACE`, reaches the static file server, as on every route, and gets its `405` with `Allow: GET, HEAD` and no `Link`. |
 | The API is off                                  | `400`                    | `-32600` with `id: null`, with `not_available` in the message, naming `server.enableAgentApi`, for every JSON-RPC method and notification sent by `POST`, including `initialize` and `server/discover` |
 | A disallowed Host or `Origin`                   | `403`                    | `-32600`, with `host_not_allowed` or `origin_not_allowed` in the message                             |
 | An `Origin` without `Content-Type: application/json` | `400`               | `-32600`, with `invalid_request` in the message, asking for `Content-Type: application/json`         |
 | A body over `server.maxWidgetStateSize`         | `413`                    | `-32600`, with `request_too_large` in the message                                                    |
-| A body that is not JSON                         | `400`                    | `-32700`                                                                                             |
-| An unsupported `MCP-Protocol-Version` header    | `400`                    | `-32600`, echoing the request's `id`. `server/discover` uses this status and code too; see above.   |
+| A body that is not JSON, or is empty            | `400`                    | `-32700` with `id: null`                                                                             |
+| JSON that is not a JSON-RPC message             | `400`                    | `-32600` with `id: null`                                                                             |
+| An unsupported `MCP-Protocol-Version` header    | `400`                    | `-32600`, echoing the request's `id`. `server/discover` uses this status and code too, and `initialize` ignores the header; see above. |
 | A batch                                         | `200`                    | `-32600`                                                                                             |
-| An unknown tool, or `arguments` not an object   | `200`                    | `-32602`                                                                                             |
+| An unknown tool, or `arguments` neither an object nor `null` | `200`       | `-32602`, with one message for both that names the two tools and asks for an object. A missing or `null` `arguments` is `{}`. |
 
 ### Security
 
@@ -556,9 +594,9 @@ The parent spec's discovery points at the MCP endpoint too:
 - The OpenAPI document lists the route under `paths` and mentions it in its description,
   relative to the document. With the API off, the minimal document lists it with only
   its refusal, the `400`, as it lists `interact` with only its `403`.
-- Every response from the route carries `Link: <openapi.json>; rel="service-desc"`, as
-  the other agent routes' responses do. Relative to `_stcore/agent/mcp`, it names the
-  document beside it.
+- Every response the route gives, for the methods it registers, carries
+  `Link: <openapi.json>; rel="service-desc"`, as the other agent routes' responses do.
+  Relative to `_stcore/agent/mcp`, it names the document beside it.
 - The `<noscript>` text in `index.html` names the MCP server, stated as a fact like the
   rest. Its sentence on the protocol's one operation calls `POST _stcore/agent/interact`
   the one HTTP operation, and a new sentence says the same protocol is also an MCP
@@ -597,8 +635,9 @@ is the parent spec's follow-up #9, compact responses, which this ships without; 
 
 ### Rollout
 
-It lands as one PR after the agent API's v1 stack, behind the same setting, about 650
-lines including the tool descriptions. Beyond the endpoint itself:
+It lands as one PR after the agent API's v1 stack, behind the same setting, about 1,000
+lines of library code including the tool descriptions, docstrings, and messages, plus
+tests. Beyond the endpoint itself:
 
 - `get_data` reads files through the media file manager. A page's cost scales with the
   page, not the file: the stored Arrow is an uncompressed IPC stream, which reads
@@ -609,21 +648,29 @@ lines including the tool descriptions. Beyond the endpoint itself:
   limit; a decoded cache or a cap on reads at once comes in only if they call for one.
 - The route is wired like the other two agent routes: `_stcore/agent/mcp` joins the
   reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
-  and its endpoint is wrapped so every response carries the `Link` header.
+  and its endpoint is wrapped so every response carries the `Link` header. That `404`
+  covers every method, not only `GET`, for all the reserved paths, as
+  [Connecting an app](#connecting-an-app) describes.
 - Reading a file back is optional for a media store. Hosts can plug in their own store
   through `RuntimeConfig.media_file_storage`, and the storage interface has no read
   today: only the built-in in-memory store can return a file's bytes. On a store that
   cannot, `get_data` returns `read_unsupported` for any `url`, so an id in that store's
   own format is never called "not a media file".
 - Route-level unit tests, a conformance test against the official MCP SDK clients as a
-  dev-only dependency, performance coverage for repeated pages and concurrent
-  `get_data` calls, and a check that a hosted-style client sends no `Origin`. The route
-  tests cover at least a page's non-JSON request, version negotiation and the
-  `2026-07-28` probe's fallback, `get_data` on another identity's session, and
-  `next_offset` after a page the character budget cut short. A unit test holds the
-  hand-written tool descriptions to the definitions, so every error code and
+  dev-only dependency, in both the Python SDK's default `auto` mode, which probes
+  `2026-07-28` first, and its `legacy` mode, performance coverage for repeated pages and
+  concurrent `get_data` calls, and a check that a hosted-style client sends no
+  `Origin`. The route tests cover at least a page's non-JSON request, version
+  negotiation and the `2026-07-28` probe's fallback, `get_data` on another identity's
+  session, and `next_offset` after a page the character budget cut short. A unit test
+  holds the hand-written tool descriptions to the definitions, so every error code and
   `unavailable` reason they name exists, as the agent API's coverage test does for
   element descriptions.
+- Checked by hand before shipping: the Claude.ai and ChatGPT custom connectors, Claude
+  Code, Cursor, VS Code, and MCP Inspector. That covers whether hosted connectors send
+  `Origin` and connect past the OAuth-discovery probe ([Security](#security)), and
+  whether clients with strict tool schemas, such as OpenAI's strict mode and
+  Gemini-based clients, accept the `interact` input schema.
 
 ## Key design decisions
 
@@ -760,6 +807,10 @@ rather than ranked, and name the parent spec's follow-up where one builds on it.
 7. **The `2026-07-28` revision**, once ChatGPT or the Claude apps default to it.
 8. **A machine-readable MCP server descriptor**, such as a `.well-known` document, once
    MCP settles on one.
+9. **Accepting a trailing slash.** Answering `/_stcore/agent/mcp/` with a `308`, which
+   keeps the `POST` across the redirect, or serving the slash variant itself, so a
+   pasted URL with a slash connects instead of failing on the static file server's
+   `301`.
 
 Compact responses, the parent spec's follow-up #9, need nothing MCP-specific, since the
 endpoint returns what `interact` returns. This ships without them and documents the
@@ -781,9 +832,9 @@ and most apps are unaffected.
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
-| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. No new config options and no `st.*` changes.                                                                                                                                                                                           |
+| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. One change to the shipped routes: any method on a reserved path under a page's URL is a `404`, so `POST /page2/_stcore/agent/interact` stops answering `405`. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
 | Metrics collected          | Not in v1, as in the parent spec. Streamlit's usage stats are reported by the browser, which an agent session does not have. When agent usage metrics land (the parent's operations follow-up), they should also record the transport (`mcp` or HTTP) and the negotiated protocol version. `clientInfo.name` arrives only on `initialize`, so it is not a per-call field in the revisions this server speaks. |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is no broader than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                   |
-| Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
+| Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, without a trailing slash, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
