@@ -79,6 +79,14 @@ const INTERVAL_TRANSIENT_SIGNAL_SUFFIXES = new Set([
   "init",
 ])
 
+/** Scale types whose interval scale-trigger zeros the pixel extent on resize. */
+const NON_CONTINUOUS_SCALE_TYPES = new Set([
+  "band",
+  "point",
+  "ordinal",
+  "bin-ordinal",
+])
+
 /** True when Vega knows this signal. View.signal throws otherwise. */
 const hasSignal = (view: VegaView, name: string): boolean => {
   try {
@@ -89,16 +97,57 @@ const hasSignal = (view: VegaView, name: string): boolean => {
   }
 }
 
-const isTransientIntervalSignalName = (name: string): boolean =>
-  Array.from(INTERVAL_TRANSIENT_SIGNAL_SUFFIXES).some(suffix =>
-    name.endsWith(`_${suffix}`)
-  )
+const isNonContinuousChannelScale = (
+  view: VegaView,
+  channel: "x" | "y"
+): boolean => {
+  try {
+    const scale = view.scale(channel) as { type?: string }
+    return (
+      typeof scale.type === "string" &&
+      NON_CONTINUOUS_SCALE_TYPES.has(scale.type)
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Interval params whose overlay can be restored from extents. Band, point,
+ * and ordinal interval channels stay on the store-only path: Vega-Lite's
+ * scale-trigger sets their pixel extent to `[0, 0]` on resize, which nulls
+ * the data extent and would clear the restored store.
+ */
+const getRestorableIntervalParams = (
+  view: VegaView,
+  selectionMode: readonly string[]
+): string[] =>
+  selectionMode.filter(param => {
+    const xIsVisual = hasSignal(view, `${param}_x`)
+    const yIsVisual = hasSignal(view, `${param}_y`)
+    if (!xIsVisual && !yIsVisual) {
+      return false
+    }
+    return !(
+      (xIsVisual && isNonContinuousChannelScale(view, "x")) ||
+      (yIsVisual && isNonContinuousChannelScale(view, "y"))
+    )
+  })
+
+const matchingIntervalParam = (
+  intervalParams: readonly string[],
+  name: string
+): string | undefined =>
+  intervalParams
+    .toSorted((left, right) => right.length - left.length)
+    .find(param => name.startsWith(`${param}_`))
 
 /**
  * Whether `name` is a stable interval extent for one of `intervalParams`:
  * visual `{param}_x` / `{param}_y` ranges and matching `{param}_{field}`
- * data-space ranges. Point, legend, and input-bound params have no visual
- * extents, so they stay on the store-only path.
+ * data-space ranges. Uses the longest param prefix so `brush` does not
+ * claim `brush_point_*`. Point, legend, and input-bound params have no
+ * visual extents, so they stay on the store-only path.
  */
 const isPersistedIntervalExtentSignal = (
   view: VegaView,
@@ -108,39 +157,54 @@ const isPersistedIntervalExtentSignal = (
   if (!hasSignal(view, name)) {
     return false
   }
-  return intervalParams.some(param => {
-    const prefix = `${param}_`
-    if (!name.startsWith(prefix)) {
-      return false
-    }
-    const suffix = name.slice(prefix.length)
-    return suffix.length > 0 && !INTERVAL_TRANSIENT_SIGNAL_SUFFIXES.has(suffix)
-  })
+  const param = matchingIntervalParam(intervalParams, name)
+  if (param === undefined) {
+    return false
+  }
+  const suffix = name.slice(param.length + 1)
+  return suffix.length > 0 && !INTERVAL_TRANSIENT_SIGNAL_SUFFIXES.has(suffix)
+}
+
+const selectionStoreData = (
+  data: unknown,
+  selectionMode: readonly string[]
+): unknown => {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return data
+  }
+  return Object.fromEntries(
+    Object.entries(data as Record<string, unknown>).filter(([name]) =>
+      selectionMode.some(mode => `${mode}_store` === name)
+    )
+  )
 }
 
 /**
  * Drops snapshot signals the new view does not define, and drops transient
- * interval machinery, so a structural change cannot apply stale pixels.
- * Legacy snapshots without `signals` restore selection-store data only.
+ * or non-restorable interval machinery, so a structural change cannot apply
+ * stale pixels. Legacy snapshots without `signals` restore selection-store
+ * data only.
  */
 const sanitizeViewStateForRestore = (
   view: VegaView,
-  viewState: VegaViewState
+  viewState: VegaViewState,
+  selectionMode: readonly string[]
 ): VegaViewState => {
+  const data = selectionStoreData(viewState.data, selectionMode)
   if (isNullOrUndefined(viewState.signals)) {
-    return { data: viewState.data }
+    return { data }
   }
 
+  const intervalParams = getRestorableIntervalParams(view, selectionMode)
   const signals = Object.fromEntries(
-    Object.entries(viewState.signals).filter(
-      ([name]) => hasSignal(view, name) && !isTransientIntervalSignalName(name)
+    Object.entries(viewState.signals).filter(([name]) =>
+      isPersistedIntervalExtentSignal(view, intervalParams, name)
     )
   )
   if (Object.keys(signals).length === 0) {
-    return { data: viewState.data }
+    return { data }
   }
-
-  return { data: viewState.data, signals }
+  return { data, signals }
 }
 
 interface DebouncedSelection {
@@ -309,10 +373,9 @@ export const useVegaLiteSelections = (
         // Persist selection-store data plus stable interval extents so remounts
         // and fullscreen can restore selected marks and the brush overlay
         // without syncing view state to Python.
-        const intervalParams = selectionMode.filter(
-          param =>
-            hasSignal(vegaView, `${param}_x`) ||
-            hasSignal(vegaView, `${param}_y`)
+        const intervalParams = getRestorableIntervalParams(
+          vegaView,
+          selectionMode
         )
 
         const viewState = vegaView.getState({
@@ -592,7 +655,7 @@ export const useVegaLiteSelections = (
         isRestoreSuppressed = true
         try {
           return vegaView.setState(
-            sanitizeViewStateForRestore(vegaView, viewState)
+            sanitizeViewStateForRestore(vegaView, viewState, selectionMode)
           )
         } catch (e) {
           isRestoreSuppressed = false

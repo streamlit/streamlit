@@ -993,6 +993,12 @@ describe("useVegaLiteSelections", () => {
         getState: vi.fn(() => getStateResult),
         setState: vi.fn().mockReturnThis(),
         container: vi.fn(() => null),
+        scale: vi.fn((channel: string) => {
+          if (channel === "x" || channel === "y") {
+            return { type: "linear" }
+          }
+          throw new Error(`Unrecognized scale: "${channel}"`)
+        }),
         signal: vi.fn((name: string) => {
           if (!Object.hasOwn(presentSignals, name)) {
             throw new Error(`Unrecognized signal name: "${name}"`)
@@ -1111,6 +1117,57 @@ describe("useVegaLiteSelections", () => {
         expect(signals(dropped)).toBe(false)
       }
     )
+
+    it("does not persist extents when an interval channel uses a band scale", () => {
+      const view = createIntervalView()
+      view.scale.mockImplementation((channel: string) => {
+        if (channel === "x") {
+          return { type: "band" }
+        }
+        if (channel === "y") {
+          return { type: "linear" }
+        }
+        throw new Error(`Unrecognized scale: "${channel}"`)
+      })
+      configure(view)
+      const { signals, data } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(false)
+      expect(signals("brush_y")).toBe(false)
+      expect(signals("brush_Horsepower")).toBe(false)
+      expect(data("brush_store")).toBe(true)
+    })
+
+    it("matches the longest param prefix so nested names stay distinct", () => {
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+          brush_Horsepower: [80, 150],
+          brush_point_x: [12, 40],
+          brush_point_tuple: {},
+        },
+      })
+      configure(view, { selectionMode: ["brush", "brush_point"] })
+      const { signals } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(true)
+      expect(signals("brush_point_x")).toBe(true)
+      expect(signals("brush_point_tuple")).toBe(false)
+    })
+
+    it("persists data-space extents whose field names look like transients", () => {
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+          brush_release_init: ["a", "b"],
+        },
+      })
+      configure(view)
+      const { signals } = getStateOptions(view)
+
+      expect(signals("brush_x")).toBe(true)
+      expect(signals("brush_release_init")).toBe(true)
+    })
 
     it("captures extents for multiple interval params on one view", () => {
       const view = createIntervalView({
@@ -1272,7 +1329,10 @@ describe("useVegaLiteSelections", () => {
           brush_scale_trigger: {},
           brush_translate_anchor: { x: 1, y: 2 },
         },
-        data: { brush_store: [{ values: [1] }] },
+        data: {
+          brush_store: [{ values: [1] }],
+          extra_store: [{ values: [2] }],
+        },
       })
       const view = createIntervalView({
         presentSignals: {
@@ -1290,10 +1350,38 @@ describe("useVegaLiteSelections", () => {
       })
     })
 
+    it("restores a data-space field whose name looks like a transient suffix", () => {
+      mockWidgetMgr.getElementState.mockReturnValue({
+        signals: {
+          brush_x: [10, 80],
+          brush_release_init: ["a", "b"],
+        },
+        data: { brush_store: [{ values: [1] }] },
+      })
+      const view = createIntervalView({
+        presentSignals: {
+          brush_x: [10, 80],
+          brush_release_init: ["a", "b"],
+        },
+      })
+      configure(view)
+
+      expect(view.setState).toHaveBeenCalledWith({
+        signals: {
+          brush_x: [10, 80],
+          brush_release_init: ["a", "b"],
+        },
+        data: { brush_store: [{ values: [1] }] },
+      })
+    })
+
     it("restores data only when no persisted interval signals exist", () => {
       mockWidgetMgr.getElementState.mockReturnValue({
         signals: { param_1_y: [20, 90] },
-        data: { brush_store: [{ values: [1] }] },
+        data: {
+          brush_store: [{ values: [1] }],
+          pts_store: [{ values: [2] }],
+        },
       })
       const view = createIntervalView({
         presentSignals: { pts_tuple: {} },
@@ -1301,7 +1389,7 @@ describe("useVegaLiteSelections", () => {
       configure(view, { selectionMode: ["pts"] })
 
       expect(view.setState).toHaveBeenCalledWith({
-        data: { brush_store: [{ values: [1] }] },
+        data: { pts_store: [{ values: [2] }] },
       })
     })
 

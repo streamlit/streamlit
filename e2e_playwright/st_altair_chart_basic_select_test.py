@@ -132,6 +132,21 @@ def _click_unmount_button(app: Page) -> None:
     wait_for_app_run(app, wait_delay=4000)
 
 
+def _selection_markdown_text(app: Page, pattern: re.Pattern[str]) -> str:
+    locator = app.get_by_test_id("stMarkdownContainer").filter(has_text=pattern)
+    expect(locator).to_have_count(1)
+    return locator.inner_text()
+
+
+def _assert_restore_did_not_rerun(app: Page, runs_text: str) -> None:
+    expect(app.get_by_text(runs_text, exact=True)).to_be_visible()
+    # Wait past the 150ms hover/wheel debounce so a restore pulse cannot
+    # sneak in another run.
+    app.wait_for_timeout(400)
+    next_run = f"Runs: {int(runs_text.rsplit(' ', 1)[-1]) + 1}"
+    expect(app.get_by_text(next_run, exact=True)).not_to_be_visible()
+
+
 def test_point_bar_chart_displays_selection_text(app: Page):
     chart = _get_selection_point_bar_chart(app)
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
@@ -594,13 +609,14 @@ def test_interval_overlay_remains_after_unmounting_snapshot(
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    selection_text = _selection_markdown_text(app, expected_selection)
     assert_snapshot(chart, name="st_altair_chart-scatter_interval_selection")
 
     _click_unmount_button(app)
-    expect_prefixed_markdown(app, expected_prefix, expected_selection)
-    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
-    app.wait_for_timeout(200)
-    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
     chart.scroll_into_view_if_needed()
     # Remount can shift the chart a few pixels, so allow a slightly higher
     # image threshold.
@@ -628,15 +644,16 @@ def test_x_interval_overlay_remains_after_unmounting(
     )
     expect_prefixed_markdown(app, expected_prefix, expected_selection)
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    selection_text = _selection_markdown_text(app, expected_selection)
     app.mouse.move(0, 0)
     app.wait_for_timeout(250)
     assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_selection")
 
     _click_unmount_button(app)
-    expect_prefixed_markdown(app, expected_prefix, expected_selection)
-    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
-    app.wait_for_timeout(200)
-    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
     chart.scroll_into_view_if_needed()
     assert_snapshot(
         chart,
@@ -654,6 +671,36 @@ def test_x_interval_overlay_remains_after_unmounting(
     app.mouse.move(0, 0)
     app.wait_for_timeout(250)
     assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_cleared")
+
+
+def test_bar_interval_selection_remains_after_unmounting(app: Page):
+    chart = _get_selection_interval_bar_chart(app)
+    expect(chart).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    bounding_box = chart.bounding_box()
+    assert bounding_box is not None
+    app.mouse.move(bounding_box["x"] + 90, bounding_box["y"] + 150)
+    app.mouse.down()
+    app.mouse.move(bounding_box["x"] + 140, bounding_box["y"] + 153, steps=5)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expected_selection = re.compile(
+        r"\{'selection': \{'param_1': \{'a': \['A', 'B'\], 'b': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(
+        app, "Bar chart with selection_interval:", expected_selection
+    )
+    selection_text = _selection_markdown_text(app, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+
+    _click_unmount_button(app)
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
 
 
 def test_legend_bound_selection_reaches_python(app: Page):

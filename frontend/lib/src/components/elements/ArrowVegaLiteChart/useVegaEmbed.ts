@@ -331,12 +331,10 @@ export function useVegaEmbed(
         // Keep restore suppression through this first resize so scale-trigger
         // rewrites cannot emit a widget update. Skip if this createView was
         // superseded so we do not unsuppress the replacement view.
-        if (!isSuperseded()) {
-          endSelectionRestore()
-        }
         if (isSuperseded()) {
           return vegaViewRef.current
         }
+        endSelectionRestore()
 
         prevDataRef.current = compiledData
         prevDatasetsRef.current = compiledDatasets
