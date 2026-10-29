@@ -440,14 +440,20 @@ disabled bound widget is ignored on initial load and on back/forward navigation,
 widget keeps its default or previous value. The server rewrites the parameter to the
 widget's actual value, or removes it, the way it already corrects an invalid URL value,
 so the address bar never claims a value the widget does not hold. Today #16209 exempts
-URL seeding twice: `url_binding_resolved` skips the disabled discard in `register_widget`,
-and the priority check in `_handle_query_param_binding` lets a disabled widget seed. That
-leaves two holes:
+URL seeding: the priority check in `_handle_query_param_binding` lets a disabled widget
+seed, and `url_binding_resolved` then skips the disabled discard in `register_widget`.
+That leaves two holes:
 
 - With `disabled=not st.user.is_admin` and `bind="query-params"`, a user who cannot
   change the filter in the UI can set it by editing the URL.
 - The agent API refuses a disabled widget in `widget_state` with `disabled_widget`, but
   `query_params` on a navigation request still sets it. Blocking makes both paths agree.
+
+Removing the two exemptions would not close these holes. On a clean initial load,
+seeding never reaches the priority check, and `_seed_widget_from_url` writes the value
+into `_new_session_state`, which wins resolution even after the widget-state entry is
+discarded. So `_handle_query_param_binding` returns early for a disabled widget, before
+anything is seeded, and then corrects the parameter.
 
 An app that wants a link to preset a filter shown as locked reads `st.query_params` in
 app code and passes the value to the widget. App code is trusted, and the author owns
