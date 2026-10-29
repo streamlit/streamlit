@@ -102,6 +102,8 @@ own, provided each reports the violation and lets the caller decide."
    - The check uses the constraints from the latest run that rendered the widget. That
      is usually what the client saw; in a sync race it can be one run newer (see
      [Behavior changes](#behavior-changes)).
+   - Rendered means registered by that run, not visible: a widget the app replaced
+     later in the same run, for example with `st.empty()`, still counts.
    - If the current run later changes those constraints (new options, new bounds), the
      value is reconciled the way it is today.
    - This is the rule the agent API already follows: the snapshot is the contract.
@@ -178,20 +180,31 @@ correct client never notices it, apart from the cases in
 After Phase 1, a value that reaches a callback, `st.session_state`, or a widget's return
 value from a client satisfies all of the following:
 
-- It has the wire type the widget registered, and the widget can read it.
+- It arrived in a wire field the widget's frontend sends, and the widget can read it.
 - It comes from a widget that the latest run covering it registered, and that was not
   `disabled` in that run. This includes a widget the app removed later in that run, for example with
   `placeholder.empty()`, because the app emitted it.
 - It is one of the widget's options, or any non-empty text for a widget that accepts new
-  options, and it is within `max_selections` with no duplicates.
+  options. It is within `max_selections` and lists no option twice. A label several
+  options share may appear as often as they share it, as the multiselect's "Select all"
+  sends it, and it resolves as before: to the first such option in `st.multiselect`, and
+  to the last elsewhere.
 - It is within `min_value`/`max_value` and `max_chars`, and is a well-formed date, time,
-  color, or range.
+  color, or range. The author's own default passes as written, even text past
+  `max_chars` or a color with a trailing newline, because the browser shows it and
+  sends it back. A float `st.slider` also accepts a bound as the browser rounds it to
+  the step's precision (`min_value=0.123` with `step=0.1` sends `0.12`), and reads it as
+  the bound, so the app never sees a value past `min_value` or `max_value`.
 - It does not empty a `required` widget. `required` limits what a user can submit, not
   what the widget holds: an untouched required widget still reads as empty (`None`, `""`,
-  or `[]`), exactly as in the browser, so an app still has to handle that case. Outside a
-  form, a client can never clear it. Inside a form, the form-submit rule (item 7 in the
-  [plan](#ranked-delivery-plan), Phase 2) adds the browser's stricter rule: a submit is
-  refused while any rendered required field of that form is empty, touched or not.
+  or `[]`), exactly as in the browser, so an app still has to handle that case. Neither
+  a client nor a link can clear it, with one exception: inside a form, a required
+  `st.pills` or `st.segmented_control` without a default can return to that empty
+  default, because a form with `clear_on_submit` restores it and the browser does not
+  block the submit. The form-submit rule (item 7 in the [plan](#ranked-delivery-plan),
+  Phase 2) adds the browser's stricter rule: a submit is refused while any rendered
+  required field of that form is empty, touched or not. For `st.pills` and
+  `st.segmented_control`, it needs the browser to block that submit first.
 
 Later items add form submission, data editor policies, selections, and fragments (see
 the plan below).
@@ -226,9 +239,9 @@ across the plan rather than saved for a final PR. Cost is the estimated PR size:
 | **Phase 1** | | | | | |
 | 1 | **Boundary check and protocol integrity.** Check at the boundary; refuse a wrong wire type or a value the widget cannot read; move the `disabled` decision there; a disabled bound widget ignores its URL parameter. | High: crashes, stuck sessions, the `disabled` holes, a button returning a string | High: replaces `_check_readable`; the shared check exists | M | Low–Med |
 | 2 | **Closed option sets.** `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, `feedback`, `tabs`; `max_selections`; duplicates. With `accept_new_options`, any non-empty text stays legal. | High: the most-assumed constraint | Med: deletes `_validate_options` and `max_items`; `max_selections` refused instead of raised | S | Low |
-| 3 | **Rendered-widget gate.** Values and triggers only for widgets registered by the latest run that covered them | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
+| 3 | **Rendered-widget gate.** Values and triggers only for widgets registered by the latest run that covered them, including one the app replaced later in that run | High: hidden admin callbacks fire today | Low: the agent already refuses these from its snapshot; this adds defense in depth | M | Med: sync races |
 | 4 | **Bounds, shapes, formats, length.** `number_input`, `slider`, `select_slider` and `date_input` ranges, `datetime_input`, `time_input`, `color_picker`, `pagination`, `max_chars` on text and chat inputs | Low–Med: mostly coerced today; reversed and over-long ranges pass | High: silent reset or truncation becomes `invalid_value` naming the bound | S | Low |
-| 5 | **`required`, per field.** A required widget cannot change to empty | Med | High: closes "required not enforced" | S | Low |
+| 5 | **`required`, per field.** A required widget cannot change to empty: text, number, date, time, and datetime inputs, `selectbox`, and single-select `pills` and `segmented_control` | Med | High: closes "required not enforced" | S | Low |
 | **Phase 2** | | | | | |
 | 6 | **Data editor edit policy.** `num_rows`, editable columns, row and column existence, index rules, cost of added rows | High: editors feed database write-back | High: a prerequisite for agent edits | M–L | Med |
 | 7 | **Form submit integrity.** Fields change only with their own form's submit; a submit is refused as a whole if a rendered required field is empty or its button is disabled | Med | Med–High: replaces `missing_form_submit` logic; allows `clear_on_submit` on the server for agents | M–L | Med |
@@ -283,7 +296,9 @@ option:
   directly:
   - **E2E parity gate.** From item 1 on, the full e2e suite runs in CI with every
     rejection logged at warning level, and any rejection fails the run. A correct browser
-    must never be refused, including after a later frontend change.
+    must never be refused, including after a later frontend change. A test that provokes
+    a sync race on purpose opts out with the `allow_refused_widget_values` marker and a
+    reason.
   - **Accepted wire fields.** Item 1 derives each widget's accepted wire fields from what
     the frontend actually sends, audited per widget, not from the registered
     `value_type` (see the [tech spec](tech-spec.md#the-boundary-check)).
@@ -302,7 +317,7 @@ client and moves it into the runtime.
 
 | Agent code today | After |
 | --- | --- |
-| `_validate_options` and `ElementState.options` (options taken from the agent description) | The widget serde's own `validate`, reached through `WidgetMetadata.validator` (item 2). The agent never needs to know a widget's rules, and the agent description stays a description instead of doubling as a validation list. |
+| `_validate_options` (options taken from the agent description) | The widget serde's own `validate`, reached through `WidgetMetadata.validator` (item 2). The agent never needs to know a widget's rules, and the agent description stays a description instead of doubling as a validation list. `ElementState.options` stays, only to send a JSON number as an option's label and to list the options in an error. |
 | `ElementState.max_items` for `max_selections` and ranges | The shared check (items 2 and 4). |
 | `_check_readable`, which runs the deserializer to avoid a stuck session | The shared readability check (item 1). |
 | The docstring rule that "constraints a widget owns are left to the widget, which resets, truncates, or trims" | The widget reports the violation; the agent refuses with `invalid_value`. |
@@ -324,11 +339,12 @@ own "is rendered" fact, which the agent's `not_on_page` can sit on top of.
 
 - **Fewer silent outcomes.** An out-of-range number, an over-long string, a reversed or
   too-short range, and a malformed date or color are refused with `invalid_value`, and
-  the error names the bound. The agent spec's "Everything else shows in the next
-  snapshot's `value`" paragraph shrinks to the one legitimate case: the app changing a
-  widget's constraints in the run the request caused. The planned per-key "how each value
-  landed" note becomes mostly unnecessary.
-- **Browser parity on `required`, and later on forms.** That removes a row from "What v1
+  the error names the bound or the layout. Date text the widget cannot read at all,
+  such as `"tomorrow"`, gets the generic `invalid_value` message. The agent spec's
+  "Everything else shows in the next snapshot's `value`" paragraph shrinks to the one
+  legitimate case: the app changing a widget's constraints in the run the request
+  caused. The planned per-key "how each value landed" note becomes mostly unnecessary.
+- **Browser parity on `required`, and later on forms.** That narrows a row of "What v1
   does not support" and makes conformance tests against a browser session meaningful.
 - **A truthful schema.** The agent spec's follow-up of stating `minimum`, `maximum`,
   `maxLength`, and `maxItems` in `value_schema` was deferred until "the server refuses
@@ -353,16 +369,23 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only four of them, all
+Each change follows from the contract. A correct browser sees only six of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
-text past `max_chars` from app code or a link, and the sync races. A browser that
-reconnects to a new session, after a server restart or an expired
-`server.disconnectedSessionTTL`, keeps its values as today, apart from text past
-`max_chars` from app code. No callback fires for them, and each is checked when its
-widget registers. The other changes affect only forged values and `AppTest`.
+values from app code or a link that break a constraint, a float slider's click at a
+bound, a form's staged values when it remounts, and the sync races. App code also sees
+one: the Components v2 trigger key. A browser that reconnects to a new session, after a
+server restart or an expired `server.disconnectedSessionTTL`, keeps its values as
+today, apart from text past `max_chars`, or an empty value for a required widget whose
+default is not empty, that app code wrote. No callback fires for them, and each is
+checked when its widget registers. The other changes affect only forged values,
+`AppTest`, and the agent API.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
+- **A widget the app no longer renders accepts nothing.** A click or change for a widget
+  the latest run did not render, such as a button behind a condition that is now false,
+  in a dialog that closed, after `st.stop()`, or on another page, is ignored and runs no
+  callback.
 - **A rejected client value keeps the previous value.** Today some widgets reset it to the
   default. This differs only when the previous value was not the default.
 - **`st.multiselect` no longer raises** `StreamlitSelectionCountExceedsMaxError` for client
@@ -371,7 +394,8 @@ widget registers. The other changes affect only forged values and `AppTest`.
   click was legal when it was made. Today it returns `False` after firing `on_click`.
 - **A disabled bound widget ignores its URL parameter.** Today a link can set a widget
   the app shows as disabled, because #16209 exempted URL seeding. The widget now keeps
-  its default or previous value, and the server corrects or removes the parameter. This
+  its default or previous value, on the first load, on back and forward, and after a
+  page change that brings it back, and the server corrects or removes the parameter. This
   needs a changelog entry, but it is rare, because `bind="query-params"` is new. A link
   that presets a filter shown as locked still works if the app reads `st.query_params`
   and passes the value to the widget itself.
@@ -386,17 +410,40 @@ widget registers. The other changes affect only forged values and `AppTest`.
   truncated, but in UTF-16 code units, as the browser counts, so text with astral
   characters such as emoji keeps fewer characters than today. Both need a changelog
   entry.
+- **Other links that break a constraint** are repaired or cleared by the widget's own
+  rules. A reversed range is now sorted (`st.slider`, `st.date_input`). A three-date
+  range, a color with a trailing newline, an empty parameter for a required widget, and
+  a start-only range for a required range now clear the parameter.
+- **A float `st.slider` click at a bound selects the bound.** For some bounds and steps,
+  the browser commits a value just past a bound, because it rounds to the step's
+  precision. Today the server silently resets the slider to its default. It now reads
+  the value as the bound.
+- **A form keeps its staged values when it remounts.** Today, when an element appears
+  above a form, the browser sends the form's staged values with the next rerun, without
+  a submit. A frontend fix keeps them staged until the submit.
+- **Keyed `st.pills` and `st.segmented_control` still read a label they cannot resolve
+  as their held selection.** A forged label therefore counts as unchanged: no callback
+  runs, and the browser is not re-synced.
+- **The agent API accepts a shared label that is unchanged on the wire,** such as the
+  reported value sent back. Any other label several options share is still refused.
+- **A Components v2 component's trigger key** (`"<key>__events"`) can no longer be
+  assigned in `st.session_state` after the component renders. Like any widget key, it
+  raises `StreamlitWidgetAlreadyInstantiatedError`.
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
-  `max_value` or `""` on a `required` field, now sees it dropped instead of coerced,
-  exactly as in the browser. This is called out in the changelog. A follow-up makes
-  `set_value` raise instead (see [Out of scope](#out-of-scope)). `AppTest` already stages
-  form values until submit, so item 7 does not change form tests.
+  `max_value`, `""` or `None` on a filled `required` field, or `set_range` with reversed
+  ends, now sees it dropped instead of coerced, exactly as in the browser. This is called
+  out in the changelog. A follow-up makes `set_value` raise instead (see
+  [Out of scope](#out-of-scope)). `AppTest` already stages form values until submit, so
+  item 7 does not change form tests.
 - **Sync races.** A user's change can be dropped where it is accepted today. This happens
   when a server-initiated rerun (`run_every`, `st.rerun` from another fragment, a file
   change) removed the widget, or changed its options or bounds, after the browser
   rendered it and before the user's message arrived. In both cases the browser was about
-  to remove or reset that widget anyway. A click on a stale element right after a
+  to remove or reset that widget anyway. The same holds for a user's own rerun: a second
+  click on a button in a dialog its first click closed is dropped. The message that
+  changes the page is still checked against the previous page, so a change it carries
+  for that page's widgets still lands. A click on a stale element right after a
   reconnect, before the new session registered the widget, is dropped too. Rejections a
   correct browser can cause are logged at debug level; the rest are logged at warning
   level, without the value, which may be a password.
@@ -450,8 +497,8 @@ widget registers. The other changes affect only forged values and `AppTest`.
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side only. No frontend or platform change, apart from the browser re-syncing to values it already accepts through `set_value`. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars` from app code. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, text past `max_chars` from app code or a link, and the sync races described there. `AppTest` values that violate constraints are now dropped. |
+| Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
