@@ -40,9 +40,9 @@ export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
     // top. Stay below app chrome such as the sticky bottom container.
     const shownZIndex = theme.zIndices.priority
     const shownStyles = {
-      // The hidden toolbar overlaps the top of its own element (e.g. the
-      // dataframe header). Raise it only once `top` has moved it above the
-      // element, so the not-yet-visible toolbar never takes those clicks.
+      // Raise z-index only after `top` finishes (100ms delay + 100ms duration).
+      // Until then the toolbar still overlaps its own element, such as the
+      // dataframe header, and must not take those clicks.
       transition: "opacity 150ms 100ms, top 100ms 100ms, z-index 0ms 200ms",
       opacity: 1,
       top: topDistance,

@@ -239,7 +239,7 @@ def test_element_toolbar_renders_above_selected_segment(app: Page):
 
     # Negative check: the hidden toolbar overlaps the top of the dataframe
     # header but must not take clicks from it.
-    hidden_button_box = toolbar.locator("button").last.bounding_box()
+    hidden_button_box = toolbar.get_by_role("button", name="Fullscreen").bounding_box()
     dataframe_box = dataframe.bounding_box()
     assert hidden_button_box is not None
     assert dataframe_box is not None
