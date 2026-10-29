@@ -694,7 +694,9 @@ Items 1–3 are covered above.
     the default. The boundary refuses that as `unreadable`, and URL seeding clears the
     parameter.
 - `color_picker`: `#rgb` or `#rrggbb` in either case, as `_HEX_COLOR_RE` accepts, checked
-  with `fullmatch`, which also fixes `$` matching before a trailing newline.
+  with `fullmatch`, which also fixes `$` matching before a trailing newline. The author's
+  `value` passes as written, because `st.color_picker` checks it with `re.match`, which
+  allows that newline, and the browser sends it back.
 - `pagination`: an integer in `1..num_pages`.
 - `feedback`: `""` or an index in range (`"0"` to `"n-1"`). The browser sends `""` when
   the user clicks the selected face again to clear it, and `FeedbackSerde` reads it as
@@ -702,7 +704,10 @@ Items 1–3 are covered above.
 - `max_chars`: counted in UTF-16 code units (`len(text.encode("utf-16-le")) // 2`), as
   the browser counts them, so an astral character counts as two and nothing a browser
   accepts is refused. `0` means no limit, as in the browser (`maxChars !== 0`). The text
-  serdes truncate to `""` today; item 4 drops that slice along with the rest.
+  serdes used to cut any text to `""` for `max_chars=0`; item 4 drops that slice along
+  with the rest. The author's `value` passes as written even past `max_chars`, as it
+  is returned: the browser shows it and sends it back, also as a change when a form
+  with `clear_on_submit` clears to it.
 - The deserializers stop replacing refused values and keep their conversions, such as
   `int()`, and the text serdes stop slicing to `max_chars`. See
   [above](#where-constraints-live-in-each-widgets-serde).

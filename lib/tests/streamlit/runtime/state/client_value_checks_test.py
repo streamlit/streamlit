@@ -1185,3 +1185,175 @@ def test_a_bound_url_color_is_normalized_or_cleared(
     assert not at.exception
     assert at.session_state.color == expected_value
     assert at.query_params.get("color") == expected_param
+
+
+def _text_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    st.text_input("Name", max_chars=3, key="name", on_change=on_change, args=["name"])
+    st.text_area("Bio", max_chars=3, key="bio", on_change=on_change, args=["bio"])
+    # The browser reads 0 as no limit.
+    st.text_input("Free", max_chars=0, key="free", on_change=on_change, args=["free"])
+    prompt = st.chat_input(
+        "Say", max_chars=3, key="chat", on_submit=on_change, args=["chat"]
+    )
+    st.write(f"prompt={prompt!r}")
+
+
+_LEGAL_TEXT: dict[str, dict[str, Any]] = {
+    "name": {"string_value": "ab"},
+    "bio": {"string_value": "xyz"},
+}
+
+
+@pytest.mark.parametrize(
+    ("key", "text"),
+    [
+        ("name", "abcd"),
+        # An emoji is two UTF-16 code units, as the browser counts it.
+        ("name", "😀😀"),
+        ("bio", "a\nbc"),
+    ],
+)
+def test_text_past_max_chars_is_refused(key: str, text: str) -> None:
+    """Over-long text runs no callback, keeps the previous text, and re-syncs."""
+    at = AppTest.from_function(_text_app).run()
+    _send_legal_values(at, _LEGAL_TEXT)
+
+    _assert_refused_and_resynced(at, key, {"string_value": text}, _LEGAL_TEXT)
+
+
+def test_text_within_max_chars_or_without_a_limit_is_accepted() -> None:
+    """Text at max_chars passes, and max_chars=0 takes any length."""
+    at = AppTest.from_function(_text_app).run()
+
+    at._run(
+        widget_state=forged_many(
+            WidgetState(id=_widget_id(at, "name"), string_value="a😀"),
+            WidgetState(id=_widget_id(at, "free"), string_value="x" * 1000),
+        )
+    )
+
+    assert at.session_state.calls == ["name", "free"]
+    assert at.session_state.name == "a😀"
+    assert at.session_state.free == "x" * 1000
+
+
+@pytest.mark.parametrize(("text", "accepted"), [("abcd", False), ("😀a", True)])
+def test_a_chat_message_past_max_chars_is_refused(text: str, accepted: bool) -> None:
+    """A chat message counts UTF-16 code units; a refused one is never submitted."""
+    at = AppTest.from_function(_text_app).run()
+
+    at._run(
+        widget_state=forged(_widget_id(at, "chat"), chat_input_value={"data": text})
+    )
+
+    assert not at.exception
+    assert at.session_state.get("calls") == (["chat"] if accepted else None)
+    assert at.markdown[0].value == (f"prompt={text!r}" if accepted else "prompt=None")
+
+
+def test_programmatic_text_past_max_chars_stays_as_written(
+    refusal_logs: list[str],
+) -> None:
+    """Session state text past max_chars is kept, and its echo fires no on_change."""
+    at = AppTest.from_function(_text_app).run()
+
+    with patch_config_options({"global.e2eTest": True}):
+        at.session_state["name"] = "abcd"
+        at.run()
+        # AppTest sends the widget's value back, as the browser echoes it.
+        at.run()
+
+    assert at.text_input(key="name").value == "abcd"
+    assert "calls" not in at.session_state
+    assert refusal_logs == []
+
+
+def test_a_new_session_drops_programmatic_text_past_max_chars() -> None:
+    """A reconnect sends the text back, and the new session falls back to the default.
+
+    The new session checks the value against the widget's max_chars when it
+    registers, and it has no programmatic value to explain it.
+    """
+    first = AppTest.from_function(_text_app).run()
+    first.session_state["name"] = "abcd"
+    first.run()
+    restored = first._tree.get_widget_states().widgets
+
+    fresh = AppTest.from_function(_text_app)
+    fresh._run(widget_state=forged_many(*restored))
+
+    assert fresh.text_input(key="name").value == ""
+    assert fresh.text_input(key="name").proto.set_value is True
+    assert "calls" not in fresh.session_state
+
+
+def _long_default_app() -> None:
+    import streamlit as st
+
+    with st.form("profile", clear_on_submit=True):
+        st.text_input("Code", "abcdef", max_chars=3, key="code")
+        st.form_submit_button("Save", key="save")
+
+
+def test_a_default_past_max_chars_is_never_refused(refusal_logs: list[str]) -> None:
+    """The browser shows a long default as written and sends it back.
+
+    A form that clears on submit sends the default as a change.
+    """
+    at = AppTest.from_function(_long_default_app).run()
+    assert at.text_input(key="code").value == "abcdef"
+
+    with patch_config_options({"global.e2eTest": True}):
+        at._run(
+            widget_state=forged_many(
+                WidgetState(id=_widget_id(at, "code"), string_value="ab"),
+                WidgetState(id=_widget_id(at, "save"), trigger_value=True),
+            )
+        )
+        assert at.text_input(key="code").value == "ab"
+        # The cleared form sends the default back with the next submit.
+        at._run(
+            widget_state=forged_many(
+                WidgetState(id=_widget_id(at, "code"), string_value="abcdef"),
+                WidgetState(id=_widget_id(at, "save"), trigger_value=True),
+            )
+        )
+
+    assert not at.exception
+    assert at.text_input(key="code").value == "abcdef"
+    assert refusal_logs == []
+
+
+@pytest.mark.parametrize(
+    ("key", "url_value", "expected"),
+    [
+        ("name", "abc", "abc"),
+        ("name", "abcd", "abc"),
+        # Truncation counts UTF-16 code units and never splits a character.
+        ("name", "a😀b", "a😀"),
+        ("name", "😀😀", "😀"),
+        ("bio", "abcd", "abc"),
+        ("free", "x" * 100, "x" * 100),
+    ],
+)
+def test_a_bound_url_text_past_max_chars_is_truncated(
+    key: str, url_value: str, expected: str
+) -> None:
+    """A link's text is cut to max_chars, and the URL is corrected to it."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        "st.text_input('Name', max_chars=3, key='name', bind='query-params')\n"
+        "st.text_area('Bio', max_chars=3, key='bio', bind='query-params')\n"
+        "st.text_input('Free', max_chars=0, key='free', bind='query-params')\n"
+    )
+    at.query_params[key] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.session_state[key] == expected
+    assert at.query_params.get(key) == expected

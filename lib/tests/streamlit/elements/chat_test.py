@@ -50,6 +50,7 @@ from streamlit.proto.Common_pb2 import (
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFile,
     UploadedFileRec,
@@ -1027,29 +1028,45 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("past_the_limit", 4, "abcdef", "abcd"),
-            ("at_the_limit", 6, "abcdef", "abcdef"),
-            ("no_limit", None, "abcdef", "abcdef"),
+            ("past_the_limit", 4, "abcdef", False),
+            ("at_the_limit", 6, "abcdef", True),
+            ("no_limit", None, "abcdef", True),
             # The browser reads 0 as no limit.
-            ("zero_means_no_limit", 0, "abcdef", "abcdef"),
+            ("zero_means_no_limit", 0, "abcdef", True),
+            # An emoji counts as two UTF-16 code units, as in the browser.
+            ("astral_past_the_limit", 3, "😀😀", False),
+            ("astral_at_the_limit", 4, "😀😀", True),
         ]
     )
-    def test_deserialize_cuts_text_past_max_chars(
-        self, _name: str, max_chars: int | None, sent: str, expected: str
+    def test_validate_refuses_text_past_max_chars(
+        self, _name: str, max_chars: int | None, sent: str, accepted: bool
     ) -> None:
-        """Text a client sends past `max_chars` is cut, as a text input cuts it."""
+        """Text past `max_chars` is refused, and the deserializer never cuts it."""
         serde = ChatInputSerde(max_chars=max_chars)
+        value = ChatInputValueProto(data=sent)
 
-        assert serde.deserialize(ChatInputValueProto(data=sent)) == expected
+        assert serde.deserialize(value) == sent
+        violation = serde.validate(value)
+        if accepted:
+            assert violation is None
+        else:
+            assert violation == Violation("too_long", {"max_chars": max_chars})
 
-    def test_deserialize_cuts_text_past_max_chars_with_files(self) -> None:
-        """The cut applies to the text of a submission that accepts files too."""
+    def test_validate_accepts_a_submission_without_text(self) -> None:
+        """A submission with only files carries no text to count."""
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+
+        assert serde.validate(ChatInputValueProto()) is None
+        assert serde.validate(None) is None
+
+    def test_deserialize_keeps_text_past_max_chars_with_files(self) -> None:
+        """A submission that accepts files keeps its text whole too."""
         serde = ChatInputSerde(accept_files=True, max_chars=2)
 
         result = serde.deserialize(ChatInputValueProto(data="abc"))
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "ab"
+        assert result.text == "abc"
 
 
 class PopUploadFilesTest(DeltaGeneratorTestCase):

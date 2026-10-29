@@ -24,6 +24,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.utils import compute_and_register_element_id
+from streamlit.elements.widgets.text_widgets import TextAreaSerde, TextInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitBadTimeStringError,
@@ -35,6 +36,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -1117,3 +1119,37 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.text_input[0].value is None
+
+
+@pytest.mark.parametrize("serde_class", [TextInputSerde, TextAreaSerde])
+@pytest.mark.parametrize(
+    ("max_chars", "sent", "accepted"),
+    [
+        (3, "abc", True),
+        (3, "abcd", False),
+        # An emoji counts as two UTF-16 code units, as in the browser.
+        (3, "😀😀", False),
+        (4, "😀😀", True),
+        # 0 and None mean no limit, as in the browser.
+        (0, "abcdef", True),
+        (None, "abcdef", True),
+        (3, None, True),
+        # The author's value is accepted as written, even past the limit.
+        (3, "default!", True),
+    ],
+)
+def test_text_serde_validate_counts_max_chars_like_the_browser(
+    serde_class: type[TextInputSerde | TextAreaSerde],
+    max_chars: int | None,
+    sent: str | None,
+    accepted: bool,
+) -> None:
+    """Text past max_chars is refused, and the deserializer never cuts it."""
+    serde = serde_class(value="default!", max_chars=max_chars)
+
+    violation = serde.validate(sent)
+    if accepted:
+        assert violation is None
+    else:
+        assert violation == Violation("too_long", {"max_chars": max_chars})
+    assert serde.deserialize(sent) == ("default!" if sent is None else sent)

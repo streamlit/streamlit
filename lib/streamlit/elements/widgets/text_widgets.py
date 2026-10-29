@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -56,13 +56,28 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
     from streamlit.type_util import SupportsStr
+
+
+def _validate_text(
+    ui_value: str | None, *, value: str | None, max_chars: int | None
+) -> Violation | None:
+    """Refuse text past ``max_chars``, counted in UTF-16 code units as a browser does.
+
+    The author's ``value`` is accepted as written, even past ``max_chars``: the
+    browser shows it and sends it back, for example when a form clears to it.
+    """
+    if ui_value is None or ui_value == value:
+        return None
+    return widget_checks.text_length(ui_value, max_chars)
 
 
 @dataclass
@@ -70,11 +85,14 @@ class TextInputSerde:
     value: str | None
     max_chars: int | None = None
 
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        return _validate_text(ui_value, value=self.value, max_chars=self.max_chars)
+
     def deserialize(self, ui_value: str | None) -> str | None:
-        result = ui_value if ui_value is not None else self.value
-        if result is not None and self.max_chars is not None:
-            result = result[: self.max_chars]
-        return result
+        # Never cuts text to max_chars: validate refuses longer text from a
+        # client, URL seeding truncates a link's text, and the author's value
+        # and session state values stay as written, as the browser shows them.
+        return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -85,11 +103,12 @@ class TextAreaSerde:
     value: str | None
     max_chars: int | None = None
 
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        return _validate_text(ui_value, value=self.value, max_chars=self.max_chars)
+
     def deserialize(self, ui_value: str | None) -> str | None:
-        result = ui_value if ui_value is not None else self.value
-        if result is not None and self.max_chars is not None:
-            result = result[: self.max_chars]
-        return result
+        # Never cuts text to max_chars, as TextInputSerde.deserialize explains.
+        return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -915,6 +934,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
@@ -1370,6 +1390,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,

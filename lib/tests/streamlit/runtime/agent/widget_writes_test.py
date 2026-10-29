@@ -820,8 +820,12 @@ class WidgetWritesTest(SnapshotCase):
             ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
-            # The widget cuts text past `max_chars`, as a text input does.
-            ("chat_past_max_chars", {"key": "prompt", "value": "x" * 9}, "x" * 8),
+            (
+                "chat_past_max_chars",
+                {"key": "prompt", "value": "x" * 9},
+                _Refused("not one it accepts"),
+            ),
+            ("chat_at_max_chars", {"key": "prompt", "value": "x" * 8}, "x" * 8),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),
             (
                 "menu_unknown_option",

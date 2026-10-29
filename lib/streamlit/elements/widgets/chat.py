@@ -78,6 +78,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -85,6 +86,7 @@ from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 # Audio file validation constants
@@ -389,12 +391,21 @@ class ChatInputSerde:
     # The browser stops input at this length, and 0 or None means no limit.
     max_chars: int | None = None
 
+    def validate(
+        self, ui_value: ChatInputValueProto | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse text past ``max_chars``, in UTF-16 code units as a browser counts."""
+        if ui_value is None or not ui_value.HasField("data"):
+            return None
+        return widget_checks.text_length(ui_value.data, self.max_chars)
+
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
-        text = ui_value.data[: self.max_chars] if self.max_chars else ui_value.data
+        # Never cut to max_chars: validate refuses longer text.
+        text = ui_value.data
         if not self.accept_files and not self.accept_audio:
             return text
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
@@ -1131,6 +1142,7 @@ class ChatMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="chat_input_value",
             disabled=disabled,

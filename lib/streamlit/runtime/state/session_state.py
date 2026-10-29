@@ -171,6 +171,8 @@ def _repair_url_wire(
       of its default's shape, so an item that names no option is replaced by
       the default's item at that position.
     - A range whose ends are reversed is sorted, as the browser sends it.
+    - Text past ``max_chars`` is truncated in UTF-16 code units, as the
+      browser counts them, without splitting a character.
     """
     if violation is None:
         return None
@@ -190,6 +192,8 @@ def _repair_url_wire(
         ]
     if violation.kind == "bad_shape" and violation.detail.get("order"):
         return sorted(wire)
+    if violation.kind == "too_long" and isinstance(wire, str):
+        return widget_checks.truncate_utf16(wire, violation.detail["max_chars"])
     return None
 
 
