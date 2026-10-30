@@ -70,14 +70,11 @@ class TestPaginationSerde:
             (None, None),
             (1, None),
             (10, None),
-            # The int and double fields accept each other.
-            (3.0, None),
             (0, Violation("out_of_range", {"min_value": 1, "max_value": 10})),
             (11, Violation("out_of_range", {"min_value": 1, "max_value": 10})),
-            (2.5, Violation("malformed", {"expected": "a whole number"})),
         ],
     )
-    def test_validate(self, ui_value: float | None, expected: Violation | None):
+    def test_validate(self, ui_value: int | None, expected: Violation | None):
         """A page is a whole number in 1..num_pages."""
         serde = PaginationSerde(default=1, num_pages=10)
         assert serde.validate(ui_value) == expected

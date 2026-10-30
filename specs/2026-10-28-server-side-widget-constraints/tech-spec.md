@@ -144,9 +144,14 @@ read it:
    (`runtime/state/widgets.py`) calls that a "best-effort guess" that is "updated to be
    the correct type" once a proto arrives, which is why `WStates.__getitem__` overwrites
    it today. Most widgets turn out to accept the `value_type` they registered.
-   - Lossless numeric pairs are interchangeable: `int_value` with `double_value`, and the
-     int and double array fields, within ±2^53, where a double holds every integer
-     exactly.
+   - `number_input`, which registers `double_value`, also accepts `int_value`, within
+     ±2^53, where a double holds every integer exactly. Its frontend sends an `INT`
+     input's value as `int_value`, and a keyed input keeps its ID when its type
+     changes, so it accepts both fields whatever its type. No other widget accepts
+     the paired numeric field: the slider always sends `double_array_value`, and
+     `pagination` always sends `int_value`. A paired field for those would be kept as
+     the field it arrived in, which their serializers cannot write, so the next
+     `get_widget_states()` would raise.
    - Components v1, which register `json_value`, also accept `bytes_value` and
      `arrow_value`.
    - `WStates.__getitem__` stops overwriting `metadata.value_type`. The field that
@@ -762,9 +767,11 @@ Items 1–3 are covered above.
   bound is `malformed`, with the limit in `expected`. A double holds every finite float,
   so only an `INT` input reaches it.
 - Every integer-valued widget accepts a whole number only: an `INT` `number_input`, an
-  `INT` `slider`, and `pagination`. Check 1 lets them receive a `double_value`, which
-  their deserializers truncate (`int()`) or, for `pagination`, return unchanged, but the
-  browser never sends a fraction.
+  `INT` `slider`, and `pagination`. An `INT` `number_input` can receive a
+  `double_value`, which AppTest and the agent API send, and an `INT` slider receives
+  doubles, so their validators refuse a fraction and their deserializers truncate a
+  whole one (`int()`). `pagination` accepts only `int_value`, so a page is always
+  whole.
 - A float `slider` can commit a value just past a bound. React Aria clamps a thumb to
   the bounds and then rounds it to the step's precision, one decimal place more than
   the step has (`snapValueToStep`). So `min_value=0.123` with `step=0.1` commits
@@ -1004,7 +1011,7 @@ a client value no longer rebuilds the widget's metadata.
 
 - **Unit tests** for every helper, both accept and refuse, including the edges in the
   [inventory](constraint-inventory.md): astral characters against `max_chars`, the
-  whitespace set, partial date ranges, and lossless numeric fields. Also fractions for
+  whitespace set, partial date ranges, and the paired numeric fields. Also fractions for
   every integer-valued widget, and a `json_value` that fails `json.loads`. Accept cases
   include every sentinel and layout the shipped frontend sends, because the browser
   parity run only catches an over-strict validator when some e2e app happens to send that

@@ -66,9 +66,18 @@ from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import ValueFieldName
     from streamlit.runtime.state.widget_checks import Violation
 
 _LOGGER: Final = get_logger(__name__)
+
+# The frontend sends an integer input's value as int_value and a float
+# input's as double_value, and AppTest and the agent API send double_value
+# for both. A keyed input keeps its ID when its type changes, so the browser
+# can still hold an int_value for a float input.
+_ACCEPTED_FIELDS: Final[frozenset[ValueFieldName]] = frozenset(
+    {"double_value", "int_value"}
+)
 
 Number: TypeAlias = int | float
 
@@ -98,9 +107,8 @@ class NumberInputSerde:
             # default when the user empties a field that has one. It is empty
             # only without a default.
             return widget_checks.filled(self.value, required=self.required)
-        # NaN fails every comparison, and an integer input can receive a
-        # double such as 2.5, because the int and double fields accept each
-        # other.
+        # NaN fails every comparison. An integer input can receive a double
+        # such as 2.5, because a number input accepts either numeric field.
         violation = widget_checks.finite(ui_value)
         if violation is None and self.data_type == NumberInputProto.INT:
             violation = widget_checks.whole_number(ui_value)
@@ -957,6 +965,7 @@ class NumberInputMixin:
             validator=serde.validate,
             ctx=ctx,
             value_type="double_value",
+            accepted_value_fields=_ACCEPTED_FIELDS,
             disabled=disabled,
             bind=bind,
             persist_state=persist_state,

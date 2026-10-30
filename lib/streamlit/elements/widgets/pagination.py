@@ -59,13 +59,15 @@ class PaginationSerde:
     default: int
     num_pages: int
 
-    def validate(self, ui_value: float | None, **_kwargs: Any) -> Violation | None:
-        """Refuse a page the client was not shown: a whole number in ``1..num_pages``."""
+    def validate(self, ui_value: int | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a page the client was not shown, one outside ``1..num_pages``.
+
+        A page is always whole: the widget accepts only ``int_value``, which
+        is what its frontend, AppTest, and the agent API send.
+        """
         if ui_value is None:
             return None
-        return widget_checks.whole_number(ui_value) or widget_checks.within(
-            ui_value, 1, self.num_pages
-        )
+        return widget_checks.within(ui_value, 1, self.num_pages)
 
     def serialize(self, value: int) -> int:
         return value

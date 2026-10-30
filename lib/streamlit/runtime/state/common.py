@@ -289,10 +289,10 @@ class WidgetMetadata(Generic[T]):
     # deserializer reads.
     validator: WidgetValidator | None = field(default=None, repr=False)
 
-    # The wire fields a client may send. None means the fields
-    # `widget_checks.accepted_value_fields` derives from `value_type`. Only a
+    # The wire fields a client may send. None means only `value_type`. Only a
     # widget whose frontend sends more than one field sets it, such as a
-    # Components v1 component, which may send JSON, bytes, or an Arrow table.
+    # Components v1 component, which may send JSON, bytes, or an Arrow table,
+    # or `st.number_input`, which sends an integer input's value as an int.
     accepted_value_fields: frozenset[ValueFieldName] | None = None
 
     def __repr__(self) -> str:

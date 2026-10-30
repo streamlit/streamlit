@@ -156,6 +156,14 @@ def test_a_field_the_widget_does_not_read_is_wrong_type(
     deserializer.assert_not_called()
 
 
+_PAIRED: dict[ValueFieldName, ValueFieldName] = {
+    "double_value": "int_value",
+    "int_value": "double_value",
+    "double_array_value": "int_array_value",
+    "int_array_value": "double_array_value",
+}
+
+
 @pytest.mark.parametrize(
     ("value_type", "state", "accepted"),
     [
@@ -173,16 +181,44 @@ def test_a_field_the_widget_does_not_read_is_wrong_type(
         ("int_value", _state(int_value=2**60), True),
     ],
 )
-def test_numeric_fields_are_interchangeable_within_double_precision(
+def test_listed_numeric_fields_are_interchangeable_within_double_precision(
     value_type: ValueFieldName, state: WidgetStateProto, accepted: bool
 ) -> None:
-    """An int and a double field accept each other within ±2**53."""
+    """A widget that lists an int and a double field gets each within ±2**53."""
+    metadata = _metadata(
+        value_type,
+        accepted_value_fields=frozenset({value_type, _PAIRED[value_type]}),
+    )
+
     result = check_client_value(
-        state, metadata=_metadata(value_type), previous=None, is_rendered=True
+        state, metadata=metadata, previous=None, is_rendered=True
     )
 
     kind = None if result.violation is None else result.violation.kind
     assert kind == (None if accepted else "wrong_type")
+
+
+@pytest.mark.parametrize(
+    ("value_type", "state"),
+    [
+        ("double_array_value", _state(int_array_value=[3])),
+        ("int_value", _state(double_value=3.0)),
+        ("double_value", _state(int_value=3)),
+    ],
+)
+def test_a_numeric_field_the_widget_does_not_list_is_wrong_type(
+    value_type: ValueFieldName, state: WidgetStateProto
+) -> None:
+    """Only a widget whose frontend sends both numeric fields accepts the other one.
+
+    A slider's serializer writes doubles, so an int array kept for it could not
+    be serialized for the next rerun.
+    """
+    result = check_client_value(
+        state, metadata=_metadata(value_type), previous=None, is_rendered=True
+    )
+
+    assert result.violation == Violation("wrong_type", {"expected": [value_type]})
 
 
 @pytest.mark.parametrize(
@@ -408,10 +444,15 @@ def test_wire_comparison(
 ) -> None:
     """The agent API compares wire values, which is stricter than comparing values."""
     validator = MagicMock(return_value=None)
+    # A number input, which takes either numeric field.
+    is_number = sent.WhichOneof("value") == "int_value"
     metadata = _metadata(
-        "double_value" if sent.WhichOneof("value") == "int_value" else "string_value",
+        "double_value" if is_number else "string_value",
         deserializer=lambda _value: "same",
         validator=validator,
+        accepted_value_fields=(
+            frozenset({"double_value", "int_value"}) if is_number else None
+        ),
     )
 
     result = check_client_value(

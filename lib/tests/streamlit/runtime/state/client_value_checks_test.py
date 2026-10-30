@@ -1033,7 +1033,7 @@ _LEGAL_BOUNDED: dict[str, dict[str, Any]] = {
     [
         ("count", {"int_value": 11}),
         ("count", {"int_value": -1}),
-        # The int and double fields accept each other, but not a fraction.
+        # A number input takes either numeric field, but not a fraction.
         ("count", {"double_value": 8.5}),
         ("count", {"double_value": 1e9}),
         ("ratio", {"double_value": math.nan}),
@@ -1048,7 +1048,11 @@ _LEGAL_BOUNDED: dict[str, dict[str, Any]] = {
         ("span", {"double_array_value": _numbers(10.0, 20.0, 30.0)}),
         ("page", {"int_value": 0}),
         ("page", {"int_value": 6}),
+        # Only a number input takes both numeric fields, as its frontend sends
+        # both. A page is never a double, even a whole one.
         ("page", {"double_value": 2.5}),
+        ("page", {"double_value": 3.0}),
+        ("level", {"int_array_value": {"data": [30]}}),
     ],
 )
 def test_a_value_outside_the_bounds_or_shape_is_refused(
@@ -1083,6 +1087,28 @@ def test_a_value_within_the_bounds_is_accepted(
 
     assert at.session_state.calls == [key]
     assert at.session_state[key] == expected
+
+
+def test_a_numeric_field_the_frontend_never_sends_is_refused(
+    refusal_logs: list[str],
+) -> None:
+    """A slider sent its value in int_array_value refuses it as wrong_type.
+
+    The slider's serializer writes doubles, so a value kept with the field it
+    arrived in could not be serialized for the browser's next rerun.
+    """
+    at = AppTest.from_function(_bounded_app).run()
+    level_id = _widget_id(at, "level")
+    at._run(widget_state=forged(level_id, double_array_value=_numbers(30.0)))
+
+    at._run(widget_state=forged(level_id, int_array_value={"data": [40]}))
+
+    assert at.session_state.level == 30
+    assert at.session_state.calls == ["level"]
+    assert "(wrong_type)" in refusal_logs[0]
+    # The session's widget map serializes, with nothing kept in that field.
+    states = at.session_state._state._state.get_widget_states()
+    assert all(state.WhichOneof("value") != "int_array_value" for state in states)
 
 
 def test_a_fraction_that_truncates_to_the_held_value_changes_nothing() -> None:

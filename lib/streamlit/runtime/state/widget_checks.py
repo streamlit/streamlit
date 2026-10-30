@@ -126,22 +126,18 @@ class CheckResult(NamedTuple):
     changed: bool = False
 
 
-# An int field and a double field accept each other, and so do the two numeric
-# array fields. A double holds every integer within ±2**53 exactly.
-_NUMERIC_PAIRS: Final[Mapping[ValueFieldName, ValueFieldName]] = {
-    "int_value": "double_value",
-    "double_value": "int_value",
-    "int_array_value": "double_array_value",
-    "double_array_value": "int_array_value",
-}
+# The numeric fields. A widget that accepts a field besides the one it
+# registered, as st.number_input accepts int_value and double_value, gets a
+# numeric one only within ±2**53, where a double holds every integer exactly.
+_NUMERIC_FIELDS: Final[frozenset[ValueFieldName]] = frozenset(
+    {"int_value", "double_value", "int_array_value", "double_array_value"}
+)
 _MAX_EXACT_INTEGER: Final = 2**53
 
-# The wire fields each registered value type accepts.
+# The wire field a widget accepts unless it lists others, built once for the
+# hot path.
 _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
-    value_type: frozenset({value_type, _NUMERIC_PAIRS[value_type]})
-    if value_type in _NUMERIC_PAIRS
-    else frozenset({value_type})
-    for value_type in get_args(ValueFieldName)
+    value_type: frozenset({value_type}) for value_type in get_args(ValueFieldName)
 }
 
 # Kinds a correct browser can cause in a sync race, such as a rerun that
@@ -260,8 +256,8 @@ def accepted_value_fields(metadata: WidgetMetadata[Any]) -> frozenset[ValueField
     """Return the wire fields a widget accepts from a client.
 
     These are the fields the frontend sends for the widget, which for most
-    widgets is the ``value_type`` it registered. A widget can override them
-    with ``WidgetMetadata.accepted_value_fields``.
+    widgets is only the ``value_type`` it registered. A widget whose frontend
+    sends more than one lists them in ``WidgetMetadata.accepted_value_fields``.
     """
     if metadata.accepted_value_fields is not None:
         return metadata.accepted_value_fields
@@ -428,8 +424,8 @@ def finite(value: float) -> Violation | None:
 def whole_number(value: float) -> Violation | None:
     """Refuse a number with a fraction, NaN, or infinity as ``malformed``.
 
-    A widget that holds whole numbers can still receive a ``double_value``,
-    because the int and double fields accept each other.
+    An integer ``st.number_input`` can still receive a ``double_value``,
+    which AppTest and the agent API send, and an integer slider gets doubles.
     """
     if isinstance(value, int) or float(value).is_integer():
         return None
@@ -663,7 +659,7 @@ def check_client_value(
         fields = accepted_value_fields(metadata)
         if field not in fields or (
             field != metadata.value_type
-            and field in _NUMERIC_PAIRS
+            and field in _NUMERIC_FIELDS
             and not _within_double_precision(state, field)
         ):
             return CheckResult(

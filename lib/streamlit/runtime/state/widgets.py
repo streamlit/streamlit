@@ -94,8 +94,7 @@ def register_widget(
     value_type: ValueFieldName
         The ``WidgetState`` field that holds the widget's value. The serializer's
         result is written to it, and a client value arriving in any other field
-        is refused, apart from the lossless numeric pairs and the fields in
-        ``accepted_value_fields``.
+        is refused, apart from the fields in ``accepted_value_fields``.
     presenter : WidgetValuePresenter or None
         An optional hook that allows a widget to customize how its value should be
         presented.
@@ -139,8 +138,9 @@ def register_widget(
         any value the deserializer reads is accepted.
     accepted_value_fields : frozenset of ValueFieldName or None
         The ``WidgetState`` fields a client may send the value in, for a widget
-        whose frontend uses more than one. If None, it is ``value_type``, plus
-        its lossless numeric pair.
+        whose frontend uses more than one. If None, it is only ``value_type``.
+        A listed numeric field other than ``value_type`` is accepted within
+        ±2**53, where a double holds every integer exactly.
 
     Returns
     -------
