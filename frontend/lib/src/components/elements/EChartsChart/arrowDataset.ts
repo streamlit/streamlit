@@ -74,8 +74,15 @@ type EChartsSourceValue =
 /** One `dataset.source` row, keyed by Arrow field name. */
 type EChartsSourceRow = Record<string, EChartsSourceValue>
 
-/** The rows of a sent dataset and its data column names, in column order. */
-type HydratedSource = { rows: EChartsSourceRow[]; dimensions: string[] }
+/**
+ * A sent Arrow dataset: its parsed `Quiver`, its ECharts rows, and its data
+ * column names in column order.
+ */
+type HydratedSource = {
+  quiver: Quiver
+  rows: EChartsSourceRow[]
+  dimensions: string[]
+}
 
 /** Converts one decoded Arrow cell of a known column type. */
 type CellConverter = (content: DataType) => EChartsSourceValue
@@ -393,9 +400,10 @@ function getMediaOptions(option: EChartsOptionObject): EChartsOptionObject[] {
 }
 
 /**
- * Returns the option plus its timeline and media variants (the same set as
- * the Python `_iter_option_variants` walker): the option, the `baseOption`,
- * each `options[i]` timeline tick, and then all `media[*].option` overrides.
+ * Returns every variant Python's `_iter_option_variants` visits, in data
+ * viewer order: the option, then `baseOption`, then each `options[i]`
+ * timeline tick. `media[*].option` overrides come last, so a media dataset
+ * does not replace the default chart's.
  */
 function getOptionVariants(
   option: EChartsOptionObject
@@ -444,6 +452,9 @@ function getPlaceholderName(source: unknown): string | null {
  *
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
+ * @returns The parsed dataframe to show in the chart's Show data table: the
+ * first one the option uses, preferring the chart that renders by default
+ * over timeline ticks and `media` overrides. `null` when the option uses none.
  * @throws When a placeholder points to a dataset whose bytes are missing or
  * cannot be read, so the chart never renders the placeholder as a row, or
  * whose data columns share a name.
@@ -451,9 +462,9 @@ function getPlaceholderName(source: unknown): string | null {
 export function hydrateArrowDatasetSources(
   option: EChartsOptionObject,
   datasets: readonly ArrowNamedDataSet.$Properties[] | null | undefined
-): void {
+): Quiver | null {
   if (isNullOrUndefined(datasets) || datasets.length === 0) {
-    return
+    return null
   }
 
   const datasetsByName = new Map<string, ArrowNamedDataSet.$Properties>()
@@ -480,11 +491,12 @@ export function hydrateArrowDatasetSources(
       type => type.arrowField.name
     )
     ensureUniqueColumnNames(dimensions)
-    const source = { rows: quiverToEChartsRows(quiver), dimensions }
+    const source = { quiver, rows: quiverToEChartsRows(quiver), dimensions }
     sourcesByName.set(name, source)
     return source
   }
 
+  let dataViewData: Quiver | null = null
   for (const variant of getOptionVariants(option)) {
     const { dataset } = variant
     const entries: unknown[] = Array.isArray(dataset) ? dataset : [dataset]
@@ -502,7 +514,9 @@ export function hydrateArrowDatasetSources(
         if (datasetOption.dimensions === undefined) {
           datasetOption.dimensions = source.dimensions
         }
+        dataViewData ??= source.quiver
       }
     }
   }
+  return dataViewData
 }
