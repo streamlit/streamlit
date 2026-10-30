@@ -35,8 +35,10 @@ export const computeDerivedColors = (
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
-  const fadedText60 = transparentize(bodyText, 0.4) // Secondary icons / soft chrome (60% opacity).
-  const fadedText70 = transparentize(bodyText, 0.3) // Secondary / muted UI text (70% opacity).
+  // Muted icon strokes (60% opacity); use fadedText70 for text.
+  const fadedText60 = transparentize(bodyText, 0.4)
+  // Secondary / muted text (70% opacity); meets 4.5:1 on default themes.
+  const fadedText70 = transparentize(bodyText, 0.3)
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg

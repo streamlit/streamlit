@@ -127,7 +127,7 @@ function getStepIconColor(tone: StepIconTone, theme: EmotionTheme): string {
     case "error":
       return theme.colors.redTextColor
     case "muted":
-      return theme.colors.fadedText70
+      return theme.colors.fadedText60
     default:
       return theme.colors.bodyText
   }

@@ -80,7 +80,7 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
     padding: 0,
     border: "none",
     cursor: "pointer",
-    color: theme.colors.fadedText70,
+    color: theme.colors.fadedText60,
     background: "transparent",
     // Apply gradient background on the side closest to the content
     backgroundImage:

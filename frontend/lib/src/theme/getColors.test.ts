@@ -60,7 +60,7 @@ describe("computeDerivedColors", () => {
       const { bodyText } = theme.emotion.colors
       const result = computeDerivedColors(theme.emotion.colors)
 
-      // Suffix is approximate bodyText opacity percentage.
+      // The token suffix is the bodyText opacity percentage.
       expect(result.fadedText60).toBe(transparentize(bodyText, 0.4))
       expect(result.fadedText70).toBe(transparentize(bodyText, 0.3))
     }

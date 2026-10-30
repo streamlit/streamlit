@@ -48,7 +48,7 @@ AA floors for **any** default light/dark palette Streamlit ships. Soft or derive
 
 **2.5.8** is chrome sizing, not a color floor — see [2.5.8](#258-target-size-minimum).
 
-Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (`bodyText`, `fadedText70`, `fadedText60`) when both refer to the same role. `bgMix` is `mix(backgroundColor, secondaryBackgroundColor, 0.5)` from `computeDerivedColors` — not a public config key. `fadedText70` is secondary/muted **text** (70% bodyText opacity); `fadedText60` is muted **icon** rest stroke (60%).
+Use `fadedText70` (70% `bodyText`) for secondary or muted **text** and `fadedText60` (60%) for muted **icon** strokes. Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (`bodyText`, `fadedText70`, `fadedText60`) when both refer to the same role. `bgMix` is `mix(backgroundColor, secondaryBackgroundColor, 0.5)` from `computeDerivedColors` — not a public config key.
 
 | Role | Typical tokens / config | Criterion | Floor | Required surfaces |
 | ---- | ----------------------- | --------- | ----- | ----------------- |
@@ -128,7 +128,7 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 | Primary as control on default sidebar | Pass (~4.88) | Pass (~3.53) | Library meets | Sidebar page background is `#F8F8F7` / `#21201D` (Pass ~4.88 / ~3.53) |
 | Input boundary with `showWidgetBorder = false` | Fail (~1.12) | Fail (~1.27) | Library blocks | Opt-out: resting outline is `secondaryBg` on page (`getBorderColor`). Default (flag unset/true) uses `borderColor` (row above) |
 | Enabled close icon (`fadedText40`) | Fail (~2.2) | Pass (~3.7) | Library blocks | `StyledCloseButton` (toast) and `StyledSkillsNudgeClose` on toast / nudge card (`bgColor`) |
-| Muted icon stroke (`fadedText60`) | Pass (~3.8–3.9) | Pass (~5.3–6.1) | Library meets | Header, toolbar, and link/help icons (page ~3.89, secondary ~3.81). Fully opaque focused/hovered heading link (`StyledLinkIcon`) uses this stroke; [#16149](https://github.com/streamlit/streamlit/issues/16149) is **not** a default 1.4.11 fail (reported ~1.16:1 likely sampled transitional `opacity` or anti-aliased edges) |
+| Muted icon stroke (`fadedText60`) | Pass (~3.8–3.9) | Pass (~5.3–6.1) | Library meets | Header, toolbar, and link/help icons (page ~3.89, secondary ~3.81). Heading link (`StyledLinkIcon`) stays at `opacity: 0` until hover/focus; the reported ~1.16:1 in [#16149](https://github.com/streamlit/streamlit/issues/16149) matches that hidden state. When shown, the stroke is ~3.9:1 light / ~6.1:1 dark — not a default 1.4.11 fail |
 | Primary as control / solid focus outline on page | Pass (~5.18) | Pass (~3.92) | Library meets | Page background only |
 
 ### 2.5.8 Target Size (Minimum)
