@@ -166,7 +166,6 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
-
 ### Keyed reruns — target a fragment from a callback
 
 Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
@@ -345,9 +344,7 @@ These checks are a UX guardrail, not a security boundary. See [Widget input cons
 
 ## Conditional rendering
 
-**This is critical and often missed.**
-
-By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
+**This is critical and often missed.** By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
 
 ### Tabs with expensive content
 
@@ -421,6 +418,10 @@ Move expensive work outside the main flow:
 - Compute aggregations in SQL/dbt, not Python
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
+
+## Charts with large data
+
+Charts process every row in the browser, which outweighs the Python side from about 10,000 points. Aggregate first and pick the chart command by size; see [charts.md](charts.md#large-datasets).
 
 ## Render stable UI before slow work
 

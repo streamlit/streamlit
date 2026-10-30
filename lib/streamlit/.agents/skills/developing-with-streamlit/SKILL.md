@@ -38,7 +38,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Prefer sentence casing over title casing, including titles and widget labels.
 - Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
 - When an alert (`st.info`, `st.success`, `st.warning`, or `st.error`) needs a headline, pass keyword-only `title=` instead of bolding the first line of the body or adding a heading above it.
-- Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short; decorative `alt=""` is only for `st.image` / `st.pyplot`. See `references/media-display.md` and `references/data-display.md`.
+- Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short; decorative `alt=""` is only for `st.image` / `st.pyplot`. See `references/media-display.md`, `references/charts.md`, and `references/data-display.md`.
 - Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` for fixed grids, precise width ratios, or side-by-side cards that must share a width.
 - Align elements placed side by side: use `vertical_alignment="bottom"` for rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content (for example, all metrics with or all without `delta`) or `height="stretch"`. See "Aligning elements side by side" in `references/layouts.md`.
 - Prefer `st.navigation` and `st.Page` with an `app_pages/` folder over the legacy `pages/` directory, `st.page_link`, or other multipage-app v1 patterns.
@@ -50,7 +50,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Never loop the app script with `while True` or with `time.sleep()` followed by `st.rerun()`. For live-updating dashboards, use `@st.fragment(run_every=...)` so only that section reruns on a timer.
 - Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work. If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form (advanced; see "Skip reruns on individual widgets" in `references/performance.md`).
 - Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
-- Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
+- Prefer Vega-based charts (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`) and `st.echarts_chart` over Plotly and `st.pyplot`. Use `st.echarts_chart` for chart types Vega-Lite lacks (network graphs, sankey, gauges, sunbursts, and similar) or an existing ECharts option. Prefer one charting library per page; for operational dashboards (KPIs, monitoring, filter-driven charts), prefer `st.echarts_chart` across the page. See `references/charts.md`.
 - Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
 - For about 2–5 options, keep them visible instead of in a dropdown: `st.segmented_control` for a single choice and `st.pills(..., selection_mode="multi")` for several. Use `st.selectbox` or `st.multiselect` for longer lists.
 - Use `st.menu_button` for a button that opens a short list of one-shot actions. Do not build one from `st.popover` with buttons or from `st.selectbox`.
@@ -147,8 +147,8 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
 | **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first; deeper sections as needed) |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, when to use each container type, aligning side-by-side elements (widget heights, `vertical_alignment`, equal-height cards), and fragments with discontiguous layout (triggering from outside, rendering into outside containers) | read `references/layouts.md` |
-| **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |
-| **Apache ECharts or pyecharts** — render an existing ECharts option dict, JSON string, or `pyecharts` chart with native `st.echarts_chart` rather than a third-party component (pass `alt=` carefully — it replaces the generated description) | read `references/data-display.md` |
+| **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, row/column/cell selection, metric sparklines, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |
+| **Charts, maps, and data visualization** — choosing between the simple charts, `st.altair_chart`, `st.echarts_chart` (including an existing ECharts option or `pyecharts` chart), `st.plotly_chart`, `st.pyplot`, `st.map`/`st.pydeck_chart`, and diagrams; keeping charts consistent on a page; chart selections (`on_select`); accessible `alt=` names; and large chart data | read `references/charts.md` |
 | **Multi-page app architecture** — `st.navigation`, `st.Page`, page routing, shared state across pages, and structuring apps with multiple views | read `references/multipage-apps.md` |
 | **Persisting values across reruns, including when a widget is hidden or the user changes pages** — `st.session_state`, widget keys, callbacks (`on_change`, `on_click`, `args=`, `kwargs=`), `persist_state`, and patterns for stateful interactions | read `references/session-state.md` |
 | **Making a selection shareable via URL / syncing a widget to a query param** — `bind="query-params"` + `key=` for automatic URL sync (don't hand-roll `st.query_params`) | read `references/session-state.md` |
@@ -183,8 +183,9 @@ Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). In
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`
-2. `references/data-display.md`
-3. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` when the app should keep the appearance toggle and use compact padding)
+2. `references/charts.md`
+3. `references/data-display.md`
+4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` when the app should keep the appearance toggle and use compact padding)
 
 **IMPORTANT - Use templates:**
 

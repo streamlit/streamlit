@@ -55,7 +55,7 @@ from streamlit.errors import (
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
-from streamlit.util import ReadOnlyAttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -745,6 +745,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # The name is the content hash of the Arrow bytes.
+        assert proto.datasets[0].name == calc_hash(proto.datasets[0].data.data)
         # Decode it to confirm the payload really is Arrow bytes for this df, so
         # this cannot pass on a merge that left raw JSON values in place.
         pd.testing.assert_frame_equal(
