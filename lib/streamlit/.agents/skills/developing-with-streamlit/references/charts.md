@@ -43,7 +43,7 @@ Start with a simple chart and move to `st.altair_chart` when it runs out of opti
 
 ## Keep charts consistent
 
-Use one charting library across a page, and ideally across the app. Libraries differ in tooltips, legends, toolbars, zoom behavior, and selection gestures, so a page that mixes them looks and behaves inconsistently.
+Prefer one charting library per page, and ideally across the app. Libraries differ in tooltips, legends, toolbars, zoom behavior, and selection gestures, so mixing them costs some consistency. Combine them when a chart needs a type or feature the main library lacks.
 
 - Default to Vega-based charts. The simple charts and `st.altair_chart` share one look, so mixing those two is fine.
 - When a page needs ECharts-only chart types (for example, a sankey next to a gauge), consider drawing that page's other charts with `st.echarts_chart` too.

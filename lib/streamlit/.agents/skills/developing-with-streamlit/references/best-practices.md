@@ -329,7 +329,7 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts and `st.echarts_chart` over Plotly and `st.pyplot`, and use one charting library per page where possible. Use `st.echarts_chart` for chart types Vega-Lite lacks, or an existing ECharts option or `pyecharts` chart, rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
+Prefer Vega-based charts and `st.echarts_chart` over Plotly and `st.pyplot`, and prefer one charting library per page. Use `st.echarts_chart` for chart types Vega-Lite lacks, or an existing ECharts option or `pyecharts` chart, rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
 
 ```python
 # GOOD: Native charts for common cases

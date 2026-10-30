@@ -117,7 +117,7 @@ with st.container(border=True):
 
 ## Choosing charts for a dashboard
 
-Use one chart engine for the whole page (see `charts.md`):
+Prefer one chart engine per page (see `charts.md`), and combine engines when a chart needs a type or feature the main one lacks:
 
 - **Operational dashboards** (KPIs, monitoring, several charts driven by the same filters): prefer `st.echarts_chart` for every chart. Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and dense series stay fast with `sampling` and `large`.
 - **Analytical dashboards** (aggregation, binning, faceting, brushing one chart to filter others): prefer `st.altair_chart`, with the simple charts for quick views.
