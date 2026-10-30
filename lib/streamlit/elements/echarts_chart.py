@@ -114,7 +114,9 @@ _GL_SERIES_TYPES: Final = frozenset(
 
 # Components from the same ECharts GL extension. Unlike the series types above
 # these are top-level option keys, so they are matched per option variant.
-_GL_COMPONENT_KEYS: Final = frozenset({"geo3D", "globe", "grid3D"})
+_GL_COMPONENT_KEYS: Final = frozenset(
+    {"geo3D", "globe", "grid3D", "mapbox3D", "maptalks3D"}
+)
 
 # Series types from other ECharts extensions that Streamlit doesn't bundle,
 # mapped to the package that provides them. This list is best-effort: any other
