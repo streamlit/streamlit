@@ -816,7 +816,10 @@ filled, belongs to item 7.
   `datetime_input` reads `[]` as its default too. Four cases differ:
   - `date_input`: `[]` is empty even with a default, because `DateInputSerde` reads it
     as `None` (`()` for a range), and a `required` range with only a start date is
-    empty, as in the browser's `isRequiredEmptyDateValue`.
+    empty, as in the browser's `isRequiredEmptyDateValue`. Once a required range holds
+    both ends, its agent `value_schema` has `minItems: 2`; one still empty or holding
+    its start reports that value, which a request may send back, so it keeps the
+    partial schema.
   - `st.pills` and `st.segmented_control`: `[]` is a deselection, whatever the default.
     Inside a form, a required one without a default may return to that empty default:
     a form that clears on submit restores it, and the browser does not keep a form from

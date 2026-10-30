@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from dataclasses import replace
 from typing import Any
@@ -292,6 +293,32 @@ class WidgetValueTest(SnapshotCase):
         )
         assert tabs_action["kind"] == "value"
         assert tabs_action["type"] == "tabs"
+
+    def test_a_required_range_that_holds_both_ends_takes_two_items(self) -> None:
+        """Such a range refuses fewer than two dates, and its schema says so.
+
+        One that is still empty holds fewer, and reports that value, which a
+        request may send back, so its schema keeps allowing it.
+        """
+        days = (dt.date(2026, 1, 1), dt.date(2026, 1, 5))
+        st.date_input("Trip", days, required=True, key="trip")
+        st.date_input("Empty trip", value=[], required=True, key="empty_trip")
+        st.date_input("Optional", days, key="optional")
+
+        document = self._build().document
+
+        def schema(key: str) -> dict[str, Any]:
+            return _one_keyed(document, "date_input", key)["value_schema"]
+
+        assert schema("trip") == {
+            "type": "array",
+            "items": {"type": "string", "format": "date"},
+            "minItems": 2,
+            "maxItems": 2,
+        }
+        assert _one_keyed(document, "date_input", "empty_trip")["value"] == []
+        assert "minItems" not in schema("empty_trip")
+        assert "minItems" not in schema("optional")
 
     def test_a_missing_or_unserializable_value_does_not_raise(self) -> None:
         """No session, a missing key, and a failing serializer still build."""

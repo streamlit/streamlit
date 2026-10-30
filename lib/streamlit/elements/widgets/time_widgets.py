@@ -2426,7 +2426,17 @@ class TimeWidgetsMixin:
                 action="value",
                 # No initial date, and not required: a later value can be cleared.
                 clearable=parsed_values.value is None and not required,
-                value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
+                # A required range that holds both ends takes nothing less. One
+                # still empty or holding its start reports that, which sending
+                # back changes nothing.
+                value_schema=agent_spec.range_of(
+                    agent_spec.DATE,
+                    partial=not (
+                        required
+                        and isinstance(current_value, (list, tuple))
+                        and len(current_value) == 2
+                    ),
+                )
                 if parsed_values.is_range
                 else agent_spec.DATE,
                 label=label,
