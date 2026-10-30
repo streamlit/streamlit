@@ -1255,6 +1255,11 @@ def _rounding_serde(
         ((0.0, 0.9996), True, [1.0], 0.9996),
         ((0.123, 0.9996), False, [0.12, 0.92], (0.123, 0.92)),
         ((0.123, 1.0), True, [0.5], 0.5),
+        # React Aria rounds both thumbs when it renders, so a thumb moved onto
+        # the other one commits the same rounded value: End on the lower thumb
+        # of (0.0, 0.9996), and Home on the upper thumb of (0.123, 0.5).
+        ((0.0, 0.9996), False, [1.0, 1.0], (0.9996, 0.9996)),
+        ((0.123, 0.5), False, [0.12, 0.12], (0.123, 0.123)),
     ],
 )
 def test_a_bound_the_browser_rounds_is_accepted_and_read_as_the_bound(

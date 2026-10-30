@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 44
+NUM_SLIDER_WIDGETS = 45
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -829,4 +829,14 @@ def test_bounds_the_browser_rounds_read_as_the_bounds(app: Page):
     wait_for_app_run(app)
     expect_prefixed_markdown(
         app, "Rounded max slider value:", "0.9996", exact_match=True
+    )
+
+    # End on the lower thumb of a range commits [1.0, 1.0]: React Aria shows
+    # the upper thumb rounded too. Both ends read as max_value.
+    rounded_range = get_slider(app, "Rounded range slider")
+    rounded_range.scroll_into_view_if_needed()
+    rounded_range.get_by_role("slider").first.press("End")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app, "Rounded range slider value:", "0.9996 0.9996", exact_match=True
     )

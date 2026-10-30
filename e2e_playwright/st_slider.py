@@ -444,3 +444,16 @@ rounded_max_value = st.slider(
     "Rounded max slider", min_value=0.0, max_value=0.9996, value=0.5, step=0.1
 )
 st.write("Rounded max slider value:", rounded_max_value)
+# React Aria rounds both thumbs of a range when it renders, so End on the
+# lower thumb commits [1.0, 1.0], which reads as max_value at both ends.
+rounded_range_value = st.slider(
+    "Rounded range slider",
+    min_value=0.0,
+    max_value=0.9996,
+    value=(0.0, 0.9996),
+    step=0.1,
+)
+st.write(
+    "Rounded range slider value:",
+    f"{rounded_range_value[0]} {rounded_range_value[1]}",
+)
