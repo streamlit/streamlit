@@ -67,9 +67,10 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
         borderRadius: theme.radii.default,
         overflow: "hidden",
       }),
-      // A printed column is often narrower than the on-screen card. The label
-      // and delta wrap onto extra lines. A stretch card scales the value down
-      // to the card. A content-width card stays as wide as the figure.
+      // Print often gives the card less width than on screen:
+      // - Label and delta wrap onto extra lines.
+      // - A stretch card scales the value down to fit.
+      // - A content-width card stays as wide as its figure.
       "@media print": {
         overflow: "visible",
         [`& ${ELLIPSIS_SELECTOR}, & ${ELLIPSIS_SELECTOR} p`]: {
@@ -86,14 +87,11 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
             whiteSpace: "nowrap",
             overflowWrap: "normal",
           },
-        // `container-type` on the value makes its intrinsic width 0. A
-        // content-width card is sized by that value, so containing it would
-        // shrink the card to the label. The figure scales to the narrower of
-        // the measured slot and the printed column: a side-by-side column is
-        // a size container in print, so `100cqi` resolves at paper width. The
-        // card's border and padding sit between the column and the value.
-        // Outside such a column (including in a content-width container),
-        // `100cqi` falls back to the page width.
+        // A content-width card is sized by its value, so the value cannot be a
+        // size container (that would zero its intrinsic width). Instead the
+        // figure scales to the narrower of the measured slot and the printed
+        // column's `100cqi`, minus the card inset. Outside a side-by-side
+        // column, `100cqi` falls back to the page width.
         ...(isContentWidth === true
           ? {
               [`& .stMetricValue ${ELLIPSIS_SELECTOR}`]: {

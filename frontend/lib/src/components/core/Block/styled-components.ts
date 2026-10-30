@@ -69,7 +69,7 @@ const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR}
  * Relative selector for a dataframe, table, or chart that prints inside a
  * direct child column. It has no leading `&`, so wrap it in `&:has(...)`.
  */
-const PRINT_STACK_TRIGGER_SELECTOR = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
 
 /**
  * Emotion selector for this horizontal container when it is not an
@@ -487,15 +487,16 @@ export const StyledFlexContainerBlock =
                 [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
               },
               ...(!isContentSized && {
-                [`&:not(:has(${PRINT_STACK_TRIGGER_SELECTOR})) > .stColumn`]: {
-                  containerType: "inline-size",
-                },
+                [`&:not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN})) > .stColumn`]:
+                  {
+                    containerType: "inline-size",
+                  },
               }),
               // A row of bordered cards that stays side by side prints like
               // one card, so a page break does not cut every card at once.
-              [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_SELECTOR}))`]:
+              [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN}))`]:
                 printKeepTogetherRules,
-              [`&:has(${PRINT_STACK_TRIGGER_SELECTOR})`]: {
+              [`&:has(${PRINT_STACK_TRIGGER_IN_COLUMN})`]: {
                 display: "block",
                 "> .stColumn": {
                   display: "block",
@@ -533,17 +534,17 @@ export const StyledFlexContainerBlock =
                 },
               },
               // A horizontal container with a chart stacks the same way.
-              // Its children print full width as block boxes, because a
-              // content-height flex column collapses in Chrome print. A
-              // fixed height that fit the row would cut off the stacked
-              // children, so the container grows to fit them instead of
-              // scrolling.
+              // Its children print as block boxes, because a content-height
+              // flex column collapses in Chrome print. Stretch children fill
+              // the container; fixed and content widths are kept, capped to
+              // the container. A fixed height that fit the row would cut off
+              // the stacked children, so the container grows to fit them
+              // instead of scrolling.
               [PRINT_STACK_HORIZONTAL_CONTAINER]: {
                 display: "block",
                 height: "auto",
                 overflow: "visible",
                 "> *": {
-                  width: "100%",
                   maxWidth: "100%",
                   minWidth: 0,
                 },

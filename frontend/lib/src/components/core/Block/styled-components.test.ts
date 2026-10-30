@@ -145,13 +145,16 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // A columns row is excluded, because its columns stack through the
-    // `.stColumn` rule. Each stacked child prints full width, and the gap
-    // becomes a bottom margin.
+    // `.stColumn` rule. Each stacked child keeps its own width, capped to
+    // the container, and the gap becomes a bottom margin.
     expect(css).toMatch(
       /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block;height:auto;overflow:visible/
     )
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{width:100%/
+      /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{max-width:100%;min-width:0/
+    )
+    expect(css).not.toMatch(
+      /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{[^}]*(?<!max-|min-)width:100%/
     )
     expect(css).toContain("margin-bottom:20px")
   })

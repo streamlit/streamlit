@@ -56,7 +56,11 @@ export function usePrintScreenWidth(
       if (element) {
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Print starts right after beforeprint, before a resize observer could report
         const { width } = element.getBoundingClientRect()
-        element.style.setProperty(PRINT_SCREEN_WIDTH_VAR, `${width}px`)
+        // A hidden element measures 0, which would collapse the print width
+        // instead of using the variable's 100% fallback.
+        if (width > 0) {
+          element.style.setProperty(PRINT_SCREEN_WIDTH_VAR, `${width}px`)
+        }
       }
     }
     const handleAfterPrint = (): void => {
