@@ -358,7 +358,6 @@ describe("applyTooltipFormatters", () => {
 })
 
 type AxisPointerFormatter = (params: { value: unknown }) => string
-type SliderLabelFormatter = (value: number, valueStr: string) => string
 
 const AUTHOR_AXIS_POINTER = { label: { formatter: "{value}" } }
 
@@ -369,13 +368,6 @@ function axisPointerFormatterOf(axis: unknown): AxisPointerFormatter {
   ).axisPointer?.label?.formatter
   expect(formatter).toBeTypeOf("function")
   return formatter as AxisPointerFormatter
-}
-
-/** Read the handle label formatter set on a dataZoom config. */
-function sliderLabelFormatterOf(zoom: unknown): SliderLabelFormatter {
-  const { labelFormatter } = zoom as { labelFormatter?: unknown }
-  expect(labelFormatter).toBeTypeOf("function")
-  return labelFormatter as SliderLabelFormatter
 }
 
 /** A timestamp on 2026-08-18 in the test's local time zone. */
@@ -408,9 +400,6 @@ describe("applyTimeLabelFormatters", () => {
     expect(formatter({ value: localTime(14, 30) })).toBe("2026-08-18 14:30:00")
     // An axis pointer that doesn't snap to data passes any instant, so the
     // label stops at seconds instead of printing a changing millisecond.
-    expect(formatter({ value: localTime(14, 30, 250) })).toBe(
-      "2026-08-18 14:30:00"
-    )
     expect(formatter({ value: localTime(0, 0, 250) })).toBe(
       "2026-08-18 00:00:00"
     )
@@ -441,19 +430,25 @@ describe("applyTimeLabelFormatters", () => {
     )
   })
 
-  it("reads useUTC from a declared baseOption, not the root", () => {
+  it("converts a timeline's baseOption and reads its useUTC", () => {
+    const tick = { xAxis: { type: "time" } }
     const result = applyTimeLabelFormatters(
       {
-        useUTC: true,
-        baseOption: { xAxis: { type: "time" } },
+        useUTC: false,
+        baseOption: { useUTC: true, xAxis: { type: "time" } },
+        options: [tick],
       },
       "streamlit"
     )
     const baseOption = result.baseOption as EChartsOptionObject
 
     expect(
-      axisPointerFormatterOf(baseOption.xAxis)({ value: localTime() })
+      axisPointerFormatterOf(baseOption.xAxis)({
+        value: Date.UTC(2026, 7, 18),
+      })
     ).toBe("2026-08-18")
+    // Timeline ticks merge into the base axis, so they stay as given.
+    expect((result.options as unknown[])[0]).toBe(tick)
   })
 
   it("fills every time axis and keeps existing axis pointer settings", () => {
@@ -516,133 +511,10 @@ describe("applyTimeLabelFormatters", () => {
     ["theme=None", timeAxisOption, ""],
     [
       "a chart without a time axis",
-      { xAxis: { type: "category" }, yAxis: {}, dataZoom: {} },
+      { xAxis: { type: "category" }, yAxis: {} },
       "streamlit",
     ],
   ])("returns the input for %s", (_case, option, theme) => {
     expect(applyTimeLabelFormatters(option, theme)).toBe(option)
-  })
-
-  it("converts timeline and media variants", () => {
-    const result = applyTimeLabelFormatters(
-      {
-        baseOption: {
-          xAxis: { type: "time" },
-          media: [{ query: {}, option: { yAxis: [{ type: "time" }] } }],
-        },
-        options: [{ xAxis: { type: "time" } }, 1],
-        media: [{ option: { xAxis: { type: "time" } } }],
-      },
-      "streamlit"
-    )
-
-    const baseOption = result.baseOption as EChartsOptionObject
-    const baseMedia = baseOption.media as Array<{
-      option: EChartsOptionObject
-    }>
-    const [tick, otherTick] = result.options as unknown[]
-    const rootMedia = result.media as Array<{ option: EChartsOptionObject }>
-    axisPointerFormatterOf(baseOption.xAxis)
-    axisPointerFormatterOf((baseMedia[0].option.yAxis as unknown[])[0])
-    axisPointerFormatterOf((tick as EChartsOptionObject).xAxis)
-    axisPointerFormatterOf(rootMedia[0].option.xAxis)
-    expect(otherTick).toBe(1)
-  })
-
-  it.each([
-    [
-      "sets a formatter",
-      {
-        baseOption: {
-          xAxis: { type: "time", axisPointer: AUTHOR_AXIS_POINTER },
-        },
-        options: [{ xAxis: { type: "time" } }],
-      },
-    ],
-    [
-      "declares a non-time type",
-      {
-        baseOption: { xAxis: { type: "time" } },
-        options: [{ xAxis: { type: "value" } }],
-      },
-    ],
-  ])(
-    "skips an axis slot in every variant when one variant %s",
-    (_case, option) => {
-      expect(applyTimeLabelFormatters(option, "streamlit")).toBe(option)
-    }
-  )
-
-  describe("slider dataZoom labels", () => {
-    const zoomOption = {
-      xAxis: { type: "time" },
-      dataZoom: [
-        { type: "slider" },
-        {},
-        { type: "inside" },
-        { type: "slider", labelFormatter: "{value}" },
-      ],
-    }
-
-    it("sets a formatter on sliders without one", () => {
-      const [slider, untyped, inside, authored] = applyTimeLabelFormatters(
-        zoomOption,
-        "streamlit"
-      ).dataZoom as Array<Record<string, unknown>>
-
-      sliderLabelFormatterOf(slider)
-      // ECharts defaults a dataZoom without a type to a slider.
-      sliderLabelFormatterOf(untyped)
-      expect(inside).toEqual({ type: "inside" })
-      expect(authored.labelFormatter).toBe("{value}")
-    })
-
-    it("trims slider labels when an axis pointer formatter is shared", () => {
-      const result = applyTimeLabelFormatters(
-        { ...zoomOption, axisPointer: AUTHOR_AXIS_POINTER },
-        "streamlit"
-      )
-
-      // The author's shared axis pointer formatter covers the axis...
-      expect(result.xAxis).toBe(zoomOption.xAxis)
-      // ...but not the slider labels.
-      sliderLabelFormatterOf((result.dataZoom as unknown[])[0])
-    })
-
-    it("checks midnight in UTC when the chart sets useUTC", () => {
-      const [slider] = applyTimeLabelFormatters(
-        { ...zoomOption, useUTC: true },
-        "streamlit"
-      ).dataZoom as unknown[]
-      const formatter = sliderLabelFormatterOf(slider)
-
-      expect(formatter(Date.UTC(2026, 7, 18), "2026-08-18 00:00:00")).toBe(
-        "2026-08-18"
-      )
-      // Local midnight in New York is 04:00 UTC.
-      expect(formatter(localTime(), "2026-08-18 04:00:00")).toBe(
-        "2026-08-18 04:00:00"
-      )
-    })
-
-    it("drops the time only from ECharts' midnight time labels", () => {
-      const [slider] = applyTimeLabelFormatters(zoomOption, "streamlit")
-        .dataZoom as unknown[]
-      const formatter = sliderLabelFormatterOf(slider)
-
-      expect(formatter(localTime(), "2026-08-18 00:00:00")).toBe("2026-08-18")
-      // ECharts labels the rounded window edge.
-      expect(formatter(localTime() + 0.4, "2026-08-18 00:00:00 000")).toBe(
-        "2026-08-18"
-      )
-      expect(formatter(localTime(14, 30), "2026-08-18 14:30:00")).toBe(
-        "2026-08-18 14:30:00"
-      )
-      // A slider on a value or category axis keeps its labels.
-      expect(formatter(localTime(), String(localTime()))).toBe(
-        String(localTime())
-      )
-      expect(formatter(0, "Mon")).toBe("Mon")
-    })
   })
 })

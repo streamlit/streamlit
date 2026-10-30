@@ -1102,9 +1102,11 @@ class EChartsMixin:
             ``tooltip.valueFormatter`` to a number format (for example
             ``"dollar"``) or ``tooltip.formatter`` to a string template (for
             example ``"{b}: {c}"``) to use your own formatting. On a time
-            ``xAxis`` or ``yAxis``, the tooltip header and slider labels show
-            midnight values as dates (for example ``2026-08-18``) unless you
-            set ``axisPointer.label.formatter`` or ``dataZoom.labelFormatter``.
+            ``xAxis`` or ``yAxis``, the axis tooltip header shows midnight
+            values as dates (for example ``2026-08-18``), so an hourly point at
+            midnight shows no time. An ``axisPointer.label.formatter`` you set
+            on the axis, ``tooltip``, or the top-level ``axisPointer`` replaces
+            this.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

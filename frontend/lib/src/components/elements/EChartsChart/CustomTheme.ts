@@ -682,7 +682,9 @@ export function buildStreamlitEChartsTheme(
 }
 
 /** Read ``option[key]`` as a list of component configs, ignoring other shapes. */
-function toComponentList(value: unknown): Array<Record<string, unknown>> {
+export function toComponentList(
+  value: unknown
+): Array<Record<string, unknown>> {
   if (isPlainObject(value)) {
     return [value as Record<string, unknown>]
   }

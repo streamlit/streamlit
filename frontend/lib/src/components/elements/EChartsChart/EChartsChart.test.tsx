@@ -528,13 +528,12 @@ describe("EChartsChart", () => {
     ["sets", "the Streamlit theme", "streamlit", "function"],
     ["skips", "theme=None", "", "undefined"],
   ] as const)(
-    "%s time axis label formatters with %s",
+    "%s the time axis label formatter with %s",
     (_action, _case, theme, expectedType) => {
       const spec = JSON.stringify({
         xAxis: { type: "time" },
         yAxis: { type: "value" },
         tooltip: { trigger: "axis" },
-        dataZoom: [{ type: "slider" }],
         series: [{ type: "line", data: [["2026-08-18", 1]] }],
       })
       render(<Wrapper element={createElement({ spec, theme })} />)
@@ -543,7 +542,6 @@ describe("EChartsChart", () => {
       expect(appliedOption.xAxis.axisPointer?.label?.formatter).toBeTypeOf(
         expectedType
       )
-      expect(appliedOption.dataZoom[0].labelFormatter).toBeTypeOf(expectedType)
     }
   )
 
