@@ -52,7 +52,7 @@ Represents a single browser tab or agent API session.
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
-An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` checks first: what a request may address and each value's JSON type come from the session's last snapshot, and each encoded value then passes the boundary check a browser value passes (see SessionState below). When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
@@ -161,7 +161,7 @@ register_widget(
 ```
 
 **Lifecycle hooks**:
-- `on_script_will_rerun()`: Process widget states from browser, run callbacks
+- `on_script_will_rerun()`: Store the widget states a client sent, check them (see the boundary check below), and run the callbacks of the accepted changes
 - `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
 - `WStates.rendered_ids`: the widgets registered by the latest run that covered them (a fragment run covers only its fragment). Registration adds an ID; `prune_rendered_widgets()` removes the ones a run covered but did not register, where stale cleanup runs and when the body ends in `st.stop()` or an uncaught exception (which keeps the values). It never adds one, so the client IDs a page change prunes against cannot forge an entry. A stop the session requested (`runner.fastReruns` replacing a running runner) is an interruption and prunes nothing.
 
