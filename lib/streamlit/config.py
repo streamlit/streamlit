@@ -857,6 +857,25 @@ _create_option(
 )
 
 _create_option(
+    "runner.connectionDefaultTTL",
+    description="""
+        Default time to live, in seconds, for ``st.connection`` when its
+        ``ttl`` argument is omitted entirely.
+
+        ``None`` (default) leaves such connections cached until they are
+        cleared. Passing ``ttl`` explicitly to ``st.connection`` -- including
+        ``ttl=None`` -- always uses that value and ignores this default.
+
+        This default applies to every connection type, including caller's-rights
+        connections and the Snowflake connection in Streamlit in Snowflake.
+        Expiry closes the connection, and the next ``st.connection`` call opens
+        a new one. Pass an explicit ``ttl`` to override it for one connection.
+    """,
+    default_val=None,
+    type_=float,
+)
+
+_create_option(
     "runner.cacheHashSeed",
     description="""
         Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
@@ -1284,18 +1303,21 @@ _create_option(
     description="""
         Enable the agent API, which lets a non-browser client drive the app
         over HTTP at `/_stcore/agent/interact`.
+        `/_stcore/agent/openapi.json` describes the protocol, and reports
+        whether the API is on.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets
         no more access than the app gives a browser. Requests from web pages
         are refused unless their origin is in `server.corsAllowedOrigins`.
         Identity comes from `server.trustedUserHeaders`; without it, agent
-        sessions are anonymous.
+        sessions are anonymous. A proxy that strips client-supplied identity
+        headers must also strip them from requests to `/_stcore/agent/`, not
+        only from the WebSocket.
 
         Note: This is an experimental feature. The API and its options are
         subject to change.
     """,
-    visibility="hidden",
     default_val=False,
     type_=bool,
 )
@@ -1303,14 +1325,20 @@ _create_option(
 _create_option(
     "server.agentWaitTimeout",
     description="""
-        Maximum number of seconds an agent API request waits for the app's run
-        chain to settle before returning `wait_timed_out`.
+        Maximum number of seconds an agent API request waits for the app to
+        finish running, including any reruns it triggers, before returning
+        `wait_timed_out`.
 
-        This bounds the wait, not the run: the app keeps running, and a retry
-        of the same request waits for it instead of starting it over. Keep it
-        below the request timeout of the clients you expect.
+        This bounds the wait, not the run: the app keeps running. To keep
+        waiting, send only the `session_id` from the `wait_timed_out`
+        response; that request waits for the same run instead of starting
+        another. Resending a request without a `session_id` starts a new
+        session and runs the app again. Keep this below the request timeout
+        of the clients you expect.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=30,
     type_=int,
 )
@@ -1320,10 +1348,13 @@ _create_option(
     description="""
         TTL in seconds for idle agent API sessions.
 
-        An agent session is reclaimed after this much time without an
-        interaction, so clients do not have to close sessions explicitly.
+        Streamlit closes an agent session after it has been idle this long, so
+        clients do not have to close sessions. A later request with that
+        session's ID gets `unknown_session`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
     default_val=900,
     type_=int,
 )
@@ -1333,12 +1364,34 @@ _create_option(
     description="""
         Maximum number of agent API sessions the server holds at once.
 
-        An agent session outlives the request that created it, so this bounds
-        what a loop of creating calls can hold in memory. When the limit is
-        reached, sessions idle past `server.agentSessionTTL` are reclaimed
-        first, and new sessions are then refused.
+        Each session stays in memory after the request that created it, so
+        this limit caps the memory a client can use by creating sessions
+        repeatedly. At the limit, Streamlit first closes sessions idle longer
+        than `server.agentSessionTTL`, then refuses new ones with
+        `too_many_sessions`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
     """,
-    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows an agent API response includes inline in the
+        `data.preview` of a table or chart: `st.dataframe`, `st.data_editor`,
+        `st.table`, and Vega-Lite charts (`st.altair_chart`,
+        `st.vega_lite_chart`, and built-in charts such as `st.line_chart`).
+
+        For an element with more rows, the response reports
+        `data.complete: false` and serves the full data at `data.url`, unless
+        `data.unavailable` says why it cannot.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
+    """,
     default_val=100,
     type_=int,
 )
@@ -2183,7 +2236,10 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        This defaults to the resolved value of `greenTextColor`.
+        If this isn't set, Streamlit uses the resolved body text color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme, Streamlit uses the resolved
+        `greenTextColor` instead.
     """,
 )
 
@@ -2199,6 +2255,11 @@ _create_theme_options(
     ],
     description="""
         Background color used for code blocks.
+
+        If this isn't set, Streamlit uses the theme's default code
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
     """,
 )
 
@@ -2655,7 +2716,12 @@ _create_theme_options(
     description="""
         The color of the border around dataframes and tables.
 
-        If this isn't set, Streamlit uses `theme.borderColor` instead.
+        If this isn't set and `theme.borderColor` is set, Streamlit uses a
+        lighter version of `theme.borderColor`. If neither is set, Streamlit
+        uses the theme's default dataframe border color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme and neither border is set, Streamlit
+        derives a light border from text color.
     """,
 )
 
@@ -2675,8 +2741,10 @@ _create_theme_options(
         This color applies to all non-interior cells of the dataframe. This
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
-        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
-        `theme.secondaryBackgroundColor`.
+        isn't set, Streamlit uses the theme's default dataframe header
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
     """,
 )
 
@@ -2715,6 +2783,9 @@ _create_theme_options(
     ],
     description="""
         Whether to show a border around input widgets.
+
+        If this is unset or `true`, Streamlit draws widget borders using
+        `borderColor`. Set it to `false` to hide them.
     """,
     type_=bool,
 )
@@ -2725,6 +2796,9 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        If this is unset or `true`, Streamlit shows the separator. Set it to
+        `false` to hide it.
     """,
     type_=bool,
 )

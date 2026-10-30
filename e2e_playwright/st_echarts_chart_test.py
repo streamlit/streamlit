@@ -31,9 +31,10 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 21
+_EXPECTED_CHART_COUNT = 25
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
@@ -340,6 +341,28 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
 
 
+def test_tooltip_formatting_without_javascript(app: Page):
+    """Tooltip templates expand ``{@[n]}``, and ``valueFormatter`` formats numbers."""
+    template_chart = _get_chart(app, "c_tooltip_template")
+    # Heatmaps draw on two canvas layers.
+    expect(template_chart.locator("canvas").first).to_be_visible()
+    template_chart.hover()
+    template_tooltip = template_chart.locator(".echarts-template-tooltip")
+    expect(template_tooltip).to_have_text(
+        f"Mon · 654 sessions · {_XSS_TEMPLATE_PAYLOAD}"
+    )
+    # Must NOT happen: the expanded payload turned into markup.
+    expect(template_tooltip.locator("img")).to_have_count(0)
+
+    format_chart = _get_chart(app, "c_tooltip_value_format")
+    expect(format_chart.locator("canvas")).to_be_visible()
+    format_chart.hover()
+    format_tooltip = format_chart.locator(".echarts-value-format-tooltip")
+    expect(format_tooltip).to_contain_text("$1,234.57")
+    # Dollar format rounds to cents, so the unrounded grouped value must not remain.
+    expect(format_tooltip).not_to_contain_text("1,234.567")
+
+
 def test_toolbar_actions(app: Page):
     """Download and fullscreen toolbar actions work on a single page load."""
     png_container = get_element_by_key(app, "c_custom_colors")
@@ -391,6 +414,52 @@ def test_toolbar_actions(app: Page):
     expect(close_button).not_to_be_visible()
 
 
+# A negative UTC offset: a date converted through local time would land on the
+# previous day. The category axis prints the source string as given, so the
+# label is exactly the string produced for the Arrow date column.
+@pytest.mark.browser_context_args(timezone_id="America/New_York")
+def test_arrow_dataset_chart_and_show_data(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A DataFrame dataset renders from Arrow and toggles to a data table."""
+    container = get_element_by_key(app, "c_dataset_arrow")
+    chart = container.get_by_test_id("stEChartsChart")
+    expect(chart.locator("svg")).to_be_visible()
+    # Must NOT happen: the Arrow dataset fails to hydrate.
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # Dates arrive as wall-clock "YYYY-MM-DD" labels, not epoch numbers and
+    # not shifted by the browser timezone.
+    axis_labels = chart.locator("svg text")
+    expect(axis_labels.filter(has_text=re.compile(r"^2020-01-01$"))).to_be_visible()
+    expect(axis_labels.filter(has_text="2019-12-31")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
+
+    chart_handle = chart.element_handle()
+
+    # The hover-revealed toolbar overlaps the neighboring chart, so dispatch
+    # the clicks directly on the buttons (see test_toolbar_actions).
+    container.get_by_role("button", name="Show data").dispatch_event("click")
+    dataframe = container.get_by_test_id("stDataFrame")
+    expect(dataframe).to_be_visible()
+    expect(chart).to_be_hidden()
+    # The grid draws its cells on a canvas and mirrors the visible ones in an
+    # accessibility table, so check a value of the chart's dataframe there.
+    # Column 0 is the pandas index, so column 1 is "day".
+    expect(dataframe.get_by_test_id("glide-cell-1-0")).to_have_text("2020-01-01")
+
+    dataframe.hover()
+    show_chart_button = dataframe.get_by_role("button", name="Show chart")
+    expect(show_chart_button).to_be_visible()
+    show_chart_button.dispatch_event("click")
+
+    expect(chart.locator("svg")).to_be_visible()
+    expect(container.get_by_test_id("stDataFrame")).to_have_count(0)
+    # The chart was only hidden, so its ECharts instance (and DOM node) survive.
+    assert chart.evaluate("(el, prev) => el === prev", chart_handle)
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
 @pytest.mark.only_browser("chromium")
 def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Representative charts look correct in both light and dark themes."""
@@ -408,6 +477,9 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Radar exercises non-cartesian theming (split areas, spokes, names),
         # which must stay subtle/legible in both light and dark mode.
         "c_radar": "st_echarts_chart-radar",
+        # Funnel stage separators must follow the app background instead of
+        # ECharts' white lines, and outside labels must stay legible on it.
+        "c_funnel": "st_echarts_chart-funnel",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)

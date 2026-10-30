@@ -17,17 +17,32 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from contextlib import ExitStack
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pandas as pd
+import pyarrow as pa
+from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.lib import agent_spec
+from streamlit import runtime
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.agent.snapshot import build_snapshot
 from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.lib.agent_spec_coverage_test import _PRODUCERS
+from tests.streamlit.runtime.agent.snapshot_test_case import (
+    _assert_data_resolves,
+    _one,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from streamlit.runtime.media_file_manager import MediaFileManager
 
 
 def _descriptions(messages: list[ForwardMsg]) -> list[dict[str, Any]]:
@@ -50,6 +65,36 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
 
     def _record(self) -> None:
         agent_spec.register_agent_session(self.script_run_ctx.session_id)
+
+    def _media_file_mgr(self) -> MediaFileManager:
+        return runtime.get_instance().media_file_mgr
+
+    def _arrow_files(self) -> list[bytes]:
+        """Contents of every Arrow file in media storage."""
+        return [
+            file.content
+            for file in self.media_file_storage._files_by_id.values()
+            if file.mimetype == agent_data.ARROW_MIMETYPE
+        ]
+
+    def _start_full_run(self) -> None:
+        """Start the next full run, after the last one's files were collected.
+
+        A full run drops the session's media references and positions, so only
+        what this run registers survives the collection at its end.
+        """
+        self.clear_queue()
+        self.script_run_ctx.reset()
+        self._media_file_mgr().clear_session_refs(self.script_run_ctx.session_id)
+        self._media_file_mgr().remove_orphaned_files()
+
+    def _snapshot(self, messages: list[ForwardMsg]) -> dict[str, Any]:
+        return build_snapshot(
+            session_id="s_7f3a",
+            messages=messages,
+            session_state=None,
+            query_params={},
+        ).document
 
     def test_is_recording_follows_the_session_id(self) -> None:
         """Another agent session does not make this browser session record."""
@@ -301,6 +346,50 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert set(chart["props"]["selection_mode"]) == {"points", "box"}
         assert "theme" not in chart["props"]
 
+    def test_on_select_is_reported_only_with_selections_on(self) -> None:
+        """`on_select` appears only when selections are on, as "rerun" even for a
+        callback. The documented default, "ignore", is left out.
+        """
+        import altair as alt
+        import plotly.graph_objects as go
+        import pydeck as pdk
+
+        self._record()
+        frame = pd.DataFrame({"a": [1, 2]})
+        chart = alt.Chart(frame).mark_bar().encode(x="a")
+        figure = go.Figure(go.Scatter(x=[1], y=[1]))
+        option = {
+            "xAxis": {"type": "category", "data": ["A", "B"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [1, 2], "selectedMode": "single"}],
+        }
+        st.dataframe(frame)
+        st.dataframe(frame, on_select=lambda: None, key="selectable_dataframe")
+        st.plotly_chart(figure)
+        st.plotly_chart(figure, on_select="rerun", key="selectable_plotly")
+        st.pydeck_chart(pdk.Deck())
+        st.pydeck_chart(pdk.Deck(), on_select="rerun", key="selectable_deck")
+        st.altair_chart(chart)
+        st.altair_chart(
+            chart.add_params(alt.selection_point()),
+            on_select="rerun",
+            key="selectable_altair",
+        )
+        st.echarts_chart(option)
+        st.echarts_chart(option, on_select=lambda: None, key="selectable_echarts")
+
+        described = _descriptions(list(self.forward_msg_queue._queue))
+        for command in (
+            "dataframe",
+            "plotly_chart",
+            "pydeck_chart",
+            "altair_chart",
+            "echarts_chart",
+        ):
+            plain, selectable = [item for item in described if item["type"] == command]
+            assert "on_select" not in plain["props"], command
+            assert selectable["props"]["on_select"] == "rerun", command
+
     def test_text_help_matches_the_dedented_proto(self) -> None:
         """Help is the dedented string the browser receives."""
         self._record()
@@ -386,6 +475,48 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert transparent() == [
             {"type": "container", "transparent": True, "props": {}}
         ]
+
+    def test_fragment_tables_in_an_outside_container_keep_their_files(self) -> None:
+        """Each table a fragment writes to the sidebar is registered where it renders.
+
+        The fragment's writes go into one wrapper block, and the sidebar's own
+        cursor advances once for it, so its position would be the same for the
+        second and third tables. The third would replace the second's
+        reference, and the second's file would be collected while the snapshot
+        still reports its URL. A fragment rerun reuses the wrapper.
+        """
+        self._record()
+
+        @st.fragment
+        def writer() -> None:
+            for rows in (1, 2, 3):
+                st.sidebar.dataframe(pd.DataFrame({"n": range(rows)}))
+
+        def assert_registered_where_rendered() -> None:
+            refs = self._media_file_mgr()._files_by_session_and_coord[
+                self.script_run_ctx.session_id
+            ]
+            tables = [
+                message
+                for message in self.forward_msg_queue._queue
+                if message.delta.new_element.WhichOneof("type") == "dataframe"
+            ]
+            assert len(tables) == 3
+            for message in tables:
+                [described] = _descriptions([message])
+                file_id = described["data"]["url"].rsplit("/", 1)[-1]
+                assert refs[str(list(message.metadata.delta_path))] == file_id
+            self._media_file_mgr().remove_orphaned_files()
+            assert len(self._arrow_files()) == 3
+
+        writer()
+        assert_registered_where_rendered()
+
+        fragment_id = next(iter(self.script_run_ctx.fragment_storage._fragments))
+        self.script_run_ctx.fragment_ids_this_run = [fragment_id]
+        self.clear_queue()
+        self.script_run_ctx.fragment_storage._fragments[fragment_id]()
+        assert_registered_where_rendered()
 
     def test_radio_series_captions_do_not_raise(self) -> None:
         """Captions may be a pandas Series, which has no truth value."""
@@ -498,6 +629,192 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         self._record()
         filled_by_browser()
         assert _descriptions(list(self.forward_msg_queue._queue)) == []
+
+    def test_browser_session_builds_and_registers_no_data(self) -> None:
+        """No element mock builds a data block or serves Arrow data, or even
+        tries to, in a browser session: every builder's body reads its payload
+        through one of these helpers.
+        """
+        helpers = ("_serve_arrow_over_http", "summarize_arrow", "parse_spec")
+        with ExitStack() as stack:
+            spies = [
+                stack.enter_context(
+                    patch.object(agent_data, helper, wraps=getattr(agent_data, helper))
+                )
+                for helper in helpers
+            ]
+            for producers in _PRODUCERS.values():
+                for producer in producers:
+                    producer()
+
+        for spy in spies:
+            spy.assert_not_called()
+        assert self._arrow_files() == []
+
+    @parameterized.expand(SHARED_TEST_CASES)
+    def test_dataframe_and_table_data_accept_every_input(
+        self, _name: str, input_data: Any, _metadata: CaseMetadata
+    ) -> None:
+        """Every input a table accepts gets a data block that counts its payload."""
+        self._record()
+        st.dataframe(input_data)
+        st.table(input_data)
+
+        messages = list(self.forward_msg_queue._queue)
+        payloads = {
+            "dataframe": messages[0].delta.new_element.dataframe.arrow_data.data,
+            "table": messages[1].delta.new_element.table.arrow_data.data,
+        }
+        document = self._snapshot(messages)
+        for element_type, payload in payloads.items():
+            data = _one(document, element_type)["data"]
+            _assert_data_resolves(data)
+            assert (
+                data["row_count"]
+                == pa.RecordBatchStreamReader(payload).read_all().num_rows
+            )
+
+    def test_cache_replay_registers_table_data_only_for_agent_sessions(self) -> None:
+        """A replay into the agent session registers the table again; a replay into
+        a browser session registers nothing and attaches no description.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def filled_by_agent() -> int:
+            st.dataframe(pd.DataFrame({"n": range(150)}))
+            return 1
+
+        self._record()
+        filled_by_agent()
+        [described] = _descriptions(list(self.forward_msg_queue._queue))
+        self._start_full_run()
+        assert self._arrow_files() == []
+
+        filled_by_agent()
+        self._media_file_mgr().remove_orphaned_files()
+        [replayed] = _descriptions(list(self.forward_msg_queue._queue))
+        assert replayed["data"] == described["data"]
+        assert len(self._arrow_files()) == 1
+        self.media_file_storage.get_file(described["data"]["url"].rsplit("/", 1)[-1])
+
+        agent_spec.forget_agent_session(self.script_run_ctx.session_id)
+        self._start_full_run()
+        filled_by_agent()
+        assert _descriptions(list(self.forward_msg_queue._queue)) == []
+        assert self._arrow_files() == []
+
+    @parameterized.expand(
+        [
+            ("table", lambda: st.table(pd.DataFrame({"n": range(3)}))),
+            ("chart", lambda: st.line_chart(pd.DataFrame({"n": range(3)}))),
+        ]
+    )
+    def test_cache_replay_serves_each_kind_of_data_again(
+        self, _name: str, emit: Callable[[], object]
+    ) -> None:
+        """A replayed table or chart serves the bytes its first run did, read
+        back from the replayed payload.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def filled_by_agent() -> int:
+            emit()
+            return 1
+
+        self._record()
+        filled_by_agent()
+        [described] = _descriptions(list(self.forward_msg_queue._queue))
+        [original] = self._arrow_files()
+        self._start_full_run()
+
+        filled_by_agent()
+        self._media_file_mgr().remove_orphaned_files()
+
+        [replayed] = _descriptions(list(self.forward_msg_queue._queue))
+        assert replayed["data"] == described["data"]
+        served = self.media_file_storage.get_file(
+            replayed["data"]["url"].rsplit("/", 1)[-1]
+        )
+        assert served.content == original
+
+    def test_a_browser_filled_cache_replays_as_undescribed(self) -> None:
+        """An entry a browser filled has no copy, so the agent sees why there is none."""
+
+        @st.cache_data(show_spinner=False)
+        def filled_by_browser() -> int:
+            st.dataframe(pd.DataFrame({"n": range(150)}))
+            return 1
+
+        filled_by_browser()
+        self.clear_queue()
+        self._record()
+        filled_by_browser()
+
+        document = self._snapshot(list(self.forward_msg_queue._queue))
+        data = _one(document, "dataframe")["data"]
+        assert document["undescribed_types"] == ["dataframe"]
+        assert data["unavailable"] == "undescribed"
+        assert "url" not in data
+        assert self._arrow_files() == []
+
+    def test_replayed_table_data_follows_the_replaying_position(self) -> None:
+        """A cached table that moved is registered where it now renders.
+
+        Under the position of the run that filled the cache, the audio now
+        rendered there would replace the table's reference, and the table's
+        file would be collected while the snapshot still reports its URL.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def table() -> int:
+            st.dataframe(pd.DataFrame({"n": range(150)}))
+            return 1
+
+        self._record()
+        st.audio(b"not really audio", format="audio/wav")
+        table()
+
+        self._start_full_run()
+        table()
+        st.audio(b"not really audio", format="audio/wav")
+        self._media_file_mgr().remove_orphaned_files()
+
+        replayed = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "dataframe"
+        )
+        self.media_file_storage.get_file(replayed["data"]["url"].rsplit("/", 1)[-1])
+        assert len(self._arrow_files()) == 1
+
+    def test_nested_cache_replay_keeps_the_inner_tables_file(self) -> None:
+        """An outer cache filled around an inner cache hit serves the inner table.
+
+        The inner hit registers its file while the outer function is being
+        filled, and the outer entry records that file too, so a later outer
+        hit registers it as well instead of reporting a collected URL.
+        """
+
+        @st.cache_data(show_spinner=False)
+        def inner() -> int:
+            st.dataframe(pd.DataFrame({"n": range(150)}))
+            return 1
+
+        @st.cache_data(show_spinner=False)
+        def outer() -> int:
+            return inner() + 1
+
+        self._record()
+        inner()
+        self._start_full_run()
+        outer()
+        self._start_full_run()
+        outer()
+        self._media_file_mgr().remove_orphaned_files()
+
+        [replayed] = _descriptions(list(self.forward_msg_queue._queue))
+        self.media_file_storage.get_file(replayed["data"]["url"].rsplit("/", 1)[-1])
+        assert len(self._arrow_files()) == 1
 
     def test_status_update_resends_the_new_state(self) -> None:
         """``status.update()`` rebuilds the description on the replacement message."""

@@ -44,7 +44,9 @@ from streamlit.runtime.fragment import (
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _FragmentIdentity,
     _FragmentLifetime,
+    _make_fragment_identity,
     _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
@@ -60,6 +62,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
+from streamlit.util import calc_hash, create_fast_hasher
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -1356,6 +1359,107 @@ class FragmentTest(unittest.TestCase):
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
 
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_fragment_wrap_uses_canonical_identity(self, patched_get_script_run_ctx):
+        """``_fragment.wrap`` must use ``_make_fragment_identity`` for both IDs."""
+        ctx = MagicMock()
+        ctx.fragment_ids_this_run = []
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.shared = SharedRunState()
+        ctx.cursors = {}
+        patched_get_script_run_ctx.return_value = ctx
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 0]
+
+        def my_function():
+            return ThreadState.get().fragment_id
+
+        observed_id = _fragment(my_function, key="charts")()
+        identity = _make_fragment_identity(
+            my_function,
+            delta_path="[0, 0]",
+            additional_hash_info="",
+        )
+        hashed_id = _fragment(
+            my_function, key="dialog_charts", additional_hash_info="dialog_func"
+        )()
+        hashed_identity = _make_fragment_identity(
+            my_function,
+            delta_path="[0, 0]",
+            additional_hash_info="dialog_func",
+        )
+        assert observed_id == identity.fragment_id
+        assert hashed_id == hashed_identity.fragment_id
+        assert hashed_id != observed_id
+        assert (
+            ctx.shared._fragment_user_keys_this_run["charts"] == identity.definition_id
+        )
+        assert (
+            ctx.shared._fragment_user_keys_this_run["dialog_charts"]
+            == hashed_identity.definition_id
+        )
+        assert ctx.fragment_storage.contains(identity.fragment_id)
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_keyed_and_unkeyed_fragments_share_call_site_id(
+        self, patched_get_script_run_ctx
+    ):
+        """A fragment key is not part of call-site or definition identity."""
+        ctx = MagicMock()
+        ctx.fragment_ids_this_run = []
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.shared = SharedRunState()
+        ctx.cursors = {}
+        patched_get_script_run_ctx.return_value = ctx
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 0]
+
+        def my_function():
+            return ThreadState.get().fragment_id
+
+        unkeyed_id = _fragment(my_function)()
+        keyed_id = _fragment(my_function, key="charts")()
+        identity = _make_fragment_identity(
+            my_function,
+            delta_path="[0, 0]",
+            additional_hash_info="",
+        )
+        assert unkeyed_id == keyed_id == identity.fragment_id
+        assert (
+            ctx.shared._fragment_user_keys_this_run["charts"] == identity.definition_id
+        )
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_distinct_call_sites_share_definition_id(self, patched_get_script_run_ctx):
+        """One keyed definition at two delta paths keeps one definition ID."""
+        ctx = MagicMock()
+        ctx.fragment_ids_this_run = []
+        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.shared = SharedRunState()
+        ctx.cursors = {}
+        patched_get_script_run_ctx.return_value = ctx
+
+        def my_function():
+            return ThreadState.get().fragment_id
+
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 0]
+        first_id = _fragment(my_function, key="multi_site")()
+        context_dg_stack.get()[-1]._cursor.delta_path = [0, 3, 1]
+        second_id = _fragment(my_function, key="multi_site")()
+
+        first_identity = _make_fragment_identity(
+            my_function, delta_path="[0, 0]", additional_hash_info=""
+        )
+        second_identity = _make_fragment_identity(
+            my_function, delta_path="[0, 3, 1]", additional_hash_info=""
+        )
+        assert first_id == first_identity.fragment_id
+        assert second_id == second_identity.fragment_id
+        assert first_id != second_id
+        assert first_identity.definition_id == second_identity.definition_id
+        assert (
+            ctx.shared._fragment_user_keys_this_run["multi_site"]
+            == first_identity.definition_id
+        )
+
     @patch("streamlit.error_util.show_uncaught_app_exception")
     @patch("streamlit.error_util._log_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
@@ -2436,6 +2540,41 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
 
         assert captured_is_parallel_worker is True
 
+    def test_run_parallel_fragment_resets_command_tracking_deactivated(self) -> None:
+        """Workers start with tracking on even if the parent copy had it off."""
+        import contextvars
+
+        mock_coordinator = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.parallel_coordinator = mock_coordinator
+
+        captured_flag: bool | None = None
+
+        def capturing_fragment() -> None:
+            nonlocal captured_flag
+            captured_flag = ThreadState.get().command_tracking_deactivated
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        worker_ctx = contextvars.copy_context()
+        try:
+            with (
+                patch(
+                    "streamlit.runtime.fragment.get_script_run_ctx",
+                    return_value=mock_ctx,
+                ),
+                patch("streamlit.delta_generator_singletons.context_dg_stack"),
+            ):
+
+                def run_worker() -> None:
+                    _run_parallel_fragment("test_id", capturing_fragment, [])
+
+                worker_ctx.run(run_worker)
+
+            assert captured_flag is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
+
     def test_nested_sequential_fragment_inherits_is_parallel_worker(self) -> None:
         """Nested sequential fragment via ThreadState.scoped() inherits is_parallel_worker."""
         ThreadState.initialize(is_parallel_worker=True)
@@ -2678,3 +2817,71 @@ def test_fragment_different_definitions_same_key_collide() -> None:
         shared.register_fragment_user_key("shared_key", "mymodule.fragment_beta")
         is False
     )
+
+
+def _named_fragment_func(module: str, qualname: str) -> Callable[[], None]:
+    """Return a function whose ``__module__`` and ``__qualname__`` form a fixed identity token."""
+
+    def func() -> None:
+        return None
+
+    func.__module__ = module
+    func.__qualname__ = qualname
+    return func
+
+
+# Locked IDs for the synthetic function ``golden.mod.frag``.
+# The golden-value test fails if either formula changes, or if the call-site
+# hash becomes ``definition_id + delta_path`` instead of
+# ``token + delta_path + additional_hash_info``.
+_GOLDEN_DEFINITION_ID = "golden.mod.frag"
+_GOLDEN_FRAGMENT_IDS = {
+    ("[0, 0]", ""): "0f90b1cc32a0c1da72bca9118df24d19",
+    ("[0, 3, 1]", ""): "f71843826544d7c28a6273254f00a845",
+    ("[0, 3, 0, 1]", ""): "1d2ad3ac9f8d3c822b2b379fda801927",
+    ("[0, 0]", "dialog_func"): "e22ab541d62e480cf65243ec9c36b98d",
+    ("[0, 3, 1]", "dialog_func"): "93d620916c41056e8a0e6ab8ed729614",
+}
+
+
+@pytest.mark.parametrize(
+    ("delta_path", "additional_hash_info", "expected_fragment_id"),
+    [(*case, digest) for case, digest in _GOLDEN_FRAGMENT_IDS.items()],
+)
+def test_fragment_identity_golden_values(
+    delta_path: str, additional_hash_info: str, expected_fragment_id: str
+) -> None:
+    """Lock current definition and call-site identity bytes."""
+    identity = _make_fragment_identity(
+        _named_fragment_func("golden.mod", "frag"),
+        delta_path=delta_path,
+        additional_hash_info=additional_hash_info,
+    )
+    token = _GOLDEN_DEFINITION_ID
+    preimage = f"{token}{delta_path}{additional_hash_info}"
+
+    assert isinstance(identity, _FragmentIdentity)
+    assert identity.definition_id == f"{token}{additional_hash_info}"
+    assert identity.fragment_id == calc_hash(preimage)
+    if additional_hash_info:
+        assert identity.fragment_id != calc_hash(
+            f"{identity.definition_id}{delta_path}"
+        )
+    if create_fast_hasher().name == "blake2b":
+        assert identity.fragment_id == expected_fragment_id
+
+
+def test_fragment_identity_different_definitions_diverge() -> None:
+    """Two functions at the same call site get distinct definition and fragment IDs."""
+    first = _make_fragment_identity(
+        _named_fragment_func("golden.mod", "frag"),
+        delta_path="[0, 0]",
+        additional_hash_info="",
+    )
+    second = _make_fragment_identity(
+        _named_fragment_func("golden.mod", "other"),
+        delta_path="[0, 0]",
+        additional_hash_info="",
+    )
+    assert first.definition_id != second.definition_id
+    assert first.fragment_id != second.fragment_id

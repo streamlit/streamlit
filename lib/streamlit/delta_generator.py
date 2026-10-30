@@ -528,6 +528,29 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
+    def _get_write_delta_path_str(self) -> str:
+        """Return the delta path where this DeltaGenerator's next element is written.
+
+        Unlike ``_get_delta_path_str``, this follows a fragment's write to a
+        container declared outside it into the wrapper block ``_enqueue``
+        redirects it to. The outside container's own cursor advances only once
+        for that wrapper, so it would give every such element the same path.
+        """
+        dg = self._active_dg
+        ctx = get_script_run_ctx()
+        if ctx is not None:
+            ts = ThreadState.get()
+            if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
+                wrapper = ctx.fragment_storage.get_outside_wrapper(
+                    ts.fragment_id, dg._id
+                )
+                if wrapper is None:
+                    # `_enqueue` creates the wrapper at this cursor's position,
+                    # and the element becomes its first child.
+                    return str([*cast("Cursor", dg._cursor).delta_path, 0])
+                dg = wrapper.delta_generator
+        return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
+
     def _enqueue(
         self,
         delta_type: str,
@@ -571,14 +594,11 @@ class DeltaGenerator(
                     cursor_path, fragment_path
                 ):
                     raise StreamlitInvalidLayoutContextError(
-                        "Writing to containers outside a parallel fragment is not "
-                        "allowed during the initial page load, because parallel "
-                        "fragments run concurrently on separate threads and "
-                        "external container writes are not thread-safe.\n\n"
-                        "To fix this, move the element inside the fragment body, "
-                        "or gate the write behind a widget interaction "
-                        "(e.g., `if st.button(...):`) so it runs during a "
-                        "sequential fragment rerun instead."
+                        "Writing to a container created outside a parallel "
+                        "fragment, including `st.sidebar` and `st.bottom`, is "
+                        "not supported on a full app run or a later fragment "
+                        "rerun.\n\n"
+                        "To fix this, move the element inside the fragment body."
                     )
 
             if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
@@ -873,10 +893,13 @@ def _get_or_create_outside_wrapper(
             "A fragment tried to write to a container created outside it, but "
             "the fragment did not write to that container during the last full "
             "app run, so Streamlit could not reserve a stable position for it.\n\n"
-            "Inside the fragment function, write to the container on every full "
-            "app run (e.g. `outside_container.empty()` or "
-            "`with outside_container: st.empty()`), then fill it during fragment "
-            "reruns."
+            "If this fragment uses `parallel=True`, writing to containers "
+            "created outside it is not supported, including `st.sidebar` and "
+            "`st.bottom`. Move the element inside the fragment body.\n\n"
+            "Otherwise, inside the fragment function, write to the container "
+            "on every full app run (e.g. `outside_container.empty()` or "
+            "`with outside_container: st.empty()`), then fill it during "
+            "fragment reruns."
         )
 
     parent_cursor = cast("Cursor", dg._cursor)

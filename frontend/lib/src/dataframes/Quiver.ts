@@ -276,6 +276,27 @@ export class Quiver {
     }
   }
 
+  /** Return a function that reads the raw values of a single data column.
+   *
+   * Use this to read every row of a column: the column is looked up once
+   * instead of on every `getCell` call, which matters for large tables.
+   *
+   * @param dataColumnIndex - The data column index (0 is the first data column, excluding index columns)
+   * @returns A function that takes a row index (0 is the first data row) and returns the cell's raw value. Row indexes are not range-checked.
+   */
+  public getDataColumnReader(
+    dataColumnIndex: number
+  ): (rowIndex: number) => DataType {
+    if (
+      dataColumnIndex < 0 ||
+      dataColumnIndex >= this._dataColumnTypes.length
+    ) {
+      throw new Error(`Data column index is out of range: ${dataColumnIndex}`)
+    }
+    const column = this._data.getChildAt(dataColumnIndex)
+    return rowIndex => column?.get(rowIndex) as DataType
+  }
+
   /** Get the raw value of an index cell.
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.

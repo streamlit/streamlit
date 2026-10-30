@@ -17,16 +17,20 @@
 import {
   Binary,
   Bool,
+  DateDay,
   Decimal,
+  Dictionary,
   Duration,
   Field,
   Float64,
   Int64,
+  Int8,
   LargeBinary,
   LargeUtf8,
   List,
   makeVector,
   Null,
+  Struct,
   Time,
   Timestamp,
   TimeUnit,
@@ -54,6 +58,7 @@ import {
   type ArrowType,
   convertVectorToList,
   DataFrameCellType,
+  getFormattableCategoryType,
   getPandasTypeName,
   getTimezone,
   isBooleanType,
@@ -982,6 +987,63 @@ describe("isTimeType", () => {
   )
 })
 
+describe("getFormattableCategoryType", () => {
+  it.each([
+    ["date", true, new DateDay(), undefined],
+    ["datetime", true, new Timestamp(TimeUnit.MILLISECOND, "UTC"), undefined],
+    ["time", true, new Time(TimeUnit.MICROSECOND, 64), undefined],
+    ["period", true, new Int64(), "pandas.period"],
+    ["string", false, new Utf8(), undefined],
+    ["float", false, new Float64(), undefined],
+    ["int", false, new Int64(), undefined],
+  ])(
+    "%s categories are formattable: %s",
+    (_name, expected, valueType, extensionName) => {
+      const metadata = new Map<string, string>()
+      if (extensionName !== undefined) {
+        metadata.set("ARROW:extension:name", extensionName)
+      }
+      const categoryType = getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "c",
+          new Dictionary(valueType, new Int8()),
+          true,
+          metadata
+        ),
+        pandasType: undefined,
+      })
+
+      expect(categoryType?.arrowField.type === valueType).toBe(expected)
+    }
+  )
+
+  it("returns undefined for columns that are not dictionary-encoded", () => {
+    expect(
+      getFormattableCategoryType({
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", new DateDay(), true),
+        pandasType: undefined,
+      })
+    ).toBeUndefined()
+  })
+
+  it("returns the cached category type for the same column type", () => {
+    const columnType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Dictionary(new DateDay(), new Int8())),
+      pandasType: undefined,
+    }
+    const categoryType = getFormattableCategoryType(columnType)
+
+    expect(categoryType).toBeDefined()
+    expect(getFormattableCategoryType(columnType)).toBe(categoryType)
+    expect(getFormattableCategoryType({ ...columnType })).not.toBe(
+      categoryType
+    )
+  })
+})
+
 describe("isListType", () => {
   it.each([
     [undefined, false],
@@ -1122,6 +1184,31 @@ describe("isPeriodType", () => {
     "interprets %s as period type: %s",
     (arrowType: ArrowType | undefined, expected: boolean) => {
       expect(isPeriodType(arrowType)).toEqual(expected)
+    }
+  )
+
+  it.each([
+    ["pandas.period", new Int64(), true],
+    ["period", new Int64(), true],
+    ["pandas.interval", new Int64(), false],
+    ["pandas.period", new Utf8(), false],
+  ])(
+    "classifies extension %s on %s without pandas metadata as period: %s",
+    (extensionName, arrowType, expected) => {
+      // A `pyarrow.Table` column or the values of a dictionary-encoded column
+      // carry no pandas column metadata, so only the Arrow extension name
+      // identifies them as periods.
+      const type: ArrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          arrowType,
+          true,
+          new Map([["ARROW:extension:name", extensionName]])
+        ),
+        pandasType: undefined,
+      }
+      expect(isPeriodType(type)).toBe(expected)
     }
   )
 })
@@ -1311,6 +1398,35 @@ describe("isIntervalType", () => {
     "interprets %s as interval type: %s",
     (arrowType: ArrowType | undefined, expected: boolean) => {
       expect(isIntervalType(arrowType)).toEqual(expected)
+    }
+  )
+
+  const intervalStruct = new Struct([
+    new Field("left", new Int64(), true),
+    new Field("right", new Int64(), true),
+  ])
+
+  it.each([
+    ["pandas.interval", intervalStruct, true],
+    ["interval", intervalStruct, true],
+    ["pandas.period", intervalStruct, false],
+    ["pandas.interval", new Int64(), false],
+  ])(
+    "classifies extension %s on %s without pandas metadata as interval: %s",
+    (extensionName, arrowType, expected) => {
+      // The values of a `pd.cut` categorical carry no pandas column metadata,
+      // so only the Arrow extension name identifies them as intervals.
+      const type: ArrowType = {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          arrowType,
+          true,
+          new Map([["ARROW:extension:name", extensionName]])
+        ),
+        pandasType: undefined,
+      }
+      expect(isIntervalType(type)).toBe(expected)
     }
   )
 })

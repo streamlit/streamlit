@@ -86,14 +86,9 @@ export const createEmotionColors = (
 
     link: genericColors.blueTextColor,
 
-    codeTextColor: genericColors.greenTextColor,
-    codeBackgroundColor: derivedColors.bgMix,
-
-    borderColor: derivedColors.fadedText10,
-    borderColorLight: derivedColors.fadedText05,
-
-    dataframeBorderColor: derivedColors.fadedText05,
-    dataframeHeaderBackgroundColor: derivedColors.bgMix,
+    // border, code, and dataframe colors are copied from genericColors.
+    // borderColorLight is that border at 45% opacity.
+    borderColorLight: transparentize(genericColors.borderColor, 0.55),
     dataframeHeaderTextColor: derivedColors.fadedText60,
 
     headingColor: genericColors.bodyText,

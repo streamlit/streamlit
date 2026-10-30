@@ -1,11 +1,31 @@
-
 # Streamlit custom components
 
-Extend Streamlit with third-party custom components from the community.
+Custom components are Python packages, mostly from the community, that add UI Streamlit does not ship.
 
-## What are custom components?
+## Prefer a native equivalent
 
-Custom components are standalone Python libraries that add features not in Streamlit's core API. They're built by the community and can be installed like any Python package.
+Most community components are not maintained by Streamlit. They can break on Streamlit upgrades and often miss theming, accessibility, and performance work that ships in core. Do not add one, and do not build a custom component, to recreate a native command.
+
+| Instead of | Use |
+| --- | --- |
+| `streamlit-autorefresh` (`st_autorefresh`) | `@st.fragment(run_every=...)` on the section that should refresh. That reruns only the fragment, not the whole app. Do not loop the script. |
+| `streamlit-aggrid` | `st.dataframe` for sorting, search, and formatting, or `st.data_editor` for editing. `column_config` sets formats and editors. See [data-display.md](data-display.md). |
+| `streamlit-folium` (`st_folium`) | `st.map` for latitude/longitude points, or `st.pydeck_chart` for deck.gl maps. |
+| `streamlit-option-menu` | `st.navigation` when the menu switches app sections; `st.segmented_control` when it switches views within one page. |
+| `extra-streamlit-components` (`CookieManager`) | `st.context.cookies` to read the initial request. `st.App` middleware can set a cookie on an HTTP response, not after a widget interaction. See [server-asgi.md](server-asgi.md). |
+| `streamlit-searchbox` | `st.selectbox` to pick from a known list of moderate size (see [High-cardinality options](selection-widgets.md#high-cardinality-options)); `st.text_input(..., type="search", live=True)` to filter results rendered below it. Put the text input in a `@st.fragment` when the rest of the page should stay put. |
+| `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. See [data-display.md](data-display.md). |
+| `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)`, inside a `@st.fragment` when the rest of the page should stay put. |
+| `streamlit-bokeh` | A Vega-based chart or `st.echarts_chart` for a new chart. Keep `streamlit-bokeh` for an existing Bokeh figure. |
+
+Use the package only when the native command does not cover the behavior:
+
+- **AgGrid** — per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Search and lazy-loading limits are in [data-display.md](data-display.md). When hiding non-matching rows is enough, filter in Python with separate widgets. For pivot tables, use `streamlit-pivot-table`.
+- **Folium** — a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide.
+- **Cookies** — `st.context.cookies` is read-only and reflects the initial request. `st.App` middleware can set cookies on HTTP responses, not after a widget interaction. Use a cookie component only when the script must read or change cookies after the page loads; for sign-in, prefer `st.login`.
+- **Search suggestions** — a dropdown of suggestions computed in Python as the user types (`streamlit-searchbox`). `st.text_input` returns the typed text and has no suggestion list.
+- **ECharts** — JavaScript callbacks (`JsCode`, `formatter` functions, `custom` series), GeoJSON map registration, or ECharts GL / 3D charts. `st.echarts_chart` accepts JSON-compatible options only. See [data-display.md](data-display.md).
+- **Bokeh** — an existing Bokeh figure. No native command renders a Bokeh object.
 
 ## Installation
 
@@ -17,84 +37,18 @@ uv add <pypi-package-name>
 
 Then import according to the component's documentation. The import name often differs from the package name too.
 
-## Use with caution
+## Before adopting a component
 
-Components are not maintained by Streamlit. Before adopting:
+- **Check maintenance** — recent commits and a current release
+- **Check compatibility** — it works with the app's Streamlit version
+- **Check popularity** — downloads and community usage
+- **Confirm the gap** — no native command in [the mapping](#prefer-a-native-equivalent) covers the behavior
 
-- **Check maintenance** - Is it actively maintained? Recent commits?
-- **Check compatibility** - Does it work with your Streamlit version?
-- **Check popularity** - GitHub stars, downloads, community usage
-- **Consider alternatives** - Can you achieve this with core Streamlit?
-
-Custom components can break when Streamlit updates, so prefer core features when possible.
-
-## Popular custom components
-
-### streamlit-bokeh
-
-Official replacement for `st.bokeh_chart` (removed from Streamlit API). Maintained by Streamlit.
-
-- **Repo:** https://github.com/streamlit/streamlit-bokeh
-- **Docs:** https://pypi.org/project/streamlit-bokeh/
-
-```bash
-uv add streamlit-bokeh
-```
-
-```python
-from bokeh.plotting import figure
-from streamlit_bokeh import streamlit_bokeh
-
-p = figure(title="Simple Line", x_axis_label="x", y_axis_label="y")
-p.line([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], line_width=2)
-streamlit_bokeh(p)
-```
-
-### streamlit-aggrid
-
-Interactive dataframes with sorting, filtering, cell editing, grouping, and pivoting. Use when you need customization beyond what `st.dataframe` and `st.data_editor` offer.
-
-- **Repo:** https://github.com/PablocFonseca/streamlit-aggrid
-- **Docs:** https://pypi.org/project/streamlit-aggrid/
-
-```bash
-uv add streamlit-aggrid
-```
-
-```python
-from st_aggrid import AgGrid
-
-AgGrid(df, editable=True, filter=True)
-```
-
-**When to use aggrid over st.dataframe:**
-- Interactive row grouping and pivoting
-- Advanced filtering and sorting UI
-- Complex cell editing workflows
-- Custom cell renderers
-
-### streamlit-folium
-
-Interactive maps powered by Folium.
-
-- **Repo:** https://github.com/randyzwitch/streamlit-folium
-- **Docs:** https://folium.streamlit.app/
-
-```bash
-uv add streamlit-folium
-```
-
-```python
-import folium
-from streamlit_folium import st_folium
-
-m = folium.Map(location=[37.7749, -122.4194], zoom_start=12)
-st_folium(m, width=700)
-```
+## When a component still fits
 
 ### streamlit-pivot-table
 
-Interactive pivot tables with drag-and-drop dimensions, aggregation, and drill-down. Maintained by Streamlit.
+Interactive pivot tables with drag-and-drop dimensions, aggregation, and drill-down.
 
 - **Repo:** https://github.com/streamlit/streamlit-pivot-table
 - **Docs:** https://pypi.org/project/streamlit-pivot/
@@ -142,6 +96,28 @@ annotated_text(
     ("annotated", "adj", "#faa"),
     ("text", "noun", "#afa"),
 )
+```
+
+### streamlit-aggrid
+
+Per-column filter menus, row grouping, and custom cell renderers beyond `column_config`. Use `streamlit-pivot-table` for pivot tables. Sorting, search, and formatting belong on `st.dataframe`. Editing belongs on `st.data_editor`.
+
+- **Repo:** https://github.com/PablocFonseca/streamlit-aggrid
+- **Docs:** https://pypi.org/project/streamlit-aggrid/
+
+```bash
+uv add streamlit-aggrid
+```
+
+### streamlit-folium
+
+Folium and Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide.
+
+- **Repo:** https://github.com/randyzwitch/streamlit-folium
+- **Docs:** https://folium.streamlit.app/
+
+```bash
+uv add streamlit-folium
 ```
 
 ## Discover more

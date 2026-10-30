@@ -73,7 +73,7 @@ const generateAdditionalPage = (
     icons?: boolean
   }
 ): AppPage.$Properties => {
-  const { sectionHeaders, icons } = options
+  const { sectionHeaders, icons = false } = options
   const suffix = generatePageSuffix(pageIndex, totalPages)
 
   return {
