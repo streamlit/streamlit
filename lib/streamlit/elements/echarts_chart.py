@@ -1046,13 +1046,13 @@ class EChartsMixin:
             Streamlit leaves series unchanged in charts with selections
             (``on_select``, ``selectedMode``, or a ``brush``) and series whose
             ``data`` items are objects with their own settings. Large mode
-            also skips charts with a ``visualMap``, and line symbols stay with
-            a chart-level item tooltip or empty values. To opt out, set the
-            option yourself, for example ``"large": False``. For line charts
-            with even more points, you can set ``"sampling": "lttb"``, which
-            draws a subset of points that keeps the line's shape. Streamlit
-            doesn't set it for you because it changes which points are drawn
-            and which points tooltips show.
+            also skips charts with a ``visualMap`` and series with
+            ``"colorBy": "data"``, and line symbols stay with an item tooltip
+            or empty values. To opt out, set the option yourself, for example
+            ``"large": False``. For line charts with even more points, you can
+            set ``"sampling": "lttb"``, which draws a subset of points that
+            keeps the line's shape. Streamlit doesn't set it for you because it
+            changes which points are drawn and which points tooltips show.
 
         Parameters
         ----------

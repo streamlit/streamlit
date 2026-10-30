@@ -113,6 +113,7 @@ describe("applyLargeDataDefaults", () => {
   it.each([
     ["selectedMode", { selectedMode: "multiple" }, {}],
     ["a visualMap", {}, { visualMap: { min: 0, max: 7 } }],
+    ["per-item colors", { colorBy: "data" }, {}],
     ["polar coordinates", { coordinateSystem: "polar" }, {}],
   ])("skips large mode for %s", (_, series, extra) => {
     const option = chart({ type: "bar", ...series }, DENSE, extra)
@@ -140,6 +141,22 @@ describe("applyLargeDataDefaults", () => {
       tooltip: { trigger: "axis" },
     })
     expect(prepare(option).showSymbol).toBe(false)
+  })
+
+  it("reads the series tooltip trigger before the chart's", () => {
+    const itemSeries = chart(
+      { type: "line", tooltip: { trigger: "item" } },
+      DENSE,
+      { tooltip: { trigger: "axis" } }
+    )
+    expect(applyLargeDataDefaults(itemSeries, false)).toBe(itemSeries)
+
+    const axisSeries = chart(
+      { type: "line", tooltip: { trigger: "axis" } },
+      DENSE,
+      { tooltip: {} }
+    )
+    expect(prepare(axisSeries).showSymbol).toBe(false)
   })
 
   it("keeps line symbols when gaps would hide points", () => {

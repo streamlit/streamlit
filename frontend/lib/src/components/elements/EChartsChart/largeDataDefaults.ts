@@ -80,8 +80,18 @@ function hasToolboxBrush(option: EChartsOptionObject): boolean {
   )
 }
 
-/** Whether a chart-level tooltip triggers on items, ECharts' default. */
-function hasItemTooltip(option: EChartsOptionObject): boolean {
+/**
+ * Whether the series shows item tooltips. Its own ``tooltip.trigger`` wins
+ * over the chart's, and ECharts triggers on items when neither sets one.
+ */
+function hasItemTooltip(
+  series: SeriesOption,
+  option: EChartsOptionObject
+): boolean {
+  const seriesTrigger = toComponentList(series.tooltip).at(0)?.trigger
+  if (seriesTrigger !== undefined) {
+    return seriesTrigger === "item"
+  }
   return toComponentList(option.tooltip).some(
     ({ show, trigger }) =>
       show !== false && (trigger === undefined || trigger === "item")
@@ -108,11 +118,11 @@ function hasContinuousXAxis(
  * The series with its large-data default, or the same object if it gets none.
  *
  * Large mode draws a series as a few paths with the series style, so it skips
- * per-item settings, ``visualMap`` colors, and selections, which need one
- * shape per item. Line symbols stay for category axes (ECharts already thins
- * them there), a chart-level item tooltip (it needs a symbol to hover;
- * series-level ``tooltip.trigger`` isn't read), and lines with empty values
- * (a point between two gaps is drawn only as a symbol).
+ * per-item settings, ``visualMap`` and ``colorBy: "data"`` colors, and
+ * selections, which need one shape per item. Line symbols stay for category
+ * axes (ECharts already thins them there), item tooltips (they need a symbol
+ * to hover), and lines with empty values (a point between two gaps is drawn
+ * only as a symbol).
  */
 function withLargeDataDefault(
   series: unknown,
@@ -137,7 +147,7 @@ function withLargeDataDefault(
       "showSymbol" in seriesOption ||
       rows.length <= LINE_SYMBOL_THRESHOLD ||
       !hasContinuousXAxis(seriesOption, option) ||
-      hasItemTooltip(option) ||
+      hasItemTooltip(seriesOption, option) ||
       hasItemSettings(seriesOption) ||
       (seriesOption.connectNulls !== true && rows.some(hasEmptyValue))
     return keepsSymbols ? series : { ...seriesOption, showSymbol: false }
@@ -152,6 +162,7 @@ function withLargeDataDefault(
     "large" in seriesOption ||
     rows.length <= threshold ||
     option.visualMap !== undefined ||
+    seriesOption.colorBy === "data" ||
     (seriesOption.coordinateSystem ?? "cartesian2d") !== "cartesian2d" ||
     hasItemSettings(seriesOption)
   return keepsDefaultMode ? series : { ...seriesOption, large: true }
