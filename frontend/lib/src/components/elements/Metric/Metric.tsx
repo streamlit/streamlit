@@ -136,7 +136,9 @@ export function getMetricChartSpec(
   const isAreaChart = chartType === MetricProto.ChartType.AREA
 
   const spec: TopLevelSpec = {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    // Keep the schema's major version in sync with the bundled vega-lite
+    // package. vega-embed logs a version mismatch warning otherwise.
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: Math.round(availableWidth),
     height: Math.round(convertRemToPx("3.5rem")),
     data: {

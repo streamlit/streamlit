@@ -624,7 +624,7 @@ describe("Metric element", () => {
       )
 
       expect(spec).toMatchObject({
-        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+        $schema: "https://vega.github.io/schema/vega-lite/v6.json",
         width: 200,
         data: {
           values: chartData.map((value, index) => ({ x: index, y: value })),
