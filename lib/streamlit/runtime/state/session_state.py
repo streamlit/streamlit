@@ -141,9 +141,9 @@ def _sanitize_url_array(
 def _validate_url_value(metadata: WidgetMetadata[T], value: T) -> tuple[T, bool]:
     """Check a value seeded from the URL against the widget's validator.
 
-    A label several options share is valid, as at the boundary. What a
-    deserializer used to repair is repaired here (``_repair_url_wire``), and
-    the repaired value is checked again.
+    A label several options share is valid, as at the boundary. A value that
+    ``_repair_url_wire`` can repair, such as a reversed range, is repaired and
+    checked again.
 
     Returns
     -------
@@ -1024,8 +1024,8 @@ class SessionState:
         Each value is checked against the metadata of the run that rendered its
         widget, and a change is refused for a widget the latest run that
         covered it did not render. An accepted value is cached deserialized, so
-        nothing reads it again. A refused one is dropped, so the widget keeps
-        its previous value, and is logged without the value.
+        it is not deserialized again. A refused one is dropped, so the widget
+        keeps its previous value, and is logged without the value.
 
         A value or trigger for a widget this session never registered, as a
         browser sends to a new session after a reconnect, is left for
@@ -1322,9 +1322,7 @@ class SessionState:
         if widget_states is None:
             return None
 
-        latest: dict[str, WidgetStateProto] = {}
-        for widget in widget_states.widgets:
-            latest[widget.id] = widget
+        latest = {widget.id: widget for widget in widget_states.widgets}
         filtered = WidgetStatesProto()
         for widget_id, widget in latest.items():
             if widget_id not in exclude and _has_active_trigger_value(widget):
@@ -1668,12 +1666,14 @@ class SessionState:
         """Forget the rendered widgets that a run covered but did not register.
 
         A full run covers every widget, and a fragment run only its fragment's
-        widgets, by the rule that scopes stale widget states. No ID is added,
-        so a client's list of widget IDs can only shrink the set. A forgotten
-        widget no longer waits for a re-sync either: the browser removed it.
+        widgets, as ``_is_stale_widget`` decides for stale widget states. This
+        never adds an ID, so a client's list of widget IDs can only shrink the
+        set. A forgotten widget also stops waiting for a re-sync, because the
+        browser removed it.
 
-        This runs where stale widget states are removed, and also when a run
-        ends in ``st.stop()`` or an uncaught exception, which keeps the states.
+        Stale widget removal calls this, and so does the script runner when
+        ``st.stop()`` or an uncaught exception ends a run, which keeps the
+        widget states.
 
         Parameters
         ----------
@@ -2109,12 +2109,13 @@ class SessionState:
         the frontend has already dropped a parameter the server cleared, so
         there is nothing to correct.
         """
+        if self.query_params.get_initial_value(user_key) is None:
+            return False
         ctx = get_script_run_ctx()
-        is_history_navigation = ctx is not None and ctx.is_history_navigation
-        return self.query_params.get_initial_value(
-            user_key
-        ) is not None and self._url_has_priority(
-            widget_id, user_key, is_history_navigation=is_history_navigation
+        return self._url_has_priority(
+            widget_id,
+            user_key,
+            is_history_navigation=ctx is not None and ctx.is_history_navigation,
         )
 
     def _handle_query_param_binding(

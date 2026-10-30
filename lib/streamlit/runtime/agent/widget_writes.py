@@ -616,9 +616,8 @@ def build_widget_states(
         )
         addressed.add(element_id)
         touched_forms.add(state.form_id or "")
-        # A value equal to the stored one on the wire changes nothing, so it is
-        # left out. Sent, a label several options share would resolve to one of
-        # them, which need not be the option the widget holds.
+        # Only a changed value is sent: resent, a label several options share
+        # could resolve to another option than the one the widget holds.
         if _check_with_widget(
             session_state,
             metadata,

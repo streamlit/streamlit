@@ -499,8 +499,8 @@ class DateTimeInputSerde:
         The browser sends ``[]`` or one ``YYYY-MM-DDTHH:MM`` within the bounds,
         and never empties a required input.
         """
-        if ui_value is None or not ui_value:
-            # Both read as the default, so they are empty only without one.
+        if not ui_value:
+            # None and `[]` read as the default, so they are empty only without one.
             return widget_checks.filled(self.value, required=self.required)
         violation = widget_checks.item_count(ui_value, allowed=(0, 1))
         if violation is not None:
@@ -2427,8 +2427,8 @@ class TimeWidgetsMixin:
                 # No initial date, and not required: a later value can be cleared.
                 clearable=parsed_values.value is None and not required,
                 # A required range that holds both ends takes nothing less. One
-                # still empty or holding its start reports that, which sending
-                # back changes nothing.
+                # that is still empty or holds only its start stays partial, so
+                # its reported value can be sent back unchanged.
                 value_schema=agent_spec.range_of(
                     agent_spec.DATE,
                     partial=not (

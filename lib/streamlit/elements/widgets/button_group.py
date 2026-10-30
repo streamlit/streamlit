@@ -179,7 +179,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         A required widget is never cleared, except back to an empty default
         inside a form.
         """
-        if ui_value is not None and len(ui_value) > 0:
+        if ui_value:
             return widget_checks.items_of(self._label_counts, ui_value, max_items=1)
         # No selection. An unset value reads as the default, and `[]` is a
         # deselection, whatever the default.

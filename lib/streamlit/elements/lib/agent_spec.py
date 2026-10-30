@@ -140,8 +140,8 @@ def list_of(items: dict[str, Any]) -> dict[str, Any]:
 def range_of(items: dict[str, Any], *, partial: bool = False) -> dict[str, Any]:
     """Two values, lowest first: a slider's or a date input's range.
 
-    ``partial`` is for a date input's range that may also be empty or hold
-    only its start, which a required one holding both ends may not.
+    ``partial`` lets a date input's range also be empty or hold only its
+    start. A required range that already holds both ends is not partial.
     """
     schema: dict[str, Any] = {"type": "array", "items": items}
     if not partial:

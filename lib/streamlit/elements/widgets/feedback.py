@@ -113,7 +113,8 @@ class FeedbackSerde:
 
     def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
         """Refuse an index that names no option, such as "7" for "thumbs"."""
-        if ui_value is None or ui_value == "":
+        # None is unset and "" a cleared selection, both of which are legal.
+        if not ui_value:
             return None
         return widget_checks.one_of(self._label_counts, ui_value)
 

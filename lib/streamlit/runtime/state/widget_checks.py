@@ -177,7 +177,9 @@ _NOT_ISO_DATETIME: Final = _malformed("a date and time as YYYY-MM-DDTHH:MM")
 _NOT_HEX_COLOR: Final = _malformed("a hex color as #rgb or #rrggbb")
 _UNORDERED: Final = Violation("bad_shape", MappingProxyType({"order": True}))
 _EMPTY_REQUIRED: Final = Violation("empty_required")
+_UNREADABLE: Final = Violation("unreadable")
 _NOT_RENDERED: Final = Violation("not_rendered")
+_DISABLED: Final = Violation("disabled")
 
 # The characters JavaScript's `String.prototype.trim()` removes, which is how
 # the browser decides that text is empty. Python's `str.strip()` also removes
@@ -203,17 +205,17 @@ _HEX_COLOR: Final = re.compile(r"#(?:[0-9a-fA-F]{3}){1,2}")
 # for it in the server output.
 REFUSAL_LOG_MARKER: Final = "Refused a client value for widget"
 
+# Ends the explanation of a kind that a correct browser never causes.
+_NEVER_SENT: Final = (
+    "The Streamlit frontend never sends that, so the message was forged or came "
+    "from a different frontend version."
+)
+
 _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
     "wrong_type": (
-        "It arrived in a wire field this widget does not read. The Streamlit "
-        "frontend never sends that, so the message was forged or came from a "
-        "different frontend version."
+        f"It arrived in a wire field this widget does not read. {_NEVER_SENT}"
     ),
-    "unreadable": (
-        "The widget could not read it. The Streamlit frontend never sends "
-        "that, so the message was forged or came from a different frontend "
-        "version."
-    ),
+    "unreadable": f"The widget could not read it. {_NEVER_SENT}",
     "not_rendered": (
         "The latest run that covered the widget did not render it. A rerun can "
         "hide a widget just before a user's change arrives."
@@ -228,9 +230,7 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
         "widget just before a user's change arrives."
     ),
     "duplicate_items": (
-        "It lists an option more often than the widget offers it. The Streamlit "
-        "frontend never sends that, so the message was forged or came from a "
-        "different frontend version."
+        f"It lists an option more often than the widget offers it. {_NEVER_SENT}"
     ),
     "ambiguous_option": (
         "Several options show its label, so it does not say which option it means."
@@ -241,14 +241,9 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
     ),
     "bad_shape": (
         "It has the wrong number of items, or the ends of its range are "
-        "reversed. The Streamlit frontend never sends that, so the message was "
-        "forged or came from a different frontend version."
+        f"reversed. {_NEVER_SENT}"
     ),
-    "malformed": (
-        "It is not in a form the widget's frontend sends. The Streamlit frontend "
-        "never sends that, so the message was forged or came from a different "
-        "frontend version."
-    ),
+    "malformed": f"It is not in a form the widget's frontend sends. {_NEVER_SENT}",
     "too_long": (
         "It is longer than the widget's max_chars. A rerun can lower the limit "
         "just before a user's change arrives."
@@ -398,11 +393,7 @@ def items_of(
     return None
 
 
-def within(
-    value: Any,
-    min_value: Any,
-    max_value: Any,
-) -> Violation | None:
+def within(value: Any, min_value: Any, max_value: Any) -> Violation | None:
     """Check a value against a widget's bounds, which are inclusive.
 
     Parameters
@@ -664,8 +655,8 @@ def check_client_value(
         The first violation, or ``None``, with the deserialized value once the
         deserializer has read it.
     """
-    # The wire field. No field at all is the cleared form, which every
-    # widget accepts and reads as None.
+    # The wire field. No field at all is the unset form, which every widget
+    # accepts.
     field = state.WhichOneof("value")
     if field is not None:
         fields = accepted_value_fields(metadata)
@@ -684,7 +675,7 @@ def check_client_value(
         ui_value = unpack_widget_state_value(state)
         value = metadata.deserializer(ui_value)
     except Exception:
-        return CheckResult(Violation("unreadable"))
+        return CheckResult(_UNREADABLE)
 
     # An unchanged value passes. An active trigger always differs,
     # because the stored trigger was reset before the client's states arrived.
@@ -706,7 +697,7 @@ def check_client_value(
     # the client was shown, so a widget that disables itself in the callback
     # its own click runs keeps the click.
     if metadata.disabled:
-        return CheckResult(Violation("disabled"), value)
+        return CheckResult(_DISABLED, value)
 
     # The widget's own rules. The agent API, which compares on the wire, gets
     # no allowance for the browser's rounding either, so nothing it sends is
@@ -729,7 +720,7 @@ def check_client_value(
                 frame.filename,
                 frame.lineno,
             )
-            return CheckResult(Violation("unreadable"), value)
+            return CheckResult(_UNREADABLE, value)
     return CheckResult(violation, value, changed=not browser_refuses(violation))
 
 
@@ -751,17 +742,15 @@ def log_violation(widget_id: str, violation: Violation, *, warned: set[str]) -> 
     warned : set of str
         The widgets this session already warned about. It is updated in place.
     """
-    is_e2e_test = bool(config.get_option("global.e2eTest"))
-    if is_e2e_test:
-        level = "warning"
+    if config.get_option("global.e2eTest"):
+        log = _LOGGER.warning
     elif violation.kind in _RACE_KINDS:
-        level = "debug"
+        log = _LOGGER.debug
     elif widget_id in warned:
         return
     else:
         warned.add(widget_id)
-        level = "warning"
-    log = _LOGGER.warning if level == "warning" else _LOGGER.debug
+        log = _LOGGER.warning
     log(
         "%s %s (%s). %s The value was dropped.",
         REFUSAL_LOG_MARKER,

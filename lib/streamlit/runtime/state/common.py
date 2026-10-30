@@ -159,8 +159,8 @@ def pack_widget_state_value(
 
     This is the inverse of ``unpack_widget_state_value``: ``serialized`` is what
     a widget's serializer returns, and ``field_name`` is the wire field to write
-    it to. With no field, or a ``None`` value, the state carries no value, which
-    is the cleared form.
+    it to. With no field, or ``None`` for a scalar field, the state carries no
+    value, which is the unset form.
     """
     state = WidgetStateProto(id=widget_id)
     if field_name is None:
