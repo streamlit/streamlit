@@ -23,8 +23,6 @@ import {
   useState,
 } from "react"
 
-import { Text as RAText } from "react-aria-components"
-
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -36,9 +34,9 @@ import {
   StyledRadioCaption,
   StyledRadioCaptionSpacer,
   StyledRadioCard,
-  StyledRadioCardContent,
   StyledRadioCardField,
   StyledRadioCardIndicator,
+  StyledRadioCardRow,
   StyledRadioCardTitle,
   StyledRadioField,
   StyledRadioGroup,
@@ -98,12 +96,8 @@ function RadioIndicator({
 
 interface RadioCaptionProps {
   caption: string
-  /**
-   * Whether the caption sits inside a card. A card caption needs no indent,
-   * because the circle is at the other end of the card, and it renders links
-   * as plain text, because the whole card is clickable.
-   */
-  isCard?: boolean
+  /** Renders links as plain text, for captions inside a clickable card. */
+  disableLinks?: boolean
 }
 
 /**
@@ -112,18 +106,14 @@ interface RadioCaptionProps {
  */
 function RadioCaption({
   caption,
-  isCard = false,
+  disableLinks = false,
 }: Readonly<RadioCaptionProps>): ReactElement | null {
   if (caption === "") {
     return null
   }
 
-  // `StyledRadioCaption` indents the caption past the leading circle of the
-  // default style.
-  const CaptionText = isCard ? RAText : StyledRadioCaption
-
   return (
-    <CaptionText
+    <StyledRadioCaption
       slot="description"
       elementType="div"
       data-testid="stRadioCaption"
@@ -133,9 +123,9 @@ function RadioCaption({
         allowHTML={false}
         isCaption
         isLabel
-        disableLinks={isCard}
+        disableLinks={disableLinks}
       />
-    </CaptionText>
+    </StyledRadioCaption>
   )
 }
 
@@ -150,9 +140,8 @@ interface RadioCardOptionProps {
 }
 
 /**
- * One option of a card group (`type="cards"`): the title and caption, then the
- * circle in the top-right corner. The caption sits inside the card's label so
- * the whole card is one click target. Labelling the input by
+ * One option of a card group (`type="cards"`). The caption sits inside the
+ * card's label so the whole card is one click target. Labelling the input by
  * the title alone keeps the caption out of the accessible name; it remains the
  * description.
  *
@@ -172,7 +161,14 @@ function RadioCardOption({
       <StyledRadioCard data-testid="stRadioOption">
         {({ isSelected, isHovered, isDisabled }) => (
           <>
-            <StyledRadioCardContent>
+            <StyledRadioCardRow>
+              <StyledRadioCardIndicator data-testid="stRadioCardIndicator">
+                <RadioIndicator
+                  isSelected={isSelected}
+                  isHovered={isHovered}
+                  isDisabled={isDisabled}
+                />
+              </StyledRadioCardIndicator>
               <StyledRadioCardTitle id={titleId} $isEmphasized={isEmphasized}>
                 <StreamlitMarkdown
                   source={option}
@@ -181,15 +177,8 @@ function RadioCardOption({
                   disableLinks
                 />
               </StyledRadioCardTitle>
-              <RadioCaption caption={caption} isCard />
-            </StyledRadioCardContent>
-            <StyledRadioCardIndicator data-testid="stRadioCardIndicator">
-              <RadioIndicator
-                isSelected={isSelected}
-                isHovered={isHovered}
-                isDisabled={isDisabled}
-              />
-            </StyledRadioCardIndicator>
+            </StyledRadioCardRow>
+            <RadioCaption caption={caption} disableLinks />
           </>
         )}
       </StyledRadioCard>

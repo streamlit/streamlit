@@ -564,7 +564,7 @@ describe("Radio cards (type='cards')", () => {
     expect(pro).not.toHaveAttribute("aria-describedby")
   })
 
-  it("places the circle after the title and caption, without a caption indent", () => {
+  it("places the circle before the title, with the caption indented under the title", () => {
     render(
       <>
         <Radio {...getCardProps({ type: "default", label: "Default" })} />
@@ -575,18 +575,19 @@ describe("Radio cards (type='cards')", () => {
     // The first three options belong to the default group.
     const card = screen.getAllByTestId("stRadioOption")[3]
     const indicator = within(card).getByTestId("stRadioCardIndicator")
-    // The circle follows both texts, so it ends up in the top-right corner.
+    // The circle comes before both texts, so it sits in the top-left corner.
     for (const text of ["Starter", "For individuals"]) {
       expect(
         indicator.compareDocumentPosition(within(card).getByText(text))
-      ).toBe(Node.DOCUMENT_POSITION_PRECEDING)
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     }
-    // Only the default style indents its captions past a leading circle.
+    // Card captions keep the default style's indent past the circle, so they
+    // line up under the title.
     const captions = screen.getAllByTestId("stRadioCaption")
     const indent = getComputedStyle(captions[0]).paddingLeft
     expect(indent).not.toBe("")
-    expect(getComputedStyle(captions[3]).paddingLeft).not.toBe(indent)
-    // The default style keeps its leading circle and has no card indicator.
+    expect(getComputedStyle(captions[3]).paddingLeft).toBe(indent)
+    // Only cards wrap their circle in a card indicator.
     expect(screen.getAllByTestId("stRadioCardIndicator")).toHaveLength(3)
   })
 

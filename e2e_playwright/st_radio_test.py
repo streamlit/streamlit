@@ -165,18 +165,16 @@ def _line_count(text: Locator) -> float:
 
 
 def _circle_corner_offsets(radio: Locator) -> list[tuple[float, float]]:
-    """Return each card circle's distance from its card's top and right edges."""
+    """Return each card circle's distance from its card's top and left edges."""
     offsets = []
     for card in radio.get_by_test_id("stRadioOption").all():
         card_box = card.bounding_box()
         circle_box = card.get_by_test_id("stRadioCardIndicator").bounding_box()
         assert card_box is not None
         assert circle_box is not None
-        top = circle_box["y"] - card_box["y"]
-        right = (card_box["x"] + card_box["width"]) - (
-            circle_box["x"] + circle_box["width"]
+        offsets.append(
+            (circle_box["y"] - card_box["y"], circle_box["x"] - card_box["x"])
         )
-        offsets.append((top, right))
     return offsets
 
 
@@ -235,16 +233,16 @@ def test_radio_cards_behavior(app: Page):
 
     wait_until(app, assert_equal_card_sizes)
 
-    # The circle sits at the same spot in each card's top-right corner, also
+    # The circle sits at the same spot in each card's top-left corner, also
     # next to a title that wraps.
-    def assert_circle_in_top_right_corner() -> None:
+    def assert_circle_in_top_left_corner() -> None:
         assert _line_count(stretch.get_by_text("Premium with priority support")) > 1
         for radio in (cards, stretch):
             offsets = _circle_corner_offsets(radio)
             _assert_within_1px([top for top, _ in offsets])
-            _assert_within_1px([right for _, right in offsets])
+            _assert_within_1px([left for _, left in offsets])
 
-    wait_until(app, assert_circle_in_top_right_corner)
+    wait_until(app, assert_circle_in_top_left_corner)
 
     # In a narrow column, content-width cards wrap into more rows instead of
     # shrinking, so no title breaks onto a second line.
