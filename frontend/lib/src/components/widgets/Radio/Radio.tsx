@@ -17,6 +17,7 @@
 import { memo, type ReactElement, useCallback, useMemo } from "react"
 
 import type { Radio as RadioProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
@@ -49,7 +50,7 @@ function Radio({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,

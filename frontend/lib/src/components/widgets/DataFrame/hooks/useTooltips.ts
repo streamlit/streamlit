@@ -22,6 +22,8 @@ import type {
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   type BaseColumn,
   hasTooltip,
@@ -123,7 +125,7 @@ function useTooltips(
           }
         }
 
-        if (tooltipContent) {
+        if (!isNullOrEmptyString(tooltipContent)) {
           pendingTooltipRef.current = {
             content: tooltipContent,
             left: args.bounds.x + args.bounds.width / 2,

@@ -67,7 +67,9 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
         data: {
           ...cellTemplate.data,
           value: cellData,
-          displayValue: cellData ? removeLineBreaks(cellData) : "",
+          displayValue: isNullOrUndefined(cellData)
+            ? ""
+            : removeLineBreaks(cellData),
         },
       } as MarkdownCell
     },

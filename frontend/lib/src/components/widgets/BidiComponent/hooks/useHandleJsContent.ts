@@ -21,7 +21,7 @@ import type {
   FrontendRendererArgs,
   FrontendState,
 } from "@streamlit/component-v2-lib"
-import { generateUuid } from "@streamlit/utils"
+import { generateUuid, isNullOrEmptyString } from "@streamlit/utils"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { blobUrlManager } from "~lib/components/widgets/BidiComponent/utils/blobUrl"
@@ -111,7 +111,7 @@ const loadAndRunModule = async <T extends FrontendState>({
     // changing global runtime semantics, we no-op trigger calls when the
     // component is rendered inside a form. Developers should use setStateValue
     // and the form submit button to commit changes.
-    if (formId) {
+    if (!isNullOrEmptyString(formId)) {
       LOG.warn(
         "BidiComponent: setTriggerValue ignored inside st.form. Triggers are not allowed in forms; use setStateValue and form submit instead."
       )
@@ -196,7 +196,7 @@ export const useHandleJsContent = ({
   } = useRequiredContext(BidiComponentContext)
 
   const externalJsSourcePathUrl = useMemo(() => {
-    if (!jsSourcePath) {
+    if (isNullOrEmptyString(jsSourcePath)) {
       return undefined
     }
     return getBidiComponentURL(componentName, jsSourcePath)
@@ -213,7 +213,8 @@ export const useHandleJsContent = ({
     const { current: containerRefCurrent } = containerRef
     if (
       skip ||
-      (!inlineJsContent && !externalJsSourcePathUrl) ||
+      (isNullOrEmptyString(inlineJsContent) &&
+        externalJsSourcePathUrl === undefined) ||
       !containerRefCurrent
     ) {
       return
@@ -249,7 +250,7 @@ export const useHandleJsContent = ({
 
     const run = async (): Promise<void> => {
       try {
-        if (inlineJsContent) {
+        if (!isNullOrEmptyString(inlineJsContent)) {
           const { url } = blobUrlManager.getOrCreateUrlForJs(
             inlineJsContent,
             `st-bidi-${componentName}`
@@ -269,7 +270,7 @@ export const useHandleJsContent = ({
               widgetMgr,
             })
           )
-        } else if (externalJsSourcePathUrl) {
+        } else if (externalJsSourcePathUrl !== undefined) {
           const scriptUrl = externalJsSourcePathUrl
 
           try {

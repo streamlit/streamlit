@@ -28,6 +28,7 @@ import {
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 
 import type { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
@@ -157,7 +158,7 @@ const TextArea: FC<Props> = ({
     setHasRequiredError(false)
   }, [element])
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
@@ -394,7 +395,7 @@ const TextArea: FC<Props> = ({
           $resize={isStretchHeight ? "none" : "vertical"}
           $hasError={hasError}
         />
-        {requiredError && (
+        {requiredError !== null && (
           <StyledErrorIcon data-testid="stTextAreaErrorIcon">
             <Tooltip
               content={requiredError}
@@ -406,7 +407,7 @@ const TextArea: FC<Props> = ({
           </StyledErrorIcon>
         )}
       </StyledTextAreaRoot>
-      {requiredError && (
+      {requiredError !== null && (
         // The error message is shown visually in a tooltip on hover. The
         // tooltip trigger isn't focusable, so we also expose the message to
         // assistive tech via a visually hidden, aria-describedby-linked alert.
