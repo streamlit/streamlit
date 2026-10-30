@@ -48,6 +48,8 @@ Use one charting library across a page, and ideally across the app. Libraries di
 - Default to Vega-based charts. The simple charts and `st.altair_chart` share one look, so mixing those two is fine.
 - When a page needs ECharts-only chart types (for example, a sankey next to a gauge), consider drawing that page's other charts with `st.echarts_chart` too.
 - A single ECharts-only chart on an otherwise Vega-based page is fine. Don't rewrite the page for it.
+- For operational dashboards (KPIs, monitoring, several charts driven by the same filters), prefer `st.echarts_chart` for every chart on the page: filter changes animate and time series get a zoom slider. For analytical dashboards (aggregation, faceting, linked brushing), prefer `st.altair_chart`. See [dashboards.md](dashboards.md#choosing-charts-for-a-dashboard).
+- Sparklines in `st.metric` and dataframe chart columns are fine next to either engine.
 - Keep the default `theme="streamlit"` so every chart uses the app's fonts and chart colors. Set the palette with `theme.chartCategoricalColors` and `theme.chartSequentialColors` in `config.toml` (see [theme.md](theme.md)), not per chart.
 
 ## Accessible names (`alt`)

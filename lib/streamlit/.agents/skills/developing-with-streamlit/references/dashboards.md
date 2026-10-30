@@ -115,6 +115,30 @@ with st.container(border=True):
     st.dataframe(orders_df, hide_index=True, alt="Recent orders")
 ```
 
+## Choosing charts for a dashboard
+
+Use one chart engine for the whole page (see `charts.md`):
+
+- **Operational dashboards** (KPIs, monitoring, several charts driven by the same filters): prefer `st.echarts_chart` for every chart. Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and many canvas charts on one page stay fast.
+- **Analytical dashboards** (aggregation, binning, faceting, brushing one chart to filter others): prefer `st.altair_chart`, with the simple charts for quick views.
+- Metric sparklines (`chart_data`) work next to either engine.
+
+```python
+st.echarts_chart(
+    {
+        "tooltip": {"trigger": "axis", "valueFormatter": "dollar"},
+        "dataset": {"source": daily_revenue},  # Columns: date, revenue
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [{"type": "line", "showSymbol": False}],
+    },
+    alt="Daily revenue, rising since March",
+)
+```
+
+The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
+
 ## Smooth loading with parallel fragments + skeletons
 
 When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
