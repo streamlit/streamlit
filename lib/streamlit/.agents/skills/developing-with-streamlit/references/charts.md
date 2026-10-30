@@ -30,7 +30,7 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | Clicking a network node or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
 | A built-in zoom slider (`dataZoom`), in-chart toolbox, or color-range filter (`visualMap`) | `st.echarts_chart` |
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
-| Line, bar, or scatter charts with more than about 100,000 points, or with tens of thousands of points on a chart that reruns often | `st.echarts_chart` (see [Large datasets](#large-datasets)) |
+| Line, bar, or scatter charts with more than about 100,000 points, or with tens of thousands of points whose data changes often | `st.echarts_chart` (see [Large datasets](#large-datasets)) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
 | 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
 | An existing Matplotlib or seaborn figure | `st.pyplot` (static image; not for new charts) |
@@ -205,7 +205,7 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 | More than 1,000,000 | Aggregate first; `st.echarts_chart` draws up to about 2,000,000 | Aggregate first | Aggregate first |
 
 - Pre-aggregate in pandas, Polars, or SQL before charting. Vega-Lite transforms such as `aggregate` and `bin` also run in the browser, on every row.
-- Size charts that rerun often (filters, timers) by their update cost. A Vega-based chart redraws from scratch on every rerun, which takes about as long as its first render (one to two seconds at 100,000 rows). `st.echarts_chart` updates in a fraction of that, so prefer it from about 50,000 points on such charts.
+- Size charts whose data changes often (filters, live data) by their update cost. When a rerun changes its data, a Vega-based chart rebuilds from scratch, which takes about as long as its first render (one to two seconds at 100,000 rows). `st.echarts_chart` updates in a fraction of that, so prefer it from about 50,000 points on such charts. Reruns that leave a chart's data unchanged cost almost nothing with any command, so don't rewrite a chart because other widgets rerun the app.
 - An existing Plotly Express line or scatter figure also holds up to about 1,000,000 points, because it switches to WebGL above 1,000 points. A `go.Scatter` trace stays SVG; use `go.Scattergl` for large data.
 - For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
