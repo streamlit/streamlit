@@ -234,6 +234,15 @@ ticker_values = [(normalized[ticker].iloc[-1], ticker) for ticker in tickers]
 max_norm_value = max(ticker_values)
 min_norm_value = min(ticker_values)
 
+# Summary for the price chart's alt text. A single stock is both best and worst.
+if len(tickers) > 1:
+    price_summary = (
+        f"{max_norm_value[1]} best at {max_norm_value[0] - 1:+.0%}, "
+        f"{min_norm_value[1]} worst at {min_norm_value[0] - 1:+.0%}"
+    )
+else:
+    price_summary = f"{max_norm_value[1]} at {max_norm_value[0] - 1:+.0%}"
+
 bottom_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
@@ -278,11 +287,7 @@ with right_cell:
             "series": [line_series(ticker) for ticker in tickers],
         },
         height=400,
-        alt=(
-            f"Normalized prices over {horizon.lower()}: {max_norm_value[1]} "
-            f"best at {max_norm_value[0] - 1:+.0%}, {min_norm_value[1]} worst "
-            f"at {min_norm_value[0] - 1:+.0%}"
-        ),
+        alt=f"Normalized prices over {horizon.lower()}: {price_summary}",
     )
 
 st.space("medium")

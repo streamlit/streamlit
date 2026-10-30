@@ -207,16 +207,23 @@ def pivot_by_dimension(
 
 
 def describe_credits(
-    wide: pd.DataFrame, x_col: str, categories: list[str], title: str, series: str
+    source: pd.DataFrame, x_col: str, title: str, series: str, *, shares: bool
 ) -> str:
-    """Summarize a card's chart for its ``alt`` text."""
-    totals = wide[categories].sum(axis=1)
-    change = totals.iloc[-1] / totals.iloc[0] - 1
-    leader = wide[categories].iloc[-1].idxmax()
-    return (
-        f"{title} ({series}) from {wide[x_col].iloc[0]:%Y-%m-%d} to "
-        f"{wide[x_col].iloc[-1]:%Y-%m-%d}: total {change:+.1%}, {leader} highest"
+    """Summarize a chart's ``dataset.source`` frame for its ``alt`` text.
+
+    Shares always stack to 100%, so they report the leader's latest share.
+    """
+    values = source.drop(columns=x_col)
+    latest = values.iloc[-1]
+    span = (
+        f"{title} ({series}) from {source[x_col].iloc[0]:%Y-%m-%d} to "
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
+    if shares:
+        return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
+    totals = values.sum(axis=1)
+    change = totals.iloc[-1] / totals.iloc[0] - 1
+    return f"{span}: total {change:+.1%}, {latest.idxmax()} highest"
 
 
 def _credits_option(
@@ -430,16 +437,19 @@ def dimension_metric(
             else:
                 categories = [option for option in options if option in selected]
                 wide = pivot_by_dimension(filtered, "ds", y_col, dim_col, categories)
+                shares = False
                 if "Bar" in (chart_type or ""):
-                    option = create_bar_chart(wide, "ds", categories, show_percent)
-                    if show_percent:
+                    shares = show_percent
+                    option = create_bar_chart(wide, "ds", categories, shares)
+                    if shares:
                         series = f"{series} share"
                 else:
                     option = create_line_chart(wide, "ds", categories)
+                source = option["dataset"]["source"]
                 st.echarts_chart(
                     option,
                     height=CHART_HEIGHT,
-                    alt=describe_credits(wide, "ds", categories, title, series),
+                    alt=describe_credits(source, "ds", title, series, shares=shares),
                 )
 
 

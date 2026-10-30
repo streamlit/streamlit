@@ -163,13 +163,19 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     return filtered
 
 
-def describe_trend(title: str, df: pd.DataFrame) -> str:
-    """Summarize a metric card's chart for its ``alt`` text."""
-    trend = df["value_7d_ma"]
-    change = trend.iloc[-1] / trend.iloc[0] - 1
+def describe_trend(
+    title: str, source: pd.DataFrame, x_col: str, y_col: str, series: str
+) -> str:
+    """Summarize one plotted series for the chart's ``alt`` text.
+
+    ``source`` is the chart's ``dataset.source``, so the summary uses the drawn
+    values, such as the weekly means of the bar chart.
+    """
+    values = source[y_col]
+    change = values.iloc[-1] / values.iloc[0] - 1
     return (
-        f"{title} from {df['ds'].iloc[0]:%Y-%m-%d} to {df['ds'].iloc[-1]:%Y-%m-%d}, "
-        f"7-day average {change:+.1%}"
+        f"{title}, {series} from {source[x_col].iloc[0]:%Y-%m-%d} to "
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}: {change:+.1%}"
     )
 
 
@@ -196,7 +202,7 @@ def _time_series_option(
 
 
 def _line_series(x_col: str, y_col: str, label: str) -> dict[str, Any]:
-    """A line series without point markers; the 7-day MA is dashed."""
+    """A line series without point markers, dashed for the "7-day MA" label."""
     return {
         "type": "line",
         "name": label,
@@ -237,12 +243,12 @@ def render_bar_chart(
 ) -> dict[str, Any]:
     """Build a grouped bar chart (weekly averages for readability)."""
     df = df.copy()
-    df[x_col] = pd.to_datetime(df[x_col])
-    df["week"] = df[x_col].dt.to_period("W").dt.start_time
-    weekly = df.groupby("week", as_index=False)[y_cols].mean()
+    # Each bar sits at the start of its week.
+    df[x_col] = pd.to_datetime(df[x_col]).dt.to_period("W").dt.start_time
+    weekly = df.groupby(x_col, as_index=False)[y_cols].mean()
 
     series = [
-        {"type": "bar", "name": label, "encode": {"x": "week", "y": y_col}}
+        {"type": "bar", "name": label, "encode": {"x": x_col, "y": y_col}}
         for y_col, label in zip(y_cols, labels, strict=True)
     ]
     # Bars start at zero so their lengths stay comparable.
@@ -395,10 +401,18 @@ def metric_card(
                     alt=f"{title} data",
                 )
             elif y_cols:
+                option = render_chart(filtered_df, "ds", y_cols, labels)
+                # Describe the last series drawn: the smoother 7-day MA when shown.
+                y_col = y_cols[-1]
+                series = "7-day average" if y_col == "value_7d_ma" else "daily values"
+                if chart_type == "bar":
+                    series = f"weekly means of the {series}"
                 st.echarts_chart(
-                    render_chart(filtered_df, "ds", y_cols, labels),
+                    option,
                     height=CHART_HEIGHT,
-                    alt=describe_trend(title, filtered_df),
+                    alt=describe_trend(
+                        title, option["dataset"]["source"], "ds", y_col, series
+                    ),
                 )
             else:
                 st.info("Select at least one line option.")
