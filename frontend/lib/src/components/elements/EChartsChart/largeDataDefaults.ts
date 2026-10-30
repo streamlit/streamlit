@@ -80,6 +80,7 @@ function hasToolboxBrush(option: EChartsOptionObject): boolean {
   )
 }
 
+/** Whether a chart-level tooltip triggers on items, ECharts' default. */
 function hasItemTooltip(option: EChartsOptionObject): boolean {
   return toComponentList(option.tooltip).some(
     ({ show, trigger }) =>

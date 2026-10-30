@@ -105,7 +105,8 @@ function hasAggregate(encoding: SpecObject): boolean {
  * when its rows are unknown: its data isn't an Arrow dataset, or it has a
  * transform (which may drop rows) or an aggregate (one mark per group).
  *
- * @param inheritedRows The rows of the parent's data.
+ * @param inheritedRows The row count of the parent's data, or null if it's
+ * unknown.
  * @param inheritsAggregate Whether a parent layer's encoding aggregates.
  */
 function countMarks(

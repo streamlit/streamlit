@@ -2258,11 +2258,11 @@ class VegaChartsMixin:
               stay fast. On a canvas, assistive technologies only get the
               chart's accessible name; marks, axes, and legends aren't
               exposed.
-            - A chart whose marks draw more than 5,000 rows, lines and areas
-              included, sets ``config.mark.aria`` to ``False``. This skips the
-              screen-reader description that Vega-Lite builds for every mark.
-              On SVG charts, axes, legends, and the chart's accessible name
-              stay available.
+            - Streamlit sets ``config.mark.aria`` to ``False`` on charts whose
+              marks draw more than 5,000 rows, including lines and areas. This
+              skips the screen-reader description that Vega-Lite builds for
+              every mark. On SVG charts, axes, legends, and the chart's
+              accessible name stay available.
 
             Streamlit counts the dataframe rows of each view and adds up
             layered and concatenated views. Views that aggregate or transform
@@ -2535,11 +2535,11 @@ class VegaChartsMixin:
               stay fast. On a canvas, assistive technologies only get the
               chart's accessible name; marks, axes, and legends aren't
               exposed.
-            - A chart whose marks draw more than 5,000 rows, lines and areas
-              included, sets ``config.mark.aria`` to ``False``. This skips the
-              screen-reader description that Vega-Lite builds for every mark.
-              On SVG charts, axes, legends, and the chart's accessible name
-              stay available.
+            - Streamlit sets ``config.mark.aria`` to ``False`` on charts whose
+              marks draw more than 5,000 rows, including lines and areas. This
+              skips the screen-reader description that Vega-Lite builds for
+              every mark. On SVG charts, axes, legends, and the chart's
+              accessible name stay available.
 
             Streamlit counts the dataframe rows of each view and adds up
             layered and concatenated views. Views that aggregate or transform
