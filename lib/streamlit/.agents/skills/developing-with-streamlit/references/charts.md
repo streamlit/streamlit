@@ -113,7 +113,7 @@ Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately 
 
 ## Apache ECharts
 
-Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Put dataframes in `dataset.source`, where Streamlit sends them as Arrow and keeps their column order:
+Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from a dataframe in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`, and map columns with `series[i].encode` when the column order isn't enough. Streamlit sends the frame as Arrow, which is smaller and faster than inline values for large data, and keeps its column order. The agent API also reports it as a table (schema, preview, and the full data), while inline values only appear inside the raw option. Use one dataframe per chart where possible; with several, no single table is reported.
 
 ```python
 df = pd.DataFrame(
@@ -163,18 +163,25 @@ date_range = event.selection.brush  # {"month": [start, end]} once the user brus
 ```
 
 ```python
+visits = pd.DataFrame({"day": ["Mon", "Tue", "Wed"], "visits": [120, 200, 150]})
 event = st.echarts_chart(
     {
-        "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
-        "yAxis": {"type": "value"},
+        "dataset": {"source": visits},
+        "xAxis": {"type": "category"},
+        "yAxis": {},
         "series": [
-            {"type": "bar", "selectedMode": "multiple", "data": [120, 200, 150]}
+            {
+                "type": "bar",
+                "selectedMode": "multiple",
+                "encode": {"x": "day", "y": "visits"},
+            }
         ],
     },
     on_select="rerun",
     key="weekday_chart",
 )
 rows = [i for group in event.selection.selected for i in group["data_indices"]]
+st.dataframe(visits.iloc[rows])
 ```
 
 - **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
@@ -186,7 +193,7 @@ rows = [i for group in event.selection.selected for i in group["data_indices"]]
 ## Large datasets
 
 - Pre-aggregate in pandas, Polars, or SQL before charting. All rows reach the browser, and Vega-Lite transforms such as `aggregate` and `bin` run there.
-- For ECharts, pass dataframes through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow. For dense series, ECharts' `sampling: "lttb"` and `large: True` options help.
+- For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table. For dense series, ECharts' `sampling: "lttb"` and `large: True` options help.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
 
 ## Plotly and Matplotlib
