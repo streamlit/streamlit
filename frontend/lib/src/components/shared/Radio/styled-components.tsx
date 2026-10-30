@@ -325,10 +325,11 @@ interface StyledRadioOuterProps {
  * - Enabled and unchecked: `bgColor` fill behind a `borderColor` stroke, which
  *   switches to `darkenedBgMix15` on hover like the secondary button and the
  *   `st.toggle` off track.
- * - Disabled: a `borderColor` disk with no CSS border. `borderColor` is
- *   translucent, so a stroke over a matching fill would darken the rim.
- *   `StyledRadioInner` supplies the white centre when selected and the
- *   `bgColor` hole when not.
+ * - Disabled: `borderColor` fill with no CSS border, because a translucent
+ *   custom `borderColor` stroke over a matching fill would darken the rim.
+ *   `StyledRadioInner` draws the white centre when selected, or a `bgColor`
+ *   disk inset by `borderWidth` when not, so the ring matches the enabled
+ *   indicator.
  *
  * No margin offset needed: its parent centers it vertically
  * (`StyledRadioRow` in the default style, `StyledRadioCardIndicator` in cards).

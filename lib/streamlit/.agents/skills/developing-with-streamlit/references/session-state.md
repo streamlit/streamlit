@@ -82,7 +82,7 @@ Notes:
 
 ## Widget input constraints are mostly client-side
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.selectbox`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
 
 For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
 
@@ -123,7 +123,23 @@ def increment(amount):
 st.button("Add 5", on_click=increment, args=(5,))
 ```
 
-Access a widget's value in its own callback via `st.session_state.key`, not the return variable.
+Streamlit stores `args` and `kwargs` when the widget command runs, not when the user interacts. Callbacks run before this run's widget commands, so a widget return value passed through `args=` or `kwargs=` is the previous run's value. To read any widget in a callback, including the widget that triggered it, give it a `key` and read `st.session_state` inside the callback.
+
+```python
+# BAD: `text` is the previous run's value, so a just-typed edit can be lost
+text = st.text_area("Notes")
+st.button("Save", on_click=save, args=(text,))
+```
+
+```python
+# GOOD: st.session_state.notes already holds the latest input when the callback runs
+def save():
+    save_notes(st.session_state.notes)
+
+
+st.text_area("Notes", key="notes")
+st.button("Save", on_click=save)
+```
 
 Calling `st.rerun()` or `st.switch_page()` inside a callback ends that callback immediately (statements after the call don't run). Streamlit still runs the interaction's other callbacks before performing the rerun or navigation.
 

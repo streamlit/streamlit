@@ -103,12 +103,15 @@ Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JS
 
 Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
 
+To format tooltip values without JavaScript, set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format, such as `"dollar"`, `"compact"`, or `"%,d visits"`. Tooltip `formatter` templates also expand `{@dimension}` and `{@[index]}`, and insert those values as plain text (no number format).
+
 ```python
 st.echarts_chart(
     {
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,d visits"},
         "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
         "yAxis": {"type": "value"},
-        "series": [{"type": "bar", "data": [120, 200, 150]}],
+        "series": [{"type": "bar", "data": [1200, 2000, 1500]}],
     },
     alt="Weekday traffic, peak on Tuesday",
 )
@@ -179,11 +182,11 @@ st.dataframe(
 - `ListColumn` → Display lists/arrays
 - `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
 - `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
-- `NumberColumn` → Numbers with formatting
+- `NumberColumn` → Numbers and timedelta/duration values with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Time only (no date)
+- `TimeColumn` → Clock time of day without a date (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -320,6 +323,8 @@ st.dataframe(
 ```
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
+
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. On a timedelta column, `format="compact"` is an elapsed-time clock (`02:00:00`) and `format="localized"` is a locale-aware duration. On other number columns, both keep their number meaning (`compact` is `1.2K`). On any number column, `format="duration"` shows the value in seconds as an approximate humanized duration.
 
 ## Editing data with st.data_editor
 

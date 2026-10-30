@@ -20,10 +20,11 @@ import shutil
 import tempfile
 import threading
 import unittest
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.v2.component_manager import BidiComponentManager
@@ -58,6 +59,8 @@ from tests.streamlit.message_mocks import (
 from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
@@ -829,6 +832,74 @@ class RuntimeTest(RuntimeTestCase):
         assert session_info.session.is_resumable() is False
         assert session_info.session._user_info == {}
 
+    async def test_start_keeps_sessions_connected_before_loop_starts(self) -> None:
+        """Starting the loop does not reset a state that already has sessions.
+
+        Sessions cannot connect before ``start``, so this state is set directly
+        to exercise the loop's defensive start-state handling.
+        """
+        self.runtime._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
+
+        await asyncio.wait_for(self.runtime.start(), timeout=5)
+
+        assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+
+    async def test_loop_shuts_down_on_unexpected_state(self) -> None:
+        """The loop exits and closes sessions when it wakes in a non-running state."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        await self.tick_runtime_loop()
+
+        # Wake the loop without setting must_stop, so only the state check can
+        # end it.
+        self.runtime._set_state(RuntimeState.STOPPING)
+        self.runtime._get_async_objs().need_send_data.set()
+
+        await asyncio.wait_for(self.runtime.stopped, timeout=5)
+        assert self.runtime.state == RuntimeState.STOPPED
+        assert self.runtime._session_mgr.get_session_info(session_id) is None
+
+    async def test_loop_keeps_running_across_signal_check_timeouts(self) -> None:
+        """Periodic signal-check wakeups neither stop the loop nor block sending."""
+        real_wait = asyncio.wait
+        timed_out_states: list[RuntimeState] = []
+
+        async def recording_wait(*args: Any, **kwargs: Any) -> Any:
+            done, pending = await real_wait(*args, **kwargs)
+            if not done:
+                timed_out_states.append(self.runtime.state)
+            return done, pending
+
+        with (
+            patch("streamlit.runtime.runtime._SIGNAL_CHECK_INTERVAL", 0.001),
+            patch("streamlit.runtime.runtime.asyncio.wait", new=recording_wait),
+        ):
+            await self.runtime.start()
+            # Time out repeatedly while waiting for a connection.
+            await asyncio.sleep(0.05)
+            assert RuntimeState.NO_SESSIONS_CONNECTED in timed_out_states
+            assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+            assert not self.runtime._get_async_objs().stopped.done()
+
+            client = MockSessionClient()
+            session_id = self.runtime.connect_session(
+                client=client, user_info=MagicMock()
+            )
+            # Time out repeatedly while waiting for messages to send.
+            await asyncio.sleep(0.05)
+            assert RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED in timed_out_states
+            assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+
+            msg = create_dataframe_msg([1, 2, 3])
+            self.enqueue_forward_msg(session_id, msg)
+            await self.tick_runtime_loop()
+
+        received = client.forward_msgs.pop()
+        populate_hash_if_needed(msg)
+        assert received.hash == msg.hash
+
 
 class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
     """clear_user_info_for_session deletes a disconnected session from storage.
@@ -920,6 +991,65 @@ class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
                 await asyncio.sleep(0)
                 assert self.runtime._session_mgr.get_session_info(session_id) is None
                 assert worker_ids[0] not in get_callers
+
+    @parameterized.expand(
+        [
+            ("logged_out", True, {}),
+            ("resumable", False, {"email": "alice@example.com"}),
+        ]
+    )
+    async def test_queued_close_keeps_session_that_became_active(
+        self,
+        _name: str,
+        logged_out: bool,
+        expected_user_info: dict[str, str],
+    ) -> None:
+        """A queued logout close leaves a session that became active connected.
+
+        SessionManager is pluggable, so this simulates a manager that does not
+        honor the non-resumable mark and lets the session become active again
+        before the close runs. Only a logged-out session has its user info
+        cleared again. A resumable session that holds the id keeps its owner.
+        """
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+
+            # Queue the close from a script thread without publishing the
+            # non-resumable mark, as a manager that ignores it would, so the
+            # reconnect below can make the session active before the close runs.
+            thread = threading.Thread(
+                target=self.runtime._close_inactive_session_on_event_loop,
+                args=(session_id,),
+            )
+            thread.start()
+            thread.join()
+            resumed_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+                existing_session_id=session_id,
+            )
+            assert resumed_id == session_id
+
+            session = self.runtime.get_app_session(session_id)
+            assert session is not None
+            if logged_out:
+                session.clear_user_info()
+
+            with patch.object(
+                session, "clear_user_info", wraps=session.clear_user_info
+            ) as spy_clear_user_info:
+                await asyncio.sleep(0)
+
+        assert self.runtime.is_active_session(session_id)
+        assert session._user_info == expected_user_info
+        assert spy_clear_user_info.call_count == (1 if logged_out else 0)
 
 
 class MarkSessionNonresumableRuntimeTest(RuntimeTestCase):
@@ -1096,3 +1226,104 @@ class BidiComponentManagerTest(unittest.TestCase):
         # Verify that our custom component manager is used
         assert runtime.bidi_component_registry is custom_component_manager
         assert runtime.bidi_component_registry.get("test_component") is not None
+
+
+@pytest.fixture
+def mock_runtime() -> Iterator[Runtime]:
+    """Yield a Runtime whose session manager is a mock with no active sessions."""
+    Runtime._instance = None
+    runtime = Runtime(MagicMock())
+    runtime._session_mgr.get_active_session_info.return_value = None
+    yield runtime
+    Runtime._instance = None
+
+
+def _async_objs_for_loop(eventloop: asyncio.AbstractEventLoop) -> AsyncObjects:
+    return AsyncObjects(
+        eventloop=eventloop,
+        must_stop=MagicMock(),
+        has_connection=MagicMock(),
+        need_send_data=MagicMock(),
+        started=MagicMock(),
+        stopped=MagicMock(),
+    )
+
+
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_logout_close_is_dropped_when_event_loop_is_closed(
+    patched_logger: MagicMock, mock_runtime: Runtime
+) -> None:
+    """A logout after the event loop closed keeps the mark and skips the close."""
+    closed_loop = asyncio.new_event_loop()
+    closed_loop.close()
+    mock_runtime._async_objs = _async_objs_for_loop(closed_loop)
+
+    mock_runtime.clear_user_info_for_session("session-1")
+
+    mock_runtime._session_mgr.mark_session_nonresumable.assert_called_once_with(
+        "session-1"
+    )
+    mock_runtime._session_mgr.close_session.assert_not_called()
+    patched_logger.debug.assert_called_once_with(
+        "Dropped logout close for session %s because the event loop is closed.",
+        "session-1",
+    )
+
+
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_logout_close_reraises_runtime_error_from_open_event_loop(
+    patched_logger: MagicMock, mock_runtime: Runtime
+) -> None:
+    """A scheduling failure on an open event loop is not silently dropped."""
+    eventloop = MagicMock()
+    eventloop.call_soon_threadsafe.side_effect = RuntimeError("scheduling failed")
+    eventloop.is_closed.return_value = False
+    mock_runtime._async_objs = _async_objs_for_loop(eventloop)
+
+    with pytest.raises(RuntimeError, match="scheduling failed"):
+        mock_runtime.clear_user_info_for_session("session-1")
+
+    patched_logger.debug.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "start_state",
+    [
+        RuntimeState.NO_SESSIONS_CONNECTED,
+        RuntimeState.STOPPING,
+        RuntimeState.STOPPED,
+    ],
+)
+@patch("streamlit.runtime.runtime.traceback.print_exc")
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_loop_coroutine_fails_stopped_future_on_bad_start_state(
+    patched_logger: MagicMock,
+    patched_print_exc: MagicMock,
+    mock_runtime: Runtime,
+    start_state: RuntimeState,
+) -> None:
+    """The loop reports a bad start state through `stopped` and keeps the state."""
+
+    async def run_loop() -> AsyncObjects:
+        async_objs = AsyncObjects(
+            eventloop=asyncio.get_running_loop(),
+            must_stop=asyncio.Event(),
+            has_connection=asyncio.Event(),
+            need_send_data=asyncio.Event(),
+            started=asyncio.Future(),
+            stopped=asyncio.Future(),
+        )
+        mock_runtime._async_objs = async_objs
+        mock_runtime._set_state(start_state)
+        await mock_runtime._loop_coroutine()
+        return async_objs
+
+    async_objs = asyncio.run(run_loop())
+
+    error = async_objs.stopped.exception()
+    assert isinstance(error, RuntimeError)
+    assert "Bad Runtime state at start" in str(error)
+    assert mock_runtime.state == start_state
+    patched_print_exc.assert_called_once_with()
+    patched_logger.info.assert_called_once()
+    assert "report this bug" in patched_logger.info.call_args.args[0]
