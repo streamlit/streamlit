@@ -378,14 +378,14 @@ listed below: the self-disabling button, the URL parameter of a disabled bound w
 values from app code or a link that break a constraint, chat input text from app code
 past `max_chars`, a float slider's click at a bound, a form's staged values when it
 remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge
-whitespace, and the sync races. App code also sees one: the Components v2 trigger key. A browser that reconnects to a new
-session, after a server restart or an expired `server.disconnectedSessionTTL`, keeps
-its values as today, apart from text past `max_chars`, or an empty value for a required
-widget whose default is not empty, that app code wrote. Its first interaction counts as
-today too, even when it is a click, a form submit, or a chat message: the widget
-returns it. No callback fires for these values and triggers, also as today, and each
-is checked when its widget registers. The other changes affect only forged values,
-`AppTest`, and the agent API.
+whitespace, and the sync races. App code also sees one: the Components v2 trigger key.
+A browser that reconnects to a new session, after a server restart or an expired
+`server.disconnectedSessionTTL`, keeps its values as today, apart from text past
+`max_chars`, or an empty value for a required widget whose default is not empty, that
+app code wrote. Its first interaction counts as today too, even when it is a click, a
+form submit, or a chat message: the widget returns it. No callback fires for these
+values and triggers, also as today, and each is checked when its widget registers. The
+other changes affect only forged values, `AppTest`, and the agent API.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
