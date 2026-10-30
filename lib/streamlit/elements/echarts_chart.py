@@ -1224,7 +1224,8 @@ class EChartsMixin:
 
         Pass a dataframe as ``dataset.source``. Streamlit preserves its column
         order through ``dataset.dimensions``, so ECharts maps the first column
-        to the category axis and each remaining column to a series.
+        to the category axis and each remaining column to a series. Hover the
+        chart and choose **Show data** to view the dataframe in a table.
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -1254,11 +1255,12 @@ class EChartsMixin:
         **Example 3: Zoom slider, toolbox, and legend**
 
         In-chart controls such as ``dataZoom`` and ``toolbox`` are configured
-        in the spec. Streamlit's hover toolbar (download, fullscreen) is
-        separate from ECharts' ``toolbox``: omit ``saveAsImage`` if you only
-        want Streamlit's download, or set ``toolbox.left`` so the two don't
-        stack in the top-right corner. Place ``legend`` at the top so it
-        doesn't share the footer with a bottom ``dataZoom`` slider.
+        in the spec. Streamlit's hover toolbar (Show data for dataframe-backed
+        charts, download, and fullscreen) is separate from ECharts'
+        ``toolbox``: omit ``saveAsImage`` if you only want Streamlit's
+        download, or set ``toolbox.left`` so the two don't stack in the
+        top-right corner. Place ``legend`` at the top so it doesn't share the
+        footer with a bottom ``dataZoom`` slider.
 
         With an inside ``dataZoom``, the wheel scrolls the page until the
         pointer has rested on the chart, then it zooms or pans. Pinch, or the

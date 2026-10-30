@@ -611,6 +611,7 @@ Vega-Lite, and Mermaid):
 
 | Action | Description |
 |--------|-------------|
+| Show data | Shown when `dataset.source` is a dataframe. Switches to a read-only table of the first such dataframe (the same data viewer the Vega-based charts use), with a **Show chart** action to switch back. The chart that renders by default is preferred: its dataframe wins over those of timeline ticks and `media` overrides, and a timeline chart shows the first tick's dataframe even while another tick is selected. The chart keeps its zoom, legend, and timeline state. |
 | Fullscreen | Expand the chart to fullscreen. |
 | Download | Export a canvas-rendered chart as PNG or an SVG-rendered chart as SVG (ECharts `getDataURL`), using a timestamped filename. Because the themed chart background is transparent, PNG export composites the app background color so the file isn't transparent (unless the spec sets its own `backgroundColor`). |
 
@@ -996,7 +997,7 @@ Required coverage for the implementation PR (not this spec-only diff):
   (`DeltaGenerator` vs `EChartsState`) and attribute/bracket access on the state
   (`event.selection.selected` and `event["selection"]["selected"]`).
 - Dataframes: pandas/Polars/PyArrow `dataset.source` conversion via Arrow transport, including a
-  dataset list.
+  dataset list and the Show data toggle.
 - Theme fidelity: light/dark snapshots of the default Streamlit theme.
 
 ## Checklist

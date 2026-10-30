@@ -29,9 +29,12 @@ import {
 import {
   type ArrowNamedDataSet,
   EChartsChart as EChartsChartProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import type * as ReadOnlyGridModule from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import type * as FormClearHelperModule from "~lib/components/widgets/Form/FormClearHelper"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -76,6 +79,27 @@ vi.mock("echarts", () => ({
   init: mockInit,
 }))
 
+/** The props of the last rendered data table (the real grid still renders). */
+const { gridPropsHolder } = vi.hoisted(() => ({
+  gridPropsHolder: { last: undefined as { height?: number } | undefined },
+}))
+
+vi.mock(
+  "~lib/components/widgets/DataFrame/ReadOnlyGrid",
+  async importOriginal => {
+    const actual = await importOriginal<typeof ReadOnlyGridModule>()
+    return {
+      ...actual,
+      ReadOnlyGrid: (
+        props: Parameters<typeof actual.ReadOnlyGrid>[0]
+      ): ReactElement => {
+        gridPropsHolder.last = props
+        return <actual.ReadOnlyGrid {...props} />
+      },
+    }
+  }
+)
+
 /** Lets a test change the measured size to simulate a container resize. */
 const { dimensionsHolder } = vi.hoisted(() => ({
   dimensionsHolder: { width: 600, height: 400 },
@@ -93,12 +117,18 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
   useEmotionTheme: () => themeHolder.override ?? mockTheme.emotion,
 }))
 
-vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
-  FormClearHelper: vi.fn().mockImplementation(() => ({
-    manageFormClearListener: vi.fn(),
-    disconnect: vi.fn(),
-  })),
-}))
+// Keep the module's other exports: the "Show data" table renders the real
+// DataFrame, which uses `useFormClearHelper`.
+vi.mock(
+  "~lib/components/widgets/Form/FormClearHelper",
+  async importOriginal => ({
+    ...(await importOriginal<typeof FormClearHelperModule>()),
+    FormClearHelper: vi.fn().mockImplementation(() => ({
+      manageFormClearListener: vi.fn(),
+      disconnect: vi.fn(),
+    })),
+  })
+)
 
 const DEFAULT_SPEC = JSON.stringify({
   xAxis: { type: "category", data: ["A", "B", "C"] },
@@ -168,20 +198,25 @@ describe("EChartsChart", () => {
     element,
     isFullScreen = false,
     disabled = false,
+    collapse,
+    heightConfig,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
     disabled?: boolean
+    collapse?: () => void
+    heightConfig?: streamlit.HeightConfig.$Properties
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
         expanded: isFullScreen,
         width: 600,
-        height: 400,
+        // Like the real wrapper, the screen height is only set when expanded.
+        height: isFullScreen ? 400 : undefined,
         expand: vi.fn(),
-        collapse: vi.fn(),
+        collapse: collapse ?? vi.fn(),
       }),
-      [isFullScreen]
+      [isFullScreen, collapse]
     )
     return (
       <ElementFullscreenContext.Provider value={contextValue}>
@@ -189,6 +224,7 @@ describe("EChartsChart", () => {
           element={element}
           widgetMgr={widgetMgr}
           disabled={disabled}
+          heightConfig={heightConfig}
         />
       </ElementFullscreenContext.Provider>
     )
@@ -201,6 +237,7 @@ describe("EChartsChart", () => {
     themeHolder.override = null
     dimensionsHolder.width = 600
     dimensionsHolder.height = 400
+    gridPropsHolder.last = undefined
     // Restore the shared-instance default; a test below overrides it locally.
     mockInit.mockImplementation(() => mockChart)
     mockChart.isDisposed.mockReturnValue(false)
@@ -1131,8 +1168,240 @@ describe("EChartsChart", () => {
         expect(error).toHaveTextContent(`ECharts chart error: ${message}`)
         expect(mockInit).not.toHaveBeenCalled()
         expect(mockChart.setOption).not.toHaveBeenCalled()
+        expect(
+          screen.queryByRole("button", { name: "Show data" })
+        ).not.toBeInTheDocument()
       }
     )
+
+    it("does not offer Show data without Arrow datasets", () => {
+      render(<Wrapper element={createElement()} />)
+
+      expect(
+        screen.queryByRole("button", { name: "Download as PNG" })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).not.toBeInTheDocument()
+    })
+
+    it("offers Show data before Download for an Arrow dataset", () => {
+      render(<Wrapper element={createDatasetElement()} />)
+
+      const showDataButton = screen.getByRole("button", { name: "Show data" })
+      const downloadButton = screen.getByRole("button", {
+        name: "Download as PNG",
+      })
+      // DOCUMENT_POSITION_FOLLOWING means Download comes after Show data.
+      expect(
+        showDataButton.compareDocumentPosition(downloadButton) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    it("toggles to the data table and back without recreating the chart", async () => {
+      const user = userEvent.setup()
+      render(<Wrapper element={createDatasetElement()} />)
+      const chart = screen.getByTestId("stEChartsChart")
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The grid toolbar is only shown (opacity > 0) on hover, so assert
+      // presence rather than visibility.
+      expect(
+        screen.queryByRole("button", { name: "Show chart" })
+      ).toBeInTheDocument()
+      // The chart is hidden, not unmounted.
+      expect(screen.getByTestId("stEChartsChart")).toBe(chart)
+      expect(chart).not.toBeVisible()
+
+      await user.click(screen.getByRole("button", { name: "Show chart" }))
+
+      expect(screen.getByTestId("stEChartsChart")).toBe(chart)
+      expect(chart).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      expect(mockChart.dispose).not.toHaveBeenCalled()
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    })
+
+    it("adds the alt context to Show data and Show chart", async () => {
+      const user = userEvent.setup()
+      render(
+        <Wrapper element={createDatasetElement({ alt: "Sales by product" })} />
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "Show data: Sales by product" })
+      )
+
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The grid toolbar is only shown on hover, so assert presence.
+      expect(
+        screen.queryByRole("button", { name: "Show chart: Sales by product" })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show chart" })
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows the chart again when a rerun drops the datasets while the table is open", async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      rerender(
+        <Wrapper
+          element={createElement({
+            spec: datasetSpec(SALES_ROWS),
+            datasets: [],
+          })}
+        />
+      )
+
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).not.toBeInTheDocument()
+      // The hidden instance kept receiving option updates.
+      expect(mockChart.setOption).toHaveBeenCalledTimes(2)
+      expect(mockInit).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the table closed when a later rerun brings the datasets back", async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      rerender(
+        <Wrapper
+          element={createElement({
+            spec: datasetSpec(SALES_ROWS),
+            datasets: [],
+          })}
+        />
+      )
+      rerender(<Wrapper element={createDatasetElement()} />)
+
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      // The chart toolbar is only shown on hover, so assert presence.
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).toBeInTheDocument()
+    })
+
+    it("sizes the table to the inline chart height after leaving fullscreen", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 300
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+
+      // In fullscreen the chart measures the screen, not its inline slot.
+      dimensionsHolder.height = 800
+      rerender(<Wrapper element={createDatasetElement()} isFullScreen />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(400)
+
+      // The hidden chart measures 0 once the table shows.
+      dimensionsHolder.height = 0
+      rerender(<Wrapper element={createDatasetElement()} />)
+
+      expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("resizes the open table when a rerun changes the pixel height", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 500
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 500 }}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(500)
+
+      // The hidden chart measures 0, so only the layout config knows the new
+      // slot height.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 300 }}
+        />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("keeps the measured inline height for a stretch-height table", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 450
+      // Decode a wire message like the real element receives, so the unset
+      // `pixelHeight` oneof member keeps its generated default.
+      const heightConfig = streamlit.HeightConfig.decode(
+        streamlit.HeightConfig.encode({ useStretch: true }).finish()
+      )
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      // The hidden chart measures 0 once the table shows.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+
+      expect(gridPropsHolder.last?.height).toBe(450)
+    })
+
+    it("offers Close fullscreen in the table only while fullscreen", async () => {
+      const user = userEvent.setup()
+      const collapse = vi.fn()
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          isFullScreen
+          collapse={collapse}
+        />
+      )
+
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The chart's own Close fullscreen button is hidden with the chart, so
+      // only the table's button is in the accessibility tree.
+      await user.click(
+        screen.getByRole("button", { name: "Close fullscreen" })
+      )
+
+      expect(collapse).toHaveBeenCalledTimes(1)
+
+      rerender(
+        <Wrapper element={createDatasetElement()} collapse={collapse} />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
+      expect(
+        screen.queryByRole("button", { name: "Close fullscreen" })
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("inside dataZoom wheel", () => {

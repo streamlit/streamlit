@@ -191,7 +191,7 @@ st.echarts_chart(
 
 # 5b) A dataset.source DataFrame with date, naive datetime, and NaN columns.
 #     The frame ships as Arrow; dates must render as wall-clock labels in any
-#     browser timezone.
+#     browser timezone, and "Show data" swaps the chart for a table of it.
 arrow_dataset_df = pd.DataFrame(
     {
         "day": [dt.date(2020, 1, 1) + dt.timedelta(days=i) for i in range(5)],
