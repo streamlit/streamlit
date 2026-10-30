@@ -20,11 +20,11 @@
 The tests call the routes over HTTP with `page.request`, which sends no
 `Origin` header, like the programmatic clients the route serves. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
-with `server.enableAgentApi` on, so they derive every URL from `app_base_url`
-and tolerate headers a hosting platform adds. They open the app before calling
-the route, because a host that guards the app's origin with a login cookie,
-as Snowflake does, sets it while the app loads, and `page.request` sends the
-browser context's cookies.
+with `server.enableAgentApi` on, so they derive every URL from
+`agent_api_base_url` and tolerate headers a hosting platform adds. They open
+the app before calling the route, because a host that guards the app's origin
+with a login cookie, as Snowflake does, sets it while the app loads, and
+`page.request` sends the browser context's cookies.
 """
 
 from __future__ import annotations
@@ -70,6 +70,25 @@ def app_page(app_target: AppTarget) -> Page:
     login cookie the host sets.
     """
     return app_target.page
+
+
+@pytest.fixture
+def agent_api_base_url(app_target: AppTarget, app_base_url: str) -> str:
+    """Return the base URL for agent API HTTP calls.
+
+    Hosts such as Snowflake in SiS can serve the HTML from one origin (the
+    iframe) and the Streamlit server from another (the SPCS container). When
+    that happens the loaded app sets ``window.__streamlit.BACKEND_BASE_URL``
+    to the server; ``page.request`` must use that URL. Locally, and on hosts
+    that serve HTML and the API from the same origin, the value is unset and
+    this falls back to ``app_base_url``.
+    """
+    backend = app_target.locator("html").evaluate(
+        "() => window.__streamlit?.BACKEND_BASE_URL || null"
+    )
+    if isinstance(backend, str) and backend.strip():
+        return backend.strip()
+    return app_base_url
 
 
 def _interact_url(app_base_url: str) -> str:
@@ -350,7 +369,7 @@ def test_data_urls_serve_every_row_the_snapshot_counts(
 
 @pytest.mark.external_test
 def test_snapshot_urls_context_and_headers_follow_the_request(
-    app_page: Page, app_base_url: str
+    app_page: Page, agent_api_base_url: str
 ) -> None:
     """Media URLs resolve against the request's URL, `context` reaches the
     app's `st.context`, and every interaction's run sees that request's
@@ -362,7 +381,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     token_header = {_TOKEN_HEADER: _TOKEN_VALUE}
     response = _interact(
         app_page,
-        app_base_url,
+        agent_api_base_url,
         {"context": {"timezone": "Asia/Kolkata", "locale": "de-DE"}},
         headers=token_header,
     )
@@ -380,14 +399,14 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     )
     # Relative to the request, the one base a path-stripping proxy cannot hide.
     assert image_url.startswith("../../media/")
-    image = app_page.request.get(urljoin(_interact_url(app_base_url), image_url))
+    image = app_page.request.get(urljoin(_interact_url(agent_api_base_url), image_url))
     assert image.status == 200
     assert image.headers["content-type"].startswith("image/")
 
     rerun = _snapshot(
         _interact(
             app_page,
-            app_base_url,
+            agent_api_base_url,
             {"session_id": created["session_id"]},
             headers=token_header,
         )
@@ -400,7 +419,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
 
 @pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
-    app_page: Page, app_base_url: str
+    app_page: Page, app_base_url: str, agent_api_base_url: str
 ) -> None:
     """A web page's request and other methods than POST are refused without
     the app's HTML, and neither made-up identity headers nor cookies, a forged
@@ -408,19 +427,24 @@ def test_refuses_web_pages_and_ignores_client_identity(
     """
     _refusal(
         _interact(
-            app_page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}
+            app_page,
+            agent_api_base_url,
+            {},
+            headers={"Origin": "https://e2e.invalid"},
         ),
         403,
         "origin_not_allowed",
     )
     for method in ["GET", "PUT"]:
         response = app_page.request.fetch(
-            _interact_url(app_base_url), method=method, max_redirects=0
+            _interact_url(agent_api_base_url), method=method, max_redirects=0
         )
         assert response.status == 405, f"{method}: {_describe(response)}"
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
+    # The forged cookie is for the document origin the browser loaded, which
+    # may differ from the API origin on hosts that set BACKEND_BASE_URL.
     app_page.context.add_cookies(
         [
             {
@@ -438,7 +462,7 @@ def test_refuses_web_pages_and_ignores_client_identity(
     ]
     response = _interact(
         app_page,
-        app_base_url,
+        agent_api_base_url,
         {},
         headers=dict.fromkeys(identity_headers, _SPOOFED_IDENTITY),
     )
@@ -450,7 +474,7 @@ def test_refuses_web_pages_and_ignores_client_identity(
 
 @pytest.mark.external_test
 def test_the_app_links_a_description_that_reaches_the_api(
-    app_target: AppTarget, app_base_url: str
+    app_target: AppTarget, agent_api_base_url: str
 ) -> None:
     """The loaded app's HTML links the OpenAPI document, in its head and in the
     text a reader without JavaScript gets. The document says the API is on,
@@ -468,7 +492,7 @@ def test_the_app_links_a_description_that_reaches_the_api(
     assert _SCHEMA_PATH.lstrip("/") in noscript
 
     page = app_target.page
-    schema_url = build_app_url(app_base_url, path=_SCHEMA_PATH)
+    schema_url = build_app_url(agent_api_base_url, path=_SCHEMA_PATH)
     response = page.request.get(schema_url, max_redirects=0)
     assert response.status == 200, _describe(response)
     assert response.headers["content-type"].startswith("application/json")
@@ -481,6 +505,8 @@ def test_the_app_links_a_description_that_reaches_the_api(
     ]
     root = urljoin(schema_url, document["servers"][0]["url"])
     interact_url = root + interact_path.lstrip("/")
-    assert urlsplit(interact_url).path == urlsplit(_interact_url(app_base_url)).path
+    assert (
+        urlsplit(interact_url).path == urlsplit(_interact_url(agent_api_base_url)).path
+    )
     created = _snapshot(page.request.post(interact_url, data={}, max_redirects=0))
     assert _SESSION_ID.fullmatch(created["session_id"])
