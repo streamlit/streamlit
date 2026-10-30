@@ -2271,9 +2271,9 @@ class VegaChartsMixin:
               On SVG charts, axes, legends, and the chart's accessible name
               stay available.
 
-            Streamlit counts the rows of each view's data, adds up layered and
-            concatenated views, and skips views that aggregate or filter their
-            data or load it from a URL. To opt out, set the renderer with
+            Streamlit counts the dataframe rows of each view and adds up
+            layered and concatenated views. Views that aggregate or transform
+            their data aren't counted. To opt out, set the renderer with
             ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``
             or the ARIA setting with ``chart.configure(aria=True)``.
 
@@ -2548,9 +2548,9 @@ class VegaChartsMixin:
               On SVG charts, axes, legends, and the chart's accessible name
               stay available.
 
-            Streamlit counts the rows of each view's data, adds up layered and
-            concatenated views, and skips views that aggregate or filter their
-            data or load it from a URL. To opt out, set
+            Streamlit counts the dataframe rows of each view and adds up
+            layered and concatenated views. Views that aggregate or transform
+            their data aren't counted. To opt out, set
             ``"usermeta": {"embedOptions": {"renderer": "svg"}}`` or
             ``"config": {"aria": True}`` in the spec.
 

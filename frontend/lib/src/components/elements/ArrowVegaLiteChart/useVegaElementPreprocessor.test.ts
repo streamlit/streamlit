@@ -1285,15 +1285,14 @@ describe("useVegaElementPreprocessor", () => {
         y: { field: "y", type: "quantitative" },
       },
     })
-    const renderChart = (
-      numDataRows: number
-    ): ReturnType<
-      typeof renderHook<
-        VegaLiteChartElement,
-        ReturnType<typeof useVegaElementPreprocessor>
-      >
-    > =>
-      renderHook(
+    const elementWithRows = (numDataRows: number): VegaLiteChartElement =>
+      getElement({ spec: pointsSpec, datasets: pointsDataset(numDataRows) })
+    const rendererOf = (spec: unknown): unknown =>
+      (spec as { usermeta?: { embedOptions?: { renderer?: string } } })
+        .usermeta?.embedOptions?.renderer
+
+    it("follows the row count and keeps the spec while it doesn't change", () => {
+      const { result, rerender } = renderHook(
         (element: VegaLiteChartElement) =>
           useVegaElementPreprocessor(
             element,
@@ -1302,49 +1301,16 @@ describe("useVegaElementPreprocessor", () => {
             useContainerWidth,
             useContainerHeight
           ),
-        {
-          initialProps: getElement({
-            spec: pointsSpec,
-            datasets: pointsDataset(numDataRows),
-          }),
-        }
+        { initialProps: elementWithRows(CANVAS_RENDERER_THRESHOLD + 1) }
       )
-    const rendererOf = (spec: unknown): unknown =>
-      (spec as { usermeta?: { embedOptions?: { renderer?: string } } })
-        .usermeta?.embedOptions?.renderer
-
-    it("renders charts with many per-datum marks to canvas", () => {
-      const { result } = renderChart(CANVAS_RENDERER_THRESHOLD + 1)
-      expect(rendererOf(result.current.spec)).toBe("canvas")
-      expect(result.current.baseSpecKey).toContain('"renderer":"canvas"')
-    })
-
-    it("keeps small charts unchanged", () => {
-      const { result } = renderChart(CANVAS_RENDERER_THRESHOLD)
-      expect(result.current.spec).not.toHaveProperty("usermeta")
-      expect(
-        (result.current.spec as unknown as { config: object }).config
-      ).not.toHaveProperty("mark.aria")
-    })
-
-    it("keeps the spec when new datasets have the same row count", () => {
-      const { result, rerender } = renderChart(CANVAS_RENDERER_THRESHOLD + 1)
       const { spec, baseSpecKey } = result.current
+      expect(rendererOf(spec)).toBe("canvas")
 
-      rerender(
-        getElement({
-          spec: pointsSpec,
-          datasets: pointsDataset(CANVAS_RENDERER_THRESHOLD + 1),
-        })
-      )
+      // Every rerun delivers new dataset objects.
+      rerender(elementWithRows(CANVAS_RENDERER_THRESHOLD + 1))
       expect(result.current.spec).toBe(spec)
 
-      rerender(
-        getElement({
-          spec: pointsSpec,
-          datasets: pointsDataset(CANVAS_RENDERER_THRESHOLD),
-        })
-      )
+      rerender(elementWithRows(CANVAS_RENDERER_THRESHOLD))
       expect(rendererOf(result.current.spec)).toBe(undefined)
       expect(result.current.baseSpecKey).not.toBe(baseSpecKey)
     })

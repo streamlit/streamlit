@@ -58,78 +58,15 @@ const PER_DATUM_MARKS: ReadonlySet<string> = new Set([
   "text",
 ])
 
-/** Marks whose items are data points but that draw one path per series. */
 const PATH_MARKS: ReadonlySet<string> = new Set(["line", "area", "trail"])
 
-/**
- * Transform operators that keep every input row, so the dataset size bounds
- * the marks from below.
- */
-const ROW_PRESERVING_TRANSFORMS: ReadonlySet<string> = new Set([
-  "bin",
-  "calculate",
-  "extent",
-  "flatten",
-  "fold",
-  "impute",
-  "joinaggregate",
-  "lookup",
-  "stack",
-  "timeUnit",
-  "window",
-])
-
-/**
- * Transform operators that can drop rows. Some of them also take a key that
- * names a row-preserving operator (``density`` and ``regression`` take an
- * ``extent``), so a transform is identified by these first.
- */
-const ROW_DROPPING_TRANSFORMS: ReadonlySet<string> = new Set([
-  "aggregate",
-  "density",
-  "filter",
-  "loess",
-  "pivot",
-  "quantile",
-  "regression",
-  "sample",
-])
-
-/** View keys that hold child views, which inherit the parent's data. */
-const COMPOSITION_KEYS = ["layer", "concat", "hconcat", "vconcat"] as const
-
-/** Per-view tallies of drawn data points. */
+/** Data points drawn by per-datum marks, and by all counted marks. */
 interface MarkCounts {
-  /** Data points drawn as per-datum marks (points, bars, …). */
   perDatum: number
-  /** Data points drawn by any counted mark, paths included. */
   total: number
-  /** A view sets its own mark description, so mark ARIA must stay on. */
-  hasAuthoredDescription: boolean
 }
 
-const NO_MARKS: MarkCounts = {
-  perDatum: 0,
-  total: 0,
-  hasAuthoredDescription: false,
-}
-
-function addCounts(a: MarkCounts, b: MarkCounts): MarkCounts {
-  return {
-    perDatum: a.perDatum + b.perDatum,
-    total: a.total + b.total,
-    hasAuthoredDescription:
-      a.hasAuthoredDescription || b.hasAuthoredDescription,
-  }
-}
-
-function scaleCounts(counts: MarkCounts, factor: number): MarkCounts {
-  return {
-    ...counts,
-    perDatum: counts.perDatum * factor,
-    total: counts.total * factor,
-  }
-}
+const NO_MARKS: MarkCounts = { perDatum: 0, total: 0 }
 
 /** Read the row counts of a chart's Arrow datasets. */
 export function getDatasetRowCounts(
@@ -145,192 +82,92 @@ export function getDatasetRowCounts(
   return { unnamed: data?.dimensions.numDataRows ?? null, named }
 }
 
-/**
- * The rows a view's ``data`` provides, ``undefined`` to inherit the parent's
- * data, or ``null`` if the size is unknown (URLs, generators, GeoJSON).
- */
-function resolveDataRows(
-  data: unknown,
-  spec: SpecObject,
-  rowCounts: DatasetRowCounts
-): number | null | undefined {
-  if (data === undefined) {
-    return undefined
-  }
-  if (!isPlainObject(data)) {
-    return null
-  }
-  const { name, values } = data as SpecObject
-  if (Array.isArray(values)) {
-    return values.length
-  }
-  if (typeof name === "string") {
-    if (name in rowCounts.named) {
-      return rowCounts.named[name]
-    }
-    const inline = isPlainObject(spec.datasets)
-      ? (spec.datasets as SpecObject)[name]
-      : undefined
-    return Array.isArray(inline) ? inline.length : null
-  }
-  return null
+function asObject(value: unknown): SpecObject {
+  return isPlainObject(value) ? (value as SpecObject) : {}
 }
 
-function preservesRows(transforms: unknown): boolean {
-  if (transforms === undefined) {
-    return true
-  }
-  return (
-    Array.isArray(transforms) &&
-    transforms.every(transform => {
-      if (!isPlainObject(transform)) {
-        return false
-      }
-      const keys = Object.keys(transform as SpecObject)
-      return (
-        !keys.some(key => ROW_DROPPING_TRANSFORMS.has(key)) &&
-        keys.some(key => ROW_PRESERVING_TRANSFORMS.has(key))
-      )
-    })
-  )
-}
-
-function getEncoding(view: SpecObject): SpecObject {
-  return isPlainObject(view.encoding) ? (view.encoding as SpecObject) : {}
+function asList(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
 }
 
 function hasAggregate(encoding: SpecObject): boolean {
   return Object.values(encoding).some(channel =>
     (Array.isArray(channel) ? channel : [channel]).some(
-      definition =>
-        isPlainObject(definition) && "aggregate" in (definition as SpecObject)
+      definition => "aggregate" in asObject(definition)
     )
   )
 }
 
-/** The number of times a ``repeat`` operator draws its child view. */
-function countRepeats(repeat: unknown): number {
-  if (Array.isArray(repeat)) {
-    return repeat.length
-  }
-  if (!isPlainObject(repeat)) {
-    return 1
-  }
-  return Object.values(repeat as SpecObject).reduce<number>(
-    (product, fields) =>
-      Array.isArray(fields) ? product * Math.max(fields.length, 1) : product,
-    1
-  )
-}
-
 /**
- * Count a unit view's data points.
+ * Count the data points a view draws. Layered and concatenated views add up,
+ * and faceted or repeated views count their rows once. A view counts as zero
+ * when its rows are unknown: its data isn't an Arrow dataset, or it has a
+ * transform (which may drop rows) or an aggregate (one mark per group).
  *
- * @param rows The rows the view draws, or ``null`` if unknown.
+ * @param inheritedRows The rows of the parent's data.
  * @param inheritsAggregate Whether a parent layer's encoding aggregates.
- */
-function countUnitMarks(
-  view: SpecObject,
-  rows: number | null,
-  inheritsAggregate: boolean
-): MarkCounts {
-  const markDef = isPlainObject(view.mark)
-    ? (view.mark as SpecObject)
-    : { type: view.mark }
-  const encoding = getEncoding(view)
-  const hasAuthoredDescription =
-    "description" in markDef || "description" in encoding
-  const markType = markDef.type
-  // Aggregated views draw one mark per group, not one per row.
-  if (
-    rows === null ||
-    inheritsAggregate ||
-    typeof markType !== "string" ||
-    hasAggregate(encoding)
-  ) {
-    return { ...NO_MARKS, hasAuthoredDescription }
-  }
-  const isPerDatum = PER_DATUM_MARKS.has(markType)
-  if (!isPerDatum && !PATH_MARKS.has(markType)) {
-    return { ...NO_MARKS, hasAuthoredDescription }
-  }
-  return {
-    perDatum: isPerDatum ? rows : 0,
-    total: rows,
-    hasAuthoredDescription,
-  }
-}
-
-/**
- * Count the data points a view draws, walking layers, concatenations,
- * facets, and repeats. Every unit view adds its own points, so a layered or
- * concatenated chart counts the sum over its views, and a repeated view counts
- * once per repetition. Views whose size can't be known count as zero.
  */
 function countMarks(
   view: unknown,
   inheritedRows: number | null,
   inheritsAggregate: boolean,
-  spec: SpecObject,
   rowCounts: DatasetRowCounts
 ): MarkCounts {
   if (!isPlainObject(view)) {
     return NO_MARKS
   }
   const viewSpec = view as SpecObject
-  const ownRows = resolveDataRows(viewSpec.data, spec, rowCounts)
-  const rows = ownRows === undefined ? inheritedRows : ownRows
-  // A transform that may drop rows makes the row count unknown for this view
-  // and its children.
-  const childRows =
-    rows !== null && preservesRows(viewSpec.transform) ? rows : null
+  const { name } = asObject(viewSpec.data)
+  let rows = inheritedRows
+  if (viewSpec.data !== undefined) {
+    rows = typeof name === "string" ? (rowCounts.named[name] ?? null) : null
+  }
+  if (viewSpec.transform !== undefined) {
+    rows = null
+  }
+  // Layer children inherit the layer's encoding; other compositions don't.
+  const aggregates =
+    inheritsAggregate || hasAggregate(asObject(viewSpec.encoding))
 
   if ("mark" in viewSpec) {
-    return countUnitMarks(viewSpec, childRows, inheritsAggregate)
-  }
-
-  // Layer children inherit the layer's encoding, aggregates and descriptions
-  // included. Concatenated, faceted, and repeated views don't.
-  const encoding = getEncoding(viewSpec)
-  const layerAggregates = inheritsAggregate || hasAggregate(encoding)
-  let counts: MarkCounts = {
-    ...NO_MARKS,
-    hasAuthoredDescription: "description" in encoding,
-  }
-  for (const key of COMPOSITION_KEYS) {
-    const children = viewSpec[key]
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        const childAggregates = key === "layer" && layerAggregates
-        counts = addCounts(
-          counts,
-          countMarks(child, childRows, childAggregates, spec, rowCounts)
-        )
-      }
+    const markType = isPlainObject(viewSpec.mark)
+      ? asObject(viewSpec.mark).type
+      : viewSpec.mark
+    if (rows === null || aggregates || typeof markType !== "string") {
+      return NO_MARKS
+    }
+    const isPerDatum = PER_DATUM_MARKS.has(markType)
+    return {
+      perDatum: isPerDatum ? rows : 0,
+      total: isPerDatum || PATH_MARKS.has(markType) ? rows : 0,
     }
   }
-  if ("spec" in viewSpec) {
-    // A facet splits its rows across the cells; a repeat draws all of them in
-    // each cell.
-    const child = countMarks(viewSpec.spec, childRows, false, spec, rowCounts)
-    counts = addCounts(
-      counts,
-      scaleCounts(child, countRepeats(viewSpec.repeat))
-    )
+
+  let counts = NO_MARKS
+  const addChild = (child: unknown, childAggregates: boolean): void => {
+    const childCounts = countMarks(child, rows, childAggregates, rowCounts)
+    counts = {
+      perDatum: counts.perDatum + childCounts.perDatum,
+      total: counts.total + childCounts.total,
+    }
+  }
+  for (const child of asList(viewSpec.layer)) {
+    addChild(child, aggregates)
+  }
+  for (const child of [
+    ...asList(viewSpec.concat),
+    ...asList(viewSpec.hconcat),
+    ...asList(viewSpec.vconcat),
+    viewSpec.spec,
+  ]) {
+    addChild(child, false)
   }
   return counts
 }
 
-/** A shallow copy of a plain object, or ``{}`` for any other value. */
-function copyPlainObject(value: unknown): SpecObject {
-  return isPlainObject(value) ? { ...(value as SpecObject) } : {}
-}
-
 /**
- * Fill rendering settings that keep large Vega-Lite charts responsive.
- *
- * Applied only to settings the author left unset, and only above the sizes
- * where the default SVG output is slow to draw and to interact with:
+ * Fill rendering settings that keep large Vega-Lite charts responsive, where
+ * the author left them unset:
  *
  * - The canvas renderer when the chart draws more than 2,000 per-datum marks
  *   (points, bars, ticks, …). An SVG chart creates one element per mark, so
@@ -340,10 +177,6 @@ function copyPlainObject(value: unknown): SpecObject {
  * - ``config.mark.aria = false`` when marks draw more than 5,000 data points.
  *   Vega-Lite otherwise evaluates a screen-reader description for every data
  *   point. On SVG charts, axes and legends stay in the accessibility tree.
- *
- * Row counts come from the chart's Arrow datasets and inline values. Layered,
- * concatenated, and repeated views add up their marks. Views that aggregate
- * or filter their data, or load it from a URL, aren't counted.
  *
  * The spec is changed in place, like the other ``generateSpec`` steps.
  *
@@ -355,27 +188,27 @@ export function applyLargeDataDefaults(
   spec: SpecObject,
   rowCounts: DatasetRowCounts
 ): void {
-  const counts = countMarks(spec, rowCounts.unnamed, false, spec, rowCounts)
+  const counts = countMarks(spec, rowCounts.unnamed, false, rowCounts)
 
-  if (counts.perDatum > CANVAS_RENDERER_THRESHOLD) {
-    const { usermeta } = spec
-    if (usermeta === undefined || isPlainObject(usermeta)) {
-      const usermetaObject = copyPlainObject(usermeta)
-      const embedOptions = copyPlainObject(usermetaObject.embedOptions)
-      if (embedOptions.renderer === undefined) {
-        spec.usermeta = {
-          ...usermetaObject,
-          embedOptions: { ...embedOptions, renderer: "canvas" },
-        }
-      }
+  const usermeta = asObject(spec.usermeta)
+  const embedOptions = asObject(usermeta.embedOptions)
+  if (
+    counts.perDatum > CANVAS_RENDERER_THRESHOLD &&
+    embedOptions.renderer === undefined
+  ) {
+    spec.usermeta = {
+      ...usermeta,
+      embedOptions: { ...embedOptions, renderer: "canvas" },
     }
   }
 
-  if (counts.total > MARK_ARIA_THRESHOLD && !counts.hasAuthoredDescription) {
-    const config = copyPlainObject(spec.config)
-    const markConfig = copyPlainObject(config.mark)
-    if (config.aria === undefined && markConfig.aria === undefined) {
-      spec.config = { ...config, mark: { ...markConfig, aria: false } }
-    }
+  const config = asObject(spec.config)
+  const markConfig = asObject(config.mark)
+  if (
+    counts.total > MARK_ARIA_THRESHOLD &&
+    config.aria === undefined &&
+    markConfig.aria === undefined
+  ) {
+    spec.config = { ...config, mark: { ...markConfig, aria: false } }
   }
 }

@@ -1043,14 +1043,12 @@ class EChartsMixin:
               (``"tooltip": {"trigger": "axis"}``) still marks the hovered
               point.
 
-            Streamlit leaves a series unchanged where these options would
-            change how it looks or break a feature it uses. For example, it
-            skips series with per-item styles, labels, or gradient fills,
-            charts with selections (``on_select``, ``selectedMode``, or a
-            ``brush``) or a ``visualMap``, and line series that set
-            ``symbol``, have empty values, or are in a chart with an item
-            tooltip or a zoom. To opt out, set the option yourself, for
-            example ``"large": False``. For line charts
+            Streamlit leaves series unchanged in charts with selections
+            (``on_select``, ``selectedMode``, or a ``brush``) and series whose
+            ``data`` items are objects with their own settings. Large mode
+            also skips charts with a ``visualMap``, and line symbols stay with
+            an item tooltip or empty values. To opt out, set the option
+            yourself, for example ``"large": False``. For line charts
             with even more points, you can set ``"sampling": "lttb"``, which
             draws a subset of points that keeps the line's shape. Streamlit
             doesn't set it for you because it changes which points are drawn
