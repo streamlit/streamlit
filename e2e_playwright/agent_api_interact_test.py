@@ -72,6 +72,16 @@ def app_page(app_target: AppTarget) -> Page:
     return app_target.page
 
 
+def _configured_backend_base_url(app_target: AppTarget) -> str | None:
+    """Return ``window.__streamlit.BACKEND_BASE_URL`` when the host set one."""
+    backend = app_target.locator("html").evaluate(
+        "() => window.__streamlit?.BACKEND_BASE_URL || null"
+    )
+    if isinstance(backend, str) and backend.strip():
+        return backend.strip()
+    return None
+
+
 @pytest.fixture
 def agent_api_base_url(app_target: AppTarget, app_base_url: str) -> str:
     """Return the base URL for agent API HTTP calls.
@@ -83,12 +93,30 @@ def agent_api_base_url(app_target: AppTarget, app_base_url: str) -> str:
     must go there. When the value is unset (locally, or when one origin serves
     both), this returns ``app_base_url``.
     """
-    backend = app_target.locator("html").evaluate(
-        "() => window.__streamlit?.BACKEND_BASE_URL || null"
+    return _configured_backend_base_url(app_target) or app_base_url
+
+
+def _expect_service_desc_href(
+    app_target: AppTarget, backend_base_url: str | None
+) -> None:
+    """The description link is relative, or absolute on the configured backend.
+
+    The page Streamlit ships uses a relative href. A host that sets
+    ``BACKEND_BASE_URL`` can replace it with an absolute URL on that backend,
+    so the link does not resolve against the iframe.
+    """
+    link = app_target.locator("link[rel='service-desc']")
+    if backend_base_url is None:
+        expect(link).to_have_attribute("href", f".{_SCHEMA_PATH}")
+        return
+    backend = urlsplit(backend_base_url)
+    expect(link).to_have_attribute(
+        "href",
+        re.compile(
+            rf"^{re.escape(backend.scheme)}://{re.escape(backend.netloc)}"
+            rf".*{re.escape(_SCHEMA_PATH)}(?:[?#].*)?$"
+        ),
     )
-    if isinstance(backend, str) and backend.strip():
-        return backend.strip()
-    return app_base_url
 
 
 def _interact_url(app_base_url: str) -> str:
@@ -479,24 +507,23 @@ def test_the_app_links_a_description_that_reaches_the_api(
     app_target: AppTarget, agent_api_base_url: str
 ) -> None:
     """The loaded app's HTML links the OpenAPI document, in its head and in the
-    text a reader without JavaScript gets. The schema is fetched from the
-    backend URL, which on a split-origin host is not the iframe that served
-    the HTML. The document says the API is on, and its server, resolved
-    against that schema URL, reaches the interact route through
-    `server.baseUrlPath` and any prefix a host adds.
+    text a reader without JavaScript gets. The link is relative to the page,
+    unless the host set ``BACKEND_BASE_URL``, in which case it is an absolute
+    URL on that backend. The schema is fetched from the backend URL, which on
+    a split-origin host is not the iframe that served the HTML. The document
+    says the API is on, and its server, resolved against that schema URL,
+    reaches the interact route through `server.baseUrlPath` and any prefix a
+    host adds.
 
     The `Link` header is not checked, because hosts may strip it.
     """
-    relative_link = f".{_SCHEMA_PATH}"
-    expect(app_target.locator("link[rel='service-desc']")).to_have_attribute(
-        "href", relative_link
-    )
+    _expect_service_desc_href(app_target, _configured_backend_base_url(app_target))
     # Read from the DOM, since Playwright's text matching skips `<noscript>`.
     noscript = app_target.locator("noscript").text_content() or ""
     assert _SCHEMA_PATH.lstrip("/") in noscript
 
     page = app_target.page
-    # The relative HTML link resolves against the iframe. The schema is served
+    # A relative HTML link resolves against the iframe. The schema is served
     # by the backend, so the request uses that URL.
     schema_url = build_app_url(agent_api_base_url, path=_SCHEMA_PATH)
     response = page.request.get(schema_url, max_redirects=0)
