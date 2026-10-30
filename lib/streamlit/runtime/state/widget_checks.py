@@ -217,7 +217,10 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
         "The latest run that covered the widget did not render it. A rerun can "
         "hide a widget just before a user's change arrives."
     ),
-    "disabled": "The widget was disabled when the client sent it.",
+    "disabled": (
+        "The widget was disabled in the run the client was shown. A rerun can "
+        "disable a widget just before a user's change arrives."
+    ),
     "not_an_option": (
         "It is not one of the widget's options. A rerun can change the options "
         "just before a user's change arrives."
@@ -632,16 +635,20 @@ def check_client_value(
         Whether the latest run that covered the widget registered it. A widget
         registering in the current run is rendered.
     compare_wire : bool
-        How an unchanged value is recognized. ``False`` compares the
-        deserialized value with ``previous``, which a browser session uses.
-        ``True`` compares ``state`` with ``stored_state`` on the wire, which is
-        stricter: a value the deserializer converts onto the stored one, such
-        as ``2.5`` for an integer input holding ``2``, still reaches the
-        validator. A ``state`` with no value field reads as the default
-        without a conversion, so it is compared deserialized either way.
-        ``True`` also asks the validator for the author's constraints as
-        written (``exact``), without the allowance a browser needs for its
-        rounding. The agent API uses it.
+        How an unchanged value is recognized, and how strictly the validator
+        checks a changed one.
+
+        - ``False``, for a browser session: "unchanged" means the deserialized
+          value equals ``previous``.
+        - ``True``, for the agent API: "unchanged" means the wire form equals
+          ``stored_state``. This is stricter: a value the deserializer converts
+          onto the stored one, such as ``2.5`` for an integer input holding
+          ``2``, still reaches the validator. The validator gets
+          ``exact=True``, so it checks the author's constraints as written,
+          without the allowance a browser needs for its rounding.
+
+        A ``state`` with no value field reads as the default without a
+        conversion, so it is compared deserialized either way.
     stored_state : WidgetState or None
         The stored value in its wire form, for ``compare_wire``. ``None`` means
         there is none, so a value with a field always counts as changed.
@@ -792,6 +799,7 @@ def _wire_equal(sent: WidgetStateProto, stored: WidgetStateProto) -> bool:
 
 
 def _is_empty_wire(state: WidgetStateProto, field: str | None) -> bool:
+    """Whether a state carries no value: no field, or an empty array."""
     if field is None:
         return True
     return field.endswith("_array_value") and not getattr(state, field).data

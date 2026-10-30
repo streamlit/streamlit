@@ -121,8 +121,10 @@ class NumberInputSerde:
         violation = widget_checks.within(ui_value, min_value, max_value)
         if violation is not None:
             return violation
-        # Past a limit that stands in for an unset bound, which only a whole
-        # number can reach: a double holds every finite float.
+        # The value is within the bounds the author set, but past a limit
+        # that stands in for an unset one. Only an integer input can get here:
+        # its stand-in is the largest whole number a double holds exactly, and
+        # a float input's is the largest double, which no finite value passes.
         limit = (
             f"up to {self.max_value}, the largest"
             if ui_value > self.max_value

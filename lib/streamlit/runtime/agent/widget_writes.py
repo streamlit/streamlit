@@ -22,24 +22,29 @@ and the whole request is refused if any part of it is not legal. This covers:
   ID the snapshot reported. An element that is gone, disabled, unsupported, or
   display-only is refused with the code that names why, and so is a value sent
   to a trigger, a trigger fired as a value, or one element set twice.
-- Values and triggers (``build_widget_states``): each value must have the
-  JSON type its ``value_schema`` states, and ``null`` resets or clears it.
-  Accepted values and the one trigger are encoded in each widget's wire type,
-  in snapshot order, as the ``WidgetStates`` a browser would send. Each encoded
-  state then passes the check a browser value passes
-  (``widget_checks.check_client_value``): the widget's wire field, its
-  deserializer, ``disabled``, and its own validator, which decides whether a
-  value is one of its options, within its bounds and ``max_chars``, in a
-  layout its frontend sends, a range of the right length in order, and not
-  empty for a ``required`` widget. Only a value whose wire form equals the
-  stored one skips the validator, so a value the widget would convert, such
-  as ``2.5`` for an integer input holding ``2``, is refused rather than
-  corrected. The unset form, which ``null`` sends unless it clears a widget,
-  reads as the default without a conversion, so it is compared after
-  deserializing: ``null`` to an empty required widget changes nothing. Unlike
-  a browser session, a request is also refused for a label several options
-  share, unless it is unchanged. A value that is unchanged is left out of the
-  ``WidgetStates``, so sending back what the snapshot reports changes nothing.
+- Values and triggers (``build_widget_states``):
+
+  - Each value must have the JSON type its ``value_schema`` states, and
+    ``null`` resets or clears it.
+  - Accepted values and the one trigger are encoded in each widget's wire
+    type, in snapshot order, as the ``WidgetStates`` a browser would send.
+  - Each encoded state then passes the check a browser value passes
+    (``widget_checks.check_client_value``): the widget's wire field, its
+    deserializer, ``disabled``, and its own validator. The validator decides
+    whether a value is one of its options, within its bounds and
+    ``max_chars``, in a layout its frontend sends, a range of the right
+    length in order, and not empty for a ``required`` widget.
+  - Only a value whose wire form equals the stored one skips the validator,
+    so a value the widget would convert, such as ``2.5`` for an integer input
+    holding ``2``, is refused rather than corrected. The unset form, which
+    ``null`` sends unless it clears a widget, reads as the default without a
+    conversion, so it is compared after deserializing: ``null`` to an empty
+    required widget changes nothing.
+  - Unlike a browser session, a request is also refused for a label several
+    options share, unless it is unchanged.
+  - A value that is unchanged is left out of the ``WidgetStates``, so
+    sending back what the snapshot reports changes nothing.
+
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only

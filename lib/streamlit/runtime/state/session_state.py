@@ -1827,9 +1827,9 @@ class SessionState:
 
         # Whether a client value for this widget was refused, so the browser
         # must be told the server's value. A value for a widget this session
-        # never registered is checked now, against this run's metadata, and
-        # before URL binding, so a refused value lets the URL seed on initial
-        # load.
+        # never registered is checked now, against this run's metadata. The
+        # check runs before URL binding, so after a refused value the URL can
+        # still seed the widget on initial load.
         client_value_refused = False
         if widget_id in self._unregistered_client_ids:
             self._unregistered_client_ids.discard(widget_id)
