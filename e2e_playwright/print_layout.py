@@ -159,10 +159,11 @@ with st.container(horizontal=True, height=180, key="horizontal_chart"):
 
 st.markdown("After the horizontal chart")
 
-with st.container(height=260, key="fixed_height_chart_row"):
+with st.container(height=420, key="fixed_height_chart_row"):
     fixed_left, fixed_right = st.columns(2)
     fixed_left.bar_chart(pd.DataFrame({"value": [3, 1, 2]}), height=160)
     fixed_right.line_chart(pd.DataFrame({"value": [1, 2, 3]}), height=160)
+    st.area_chart(pd.DataFrame({"value": [2, 3, 1]}), height="stretch")
 
 st.markdown("After the fixed-height chart row")
 

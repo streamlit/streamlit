@@ -52,6 +52,19 @@ describe("usePrintScreenWidth", () => {
     expect(element.style.getPropertyValue(PRINT_SCREEN_WIDTH_VAR)).toBe("")
   })
 
+  it("drops a stale width when the element now measures zero", () => {
+    const element = createElementWithWidth(0)
+    // A previous print whose afterprint never fired left this behind.
+    element.style.setProperty(PRINT_SCREEN_WIDTH_VAR, "180px")
+    renderHook(() => usePrintScreenWidth({ current: element }))
+
+    window.dispatchEvent(new Event("beforeprint"))
+    expect(element.style.getPropertyValue(PRINT_SCREEN_WIDTH_VAR)).toBe("")
+    expect(element.style.getPropertyValue(PRINT_SCREEN_WIDTH_VAR)).not.toBe(
+      "180px"
+    )
+  })
+
   it("records nothing when disabled", () => {
     const element = createElementWithWidth(230)
     renderHook(() => usePrintScreenWidth({ current: element }, false))
