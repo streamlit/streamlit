@@ -25,6 +25,7 @@ import {
   Utf8,
   vectorFromArray,
 } from "apache-arrow"
+import { getLogger } from "loglevel"
 
 import {
   type ArrowNamedDataSet,
@@ -41,6 +42,8 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 import { resetPageWheelClockForTests } from "./insideDataZoomWheel"
+
+const LOG = getLogger("EChartsChart")
 
 const { mockInit, mockChart } = vi.hoisted(() => {
   const mockChart = {
@@ -77,6 +80,11 @@ const { themeHolder } = vi.hoisted(() => {
 
 vi.mock("echarts", () => ({
   init: mockInit,
+  // Registered chart types; the tests use "notAChart" for an unknown one.
+  ComponentModel: {
+    getClass: (_mainType: string, subType?: string) =>
+      subType === "notAChart" ? undefined : Object,
+  },
 }))
 
 /** The props of the last rendered data table (the real grid still renders). */
@@ -232,6 +240,8 @@ describe("EChartsChart", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Chart errors are logged; keep the expected ones out of the test output.
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
     resetPageWheelClockForTests()
     mockContainerRef.current = null
     themeHolder.override = null
@@ -822,6 +832,59 @@ describe("EChartsChart", () => {
     expect(error).toHaveTextContent("invalid option")
   })
 
+  it("replaces the instance when a new option follows a failed one", () => {
+    mockChart.setOption.mockImplementationOnce(() => {
+      throw new Error('yAxis "0" not found')
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
+
+    // An unrelated rerun with the same spec doesn't retry the failed option.
+    rerender(<Wrapper element={createElement()} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+
+    // ECharts returns a new instance from each `init`.
+    const freshChart = {
+      ...mockChart,
+      setOption: vi.fn(),
+      dispose: vi.fn(),
+      isDisposed: vi.fn(() => false),
+    }
+    mockInit.mockImplementationOnce(() => freshChart)
+    const fixedSpec = JSON.stringify({
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: {},
+      series: [{ type: "bar", data: [1] }],
+    })
+    rerender(<Wrapper element={createElement({ spec: fixedSpec })} />)
+
+    expect(mockChart.dispose).toHaveBeenCalledTimes(1)
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    expect(freshChart.setOption).toHaveBeenCalledTimes(1)
+    expect(freshChart.setOption.mock.calls[0][0].yAxis).toEqual(
+      expect.any(Object)
+    )
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
+  it("does not resize or re-theme an instance whose option failed", () => {
+    mockChart.setOption.mockImplementationOnce(() => {
+      throw new Error("invalid option")
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+
+    dimensionsHolder.width = 800
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).not.toHaveBeenCalled()
+    expect(mockChart.setTheme).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stEChartsChartError")).toHaveTextContent(
+      "invalid option"
+    )
+  })
+
   it("renders a styled error instead of throwing when echarts.init fails", () => {
     mockInit.mockImplementationOnce(() => {
       throw new Error("init failed")
@@ -874,6 +937,124 @@ describe("EChartsChart", () => {
     // No chart should be created for an invalid spec.
     expect(mockInit).not.toHaveBeenCalled()
     expect(screen.queryByTestId("stEChartsChart")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      op: "initialize",
+      fail: (): void => {
+        mockInit.mockImplementationOnce(() => {
+          throw new Error("init failed")
+        })
+      },
+      message: "init failed",
+    },
+    {
+      op: "render its option",
+      fail: (): void => {
+        mockChart.setOption.mockImplementationOnce(() => {
+          throw new Error("invalid option")
+        })
+      },
+      message: "invalid option",
+    },
+  ])("logs the error when the chart fails to $op", ({ op, fail, message }) => {
+    fail()
+
+    render(<Wrapper element={createElement({ alt: "Revenue by day" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      `ECharts chart "Revenue by day" failed to ${op}: ${message}`,
+      expect.objectContaining({ message })
+    )
+  })
+
+  it("logs the error when the theme fails to apply", () => {
+    mockChart.setTheme.mockImplementationOnce(() => {
+      throw new Error("theme failed")
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      "ECharts chart failed to apply the theme: theme failed",
+      expect.any(Error)
+    )
+  })
+
+  it("logs an error that repeats on resize only once", () => {
+    const failure = (): never => {
+      throw new Error("layout failed")
+    }
+    mockChart.resize
+      .mockImplementationOnce(failure)
+      .mockImplementationOnce(failure)
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+    dimensionsHolder.width = 900
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).toHaveBeenCalledTimes(2)
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+  })
+
+  it("logs a resize error again after a successful resize", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    mockChart.resize
+      .mockImplementationOnce(() => {
+        throw new Error("resize failed")
+      })
+      .mockImplementationOnce(() => {})
+      .mockImplementationOnce(() => {
+        throw new Error("resize failed")
+      })
+    for (const width of [800, 900, 1000]) {
+      dimensionsHolder.width = width
+      rerender(<Wrapper element={createElement()} />)
+    }
+
+    expect(LOG.error).toHaveBeenCalledTimes(2)
+  })
+
+  it("logs an unparseable spec once", () => {
+    const element = createElement({ spec: "{not json" })
+    const { rerender } = render(<Wrapper element={element} />)
+    rerender(<Wrapper element={createElement({ spec: "{not json" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      expect.stringMatching(/^ECharts chart has an invalid spec: /)
+    )
+  })
+
+  it("logs series types that ECharts doesn't know once", () => {
+    const spec = JSON.stringify({
+      series: [
+        { type: "notAChart", data: [1] },
+        { type: "bar", data: [1] },
+      ],
+      baseOption: { series: [{ type: "notAChart" }] },
+    })
+    const { rerender } = render(
+      <Wrapper element={createElement({ spec, alt: "Sales" })} />
+    )
+    rerender(<Wrapper element={createElement({ spec, alt: "Sales" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      `ECharts chart "Sales" has series with an unknown type, which ECharts doesn't draw: "notAChart"`
+    )
+  })
+
+  it("does not log a chart that renders", () => {
+    render(<Wrapper element={createElement()} />)
+
+    expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    expect(LOG.error).not.toHaveBeenCalled()
   })
 
   it("does not inject a tooltip formatter or renderMode (XSS-safe)", () => {

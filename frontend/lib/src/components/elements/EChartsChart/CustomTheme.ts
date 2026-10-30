@@ -1482,7 +1482,7 @@ function fillOptionDefaults(
  * under ``media[*].option`` at either level. Non-object entries are returned
  * unchanged.
  */
-function mapOptionSeries(
+export function mapOptionSeries(
   option: EChartsOptionObject,
   mapSeries: (series: Record<string, unknown>) => Record<string, unknown>
 ): EChartsOptionObject {
