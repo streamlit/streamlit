@@ -432,57 +432,32 @@ def _loads_json_option(raw: str) -> Any:
     return option
 
 
-def _ensure_unique_dataset_labels(labels: list[str]) -> None:
-    """Reject dataset column labels that collide once stringified.
-
-    The labels become ECharts ``dimensions`` and the keys of each source row,
-    so a collision would silently merge two columns in the browser.
-    """
-    if len(labels) != len(set(labels)):
-        raise StreamlitAPIException(
-            "The provided ECharts dataset has duplicate column labels. Labels "
-            'are compared as strings, so `1` and `"1"` also collide. Rename '
-            "the columns so each label is unique.",
-            error_id="echarts-dataset-duplicate-columns",
-        )
-
-
 def _prepare_dataset_source(source: Any) -> Any:
     """Prepare a dataframe-like ``dataset.source`` for Arrow conversion.
 
-    Rejects column labels that would collide in the browser. PyArrow tables
-    and Polars objects are returned unchanged. Anything else becomes a pandas
-    dataframe with ``str(column)`` labels and no index.
+    PyArrow tables and Polars objects are returned unchanged. Anything else
+    becomes a pandas dataframe, with tuple and bytes column labels renamed to
+    ``str(column)``.
     """
     import pandas as pd
     import pyarrow as pa
 
-    if isinstance(source, pa.Table):
-        _ensure_unique_dataset_labels(source.column_names)
-        return source
     if (
-        dataframe_util.is_polars_dataframe(source)
+        isinstance(source, pa.Table)
+        or dataframe_util.is_polars_dataframe(source)
         or dataframe_util.is_polars_series(source)
         or dataframe_util.is_polars_lazyframe(source)
     ):
-        # Polars column names are already unique strings.
         return source
 
     df = dataframe_util.convert_anything_to_pandas_df(source)
-    labels = [str(column) for column in df.columns]
-    # Check before converting: PyArrow raises a bare ValueError for exact
-    # duplicates, which would otherwise surface as a conversion error.
-    _ensure_unique_dataset_labels(labels)
-    # The shallow copy leaves the caller's dataframe unchanged.
-    df = df.copy(deep=False)
     if any(isinstance(column, (tuple, bytes)) for column in df.columns):
         # Keep `str(column)` names such as `"(1, 2)"`, which apps write in
         # `encode` and `dimensions`. PyArrow would name tuple labels (MultiIndex
-        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels.
-        df.columns = pd.Index(labels)
-    # The chart never shows the index, so don't send it. A RangeIndex is stored
-    # only in the pandas metadata.
-    df.index = pd.RangeIndex(len(df))
+        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels. The
+        # shallow copy leaves the caller's dataframe unchanged.
+        df = df.copy(deep=False)
+        df.columns = pd.Index([str(column) for column in df.columns])
     return df
 
 
@@ -500,8 +475,7 @@ def _convert_single_dataset(
         return
 
     # Dataframe and PyArrow conversions raise plain TypeError and ValueError
-    # for unsupported values. The duplicate-label StreamlitAPIException is not
-    # caught, so it reaches the app unchanged.
+    # for unsupported values, such as duplicate pandas column names.
     conversion_errors: tuple[type[BaseException], ...] = (
         StreamlitDataframeConversionError,
         *dataframe_util.get_arrow_conversion_errors(),

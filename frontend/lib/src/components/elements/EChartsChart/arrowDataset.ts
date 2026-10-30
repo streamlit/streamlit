@@ -328,6 +328,29 @@ export function quiverToEChartsRows(quiver: Quiver): EChartsSourceRow[] {
   return rows
 }
 
+/**
+ * Throws when two data columns share a name. Each row is an object keyed by
+ * column name, so the second column would silently replace the first.
+ */
+function ensureUniqueColumnNames(names: readonly string[]): void {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const name of names) {
+    if (seen.has(name)) {
+      duplicates.add(name)
+    }
+    seen.add(name)
+  }
+  if (duplicates.size > 0) {
+    throw new Error(
+      `The ECharts dataset.source has duplicate column labels: ${[
+        ...duplicates,
+      ].join(", ")}. Labels are compared as strings, so 1 and "1" also ` +
+        "collide. Rename the columns so each label is unique."
+    )
+  }
+}
+
 /** Parses the Arrow bytes of a dataset that a placeholder points to. */
 function parseDataset(dataset: ArrowNamedDataSet.$Properties): Quiver {
   const bytes = dataset.data?.data
@@ -422,7 +445,8 @@ function getPlaceholderName(source: unknown): string | null {
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
  * @throws When a placeholder points to a dataset whose bytes are missing or
- * cannot be read, so the chart never renders the placeholder as a row.
+ * cannot be read, so the chart never renders the placeholder as a row, or
+ * whose data columns share a name.
  */
 export function hydrateArrowDatasetSources(
   option: EChartsOptionObject,
@@ -452,10 +476,11 @@ export function hydrateArrowDatasetSources(
       return undefined
     }
     const quiver = parseDataset(dataset)
-    const source = {
-      rows: quiverToEChartsRows(quiver),
-      dimensions: getDataColumnTypes(quiver).map(type => type.arrowField.name),
-    }
+    const dimensions = getDataColumnTypes(quiver).map(
+      type => type.arrowField.name
+    )
+    ensureUniqueColumnNames(dimensions)
+    const source = { rows: quiverToEChartsRows(quiver), dimensions }
     sourcesByName.set(name, source)
     return source
   }

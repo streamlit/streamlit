@@ -1085,15 +1085,18 @@ _MULTI_INDEXED_DF = pd.DataFrame(
     ],
     ids=["named_index", "unnamed_int_index", "multi_index"],
 )
-def test_dataset_source_drops_pandas_index(source: pd.DataFrame) -> None:
-    """A pandas dataframe is sent without its index."""
-    index = source.index.copy()
+def test_dataset_source_sends_pandas_index_named_in_metadata(
+    source: pd.DataFrame,
+) -> None:
+    """A pandas index is sent like in ``st.dataframe``; the browser skips it.
 
+    The browser recognizes index fields by the pandas metadata's
+    ``index_columns``, so every index field must be listed there.
+    """
     _, table = _convert_source(source)
 
-    assert table.column_names == ["v"]
-    # The caller's dataframe keeps its index.
-    assert source.index.equals(index)
+    index_columns = table.schema.pandas_metadata["index_columns"]
+    assert table.column_names == ["v", *index_columns]
 
 
 @pytest.mark.parametrize(
@@ -1117,21 +1120,30 @@ def test_pyarrow_table_source_is_sent_as_is(table: pa.Table) -> None:
     assert "dimensions" not in option["dataset"]
 
 
+def test_dataset_source_exact_duplicate_pandas_columns_raise() -> None:
+    """PyArrow rejects exact duplicate pandas column names."""
+    with pytest.raises(StreamlitDataframeConversionError, match="Duplicate column"):
+        _normalize_spec(
+            {"dataset": {"source": pd.DataFrame([[1, 2]], columns=["a", "a"])}}
+        )
+
+
 @pytest.mark.parametrize(
     "source",
     [
         pd.DataFrame([[1, 2]], columns=[1, "1"]),
-        pd.DataFrame([[1, 2]], columns=["a", "a"]),
         pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
     ],
-    ids=["stringified_collision", "exact_duplicate", "pyarrow_table"],
+    ids=["stringified_collision", "pyarrow_table"],
 )
-def test_dataset_source_duplicate_column_labels_raise(source: Any) -> None:
-    """Column labels that collide as strings are rejected for every source type."""
-    with pytest.raises(StreamlitAPIException) as exc:
-        _normalize_spec({"dataset": {"source": source}})
+def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
+    """Labels that only collide as Arrow field names are left to the browser.
 
-    assert exc.value.error_id == "echarts-dataset-duplicate-columns"
+    The browser rejects a dataset whose data columns share a name.
+    """
+    _, table = _convert_source(source)
+
+    assert len(set(table.column_names)) < len(table.column_names)
 
 
 @pytest.mark.parametrize(

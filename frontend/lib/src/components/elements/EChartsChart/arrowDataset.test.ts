@@ -28,7 +28,10 @@ import {
   Int8,
   LargeList,
   List,
+  makeData,
   Null,
+  RecordBatch,
+  Schema,
   Struct,
   Table,
   tableToIPC,
@@ -768,6 +771,35 @@ describe("hydrateArrowDatasetSources", () => {
       expect(option.dataset.source).toEqual({ name: "h1" })
     }
   )
+
+  it("throws for a dataset whose data columns share a name", () => {
+    // Python sends `pd.DataFrame([[1, 2]], columns=[1, "1"])` as two fields
+    // named "1", which would merge into one key of each row.
+    const fields = [
+      new Field("1", new Float64(), true),
+      new Field("1", new Float64(), true),
+      new Field("other", new Float64(), true),
+    ]
+    const batch = new RecordBatch(
+      new Schema(fields),
+      makeData({
+        type: new Struct(fields),
+        length: 1,
+        nullCount: 0,
+        children: [1, 2, 3].map(
+          value => vectorFromArray([value], new Float64()).data[0]
+        ),
+      })
+    )
+    const option = { dataset: { source: { name: "dup" } } }
+
+    expect(() =>
+      hydrateArrowDatasetSources(option, [
+        namedDataset("dup", tableToIPC(new Table(batch), "stream")),
+      ])
+    ).toThrow(/^The ECharts dataset\.source has duplicate column labels: 1\. /)
+    expect(option.dataset.source).toEqual({ name: "dup" })
+  })
 
   it("does not read datasets that no placeholder points to", () => {
     const option = { dataset: { source: { name: "h2" } } }
