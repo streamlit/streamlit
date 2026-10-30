@@ -18,6 +18,8 @@ import pydeck as pdk
 
 import streamlit as st
 
+st.set_page_config(initial_sidebar_state=480)
+
 with st.sidebar:
     st.text("Sidebar filter")
 
