@@ -31,7 +31,7 @@ import type {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
-import { StreamlitConfig } from "@streamlit/utils"
+import { isNullOrEmptyString, StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
@@ -103,7 +103,7 @@ function getSrc(
     url: src,
     query: {
       streamlitUrl: currentUrl.origin + currentUrl.pathname,
-      ...(customComponentClientId && {
+      ...(!isNullOrEmptyString(customComponentClientId) && {
         __streamlit_parent_client_id: customComponentClientId,
       }),
     },
@@ -119,7 +119,7 @@ function getSrc(
  */
 function getWarnMessage(componentName: string, url?: string): string {
   let message: string
-  if (url && url !== "") {
+  if (!isNullOrEmptyString(url)) {
     message =
       `Your app is having trouble loading the **${componentName}** component.` +
       `\nThe app is attempting to load the component from **${url}**,` +

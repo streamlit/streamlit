@@ -28,7 +28,7 @@ const FILE_URLS = {
 
 const createFile = (name: string, webkitRelativePath?: string): File => {
   const file = new File(["file-bytes"], name, { type: "text/plain" })
-  if (webkitRelativePath) {
+  if (webkitRelativePath !== undefined) {
     Object.defineProperty(file, "webkitRelativePath", {
       value: webkitRelativePath,
     })

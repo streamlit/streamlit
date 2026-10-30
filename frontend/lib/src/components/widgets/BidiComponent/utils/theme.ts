@@ -20,6 +20,7 @@ import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -153,8 +154,10 @@ export const extractComponentsV2Theme = (
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
      */
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank border color renders as transparent
-    widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
+    // Blank border color renders as transparent.
+    widgetBorderColor: isNullOrEmptyString(theme.colors.widgetBorderColor)
+      ? "transparent"
+      : theme.colors.widgetBorderColor,
 
     redColor: theme.colors.redColor,
     orangeColor: theme.colors.orangeColor,
