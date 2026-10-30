@@ -583,6 +583,11 @@ def truncate_utf16(text: str, max_chars: int) -> str:
     return text
 
 
+def browser_trim(text: str) -> str:
+    """Remove whitespace from both ends of text, as JavaScript's ``trim()`` does."""
+    return text.strip(_ECMASCRIPT_WHITESPACE)
+
+
 def is_empty(value: Any) -> bool:
     """Whether a value is empty as a ``required`` widget counts it.
 
@@ -593,7 +598,7 @@ def is_empty(value: Any) -> bool:
     if value is None:
         return True
     if isinstance(value, str):
-        return not value.strip(_ECMASCRIPT_WHITESPACE)
+        return not browser_trim(value)
     if isinstance(value, Sized):
         return len(value) == 0
     return False

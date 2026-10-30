@@ -371,10 +371,11 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only six of them, all
+Each change follows from the contract. A correct browser sees only seven of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
 values from app code or a link that break a constraint, a float slider's click at a
-bound, a form's staged values when it remounts, and the sync races. App code also sees
+bound, a form's staged values when it remounts, a pill whose label has an icon and edge
+whitespace, and the sync races. App code also sees
 one: the Components v2 trigger key. A browser that reconnects to a new session, after a
 server restart or an expired `server.disconnectedSessionTTL`, keeps its values as
 today, apart from text past `max_chars`, or an empty value for a required widget whose
@@ -428,6 +429,10 @@ agent API.
 - **Keyed `st.pills` and `st.segmented_control` still read a label they cannot resolve
   as their held selection.** A forged label therefore counts as unchanged: no callback
   runs, and the browser is not re-synced.
+- **A `st.pills` or `st.segmented_control` option whose label has an icon and edge
+  whitespace,** such as `"🔥 Fire "`, can be selected. The browser trims the label it
+  sends, so today the click changes nothing. Links and the agent API use the trimmed
+  label too.
 - **The agent API accepts a shared label that is unchanged on the wire,** such as the
   reported value sent back, and it changes nothing: the widget keeps the option it
   holds, and no `on_change` runs. Any other label several options share is still
@@ -503,7 +508,7 @@ agent API.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |

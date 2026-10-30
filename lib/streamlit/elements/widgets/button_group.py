@@ -97,6 +97,37 @@ V = TypeVar("V")
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
+def _split_leading_icon(label: str) -> tuple[str, str]:
+    """Split an option's label into the icon the frontend shows apart, and the rest.
+
+    The icon is extracted only if it's followed by a space or is the entire
+    label (icon-only). Without one, the icon is empty and the rest is the label.
+    """
+    parts = label.split(" ", 1)
+    icon, remaining = extract_leading_icon(parts[0].strip())
+    if icon and not remaining:
+        return icon, parts[1] if len(parts) > 1 else ""
+    return "", label
+
+
+def _browser_label(label: str) -> str:
+    """The label the browser sends for an option whose ``format_func`` returns ``label``.
+
+    The frontend joins an extracted icon and the rest with a space and trims
+    the result, so ``"🔥 Fire "`` arrives as ``"🔥 Fire"``. A label without an
+    icon arrives as it is.
+    """
+    first = label.split(" ", 1)[0]
+    if first == first.strip() and widget_checks.browser_trim(label) == label:
+        # Rebuilding the label around its first space changes nothing, so the
+        # icon lookup, which is slow for emoji, is skipped.
+        return label
+    icon, rest = _split_leading_icon(label)
+    if not icon:
+        return label
+    return widget_checks.browser_trim(f"{icon} {rest}")
+
+
 class _SingleSelectButtonGroupSerde(Generic[T]):
     """String-based serde for single-select ButtonGroup widgets.
 
@@ -1307,24 +1338,13 @@ class ButtonGroupMixin:
             Note: The icon is only extracted if it's followed by a space or is the
             entire content (icon-only).
             """
-            transformed = actual_format_func(option)
+            icon, content = _split_leading_icon(actual_format_func(option))
+            return ButtonGroupProto.Option(content=content, content_icon=icon or None)
 
-            # Split by space to check if first token is an icon
-            parts = transformed.split(" ", 1)
-            first_part = parts[0].strip()
-
-            icon, remaining = extract_leading_icon(first_part)
-            if icon and not remaining:
-                # First token is a pure icon (emoji or material icon)
-                # Use remaining parts as content, or empty string if icon-only
-                transformed = parts[1] if len(parts) > 1 else ""
-            else:
-                icon = ""
-
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon or None,
-            )
+        def wire_format_func(option: Any) -> str:
+            # The label the browser shows and sends back, which can differ from
+            # format_func's by edge whitespace, so the serde reads and writes it.
+            return _browser_label(actual_format_func(option))
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
@@ -1333,7 +1353,7 @@ class ButtonGroupMixin:
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
         for index, option in enumerate(indexable_options):
-            formatted = actual_format_func(option)
+            formatted = wire_format_func(option)
             formatted_options.append(formatted)
             # If formatted labels are duplicated, the last one wins. We keep this
             # behavior to mirror radio/selectbox/multiselect.
@@ -1378,7 +1398,7 @@ class ButtonGroupMixin:
                 formatted_options=formatted_options,
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
-                format_func=actual_format_func,
+                format_func=wire_format_func,
                 session_state_fallback=_ss_fallback_multi,
             )
             serializer = multi_serde.serialize
@@ -1390,7 +1410,7 @@ class ButtonGroupMixin:
                 formatted_options=formatted_options,
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
-                format_func=actual_format_func,
+                format_func=wire_format_func,
                 session_state_fallback=_ss_fallback_single,
                 required=required,
                 in_form=is_in_form(self.dg),
@@ -1420,7 +1440,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             wrap=wrap,
-            options_format_func=actual_format_func,
+            options_format_func=wire_format_func,
             bind=bind,
             persist_state=persist_state,
             string_formatted_options=formatted_options,

@@ -495,3 +495,14 @@ st.text(f"ignore_pills_multi: {ignore_multi}")
 if st.button("Apply ignore pills", key="apply_ignore_pills"):
     st.text(f"Applied ignore pills: {ignore_single}")
     st.text(f"Applied ignore multi pills: {ignore_multi}")
+
+# --- Labels the browser trims around their icon ---
+
+_edge_whitespace_labels = {"fire": "🔥 Fire ", "ice": " Ice"}
+edge_whitespace = st.pills(
+    "Edge whitespace pills",
+    ["fire", "ice"],
+    format_func=lambda option: _edge_whitespace_labels[option],
+    key="edge_whitespace_pills",
+)
+st.text(f"edge_whitespace_pills: {edge_whitespace}")

@@ -380,6 +380,14 @@ ones, and the recovery reads that echo as unchanged, so it fires no `on_change` 
 not refused. A forged unknown label therefore also reads as unchanged for these two
 widgets: no callback runs and the value is kept, but the browser is not re-synced.
 
+These two widgets' labels are the ones the browser sends. The frontend shows a leading
+icon apart from the rest of the label and rebuilds the label as
+`` `${icon} ${rest}`.trim() ``, so a `format_func` label with an icon and edge
+whitespace, such as `"🔥 Fire "`, arrives as `"🔥 Fire"`. The serde maps, counts, and
+serializes that form, which URL binding, `AppTest`, and the agent API use too, so the
+click selects its option, and a value from session state reaches the browser in a form
+it matches. Before, such a click was a no-op.
+
 URL seeding relies on today's fallback and truncation, so it
 takes both over. It calls `validate` itself, on the deserialized value serialized again,
 after the array repairs it already makes (`_sanitize_url_array` filters, deduplicates,

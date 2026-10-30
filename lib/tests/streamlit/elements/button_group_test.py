@@ -27,6 +27,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
     ButtonGroupMixin,
+    _browser_label,
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
@@ -2278,6 +2279,31 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.required is False
+
+
+@pytest.mark.parametrize(
+    ("label", "expected"),
+    [
+        ("Fire", "Fire"),
+        # Without an icon, the browser sends the label as it is.
+        (" Ice ", " Ice "),
+        ("Fire\u00a0", "Fire\u00a0"),
+        # With one, it sends `${icon} ${rest}`.trim().
+        ("🔥 Fire", "🔥 Fire"),
+        ("🔥 Fire ", "🔥 Fire"),
+        ("🔥 Fire\n", "🔥 Fire"),
+        ("🔥  Fire", "🔥  Fire"),
+        ("🔥", "🔥"),
+        ("🔥 ", "🔥"),
+        ("\t🔥 Fire", "🔥 Fire"),
+        (":material/home: Home\u3000", ":material/home: Home"),
+        # A label that is not an icon followed by a space keeps its icon inline.
+        ("🔥Fire ", "🔥Fire "),
+    ],
+)
+def test_browser_label_is_what_the_frontend_sends(label: str, expected: str) -> None:
+    """The label matches `getOptionBaseContent` in `ButtonGroup.tsx`."""
+    assert _browser_label(label) == expected
 
 
 def test_single_serde_serialize_empty_options_with_value() -> None:

@@ -915,6 +915,73 @@ def test_a_language_switch_keeps_pills_without_a_refusal(
     assert refusal_logs == []
 
 
+def _edge_whitespace_app() -> None:
+    import streamlit as st
+
+    def on_change() -> None:
+        st.session_state.calls = st.session_state.get("calls", 0) + 1
+
+    labels = {"fire": "🔥 Fire ", "ice": " Ice", "wind": "💨 "}
+    st.pills("Unkeyed", ["fire", "ice", "wind"], format_func=labels.get)
+    if st.session_state.get("pick_fire"):
+        st.session_state.keyed = "fire"
+    st.pills(
+        "Keyed",
+        ["fire", "ice", "wind"],
+        format_func=labels.get,
+        default="wind",
+        key="keyed",
+        on_change=on_change,
+    )
+
+
+@pytest.mark.parametrize(
+    ("index", "sent", "expected", "calls"),
+    [
+        # The browser rebuilds a label with an icon as "{icon} {rest}" and
+        # trims it, so it sends "🔥 Fire" for "🔥 Fire ".
+        (0, "🔥 Fire", "fire", None),
+        (1, "🔥 Fire", "fire", 1),
+        # Without an icon the label arrives as it is.
+        (0, " Ice", "ice", None),
+        # The default, which the browser sends back as "💨" on every rerun.
+        (1, "💨", "wind", None),
+    ],
+)
+def test_a_pill_label_with_edge_whitespace_is_read_as_the_browser_sends_it(
+    index: int,
+    sent: str,
+    expected: str,
+    calls: int | None,
+    refusal_logs: list[str],
+) -> None:
+    """The click on such a pill selects it, and is not refused."""
+    at = AppTest.from_function(_edge_whitespace_app).run()
+    pills = at.button_group[index]
+
+    with patch_config_options({"global.e2eTest": True}):
+        at._run(widget_state=forged(pills.id, string_array_value=_labels(sent)))
+
+    assert at.button_group[index].value == expected
+    # The labels the browser holds match, so nothing is re-synced.
+    assert at.button_group[index].proto.set_value is False
+    assert refusal_logs == []
+    assert at.session_state.get("calls") == calls
+
+
+def test_a_pill_label_with_edge_whitespace_reaches_the_browser_trimmed() -> None:
+    """A value app code sets is sent as the label the browser matches."""
+    at = AppTest.from_function(_edge_whitespace_app).run()
+
+    at.session_state["pick_fire"] = True
+    at.run()
+
+    assert at.button_group[1].proto.set_value is True
+    assert list(at.button_group[1].proto.raw_values) == ["🔥 Fire"]
+    assert at.button_group[1].value == "fire"
+    assert "calls" not in at.session_state
+
+
 def _numbers(*values: float) -> dict[str, list[float]]:
     """A ``double_array_value`` for ``forged``."""
     return {"data": list(values)}

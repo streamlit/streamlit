@@ -876,3 +876,25 @@ def test_pills_on_change_ignore(app: Page):
     )
     expect_text(app, "ignore_pills: beta")
     expect_text(app, "ignore_pills_multi: ['Red', 'Green']")
+
+
+def test_pills_with_edge_whitespace_labels(app: Page):
+    """A label the browser trims around its icon still selects its option.
+
+    The browser sends "🔥 Fire" for the label "🔥 Fire ", and the server reads
+    it as that option, so the click is not refused.
+    """
+    pills = get_button_group(app, "edge_whitespace_pills")
+    expect_text(app, "edge_whitespace_pills: None")
+
+    get_pill_button(pills, "Fire").click()
+    wait_for_app_run(app)
+    expect_text(app, "edge_whitespace_pills: fire")
+    expect(get_pill_button(pills, "Fire")).to_have_attribute("data-selected", "true")
+
+    get_pill_button(pills, "Ice").click()
+    wait_for_app_run(app)
+    expect_text(app, "edge_whitespace_pills: ice")
+    expect(get_pill_button(pills, "Fire")).not_to_have_attribute(
+        "data-selected", "true"
+    )
