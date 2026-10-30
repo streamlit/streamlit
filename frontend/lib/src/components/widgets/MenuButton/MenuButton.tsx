@@ -220,7 +220,7 @@ function MenuButton(props: Props): ReactElement {
                     textValue={text}
                   >
                     <StyledMenuOptionLabel>
-                      {icon && (
+                      {icon !== null && (
                         <StyledMenuOptionIcon aria-hidden="true">
                           <DynamicIcon iconValue={icon} size="md" />
                         </StyledMenuOptionIcon>

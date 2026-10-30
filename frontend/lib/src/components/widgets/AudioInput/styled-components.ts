@@ -32,9 +32,10 @@ export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
     position: "relative",
     paddingLeft: theme.spacing.xs,
     paddingRight: theme.spacing.sm,
-    border: theme.colors.widgetBorderColor
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-      : undefined,
+    border:
+      theme.colors.widgetBorderColor !== undefined
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+        : undefined,
     cursor: disabled ? "not-allowed" : "auto",
     overflow: "hidden",
   })

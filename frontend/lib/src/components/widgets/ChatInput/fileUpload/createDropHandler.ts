@@ -21,6 +21,7 @@ import type {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import type { FileUploadClient } from "~lib/FileUploadClient"
@@ -78,8 +79,9 @@ const filterFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
-            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank message should still explain the rejection
-            message: validation.errorMessage || "File type not allowed.",
+            message: isNullOrEmptyString(validation.errorMessage)
+              ? "File type not allowed."
+              : validation.errorMessage,
           },
         ],
       })
