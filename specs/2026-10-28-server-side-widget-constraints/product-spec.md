@@ -373,19 +373,19 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only seven of them, all
+Each change follows from the contract. A correct browser sees only eight of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
-values from app code or a link that break a constraint, a float slider's click at a
-bound, a form's staged values when it remounts, a pill whose label has an icon and edge
-whitespace, and the sync races. App code also sees
-one: the Components v2 trigger key. A browser that reconnects to a new session, after a
-server restart or an expired `server.disconnectedSessionTTL`, keeps its values as
-today, apart from text past `max_chars`, or an empty value for a required widget whose
-default is not empty, that app code wrote. Its first interaction counts as today too,
-even when it is a click, a form submit, or a chat message: the widget returns it. No
-callback fires for these values and triggers, also as today, and each is checked when
-its widget registers. The other changes affect only forged values, `AppTest`, and the
-agent API.
+values from app code or a link that break a constraint, chat input text from app code
+past `max_chars`, a float slider's click at a bound, a form's staged values when it
+remounts, a pill whose label has an icon and edge whitespace, and the sync races. App
+code also sees one: the Components v2 trigger key. A browser that reconnects to a new
+session, after a server restart or an expired `server.disconnectedSessionTTL`, keeps
+its values as today, apart from text past `max_chars`, or an empty value for a required
+widget whose default is not empty, that app code wrote. Its first interaction counts as
+today too, even when it is a click, a form submit, or a chat message: the widget
+returns it. No callback fires for these values and triggers, also as today, and each
+is checked when its widget registers. The other changes affect only forged values,
+`AppTest`, and the agent API.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -417,6 +417,13 @@ agent API.
   truncated, but in UTF-16 code units, as the browser counts, so text with astral
   characters such as emoji keeps fewer characters than today. Both need a changelog
   entry.
+- **Chat input text from app code is cut to `max_chars` before the browser shows it.**
+  A chat input does not echo its text: the browser writes the text into the field
+  without its `max_chars` check, and Enter sends it as a new message. So with
+  `st.session_state.chat = "abcdefgh"` for a `max_chars=5` chat input, the field now
+  shows `"abcde"`, the message that lands, as it landed before. Today the field shows
+  all eight characters and the server cuts the message. The cut counts UTF-16 code
+  units, as the browser does.
 - **Other links that break a constraint** are repaired or cleared by the widget's own
   rules. A reversed range is now sorted (`st.slider`, `st.date_input`). A three-date
   range, a color with a trailing newline, an empty parameter for a required widget, and
@@ -468,7 +475,10 @@ agent API.
    to keep it as written until the programmatic-writes follow-up, which this spec
    proposes, or to truncate it at registration in item 4. Truncating keeps today's end
    value, one run earlier, removes the spurious `on_change`, and avoids the fallback to
-   the default after a reconnect to a new session.
+   the default after a reconnect to a new session. This concerns text inputs and text
+   areas, which echo their value unchanged. A chat input sends its text as a new message
+   instead, so it is already cut when it reaches the browser (see
+   [Behavior changes](#behavior-changes)).
 
 ## Out of scope
 
@@ -510,7 +520,7 @@ agent API.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, chat input text from app code past `max_chars`, a float slider's click at a bound, a form's staged values when it remounts, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |

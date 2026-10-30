@@ -1520,6 +1520,53 @@ def test_programmatic_text_past_max_chars_stays_as_written(
     assert refusal_logs == []
 
 
+def _chat_draft_app() -> None:
+    import streamlit as st
+
+    def on_submit() -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), "chat"]
+
+    # App code drafts a message, which the browser shows in the field.
+    if "draft" in st.session_state:
+        st.session_state.chat = st.session_state.pop("draft")
+    prompt = st.chat_input("Say", max_chars=3, key="chat", on_submit=on_submit)
+    st.write(f"prompt={prompt!r}")
+
+
+@pytest.mark.parametrize(
+    ("text", "pushed"),
+    [
+        ("abcdefgh", "abc"),
+        # Cut in UTF-16 code units, without splitting an emoji.
+        ("a😀😀", "a😀"),
+        ("ab", "ab"),
+    ],
+)
+def test_programmatic_chat_text_is_cut_to_max_chars(
+    text: str, pushed: str, refusal_logs: list[str]
+) -> None:
+    """Session state text for a chat input reaches the browser cut to max_chars.
+
+    The browser writes the text into the field without its max_chars check,
+    and a submit sends it as a new message, so the cut text is what lands.
+    """
+    at = AppTest.from_function(_chat_draft_app).run()
+    at.session_state["draft"] = text
+    at.run()
+
+    chat = at.chat_input[0]
+    assert chat.proto.set_value is True
+    assert chat.proto.value == pushed
+
+    # The user presses Enter on the text the browser was given.
+    with patch_config_options({"global.e2eTest": True}):
+        chat.set_value(chat.proto.value).run()
+
+    assert at.session_state.calls == ["chat"]
+    assert at.markdown[0].value == f"prompt={pushed!r}"
+    assert refusal_logs == []
+
+
 def test_a_new_session_drops_programmatic_text_past_max_chars() -> None:
     """A reconnect sends the text back, and the new session falls back to the default.
 

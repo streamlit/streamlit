@@ -1170,7 +1170,15 @@ class ChatMixin:
             # the actual widget state here, but only inserting the provided value
             # into the chat input field. The user needs to submit the value in
             # order for the chat input to reflect the value in the backend state.
-            chat_input_proto.value = widget_state.value
+            # The browser writes this text into the field without its max_chars
+            # check, and a submit sends it as a new message, which validate
+            # refuses past max_chars. So the text is cut to the limit here,
+            # in UTF-16 code units as the browser counts them.
+            chat_input_proto.value = (
+                widget_checks.truncate_utf16(widget_state.value, max_chars)
+                if max_chars
+                else widget_state.value
+            )
             chat_input_proto.set_value = True
 
             session_state = get_session_state()

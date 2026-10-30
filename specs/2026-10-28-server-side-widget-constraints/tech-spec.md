@@ -713,9 +713,16 @@ today an out-of-constraint write has four different outcomes, depending on the w
 - **Accepted unchecked:** text past `max_chars`, a failed `validate`, or the color
   `"red"`. Text past `max_chars` is corrected one rerun later, though: the browser sends
   it back, and the deserializer truncates it, which fires `on_change` although nobody
-  changed the widget. Once deserializers stop truncating (item 4), the echo is unchanged
-  and the text stays as written. The product spec lists this as a behavior change and
-  leaves the alternative open (its [open question 1](product-spec.md#open-questions)).
+  changed the widget. Once deserializers stop truncating (item 4), the echo of a text
+  input's or text area's value is unchanged and the text stays as written. The product
+  spec lists this as a behavior change and leaves the alternative open (its
+  [open question 1](product-spec.md#open-questions)).
+  - A chat input's text is not echoed. The browser writes it into the field without
+    its `max_chars` check, and Enter sends it as a new message, which `validate` would
+    refuse and the cleared field would lose. So `st.chat_input` cuts that text to
+    `max_chars` with `truncate_utf16` when it pushes it to the browser. The message the
+    user sends is then accepted, cut to the limit as the deserializer used to cut it,
+    but in UTF-16 code units.
 - **A raw `TypeError`:** `"abc"` for a number input, `123` for a text input, or `"yes"`
   for a checkbox.
 
@@ -1009,7 +1016,8 @@ a client value no longer rebuilds the widget's metadata.
   corrected at the next full run. A run that ends in `st.stop()` or an exception before a
   widget registers keeps that widget's value, and a forged trigger for it is then
   refused. A programmatic text value past `max_chars` stays as written and fires no
-  `on_change`.
+  `on_change`, and a chat input's reaches the browser cut to `max_chars`, so its submit
+  is accepted.
 - **Forms**: a submit whose required field gets filler that a per-field check drops, such
   as text past `max_chars`, is refused as a whole. A trigger in the form that is not a
   submit button commits no field changes.
