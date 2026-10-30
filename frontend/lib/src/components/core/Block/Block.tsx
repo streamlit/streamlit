@@ -20,6 +20,7 @@ import {
   type ReactNode,
   useContext,
   useMemo,
+  useRef,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -47,6 +48,7 @@ import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
+import { usePrintScreenWidth } from "~lib/components/shared/usePrintScreenWidth"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -383,6 +385,10 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
+  // A stacked column prints close to its screen width instead of full width.
+  const columnRef = useRef<HTMLDivElement>(null)
+  usePrintScreenWidth(columnRef, Boolean(node.deltaBlock.column))
+
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return null
   }
@@ -575,6 +581,7 @@ export const BlockNodeRenderer = (
           .filter(Boolean)
           .join(" ")}
         data-testid="stColumn"
+        ref={columnRef}
       >
         {child}
       </StyledColumn>
