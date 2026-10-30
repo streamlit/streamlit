@@ -412,12 +412,13 @@ function hasLabelFormatter(target: unknown): boolean {
  *   An hourly series shows its midnight points without a time, and other
  *   values show their time to the second, without milliseconds.
  * - A label formatter on the axis, ``tooltip.axisPointer``,
- *   ``grid.tooltip.axisPointer``, or the top-level ``axisPointer`` wins. If
- *   any shared one is set, no axis gets Streamlit's formatter, because an
- *   axis-level formatter would override it.
- * - On a timeline, only ``baseOption`` is read and converted, and ``useUTC``
- *   comes from there too. A formatter set only in a timeline tick or
- *   ``media`` override isn't detected, and those variants stay as given.
+ *   ``grid.tooltip.axisPointer``, or the top-level ``axisPointer`` wins,
+ *   including one set in a timeline tick or ``media`` override. If any shared
+ *   one is set, no axis gets Streamlit's formatter, because an axis-level
+ *   formatter would override it.
+ * - On a timeline, only ``baseOption`` is converted, and ``useUTC`` comes from
+ *   there too. Timeline ticks and ``media`` overrides stay as given; they
+ *   merge over the base axis, so an axis formatter set in one still wins.
  * - Only the Streamlit theme adds these formatters, so ``theme=None`` keeps
  *   ECharts' labels.
  *
@@ -437,15 +438,28 @@ export function applyTimeLabelFormatters(
   const chartOption = hasBaseOption
     ? (option.baseOption as EChartsOptionObject)
     : option
-  const sharedAxisPointers = [
-    ...toComponentList(chartOption.tooltip).map(
+  // Timeline ticks and media overrides merge over the chart, where Streamlit's
+  // axis-level formatter would beat a shared one they set. ECharts reads
+  // ``media`` only on the root; ``baseOption.media`` is checked to be safe.
+  const mediaLists = hasBaseOption
+    ? [option.media, chartOption.media]
+    : [option.media]
+  const variants = [
+    chartOption,
+    ...toComponentList(option.options),
+    ...mediaLists.flatMap(media =>
+      toComponentList(media).map(entry => entry.option)
+    ),
+  ]
+  const sharedAxisPointers = variants.flatMap(variant => [
+    ...toComponentList(get(variant, "tooltip")).map(
       ({ axisPointer }) => axisPointer
     ),
-    ...toComponentList(chartOption.grid).map(grid =>
+    ...toComponentList(get(variant, "grid")).map(grid =>
       get(grid, "tooltip.axisPointer")
     ),
-    ...toComponentList(chartOption.axisPointer),
-  ]
+    ...toComponentList(get(variant, "axisPointer")),
+  ])
   if (sharedAxisPointers.some(hasLabelFormatter)) {
     return option
   }

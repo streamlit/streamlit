@@ -504,6 +504,35 @@ describe("applyTimeLabelFormatters", () => {
       "the top-level axisPointer",
       { ...timeAxisOption, axisPointer: AUTHOR_AXIS_POINTER },
     ],
+    [
+      "a timeline tick's tooltip",
+      {
+        baseOption: timeAxisOption,
+        options: [{ tooltip: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "a media override's top-level axisPointer",
+      {
+        ...timeAxisOption,
+        media: [{ query: {}, option: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "a media override in baseOption",
+      {
+        baseOption: {
+          ...timeAxisOption,
+          media: [
+            {
+              option: {
+                grid: { tooltip: { axisPointer: AUTHOR_AXIS_POINTER } },
+              },
+            },
+          ],
+        },
+      },
+    ],
   ])("keeps an axis pointer formatter set on %s", (_case, option) => {
     expect(applyTimeLabelFormatters(option, "streamlit")).toBe(option)
   })
