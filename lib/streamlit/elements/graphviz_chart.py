@@ -65,9 +65,10 @@ class GraphvizMixin:
             node, edge, and font colors in the graph for dark themes.
 
         .. Important::
-            You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies as an extra with
-            Streamlit:
+            To pass ``graphviz.Graph``, ``graphviz.Digraph``, or
+            ``graphviz.Source`` objects, you must install
+            ``graphviz>=0.19.0``. A DOT string works without it. You can
+            install all charting dependencies as an extra with Streamlit:
 
             .. code-block:: shell
 

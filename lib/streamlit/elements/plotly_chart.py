@@ -597,6 +597,15 @@ class PlotlyMixin:
         To show Plotly charts in Streamlit, pass a Plotly ``Figure`` or
         ``Data`` object to ``st.plotly_chart``.
 
+        .. note::
+            For new 2D charts, prefer a Vega-based chart command
+            (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
+            ``st.scatter_chart``, or ``st.altair_chart``) or
+            ``st.echarts_chart``. They follow the app's theme more closely,
+            load faster, and don't need an extra package. Use
+            ``st.plotly_chart`` for 3D charts, scientific chart types such as
+            violin or ternary plots, or a Plotly figure you already have.
+
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
             performance may be enhanced by installing ``orjson`` as well. You
@@ -789,11 +798,12 @@ class PlotlyMixin:
 
         **Example 2: Plotly Chart with configuration**
 
-        By default, Plotly charts have scroll zoom enabled. If you have a
-        longer page and want to avoid conflicts between page scrolling and
-        zooming, you can use Plotly's configuration options to disable scroll
-        zoom. In the following example, scroll zoom is disabled, but the zoom
-        buttons are still enabled in the modebar.
+        Use Plotly's configuration options to control chart interactions such
+        as scroll zoom. Plotly enables scroll zoom by default on 3D, geo, and
+        map subplots. On a longer page, you can disable it to avoid conflicts
+        between page scrolling and zooming. In the following example, scroll
+        zoom is disabled, but the zoom buttons are still enabled in the
+        modebar.
 
         >>> import plotly.graph_objects as go
         >>> import streamlit as st

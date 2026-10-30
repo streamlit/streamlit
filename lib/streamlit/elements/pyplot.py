@@ -122,6 +122,8 @@ class PyplotMixin:
         fig : Matplotlib Figure
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
+            Pandas' ``DataFrame.plot()`` returns an ``Axes`` rather than a
+            ``Figure``, so pass ``ax.get_figure()``.
 
         clear_figure : bool
             Whether to clear the figure after rendering it. If this is
@@ -139,7 +141,10 @@ class PyplotMixin:
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
-              of the parent container.
+              of the parent container. Streamlit shrinks a wider image to
+              exactly that many pixels, so it can look blurry on
+              high-resolution screens. ``"stretch"`` keeps twice the content
+              width, so it stays sharp.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of

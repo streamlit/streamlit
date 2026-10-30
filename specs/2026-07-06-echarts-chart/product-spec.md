@@ -797,9 +797,12 @@ st.echarts_chart(pie)
   solves this with a `JsCode` wrapper (a placeholder-encoded JS string the frontend `eval`s) and an
   `events={...}` dict. A native version needs a security-reviewed opt-in (e.g. a `JsCode`-style
   wrapper) before we execute app-provided JS. Revisit based on demand.
-- **`setOption` merge control** — `streamlit-echarts` exposes `replace_merge` to opt into ECharts'
-  `universalTransition` animations between data shapes. v1 uses deterministic full replacement
-  (`notMerge`); smooth cross-update transitions can be added later.
+- **`setOption` merge control** — `streamlit-echarts` exposes `replace_merge` to control how
+  ECharts merges a new option into the old one. v1 uses deterministic full replacement
+  (`notMerge`). This does not block animations: ECharts keeps series views across `notMerge`, so
+  data updates tween from the old values and `universalTransition` morphs between series types.
+  Merge control could still help keep other interaction state, such as `dataZoom` ranges, across
+  data updates.
 - **Geo/map registration and extension-backed charts** — registering custom GeoJSON maps
   (`streamlit-echarts`' `map=` / `Map(map_name, geo_json, special_areas)`), and ECharts GL / other
   third-party extensions (extra bundles + extension lifecycle). Map/geo and ECharts GL specs are
