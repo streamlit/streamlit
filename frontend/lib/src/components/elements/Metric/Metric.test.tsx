@@ -16,7 +16,7 @@
 
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
-import type { TopLevelSpec } from "vega-lite"
+import { type TopLevelSpec, version as vegaLiteVersion } from "vega-lite"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -28,6 +28,14 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
 import Metric, { getMetricChartSpec, type MetricProps } from "./Metric"
+
+/**
+ * Schema URL matching the installed vega-lite major version. vega-embed warns
+ * when a spec declares a different major.
+ */
+const EXPECTED_VEGA_LITE_SCHEMA = `https://vega.github.io/schema/vega-lite/v${
+  vegaLiteVersion.split(".")[0]
+}.json`
 
 // Mock vega-embed
 vi.mock("vega-embed", () => ({
@@ -624,7 +632,7 @@ describe("Metric element", () => {
       )
 
       expect(spec).toMatchObject({
-        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+        $schema: EXPECTED_VEGA_LITE_SCHEMA,
         width: 200,
         data: {
           values: chartData.map((value, index) => ({ x: index, y: value })),

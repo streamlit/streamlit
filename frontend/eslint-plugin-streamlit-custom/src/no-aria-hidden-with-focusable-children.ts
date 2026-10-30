@@ -199,8 +199,8 @@ const noAriaHiddenWithFocusableChildren = createRule<Options, MessageIds>({
       ariaHiddenWithFocusableChildren:
         "Do not set aria-hidden on a wrapper that contains focusable descendants. This hides interactive controls from assistive technology. Apply aria-hidden only to the specific visual text node instead (e.g. a <span>).",
     },
+    defaultOptions: [{}],
   },
-  defaultOptions: [{}],
   create(context, [options]) {
     const focusableComponents = new Set(DEFAULT_FOCUSABLE_COMPONENTS)
     for (const name of options?.additionalFocusableComponents ?? []) {

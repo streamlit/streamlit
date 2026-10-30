@@ -22,7 +22,7 @@ import { hasLightBackgroundColor } from "~lib/theme/getColors"
 export const StyledPopoverBody = styled.div<{
   $stretchWidth?: boolean
   $calculatedWidth?: number
-}>(({ theme, $stretchWidth, $calculatedWidth = 0 }) => {
+}>(({ theme, $stretchWidth = false, $calculatedWidth = 0 }) => {
   const isLight = hasLightBackgroundColor(theme)
   return {
     boxSizing: "border-box",
@@ -47,7 +47,7 @@ export const StyledPopoverBody = styled.div<{
 export const StyledPopoverLabelContainer = styled.div<{
   $hideChevron?: boolean
   $truncate?: boolean
-}>(({ theme, $hideChevron, $truncate }) => ({
+}>(({ theme, $hideChevron = false, $truncate = false }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,

@@ -118,6 +118,14 @@ page = st.navigation(
 )
 ```
 
+## Unique page URLs
+
+Every page needs a URL pathname that is unique across the whole `st.navigation` call, including pages in other sections, hidden pages, and external URLs. Streamlit infers it from the filename or callable name, so `app_pages/admin/settings.py` and `app_pages/user/settings.py` both resolve to `settings`. Set `url_path` on one of them:
+
+```python
+st.Page("app_pages/admin/settings.py", title="Settings", url_path="admin_settings")
+```
+
 ## Page modules
 
 ```python

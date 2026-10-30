@@ -23,11 +23,7 @@ import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  replaceTemporaryColors,
-} from "./CustomTheme"
+import { applyStreamlitTheme, replaceTemporaryColors } from "./CustomTheme"
 
 // Copied and Pasted from Plotly type def
 interface SelectionRange {
@@ -197,7 +193,9 @@ export function parseBoxSelection(
  * Apply theming to the Plotly figure.
  *
  * @param plotlyFigure The Plotly figure to apply theming to
- * @param chartTheme The theme of the chart (streamlit or empty string)
+ * @param chartTheme `"streamlit"` applies Streamlit layout defaults. Any other
+ *   value, including `""` (`theme=None`), leaves layout fonts and backgrounds
+ *   as authored. Both paths still resolve template color stand-ins.
  * @param theme The current theme of the app
  * @returns The Plotly figure with theming applied
  */
@@ -211,12 +209,6 @@ export function applyTheming(
   ) as Record<string, unknown>
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(
-      (spec.layout ?? {}) as Record<string, unknown>,
-      theme
-    )
   }
   return spec as unknown as PlotlyFigureType
 }

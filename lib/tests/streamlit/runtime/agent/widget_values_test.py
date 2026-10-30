@@ -16,17 +16,19 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 from dataclasses import replace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
+import pytest
 
 import streamlit as st
 from streamlit.elements.widgets.chat import ChatInputValue
+from streamlit.proto.ArrowData_pb2 import ArrowData
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
+from streamlit.runtime.agent import widget_values
 from streamlit.runtime.agent.snapshot import _public_key
 from streamlit.runtime.agent.widget_values import _authored_options
 from streamlit.runtime.state.session_state import Serialized
@@ -37,6 +39,7 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
     _describe,
     _one_keyed,
     _walk,
+    render_value_widgets,
 )
 
 
@@ -253,40 +256,7 @@ class WidgetValueTest(SnapshotCase):
 
     def test_widget_values_match_their_value_schema(self) -> None:
         """Every reported value is null or the JSON type its schema names."""
-        st.checkbox("Check", key="check")
-        st.toggle("Toggle", key="toggle")
-        st.radio("Choose", ["a", "b"], key="radio")
-        st.selectbox("Select", ["a", "b"], key="select")
-        st.multiselect("Many", ["a", "b"], default=["a"], key="many")
-        st.select_slider("Step", options=["a", "b", "c"], key="step")
-        st.select_slider("Span", options=["a", "b", "c"], value=("a", "c"), key="span")
-        st.slider("Amount", key="amount")
-        st.slider("Range", 0, 100, (20, 80), key="range")
-        st.number_input("Whole", value=3, key="whole")
-        st.number_input("Fraction", value=1.5, key="fraction")
-        st.text_input("Text", value="hello", key="text")
-        st.text_area("Area", value="lines", key="area")
-        st.date_input("Day", dt.date(2026, 1, 2), key="day")
-        st.date_input(
-            "Days",
-            (dt.date(2026, 1, 1), dt.date(2026, 1, 31)),
-            key="days",
-        )
-        st.time_input("Time", dt.time(9, 30), key="time")
-        st.datetime_input("When", dt.datetime(2026, 1, 2, 9, 30), key="when")
-        st.color_picker("Color", key="color")
-        st.pills("Pills", ["a", "b"], default="a", key="pills")
-        st.segmented_control(
-            "Segments",
-            ["a", "b"],
-            selection_mode="multi",
-            default=["a"],
-            key="segments",
-        )
-        st.feedback("stars", key="stars")
-        st.pagination(10, key="page")
-        st.tabs(["A", "B"], on_change="rerun", key="tabs")
-        st.expander("Open?", on_change="rerun", key="open")
+        render_value_widgets()
 
         document = self._build().document
         mismatches = [
@@ -496,3 +466,170 @@ class WidgetValueTest(SnapshotCase):
             metadata = state.get_widget_metadata(element_id)
             assert metadata is not None
             assert list(_authored_options(metadata.serializer) or []) == expected
+
+
+class _Unprintable:
+    """A value with no JSON form: even ``str()`` on it raises."""
+
+    def __str__(self) -> str:
+        raise RuntimeError("no text form")
+
+
+class _EqualityRaises:
+    """An option whose comparison raises."""
+
+    __hash__ = None  # type: ignore[assignment]
+
+    def __eq__(self, other: object) -> bool:
+        raise RuntimeError("cannot compare")
+
+
+class _ZeroDimTruthRaises:
+    """A 0-d comparison result whose truth value raises."""
+
+    ndim = 0
+
+    def __bool__(self) -> bool:
+        raise ValueError("no truth value")
+
+
+class _ReturnsFromEq:
+    """An option whose ``==`` returns a fixed object instead of a bool."""
+
+    __hash__ = None  # type: ignore[assignment]
+
+    def __init__(self, result: object) -> None:
+        self._result = result
+
+    def __eq__(self, other: object) -> Any:
+        return self._result
+
+
+class _PresencelessPayload:
+    """A trigger proto stand-in whose ``data`` field has no presence bit."""
+
+    def __init__(self, data: str) -> None:
+        self.data = data
+
+    def HasField(self, name: str) -> bool:
+        raise ValueError(f"Field {name} does not have presence.")
+
+
+def _session_state_holding(value: Any) -> MagicMock:
+    """A session state that stores ``value`` for any widget, without metadata."""
+    session_state = MagicMock()
+    session_state.get_widget_value.return_value = value
+    session_state.get_widget_metadata.return_value = None
+    return session_state
+
+
+def test_an_unencodable_value_reports_null_and_logs() -> None:
+    """A stored value with no JSON form reports null and warns, naming the widget."""
+    session_state = _session_state_holding(_Unprintable())
+
+    with patch.object(widget_values._LOGGER, "warning") as warning:
+        result = widget_values.reported_value(session_state, "widget-id")
+
+    assert result is None
+    warning.assert_called_once()
+    assert warning.call_args.args[0] == "Could not encode the value of %s."
+    assert warning.call_args.args[1] == "widget-id"
+
+
+def test_an_encodable_value_without_metadata_is_json_encoded() -> None:
+    """Without metadata the stored value is reported in its JSON form."""
+    session_state = _session_state_holding((1, "a"))
+
+    with patch.object(widget_values._LOGGER, "warning") as warning:
+        result = widget_values.reported_value(session_state, "widget-id")
+
+    assert result == [1, "a"]
+    warning.assert_not_called()
+
+
+def test_a_presenceless_payload_with_text_data_reports_the_text() -> None:
+    """A proto whose ``data`` has no presence bit still reports its text."""
+    assert widget_values._string_payload(_PresencelessPayload("hello")) == "hello"
+
+
+def test_a_presenceless_proto_with_non_text_data_is_returned_unchanged() -> None:
+    """A real proto with non-text ``data`` and no presence bit passes through."""
+    proto = ArrowData(data=b"bytes")
+
+    assert widget_values._string_payload(proto) is proto
+
+
+@pytest.mark.parametrize(
+    ("option", "expected"),
+    [
+        pytest.param(_EqualityRaises(), False, id="equality_raises"),
+        pytest.param(_ReturnsFromEq(np.bool_(True)), True, id="numpy_true"),
+        pytest.param(_ReturnsFromEq(np.bool_(False)), False, id="numpy_false"),
+        pytest.param(_ReturnsFromEq(np.array([True])), False, id="array_result"),
+        pytest.param(_ReturnsFromEq(_ZeroDimTruthRaises()), False, id="bool_raises"),
+        pytest.param(_ReturnsFromEq("truthy"), False, id="non_array_object"),
+    ],
+)
+def test_option_equals_only_matches_a_true_scalar(option: Any, expected: bool) -> None:
+    """Only a true builtin or 0-d result is a match; failures are not."""
+    assert widget_values._option_equals("item", option) is expected
+
+
+def test_index_authored_without_options_is_none() -> None:
+    """No authored options means no index, not an empty one."""
+    assert widget_values._index_authored(None) is None
+
+
+def test_index_authored_splits_hashable_and_unhashable_options() -> None:
+    """Hashable options go to the set; unhashable ones stay on the linear scan."""
+    assert widget_values._index_authored(["a", ["b"], "c"]) == ({"a", "c"}, [["b"]])
+
+
+@pytest.mark.parametrize(
+    ("item", "expected"),
+    [
+        pytest.param(["b"], True, id="unhashable_linear_match"),
+        pytest.param(["z"], False, id="unhashable_no_match"),
+    ],
+)
+def test_is_authored_falls_back_to_equality_for_unhashable_items(
+    item: Any, expected: bool
+) -> None:
+    """An unhashable item is compared by equality against every authored option."""
+    index = widget_values._index_authored(["a", ["b"]])
+    assert index is not None
+
+    assert widget_values._is_authored(item, index) is expected
+
+
+@pytest.mark.parametrize(
+    ("serialized", "expected"),
+    [
+        pytest.param("b", "b", id="label_in_options"),
+        pytest.param("unknown", None, id="label_not_in_options"),
+    ],
+)
+def test_unhashable_options_are_checked_by_membership(
+    serialized: str, expected: str | None
+) -> None:
+    """Unhashable option labels still allow a matching label and reject others."""
+    result = widget_values._keep_typed_text("b", serialized, [["a"], "b"])
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("stored", "authored", "expected"),
+    [
+        pytest.param("b", ["a", "b"], "B", id="captured_label_by_index"),
+        pytest.param("z", ["a", "b"], None, id="not_an_authored_option"),
+        pytest.param("c", ["a", "b", "c"], None, id="index_beyond_captured_labels"),
+    ],
+)
+def test_a_changed_label_falls_back_to_the_captured_one(
+    stored: str, authored: list[str], expected: str | None
+) -> None:
+    """A label that is no longer an option maps to the captured label, or null."""
+    result = widget_values._keep_typed_text(stored, "CHANGED", ["A", "B"], authored)
+
+    assert result == expected

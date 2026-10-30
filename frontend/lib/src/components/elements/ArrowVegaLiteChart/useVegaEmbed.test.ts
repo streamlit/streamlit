@@ -113,11 +113,12 @@ describe("useVegaEmbed hook", () => {
     // By default, embed(...) resolves to our mockEmbedReturn
     ;(embed as unknown as Mock).mockResolvedValue(mockEmbedReturn)
 
-    // Mock useVegaLiteSelections returns two callbacks:
+    // Mock useVegaLiteSelections returns its lifecycle callbacks:
     ;(useVegaLiteSelections as Mock).mockReturnValue({
       maybeConfigureSelections: vi
         .fn()
         .mockImplementation((view: VegaView) => view),
+      teardownSelections: vi.fn(),
       onFormCleared: vi.fn(),
     })
 
@@ -239,6 +240,9 @@ describe("useVegaEmbed hook", () => {
 
     // The old finalize method is now called
     expect(mockEmbedReturn.finalize).toHaveBeenCalledTimes(1)
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    expect(teardownSelections).toHaveBeenCalledTimes(1)
   })
 
   it("throws an error if containerRef is missing", async () => {
@@ -293,7 +297,13 @@ describe("useVegaEmbed hook", () => {
     await act(async () => {
       result.current.finalizeView()
     })
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    expect(teardownSelections).toHaveBeenCalledOnce()
     expect(mockEmbedReturn.finalize).toHaveBeenCalled()
+    expect(teardownSelections.mock.invocationCallOrder[0]).toBeLessThan(
+      (mockEmbedReturn.finalize as Mock).mock.invocationCallOrder[0]
+    )
 
     // The stored references are cleared (not easily tested directly,
     // but if we tried to re-finalize, finalize shouldn't be called again):
@@ -303,6 +313,41 @@ describe("useVegaEmbed hook", () => {
     })
     // finalize is not called a second time
     expect(mockEmbedReturn.finalize).toHaveBeenCalledTimes(1)
+    expect(teardownSelections).toHaveBeenCalledTimes(1)
+  })
+
+  it("finalizes and clears the view when selection teardown throws", async () => {
+    const chartElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["selection"],
+      formId: "",
+    }
+    const { result } = renderHook(() =>
+      useVegaEmbed(chartElement, mockWidgetMgr)
+    )
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    teardownSelections.mockImplementationOnce(() => {
+      throw new Error("selection teardown failed")
+    })
+
+    expect(() => result.current.finalizeView()).toThrow(
+      "selection teardown failed"
+    )
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
+
+    expect(() => result.current.finalizeView()).not.toThrow()
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
   })
 
   it("updateView returns null if no vegaView is present", async () => {

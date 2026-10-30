@@ -149,7 +149,7 @@ function useCustomRenderer(
           drawMissingPlaceholder(args as BaseDrawArgs, placeholderToken)
         }
 
-        if (column.isRequired && column.isEditable) {
+        if (column.isRequired === true && column.isEditable) {
           // If the column is configured as required & editable,
           // we draw a red indicator in the top right corner of the cell.
           drawAttentionIndicator(ctx, rect, theme)

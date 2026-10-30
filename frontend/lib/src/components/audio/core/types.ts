@@ -49,6 +49,10 @@ export interface WaveformController {
   readonly mountRef: RefObject<HTMLDivElement>
 
   start: () => Promise<void>
+  /**
+   * Rejects with `RecordingCancelledError` when the stop is abandoned (cancel,
+   * reset, or teardown); callers should skip approval without showing an error.
+   */
   stop: () => Promise<StopResult>
   approve: (blob?: Blob) => Promise<void>
   cancel: () => void

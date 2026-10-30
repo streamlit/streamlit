@@ -20,16 +20,22 @@ Each command already described itself when it emitted its element (see
 ``value`` from ``widget_values``, because proto defaults stop being accurate
 after the first interaction.
 
-``data``, the derived facts about a dataframe or chart, is not attached yet.
-A command's parameters stay in ``props``.
+``data``, the derived facts about a table, chart, or map, is built by the
+command while recording (see ``elements/lib/agent_data.py``) and copied from
+its description, so its preview is bounded by ``server.agentPreviewRows`` when
+the element is emitted. This walk only checks that the block resolves:
+``complete``, or a ``url`` serving the rest, or ``unavailable`` saying why
+nothing does. Only a table replayed without a description is summarized from
+its payload. A command's parameters stay in ``props``.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
 
+from streamlit.elements.lib import agent_data
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import json_encoding, tree, widget_values
 from streamlit.runtime.state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
@@ -40,10 +46,19 @@ if TYPE_CHECKING:
 
     from google.protobuf.message import Message
 
+    from streamlit.elements.lib.agent_spec import ActionKind
     from streamlit.runtime.agent.tree import Node
     from streamlit.runtime.state.session_state import SessionState
 
 SCHEMA_VERSION: Final = 1
+
+# Whether the run a snapshot reports raised: "error" when the script failed to
+# compile, the runtime marked the run failed, or the page shows an uncaught
+# exception, and "ready" otherwise.
+SnapshotStatus: TypeAlias = Literal["ready", "error"]
+
+# Why an element the snapshot shows cannot be used now.
+BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, style-only HTML, and a loading skeleton, which by the
@@ -91,6 +106,16 @@ class ElementState(NamedTuple):
     # Whether a browser user can empty it, so a later request's null clears it
     # rather than resetting it to a non-empty default.
     clearable: bool = False
+    # What the element is acted on with, "value" or "trigger", or None for a
+    # display-only element. It decides whether `widget_state` or `trigger`
+    # addresses it, and tells a display-only element from one that cannot be
+    # used right now, such as a widget in a closed dialog.
+    action: ActionKind | None = None
+    # Why an element the snapshot shows cannot be used now: "closed_dialog"
+    # for one in a closed dialog, "compile_error" for one left from an
+    # earlier run when the script failed to compile. Enabling it would not
+    # help.
+    blocked_by: BlockedReason | None = None
 
 
 @dataclass
@@ -98,7 +123,12 @@ class Snapshot:
     """A serialized snapshot plus the bookkeeping the next request needs."""
 
     document: dict[str, Any]
+    # Keyed by element ID, in tree order, which a batched write's widget
+    # states are encoded in.
     element_states: dict[str, ElementState]
+    # Whether the run failed to compile. The page it leaves usually has no
+    # elements, so a write to one from the page before names this cause.
+    compile_error: bool = False
 
 
 class _SnapshotBuilder:
@@ -167,14 +197,28 @@ class _SnapshotBuilder:
         support = node.description.get("support") or inherited_support
         is_dialog = node.description.get("type") == "dialog"
         dialog_props = (node.description.get("props") or {}) if is_dialog else {}
-        actions_before_children = len(self.actions)
+        closed_dialog = dialog_props.get("is_open") is False
+        if (
+            node.root_name is None
+            and node.block is not None
+            and not node.description.get("transparent")
+        ):
+            # Recorded before its body, so `actions` and `element_states` both
+            # follow tree order, which a batched write's callbacks run in, and
+            # a dialog's own state stays outside the in-dialog window.
+            self._record_element_state(
+                node.description,
+                inherited_support,
+                None,
+                node.fragment_id,
+                unusable=closed_dialog,
+            )
         # A dialog closed in this run still has its body in the tree. Only an
         # open one makes those widgets cross-dialog writes. A closed one is
         # unmounted, so nothing in it can be set or fired. The flag covers the
-        # body; the dialog's own dismiss trigger is passed below.
+        # body; the dialog's own dismiss trigger is recorded above.
         if dialog_props.get("is_open") is True:
             self._in_dialog = True
-        closed_dialog = dialog_props.get("is_open") is False
         if closed_dialog:
             self._closed_dialog = True
         children = self.serialize_children(node, support)
@@ -229,19 +273,6 @@ class _SnapshotBuilder:
                 value_schema=description.get("value_schema"),
             )
             _attach_value(result, action, value, description.get("value_schema"))
-        # The container is recorded after its body so a dialog's own state
-        # stays outside the in-dialog window. Its action is then moved in
-        # front of the children's, so `actions` follows tree order.
-        before_record = len(self.actions)
-        self._record_element_state(
-            description,
-            inherited_support,
-            None,
-            node.fragment_id,
-            unusable=closed_dialog,
-        )
-        if len(self.actions) == before_record + 1:
-            self.actions.insert(actions_before_children, self.actions.pop())
 
         result["children"] = children
         return [result]
@@ -305,6 +336,12 @@ class _SnapshotBuilder:
             )
             _attach_value(result, action, value, description.get("value_schema"))
 
+        data = _data_block(
+            proto_field, payload, description, described=bool(node.description)
+        )
+        if data:
+            result["data"] = data
+
         form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
@@ -342,6 +379,7 @@ class _SnapshotBuilder:
         # text has no such list: any value of the right schema is legal, and
         # its options stay on the description. Otherwise a command publishes
         # `choices` when the list is not its `options` parameter.
+        options: list[Any] | None
         if props.get("accept_new_options") is True:
             options = None
         else:
@@ -352,12 +390,9 @@ class _SnapshotBuilder:
                 candidate = props.get("options")
                 options = candidate if isinstance(candidate, list) else None
         # A closed dialog is still in the tree, but the frontend unmounts it.
+        in_closed_dialog = unusable or self._closed_dialog
         actionable = (
-            bool(action)
-            and not support
-            and not disabled
-            and not unusable
-            and not self._closed_dialog
+            bool(action) and not support and not disabled and not in_closed_dialog
         )
 
         self.element_states[element_id] = ElementState(
@@ -376,6 +411,8 @@ class _SnapshotBuilder:
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
             clearable=description.get("clearable") is True,
+            action=action if action in {"value", "trigger"} else None,
+            blocked_by="closed_dialog" if in_closed_dialog else None,
         )
         if actionable:
             # The type and label name the entry, so a client can tell generated
@@ -495,6 +532,61 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     return description.get("type") == "text_input" and props.get("type") == "password"
 
 
+def _data_block(
+    proto_field: str,
+    payload: Any,
+    description: dict[str, Any],
+    *,
+    described: bool,
+) -> dict[str, Any] | None:
+    """The `data` an element carries, resolved so `complete` always has an answer.
+
+    Either the preview is everything (`complete: true`), or `url` serves all of
+    it, or `unavailable` says why nothing does. A `url` never comes with an
+    `unavailable` reason. A data command builds its block while recording, so
+    it is copied from the description and only checked here. ``described`` is
+    whether the command described itself.
+    """
+    built = description.get("data")
+    data = (
+        dict(built)
+        if isinstance(built, dict)
+        else _payload_data(proto_field, payload, described=described)
+    )
+    if not data:
+        return None
+
+    if data.get("complete") is not True or "unavailable" in data:
+        data["complete"] = False
+    if "unavailable" in data or not isinstance(data.get("url"), str):
+        data.pop("url", None)
+    if data["complete"] is False and "url" not in data and "unavailable" not in data:
+        # Builders set their own `unavailable` reason. This fallback only stops a
+        # block that set none from looking complete or servable, using the reason
+        # `agent_data.arrow` gives for a copy it did not register.
+        data.update(agent_data.unavailable("too_large_to_serve"))
+    return data
+
+
+def _payload_data(
+    proto_field: str, payload: Any, *, described: bool
+) -> dict[str, Any] | None:
+    """Summarize an undescribed table's payload, which built no `data` block.
+
+    A command that described itself and built no block has no data to report.
+    ``payload`` is typed loosely because the table protos share `arrow_data`.
+    """
+    if payload is None or described or proto_field not in {"dataframe", "table"}:
+        return None
+    # A table replayed from a cache a browser filled built no `data` and
+    # registered no copy, so its payload is summarized and nothing serves the
+    # rest.
+    data = agent_data.summarize_arrow(payload.arrow_data.data)
+    if data is not None and data["complete"] is False:
+        data.update(agent_data.unavailable("undescribed"))
+    return data
+
+
 def build_snapshot(
     *,
     session_id: str,
@@ -528,22 +620,25 @@ def build_snapshot(
         # the caller passed, and none of them can be used.
         builder.actions.clear()
         builder.element_states = {
-            element_id: state._replace(actionable=False)
+            element_id: state._replace(actionable=False, blocked_by="compile_error")
             for element_id, state in builder.element_states.items()
         }
 
     pages, current_page = _pages(messages, new_session)
 
+    # Two signals, not one: an app's `on_script_error` handler can suppress the
+    # error display, which only the run's own flag still reports, and an
+    # exception raised inside a fragment is rendered while the run still
+    # reports success.
+    status: SnapshotStatus = (
+        "error"
+        if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
+        else "ready"
+    )
     document: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session_id,
-        # Two signals, not one: an app's `on_script_error` handler can suppress
-        # the error display, which only the run's own flag still reports, and
-        # an exception raised inside a fragment is rendered while the run still
-        # reports success.
-        "status": "error"
-        if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
-        else "ready",
+        "status": status,
         "observed_at": dt.datetime.now(dt.UTC)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
@@ -562,7 +657,11 @@ def build_snapshot(
         # real command name.
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
-    return Snapshot(document=document, element_states=builder.element_states)
+    return Snapshot(
+        document=document,
+        element_states=builder.element_states,
+        compile_error=compile_error,
+    )
 
 
 def rebase_media_urls(
@@ -577,9 +676,9 @@ def rebase_media_urls(
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a media URL
     is a 404 or a login redirect.
 
-    Only the ``url``, ``src``, and ``avatar`` props are touched, and only values
-    under one of ``paths``, so an external link an app displays is never
-    rewritten.
+    Only ``data.url`` and the ``url``, ``src``, and ``avatar`` props are
+    touched, and only values under one of ``paths``, so an external link an app
+    displays is never rewritten.
 
     Parameters
     ----------
@@ -603,6 +702,9 @@ def rebase_media_urls(
         return value
 
     def walk(node: dict[str, Any]) -> None:
+        data = node.get("data")
+        if isinstance(data, dict) and "url" in data:
+            data["url"] = rebase(data["url"])
         props = node.get("props")
         if isinstance(props, dict):
             for name in ("url", "src", "avatar"):

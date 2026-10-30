@@ -62,7 +62,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
-| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations and selection-driven interactions. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -161,7 +161,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.column_config.ListColumn` | Configure a list column in `st.dataframe` or `st.data_editor`. Use it for arrays or repeated values that should render as structured list content. |
 | `st.column_config.MarkdownColumn` | Configure a markdown column in `st.dataframe` or `st.data_editor`. Cells show plain text, and clicking a cell opens an overlay that renders the Markdown. |
 | `st.column_config.MultiselectColumn` | Configure a multiselect column in `st.dataframe` or `st.data_editor`. Use it when each row can contain multiple choices from a known set. |
-| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, min/max bounds, step sizes, and numeric formatting. |
+| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, timedelta/duration values, min/max bounds, step sizes, and numeric formatting. |
 | `st.column_config.ProgressColumn` | Configure a progress column in `st.dataframe` or `st.data_editor`. Use it for percentages, completion values, scores, or bounded progress-like quantities. |
 | `st.column_config.SelectboxColumn` | Configure a selectbox column in `st.dataframe` or `st.data_editor`. Use it when each row should choose exactly one option from a known set. |
 | `st.column_config.TextColumn` | Configure a text column in `st.dataframe` or `st.data_editor`. Use it for strings with optional validation, length bounds, and text-specific display or editing behavior. |
@@ -188,6 +188,7 @@ from streamlit.typing import DataframeState, UploadedFile
 | `PlotlyState` | `st.plotly_chart` when selection events are enabled |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` when selection events are enabled |
 | `PydeckState` | `st.pydeck_chart` when selection events are enabled |
+| `EChartsState` | `st.echarts_chart` when selection events are enabled |
 | `DataEditorState` | Session State for a keyed `st.data_editor` |
 | `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
 

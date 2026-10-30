@@ -309,6 +309,24 @@ def test_recording_lifecycle(app: Page):
 
 
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+@pytest.mark.flaky(reruns=3)  # Firefox occasionally crashes during media API usage
+def test_recording_in_sidebar(app: Page):
+    """Test that a sidebar recording shows its waveform instead of the error state."""
+    grant_microphone_permissions(app)
+    click_toggle(app, "Show sidebar audio input")
+
+    record_and_stop(app, "Sidebar Audio Input")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Sidebar audio received")).to_be_visible()
+
+    audio_input = get_audio_input_by_label(app, "Sidebar Audio Input")
+    expect(
+        audio_input.get_by_text("An error has occurred, please try again.")
+    ).not_to_be_attached()
+    verify_recording_exists(app, "Sidebar Audio Input")
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
 def test_form_clears_on_submit(app: Page):
     """Test audio input in form clears after submit."""
     grant_microphone_permissions(app)
@@ -755,6 +773,9 @@ def test_audio_input_on_change_ignore(app: Page):
     ).to_be_visible()
 
     ignore_audio.hover()
+    # The hover toolbar slides into place after a delay. Clicking mid-slide can
+    # miss the button, so wait until it is fully shown.
+    expect(ignore_audio.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
     ignore_audio.get_by_role("button", name="Clear recording").click()
     # Clearing does not rerun either. Wait so a spurious rerun would appear.
     wait_for_app_run(app)

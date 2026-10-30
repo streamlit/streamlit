@@ -80,7 +80,7 @@ export function useFloatingOverlay(
     offsetPx = 0,
     flipOptions,
     shiftOptions,
-    matchTriggerWidth,
+    matchTriggerWidth = false,
     extraMiddleware = EMPTY_MIDDLEWARE,
   } = options
 

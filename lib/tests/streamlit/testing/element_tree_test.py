@@ -23,11 +23,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit import dataframe_util
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
@@ -37,19 +39,27 @@ from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     _DATAFRAME_EDITING_MODE_NAMES,
     AppTestError,
+    AudioInput,
     BlockList,
+    CameraInput,
+    DateTimeInput,
+    ElementList,
+    ElementTree,
+    FileUploader,
     Help,
     Html,
     LinkButton,
     PageLink,
     Progress,
     Space,
+    SpecialBlock,
     UnknownElement,
     _form_clear_flags,
     _format_value_for_widget,
     _has_pending_value,
     _submitted_form_ids,
     _use_form_clear_defaults,
+    get_widget_state,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -3524,6 +3534,11 @@ def test_chat_input_clear_drops_staged_files_only() -> None:
             ("notes.txt", "hi"),
             r"file content must be bytes",
         ),
+        (
+            {"accept_file": True},
+            ("notes.txt", b"hi", ""),
+            r"file MIME types must be a non-empty string",
+        ),
     ],
 )
 def test_chat_input_upload_rejects_invalid_files(
@@ -4471,3 +4486,265 @@ def test_disabled_widget_specialized_interactions_reject_updates(
     widget = getattr(at, widget_type)[0]
     with pytest.raises(AppTestError, match="disabled"):
         getattr(widget, method_name)(*args)
+
+
+def _element_msg(index: int) -> ForwardMsg:
+    """Return a ``new_element`` ForwardMsg addressed to ``main[index]``."""
+    msg = ForwardMsg()
+    msg.metadata.delta_path.extend([0, index])
+    return msg
+
+
+@pytest.mark.parametrize(
+    ("stored", "proto_type", "expected"),
+    [
+        # The ``(...)`` fallback signature is replaced by the captured name.
+        pytest.param("mod.fn(...)", "function", "fn", id="fallback_signature"),
+        # Unbalanced, suffixed, or non-dotted-name prefixes are reprs, not
+        # signatures, so the stored text stays the value.
+        pytest.param("Point(1, 2", "Point", "Point(1, 2", id="unbalanced"),
+        pytest.param("Box(a, b) extra", "Box", "Box(a, b) extra", id="suffixed"),
+        pytest.param("a-b(x, y)", "function", "a-b(x, y)", id="non_dotted_name"),
+    ],
+)
+def test_help_value_signature_detection_edge_cases(
+    stored: str, proto_type: str, expected: str
+) -> None:
+    """``Help.value`` swaps in the name only for well-formed signatures."""
+    msg = _element_msg(0)
+    msg.delta.new_element.help_info.name = "fn"
+    msg.delta.new_element.help_info.value = stored
+    msg.delta.new_element.help_info.type = proto_type
+
+    node = parse_tree_from_messages([msg]).main[0]
+
+    assert isinstance(node, Help)
+    assert node.value == expected
+
+
+def test_unknown_element_without_content_fields_has_none_value() -> None:
+    """An unimplemented element with no value-like proto field reads as None."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.empty()
+
+    at = AppTest.from_function(script).run()
+    empty = at.get("empty")[0]
+
+    assert isinstance(empty, UnknownElement)
+    assert empty.value is None
+
+
+def test_unknown_element_value_falls_back_when_id_not_in_session_state() -> None:
+    """An unknown element whose id is not in session state reads its proto."""
+    at = AppTest.from_string("import streamlit as st").run()
+    msg = _element_msg(0)
+    slider = msg.delta.new_element.slider
+    slider.id = "$$ID-not-registered-None"
+    slider.type = SliderProto.Type.UNSPECIFIED
+    slider.value[:] = [3.0]
+    tree = parse_tree_from_messages([msg])
+    tree._runner = at
+
+    node = tree.main[0]
+
+    assert isinstance(node, UnknownElement)
+    assert slider.id not in at.session_state
+    assert list(node.value) == [3.0]
+
+
+def test_element_and_block_list_hash_is_consistent_with_equality() -> None:
+    """Equal element and block collections hash equally, including empty ones."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.container(key="one"):
+            st.text("a")
+        with st.container(key="two"):
+            st.text("b")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.container[0:1] == at.container[0:1]
+    assert at.container[0:1] != at.container[1:2]
+    empty_blocks = BlockList([])
+    assert empty_blocks == BlockList([])
+    assert hash(empty_blocks) == hash(BlockList([]))
+    empty_elements = ElementList([])
+    assert empty_elements == at.button
+    assert hash(empty_elements) == hash(at.button)
+
+
+def test_dataframe_value_reads_lazy_initial_chunk() -> None:
+    """Without eager Arrow data, ``Dataframe.value`` uses the lazy initial chunk."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    msg = _element_msg(0)
+    msg.delta.new_element.dataframe.lazy_data.initial_chunk.data = (
+        dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+    )
+
+    dataframe = parse_tree_from_messages([msg]).main[0]
+
+    assert not dataframe.proto.arrow_data.data
+    assert dataframe.value["a"].tolist() == [1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    ("field_name", "widget_cls"),
+    [
+        ("audio_input", AudioInput),
+        ("camera_input", CameraInput),
+        ("file_uploader", FileUploader),
+    ],
+)
+def test_file_widgets_without_session_state_entry_register_no_files(
+    field_name: str, widget_cls: type[AudioInput | CameraInput | FileUploader]
+) -> None:
+    """File widgets with no stored value register nothing and send empty state."""
+    at = AppTest.from_string("import streamlit as st").run()
+    msg = _element_msg(0)
+    widget_id = f"$$ID-{field_name}-None"
+    getattr(msg.delta.new_element, field_name).id = widget_id
+    tree = parse_tree_from_messages([msg])
+    tree._runner = at
+
+    widget = tree.main[0]
+
+    assert isinstance(widget, widget_cls)
+    assert widget._get_files_to_register() == []
+    widget_state = widget._widget_state
+    assert widget_state.id == widget_id
+    assert widget_state.WhichOneof("value") is None
+
+
+def test_menu_button_click_accepts_label_when_format_func_rejects_it() -> None:
+    """Clicking a formatted label works even if ``format_func`` rejects labels."""
+
+    def script() -> None:
+        import streamlit as st
+
+        labels = {"a": "Apple", "b": "Banana"}
+        choice = st.menu_button("Fruit", ["a", "b"], format_func=lambda o: labels[o])
+        st.text(f"choice={choice}")
+
+    at = AppTest.from_function(script).run()
+    at = at.menu_button[0].click("Banana").run()
+
+    assert not at.exception
+    assert at.text[0].value == "choice=b"
+
+
+def test_select_slider_rejects_unserializable_value() -> None:
+    """A value ``format_func`` cannot format fails before the script reruns."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.select_slider("Pick", options=[1, 2, 3], format_func=lambda n: f"{n:03d}")
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 1
+
+    with pytest.raises(ValueError, match="Could not serialize value x"):
+        at.select_slider[0].set_value("x").run()
+
+
+def _datetime_input_with_bounds(min_value: str, max_value: str) -> DateTimeInput:
+    """Return a parsed ``DateTimeInput`` with the given proto ``min`` and ``max``."""
+    msg = _element_msg(0)
+    proto = msg.delta.new_element.date_time_input
+    proto.id = "$$ID-when-None"
+    proto.min = min_value
+    proto.max = max_value
+    widget = parse_tree_from_messages([msg]).main[0]
+    assert isinstance(widget, DateTimeInput)
+    widget.set_value(datetime(2024, 6, 1, 12, 30))
+    return widget
+
+
+def test_datetime_input_widget_state_accepts_legacy_min_max_format() -> None:
+    """``min`` and ``max`` in the legacy ``%Y/%m/%d, %H:%M`` format still parse."""
+    widget = _datetime_input_with_bounds("2024/01/01, 00:00", "2024/12/31, 23:59")
+
+    assert list(widget._widget_state.string_array_value.data) == ["2024-06-01T12:30"]
+
+
+def test_datetime_input_widget_state_rejects_unknown_min_format() -> None:
+    """A ``min`` in neither supported format raises when serializing."""
+    widget = _datetime_input_with_bounds("June 1st", "2024/12/31, 23:59")
+
+    with pytest.raises(ValueError, match="does not match format"):
+        _ = widget._widget_state
+
+
+def test_parse_tree_untyped_block_and_delta() -> None:
+    """An untyped block is a container, and an untyped delta is skipped."""
+    block_msg = _element_msg(0)
+    block_msg.delta.add_block.SetInParent()
+    untyped_msg = _element_msg(1)
+    untyped_msg.delta.fragment_id = "fragment"
+    text_msg = _element_msg(2)
+    text_msg.delta.new_element.text.body = "after"
+
+    tree = parse_tree_from_messages([block_msg, untyped_msg, text_msg])
+
+    assert tree.main[0].type == "container"
+    assert 1 not in tree.main.children
+    assert tree.main[2].value == "after"
+
+
+def test_get_by_key_missing_key_raises_key_error() -> None:
+    """``get_by_key`` raises ``KeyError`` when no node has the key."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text_input("Name", key="name")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.get_by_key("name").key == "name"
+    with pytest.raises(KeyError, match="missing"):
+        at.get_by_key("missing")
+
+
+@pytest.mark.parametrize(
+    ("proto", "expected_type"),
+    [
+        (BlockProto(vertical=BlockProto.Vertical()), "vertical"),
+        (BlockProto(), "unknown"),
+        (None, "unknown"),
+    ],
+)
+def test_special_block_type_without_explicit_type(
+    proto: BlockProto | None, expected_type: str
+) -> None:
+    """``SpecialBlock`` falls back to the proto's block type, then ``unknown``."""
+    block = SpecialBlock(proto=proto, root=ElementTree())
+
+    assert block.type == expected_type
+    assert block.children == {}
+
+
+def test_checkbox_reports_pending_value_and_display_element_has_no_widget_state() -> (
+    None
+):
+    """A checked checkbox reports a staged value; display elements have no state."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.checkbox("Agree", key="agree")
+        st.text("plain")
+
+    at = AppTest.from_function(script).run()
+    checkbox = at.checkbox(key="agree")
+
+    assert not _has_pending_value(checkbox)
+    checkbox.check()
+    assert _has_pending_value(checkbox)
+    assert get_widget_state(checkbox).bool_value is True
+    assert get_widget_state(at.text[0]) is None

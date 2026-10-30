@@ -172,7 +172,7 @@ export default class HostCommunicationManager {
     allowedOrigins,
     useExternalAuthToken,
   }: AppConfig): void => {
-    if (!useExternalAuthToken) {
+    if (useExternalAuthToken !== true) {
       this.deferredAuthToken.resolve(undefined)
     }
     if (!allowedOrigins?.length) {

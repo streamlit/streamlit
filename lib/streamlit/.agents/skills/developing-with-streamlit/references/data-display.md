@@ -103,12 +103,15 @@ Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JS
 
 Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
 
+To format tooltip values without JavaScript, set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format, such as `"dollar"`, `"compact"`, or `"%,d visits"`. Tooltip `formatter` templates also expand `{@dimension}` and `{@[index]}`, and insert those values as plain text (no number format).
+
 ```python
 st.echarts_chart(
     {
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,d visits"},
         "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
         "yAxis": {"type": "value"},
-        "series": [{"type": "bar", "data": [120, 200, 150]}],
+        "series": [{"type": "bar", "data": [1200, 2000, 1500]}],
     },
     alt="Weekday traffic, peak on Tuesday",
 )
@@ -179,11 +182,11 @@ st.dataframe(
 - `ListColumn` → Display lists/arrays
 - `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
 - `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
-- `NumberColumn` → Numbers with formatting
+- `NumberColumn` → Numbers and timedelta/duration values with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Time only (no date)
+- `TimeColumn` → Clock time of day without a date (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -262,11 +265,13 @@ st.dataframe(
 
 | Widget           | Use When                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, search, row selection       |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
 | `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
+
+Prefer `st.dataframe` for sorting, search, and formatting, and `st.data_editor` for editing, over `streamlit-aggrid`. Use `column_config` for formats and editors. Search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source such as a Polars `LazyFrame`). Pass `lazy=False` only when the full table still fits in the browser. Use aggrid only for per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Use `streamlit-pivot-table` for pivot tables. When hiding non-matching rows is enough, filter the data in Python with separate widgets.
 
 ## Description and key-value lists
 
@@ -319,6 +324,8 @@ st.dataframe(
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
 
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. On a timedelta column, `format="compact"` is an elapsed-time clock (`02:00:00`) and `format="localized"` is a locale-aware duration. On other number columns, both keep their number meaning (`compact` is `1.2K`). On any number column, `format="duration"` shows the value in seconds as an approximate humanized duration.
+
 ## Editing data with st.data_editor
 
 ```python
@@ -361,7 +368,7 @@ selected_data = df.iloc[selected_indices]
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
 
-Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, and `PydeckState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, and `st.pydeck_chart`, respectively. Do not import these types from Streamlit's internal modules.
+Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, `PydeckState`, and `EChartsState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, `st.pydeck_chart`, and `st.echarts_chart`, respectively. Do not import these types from Streamlit's internal modules.
 
 ## Empty DataFrames
 

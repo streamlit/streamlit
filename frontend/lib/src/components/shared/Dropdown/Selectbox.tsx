@@ -21,12 +21,16 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
 } from "react"
 
-import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import {
+  ErrorOutline,
+  KeyboardArrowDown,
+} from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import {
   ComboBox,
@@ -40,6 +44,8 @@ import {
 import { streamlit } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -63,6 +69,7 @@ import {
 import {
   StyledClearButton,
   StyledEmptyState,
+  StyledErrorIcon,
   StyledGroup,
   StyledInput,
   StyledItemHighlight,
@@ -70,6 +77,7 @@ import {
   StyledListBoxItem,
   StyledOpenButton,
   StyledPopover,
+  StyledVisuallyHidden,
 } from "./Selectbox.styled"
 import { useSyncComboBoxEnterTargetFocus } from "./useSyncComboBoxEnterTargetFocus"
 
@@ -85,6 +93,13 @@ export interface Props {
   clearable?: boolean
   acceptNewOptions: boolean
   filterMode?: streamlit.SelectWidgetFilterMode | null
+  /** Shows the `(required)` label marker and sets `aria-required`. */
+  required?: boolean
+  /**
+   * Validation message. When set, shows the invalid-input chrome and
+   * announces the message to assistive tech.
+   */
+  error?: string | null
 }
 
 type ComboOption = {
@@ -221,12 +236,17 @@ const Selectbox: FC<Props> = ({
   labelVisibility,
   help,
   placeholder,
-  clearable,
+  clearable = false,
   acceptNewOptions,
   filterMode: filterModeProp,
+  required = false,
+  error,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const id = useId()
+  const errorId = `${id}-error`
+  const hasError = Boolean(error)
 
   // Floating UI provides scroll-tracking via autoUpdate. Unlike Popover and
   // MenuButton, we cannot replace RAC's <Popover> with FloatingPortal because
@@ -373,10 +393,10 @@ const Selectbox: FC<Props> = ({
   const enterTargetId = useMemo((): string | null => {
     if (creatableItem) return CREATABLE_ID
     const exactMatch = displayOptions.find(
-      o => !o.isCreatable && o.value === inputValue
+      o => o.isCreatable !== true && o.value === inputValue
     )
     if (exactMatch) return exactMatch.id
-    const first = displayOptions.find(o => !o.isCreatable)
+    const first = displayOptions.find(o => o.isCreatable !== true)
     return first?.id ?? null
   }, [creatableItem, displayOptions, inputValue])
 
@@ -582,8 +602,8 @@ const Selectbox: FC<Props> = ({
         const focused = state?.selectionManager.focusedKey
         if (state && isNullOrUndefined(focused)) {
           const options = displayOptionsRef.current
-          if (options[0]?.isCreatable) {
-            const firstMatch = options.find(o => !o.isCreatable)
+          if (options[0]?.isCreatable === true) {
+            const firstMatch = options.find(o => o.isCreatable !== true)
             if (firstMatch) {
               e.preventDefault()
               e.stopPropagation()
@@ -646,7 +666,7 @@ const Selectbox: FC<Props> = ({
       const targetId = enterTargetIdRef.current
       const options = displayOptionsRef.current
       const target = targetId ? options.find(o => o.id === targetId) : null
-      if (target?.isCreatable) {
+      if (target?.isCreatable === true) {
         commitSelection(inputValueRef.current)
         closeDropdownRef.current?.()
         return
@@ -654,7 +674,7 @@ const Selectbox: FC<Props> = ({
 
       if (!wasOpenBeforeEnterRef.current) return
 
-      if (target && !target.isCreatable) {
+      if (target) {
         commitSelection(target.value)
         closeDropdownRef.current?.()
       }
@@ -683,6 +703,7 @@ const Selectbox: FC<Props> = ({
         label={label}
         labelVisibility={labelVisibility}
         disabled={selectDisabled}
+        required={required}
       >
         {help && <WidgetLabelHelpIcon content={help} label={label} />}
       </WidgetLabel>
@@ -699,6 +720,14 @@ const Selectbox: FC<Props> = ({
           onBlur={handleBlur}
           menuTrigger="manual"
           aria-label={label ?? "Selectbox"}
+          // The caller owns validation. validationBehavior="aria" keeps React
+          // Aria out of native constraint validation, so isRequired and
+          // isInvalid only set ARIA state on the input and data-invalid on the
+          // group (styled in StyledGroup).
+          isRequired={required}
+          isInvalid={hasError}
+          validationBehavior="aria"
+          aria-describedby={hasError ? errorId : undefined}
           // Streamlit owns the filtering (fuzzy / contains / prefix / none),
           // and passes the already-filtered list to <StyledListBox items=...>.
           // Without this pass-through, RAC applies its own "contains" filter on
@@ -730,6 +759,13 @@ const Selectbox: FC<Props> = ({
                 selectDisabled ? theme.colors.fadedText40 : undefined
               }
             />
+            {hasError && (
+              <StyledErrorIcon data-testid="stSelectboxErrorIcon">
+                <Tooltip content={error} placement={Placement.TOP_RIGHT} error>
+                  <Icon content={ErrorOutline} size="base" />
+                </Tooltip>
+              </StyledErrorIcon>
+            )}
             {clearable && !isNullOrUndefined(value) && (
               <StyledClearButton
                 aria-label="Clear value"
@@ -769,6 +805,14 @@ const Selectbox: FC<Props> = ({
           </StyledPopover>
         </ComboBox>
       </I18nProvider>
+      {hasError && (
+        // The error message is shown visually in a tooltip on hover. The
+        // tooltip trigger isn't focusable, so we also expose the message to
+        // assistive tech via a visually hidden, aria-describedby-linked alert.
+        <StyledVisuallyHidden id={errorId} role="alert">
+          {error}
+        </StyledVisuallyHidden>
+      )}
     </div>
   )
 }

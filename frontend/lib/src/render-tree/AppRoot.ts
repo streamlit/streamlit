@@ -29,6 +29,7 @@ import {
   LoadingScreenType,
   makeAppSkeletonElement,
   makeElementWithInfoText,
+  notNullOrUndefined,
 } from "~lib/util/utils"
 
 import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
@@ -61,7 +62,7 @@ function canReuseElementPayload(
     existingNode instanceof ElementNode &&
     existingNode.elementHash === elementHash &&
     existingNode.element.type === nextElement.type &&
-    !nextElement.hasOneShotEffect
+    nextElement.hasOneShotEffect !== true
   )
 }
 
@@ -352,7 +353,7 @@ export class AppRoot {
     )
 
     // Check if we're running a fragment, ensure logo isn't cleared as stale (Issue #10350/#10382)
-    const isFragmentRun = fragmentIdsThisRun && fragmentIdsThisRun.length > 0
+    const isFragmentRun = (fragmentIdsThisRun?.length ?? 0) > 0
     const appLogo =
       isFragmentRun || this.appLogo?.scriptRunId === currentScriptRunId
         ? this.appLogo
@@ -475,8 +476,8 @@ export class AppRoot {
       // This prevents showing stale elements from a previous
       // dialog when switching between different dialogs (see issue #10907).
       const isDialogWithDifferentIdentity =
-        block.dialog &&
-        existingNode.deltaBlock.dialog &&
+        notNullOrUndefined(block.dialog) &&
+        notNullOrUndefined(existingNode.deltaBlock.dialog) &&
         block.id !== existingNode.deltaBlock.id
 
       if (!isDialogWithDifferentIdentity) {

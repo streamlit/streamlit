@@ -20,7 +20,11 @@ import re
 from numbers import Integral
 from typing import Final
 
-from streamlit.errors import StreamlitInvalidParameterTypeError, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 _BYTE_SIZE_RE: Final[re.Pattern[str]] = re.compile(
     r"(?P<value>(?:\d+(?:\.\d*)?|\.\d+)) ?"
@@ -40,6 +44,20 @@ _MULTIPLIERS: Final[dict[str, int]] = {
 }
 # Prevent unbounded integer-conversion work from pathological size strings.
 _MAX_BYTE_SIZE_DIGITS: Final = 100
+_CONFIG_MAX_CACHE_DATA_SIZE_ERROR: Final = (
+    "`server.maxCacheDataSize` requires a positive binary-unit string, such as "
+    '"2gb" or "500mb". Use "0" to disable the global cache budget.'
+)
+_CONFIG_MAX_CACHE_DATA_SIZE_ZERO_ERROR: Final = (
+    '`server.maxCacheDataSize` must be positive. Use "0" without a unit to '
+    "disable the global cache budget."
+)
+_CONFIG_MAX_CACHE_DATA_SIZE_MINIMUM_ERROR: Final = (
+    "`server.maxCacheDataSize` must be at least 1 byte."
+)
+_CONFIG_MAX_CACHE_DATA_SIZE_RANGE_ERROR: Final = (
+    "`server.maxCacheDataSize` exceeds the supported byte-size range."
+)
 _MAX_SIZE_DETAIL: Final = (
     "Use an integer number of bytes or a positive value with an explicit unit, "
     'such as "500MB", "1.5GB", or "200KiB".'
@@ -59,6 +77,12 @@ class _ByteSizeTooLongError(ValueError):
 
 def _parse_byte_size(value: str) -> int:
     """Parse a unit-bearing size and return its whole-byte count."""
+    size, _ = _parse_byte_size_with_metadata(value)
+    return size
+
+
+def _parse_byte_size_with_metadata(value: str) -> tuple[int, bool]:
+    """Parse a size and report whether its numeral contains a nonzero digit."""
     match = _BYTE_SIZE_RE.fullmatch(value)
     if match is None:
         raise _InvalidByteSizeError
@@ -70,7 +94,8 @@ def _parse_byte_size(value: str) -> int:
         raise _ByteSizeTooLongError
     denominator = 10 ** len(fraction)
     size: int = int(digits) * _MULTIPLIERS[unit.lower()] // denominator
-    return size
+    has_nonzero_numeral = bool(digits.strip("0"))
+    return size, has_nonzero_numeral
 
 
 def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | None:
@@ -123,5 +148,44 @@ def cache_data_max_size_to_bytes(value: int | Integral | str | None) -> int | No
     if size <= 0:
         raise StreamlitValueError(
             "max_size", ["a positive byte size"], detail=_MAX_SIZE_DETAIL
+        )
+    return size
+
+
+def config_max_cache_data_size_to_bytes(value: object) -> int | None:
+    """Parse ``server.maxCacheDataSize`` and return ``None`` when disabled."""
+    if (
+        value is None
+        or (isinstance(value, int) and not isinstance(value, bool) and value == 0)
+        or (isinstance(value, str) and value.strip() == "0")
+    ):
+        return None
+    if not isinstance(value, str):
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHE_DATA_SIZE_ERROR,
+            error_id="config-max-cache-data-size-invalid",
+        )
+    try:
+        size, has_nonzero_numeral = _parse_byte_size_with_metadata(value)
+    except _InvalidByteSizeError:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHE_DATA_SIZE_ERROR,
+            error_id="config-max-cache-data-size-invalid",
+        ) from None
+    except _ByteSizeTooLongError:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHE_DATA_SIZE_RANGE_ERROR,
+            error_id="config-max-cache-data-size-invalid",
+        ) from None
+    # Reject an explicit zero with a unit ("0gb"); only a bare "0" disables.
+    if not has_nonzero_numeral:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHE_DATA_SIZE_ZERO_ERROR,
+            error_id="config-max-cache-data-size-invalid",
+        )
+    if size < 1:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHE_DATA_SIZE_MINIMUM_ERROR,
+            error_id="config-max-cache-data-size-invalid",
         )
     return size

@@ -374,7 +374,7 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          if (this.args.enableBypass) {
+          if (this.args.enableBypass === true) {
             // Bypass: Start connecting to the websocket immediately while
             // running health and host-config pings in parallel (rather than
             // sequentially). Both must succeed, but they don't gate the WS connection.

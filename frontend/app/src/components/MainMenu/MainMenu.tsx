@@ -431,7 +431,7 @@ function buildCommonItems(
 
   // Report a bug - shown if URL provided and not hidden
   const reportABugUrl = menuItems?.reportABugUrl
-  if (reportABugUrl && !menuItems?.hideReportABug) {
+  if (reportABugUrl && menuItems.hideReportABug !== true) {
     items.push({
       type: "action",
       key: "report",
@@ -442,7 +442,7 @@ function buildCommonItems(
 
   // Get help - shown if URL provided and not hidden
   const getHelpUrl = menuItems?.getHelpUrl
-  if (getHelpUrl && !menuItems?.hideGetHelp) {
+  if (getHelpUrl && menuItems.hideGetHelp !== true) {
     items.push({
       type: "action",
       key: "community",
@@ -459,7 +459,8 @@ function buildCommonItems(
     // (if present) and before “About” (if present).
     if (hostItem.type === "separator") continue
     // Hide host's reportBug if developer wants to hide help-related items
-    if (hostItem.key === "reportBug" && menuItems?.hideGetHelp) continue
+    if (hostItem.key === "reportBug" && menuItems?.hideGetHelp === true)
+      continue
     // Hide host's about if developer provides custom About content
     if (hostItem.key === "about" && menuItems?.aboutSectionMd) continue
 
@@ -520,7 +521,7 @@ const MenuItemRow = memo(function MenuItemRow({
   setItemRef,
 }: MenuItemRowProps): ReactElement {
   const handleClick = (): void => {
-    if (item.disabled) return
+    if (item.disabled === true) return
     onItemClick(item)
   }
 
@@ -537,8 +538,7 @@ const MenuItemRow = memo(function MenuItemRow({
       ref={handleRef}
       onClick={handleClick}
       role="menuitem"
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false omits aria-disabled
-      aria-disabled={item.disabled || undefined}
+      aria-disabled={item.disabled === true || undefined}
       tabIndex={tabIndex}
       isRecording={item.isRecording}
       data-testid={`stMainMenuItem-${item.key}`}

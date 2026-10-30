@@ -24,6 +24,35 @@ const widgetMgr = new WidgetStateManager({
   sendRerunBackMsg: vi.fn(),
   formsDataChanged: vi.fn(),
 })
+
+type SubmitFormKeyboardEvent = Parameters<
+  ReturnType<typeof useSubmitFormViaEnterKey>
+>[0]
+
+/**
+ * Builds the keyboard event passed to the hook's callback. `keyCode` is 0, so
+ * the Enter check relies on `key`.
+ */
+function createKeyDownEvent({
+  key = "Enter",
+  metaKey = false,
+  ctrlKey = false,
+}: Partial<
+  Pick<SubmitFormKeyboardEvent, "key" | "metaKey" | "ctrlKey">
+> = {}): SubmitFormKeyboardEvent {
+  return {
+    key,
+    metaKey,
+    ctrlKey,
+    // The event type requires the deprecated keyCode, which isEnterKeyPressed
+    // reads as a Windows IME fallback.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    keyCode: 0,
+    nativeEvent: new KeyboardEvent("keydown"),
+    preventDefault: vi.fn(),
+  }
+}
+
 describe("useSubmitFormViaEnterKey", () => {
   it("should call commitWidgetValue and submitForm when Enter is pressed", async () => {
     const commitWidgetValue = vi.fn()
@@ -43,14 +72,7 @@ describe("useSubmitFormViaEnterKey", () => {
       )
     )
 
-    onInputChange.current({
-      key: "Enter",
-      metaKey: false,
-      ctrlKey: false,
-      keyCode: 0,
-      nativeEvent: new KeyboardEvent("keydown"),
-      preventDefault: vi.fn(),
-    })
+    onInputChange.current(createKeyDownEvent())
     await waitFor(() => {
       expect(commitWidgetValue).toHaveBeenCalledTimes(1)
     })
@@ -80,14 +102,7 @@ describe("useSubmitFormViaEnterKey", () => {
       )
     )
 
-    onInputChange.current({
-      key: "SomeOtherKey",
-      metaKey: false,
-      ctrlKey: false,
-      keyCode: 0,
-      nativeEvent: new KeyboardEvent("keydown"),
-      preventDefault: vi.fn(),
-    })
+    onInputChange.current(createKeyDownEvent({ key: "SomeOtherKey" }))
     await waitFor(() => {
       expect(commitWidgetValue).not.toHaveBeenCalled()
     })
@@ -117,14 +132,7 @@ describe("useSubmitFormViaEnterKey", () => {
       )
     )
 
-    onInputChange.current({
-      key: "Enter",
-      metaKey: false,
-      ctrlKey: false,
-      keyCode: 0,
-      nativeEvent: new KeyboardEvent("keydown"),
-      preventDefault: vi.fn(),
-    })
+    onInputChange.current(createKeyDownEvent())
     await waitFor(() => {
       expect(commitWidgetValue).not.toHaveBeenCalled()
     })
@@ -160,14 +168,7 @@ describe("useSubmitFormViaEnterKey", () => {
         )
       )
 
-      onInputChange.current({
-        key: "Enter",
-        metaKey: metaKey,
-        ctrlKey: ctrlKey,
-        keyCode: 0,
-        nativeEvent: new KeyboardEvent("keydown"),
-        preventDefault: vi.fn(),
-      })
+      onInputChange.current(createKeyDownEvent({ metaKey, ctrlKey }))
       await waitFor(() => {
         expect(commitWidgetValue).toHaveBeenCalledTimes(1)
       })
@@ -198,14 +199,7 @@ describe("useSubmitFormViaEnterKey", () => {
       )
     )
 
-    onInputChange.current({
-      key: "Enter",
-      metaKey: false,
-      ctrlKey: false,
-      keyCode: 0,
-      nativeEvent: new KeyboardEvent("keydown"),
-      preventDefault: vi.fn(),
-    })
+    onInputChange.current(createKeyDownEvent())
     await waitFor(() => {
       expect(commitWidgetValue).toHaveBeenCalledTimes(1)
     })
@@ -235,14 +229,7 @@ describe("useSubmitFormViaEnterKey", () => {
       )
     )
 
-    onInputChange.current({
-      key: "Enter",
-      metaKey: false,
-      ctrlKey: false,
-      keyCode: 0,
-      nativeEvent: new KeyboardEvent("keydown"),
-      preventDefault: vi.fn(),
-    })
+    onInputChange.current(createKeyDownEvent())
     await waitFor(() => {
       expect(commitWidgetValue).not.toHaveBeenCalled()
     })

@@ -89,7 +89,7 @@ export const katexWoff2Only = (): Plugin => ({
       return null
     }
 
-    const woff2Only = code.replace(NON_WOFF2_SRC, "")
+    const woff2Only = code.replaceAll(NON_WOFF2_SRC, "")
 
     const srcDeclarations = woff2Only.match(SRC_DECLARATION) ?? []
     if (srcDeclarations.some(src => SURVIVING_NON_WOFF2.test(src))) {

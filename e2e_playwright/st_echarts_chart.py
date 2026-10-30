@@ -22,6 +22,7 @@ without a ``key`` of their own.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from typing import Any
 
@@ -32,6 +33,10 @@ import streamlit as st
 
 # Seed the RNG so any generated data is deterministic across runs.
 np.random.seed(0)
+
+if "echarts_script_runs" not in st.session_state:
+    st.session_state.echarts_script_runs = 0
+st.session_state.echarts_script_runs += 1
 
 # ECharts plays entry animations on init, which makes canvas snapshots
 # non-deterministic. Disable animations for the display charts we render.
@@ -71,8 +76,9 @@ with st.container(key="c_basic_bar"):
 
 # An unrelated widget: clicking it reruns the app. Used to verify that a
 # display-only chart is not remounted / duplicated / reset by unrelated reruns.
-if st.button("rerun helper"):
-    st.write("rerun helper clicked")
+# Do not write extra markdown here: inserting a block above later charts
+# shifts them onto a fractional Y and makes snapshots 1px taller.
+st.button("rerun helper")
 
 # 2) A chart with theme=None (uses ECharts' built-in default theme; the spec is
 #    left untouched).
@@ -183,6 +189,34 @@ st.echarts_chart(
     height=_HEIGHT,
 )
 
+# 5b) A dataset.source DataFrame with date, naive datetime, and NaN columns.
+#     The frame ships as Arrow; dates must render as wall-clock labels in any
+#     browser timezone, and "Show data" swaps the chart for a table of it.
+arrow_dataset_df = pd.DataFrame(
+    {
+        "day": [dt.date(2020, 1, 1) + dt.timedelta(days=i) for i in range(5)],
+        "ts": pd.date_range("2020-01-01 08:30", periods=5, freq="D"),
+        "sales": [12, 20, 15, 8, 18],
+        "cost": [5.5, 7.25, np.nan, 4.0, 6.75],
+    }
+)
+with st.container(key="c_dataset_arrow"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": arrow_dataset_df},
+            "xAxis": {"type": "category"},
+            "yAxis": {"type": "value"},
+            "series": [
+                {"type": "bar", "encode": {"x": "day", "y": "sales"}},
+                {"type": "line", "encode": {"x": "day", "y": "cost"}},
+            ],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        key="dataset_arrow",
+        height=_HEIGHT,
+    )
+
 # 6) A chart built from a JSON string input.
 st.echarts_chart(
     json.dumps(
@@ -256,6 +290,73 @@ st.echarts_chart(
     key="datazoom",
     height=_HEIGHT,
 )
+
+# 11) A selection chart (a widget). Point selection is enabled in the spec via
+#     `selectedMode`, with a `select` style so the selection is visible. A
+#     single, chart-filling bar makes a point-click land reliably on the item.
+selection_event = st.echarts_chart(
+    {
+        "xAxis": {"type": "category", "data": ["Selected"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [100],
+                "barWidth": "90%",
+                "selectedMode": "multiple",
+                "select": {"itemStyle": {"color": "#ff4b4b"}},
+            }
+        ],
+        **_NO_ANIM,
+    },
+    key="selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+selection_groups = selection_event["selection"]["selected"]
+selection_indices = selection_groups[0]["data_indices"] if selection_groups else []
+st.write(f"echarts selection groups: {len(selection_groups)}")
+st.write(f"echarts selection indices: {selection_indices}")
+
+# 11b) A brush-selection chart. Rect brush is enabled via the toolbox; the E2E
+#      test draws a box, checks persistence across rerun, then clears it.
+brush_event = st.echarts_chart(
+    {
+        "toolbox": {
+            "orient": "vertical",
+            "left": 8,
+            "top": "middle",
+            "itemSize": 32,
+            "feature": {"brush": {"type": ["rect"]}},
+        },
+        "brush": {
+            "xAxisIndex": "all",
+            "throttleType": "debounce",
+            "throttleDelay": 0,
+        },
+        "grid": {
+            "containLabel": True,
+            "left": 56,
+            "top": 24,
+            "bottom": 32,
+            "right": 16,
+        },
+        "xAxis": {"type": "category", "data": ["A", "B", "C", "D"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [80, 80, 80, 80],
+                "barWidth": "70%",
+            }
+        ],
+        **_NO_ANIM,
+    },
+    key="brush_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+st.write(f"echarts brush areas: {len(brush_event['selection']['areas'])}")
 
 # 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
 #     Under theme="streamlit" it must render as escaped text and never execute.
@@ -333,6 +434,33 @@ with st.expander("Chart in expander", expanded=False):
             height=_HEIGHT,
         )
 
+# 14) A selection chart inside a form. ``clear_on_submit=True`` so submit
+#     delivers the pending selection and then clears the overlay (Python still
+#     reports the last submitted value until the next submit).
+with st.form("echarts_form", clear_on_submit=True):
+    form_event = st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Selected"]},
+            "yAxis": {"type": "value", "max": 100},
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [100],
+                    "barWidth": "90%",
+                    "selectedMode": "multiple",
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="form_selection_chart",
+        on_select="rerun",
+        height=_HEIGHT,
+    )
+    st.form_submit_button("Submit selection")
+st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")
+# Keep this out of the first block so chart snapshots stay 300px tall.
+st.write(f"echarts script runs: {st.session_state.echarts_script_runs}")
+
 # Stretch height outside a sized parent: the chart must still get the 350px
 # content-height floor so ECharts can initialize.
 with st.container(key="c_stretch_height"):
@@ -386,4 +514,76 @@ with st.container(key="c_echarts_alt_overrides_description"):
         key="echarts_alt_overrides_description",
         height=_HEIGHT,
         alt="Streamlit alt overrides description",
+    )
+
+# A funnel with outside labels. Guards the stage separators (white by default
+# in ECharts) and the themed outside label color.
+with st.container(key="c_funnel"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "funnel",
+                    "data": [
+                        {"name": "Leads", "value": 100},
+                        {"name": "Qualified", "value": 70},
+                        {"name": "Proposal", "value": 45},
+                        {"name": "Won", "value": 30},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="funnel",
+        height=_HEIGHT,
+    )
+
+# Tooltip formatting without JavaScript. One item fills each chart, so hovering
+# the chart center lands on it.
+# - The template chart expands a ``{@[n]}`` placeholder, which ECharts expands
+#   only in labels. Streamlit builds that HTML itself, so the cell also carries
+#   an HTML payload that ``{@[3]}`` must print as text.
+# - Its ``visualMap.dimension`` points at the value column, because it defaults
+#   to the last column (the text payload) and would leave the cell undrawn.
+# - The bar chart formats its value with the ``"dollar"`` number format.
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
+with st.container(key="c_tooltip_template"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-template-tooltip",
+                "formatter": "{a} · {@[2]} sessions · {@[3]}",
+            },
+            "xAxis": {"type": "category", "data": ["11:00"]},
+            "yAxis": {"type": "category", "data": ["Mon"]},
+            "visualMap": {"min": 0, "max": 1000, "show": False, "dimension": 2},
+            "series": [
+                {
+                    "type": "heatmap",
+                    "name": "Mon",
+                    "data": [[0, 0, 654, _XSS_TEMPLATE_PAYLOAD]],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="tooltip_template",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_tooltip_value_format"):
+    st.echarts_chart(
+        {
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-value-format-tooltip",
+                "valueFormatter": "dollar",
+            },
+            "xAxis": {"type": "category", "data": ["Revenue"]},
+            "yAxis": {"type": "value", "max": 1300},
+            "series": [{"type": "bar", "barWidth": "90%", "data": [1234.567]}],
+            **_NO_ANIM,
+        },
+        key="tooltip_value_format",
+        height=_HEIGHT,
     )
