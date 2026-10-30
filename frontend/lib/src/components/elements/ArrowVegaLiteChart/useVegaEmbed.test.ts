@@ -120,6 +120,7 @@ describe("useVegaEmbed hook", () => {
         .mockImplementation((view: VegaView) => view),
       teardownSelections: vi.fn(),
       onFormCleared: vi.fn(),
+      endSelectionRestore: vi.fn(),
     })
 
     // Default stubs:
@@ -195,6 +196,42 @@ describe("useVegaEmbed hook", () => {
     // 6) Resizes the new vega view
     expect(mockVegaView.resize).toHaveBeenCalled()
     expect(mockVegaView.runAsync).toHaveBeenCalled()
+  })
+
+  it("ends selection restore after the initial resize pulse", async () => {
+    const chartElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["brush"],
+      formId: "",
+    }
+
+    const { result } = renderHook(() =>
+      useVegaEmbed(chartElement, mockWidgetMgr)
+    )
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    const { maybeConfigureSelections, endSelectionRestore } = (
+      useVegaLiteSelections as Mock
+    ).mock.results[0].value as {
+      maybeConfigureSelections: Mock
+      endSelectionRestore: Mock
+    }
+
+    expect(maybeConfigureSelections).toHaveBeenCalledWith(mockVegaView)
+    expect(endSelectionRestore).toHaveBeenCalled()
+    expect(mockVegaView.resize).toHaveBeenCalled()
+    expect(endSelectionRestore.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockVegaView.resize.mock.invocationCallOrder[0]
+    )
   })
 
   it("finalizes old view if one exists before creating a new one", async () => {
@@ -840,6 +877,11 @@ describe("useVegaEmbed hook", () => {
       await secondPromise
     })
 
+    const { endSelectionRestore } = (useVegaLiteSelections as Mock).mock
+      .results[0].value as { endSelectionRestore: Mock }
+    const restoreCallsAfterSecond = endSelectionRestore.mock.calls.length
+    expect(restoreCallsAfterSecond).toBeGreaterThan(0)
+
     await act(async () => {
       embedResolvers[0]({
         vgSpec: { data: [{}] },
@@ -854,6 +896,7 @@ describe("useVegaEmbed hook", () => {
     expect(firstView.insert).not.toHaveBeenCalled()
     expect(secondView.data).not.toHaveBeenCalled()
     expect(secondView.runAsync).toHaveBeenCalled()
+    expect(endSelectionRestore).toHaveBeenCalledTimes(restoreCallsAfterSecond)
 
     await act(async () => {
       const updated = await result.current.updateView(null, datasetsB)
