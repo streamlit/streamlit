@@ -401,6 +401,27 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     wait_until(app, horizontal_chart_stacks)
 
+    # A stretch-height chart keeps a usable height when its fixed-height
+    # horizontal container stacks and grows to fit its children.
+    stretch_charts = get_element_by_key(app, "horizontal_stretch_chart").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(stretch_charts).to_have_count(2)
+    after_stretch = app.get_by_text("After the horizontal stretch chart", exact=True)
+
+    def stretch_chart_keeps_height() -> None:
+        stretch_box = stretch_charts.nth(0).bounding_box()
+        line_box = stretch_charts.nth(1).bounding_box()
+        after_box = after_stretch.bounding_box()
+        assert stretch_box is not None
+        assert line_box is not None
+        assert after_box is not None
+        assert stretch_box["height"] > 100
+        assert stretch_box["y"] + stretch_box["height"] <= line_box["y"] + 1
+        assert line_box["y"] + line_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, stretch_chart_keeps_height)
+
     buttons = get_element_by_key(app, "horizontal_buttons").get_by_test_id("stButton")
     expect(buttons).to_have_count(2)
     first_button = buttons.nth(0).bounding_box()
