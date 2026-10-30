@@ -3022,8 +3022,10 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
         name = calc_hash(json.dumps(data, sort_keys=True))
         datasets[name] = data
     else:
-        # Serialize first so the dataset name is a stable content hash.
+        # Serialize first so the dataset name is a stable content hash. Hash
+        # the bytes directly: hashing their str() repr is several times slower
+        # for large frames.
         data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-        name = calc_hash(str(data_bytes))
+        name = calc_hash(data_bytes)
         datasets[name] = data_bytes
     return {"name": name}
