@@ -48,6 +48,7 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { hydrateArrowDatasetSources } from "./arrowDataset"
 import {
   applyAltToOption,
   applyStreamlitOptionDefaults,
@@ -64,6 +65,7 @@ import {
   StyledEChartsError,
   StyledEChartsErrorOverlay,
 } from "./styled-components"
+import { applyTooltipFormatters } from "./tooltipFormatters"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -234,7 +236,10 @@ export function EChartsChart({
   const renderError =
     opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
 
-  // Parse the spec, memoized on the spec string.
+  // Parse the spec and replace its Arrow `dataset.source` placeholders with
+  // rows. Memoized on the spec string, which embeds each dataset's content
+  // hash. An unreadable dataset is reported as a spec error, so ECharts never
+  // receives a placeholder.
   const { option, parseError } = useMemo<{
     option: EChartsOptionObject | null
     parseError: string | null
@@ -250,10 +255,13 @@ export function EChartsChart({
           parseError: "The ECharts option must be a JSON object.",
         }
       }
-      return { option: parsed as EChartsOptionObject, parseError: null }
+      const parsedOption = parsed as EChartsOptionObject
+      hydrateArrowDatasetSources(parsedOption, element.datasets)
+      return { option: parsedOption, parseError: null }
     } catch (error) {
       return { option: null, parseError: ensureError(error).message }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
 
   const rendererStr =
@@ -283,9 +291,11 @@ export function EChartsChart({
     prunePixelOnlyBrushAfterResize,
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
-  // The option handed to setOption: Streamlit theme defaults, plus a
-  // non-pointer series cursor on display-only charts so they do not look
-  // clickable. Selection widgets pass the option through unchanged.
+  // The option handed to setOption:
+  // - Streamlit theme defaults.
+  // - Tooltip string formatters turned into functions.
+  // - On display-only charts, a non-pointer series cursor so they don't look
+  //   clickable. Selection widgets keep the author's cursor.
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
   // or configured base font size change — not on every new theme object (a
   // light/dark switch would re-apply the option and replay entry animations).
@@ -295,7 +305,9 @@ export function EChartsChart({
       return null
     }
     let prepared = configureSelectionOption(
-      applyStreamlitOptionDefaults(option, element.theme, theme)
+      applyTooltipFormatters(
+        applyStreamlitOptionDefaults(option, element.theme, theme)
+      )
     )
     // Proto `alt` wins over generated / author aria.label.description and
     // forces aria.enabled so the chart stays named.
@@ -303,7 +315,9 @@ export function EChartsChart({
       prepared = applyAltToOption(prepared, element.alt)
     }
     return prepared
-    // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
+    // Rebuild only when layout tokens change. `theme` is read for rem→px insets
+    // (spacing, title size, baseFontSize) and for the inside funnel and pie
+    // label colors, which are the same in light and dark mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,

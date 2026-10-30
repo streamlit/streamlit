@@ -51,6 +51,7 @@ import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
+  convertDurationToMilliseconds,
   convertTimestampToSeconds,
   convertTimeToDate,
   format,
@@ -520,6 +521,9 @@ describe("format", () => {
     { unscaled: -5, scale: 3, expected: "-0.005" },
     { unscaled: -12, scale: 3, expected: "-0.012" },
     { unscaled: -12345, scale: 2, expected: "-123.45" },
+    { unscaled: 123, scale: -2, expected: "12300" },
+    { unscaled: -123, scale: -4, expected: "-1230000" },
+    { unscaled: 0, scale: -2, expected: "0" },
   ])(
     "decimal $unscaled with scale $scale formats as $expected",
     ({ unscaled, scale, expected }) => {
@@ -826,6 +830,60 @@ describe("convertTimeToDate", () => {
       unit ? new Field("test", new Timestamp(unit), true, null) : undefined
     )
     expect(result.toISOString()).toBe(expected)
+  })
+})
+
+describe("convertDurationToMilliseconds", () => {
+  // 120 days plus 0.123456789 seconds: above Number.MAX_SAFE_INTEGER in ns.
+  const unsafeNanoseconds =
+    BigInt(10_368_000) * BigInt(1_000_000_000) + BigInt(123_456_789)
+
+  it.each([
+    // [duration, unit, expected milliseconds]
+    [1_500_000, TimeUnit.NANOSECOND, 1.5],
+    [BigInt(1_500_000), TimeUnit.NANOSECOND, 1.5],
+    [BigInt(-1_500_000), TimeUnit.NANOSECOND, -1.5],
+    [1500, TimeUnit.MICROSECOND, 1.5],
+    [BigInt(1500), TimeUnit.MICROSECOND, 1.5],
+    [1500, TimeUnit.MILLISECOND, 1500],
+    [BigInt(1500), TimeUnit.MILLISECOND, 1500],
+    [2, TimeUnit.SECOND, 2000],
+    [BigInt(-2), TimeUnit.SECOND, -2000],
+    // Without a field, the value is read as nanoseconds (the pandas default).
+    [1_500_000, undefined, 1.5],
+    // Divided straight to milliseconds: going through seconds would give
+    // 20.987638999999998.
+    [20_987_639, TimeUnit.NANOSECOND, 20.987639],
+    // Unsafe bigints are divided as bigints and keep the sub-millisecond
+    // remainder.
+    [unsafeNanoseconds, TimeUnit.NANOSECOND, 10_368_000_123 + 0.456789],
+    [-unsafeNanoseconds, TimeUnit.NANOSECOND, -(10_368_000_123 + 0.456789)],
+    [
+      BigInt(Number.MAX_SAFE_INTEGER) * BigInt(10) + BigInt(7),
+      TimeUnit.MICROSECOND,
+      90_071_992_547_409 + 0.917,
+    ],
+  ])(
+    "converts duration %s with unit %s to %s ms",
+    (duration, unit, expected) => {
+      const field =
+        unit === undefined
+          ? undefined
+          : new Field("test", new Duration(unit), true, null)
+      expect(convertDurationToMilliseconds(duration, field)).toBe(expected)
+    }
+  )
+
+  it("keeps sub-millisecond fractions of a safe bigint", () => {
+    const field = new Field(
+      "test",
+      new Duration(TimeUnit.NANOSECOND),
+      true,
+      null
+    )
+    const result = convertDurationToMilliseconds(BigInt(1_234_567), field)
+    expect(result).toBe(1.234567)
+    expect(Number.isInteger(result)).toBe(false)
   })
 })
 

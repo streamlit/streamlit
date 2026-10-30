@@ -264,21 +264,25 @@ export function convertTimestampToSeconds(
     return Number(timestamp)
   }
 
-  // Do the calculation based on bigints if the value is a
-  // bigint outside JavaScript's safe integer range. Recombine
-  // the integer quotient with the remainder so sub-second
-  // precision is kept after the ticks overflow that range.
-  if (
-    typeof timestamp === "bigint" &&
-    !Number.isSafeInteger(Number(timestamp))
-  ) {
-    const unitAdjustmentBigInt = BigInt(unitAdjustment)
-    const wholeUnits = timestamp / unitAdjustmentBigInt
-    const remainder = timestamp % unitAdjustmentBigInt
-    return Number(wholeUnits) + Number(remainder) / unitAdjustment
+  return divideTicks(timestamp, unitAdjustment)
+}
+
+/**
+ * Divides an Arrow tick count by the number of ticks per target unit.
+ *
+ * Bigints outside JavaScript's safe integer range are divided as bigints, and
+ * the integer quotient is recombined with the remainder, so the fractional
+ * part is kept after the ticks overflow that range.
+ */
+function divideTicks(ticks: number | bigint, ticksPerUnit: number): number {
+  if (typeof ticks === "bigint" && !Number.isSafeInteger(Number(ticks))) {
+    const ticksPerUnitBigInt = BigInt(ticksPerUnit)
+    const wholeUnits = ticks / ticksPerUnitBigInt
+    const remainder = ticks % ticksPerUnitBigInt
+    return Number(wholeUnits) + Number(remainder) / ticksPerUnit
   }
 
-  return Number(timestamp) / unitAdjustment
+  return Number(ticks) / ticksPerUnit
 }
 
 /**
@@ -303,6 +307,38 @@ export function convertTimeToDate(
     getArrowTimeUnit(field, TimeUnit.SECOND)
   )
   return moment.unix(timeInSeconds).utc().toDate()
+}
+
+/**
+ * Converts a duration (timedelta) value to milliseconds based on the unit
+ * information in the field.
+ *
+ * Nanosecond and microsecond counts are divided straight into milliseconds,
+ * avoiding the float noise of going through seconds (`20.987638999999998`).
+ * Bigints outside the safe integer range keep their sub-millisecond remainder.
+ *
+ * @param duration The duration value in the field's unit.
+ * @param field The field containing the unit information. Without one, the
+ * value is read as nanoseconds (the pandas default).
+ * @returns The duration in milliseconds.
+ */
+export function convertDurationToMilliseconds(
+  duration: number | bigint,
+  field?: Field
+): number {
+  const unit = getArrowTimeUnit(field, TimeUnit.NANOSECOND)
+
+  if (unit === TimeUnit.NANOSECOND) {
+    return divideTicks(duration, 1_000_000)
+  }
+  if (unit === TimeUnit.MICROSECOND) {
+    return divideTicks(duration, 1_000)
+  }
+  if (unit === TimeUnit.MILLISECOND) {
+    return Number(duration)
+  }
+  // Interpret it as seconds as a fallback.
+  return Number(duration) * 1000
 }
 
 /**
@@ -747,8 +783,14 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
   // start with a minus sign.
   let numString = decimalWordsToBigInt(value).toString()
 
-  if (scale === 0) {
+  if (scale === 0 || numString === "0") {
     return numString
+  }
+
+  if (scale < 0) {
+    // A negative scale multiplies the unscaled integer by a power of ten,
+    // e.g. 123 with scale -2 is 12300.
+    return numString + "0".repeat(-scale)
   }
 
   let sign = ""

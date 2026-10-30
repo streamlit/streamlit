@@ -157,8 +157,20 @@ strings as plain text. Streamlit markdown is not applied inside `spec` (`title.t
 API lets multiple series share one data source. To *Embrace the Python Ecosystem*, Streamlit
 accepts a dataframe-like object (pandas, Polars, PyArrow, …) as `dataset.source` — on a single
 dataset object **or** on every entry of a dataset list (`[{"source": df1}, {"source": df2}]`) —
-and converts each to JSON-compatible rows (preserving column order via `dataset.dimensions` when
-the user hasn't set it) — the same spirit as `st.vega_lite_chart` accepting a `data` argument.
+the same spirit as `st.vega_lite_chart` accepting a `data` argument. Streamlit sends each frame
+as an Apache Arrow table next to the JSON option, and the browser turns it into ECharts `source`
+rows before rendering. Column order is preserved via `dataset.dimensions` when the user hasn't set
+it. The dataframe index is not included (use `df.reset_index()` to plot it). Cell values become:
+
+- Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
+- Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
+  shows the same wall-clock time. Timezone-aware datetimes: ISO-8601 in UTC with `Z`.
+- Dates: `YYYY-MM-DD`. Times of day: `HH:mm:ss` (with milliseconds when set). Durations:
+  milliseconds.
+- Periods and intervals: labels such as `2020-01` and `(0, 1]`. Bytes: their comma-separated
+  byte values (`97,98` for `b"ab"`). Structs and other objects: the text `st.dataframe` shows.
+  Lists: arrays.
+
 A dataframe-like object anywhere else (`series.data`, `xAxis.data`, …) is **not** converted; it
 fails the JSON-serializability check with an error that points the user at `dataset.source`:
 
@@ -189,9 +201,11 @@ st.echarts_chart(
 **JSON-only in v1.** The option object must be JSON-serializable. ECharts supports embedding
 raw JavaScript callbacks (e.g. `formatter` functions, `renderItem` for custom series). To keep
 parity with `st.plotly_chart`/`st.vega_lite_chart`/`st.altair_chart` (which are pure-JSON specs) and to avoid
-executing arbitrary JS, **v1 does not support JavaScript function values**. Most formatting
-needs are covered by ECharts' [string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
-(e.g. `"formatter": "{b}: {c}"`). JS callbacks are documented as [out of scope](#out-of-scope-future-work).
+executing arbitrary JS, **v1 does not support JavaScript function values**. Use ECharts'
+[string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
+(e.g. `"formatter": "{b}: {c}"`) instead. For tooltips, Streamlit adds JSON-only formatting
+(see [Tooltip formatting](#tooltip-formatting)). JS callbacks are documented as
+[out of scope](#out-of-scope-future-work).
 
 **Unsupported chart families in v1.** Streamlit raises a `StreamlitAPIException` when the
 normalized option uses any of these keys (walked through `series` and top-level components,
@@ -221,7 +235,8 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
 - **Colors** — series use `theme.chartCategoricalColors`; continuous scales (`visualMap`) use
   `theme.chartSequentialColors`. These are the same palettes used by `st.plotly_chart`,
   `st.vega_lite_chart`, and `st.altair_chart`, and they are partially customizable through the
-  config options `theme.chartCategoricalColors` and `theme.chartSequentialColors`.
+  config options `theme.chartCategoricalColors` and `theme.chartSequentialColors`. Candlesticks
+  use the same rising green and falling red as `st.plotly_chart`.
 - **Typography** — title, axis labels, legend, and tooltip use Streamlit's font family and sizes.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
@@ -249,6 +264,75 @@ over the Streamlit theme defaults (the theme fills in gaps; it does not override
 values). `theme=None` disables these theme defaults and renders with ECharts' built-in default
 theme. Independently of theming, display-only charts set a missing `series.cursor` to `"default"`
 so they do not misleadingly appear clickable; an explicitly configured cursor is preserved.
+
+#### Tooltip formatting
+
+ECharts formats tooltips through JavaScript callbacks, which a JSON spec cannot carry. Its
+string templates don't fill the gap: a tooltip template inserts raw values (`{c}` prints
+`1234567.891`), skips the theme's number shortening, and doesn't expand the `{@dim}` /
+`{@[n]}` placeholders that ECharts supports in series labels (they print literally). So
+currency, percentages, and units in tooltips would need JavaScript.
+
+Streamlit fills the gap without adding template syntax. It reuses an ECharts key and an
+ECharts placeholder syntax, and both conversions run in the frontend for both themes:
+
+```python
+st.echarts_chart({
+    "tooltip": {"trigger": "axis", "valueFormatter": "compact"},
+    "series": [
+        {"type": "bar", "name": "Revenue", "tooltip": {"valueFormatter": "dollar"}},
+        {"type": "line", "name": "Sessions", "tooltip": {"valueFormatter": "%,d sessions"}},
+    ],
+    ...
+})
+
+# Heatmap cell: "Mon · 654 sessions"
+{"tooltip": {"formatter": "{a} · {@[2]} sessions"}, ...}
+```
+
+- **String `valueFormatter`.** ECharts' `tooltip.valueFormatter` (a function that formats each
+  value in the default tooltip) also accepts a Streamlit number format: the named formats and
+  printf-style strings of `st.metric(format=...)`. A string there is a hover-time `TypeError` in
+  ECharts, so no working spec changes meaning. Numbers and numeric strings are formatted, other
+  strings pass through, and missing or non-finite values show `-`. One format applies to every
+  value of a series (ECharts doesn't tell the formatter which dimension a value belongs to), so
+  `encode.tooltip` chooses the dimensions to show. The frontend drops any other value (not a
+  named format and no `%` placeholder other than an escaped `%%`, rejected by sprintf, or not
+  a string) and logs a browser console warning, so the default formatting applies. Python logs
+  a warning for these values too. It checks printf strings against sprintf's token grammar, so
+  it misses named, numbered, or extra placeholders that have no value to read (`%(price).2f`,
+  `%2$d`, `%d / %d`). ECharts escapes the returned text.
+- **`{@dim}` / `{@[n]}` in tooltip templates.** A string `tooltip.formatter` that contains `{@`
+  becomes a function that runs ECharts' own string-template steps (time tokens on time axes,
+  then `{a}`/`{b}`/`{c}`/`{d}` via the public `echarts.format.formatTpl`), then expands the
+  placeholders the way labels do: index or dimension name over array rows, object rows, or a
+  single value. Missing values print as an empty string. In an axis tooltip the placeholders
+  read the first series, as `{c}` means `{c0}`. Expanded values are HTML-escaped. Templates
+  without `{@` stay strings, so existing charts don't change. Values are inserted without a
+  number format.
+
+Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOption` /
+`options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
+arrays aren't walked.
+
+Options considered:
+
+- **Extend the ECharts keys (chosen).** No new syntax and no Python parameter, and the number
+  formats are the ones `st.metric` users already know. Cost: these specs no longer render the
+  same way in plain ECharts.
+- **A Streamlit parameter** (e.g. `st.echarts_chart(spec, value_format="dollar")`). Portable
+  specs, but one format for the whole chart, and it duplicates a key ECharts already has.
+- **A format suffix in templates** (e.g. `{@[2]:compact}`). Most flexible, but ECharts has no
+  format specifiers, so it would be syntax only Streamlit understands. Not included.
+
+Also not included:
+
+- `{value}` templates in `valueFormatter` (e.g. `"{value} €"`, by analogy with
+  `axisLabel.formatter`). Strings without a `%` are dropped, which leaves room to adopt them,
+  or an upstream meaning, later. Use printf instead: `"%.2f €"`.
+- Per-dimension formats, date/time formats for tooltip values, number formats for axis labels,
+  and coordinate-system tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings
+  on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
 
 #### Selections
 
@@ -502,9 +586,10 @@ renderer switch requires, just as it does after a `setTheme`.
   (*Fail Fast, Fail Helpfully*). Unsupported `custom`, map/geo, and ECharts GL chart families,
   detected JavaScript callbacks, non-finite numbers (`NaN`/`Infinity`), and a `dataset.source`
   dataframe whose column labels collide once stringified are rejected with similarly targeted
-  errors. Note that `NaN`/`NaT` *inside* a `dataset.source` dataframe is converted to `null`
-  (ECharts' own "no value" marker) rather than rejected; only non-finite floats the user writes
-  directly into the option raise.
+  errors; a dataframe that cannot be converted raises an error that names `dataset.source`.
+  Note that `NaN`/`NaT`/`±Infinity` *inside* a `dataset.source` dataframe become `null`
+  (ECharts' own "no value" marker) rather than being rejected; only non-finite floats the user
+  writes directly into the option raise.
 - **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
   chart area rather than crashing the app.
 
@@ -649,7 +734,11 @@ st.echarts_chart(pie)
   raw-HTML tooltip rendering on the user's behalf (no HTML formatter injection; do not change
   `tooltip.renderMode`), and a required regression test asserts that HTML/script payloads in
   tooltip/label content render as escaped text. An app author who sets an HTML formatter in
-  `spec` is opting into the same trust model as Plotly/Vega.
+  `spec` is opting into the same trust model as Plotly/Vega. The one formatter Streamlit
+  builds is the [tooltip formatting](#tooltip-formatting) function, and it only replaces an
+  author's string template, which ECharts already renders as HTML. It keeps the template's
+  markup and escapes every value it inserts, and an e2e test covers an HTML payload expanded
+  through `{@[n]}`. A `valueFormatter` returns plain text, which ECharts escapes.
 - **Other JSON-reachable sinks.** Tooltip escaping is not the whole boundary. ECharts'
   [security guide](https://echarts.apache.org/handbook/en/best-practices/security/) also lists
   HTML/URL fields that a JSON spec can set (`toolbox.feature.dataView.title` / `lang`,
@@ -686,8 +775,9 @@ st.echarts_chart(pie)
   charts whose types weren't statically included. ECharts GL and other third-party extensions
   remain separate and are not bundled.
 - **JSON-only spec.** Power users who rely on JS `formatter`/`renderItem` callbacks are not
-  served in v1 (see [Out of Scope](#out-of-scope-future-work)). String-template formatters cover
-  the large majority of cases.
+  served in v1 (see [Out of Scope](#out-of-scope-future-work)). String templates plus
+  Streamlit's [tooltip formatting](#tooltip-formatting) cover common formatting; number formats
+  on axis labels and per-dimension tooltip formats still need pre-formatted strings.
 
 ## Out of Scope (Future Work)
 
@@ -881,13 +971,17 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Re-theming: a light/dark switch calls `setTheme` and does not dispose the instance; a
   `renderer` switch still disposes and re-initializes.
 - Tooltip XSS: HTML/script payloads in tooltip/label content render as escaped text.
+- Tooltip formatting: string `valueFormatter` number formats (named, printf, arrays, numeric
+  strings, invalid strings dropped with a warning) and `{@dim}` / `{@[n]}` expansion (array and
+  object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
 - `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored;
   unsupported CSS units warn and fall back.
 - Display-only `key` still emits `st-key-*`; keyed `renderer` switch does not reset selection.
 - Typing: `lib/tests/streamlit/typing/echarts_chart_types.py` covers `on_select` overloads
   (`DeltaGenerator` vs `EChartsState`) and attribute/bracket access on the state
   (`event.selection.selected` and `event["selection"]["selected"]`).
-- Dataframes: pandas/Polars/PyArrow `dataset.source` conversion, including a dataset list.
+- Dataframes: pandas/Polars/PyArrow `dataset.source` conversion via Arrow transport, including a
+  dataset list.
 - Theme fidelity: light/dark snapshots of the default Streamlit theme.
 
 ## Checklist

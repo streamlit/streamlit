@@ -18,8 +18,18 @@ import { type ReactElement, useMemo } from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import {
+  Float64,
+  Table,
+  tableToIPC,
+  Utf8,
+  vectorFromArray,
+} from "apache-arrow"
 
-import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
+import {
+  type ArrowNamedDataSet,
+  EChartsChart as EChartsChartProto,
+} from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -460,6 +470,21 @@ describe("EChartsChart", () => {
     const [appliedOption] = mockChart.setOption.mock.calls[0]
     expect(appliedOption.aria).toEqual({ enabled: true })
     expect(appliedOption.grid).toBeUndefined()
+  })
+
+  it.each([
+    ["the Streamlit theme", "streamlit"],
+    ["theme=None", ""],
+  ])("turns string tooltip formatters into functions with %s", (_, theme) => {
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      tooltip: { formatter: "{b}: {@[1]}", valueFormatter: "%d units" },
+    })
+    render(<Wrapper element={createElement({ spec, theme })} />)
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.tooltip.formatter).toBeTypeOf("function")
+    expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
   })
 
   it("leaves the chart container's role to ECharts", () => {
@@ -956,6 +981,135 @@ describe("EChartsChart", () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.svg$/
     )
     clickSpy.mockRestore()
+  })
+
+  describe("Arrow datasets", () => {
+    const SALES_BYTES = tableToIPC(
+      new Table({
+        product: vectorFromArray(["Matcha", "Latte"], new Utf8()),
+        sales: vectorFromArray([43.3, 83.1], new Float64()),
+      }),
+      "stream"
+    )
+    const SALES_ROWS = [
+      { product: "Matcha", sales: 43.3 },
+      { product: "Latte", sales: 83.1 },
+    ]
+    const COST_BYTES = tableToIPC(
+      new Table({ cost: vectorFromArray([1.5, 2.5], new Float64()) }),
+      "stream"
+    )
+
+    /** A fresh dataset object, as every rerun delivers a new proto. */
+    const namedDataset = (
+      name: string,
+      data: Uint8Array | null
+    ): ArrowNamedDataSet.$Properties => ({
+      name,
+      hasName: true,
+      data: { data },
+    })
+
+    const datasetSpec = (source: unknown): string =>
+      JSON.stringify({
+        dataset: { source, dimensions: ["product", "sales"] },
+        xAxis: { type: "category" },
+        yAxis: {},
+        series: [{ type: "bar" }],
+      })
+
+    const createDatasetElement = (
+      overrides: Partial<EChartsChartProto> = {}
+    ): EChartsChartProto =>
+      createElement({
+        spec: datasetSpec({ name: "h1" }),
+        datasets: [namedDataset("h1", SALES_BYTES)],
+        ...overrides,
+      })
+
+    it("hands setOption the dataset rows instead of the placeholder", () => {
+      render(<Wrapper element={createDatasetElement()} />)
+
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.dataset.source).toEqual(SALES_ROWS)
+      expect(appliedOption.dataset.dimensions).toEqual(["product", "sales"])
+      expect(
+        screen.queryByTestId("stEChartsChartError")
+      ).not.toBeInTheDocument()
+    })
+
+    it("passes a user-authored name source through unchanged", () => {
+      render(
+        <Wrapper
+          element={createDatasetElement({
+            spec: datasetSpec({ name: "Matcha" }),
+          })}
+        />
+      )
+
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.dataset.source).toEqual({ name: "Matcha" })
+      expect(
+        screen.queryByTestId("stEChartsChartError")
+      ).not.toBeInTheDocument()
+    })
+
+    it("skips setOption on a rerun with the same spec and re-applies on a new hash", () => {
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      // Same spec, new proto and dataset objects (an unrelated rerun).
+      rerender(<Wrapper element={createDatasetElement()} />)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      // New data means a new content hash, so the spec string changes.
+      rerender(
+        <Wrapper
+          element={createDatasetElement({
+            spec: datasetSpec({ name: "h2" }),
+            datasets: [namedDataset("h2", COST_BYTES)],
+          })}
+        />
+      )
+      expect(mockChart.setOption).toHaveBeenCalledTimes(2)
+      const [appliedOption] = mockChart.setOption.mock.calls[1]
+      expect(appliedOption.dataset.source).toEqual([
+        { cost: 1.5 },
+        { cost: 2.5 },
+      ])
+      expect(mockChart.dispose).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      {
+        name: "missing",
+        data: null,
+        message: "The data for an ECharts dataset.source is missing.",
+      },
+      {
+        name: "corrupt",
+        data: new Uint8Array([1, 2, 3]),
+        message: "The data for an ECharts dataset.source could not be read",
+      },
+    ])(
+      "shows an error and creates no chart when the dataset bytes are $name",
+      ({ data, message }) => {
+        render(
+          <Wrapper
+            element={createDatasetElement({
+              datasets: [namedDataset("h1", data)],
+            })}
+          />
+        )
+
+        const error = screen.getByTestId("stEChartsChartError")
+        expect(error).toBeVisible()
+        expect(error).toHaveTextContent(`ECharts chart error: ${message}`)
+        expect(mockInit).not.toHaveBeenCalled()
+        expect(mockChart.setOption).not.toHaveBeenCalled()
+      }
+    )
   })
 
   describe("inside dataZoom wheel", () => {
