@@ -18,7 +18,7 @@ Choose a chart command, keep charts consistent, and use the chart APIs well.
 
 ## Choose a chart command
 
-Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, including light/dark switching, and are interactive and Arrow-backed for dataframes.
+Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, including light/dark switching, are interactive, and send dataframes to the browser as Arrow (for ECharts, in `dataset.source`).
 
 | Need | Use |
 | --- | --- |
@@ -35,7 +35,7 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | Flowcharts, sequence diagrams, ER models | `st.mermaid_chart` |
 | A tiny trend inside a metric or table cell | `st.metric(chart_data=...)` or `LineChartColumn` / `BarChartColumn` / `AreaChartColumn` (see [data-display.md](data-display.md)) |
 
-Start with a simple chart and move to `st.altair_chart` when it runs out of options. Move to `st.echarts_chart` for chart types Vega-Lite doesn't have, not for line, bar, or scatter charts that Altair already draws.
+Start with a simple chart and move to `st.altair_chart` when it runs out of options. Move to `st.echarts_chart` for the chart types and in-chart features in the table that Vega-Lite doesn't have, not to redraw a plain line, bar, or scatter chart that Altair already handles.
 
 ## Keep charts consistent
 
@@ -134,7 +134,7 @@ The dataframe index is not sent, so call `df.reset_index()` to plot it.
 
 - **JSON-compatible options only.** JavaScript callbacks (`formatter` functions, `JsCode`), `custom` series, GeoJSON map registration, and ECharts GL / 3D charts raise an error. For those, see [third-party-components.md](third-party-components.md).
 - **Format without JavaScript.** Set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format such as `"dollar"`, `"compact"`, or `"%,d visits"`. String templates (`"{b}: {c}"`) work in labels and tooltips, and tooltip templates also expand `{@dimension}` and `{@[index]}`.
-- **Dataframes belong in `dataset.source`.** A dataframe in `series.data` or `xAxis.data` raises an error. Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`.
+- **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error. Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 
@@ -146,8 +146,8 @@ The dataframe index is not sent, so call `df.reset_index()` to plot it.
 | --- | --- | --- |
 | `st.altair_chart` / `st.vega_lite_chart` | A named selection param in the chart (`alt.selection_point("name")`, `alt.selection_interval("name")`) | `event.selection.<name>` |
 | `st.echarts_chart` | `selectedMode` on a series for points, or a `brush` component / `toolbox.feature.brush` for regions | `event.selection.selected`, `event.selection.areas` |
-| `st.plotly_chart` | `selection_mode` (`"points"`, `"box"`, `"lasso"`) | `event.selection.points` |
-| `st.pydeck_chart` | `selection_mode` and `pickable=True` layers with an `id` | `event.selection.objects` |
+| `st.plotly_chart` | Nothing extra; `selection_mode` narrows it to `"points"`, `"box"`, or `"lasso"` | `event.selection.points` |
+| `st.pydeck_chart` | An `id` on every layer; `selection_mode="multi-object"` for several objects | `event.selection.objects` |
 
 ```python
 brush = alt.selection_interval(name="brush", encodings=["x"])
@@ -171,7 +171,7 @@ event = st.echarts_chart(
 rows = [i for group in event.selection.selected for i in group["data_indices"]]
 ```
 
-- **ECharts needs the selection keys in the spec.** `on_select` alone renders a chart that never returns a selection, and Streamlit logs a warning. There is no `selection_mode` parameter.
+- **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
 - ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
 - Target an axis on an ECharts brush (`"brush": {"xAxisIndex": "all"}`) so its regions appear in `areas`.
 - Set `key` on Altair, Vega-Lite, ECharts, and pydeck charts to keep a selection when the data changes. Without a key, any change to the chart resets it. Plotly selections reset whenever the figure changes, even with a key.
@@ -185,7 +185,7 @@ rows = [i for group in event.selection.selected for i in group["data_indices"]]
 
 ## Plotly and Matplotlib
 
-Don't reach for Plotly or Matplotlib for new 2D charts. Vega-based charts and ECharts cover them and match the app better.
+Don't reach for Plotly or Matplotlib for ordinary 2D charts. Vega-based charts and ECharts cover them and match the app better.
 
 - **`st.plotly_chart`** fits when you need what neither Vega-Lite nor ECharts draws: 3D charts (`scatter3d`, `surface`, `mesh3d`, `volume`), scientific traces (violin, ternary, carpet, Smith charts), a tile basemap under a chart, or a Plotly figure the user already has. It needs the `plotly` package. Browsers allow only a handful of WebGL contexts per page, so keep WebGL-heavy Plotly charts to a few per page.
 - **`st.pyplot`** displays a Matplotlib figure as a static image: no zoom, hover, or selection. It doesn't follow the app theme, so a default figure is a white box on a dark theme. It also renders on the server on every rerun. Use it only for a figure you already have, or for libraries that only produce Matplotlib output (seaborn, statsmodels, scikit-learn displays). Pass the `Figure`, not an `Axes`: pandas `.plot()` returns an `Axes`, so pass `ax.get_figure()`.

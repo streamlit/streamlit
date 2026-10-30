@@ -68,7 +68,7 @@ query = st.text_input(
 )
 ```
 
-Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md), [charts.md](charts.md#accessible-names-alt), and [data-display.md](data-display.md).
 
 ```python
 # BAD: Meaningful image with no alt
