@@ -810,7 +810,9 @@ Items 1–3 are covered above.
 - `color_picker`: `#rgb` or `#rrggbb` in either case, as `_HEX_COLOR_RE` accepts, checked
   with `fullmatch`, which also fixes `$` matching before a trailing newline. The author's
   `value` passes as written, because `st.color_picker` checks it with `re.match`, which
-  allows that newline, and the browser sends it back.
+  allows that newline, and the browser sends it back. react-color's hex field also
+  accepts the word `transparent`, which the picker used to commit. The frontend now
+  keeps the previous color instead (`BaseColorPicker`), and the server refuses the word.
 - `pagination`: an integer in `1..num_pages`.
 - `feedback`: `""` or an index in range (`"0"` to `"n-1"`). The browser sends `""` when
   the user clicks the selected face again to clear it, and `FeedbackSerde` reads it as

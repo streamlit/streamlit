@@ -373,12 +373,12 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only eight of them, all
+Each change follows from the contract. A correct browser sees only nine of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
 values from app code or a link that break a constraint, chat input text from app code
 past `max_chars`, a float slider's click at a bound, a form's staged values when it
-remounts, a pill whose label has an icon and edge whitespace, and the sync races. App
-code also sees one: the Components v2 trigger key. A browser that reconnects to a new
+remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge
+whitespace, and the sync races. App code also sees one: the Components v2 trigger key. A browser that reconnects to a new
 session, after a server restart or an expired `server.disconnectedSessionTTL`, keeps
 its values as today, apart from text past `max_chars`, or an empty value for a required
 widget whose default is not empty, that app code wrote. Its first interaction counts as
@@ -435,6 +435,10 @@ is checked when its widget registers. The other changes affect only forged value
 - **A form keeps its staged values when it remounts.** Today, when an element appears
   above a form, the browser sends the form's staged values with the next rerun, without
   a submit. A frontend fix keeps them staged until the submit.
+- **A color picker keeps its color when the user types `transparent`.** The picker's
+  hex field accepts the word, and today the widget returns `"transparent"`, although
+  `st.color_picker` returns a hex color. A frontend fix keeps the previous color, and
+  the server refuses the word from any other client.
 - **Keyed `st.pills` and `st.segmented_control` still read a label they cannot resolve
   as their held selection.** A forged label therefore counts as unchanged: no callback
   runs, and the browser is not re-synced.
@@ -519,8 +523,8 @@ is checked when its widget registers. The other changes affect only forged value
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side, apart from one frontend fix (a form keeps its staged values when it remounts) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, chat input text from app code past `max_chars`, a float slider's click at a bound, a form's staged values when it remounts, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
+| Works on SiS, Cloud, etc? | ✅ Server-side, apart from two frontend fixes (a form keeps its staged values when it remounts, and a color picker keeps its color when the user types `transparent`) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, chat input text from app code past `max_chars`, a float slider's click at a bound, a form's staged values when it remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
