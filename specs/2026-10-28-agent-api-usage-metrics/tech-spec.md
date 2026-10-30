@@ -28,8 +28,8 @@ session has no browser. The next decisions need data:
   The MCP spec asks for the transport to be recorded once agent metrics exist.
 - **Default-on:** the parent spec's first
   [follow-up](../2026-08-28-agent-app-interface/product-spec.md#follow-ups) turns the
-  API on for every app. Today nothing measures whether agents try to use apps that have it off, which is the demand that
-  follow-up is meant to serve.
+  API on for every app. Today nothing measures whether agents try to use apps that
+  have it off, which is the demand that follow-up is meant to serve.
 
 One part is already measured. The page profile's `config` field lists every option
 that was set manually, so `server.enableAgentApi` appears there when an app enables it.
