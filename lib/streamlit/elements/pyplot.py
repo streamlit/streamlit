@@ -144,8 +144,8 @@ class PyplotMixin:
               of the parent container. Streamlit shrinks a wider image to
               exactly that many pixels, so it can look blurry on
               high-resolution screens. With ``"stretch"`` or ``"content"``,
-              Streamlit keeps up to 1,460 pixels (twice the default page
-              width), so the figure stays sharp.
+              Streamlit keeps up to 1,460 pixels, so the figure stays sharp in
+              the default centered layout.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of

@@ -63,7 +63,7 @@ st.bar_chart(
 ```
 
 - **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than none.
-- A whitespace-only `alt` is ignored (same as not passing it) and logged. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
+- Streamlit ignores a whitespace-only `alt` (same as omitting it) and logs a warning. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
 
 ## Simple charts
 
@@ -139,10 +139,10 @@ st.echarts_chart(
 )
 ```
 
-The dataframe index is not sent, so call `df.reset_index()` to plot it.
+Streamlit does not send the dataframe index, so call `df.reset_index()` to plot it.
 
 - **JSON-compatible options only.** JavaScript callbacks (`formatter` functions, `JsCode`), `custom` series, GeoJSON map registration, and ECharts GL / 3D charts raise an error. For those, see [third-party-components.md](third-party-components.md).
-- **Format without JavaScript.** Set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format such as `"dollar"`, `"compact"`, or `"%,d visits"`. String templates (`"{b}: {c}"`) work in labels and tooltips, and tooltip templates also expand `{@dimension}` and `{@[index]}`.
+- **Format without JavaScript.** Set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format such as `"dollar"`, `"compact"`, or `"%,d visits"`. String templates (`"{b}: {c}"`) work in labels and tooltips, and tooltip templates also expand `{@dimension}` and `{@[index]}`. One format applies to every value of a series, so set `encode.tooltip` to the dimensions the tooltip should show.
 - **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error. Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.

@@ -214,6 +214,8 @@ def describe_credits(
     Shares always stack to 100%, so they report the leader's latest share.
     """
     values = source.drop(columns=x_col)
+    if values.empty:
+        return f"{title} ({series}): no data"
     latest = values.iloc[-1]
     span = (
         f"{title} ({series}) from {source[x_col].iloc[0]:%Y-%m-%d} to "
@@ -222,15 +224,15 @@ def describe_credits(
     if shares:
         return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
     totals = values.sum(axis=1)
-    change = totals.iloc[-1] / totals.iloc[0] - 1
-    return f"{span}: total {change:+.1%}, {latest.idxmax()} highest"
+    if totals.iloc[0]:
+        trend = f"total {totals.iloc[-1] / totals.iloc[0] - 1:+.1%}"
+    else:
+        trend = f"latest total {totals.iloc[-1]:,.0f}"
+    return f"{span}: {trend}, {latest.idxmax()} highest"
 
 
 def _credits_option(
-    wide: pd.DataFrame,
-    series: list[dict[str, Any]],
-    *,
-    show_percent: bool = False,
+    wide: pd.DataFrame, series: list[dict[str, Any]], *, show_percent: bool = False
 ) -> dict[str, Any]:
     """Build an ECharts option for credit series that share a time x-axis.
 
@@ -240,7 +242,8 @@ def _credits_option(
     """
     y_axis: dict[str, Any] = {"type": "value"}
     if show_percent:
-        # Label templates can't scale values, so shares are already 0-100.
+        # ECharts label templates can't multiply values, so create_bar_chart
+        # scales shares to 0-100 before they reach the chart.
         y_axis |= {"max": 100, "axisLabel": {"formatter": "{value}%"}}
     return {
         "dataset": {"source": wide},
@@ -274,10 +277,7 @@ def create_line_chart(
 
 
 def create_bar_chart(
-    wide: pd.DataFrame,
-    x_col: str,
-    categories: list[str],
-    show_percent: bool = False,
+    wide: pd.DataFrame, x_col: str, categories: list[str], show_percent: bool = False
 ) -> dict[str, Any]:
     """Create a stacked bar chart, optionally as each category's daily share."""
     if show_percent:
@@ -435,7 +435,7 @@ def dimension_metric(
                     alt=f"{title} data",
                 )
             else:
-                categories = [option for option in options if option in selected]
+                categories = [category for category in options if category in selected]
                 wide = pivot_by_dimension(filtered, "ds", y_col, dim_col, categories)
                 shares = False
                 if "Bar" in (chart_type or ""):

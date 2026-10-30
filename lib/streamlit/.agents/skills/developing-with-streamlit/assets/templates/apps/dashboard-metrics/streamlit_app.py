@@ -172,11 +172,16 @@ def describe_trend(
     values, such as the weekly means of the bar chart.
     """
     values = source[y_col]
-    change = values.iloc[-1] / values.iloc[0] - 1
-    return (
+    if values.empty:
+        return f"{title}, {series}: no data"
+    span = (
         f"{title}, {series} from {source[x_col].iloc[0]:%Y-%m-%d} to "
-        f"{source[x_col].iloc[-1]:%Y-%m-%d}: {change:+.1%}"
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
+    if not values.iloc[0]:
+        # A zero starting value has no percent change.
+        return f"{span}: latest {values.iloc[-1]:,.0f}"
+    return f"{span}: {values.iloc[-1] / values.iloc[0] - 1:+.1%}"
 
 
 def _time_series_option(

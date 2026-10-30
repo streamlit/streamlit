@@ -602,10 +602,10 @@ class PlotlyMixin:
             (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
             ``st.scatter_chart``, or ``st.altair_chart``) or
             ``st.echarts_chart``. Vega-based charts and ECharts follow the
-            app's theme more closely, load faster, and don't need an extra
-            package. Use ``st.plotly_chart`` for 3D charts, scientific chart
-            types such as violin or ternary plots, or a Plotly figure you
-            already have.
+            app's theme more closely, load much less code in the browser, and
+            don't need an extra package. Use ``st.plotly_chart`` for 3D
+            charts, scientific chart types such as violin or ternary plots, or
+            a Plotly figure you already have.
 
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
