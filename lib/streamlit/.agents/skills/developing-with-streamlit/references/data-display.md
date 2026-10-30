@@ -9,6 +9,7 @@ Present data clearly.
 - [Human-readable labels](#human-readable-labels)
 - [Altair for complex charts](#altair-for-complex-charts)
 - [Apache ECharts](#apache-echarts)
+- [Charts with large datasets](#charts-with-large-datasets)
 - [Deprecated: use_container_width](#deprecated-use_container_width)
 - [Dataframe column configuration](#dataframe-column-configuration)
 - [Markdown in dataframe cells](#markdown-in-dataframe-cells)
@@ -116,6 +117,16 @@ st.echarts_chart(
     alt="Weekday traffic, peak on Tuesday",
 )
 ```
+
+## Charts with large datasets
+
+Charts render in the browser, so aggregate or bin large data in Python first (`df.groupby(...)`, `alt.X(..., bin=True)`). Rough ceilings for raw rows before a chart takes seconds to draw:
+
+- Vega-based charts (native charts, `st.altair_chart`): about 100,000 rows.
+- `st.echarts_chart`: about 2,000,000 points with large mode or LTTB sampling.
+- `st.plotly_chart`: about 1,000,000 points for WebGL line and scatter traces, but only about 10,000 bars.
+
+Streamlit fills safe defaults that you haven't set yourself. Vega-based charts with more than 2,000 per-row marks render to canvas. ECharts scatter series with 20,000 or more points and bar series with more than 2,000 bars use `"large": True`. ECharts lines with more than 2,000 points on a value or time axis hide their symbols. Don't add these settings by hand. For denser ECharts lines, set `"sampling": "lttb"` on the series. Streamlit doesn't set it automatically because it changes which points are drawn.
 
 ## Deprecated: `use_container_width`
 

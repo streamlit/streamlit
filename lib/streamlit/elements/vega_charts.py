@@ -2227,6 +2227,26 @@ class VegaChartsMixin:
         statistical visualization library for Python, based on Vega and
         Vega-Lite.
 
+        .. note::
+            To keep large charts responsive, Streamlit changes two rendering
+            settings when your chart doesn't set them:
+
+            - A chart that draws more than 2,000 marks with one mark per row
+              (points, circles, squares, bars, rects, ticks, rules, or text)
+              renders to a canvas instead of SVG, so pointer moves and reruns
+              stay fast. On a canvas, assistive technologies can't reach the
+              individual marks.
+            - A chart whose marks draw more than 5,000 rows, lines and areas
+              included, sets ``config.mark.aria`` to ``False``. This skips the
+              screen-reader description that Vega-Lite builds for every mark.
+              Axes, legends, and the chart's accessible name stay available.
+
+            Streamlit counts the rows of each view's data, adds up layered and
+            concatenated views, and skips views that aggregate or filter their
+            data or load it from a URL. To opt out, set the renderer with
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``
+            or the ARIA setting with ``chart.configure(aria=True)``.
+
         Parameters
         ----------
         altair_chart : altair.Chart
@@ -2481,6 +2501,26 @@ class VegaChartsMixin:
 
         `Vega-Lite <https://vega.github.io/vega-lite/>`_ is a high-level
         grammar for defining interactive graphics.
+
+        .. note::
+            To keep large charts responsive, Streamlit changes two rendering
+            settings when your spec doesn't set them:
+
+            - A chart that draws more than 2,000 marks with one mark per row
+              (points, circles, squares, bars, rects, ticks, rules, or text)
+              renders to a canvas instead of SVG, so pointer moves and reruns
+              stay fast. On a canvas, assistive technologies can't reach the
+              individual marks.
+            - A chart whose marks draw more than 5,000 rows, lines and areas
+              included, sets ``config.mark.aria`` to ``False``. This skips the
+              screen-reader description that Vega-Lite builds for every mark.
+              Axes, legends, and the chart's accessible name stay available.
+
+            Streamlit counts the rows of each view's data, adds up layered and
+            concatenated views, and skips views that aggregate or filter their
+            data or load it from a URL. To opt out, set
+            ``"usermeta": {"embedOptions": {"renderer": "svg"}}`` or
+            ``"config": {"aria": True}`` in the spec.
 
         Parameters
         ----------

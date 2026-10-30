@@ -23,6 +23,11 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import type { VegaLiteChartElement } from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
+import {
+  applyLargeDataDefaults,
+  type DatasetRowCounts,
+  getDatasetRowCounts,
+} from "./largeDataDefaults"
 
 /**
  * A loosely-typed VegaLite spec after JSON parsing.
@@ -225,6 +230,7 @@ const generateSpec = (
   vegaLiteTheme: string,
   selectionMode: string[],
   theme: EmotionTheme,
+  rowCounts: DatasetRowCounts,
   containerWidth: number,
   containerHeight?: number,
   alt: string = ""
@@ -267,6 +273,10 @@ const generateSpec = (
   // Behavior-bearing options stay stripped, including chart actions that open
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
+
+  // Canvas rendering and no per-mark ARIA descriptions for large charts,
+  // unless the author chose a renderer or ARIA setting.
+  applyLargeDataDefaults(spec, rowCounts)
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- title may be a string, array, object, or null; a missing or empty title is left unchanged
   if (spec.title) {
@@ -379,6 +389,14 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
 
+  // Every rerun delivers new dataset objects, so the spec only regenerates
+  // when a row count changes, not on every data update.
+  const rowCountsKey = JSON.stringify(getDatasetRowCounts(data, datasets))
+  const rowCounts = useMemo(
+    () => JSON.parse(rowCountsKey) as DatasetRowCounts,
+    [rowCountsKey]
+  )
+
   // The structural spec generated with neutral (0) container dimensions. This is
   // only recomputed when non-dimension inputs change, keeping it stable across
   // container resizes.
@@ -391,6 +409,7 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         0, // Use 0 for container dimensions
         0,
         alt
@@ -402,6 +421,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
       alt,
     ]
   )
@@ -466,6 +486,7 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         containerWidth,
         containerHeight,
         alt
@@ -477,6 +498,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
       containerWidth,
       containerHeight,
       alt,

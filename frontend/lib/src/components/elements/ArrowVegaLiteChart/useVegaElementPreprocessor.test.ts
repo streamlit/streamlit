@@ -17,9 +17,11 @@
 import { compile, type TopLevelSpec } from "vega-lite"
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
 import type { VegaLiteChartElement } from "./arrowUtils"
+import { CANVAS_RENDERER_THRESHOLD } from "./largeDataDefaults"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 
 type VegaLiteSpec = {
@@ -1261,6 +1263,90 @@ describe("useVegaElementPreprocessor", () => {
         { alt: "Streamlit alt" }
       )
       expect(spec.description).toBe("Streamlit alt")
+    })
+  })
+
+  describe("large data defaults", () => {
+    /** A dataset stand-in: the preprocessor only reads its row count. */
+    const pointsDataset = (
+      numDataRows: number
+    ): VegaLiteChartElement["datasets"] => [
+      {
+        name: "points",
+        hasName: true,
+        data: { dimensions: { numDataRows } } as unknown as Quiver,
+      },
+    ]
+    const pointsSpec = JSON.stringify({
+      data: { name: "points" },
+      mark: "point",
+      encoding: {
+        x: { field: "x", type: "quantitative" },
+        y: { field: "y", type: "quantitative" },
+      },
+    })
+    const renderChart = (
+      numDataRows: number
+    ): ReturnType<
+      typeof renderHook<
+        VegaLiteChartElement,
+        ReturnType<typeof useVegaElementPreprocessor>
+      >
+    > =>
+      renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: pointsSpec,
+            datasets: pointsDataset(numDataRows),
+          }),
+        }
+      )
+    const rendererOf = (spec: unknown): unknown =>
+      (spec as { usermeta?: { embedOptions?: { renderer?: string } } })
+        .usermeta?.embedOptions?.renderer
+
+    it("renders charts with many per-datum marks to canvas", () => {
+      const { result } = renderChart(CANVAS_RENDERER_THRESHOLD + 1)
+      expect(rendererOf(result.current.spec)).toBe("canvas")
+      expect(result.current.baseSpecKey).toContain('"renderer":"canvas"')
+    })
+
+    it("keeps small charts unchanged", () => {
+      const { result } = renderChart(CANVAS_RENDERER_THRESHOLD)
+      expect(result.current.spec).not.toHaveProperty("usermeta")
+      expect(
+        (result.current.spec as unknown as { config: object }).config
+      ).not.toHaveProperty("mark.aria")
+    })
+
+    it("keeps the spec when new datasets have the same row count", () => {
+      const { result, rerender } = renderChart(CANVAS_RENDERER_THRESHOLD + 1)
+      const { spec, baseSpecKey } = result.current
+
+      rerender(
+        getElement({
+          spec: pointsSpec,
+          datasets: pointsDataset(CANVAS_RENDERER_THRESHOLD + 1),
+        })
+      )
+      expect(result.current.spec).toBe(spec)
+
+      rerender(
+        getElement({
+          spec: pointsSpec,
+          datasets: pointsDataset(CANVAS_RENDERER_THRESHOLD),
+        })
+      )
+      expect(rendererOf(result.current.spec)).toBe(undefined)
+      expect(result.current.baseSpecKey).not.toBe(baseSpecKey)
     })
   })
 })

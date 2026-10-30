@@ -587,3 +587,58 @@ with st.container(key="c_tooltip_value_format"):
         key="tooltip_value_format",
         height=_HEIGHT,
     )
+
+# Large-data defaults. The SVG renderer makes the drawn shapes countable: large
+# mode draws a bar series as a few paths, and hidden line symbols draw nothing.
+_dense_rng = np.random.default_rng(17)
+_dense_bars = pd.DataFrame({"x": np.arange(2001), "y": _dense_rng.random(2001)})
+_dense_line = pd.DataFrame(
+    {
+        "x": pd.date_range("2024-01-01", periods=2001, freq="min"),
+        "y": np.cumsum(_dense_rng.standard_normal(2001)),
+    }
+)
+
+
+def _dense_option(
+    df: pd.DataFrame, series: dict[str, Any], x_type: str
+) -> dict[str, Any]:
+    return {
+        "dataset": {"source": df},
+        "xAxis": {"type": x_type},
+        "yAxis": {"type": "value"},
+        "series": [{"encode": {"x": "x", "y": "y"}, **series}],
+        **_NO_ANIM,
+    }
+
+
+with st.container(key="c_dense_bar"):
+    st.echarts_chart(
+        _dense_option(_dense_bars, {"type": "bar"}, "value"),
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_bar_opt_out"):
+    st.echarts_chart(
+        _dense_option(_dense_bars, {"type": "bar", "large": False}, "value"),
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_line"):
+    st.echarts_chart(
+        {
+            **_dense_option(_dense_line, {"type": "line"}, "time"),
+            "tooltip": {"trigger": "axis", "className": "echarts-dense-tooltip"},
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_line_opt_out"):
+    st.echarts_chart(
+        _dense_option(_dense_line, {"type": "line", "showSymbol": True}, "time"),
+        renderer="svg",
+        height=_HEIGHT,
+    )

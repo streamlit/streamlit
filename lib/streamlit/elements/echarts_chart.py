@@ -1026,6 +1026,34 @@ class EChartsMixin:
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
 
+        .. note::
+            To keep large charts fast, Streamlit sets two ECharts options when
+            your ``spec`` doesn't set them. It counts the items in each
+            series' ``data`` or in its dataset's ``source``:
+
+            - ``"large": True`` on ``scatter`` series with at least 20,000
+              points and on ``bar`` series with more than 2,000 bars. ECharts
+              then draws each series in a few batched paths instead of one
+              shape per item, which loads much faster. At these sizes ECharts
+              already skips animations. Tooltips still work, but hovering no
+              longer highlights an item.
+            - ``"showSymbol": False`` on ``line`` series with more than 2,000
+              points on a value or time axis, where the symbols would merge
+              into a solid band. An axis tooltip
+              (``"tooltip": {"trigger": "axis"}``) still marks the hovered
+              point.
+
+            Streamlit leaves a series unchanged if these options would change
+            how it looks or behaves. For example, it skips series with
+            per-item styles or labels, charts with selections (``on_select``,
+            ``selectedMode``, or a ``brush``) or a ``visualMap``, and line
+            charts with an item tooltip or a ``dataZoom``. To opt out, set the
+            option yourself, for example ``"large": False``. For line charts
+            with even more points, you can set ``"sampling": "lttb"``, which
+            draws a subset of points that keeps the line's shape. Streamlit
+            doesn't set it for you because it changes which points are drawn
+            and which points tooltips show.
+
         Parameters
         ----------
         spec : dict, str, or pyecharts chart
