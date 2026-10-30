@@ -408,6 +408,10 @@ class ChatInputSerde:
         text = ui_value.data
         if not self.accept_files and not self.accept_audio:
             return text
+        # Popping consumes the upload records, also for a submit the boundary
+        # check then refuses, such as text past max_chars. Nothing could read
+        # them later: the browser never resends a submit, so keeping them would
+        # only hold the files until the session ends.
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
         for file in uploaded_files:
             if self.allowed_types and not isinstance(file, DeletedFile):

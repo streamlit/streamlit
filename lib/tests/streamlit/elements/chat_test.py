@@ -50,7 +50,9 @@ from streamlit.proto.Common_pb2 import (
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
-from streamlit.runtime.state.widget_checks import Violation
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.common import WidgetMetadata
+from streamlit.runtime.state.widget_checks import Violation, check_client_value
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFile,
     UploadedFileRec,
@@ -1132,6 +1134,38 @@ class PopUploadFilesTest(DeltaGeneratorTestCase):
         # No file is registered for "missing" so it should be filtered out.
         result = _pop_upload_files(proto)
         assert result == []
+
+    def test_a_refused_submit_consumes_its_attachments(self) -> None:
+        """A submit the boundary check refuses still removes its upload records.
+
+        The browser never resends a submit, so nothing could read them later.
+        """
+        session_id = self.script_run_ctx.session_id
+        file_mgr = self.script_run_ctx.uploaded_file_mgr
+        file_mgr.add_file(
+            session_id=session_id,
+            file=UploadedFileRec("file42", "name42.txt", "text/plain", b"hello"),
+        )
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+        metadata = WidgetMetadata(
+            id="chat",
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            value_type="chat_input_value",
+            validator=serde.validate,
+        )
+        state = WidgetState(id="chat")
+        state.chat_input_value.data = "abc"
+        info = state.chat_input_value.file_uploader_state.uploaded_file_info.add()
+        info.file_id = "file42"
+        info.file_urls.file_id = "file42"
+
+        result = check_client_value(
+            state, metadata=metadata, previous=None, is_rendered=True
+        )
+
+        assert result.violation == Violation("too_long", {"max_chars": 2})
+        assert file_mgr.get_files(session_id=session_id, file_ids=["file42"]) == []
 
     def test_pop_audio_file_returns_none_for_none(self):
         """Test _pop_audio_file returns None when audio_file_info is None."""
