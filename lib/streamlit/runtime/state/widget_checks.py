@@ -146,7 +146,9 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 
 # Kinds a correct browser can cause in a sync race, such as a rerun that
 # disables a widget, or changes its options, just before the user's change
-# arrives. They are logged at debug level.
+# arrives. They are logged at debug level. `too_long` is not one of them:
+# `max_chars` is part of a keyed widget's identity, so a rerun that changes it
+# gives the widget a new ID.
 _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
     {
         "not_rendered",
@@ -154,7 +156,6 @@ _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
         "not_an_option",
         "too_many_items",
         "out_of_range",
-        "too_long",
         "empty_required",
     }
 )
@@ -245,8 +246,8 @@ _EXPLANATIONS: Final[Mapping[ViolationKind, str]] = {
     ),
     "malformed": f"It is not in a form the widget's frontend sends. {_NEVER_SENT}",
     "too_long": (
-        "It is longer than the widget's max_chars. A rerun can lower the limit "
-        "just before a user's change arrives."
+        "It is longer than the widget's max_chars. The Streamlit frontend stops "
+        "input at that length."
     ),
     "empty_required": (
         "It empties a required widget. A rerun can make a widget required just "

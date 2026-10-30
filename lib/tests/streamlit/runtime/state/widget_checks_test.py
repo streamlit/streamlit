@@ -509,7 +509,9 @@ def test_e2e_tests_log_every_refusal_at_warning(
         ("too_many_items", logging.DEBUG),
         ("duplicate_items", logging.WARNING),
         ("out_of_range", logging.DEBUG),
-        ("too_long", logging.DEBUG),
+        # max_chars is part of a keyed widget's identity, so no rerun lowers it
+        # under the user.
+        ("too_long", logging.WARNING),
         # A key keeps the ID while `required` turns on.
         ("empty_required", logging.DEBUG),
         ("bad_shape", logging.WARNING),
@@ -519,7 +521,7 @@ def test_e2e_tests_log_every_refusal_at_warning(
 def test_option_and_bound_kinds_log_at_their_level(
     records: list[logging.LogRecord], kind: ViolationKind, level: int
 ) -> None:
-    """A sync race can change options, bounds, or max_chars, but not a shape."""
+    """A sync race can change options or bounds, but not a shape or max_chars."""
     log_violation(_ID, Violation(kind), warned=set())
 
     assert [r.levelno for r in records] == [level]
