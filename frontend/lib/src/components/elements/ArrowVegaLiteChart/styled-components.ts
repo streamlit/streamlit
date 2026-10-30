@@ -20,7 +20,7 @@ import { transparentize } from "color2k"
 
 import {
   printGraphicFitStyles,
-  printWidthCapStyles,
+  printWidthCapRules,
 } from "~lib/components/shared/printWidthCap"
 import { PRINT_UPSCALED_WIDTH } from "~lib/components/shared/usePrintScreenWidth"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
@@ -418,9 +418,16 @@ export const StyledVegaLiteChartContainer =
           },
         },
         "& form.vega-bindings": getVegaBindingStyles(theme),
-        // Vega locks the SVG to the on-screen pixel width. Cap that width
-        // when the printed page is narrower, without shrinking the height.
-        ...printWidthCapStyles,
+        "@media print": {
+          // Vega locks the SVG to the on-screen pixel width. Cap that width
+          // when the printed page is narrower, without shrinking the height.
+          ...printWidthCapRules,
+          // Print can release the parent's height, for example when a
+          // fixed-height horizontal container stacks its children. Contain
+          // only the width, so the chart takes the height it rendered at
+          // instead of collapsing.
+          ...(isSizeContained && { contain: "inline-size" }),
+        },
         // Canvas and hybrid renderers paint a canvas.marks node. It keeps
         // the on-screen pixel width unless the same fit rule covers it.
         "& svg.marks, & canvas.marks": printGraphicFitStyles,

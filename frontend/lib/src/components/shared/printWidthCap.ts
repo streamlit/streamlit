@@ -27,7 +27,7 @@ import type { CSSObject } from "@emotion/styled"
  * up into the card above. `overflow` other than `visible` also makes Chrome's
  * print layout overlap the following flex items.
  */
-const printWidthCapRules = {
+export const printWidthCapRules = {
   maxWidth: "100%",
   minWidth: 0,
   overflow: "visible",

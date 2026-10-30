@@ -150,3 +150,9 @@ with st.container(horizontal=True, key="horizontal_buttons"):
 with st.container(border=True, key="trailing_empty"):
     st.markdown("Text above a trailing placeholder")
     st.empty()
+
+with st.container(horizontal=True, height=180, key="horizontal_stretch_chart"):
+    st.bar_chart(pd.DataFrame({"value": [1, 2, 3]}), height="stretch")
+    st.line_chart(pd.DataFrame({"value": [3, 2, 1]}), height=120)
+
+st.markdown("After the horizontal stretch chart")
