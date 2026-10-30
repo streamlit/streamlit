@@ -60,9 +60,10 @@ const PER_DATUM_MARKS: ReadonlySet<string> = new Set([
 
 const PATH_MARKS: ReadonlySet<string> = new Set(["line", "area", "trail"])
 
-/** Data points drawn by per-datum marks, and by all counted marks. */
 interface MarkCounts {
+  /** Rows drawn by per-datum marks; compared with the canvas threshold. */
   perDatum: number
+  /** Rows drawn by per-datum and path marks; compared with the ARIA one. */
   total: number
 }
 

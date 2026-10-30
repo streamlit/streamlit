@@ -1036,7 +1036,7 @@ class EChartsMixin:
               then draws each series in a few batched paths instead of one
               shape per item, which loads much faster. At these sizes ECharts
               already skips animations. Tooltips still work, but hovering no
-              longer highlights an item.
+              longer highlights an item, and series labels aren't drawn.
             - ``"showSymbol": False`` on ``line`` series with more than 2,000
               points on a value or time axis, where the symbols would merge
               into a solid band. An axis tooltip
@@ -1047,8 +1047,8 @@ class EChartsMixin:
             (``on_select``, ``selectedMode``, or a ``brush``) and series whose
             ``data`` items are objects with their own settings. Large mode
             also skips charts with a ``visualMap``, and line symbols stay with
-            an item tooltip or empty values. To opt out, set the option
-            yourself, for example ``"large": False``. For line charts
+            a chart-level item tooltip or empty values. To opt out, set the
+            option yourself, for example ``"large": False``. For line charts
             with even more points, you can set ``"sampling": "lttb"``, which
             draws a subset of points that keeps the line's shape. Streamlit
             doesn't set it for you because it changes which points are drawn

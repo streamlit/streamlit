@@ -126,7 +126,7 @@ Charts render in the browser, so aggregate or bin large data in Python first (`d
 - `st.echarts_chart`: about 2,000,000 points with large mode or LTTB sampling.
 - `st.plotly_chart`: about 1,000,000 points for WebGL line and scatter traces, but only about 10,000 bars.
 
-Streamlit fills safe defaults that you haven't set yourself. Vega-based charts with more than 2,000 per-row marks, native charts included, render to canvas, which exposes only the chart's `alt` name to screen readers. ECharts scatter series with more than 20,000 points and bar series with more than 2,000 bars use `"large": True`. ECharts lines with more than 2,000 points on a value or time axis hide their symbols. Don't add these settings by hand. For denser ECharts lines, set `"sampling": "lttb"` on the series. Streamlit doesn't set it automatically because it changes which points are drawn.
+Streamlit fills safe defaults that you haven't set yourself. Vega-based charts with more than 2,000 per-row marks (points, bars, or `st.line_chart`'s hover points) render to canvas, which exposes only the chart's `alt` name to screen readers. To keep an Altair chart on SVG, use `chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})`. ECharts scatter series with more than 20,000 points and bar series with more than 2,000 bars use `"large": True`. ECharts lines with more than 2,000 points on a value or time axis hide their symbols. Don't add these settings by hand. For denser ECharts lines, set `"sampling": "lttb"` on the series. Streamlit doesn't set it automatically because it changes which points are drawn.
 
 ## Deprecated: `use_container_width`
 

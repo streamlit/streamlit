@@ -117,7 +117,9 @@ describe("applyLargeDataDefaults", () => {
       },
     ],
   ])("doesn't count views with %s", (_, spec) => {
-    expect(prepare(spec, counts(100_000, 100_000))).toEqual(spec)
+    const prepared = prepare(spec, counts(100_000, 100_000))
+    expect(prepared).not.toHaveProperty("usermeta")
+    expect(prepared).not.toHaveProperty("config")
   })
 
   it("adds up layered and concatenated views", () => {

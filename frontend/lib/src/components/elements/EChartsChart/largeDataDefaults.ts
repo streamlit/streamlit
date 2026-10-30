@@ -49,6 +49,7 @@ function getSeriesRows(
   if (series.data !== undefined) {
     return Array.isArray(series.data) ? series.data : undefined
   }
+  // A series that names its dataset by id isn't counted.
   if (series.datasetId !== undefined) {
     return undefined
   }
@@ -66,6 +67,11 @@ function hasEmptyValue(row: unknown): boolean {
       ? Object.values(row as SeriesOption)
       : [row]
   return cells.some(cell => cell === null || cell === "-")
+}
+
+/** Whether ``data`` has object items, which can set their own style or symbol. */
+function hasItemSettings(series: SeriesOption): boolean {
+  return Array.isArray(series.data) && series.data.some(isPlainObject)
 }
 
 function hasToolboxBrush(option: EChartsOptionObject): boolean {
@@ -103,8 +109,9 @@ function hasContinuousXAxis(
  * Large mode draws a series as a few paths with the series style, so it skips
  * per-item settings, ``visualMap`` colors, and selections, which need one
  * shape per item. Line symbols stay for category axes (ECharts already thins
- * them there), item tooltips (they need a symbol to hover), and lines with
- * empty values (a point between two gaps is drawn only as a symbol).
+ * them there), a chart-level item tooltip (it needs a symbol to hover;
+ * series-level ``tooltip.trigger`` isn't read), and lines with empty values
+ * (a point between two gaps is drawn only as a symbol).
  */
 function withLargeDataDefault(
   series: unknown,
@@ -116,39 +123,37 @@ function withLargeDataDefault(
   }
   const seriesOption = series as SeriesOption
   const rows = getSeriesRows(seriesOption, option)
-  // Object items in ``data`` can carry their own style, label, or symbol.
-  const hasItemSettings =
-    Array.isArray(seriesOption.data) && seriesOption.data.some(isPlainObject)
   if (
     rows === undefined ||
     hasSelection ||
-    hasItemSettings ||
     Boolean(seriesOption.selectedMode)
   ) {
     return series
   }
 
   if (seriesOption.type === "line") {
-    return !("showSymbol" in seriesOption) &&
-      rows.length > LINE_SYMBOL_THRESHOLD &&
-      hasContinuousXAxis(seriesOption, option) &&
-      !hasItemTooltip(option) &&
-      !(seriesOption.connectNulls !== true && rows.some(hasEmptyValue))
-      ? { ...seriesOption, showSymbol: false }
-      : series
+    const keepsSymbols =
+      "showSymbol" in seriesOption ||
+      rows.length <= LINE_SYMBOL_THRESHOLD ||
+      !hasContinuousXAxis(seriesOption, option) ||
+      hasItemTooltip(option) ||
+      hasItemSettings(seriesOption) ||
+      (seriesOption.connectNulls !== true && rows.some(hasEmptyValue))
+    return keepsSymbols ? series : { ...seriesOption, showSymbol: false }
   }
 
   const threshold =
     typeof seriesOption.type === "string"
       ? LARGE_MODE_THRESHOLDS.get(seriesOption.type)
       : undefined
-  return threshold !== undefined &&
-    !("large" in seriesOption) &&
-    rows.length > threshold &&
-    option.visualMap === undefined &&
-    (seriesOption.coordinateSystem ?? "cartesian2d") === "cartesian2d"
-    ? { ...seriesOption, large: true }
-    : series
+  const keepsDefaultMode =
+    threshold === undefined ||
+    "large" in seriesOption ||
+    rows.length <= threshold ||
+    option.visualMap !== undefined ||
+    (seriesOption.coordinateSystem ?? "cartesian2d") !== "cartesian2d" ||
+    hasItemSettings(seriesOption)
+  return keepsDefaultMode ? series : { ...seriesOption, large: true }
 }
 
 /**

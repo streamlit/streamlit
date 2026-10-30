@@ -1239,13 +1239,6 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
-        .. note::
-            A chart with more than 2,000 data points (rows times plotted
-            columns) renders to a canvas instead of SVG so it stays
-            responsive. On a canvas, assistive technologies only get the
-            chart's accessible name (``alt``). To keep SVG, build the chart
-            with ``st.altair_chart`` and set its renderer.
-
         Parameters
         ----------
         data : Anything supported by st.dataframe
