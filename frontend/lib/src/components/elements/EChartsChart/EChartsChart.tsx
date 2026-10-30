@@ -54,6 +54,7 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
+  mapOptionSeries,
   STREAMLIT_THEME,
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
@@ -70,7 +71,47 @@ import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
 
-type ChartErrorSource = "theme" | "option" | "resize"
+type ChartErrorSource = "init" | "theme" | "option" | "resize"
+
+/** What each chart operation does, for the console message when it fails. */
+const OPERATION_DESCRIPTIONS: Readonly<Record<ChartErrorSource, string>> = {
+  init: "initialize",
+  theme: "apply the theme",
+  option: "render its option",
+  resize: "resize",
+}
+
+/** Names a chart in console messages by its `alt`, if it has one. */
+function describeChart(alt: string | null | undefined): string {
+  const label = alt?.trim()
+  return label ? `ECharts chart "${label}"` : "ECharts chart"
+}
+
+/**
+ * The series ``type`` values in the option that ECharts has no chart for.
+ *
+ * ECharts skips such a series and reports it only in development builds, so
+ * in a release the chart is silently missing that series.
+ */
+function findUnknownSeriesTypes(option: EChartsOptionObject): string[] {
+  // ECharts registers each chart type's model here. The class registry's
+  // `getClass` exists at runtime, but ECharts' typings leave it out.
+  const registry = echarts.ComponentModel as unknown as {
+    getClass?: (mainType: string, subType: string) => unknown
+  }
+  if (typeof registry.getClass !== "function") {
+    return []
+  }
+  const unknownTypes = new Set<string>()
+  mapOptionSeries(option, series => {
+    const { type } = series
+    if (typeof type === "string" && !registry.getClass?.("series", type)) {
+      unknownTypes.add(type)
+    }
+    return series
+  })
+  return [...unknownTypes]
+}
 
 interface EChartsChartProps {
   element: EChartsChartProto
@@ -208,13 +249,48 @@ export function EChartsChart({
   const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(
     null
   )
+  // The instance whose last `setOption` threw. ECharts doesn't reset its
+  // update-cycle flag when building the option model throws (for example,
+  // `yAxis "0" not found`), so that instance ignores every later `setOption`,
+  // `setTheme`, and `resize`. Bumping `instanceGeneration` replaces it.
+  const failedInstanceRef = useRef<echarts.ECharts | null>(null)
+  const [instanceGeneration, setInstanceGeneration] = useState(0)
   const [opErrors, setOpErrors] = useState<
     Partial<Record<ChartErrorSource, string>>
   >({})
   const [hasRendered, setHasRendered] = useState(false)
 
+  // Read by the error logging below without making `setOpError` depend on
+  // `alt`; the create effect depends on `setOpError`, and an `alt` change
+  // must not recreate the instance.
+  const altRef = useRef(element.alt)
+  useLayoutEffect(() => {
+    altRef.current = element.alt
+  }, [element.alt])
+  // The message logged for each failing operation. A bad option also fails on
+  // every resize, so each message is logged once while it is unresolved.
+  const loggedOpErrorsRef = useRef(new Map<ChartErrorSource, string>())
+
+  // Records one operation's error, or clears it with `null` once the operation
+  // succeeds. The chart shows the message; it is also logged with the stack so
+  // it reaches the browser console, where it can be found without viewing the
+  // page.
   const setOpError = useCallback(
-    (op: ChartErrorSource, message: string | null): void => {
+    (op: ChartErrorSource, error: unknown): void => {
+      const message = error === null ? null : ensureError(error).message
+      const logged = loggedOpErrorsRef.current
+      if (message === null) {
+        logged.delete(op)
+      } else {
+        const isRepeat = [...logged.values()].includes(message)
+        logged.set(op, message)
+        if (!isRepeat) {
+          LOG.error(
+            `${describeChart(altRef.current)} failed to ${OPERATION_DESCRIPTIONS[op]}: ${message}`,
+            error
+          )
+        }
+      }
       setOpErrors(prev => {
         if (message === null) {
           if (prev[op] === undefined) {
@@ -231,10 +307,14 @@ export function EChartsChart({
     },
     []
   )
-  // An option error is the most actionable; a resize failure is usually a
-  // downstream symptom of the same bad option.
+  // An init or option error is the most actionable: it explains why nothing
+  // rendered. Theme and resize errors come from a chart that did render.
   const renderError =
-    opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
+    opErrors.init ??
+    opErrors.option ??
+    opErrors.theme ??
+    opErrors.resize ??
+    null
 
   // Parse the spec and replace its Arrow `dataset.source` placeholders with
   // rows. Memoized on the spec string, which embeds each dataset's content
@@ -263,6 +343,27 @@ export function EChartsChart({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
+
+  // Log spec problems that would otherwise only show on the page: a spec
+  // error replaces the chart, and an unknown series type leaves it blank. The
+  // ref keeps a repeated effect run from logging the same problem twice.
+  const loggedSpecProblemRef = useRef<string | null>(null)
+  useEffect(() => {
+    let problem: string | null = null
+    if (parseError !== null) {
+      problem = `has an invalid spec: ${parseError}`
+    } else if (option !== null) {
+      const unknownTypes = findUnknownSeriesTypes(option)
+      if (unknownTypes.length > 0) {
+        const typeList = unknownTypes.map(type => `"${type}"`).join(", ")
+        problem = `has series with an unknown type, which ECharts doesn't draw: ${typeList}`
+      }
+    }
+    if (problem !== null && problem !== loggedSpecProblemRef.current) {
+      LOG.error(`${describeChart(altRef.current)} ${problem}`)
+    }
+    loggedSpecProblemRef.current = problem
+  }, [option, parseError])
 
   const rendererStr =
     element.renderer === EChartsChartProto.Renderer.SVG ? "svg" : "canvas"
@@ -382,14 +483,16 @@ export function EChartsChart({
       })
     } catch (error) {
       // Uncaught throws trip the error boundary and replace the element.
-      setOpError("option", ensureError(error).message)
+      setOpError("init", error)
       return
     }
     appliedThemeRef.current = themeArgRef.current
+    failedInstanceRef.current = null
     // Force the setOption effect to re-apply against the fresh instance.
     appliedOptionRef.current = null
     setHasRendered(false)
     setOpErrors({})
+    loggedOpErrorsRef.current.clear()
     setChartInstance(chart)
 
     return () => {
@@ -397,7 +500,14 @@ export function EChartsChart({
       setChartInstance(null)
       setHasRendered(false)
     }
-  }, [containerRef, rendererStr, hasValidSpec, hasBeenSized, setOpError])
+  }, [
+    containerRef,
+    rendererStr,
+    hasValidSpec,
+    hasBeenSized,
+    setOpError,
+    instanceGeneration,
+  ])
 
   // Re-theme in place when the app switches between light and dark. ECharts
   // 6's `setTheme` keeps the current option model, so this avoids the
@@ -407,7 +517,11 @@ export function EChartsChart({
     if (!chartInstance || chartInstance.isDisposed()) {
       return
     }
-    if (appliedThemeRef.current === themeArg) {
+    // A replacement instance is created with the current theme.
+    if (
+      appliedThemeRef.current === themeArg ||
+      failedInstanceRef.current === chartInstance
+    ) {
       return
     }
 
@@ -419,7 +533,7 @@ export function EChartsChart({
       // select/brush visuals, so put them back.
       restoreSelection(chartInstance)
     } catch (error) {
-      setOpError("theme", ensureError(error).message)
+      setOpError("theme", error)
     }
   }, [chartInstance, themeArg, restoreSelection, setOpError])
 
@@ -437,6 +551,12 @@ export function EChartsChart({
     }
 
     if (appliedOptionRef.current === preparedOption) {
+      return
+    }
+    // A new option for an instance that can no longer update: replace the
+    // instance, and this effect applies the option to the new one.
+    if (failedInstanceRef.current === chartInstance) {
+      setInstanceGeneration(generation => generation + 1)
       return
     }
     // Mark this option as attempted up front so a rendering error isn't cleared
@@ -463,7 +583,8 @@ export function EChartsChart({
       // A full replacement clears the selected/brushed state, so restore it.
       restoreSelection(chartInstance)
     } catch (error) {
-      setOpError("option", ensureError(error).message)
+      failedInstanceRef.current = chartInstance
+      setOpError("option", error)
     }
   }, [
     chartInstance,
@@ -488,7 +609,13 @@ export function EChartsChart({
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
   useEffect(() => {
-    if (!chartInstance || chartInstance.isDisposed()) {
+    // An instance whose option failed has nothing to resize; the next option
+    // replaces it at the current size.
+    if (
+      !chartInstance ||
+      chartInstance.isDisposed() ||
+      failedInstanceRef.current === chartInstance
+    ) {
       return
     }
     if (width <= 0 || height <= 0) {
@@ -528,11 +655,11 @@ export function EChartsChart({
         prunePixelOnlyBrushAfterResize(chartInstance)
       }
     } catch (error) {
-      // `resize` re-runs the full render pipeline, so an option that already
-      // failed in `setOption` throws again here. Surface it as an in-chart
-      // error; letting it escape the effect would trip the error boundary and
-      // replace the element with an unrecoverable stack trace.
-      setOpError("resize", ensureError(error).message)
+      // `resize` re-runs the full render pipeline, which can throw. Surface it
+      // as an in-chart error; letting it escape the effect would trip the
+      // error boundary and replace the element with an unrecoverable stack
+      // trace.
+      setOpError("resize", error)
     }
   }, [
     chartInstance,
