@@ -791,7 +791,11 @@ Items 1–3 are covered above.
   request is never moved onto a bound: `0.12` is refused with the author's bounds.
 - `slider`, `select_slider`, `date_input` ranges: the item count is fixed. `date_input`
   allows up to two items, and an empty or start-only range. The values must be ordered,
-  which the browser guarantees.
+  which the browser guarantees. A `select_slider` label that several options share can
+  stand for any of them, because the browser sends the labels of the options it holds,
+  so such a range is ordered if some choice of those options is. With
+  `format_func=lambda o: o[:3]` over `["jan1", "feb1", "mar1", "jan2"]`, the range Jan
+  to Mar arrives as `["jan", "mar"]`, and `"jan"` resolves to `jan2`, after `mar1`.
 - The layouts the browser sends:
   - `date_input`: `YYYY-MM-DD`.
   - `datetime_input`: `YYYY-MM-DDTHH:MM`, with no seconds (`calendarDateTimeToIso`).

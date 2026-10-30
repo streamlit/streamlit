@@ -904,9 +904,13 @@ _SHARED_OPTIONS_MISSING = {"options": ("a", "b", "X", "c")}
         ),
         (True, ["b"], Violation("bad_shape", {"item_counts": (2,)})),
         (True, ["a", "b", "c"], Violation("bad_shape", {"item_counts": (2,)})),
-        # A shared label is ordered by the option it resolves to, the last.
+        # A shared label can stand for any option that shows it, so a range is
+        # ordered if some choice of options is.
         (True, ["X", "c"], Violation("ambiguous_option", {"positions": (0,)})),
+        (True, ["b", "X"], Violation("ambiguous_option", {"positions": (1,)})),
+        (True, ["X", "X"], Violation("ambiguous_option", {"positions": (0,)})),
         (True, ["c", "X"], Violation("bad_shape", {"order": True})),
+        (True, ["X", "b"], Violation("bad_shape", {"order": True})),
     ],
 )
 def test_select_slider_serde_validate(
@@ -924,6 +928,32 @@ def test_select_slider_serde_validate(
         if labels is None
         else WidgetState(string_array_value={"data": labels}).string_array_value.data
     )
+    assert serde.validate(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        # The browser holds jan1 to mar1 and sends their labels, and "jan" is
+        # the label of jan2 too, which comes after mar1.
+        (["jan", "mar"], Violation("ambiguous_option", {"positions": (0,)})),
+        (["feb", "jan"], Violation("ambiguous_option", {"positions": (1,)})),
+        (["mar", "jan"], Violation("ambiguous_option", {"positions": (1,)})),
+        (["mar", "feb"], Violation("bad_shape", {"order": True})),
+    ],
+)
+def test_select_slider_serde_validate_orders_a_shared_label_by_any_option(
+    labels: list[str], expected: Violation
+) -> None:
+    """A shared label that is not the last option with it still orders a range."""
+    serde: SelectSliderSerde[str] = SelectSliderSerde(
+        ["jan1", "feb1", "mar1", "jan2"],
+        formatted_options=["jan", "feb", "mar", "jan"],
+        formatted_option_to_index={"jan": 3, "feb": 1, "mar": 2},
+        default_indices=[0, 2],
+    )
+    ui_value = WidgetState(string_array_value={"data": labels}).string_array_value.data
+
     assert serde.validate(ui_value) == expected
 
 

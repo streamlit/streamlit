@@ -577,6 +577,38 @@ def test_a_repeat_the_held_value_has_is_accepted(
         assert "(duplicate_items)" in refusal_logs[0]
 
 
+def _shared_label_range_app() -> None:
+    import streamlit as st
+
+    st.select_slider(
+        "Months",
+        ["jan1", "feb1", "mar1", "jan2"],
+        value=("jan1", "mar1"),
+        format_func=lambda option: option[:3],
+        key="months",
+    )
+
+
+def test_a_shared_label_at_a_range_end_is_accepted(refusal_logs: list[str]) -> None:
+    """A select_slider range whose start shares its label with a later option.
+
+    The browser sends the labels of the options it holds, jan1 to mar1, and
+    "jan" also names jan2. The labels resolve as before, to the last option
+    with each label, and the range is sorted.
+    """
+    at = AppTest.from_function(_shared_label_range_app).run()
+
+    with patch_config_options({"global.e2eTest": True}):
+        at._run(
+            widget_state=forged(
+                at.select_slider[0].id, string_array_value=_labels("jan", "mar")
+            )
+        )
+
+    assert refusal_logs == []
+    assert at.select_slider[0].value == ("mar1", "jan2")
+
+
 def test_a_new_session_keeps_a_shared_label() -> None:
     """A browser map with shared labels, resent to a new session, keeps them."""
     first = AppTest.from_function(_shared_label_app).run()

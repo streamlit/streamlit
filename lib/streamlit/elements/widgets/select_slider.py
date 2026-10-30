@@ -110,6 +110,15 @@ class SelectSliderSerde(Generic[T]):
         # nothing for it.
         return Counter(self.formatted_options)
 
+    @cached_property
+    def _label_indexes(self) -> dict[str, list[int]]:
+        # The positions of the options that show each label, built lazily like
+        # the counts.
+        indexes: dict[str, list[int]] = {}
+        for index, label in enumerate(self.formatted_options):
+            indexes.setdefault(label, []).append(index)
+        return indexes
+
     @property
     def _is_range(self) -> bool:
         return len(self.default_indices) >= 2
@@ -132,10 +141,12 @@ class SelectSliderSerde(Generic[T]):
         violation = widget_checks.items_of(self._label_counts, ui_value, unique=False)
         if widget_checks.browser_refuses(violation) or not self._is_range:
             return violation
-        # Every label names an option here. A shared one is ordered by the
-        # option it resolves to, as the deserializer reads it.
+        # Every label names an option here. The browser sends the labels of
+        # the two options it holds, so a label several options share can stand
+        # for any of them: the range is ordered if some choice of options is.
+        low, high = ui_value
         order = widget_checks.ordered(
-            [self.formatted_option_to_index[label] for label in ui_value]
+            [min(self._label_indexes[low]), max(self._label_indexes[high])]
         )
         return order or violation
 
