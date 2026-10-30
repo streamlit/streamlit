@@ -734,8 +734,8 @@ export function formatDatetime(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  // Use provided timezone, or default to UTC for consistency
-  // A blank timezone is invalid for Intl.
+  // Use the provided timezone, or UTC when it is missing or blank (Intl
+  // rejects a blank timeZone).
   const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (isDateOnly) {
     return date.toLocaleDateString(undefined, {
@@ -839,7 +839,8 @@ export function formatTooltipDate(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  // A blank timezone is invalid for Intl, so it falls back to UTC.
+  // Use the provided timezone, or UTC when it is missing or blank (Intl
+  // rejects a blank timeZone).
   const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (includeTime) {
     return date.toLocaleString(undefined, {
