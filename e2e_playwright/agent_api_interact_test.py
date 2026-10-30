@@ -20,7 +20,7 @@
 The tests call the routes over HTTP with `page.request`, which sends no
 `Origin` header, like the programmatic clients the route serves. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
-with `server.enableAgentApi` on, so they derive every URL from
+with `server.enableAgentApi` on, so they derive agent route URLs from
 `agent_api_base_url` and tolerate headers a hosting platform adds. They open
 the app before calling the route, because a host that guards the app's origin
 with a login cookie, as Snowflake does, sets it while the app loads, and
@@ -76,12 +76,12 @@ def app_page(app_target: AppTarget) -> Page:
 def agent_api_base_url(app_target: AppTarget, app_base_url: str) -> str:
     """Return the base URL for agent API HTTP calls.
 
-    Hosts such as Snowflake in SiS can serve the HTML from one origin (the
-    iframe) and the Streamlit server from another (the SPCS container). When
-    that happens the loaded app sets ``window.__streamlit.BACKEND_BASE_URL``
-    to the server; ``page.request`` must use that URL. Locally, and on hosts
-    that serve HTML and the API from the same origin, the value is unset and
-    this falls back to ``app_base_url``.
+    Some hosts, such as Streamlit in Snowflake, serve the app's HTML from one
+    origin (an iframe) and the Streamlit server from another (a Snowpark
+    Container Services container). The host points the app at the server
+    through ``window.__streamlit.BACKEND_BASE_URL``, and agent API requests
+    must go there. When the value is unset (locally, or when one origin serves
+    both), this returns ``app_base_url``.
     """
     backend = app_target.locator("html").evaluate(
         "() => window.__streamlit?.BACKEND_BASE_URL || null"
@@ -443,15 +443,17 @@ def test_refuses_web_pages_and_ignores_client_identity(
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
-    # The forged cookie is for the document origin the browser loaded, which
-    # may differ from the API origin on hosts that set BACKEND_BASE_URL.
+    # Playwright sends a cookie only to its own origin, so forge it for the API
+    # origin the request goes to as well as the document origin the browser
+    # loaded, since the two differ on hosts that set BACKEND_BASE_URL.
     app_page.context.add_cookies(
         [
             {
                 "name": "_streamlit_user",
                 "value": quote(forged_login),
-                "url": build_app_url(app_base_url, path="/"),
+                "url": build_app_url(base_url, path="/"),
             }
+            for base_url in {app_base_url, agent_api_base_url}
         ]
     )
     identity_headers = [
