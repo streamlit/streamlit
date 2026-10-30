@@ -16,6 +16,8 @@
 
 import type { CSSObject } from "@emotion/styled"
 
+import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
+
 /**
  * Marks a subtree that stays mounted but is not on the printed page: a
  * closed tab panel or a collapsed sidebar.
@@ -48,6 +50,8 @@ export const printKeepTogetherRules: CSSObject = {
  * Emotion selector that matches this box when it contains a chart that
  * prints (not inside a closed tab, a collapsed sidebar, or a closed
  * expander). Pair it with `printKeepTogetherRules` so the box is not split
- * from that chart. A box taller than a page still breaks.
+ * from that chart. A box with a dataframe print table is not matched, so the
+ * table can continue on the next page and repeat its header. A box taller
+ * than a page still breaks.
  */
-export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_CHART})`
+export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_CHART}):not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`

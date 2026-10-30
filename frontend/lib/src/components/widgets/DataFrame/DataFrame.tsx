@@ -66,6 +66,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -105,6 +106,15 @@ import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { DATAFRAME_PRINT_SLOT_CLASS } from "./printClassNames"
+import {
+  buildDataFramePrintMeasure,
+  clearDataFramePrintSlot,
+  fillDataFramePrintSlot,
+  fitDataFramePrintTable,
+  isHiddenFromPrint,
+  registerDataFramePrintSlot,
+} from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
@@ -201,6 +211,7 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  const printSlotRef = useRef<HTMLDivElement>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -396,20 +407,27 @@ function DataFrame({
     getCellContent: getOriginalCellContent,
   })
 
-  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
-    useLazyDataLoader({
-      initialChunk: data,
-      columns: originalColumns,
-      numRows: originalNumRows,
-      sourceId: lazyData?.sourceId ?? "",
-      pageSize: lazyData?.pageSize ?? 1,
-      sortState: serverSortState,
-      backendOperationClient,
-    })
+  const {
+    getCellContent: getLazyCellContent,
+    getCachedCellContent,
+    onVisibleRegionChanged,
+  } = useLazyDataLoader({
+    initialChunk: data,
+    columns: originalColumns,
+    numRows: originalNumRows,
+    sourceId: lazyData?.sourceId ?? "",
+    pageSize: lazyData?.pageSize ?? 1,
+    sortState: serverSortState,
+    backendOperationClient,
+  })
 
   // In lazy mode, cells come from the chunked loader; otherwise from the
   // client-sorted eager getter.
   const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+  // Printing must not schedule a chunk request. A request changes
+  // getCellContent when the chunk arrives and would rebuild the print table
+  // while the dialog is open.
+  const getPrintCellContent = isLazy ? getCachedCellContent : getCellContent
 
   // Whether a specific column can be sorted in the current mode. Eager sorting
   // is client-side and works for any column (incl. the index). Lazy sorting is
@@ -945,6 +963,90 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // The canvas grid only paints the viewport. Before the browser snapshots
+  // the page, replace it with a table of the loaded cells so print can scale
+  // the frame onto the page. A frame prints at most 1,000 rows. Frames that
+  // are still loading, have too many images, or cannot fit a single row
+  // keep the canvas.
+  const theme = useEmotionTheme()
+  const printMeasure = useMemo(
+    () => buildDataFramePrintMeasure(theme),
+    [theme]
+  )
+  const missingPlaceholder = element.placeholder ?? undefined
+  const printAccessibleName = element.alt ?? undefined
+  useEffect(() => {
+    const slot = printSlotRef.current
+    if (!slot) {
+      return
+    }
+
+    // Frames fill in page order from one budget shared by the whole page.
+    const unregisterPrintSlot = registerDataFramePrintSlot(slot, budget => {
+      // The slot is display:none on screen, so visibility is read from the
+      // dataframe. A closed tab, a collapsed expander, or any other hidden
+      // ancestor stays mounted. A print table there would still match
+      // :has(.stDataFramePrintTable) and let the surrounding card split.
+      const frame = slot.closest(".stDataFrame")
+      if (
+        isEmptyTable ||
+        (frame instanceof HTMLElement && isHiddenFromPrint(frame))
+      ) {
+        clearDataFramePrintSlot(slot)
+        return
+      }
+      fillDataFramePrintSlot(
+        slot,
+        columns,
+        numRows,
+        getPrintCellContent,
+        printMeasure,
+        budget,
+        { missingPlaceholder, accessibleName: printAccessibleName }
+      )
+    })
+    const handleAfterPrint = (): void => {
+      clearDataFramePrintSlot(slot)
+    }
+    // beforeprint still uses screen media, so the first measure is the
+    // on-screen column. This fires once the page is actually laid out for
+    // print and the font ratio can follow the printed column.
+    const printMedia = window.matchMedia("print")
+    const handlePrintMedia = (): void => {
+      if (printMedia.matches) {
+        fitDataFramePrintTable(slot)
+      }
+    }
+
+    window.addEventListener("afterprint", handleAfterPrint)
+    printMedia.addEventListener("change", handlePrintMedia)
+    return () => {
+      unregisterPrintSlot()
+      window.removeEventListener("afterprint", handleAfterPrint)
+      printMedia.removeEventListener("change", handlePrintMedia)
+    }
+  }, [
+    columns,
+    getPrintCellContent,
+    isEmptyTable,
+    missingPlaceholder,
+    numRows,
+    printAccessibleName,
+    printMeasure,
+  ])
+
+  // Clear only on unmount. The registration effect re-runs when data or
+  // columns change, and clearing there would drop a table already built for
+  // an open print dialog.
+  useEffect(() => {
+    const slot = printSlotRef.current
+    return () => {
+      if (slot) {
+        clearDataFramePrintSlot(slot)
+      }
+    }
+  }, [])
+
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
@@ -1117,6 +1219,7 @@ function DataFrame({
         )}
       </Toolbar>
       <Resizable
+        className="stDataFrameResizable"
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}
@@ -1421,6 +1524,7 @@ function DataFrame({
           })}
         />
       </Resizable>
+      <div className={DATAFRAME_PRINT_SLOT_CLASS} ref={printSlotRef} />
       {tooltip?.content && (
         <Tooltip
           top={tooltip.top}

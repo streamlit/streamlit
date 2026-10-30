@@ -23,7 +23,7 @@ import { render } from "~lib/test_util"
 import { StyledResizableContainer } from "./styled-components"
 
 describe("StyledResizableContainer print layout", () => {
-  it("clips a grid wider than its printed container", () => {
+  it("clips a grid wider than its printed container unless it prints a table", () => {
     const { container } = render(
       createElement(StyledResizableContainer, {
         isInHorizontalLayout: false,
@@ -41,6 +41,8 @@ describe("StyledResizableContainer print layout", () => {
       )
       .join("\n")
 
-    expect(css).toMatch(/@media print\{[^{]+\{max-width:100%;overflow:clip/)
+    expect(css).toMatch(
+      /:not\(:has\(\.stDataFramePrintTable\)\)\{overflow:clip/
+    )
   })
 })

@@ -91,6 +91,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(
       ">.stColumn{display:block;width:min(100%, calc(var(--st-print-screen-width, 100%) * 1.25))"
     )
+    expect(css).toContain(">.stColumn:has(.stDataFramePrintTable){width:100%")
   })
 
   it("makes the columns of a side-by-side row size containers", () => {
@@ -158,7 +159,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("margin-bottom:20px")
   })
 
-  it("keeps a bordered chart card on one page", () => {
+  it("keeps a bordered chart card on one page unless it holds a print table", () => {
     const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
@@ -169,10 +170,11 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // A chart prints as one piece and moves to the next page, so a split
-    // card would leave an empty bordered strip behind. This applies to both
+    // card would leave an empty bordered strip behind. A print table has
+    // to paginate, so its card may still break. This applies to both
     // orientations.
     expect(css).toMatch(
-      /:has\(:is\(\.stVegaLiteChart[^{]*\{break-inside:avoid/
+      /:has\(:is\(\.stVegaLiteChart[^{]*:not\(:has\(\.stDataFramePrintTable\)\)\{break-inside:avoid/
     )
     expect(css).not.toContain("orientation")
 
@@ -221,6 +223,10 @@ describe("StyledFlexContainerBlock print layout", () => {
         })
       )
     )
+    // No fixed height or gap to clear, but the dataframe-print-table escape
+    // hatch (tested below) applies to every flex container.
+    expect(centered).toContain("@media print")
+    expect(centered).toContain(":has(.stDataFramePrintTable)")
     expect(centered).not.toContain("display:block")
 
     const gapped = cssOf(
@@ -260,11 +266,53 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // Stretch children are height 100%. A block parent gives each of them
-    // the full container, so a fixed-height container keeps flex and its
-    // gap, and print adds no block margin on its own class.
-    expect(css).toContain("height:300px")
-    expect(css).not.toMatch(OWN_PRINT_BLOCK)
-    expect(css).not.toMatch(/\.css-[\w-]+ ?> ?:has\(~/)
+    // the full container, so a fixed-height container keeps flex until a
+    // print table or note releases that height. Then it becomes block,
+    // which is the content-height case Chrome collapses. The block box
+    // loses gap, so the same bottom margin is restored there.
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;/
+    )
+    expect(css).toContain("height:auto;max-height:none;overflow:visible")
+    expect(css).toContain("margin-bottom:16px")
+    expect(css).toContain("margin-bottom:calc(16px - 0.375rem)")
+
+    const aligned = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+          gap: { pixelGap: 16 },
+          align: BlockProto.FlexContainer.Align.ALIGN_CENTER,
+        })
+      )
+    )
+    // Alignment still needs flex after the height is released, so gap
+    // keeps working and print does not add a block margin.
+    expect(aligned).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{height:auto;max-height:none;overflow:visible/
+    )
+    expect(aligned).not.toContain("display:block")
+    expect(aligned).not.toContain("margin-bottom")
+
+    const verticallyCentered = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+          gap: { pixelGap: 16 },
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        })
+      )
+    )
+    // Vertical centering has no free space once a print table releases the
+    // height, so that container becomes block like an unaligned one.
+    expect(verticallyCentered).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;/
+    )
+    expect(verticallyCentered).toContain("margin-bottom:16px")
   })
 
   it("releases a fixed height around a descendant row that stacks in print", () => {
@@ -331,7 +379,8 @@ describe("StyledFlexContainerBlock print layout", () => {
         })
       )
     )
-    expect(contentSized).toMatch(/@media print\{[^}]*display:block/)
+    // The block's own print rule, not the print-table `:has()` override.
+    expect(contentSized).toMatch(/@media print\{\.[\w-]+\{display:block/)
 
     const definite = cssOf(
       render(
@@ -422,8 +471,12 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
 
-    // Stays flex so its child retains the fixed height.
+    // Stays flex so its child retains the fixed height, unless that child
+    // is an expanded print table, which needs to grow past it.
     expect(css).toContain("height:300px")
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\),\.[\w-]+:has\(\.stDataFramePrintNote\)\{display:block;height:auto;max-height:none/
+    )
     expect(css).not.toMatch(OWN_PRINT_BLOCK)
 
     const contentHeight = cssOf(

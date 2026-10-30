@@ -32,6 +32,10 @@ import {
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
 import { PRINT_UPSCALED_WIDTH } from "~lib/components/shared/usePrintScreenWidth"
+import {
+  DATAFRAME_PRINT_NOTE_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+} from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -225,6 +229,17 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
             display: "none",
           }
         : {}),
+      // A fixed-height dataframe keeps that height on its container. The
+      // print table is taller than the on-screen grid, and a fallback note
+      // sits under the canvas, so the container grows with that content
+      // instead of letting it paint outside the card.
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+        {
+          height: "auto",
+          maxHeight: "none",
+          minHeight: 0,
+          contain: "none",
+        },
     },
 
     ":has(> .stCacheSpinner)": {
@@ -523,6 +538,11 @@ export const StyledFlexContainerBlock =
                   width: PRINT_UPSCALED_WIDTH,
                   maxWidth: "100%",
                   minWidth: 0,
+                  // A print table scales its text to the column, so it
+                  // gets the full page width.
+                  [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+                    width: "100%",
+                  },
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
                       "&:not(:last-of-type)": {
@@ -573,6 +593,27 @@ export const StyledFlexContainerBlock =
         ...(border && {
           [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
         }),
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+          {
+            // A fixed-height container (st.container(height=...)) scrolls
+            // its overflow on screen. A print table, or a fallback note
+            // stacked under the canvas, can be taller than that height, so
+            // the container grows instead of clipping them. Releasing that
+            // height makes this the content-height column Chrome collapses,
+            // so drop flex when the height was the only reason to keep it.
+            // That block box loses `gap`, so it uses the same bottom margins
+            // as a content-height container. Vertical alignment has no free
+            // space once the height is auto, so only horizontal centering
+            // or end alignment stays flex, and its gap still applies.
+            ...(keepsPrintFlexForHeight &&
+              !keepsPrintFlexForAlignment && {
+                display: "block",
+                ...printBlockGapMargins(gapWidth, theme),
+              }),
+            height: "auto",
+            maxHeight: "none",
+            overflow: "visible",
+          },
       }
 
       return {
@@ -696,6 +737,15 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
         hasDefiniteHeight !== true && {
           display: "block",
         }),
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}), &:has(.${DATAFRAME_PRINT_NOTE_CLASS})`]:
+        {
+          // A fixed height clips a print table, or a fallback note stacked
+          // under the canvas, through the inner container's overflow:auto.
+          // Grow this wrapper with it.
+          display: "block",
+          height: "auto",
+          maxHeight: "none",
+        },
       // A row that stacks in print outgrows a fixed height that fit it side
       // by side, whether the height is on the row's own container or on a
       // container around it, so the wrapper follows its content's height.

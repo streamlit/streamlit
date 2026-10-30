@@ -36,16 +36,17 @@ def _container_type(locator: Locator) -> str:
     return str(locator.evaluate("element => getComputedStyle(element).containerType"))
 
 
-def test_print_stacks_chart_rows_without_overlap(
+def test_print_stacks_columns_and_fits_the_dataframe(
     app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """Only rows with a chart stack, and nothing overlaps.
+    """Only rows with a chart or dataframe stack, and nothing overlaps.
 
     Print forces colors, so a dark theme would snapshot the same pixels.
     """
     expect(app.get_by_text("Plain column")).to_be_visible()
     expect(app.get_by_text("Bordered column")).to_be_visible()
 
+    # The print-media change refits the table to the printed column.
     app.set_viewport_size(_PORTRAIT)
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
@@ -152,6 +153,45 @@ def test_print_stacks_chart_rows_without_overlap(
     assert _break_inside(get_element_by_key(app, "chart_card")) == "avoid"
     assert _break_inside(bordered) == "auto"
 
+    table = get_element_by_key(app, "feedback").locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    headers = table.locator("th")
+    expect(headers).to_have_text(
+        [
+            "Feedback Message",
+            "Date",
+            "Salesforce Account Name",
+            "Deployment",
+            "Snowflake Account Name",
+            "Username",
+            "Agreement Type",
+        ]
+    )
+    expect(table).to_contain_text("Capacity")
+    expect(
+        get_element_by_key(app, "feedback").locator(".stDataFrameResizable")
+    ).to_be_hidden()
+
+    def table_fits_the_card() -> None:
+        fit = app.evaluate(
+            """() => {
+                const card = document.querySelector(".st-key-feedback");
+                const table = card?.querySelector(".stDataFramePrintTable");
+                if (!table || !card) {
+                    return false;
+                }
+                const tableBox = table.getBoundingClientRect();
+                const cardBox = card.getBoundingClientRect();
+                return tableBox.left >= cardBox.left - 1
+                    && tableBox.right <= cardBox.right + 1
+                    && tableBox.top >= cardBox.top - 1
+                    && tableBox.bottom <= cardBox.bottom + 1;
+            }"""
+        )
+        assert fit
+
+    wait_until(app, table_fits_the_card)
+
     # A horizontally centered container keeps flex, because display:block
     # would drop align-items. A fixed-height container keeps flex, so its
     # vertical alignment still has free space to center in.
@@ -211,29 +251,34 @@ def test_print_stacks_chart_rows_without_overlap(
 
     wait_until(app, expander_chart_does_not_overlap)
 
-    # A centered container keeps flex even when it holds a chart. The chart
-    # stays inside the container without covering the next element.
+    # A centered container keeps flex even when it holds a chart and a
+    # dataframe. Each stays inside the container without covering the next.
     centered_chart = get_element_by_key(app, "centered_chart")
     centered_parts = [
         centered_chart.get_by_test_id("stVegaLiteChart"),
+        centered_chart.locator(".stDataFramePrintTable"),
         app.get_by_text("After the centered chart", exact=True),
     ]
     for part in centered_parts:
         expect(part).to_be_visible()
 
-    def centered_chart_does_not_overlap() -> None:
+    def centered_chart_and_table_do_not_overlap() -> None:
         container_box = centered_chart.bounding_box()
         assert container_box is not None
-        chart_box, after_box = (part.bounding_box() for part in centered_parts)
-        assert chart_box is not None
-        assert after_box is not None
-        assert chart_box["y"] + chart_box["height"] <= after_box["y"] + 1
-        assert chart_box["x"] >= container_box["x"] - 1
-        assert chart_box["x"] + chart_box["width"] <= (
-            container_box["x"] + container_box["width"] + 1
-        )
+        boxes = []
+        for part in centered_parts:
+            box = part.bounding_box()
+            assert box is not None
+            boxes.append(box)
+        for upper, lower in itertools.pairwise(boxes):
+            assert upper["y"] + upper["height"] <= lower["y"] + 1
+        for box in boxes[:2]:
+            assert box["x"] >= container_box["x"] - 1
+            assert box["x"] + box["width"] <= (
+                container_box["x"] + container_box["width"] + 1
+            )
 
-    wait_until(app, centered_chart_does_not_overlap)
+    wait_until(app, centered_chart_and_table_do_not_overlap)
 
     chart = chart_row.get_by_test_id("stVegaLiteChart")
     after_chart = app.get_by_text("After the chart row", exact=True)
@@ -282,6 +327,7 @@ def test_print_stacks_chart_rows_without_overlap(
     assert_snapshot(chart_row, name="print_layout-stacked_chart_row")
 
     end_browser_print(app)
+    expect(app.locator(".stDataFramePrintTable")).to_have_count(0)
 
 
 def _assert_inside(inner: Locator, outer: Locator) -> None:
