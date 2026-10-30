@@ -961,6 +961,13 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set its renderer.
+
         Parameters
         ----------
         data : Anything supported by st.dataframe
@@ -1231,6 +1238,13 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
+
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set its renderer.
 
         Parameters
         ----------
@@ -1554,6 +1568,13 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
+
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set its renderer.
 
         Parameters
         ----------
@@ -1918,6 +1939,13 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set its renderer.
+
         Parameters
         ----------
         data : Anything supported by st.dataframe
@@ -2234,12 +2262,14 @@ class VegaChartsMixin:
             - A chart that draws more than 2,000 marks with one mark per row
               (points, circles, squares, bars, rects, ticks, rules, or text)
               renders to a canvas instead of SVG, so pointer moves and reruns
-              stay fast. On a canvas, assistive technologies can't reach the
-              individual marks.
+              stay fast. On a canvas, assistive technologies only get the
+              chart's accessible name; marks, axes, and legends aren't
+              exposed.
             - A chart whose marks draw more than 5,000 rows, lines and areas
               included, sets ``config.mark.aria`` to ``False``. This skips the
               screen-reader description that Vega-Lite builds for every mark.
-              Axes, legends, and the chart's accessible name stay available.
+              On SVG charts, axes, legends, and the chart's accessible name
+              stay available.
 
             Streamlit counts the rows of each view's data, adds up layered and
             concatenated views, and skips views that aggregate or filter their
@@ -2509,12 +2539,14 @@ class VegaChartsMixin:
             - A chart that draws more than 2,000 marks with one mark per row
               (points, circles, squares, bars, rects, ticks, rules, or text)
               renders to a canvas instead of SVG, so pointer moves and reruns
-              stay fast. On a canvas, assistive technologies can't reach the
-              individual marks.
+              stay fast. On a canvas, assistive technologies only get the
+              chart's accessible name; marks, axes, and legends aren't
+              exposed.
             - A chart whose marks draw more than 5,000 rows, lines and areas
               included, sets ``config.mark.aria`` to ``False``. This skips the
               screen-reader description that Vega-Lite builds for every mark.
-              Axes, legends, and the chart's accessible name stay available.
+              On SVG charts, axes, legends, and the chart's accessible name
+              stay available.
 
             Streamlit counts the rows of each view's data, adds up layered and
             concatenated views, and skips views that aggregate or filter their

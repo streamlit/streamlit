@@ -145,6 +145,12 @@ describe("applyLargeDataDefaults: canvas renderer", () => {
     ["filter", { filter: "datum.y > 0" }],
     ["sample", { sample: 100 }],
     ["density", { density: "y" }],
+    ["density with an extent", { density: "y", extent: [0, 100] }],
+    [
+      "regression with an extent",
+      { regression: "y", on: "x", extent: [0, 1] },
+    ],
+    ["unknown", { custom: "y" }],
   ])("skips a view with a %s transform", (_, transform) => {
     const spec = unitSpec("point", { transform: [transform] })
     expect(rendererOf(prepare(spec, counts(100_000)))).toBe(undefined)
@@ -226,6 +232,28 @@ describe("applyLargeDataDefaults: row counts", () => {
     }
   })
 
+  it("skips layers under a parent layer's aggregate", () => {
+    const spec: Spec = {
+      data: { name: "points" },
+      encoding: {
+        x: { field: "cat", type: "nominal" },
+        y: { aggregate: "sum", field: "v", type: "quantitative" },
+      },
+      layer: [{ mark: "bar" }, { mark: "text" }],
+    }
+    const prepared = prepare(spec, counts(100_000))
+    expect(prepared).not.toHaveProperty("usermeta")
+    expect(prepared).not.toHaveProperty("config")
+  })
+
+  it("does not pass an aggregate on to concatenated views", () => {
+    const spec: Spec = {
+      encoding: { y: { aggregate: "count", type: "quantitative" } },
+      hconcat: [unitSpec("point")],
+    }
+    expect(rendererOf(prepare(spec, counts(ABOVE)))).toBe("canvas")
+  })
+
   it("does not count children of a filtered parent", () => {
     const spec: Spec = {
       data: { name: "points" },
@@ -284,6 +312,29 @@ describe("applyLargeDataDefaults: mark ARIA", () => {
   ])("keeps ARIA for views with %s", (_, mark, encoding) => {
     const spec = unitSpec(mark)
     spec.encoding = { ...(spec.encoding as Spec), ...encoding }
+    expect(markAriaOf(prepare(spec, counts(ABOVE)))).toBe(undefined)
+  })
+
+  it("keeps ARIA for described views of unknown size", () => {
+    const spec: Spec = {
+      layer: [
+        unitSpec("line"),
+        {
+          data: { url: "notes.csv" },
+          mark: "text",
+          encoding: { description: { field: "note" } },
+        },
+      ],
+    }
+    expect(markAriaOf(prepare(spec, counts(ABOVE)))).toBe(undefined)
+  })
+
+  it("keeps ARIA when a parent layer describes the marks", () => {
+    const spec: Spec = {
+      data: { name: "points" },
+      encoding: { description: { field: "note" } },
+      layer: [{ mark: "line" }],
+    }
     expect(markAriaOf(prepare(spec, counts(ABOVE)))).toBe(undefined)
   })
 

@@ -21,30 +21,23 @@ import { type EChartsOptionObject, toComponentList } from "./CustomTheme"
 type SeriesOption = Record<string, unknown>
 
 /**
- * Item counts from which a series gets ``large: true``.
+ * Item counts above which a series gets ``large: true``.
  *
- * Bars use ECharts' default ``largeThreshold``. Scatter waits longer than
- * ECharts' 2,000: large mode fills up to 10,000 points into one path, so
- * overlapping semi-transparent points stop darkening each other. From 20,000
- * points the series spans several paths again, and dense areas look nearly
- * the same as without large mode.
+ * Large mode never animates, so bars wait for ECharts' default
+ * ``animationThreshold`` (2,000 items), above which ECharts skips animations
+ * anyway. Scatter waits longer: large mode fills up to 10,000 points into one
+ * path, so overlapping semi-transparent points stop darkening each other.
+ * Above 20,000 points the series spans several paths again, and dense areas
+ * look nearly the same as without large mode.
  */
 export const LARGE_MODE_THRESHOLDS: ReadonlyMap<string, number> = new Map([
   ["scatter", 20_000],
-  ["bar", 400],
+  ["bar", 2000],
 ])
 
 /**
- * ECharts' default ``animationThreshold``: series with more items than this
- * don't animate. Large mode never animates, so it waits until ECharts would
- * skip the animations anyway.
- */
-export const DEFAULT_ANIMATION_THRESHOLD = 2000
-
-/**
- * Line series with more points than this hide their symbols. It matches
- * ECharts' default ``animationThreshold``, above which ECharts already treats
- * a series as too dense to animate.
+ * Line series with more points than this hide their symbols, which overlap
+ * into a solid band at typical chart widths.
  */
 export const LINE_SYMBOL_THRESHOLD = 2000
 
@@ -85,7 +78,10 @@ interface ChartContext {
   hasVisualMap: boolean
   /** A tooltip triggers on items, so hovering needs a drawn symbol. */
   hasItemTooltip: boolean
-  /** Zooming in can thin a dense line until its symbols are readable. */
+  /**
+   * A ``dataZoom`` or toolbox zoom can thin a dense line until its symbols
+   * are readable.
+   */
   hasDataZoom: boolean
   /** ARIA decal patterns fill each item. */
   hasDecal: boolean
@@ -143,14 +139,82 @@ function hasStyledItems(data: unknown): boolean {
   )
 }
 
-function configuresSelection(target: EChartsOptionObject): boolean {
-  if ("brush" in target) {
-    return true
-  }
+function hasToolboxFeature(
+  target: EChartsOptionObject,
+  name: string
+): boolean {
   return toComponentList(target.toolbox).some(toolbox => {
     const { feature } = toolbox
-    return isPlainObject(feature) && "brush" in (feature as SeriesOption)
+    return isPlainObject(feature) && name in (feature as SeriesOption)
   })
+}
+
+/** ECharts treats ``null``, ``undefined``, and ``"-"`` as empty values. */
+function isEmptyValue(value: unknown): boolean {
+  return value === null || value === undefined || value === "-"
+}
+
+/**
+ * Whether a data item or dataset row has an empty value, in ``dimension`` if
+ * it names one.
+ */
+function hasEmptyCell(row: unknown, dimension: unknown): boolean {
+  if (Array.isArray(row)) {
+    return typeof dimension === "number"
+      ? isEmptyValue(row[dimension])
+      : row.some(isEmptyValue)
+  }
+  if (isPlainObject(row)) {
+    const cells = row as SeriesOption
+    return typeof dimension === "string"
+      ? isEmptyValue(cells[dimension])
+      : Object.values(cells).some(isEmptyValue)
+  }
+  return isEmptyValue(row)
+}
+
+/**
+ * Whether a line series breaks at empty values. A point between two gaps is
+ * drawn only as a symbol, so hiding the symbols would hide the point.
+ */
+function hasLineGaps(
+  series: SeriesOption,
+  target: EChartsOptionObject
+): boolean {
+  if (series.connectNulls === true) {
+    return false
+  }
+  const yDimension = isPlainObject(series.encode)
+    ? (series.encode as SeriesOption).y
+    : undefined
+  const { data } = series
+  if (Array.isArray(data)) {
+    return data.some(item =>
+      hasEmptyCell(
+        isPlainObject(item) ? (item as SeriesOption).value : item,
+        yDimension
+      )
+    )
+  }
+  const source = findReferencedComponent(
+    toComponentList(target.dataset),
+    series,
+    "dataset"
+  )?.source
+  if (Array.isArray(source)) {
+    return source.some(row => hasEmptyCell(row, yDimension))
+  }
+  if (isPlainObject(source)) {
+    const columns = source as SeriesOption
+    const checked =
+      typeof yDimension === "string"
+        ? [columns[yDimension]]
+        : Object.values(columns)
+    return checked.some(
+      column => Array.isArray(column) && column.some(isEmptyValue)
+    )
+  }
+  return false
 }
 
 function hasItemTooltip(target: EChartsOptionObject): boolean {
@@ -237,19 +301,6 @@ function countSeriesItems(
   return dataset ? countSourceRows(dataset) : null
 }
 
-/** The series' ``animationThreshold``, read the way ECharts reads it. */
-function getAnimationThreshold(
-  series: SeriesOption,
-  target: EChartsOptionObject
-): number {
-  for (const value of [series.animationThreshold, target.animationThreshold]) {
-    if (typeof value === "number") {
-      return value
-    }
-  }
-  return DEFAULT_ANIMATION_THRESHOLD
-}
-
 function isCartesianSeries(series: SeriesOption): boolean {
   return (
     series.coordinateSystem === undefined ||
@@ -266,16 +317,20 @@ function isCategoryAxis(axis: Record<string, unknown>): boolean {
 }
 
 /**
- * Whether large mode would draw the series as it looks today.
+ * Whether large mode draws the series the same as regular mode.
  *
  * Large mode draws all items of a series as one path with the series style.
  * It has no per-item styles, labels, emphasis, selection, or visual mapping,
- * and large bars have no stroke, rounded corners, or polar layout.
+ * a gradient spans the whole path instead of each item, and large bars have
+ * no stroke, rounded corners, or polar layout.
  */
 function canUseLargeMode(
   series: SeriesOption,
   context: ChartContext
 ): boolean {
+  const itemStyle = isPlainObject(series.itemStyle)
+    ? (series.itemStyle as SeriesOption)
+    : {}
   if (
     context.hasSelection ||
     context.hasVisualMap ||
@@ -286,14 +341,12 @@ function canUseLargeMode(
     "emphasis" in series ||
     "select" in series ||
     "blur" in series ||
+    isPlainObject(itemStyle.color) ||
     hasStyledItems(series.data)
   ) {
     return false
   }
   if (series.type === "bar") {
-    const itemStyle = isPlainObject(series.itemStyle)
-      ? (series.itemStyle as SeriesOption)
-      : {}
     return (
       isCartesianSeries(series) &&
       !isPositiveNumber(itemStyle.borderWidth) &&
@@ -309,29 +362,23 @@ function canUseLargeMode(
   )
 }
 
+/**
+ * Add ``large: true`` to a scatter or bar series above its threshold, if large
+ * mode draws it the same.
+ */
 function withLargeMode(
   series: SeriesOption,
   context: ChartContext
 ): SeriesOption {
-  const defaultThreshold =
+  const threshold =
     typeof series.type === "string"
       ? LARGE_MODE_THRESHOLDS.get(series.type)
       : undefined
-  if (defaultThreshold === undefined || "large" in series) {
+  if (threshold === undefined || "large" in series) {
     return series
   }
-  // A higher ``largeThreshold`` from the author would keep ECharts out of
-  // large mode anyway.
-  const threshold =
-    typeof series.largeThreshold === "number"
-      ? Math.max(series.largeThreshold, defaultThreshold)
-      : defaultThreshold
   const count = countSeriesItems(series, context.target)
-  if (
-    count === null ||
-    count < threshold ||
-    count <= getAnimationThreshold(series, context.target)
-  ) {
+  if (count === null || count <= threshold) {
     return series
   }
   return canUseLargeMode(series, context) ? { ...series, large: true } : series
@@ -344,7 +391,9 @@ function withLargeMode(
  * ECharts already thins symbols on category axes (``showAllSymbol``). Without
  * drawn symbols, an axis tooltip still highlights the hovered point, but item
  * tooltips, point selection, and brush highlights have nothing to target. A
- * zoomed-in ``dataZoom`` window could make the symbols readable again.
+ * zoomed-in ``dataZoom`` window could make the symbols readable again, a
+ * point between two gaps would vanish, and a styled symbol shows the author
+ * wants it drawn.
  */
 function shouldHideLineSymbols(
   series: SeriesOption,
@@ -352,6 +401,8 @@ function shouldHideLineSymbols(
 ): boolean {
   if (
     "showSymbol" in series ||
+    "symbol" in series ||
+    "symbolSize" in series ||
     // Sampling already reduces the drawn points to about the axis width.
     !(series.sampling === undefined || series.sampling === null) ||
     context.hasSelection ||
@@ -381,7 +432,8 @@ function shouldHideLineSymbols(
   return (
     count !== null &&
     count > LINE_SYMBOL_THRESHOLD &&
-    !hasStyledItems(series.data)
+    !hasStyledItems(series.data) &&
+    !hasLineGaps(series, target)
   )
 }
 
@@ -407,19 +459,18 @@ function withLargeDataDefaults(
  * Applied only to options the author left unset, and only where the chart
  * looks the same at that size:
  *
- * - ``large: true`` on scatter series with at least 20,000 points and bar
+ * - ``large: true`` on scatter series with more than 20,000 points and bar
  *   series with more than 2,000 bars. ECharts then draws each series as a few
- *   paths instead of one element per item. Large mode doesn't animate, so it
- *   waits for the series to pass ``animationThreshold``, where ECharts stops
- *   animating anyway.
+ *   paths instead of one element per item.
  * - ``showSymbol: false`` on line series with more than 2,000 points on value
  *   or time axes, where the symbols merge into a solid band.
  *
  * Series that large mode or hidden symbols would draw differently keep
  * ECharts' defaults: per-item styles or labels, selections, visual maps,
- * item tooltips on lines, and similar (see ``canUseLargeMode`` and
- * ``shouldHideLineSymbols``). Timeline options are handled on
- * ``baseOption``; per-tick and media overrides are left as they are.
+ * item tooltips or gaps on lines, and similar (see ``canUseLargeMode`` and
+ * ``shouldHideLineSymbols``). Options with a ``baseOption`` (timelines and
+ * media queries) are handled there; per-tick and media overrides are left as
+ * they are.
  *
  * @param option The parsed ECharts option object.
  * @param selectionActivated Whether ``on_select`` is active for the chart.
@@ -430,8 +481,8 @@ export function applyLargeDataDefaults(
   option: EChartsOptionObject,
   selectionActivated: boolean
 ): EChartsOptionObject {
-  const isTimeline = isPlainObject(option.baseOption)
-  const target = isTimeline
+  const hasBaseOption = isPlainObject(option.baseOption)
+  const target = hasBaseOption
     ? (option.baseOption as EChartsOptionObject)
     : option
   const { series } = target
@@ -441,10 +492,14 @@ export function applyLargeDataDefaults(
 
   const context: ChartContext = {
     target,
-    hasSelection: selectionActivated || configuresSelection(target),
+    hasSelection:
+      selectionActivated ||
+      "brush" in target ||
+      hasToolboxFeature(target, "brush"),
     hasVisualMap: target.visualMap !== undefined,
     hasItemTooltip: hasItemTooltip(target),
-    hasDataZoom: target.dataZoom !== undefined,
+    hasDataZoom:
+      target.dataZoom !== undefined || hasToolboxFeature(target, "dataZoom"),
     hasDecal: hasDecal(target),
   }
   const seriesList: unknown[] = Array.isArray(series) ? series : [series]
@@ -459,5 +514,7 @@ export function applyLargeDataDefaults(
     ...target,
     series: Array.isArray(series) ? updated : updated[0],
   }
-  return isTimeline ? { ...option, baseOption: updatedTarget } : updatedTarget
+  return hasBaseOption
+    ? { ...option, baseOption: updatedTarget }
+    : updatedTarget
 }

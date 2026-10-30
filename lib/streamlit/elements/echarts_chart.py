@@ -1031,7 +1031,7 @@ class EChartsMixin:
             your ``spec`` doesn't set them. It counts the items in each
             series' ``data`` or in its dataset's ``source``:
 
-            - ``"large": True`` on ``scatter`` series with at least 20,000
+            - ``"large": True`` on ``scatter`` series with more than 20,000
               points and on ``bar`` series with more than 2,000 bars. ECharts
               then draws each series in a few batched paths instead of one
               shape per item, which loads much faster. At these sizes ECharts
@@ -1043,12 +1043,14 @@ class EChartsMixin:
               (``"tooltip": {"trigger": "axis"}``) still marks the hovered
               point.
 
-            Streamlit leaves a series unchanged if these options would change
-            how it looks or behaves. For example, it skips series with
-            per-item styles or labels, charts with selections (``on_select``,
-            ``selectedMode``, or a ``brush``) or a ``visualMap``, and line
-            charts with an item tooltip or a ``dataZoom``. To opt out, set the
-            option yourself, for example ``"large": False``. For line charts
+            Streamlit leaves a series unchanged where these options would
+            change how it looks or break a feature it uses. For example, it
+            skips series with per-item styles, labels, or gradient fills,
+            charts with selections (``on_select``, ``selectedMode``, or a
+            ``brush``) or a ``visualMap``, and line series that set
+            ``symbol``, have empty values, or are in a chart with an item
+            tooltip or a zoom. To opt out, set the option yourself, for
+            example ``"large": False``. For line charts
             with even more points, you can set ``"sampling": "lttb"``, which
             draws a subset of points that keeps the line's shape. Streamlit
             doesn't set it for you because it changes which points are drawn

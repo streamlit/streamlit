@@ -274,8 +274,8 @@ const generateSpec = (
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
 
-  // Canvas rendering and no per-mark ARIA descriptions for large charts,
-  // unless the author chose a renderer or ARIA setting.
+  // Render large charts to canvas and skip per-mark ARIA, unless the author
+  // set the renderer or ARIA.
   applyLargeDataDefaults(spec, rowCounts)
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- title may be a string, array, object, or null; a missing or empty title is left unchanged

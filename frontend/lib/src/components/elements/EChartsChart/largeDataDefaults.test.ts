@@ -19,7 +19,6 @@ import { describe, expect, it } from "vitest"
 import type { EChartsOptionObject } from "./CustomTheme"
 import {
   applyLargeDataDefaults,
-  DEFAULT_ANIMATION_THRESHOLD,
   LARGE_MODE_THRESHOLDS,
   LINE_SYMBOL_THRESHOLD,
 } from "./largeDataDefaults"
@@ -27,8 +26,10 @@ import {
 type Series = Record<string, unknown>
 
 const SCATTER_THRESHOLD = LARGE_MODE_THRESHOLDS.get("scatter") ?? 0
-/** Bars wait until ECharts stops animating them. */
-const BAR_THRESHOLD = DEFAULT_ANIMATION_THRESHOLD + 1
+/** The smallest scatter series that gets large mode. */
+const DENSE_SCATTER = SCATTER_THRESHOLD + 1
+/** The smallest bar series that gets large mode. */
+const DENSE_BARS = (LARGE_MODE_THRESHOLDS.get("bar") ?? 0) + 1
 
 /** Rows shaped like a hydrated Arrow ``dataset.source``. */
 function rows(count: number): Array<Record<string, number>> {
@@ -63,15 +64,15 @@ function prepare(
 }
 
 describe("applyLargeDataDefaults: large mode", () => {
-  it.each([
-    ["scatter", SCATTER_THRESHOLD],
-    ["bar", BAR_THRESHOLD],
-  ])("sets large on a %s series from %i items", (type, threshold) => {
-    expect(prepare(datasetChart({ type }, threshold)).large).toBe(true)
-    expect(prepare(datasetChart({ type }, threshold - 1))).not.toHaveProperty(
-      "large"
-    )
-  })
+  it.each([...LARGE_MODE_THRESHOLDS])(
+    "sets large on a %s series above %i items",
+    (type, threshold) => {
+      expect(prepare(datasetChart({ type }, threshold + 1)).large).toBe(true)
+      expect(prepare(datasetChart({ type }, threshold))).not.toHaveProperty(
+        "large"
+      )
+    }
+  )
 
   it.each([true, false])("keeps an explicit large: %s", large => {
     const option = datasetChart({ type: "scatter", large }, 100_000)
@@ -79,41 +80,13 @@ describe("applyLargeDataDefaults: large mode", () => {
     expect(prepare(option).large).toBe(large)
   })
 
-  it("waits for the author's higher largeThreshold", () => {
-    const series = { type: "scatter", largeThreshold: 50_000 }
-    expect(prepare(datasetChart(series, 49_999))).not.toHaveProperty("large")
-    expect(prepare(datasetChart(series, 50_000)).large).toBe(true)
-  })
-
-  it("waits for the series to pass animationThreshold", () => {
-    const chart = (count: number, extra: EChartsOptionObject = {}): Series =>
-      prepare(
-        datasetChart({ type: "bar", ...extra }, count, {
-          animationThreshold: 5000,
-        })
-      )
-    expect(chart(5000)).not.toHaveProperty("large")
-    expect(chart(5001).large).toBe(true)
-    // The series' own threshold wins over the chart's.
-    expect(chart(5001, { animationThreshold: 10_000 })).not.toHaveProperty(
-      "large"
-    )
-  })
-
-  it("keeps its own threshold over a lower largeThreshold", () => {
-    const series = { type: "scatter", largeThreshold: 100 }
-    expect(
-      prepare(datasetChart(series, SCATTER_THRESHOLD - 1))
-    ).not.toHaveProperty("large")
-  })
-
   it("leaves a small chart's option untouched", () => {
-    const option = datasetChart({ type: "scatter" }, SCATTER_THRESHOLD - 1)
+    const option = datasetChart({ type: "scatter" }, SCATTER_THRESHOLD)
     expect(applyLargeDataDefaults(option, false)).toBe(option)
   })
 
   it("counts inline series data", () => {
-    const data = Array.from({ length: BAR_THRESHOLD }, (_, i) => [i, i])
+    const data = Array.from({ length: DENSE_BARS }, (_, i) => [i, i])
     const option = { xAxis: {}, yAxis: {}, series: { type: "bar", data } }
     const prepared = applyLargeDataDefaults(option, false)
     expect((prepared.series as Series).large).toBe(true)
@@ -131,7 +104,7 @@ describe("applyLargeDataDefaults: large mode", () => {
       false,
     ],
   ])("skips a chart with %s", (_, extra, selectionActivated) => {
-    const option = datasetChart({ type: "scatter" }, SCATTER_THRESHOLD, extra)
+    const option = datasetChart({ type: "scatter" }, DENSE_SCATTER, extra)
     expect(applyLargeDataDefaults(option, selectionActivated)).toBe(option)
   })
 
@@ -148,9 +121,13 @@ describe("applyLargeDataDefaults: large mode", () => {
     ["hollow symbols", { symbol: "emptyCircle" }],
     ["rotated symbols", { symbolRotate: 45 }],
     ["offset symbols", { symbolOffset: [0, 5] }],
+    [
+      "gradient fills",
+      { itemStyle: { color: { type: "linear", colorStops: [] } } },
+    ],
   ])("skips a scatter series with %s", (_, series) => {
     expect(
-      prepare(datasetChart({ type: "scatter", ...series }, SCATTER_THRESHOLD))
+      prepare(datasetChart({ type: "scatter", ...series }, DENSE_SCATTER))
     ).not.toHaveProperty("large")
   })
 
@@ -175,9 +152,8 @@ describe("applyLargeDataDefaults: large mode", () => {
       { itemStyle: { color: "#f00", opacity: 0.5 } },
     ]) {
       expect(
-        prepare(
-          datasetChart({ type: "scatter", ...series }, SCATTER_THRESHOLD)
-        ).large
+        prepare(datasetChart({ type: "scatter", ...series }, DENSE_SCATTER))
+          .large
       ).toBe(true)
     }
     expect(
@@ -186,10 +162,10 @@ describe("applyLargeDataDefaults: large mode", () => {
   })
 
   it("skips series data items with their own style", () => {
-    const data: unknown[] = Array.from(
-      { length: SCATTER_THRESHOLD },
-      (_, i) => [i, i]
-    )
+    const data: unknown[] = Array.from({ length: DENSE_SCATTER }, (_, i) => [
+      i,
+      i,
+    ])
     data[10] = { value: [10, 10], itemStyle: { color: "red" } }
     const option = { xAxis: {}, yAxis: {}, series: { type: "scatter", data } }
     expect(applyLargeDataDefaults(option, false)).toBe(option)
@@ -213,7 +189,7 @@ describe("applyLargeDataDefaults: dataset row counts", () => {
   it("picks the dataset by datasetIndex or datasetId", () => {
     const datasets = [
       { source: rows(10) },
-      { id: "big", source: rows(SCATTER_THRESHOLD) },
+      { id: "big", source: rows(DENSE_SCATTER) },
     ]
     const byIndex = {
       dataset: datasets,
@@ -232,7 +208,7 @@ describe("applyLargeDataDefaults: dataset row counts", () => {
 
   it("counts column-oriented sources by their longest column", () => {
     const source = {
-      x: Array.from({ length: BAR_THRESHOLD }, (_, i) => i),
+      x: Array.from({ length: DENSE_BARS }, (_, i) => i),
       y: [1],
     }
     expect(
@@ -246,8 +222,8 @@ describe("applyLargeDataDefaults: dataset row counts", () => {
   ])("skips %s", (_, dataset) => {
     const option = {
       dataset: [
-        { source: rows(SCATTER_THRESHOLD) },
-        { source: rows(SCATTER_THRESHOLD), ...dataset },
+        { source: rows(DENSE_SCATTER) },
+        { source: rows(DENSE_SCATTER), ...dataset },
       ],
       series: [{ type: "scatter", datasetIndex: 1 }],
     }
@@ -261,7 +237,7 @@ describe("applyLargeDataDefaults: dataset row counts", () => {
 
   it("fills timeline charts on baseOption only", () => {
     const option = {
-      baseOption: datasetChart({ type: "scatter" }, SCATTER_THRESHOLD),
+      baseOption: datasetChart({ type: "scatter" }, DENSE_SCATTER),
       options: [{ series: [{ type: "scatter", data: rows(5000) }] }],
     }
     const prepared = applyLargeDataDefaults(option, false)
@@ -316,6 +292,7 @@ describe("applyLargeDataDefaults: line symbols", () => {
     ["an explicit item tooltip", { tooltip: { trigger: "item" } }],
     ["a brush", { brush: {} }],
     ["a dataZoom", { dataZoom: [{ type: "inside" }] }],
+    ["a toolbox zoom", { toolbox: { feature: { dataZoom: {} } } }],
     ["no x-axis", { xAxis: undefined }],
   ])("skips a chart with %s", (_, extra) => {
     const option = datasetChart({ type: "line" }, 5000, extra)
@@ -332,6 +309,8 @@ describe("applyLargeDataDefaults: line symbols", () => {
 
   it.each([
     ["sampling", { sampling: "lttb" }],
+    ["a symbol", { symbol: "diamond" }],
+    ["a symbol size", { symbolSize: 8 }],
     ["selectedMode", { selectedMode: "single" }],
     ["shown labels", { label: { show: true } }],
     ["polar coordinates", { coordinateSystem: "polar" }],
@@ -343,6 +322,71 @@ describe("applyLargeDataDefaults: line symbols", () => {
   it("skips a selection-activated chart", () => {
     const option = datasetChart({ type: "line" }, 5000)
     expect(applyLargeDataDefaults(option, true)).toBe(option)
+  })
+
+  it("keeps symbols on lines with gaps unless connectNulls is set", () => {
+    const source: Array<Record<string, number | null>> = rows(5000)
+    source[100] = { x: 100, y: null }
+    expect(
+      applyLargeDataDefaults(
+        datasetChart({ type: "line" }, 0, { dataset: { source } }),
+        false
+      ).series
+    ).toEqual([{ encode: { x: "x", y: "y" }, type: "line" }])
+    expect(
+      prepare(
+        datasetChart({ type: "line", connectNulls: true }, 0, {
+          dataset: { source },
+        })
+      ).showSymbol
+    ).toBe(false)
+
+    // Only the encoded y column counts.
+    source[100] = { x: 100, y: 1, note: null }
+    expect(
+      prepare(datasetChart({ type: "line" }, 0, { dataset: { source } }))
+        .showSymbol
+    ).toBe(false)
+  })
+
+  it.each([
+    ["a null point", [[1, 1], null, [3, 3]]],
+    [
+      "a null value",
+      [
+        [1, 1],
+        [2, null],
+        [3, 3],
+      ],
+    ],
+    [
+      "a '-' value",
+      [
+        [1, 1],
+        [2, "-"],
+        [3, 3],
+      ],
+    ],
+    ["an empty item value", [[1, 1], { value: [2, null] }, [3, 3]]],
+  ])("keeps symbols on inline data with %s", (_, gap) => {
+    const data: unknown[] = Array.from({ length: 5000 }, (_, i) => [i, i])
+    data.splice(10, 3, ...gap)
+    const option = {
+      xAxis: { type: "value" },
+      yAxis: { type: "value" },
+      series: [{ type: "line", data }],
+    }
+    expect(applyLargeDataDefaults(option, false)).toBe(option)
+  })
+
+  it("keeps symbols on column sources with a gap in the y column", () => {
+    const x = Array.from({ length: 5000 }, (_, i) => i)
+    const y: Array<number | null> = [...x]
+    y[7] = null
+    const option = datasetChart({ type: "line" }, 0, {
+      dataset: { source: { x, y } },
+    })
+    expect(applyLargeDataDefaults(option, false)).toBe(option)
   })
 
   it("skips lines with highlighted data items", () => {
@@ -358,7 +402,7 @@ describe("applyLargeDataDefaults: line symbols", () => {
 
   it("only changes the dense series of a multi-series chart", () => {
     const option = {
-      dataset: [{ source: rows(SCATTER_THRESHOLD) }, { source: rows(100) }],
+      dataset: [{ source: rows(DENSE_SCATTER) }, { source: rows(100) }],
       xAxis: { type: "time" },
       yAxis: { type: "value" },
       series: [

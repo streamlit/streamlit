@@ -537,7 +537,8 @@ def test_large_data_defaults(app: Page):
     # so only the axes, grid, and series paths remain.
     for key in ("c_dense_bar", "c_dense_line"):
         expect(_get_chart(app, key)).to_have_attribute("aria-busy", "false")
-        assert shapes[key].count() < 100
+    wait_until(app, lambda: 0 < shapes["c_dense_bar"].count() < 100)
+    wait_until(app, lambda: 0 < shapes["c_dense_line"].count() < 100)
 
     # The axis tooltip still shows the hovered point and marks it with a symbol.
     tooltip = app.locator(".echarts-dense-tooltip")
