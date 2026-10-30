@@ -22,7 +22,7 @@ New features should include:
    - New elements: add to `lib/streamlit/__init__.py`
    - Public `st.*` commands: decorate with `gather_metrics`. Use it only for those public APIs, not internal helpers.
    - New elements and parameters: describe them for the agent API with `agent_spec.element(...)` or `agent_spec.block(...)` where the proto is filled, and pass that as `agent_props=`. See "Agent API element descriptions" in `lib/streamlit/AGENTS.md`.
-   - New widgets and constraint parameters (options, bounds, `max_chars`, `required`): check client values in the serde's `validate` method and pass it to `register_widget(..., validator=serde.validate)`. Without it, the server accepts any value of the right wire type. See the client value boundary check in the architecture skill's [`references/backend.md`](../.claude/skills/understanding-streamlit-architecture/references/backend.md).
+   - New widgets and constraint parameters (options, bounds, `max_chars`, `required`): check client values in the serde's `validate` method and pass it to `register_widget(..., validator=serde.validate)`. Without it, the server accepts any value of the right wire type, and `lib/tests/streamlit/runtime/state/validator_coverage_test.py` fails until the widget passes one or its function is listed in `_WITHOUT_VALIDATOR` with the reason. See the client value boundary check in the architecture skill's [`references/backend.md`](../.claude/skills/understanding-streamlit-architecture/references/backend.md).
 
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`

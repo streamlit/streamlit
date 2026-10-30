@@ -427,9 +427,15 @@ widget makes this change in the item that gives it a validator (items 2 and 4).
   written twice: in the deserializer, for URL values, and again in the widget function
   after registration. `validate` replaces the deserializer's copy.
 - **A widget is reviewed in one file:** what it renders, what it accepts, and how it reads
-  values. A coverage test, like the agent description test, fails for a value widget
-  registered without a validator unless an explicit list says any value of the right wire
-  type is legal, as for `checkbox`, `toggle`, and buttons.
+  values. A coverage test, `lib/tests/streamlit/runtime/state/validator_coverage_test.py`,
+  reads every `register_widget` call in `lib/streamlit` and fails for one without a
+  validator, unless its `_WITHOUT_VALIDATOR` list names the calling function with the
+  reason. Any value of the right wire type is legal for `checkbox`, `toggle`, buttons,
+  and the open state of `st.expander`, `st.popover`, and `st.dialog`, and custom
+  components declare no constraints. The data editor (item 6), dataframe and chart
+  selections (items 8 and 12), and uploads (item 11) are listed until their items land.
+  Unlike the agent description test, it reads the calls instead of running the element
+  mocks, so a call no mock reaches, such as a `ButtonColumn` click, is covered too.
 
 **What does not belong in the serde.** Rules about the protocol or about containers stay
 in `widget_checks.check_client_value`, which calls `metadata.validator` as step 6:
