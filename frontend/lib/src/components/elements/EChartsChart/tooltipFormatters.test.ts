@@ -18,7 +18,10 @@ import { getLogger } from "loglevel"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { EChartsOptionObject } from "./CustomTheme"
-import { applyTooltipFormatters } from "./tooltipFormatters"
+import {
+  applyTimeLabelFormatters,
+  applyTooltipFormatters,
+} from "./tooltipFormatters"
 
 const LOG = getLogger("EChartsChart")
 
@@ -351,5 +354,197 @@ describe("applyTooltipFormatters", () => {
 
     expect(result).toBe(option)
     expect(dataItem.tooltip.valueFormatter).toBe("dollar")
+  })
+})
+
+type AxisPointerFormatter = (params: { value: unknown }) => string
+
+const AUTHOR_AXIS_POINTER = { label: { formatter: "{value}" } }
+
+/** Read the axis pointer label formatter set on an axis config. */
+function axisPointerFormatterOf(axis: unknown): AxisPointerFormatter {
+  const formatter = (
+    axis as { axisPointer?: { label?: { formatter?: unknown } } }
+  ).axisPointer?.label?.formatter
+  expect(formatter).toBeTypeOf("function")
+  return formatter as AxisPointerFormatter
+}
+
+/** A timestamp on 2026-08-18 in the test's local time zone. */
+function localTime(hours = 0, minutes = 0, milliseconds = 0): number {
+  return new Date(2026, 7, 18, hours, minutes, 0, milliseconds).getTime()
+}
+
+describe("applyTimeLabelFormatters", () => {
+  const timeAxisOption = {
+    xAxis: { type: "time" },
+    yAxis: { type: "value" },
+    tooltip: { trigger: "axis" },
+  }
+
+  beforeEach(() => {
+    // A zone behind UTC, so local and UTC midnight differ. Streamlit sends
+    // naive datetimes as local ISO strings.
+    process.env.TZ = "America/New_York"
+  })
+
+  afterEach(() => {
+    process.env.TZ = "UTC"
+  })
+
+  it("shows midnight values on a time axis as dates", () => {
+    const result = applyTimeLabelFormatters(timeAxisOption, "streamlit")
+    const formatter = axisPointerFormatterOf(result.xAxis)
+
+    expect(formatter({ value: localTime() })).toBe("2026-08-18")
+    expect(formatter({ value: localTime(14, 30) })).toBe("2026-08-18 14:30:00")
+    // An axis pointer that doesn't snap to data passes any instant, so the
+    // label stops at seconds instead of printing a changing millisecond.
+    expect(formatter({ value: localTime(0, 0, 250) })).toBe(
+      "2026-08-18 00:00:00"
+    )
+    // ECharts parses naive ISO and date-only strings as local time.
+    expect(formatter({ value: "2026-08-18T00:00:00.000" })).toBe("2026-08-18")
+    expect(formatter({ value: "2026-08-18" })).toBe("2026-08-18")
+    // A value axis keeps ECharts' number labels.
+    expect(result.yAxis).toBe(timeAxisOption.yAxis)
+    // The input spec is not mutated.
+    expect(timeAxisOption.xAxis).toEqual({ type: "time" })
+  })
+
+  it("formats in UTC when the chart sets useUTC", () => {
+    const utcMidnight = Date.UTC(2026, 7, 18)
+    const format = (option: EChartsOptionObject, value: number): string =>
+      axisPointerFormatterOf(
+        applyTimeLabelFormatters(option, "streamlit").xAxis
+      )({ value })
+
+    expect(
+      format({ useUTC: true, xAxis: { type: "time" } }, utcMidnight)
+    ).toBe("2026-08-18")
+    // Local midnight in New York is 04:00 UTC.
+    expect(
+      format({ useUTC: true, xAxis: { type: "time" } }, localTime())
+    ).toBe("2026-08-18 04:00:00")
+    expect(format({ xAxis: { type: "time" } }, utcMidnight)).toBe(
+      "2026-08-17 20:00:00"
+    )
+  })
+
+  it("converts a timeline's baseOption and reads its useUTC", () => {
+    const tick = { xAxis: { type: "time" } }
+    const result = applyTimeLabelFormatters(
+      {
+        useUTC: false,
+        baseOption: { useUTC: true, xAxis: { type: "time" } },
+        options: [tick],
+      },
+      "streamlit"
+    )
+    const baseOption = result.baseOption as EChartsOptionObject
+
+    expect(
+      axisPointerFormatterOf(baseOption.xAxis)({
+        value: Date.UTC(2026, 7, 18),
+      })
+    ).toBe("2026-08-18")
+    // Timeline ticks merge into the base axis, so they stay as given.
+    expect((result.options as unknown[])[0]).toBe(tick)
+  })
+
+  it("fills every time axis and keeps existing axis pointer settings", () => {
+    const result = applyTimeLabelFormatters(
+      {
+        xAxis: [
+          { type: "time", axisPointer: { label: { show: true } } },
+          { type: "category" },
+        ],
+        yAxis: { type: "time" },
+      },
+      "streamlit"
+    )
+
+    const [timeAxis, categoryAxis] = result.xAxis as Array<{
+      axisPointer?: { label?: { show?: boolean } }
+    }>
+    expect(axisPointerFormatterOf(timeAxis)({ value: localTime() })).toBe(
+      "2026-08-18"
+    )
+    expect(timeAxis.axisPointer?.label?.show).toBe(true)
+    expect(categoryAxis).toEqual({ type: "category" })
+    expect(axisPointerFormatterOf(result.yAxis)({ value: localTime() })).toBe(
+      "2026-08-18"
+    )
+  })
+
+  it.each([
+    [
+      "the axis",
+      { xAxis: { type: "time", axisPointer: AUTHOR_AXIS_POINTER } },
+    ],
+    [
+      "tooltip.axisPointer",
+      { ...timeAxisOption, tooltip: { axisPointer: AUTHOR_AXIS_POINTER } },
+    ],
+    [
+      "a tooltip in a list",
+      {
+        ...timeAxisOption,
+        tooltip: [{ trigger: "axis" }, { axisPointer: AUTHOR_AXIS_POINTER }],
+      },
+    ],
+    [
+      "grid.tooltip.axisPointer",
+      {
+        ...timeAxisOption,
+        grid: [{ tooltip: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "the top-level axisPointer",
+      { ...timeAxisOption, axisPointer: AUTHOR_AXIS_POINTER },
+    ],
+    [
+      "a timeline tick's tooltip",
+      {
+        baseOption: timeAxisOption,
+        options: [{ tooltip: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "a media override's top-level axisPointer",
+      {
+        ...timeAxisOption,
+        media: [{ query: {}, option: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "a media override in baseOption",
+      {
+        baseOption: {
+          ...timeAxisOption,
+          media: [
+            {
+              option: {
+                grid: { tooltip: { axisPointer: AUTHOR_AXIS_POINTER } },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  ])("keeps an axis pointer formatter set on %s", (_case, option) => {
+    expect(applyTimeLabelFormatters(option, "streamlit")).toBe(option)
+  })
+
+  it.each([
+    ["theme=None", timeAxisOption, ""],
+    [
+      "a chart without a time axis",
+      { xAxis: { type: "category" }, yAxis: {} },
+      "streamlit",
+    ],
+  ])("returns the input for %s", (_case, option, theme) => {
+    expect(applyTimeLabelFormatters(option, theme)).toBe(option)
   })
 })

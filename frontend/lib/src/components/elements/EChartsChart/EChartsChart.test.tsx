@@ -534,6 +534,27 @@ describe("EChartsChart", () => {
     expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
   })
 
+  it.each([
+    ["sets", "the Streamlit theme", "streamlit", "function"],
+    ["skips", "theme=None", "", "undefined"],
+  ] as const)(
+    "%s the time axis label formatter with %s",
+    (_action, _case, theme, expectedType) => {
+      const spec = JSON.stringify({
+        xAxis: { type: "time" },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "axis" },
+        series: [{ type: "line", data: [["2026-08-18", 1]] }],
+      })
+      render(<Wrapper element={createElement({ spec, theme })} />)
+
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.xAxis.axisPointer?.label?.formatter).toBeTypeOf(
+        expectedType
+      )
+    }
+  )
+
   it("leaves the chart container's role to ECharts", () => {
     render(<Wrapper element={createElement()} />)
 

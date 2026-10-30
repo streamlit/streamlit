@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 25
+_EXPECTED_CHART_COUNT = 26
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -342,7 +342,9 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
 
 
 def test_tooltip_formatting_without_javascript(app: Page):
-    """Tooltip templates expand ``{@[n]}``, and ``valueFormatter`` formats numbers."""
+    """Tooltip templates expand ``{@[n]}``, ``valueFormatter`` formats numbers,
+    and a daily time axis heads its tooltip with a plain date.
+    """
     template_chart = _get_chart(app, "c_tooltip_template")
     # Heatmaps draw on two canvas layers.
     expect(template_chart.locator("canvas").first).to_be_visible()
@@ -361,6 +363,14 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(format_tooltip).to_contain_text("$1,234.57")
     # Dollar format rounds to cents, so the unrounded grouped value must not remain.
     expect(format_tooltip).not_to_contain_text("1,234.567")
+
+    daily_chart = _get_chart(app, "c_daily_time_tooltip")
+    expect(daily_chart.locator("canvas")).to_be_visible()
+    daily_chart.hover()
+    daily_tooltip = daily_chart.locator(".echarts-daily-tooltip")
+    expect(daily_tooltip).to_contain_text(re.compile(r"2026-0[78]-\d{2}"))
+    # Must NOT happen: the header keeps ECharts' midnight time.
+    expect(daily_tooltip).not_to_contain_text("00:00")
 
 
 def test_toolbar_actions(app: Page):

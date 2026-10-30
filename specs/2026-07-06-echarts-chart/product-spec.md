@@ -238,6 +238,21 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   config options `theme.chartCategoricalColors` and `theme.chartSequentialColors`. Candlesticks
   use the same rising green and falling red as `st.plotly_chart`.
 - **Typography** — title, axis labels, legend, and tooltip use Streamlit's font family and sizes.
+- **Time labels** — on a `type: "time"` `xAxis`/`yAxis`, the axis tooltip header and axis
+  pointer labels show a midnight value as a date (`2026-08-18`). ECharts picks one precision
+  per axis, so daily data spanning less than about five months otherwise reads
+  `2026-08-18 00:00:00`.
+  - Streamlit decides per value, which needs no data scan. Other values show their date and
+    time to the second, also on long axes where ECharts shows only the date, and without the
+    milliseconds ECharts shows on sub-second axes. An hourly series shows its midnight points
+    without a time.
+  - Labels use UTC when the spec sets `useUTC: true`, as ECharts does.
+  - An axis pointer label formatter anywhere in the spec wins (axis, `tooltip.axisPointer`,
+    `grid.tooltip.axisPointer`, top-level `axisPointer`), including one set only in a timeline
+    tick or `media` override. `"{value}"` restores ECharts' label.
+  - Only the chart option (`baseOption` on a timeline) gets the formatter. Timeline ticks and
+    `media` overrides inherit it when they merge over a base time axis, but a time axis that
+    only a tick or override declares keeps ECharts' labels, as do slider `dataZoom` labels.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.
@@ -735,11 +750,12 @@ st.echarts_chart(pie)
   raw-HTML tooltip rendering on the user's behalf (no HTML formatter injection; do not change
   `tooltip.renderMode`), and a required regression test asserts that HTML/script payloads in
   tooltip/label content render as escaped text. An app author who sets an HTML formatter in
-  `spec` is opting into the same trust model as Plotly/Vega. The one formatter Streamlit
+  `spec` is opting into the same trust model as Plotly/Vega. The one HTML formatter Streamlit
   builds is the [tooltip formatting](#tooltip-formatting) function, and it only replaces an
   author's string template, which ECharts already renders as HTML. It keeps the template's
   markup and escapes every value it inserts, and an e2e test covers an HTML payload expanded
-  through `{@[n]}`. A `valueFormatter` returns plain text, which ECharts escapes.
+  through `{@[n]}`. A `valueFormatter` and the time axis label formatter return plain text,
+  which ECharts escapes.
 - **Other JSON-reachable sinks.** Tooltip escaping is not the whole boundary. ECharts'
   [security guide](https://echarts.apache.org/handbook/en/best-practices/security/) also lists
   HTML/URL fields that a JSON spec can set (`toolbox.feature.dataView.title` / `lang`,
@@ -975,6 +991,9 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Tooltip formatting: string `valueFormatter` number formats (named, printf, arrays, numeric
   strings, invalid strings dropped with a warning) and `{@dim}` / `{@[n]}` expansion (array and
   object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
+- Time labels: midnight values show as dates in the axis tooltip header; other values keep
+  their time; `useUTC` and timeline `baseOption` handled; author formatters, non-time axes, and
+  `theme=None` left alone.
 - `pyecharts` `JsCode` / non-JSON charts raise; library-default InitOpts size is ignored;
   unsupported CSS units warn and fall back.
 - Display-only `key` still emits `st-key-*`; keyed `renderer` switch does not reset selection.
