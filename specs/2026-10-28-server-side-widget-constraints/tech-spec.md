@@ -922,7 +922,11 @@ validator decides whether it names an option, while free text, including a widge
 `accept_new_options`, takes no number. Its errors still list the options. An option
 error quotes the sent candidate, because options are not secrets and the client holds
 the value; every other error names only the constraint. A shared label that is
-unchanged on the wire, such as the reported value sent back, is accepted.
+unchanged on the wire, such as the reported value sent back, is accepted. Every value
+that is unchanged on the wire is left out of the `WidgetStates` the request sends, so it
+changes nothing. Sent, a shared label would resolve as for a browser, to the last option
+with that label except in `st.multiselect`, which need not be the option the widget
+holds, and so flip the widget and fire `on_change`.
 
 ### Performance
 

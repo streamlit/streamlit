@@ -1224,6 +1224,68 @@ async def test_sending_every_reported_value_back_changes_nothing(
 
 
 @pytest.mark.anyio
+async def test_sending_back_a_shared_label_keeps_the_held_option(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Each widget holds "a", which it shows as "A", as it shows the option "A".
+
+    Sending that label back runs no `on_change`, and the widget keeps "a"
+    instead of the last option with the label.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("changed", [])
+
+    def changed(key):
+        st.session_state.changed.append(key)
+
+    def widget(command, *args, key, **kwargs):
+        command(
+            key,
+            ["a", "A", "b"],
+            *args,
+            format_func=str.upper,
+            key=key,
+            on_change=changed,
+            args=(key,),
+            **kwargs,
+        )
+
+    widget(st.selectbox, key="select")
+    widget(st.radio, key="radio")
+    widget(st.pills, key="pills", default="a")
+    widget(st.select_slider, key="size", value="a")
+    widget(st.multiselect, key="many", default=["a"])
+    held = {key: st.session_state[key] for key in ("select", "radio", "pills", "size", "many")}
+    st.text(f"changed={st.session_state.changed}")
+    st.text(f"held={held}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call()
+        reported = {
+            action["key"]: _keyed(first, action["key"])["value"]
+            for action in first["actions"]
+            if action["kind"] == "value"
+        }
+        echoed = await app.call(
+            {"session_id": first["session_id"], "widget_state": reported}
+        )
+
+    assert reported == {
+        "select": "A",
+        "radio": "A",
+        "pills": "A",
+        "size": "A",
+        "many": ["A"],
+    }
+    assert _line(echoed, "changed") == "[]"
+    assert _line(echoed, "held") == (
+        "{'select': 'a', 'radio': 'a', 'pills': 'a', 'size': 'a', 'many': ['a']}"
+    )
+
+
+@pytest.mark.anyio
 async def test_a_refused_write_runs_nothing(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:

@@ -38,7 +38,8 @@ and the whole request is refused if any part of it is not legal. This covers:
   reads as the default without a conversion, so it is compared after
   deserializing: ``null`` to an empty required widget changes nothing. Unlike
   a browser session, a request is also refused for a label several options
-  share.
+  share, unless it is unchanged. A value that is unchanged is left out of the
+  ``WidgetStates``, so sending back what the snapshot reports changes nothing.
 - Forms: a form's fields go with one of its submit triggers, and a request
   cannot span two forms or mix a form with other controls.
 - Rerun scope (``resolve_fragment``): writes that share a fragment rerun only
@@ -354,7 +355,7 @@ def _check_with_widget(
     metadata: WidgetMetadata[Any],
     encoded: WidgetState,
     sent: _Sent,
-) -> None:
+) -> bool:
     """Refuse an encoded state that the widget's own checks refuse.
 
     This is the check a browser value passes at the boundary, against the
@@ -363,6 +364,11 @@ def _check_with_widget(
     equals the stored value serialized, so a value the deserializer would
     convert onto the stored one still reaches the widget's validator. Unlike a
     browser session, the agent API also refuses a label several options share.
+
+    Returns
+    -------
+    bool
+        Whether the state changes the widget's value.
     """
     stored_state: WidgetState | None = None
     try:
@@ -387,6 +393,7 @@ def _check_with_widget(
     )
     if result.violation is not None:
         raise _VIOLATION_ERRORS[result.violation.kind](result.violation, sent)
+    return result.changed
 
 
 def _require_actionable(
@@ -506,9 +513,12 @@ def build_widget_states(
 ) -> WidgetStates:
     """Validate a request's widget values and trigger, and encode both.
 
-    Only the addressed widgets are included. The runtime merges them into the
-    session's current widget state and works out what changed, exactly as it
-    does for a browser.
+    Only the addressed widgets whose value changes are included, and the
+    trigger. The runtime merges them into the session's current widget state
+    and works out what changed, exactly as it does for a browser. A value equal
+    to the stored one on the wire is left out: sent, a label that several
+    options share would resolve to one of them, which need not be the option
+    the widget holds, and flip it.
 
     Session state is read without the lock ``SafeSessionState`` takes, so call
     this while no run can start. Validation runs each addressed widget's
@@ -531,8 +541,8 @@ def build_widget_states(
     Returns
     -------
     WidgetStates
-        One ``WidgetState`` per addressed widget, in the order of
-        ``element_states``, with the trigger last.
+        One ``WidgetState`` per addressed widget whose value changes, in the
+        order of ``element_states``, with the trigger last.
 
     Raises
     ------
@@ -541,12 +551,13 @@ def build_widget_states(
         naming why.
     """
     states = WidgetStates()
+    addressed: set[str] = set()
     values: dict[str, WidgetState] = {}
     touched_forms: set[str] = set()
 
     for key, sent in (widget_state or {}).items():
         element_id = resolve_element_id(session_state, key, element_states)
-        if element_id in values:
+        if element_id in addressed:
             # An authored key and its element ID name the same widget, and
             # which of the two values would win is not something to guess.
             raise AgentRequestError(
@@ -589,14 +600,18 @@ def build_widget_states(
             clearable=state.clearable,
             as_list=state.schema_type == "array",
         )
-        _check_with_widget(
+        addressed.add(element_id)
+        touched_forms.add(state.form_id or "")
+        # A value equal to the stored one on the wire changes nothing, so it is
+        # left out. Sent, a label several options share would resolve to one of
+        # them, which need not be the option the widget holds.
+        if _check_with_widget(
             session_state,
             metadata,
             encoded,
             _Sent(key, checked, as_numbers=state.schema_type in {"integer", "number"}),
-        )
-        values[element_id] = encoded
-        touched_forms.add(state.form_id or "")
+        ):
+            values[element_id] = encoded
 
     # Callbacks run in the order the states arrive, so they follow the order
     # the snapshot recorded the elements in, not the client's JSON key order.

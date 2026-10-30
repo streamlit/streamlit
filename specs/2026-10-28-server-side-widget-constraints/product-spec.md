@@ -427,7 +427,9 @@ agent API.
   as their held selection.** A forged label therefore counts as unchanged: no callback
   runs, and the browser is not re-synced.
 - **The agent API accepts a shared label that is unchanged on the wire,** such as the
-  reported value sent back. Any other label several options share is still refused.
+  reported value sent back, and it changes nothing: the widget keeps the option it
+  holds, and no `on_change` runs. Any other label several options share is still
+  refused.
 - **A Components v2 component's trigger key** (`"<key>__events"`) can no longer be
   assigned in `st.session_state` after the component renders. Like any widget key, it
   raises `StreamlitWidgetAlreadyInstantiatedError`.

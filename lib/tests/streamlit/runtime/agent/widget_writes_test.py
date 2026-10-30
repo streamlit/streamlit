@@ -41,12 +41,14 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
     from streamlit.runtime.agent.snapshot import Snapshot
 
 _BERLIN: Final = ZoneInfo("Europe/Berlin")
+# "a" and "A" both show as "A" with `format_func=str.upper`.
+_SHARED_OPTIONS: Final = ["a", "A", "b"]
 
 
 class _Refused(NamedTuple):
@@ -155,14 +157,27 @@ class WidgetWritesTest(SnapshotCase):
         *,
         trigger: Mapping[str, Any] | None = None,
     ) -> None:
-        """Send a one-widget request and compare what the app reads, or the refusal."""
+        """Send a one-widget request and compare what the app reads, or the refusal.
+
+        An unchanged value is left out of the request's states, so the app
+        reads what the widget holds.
+        """
         if isinstance(expected, _Refused):
             error = self._refusal(widget_state, trigger=trigger)
             assert error.code == expected.code, error.message
             assert expected.message in error.message
             return
-        (encoded,) = self._write(widget_state, trigger=trigger).widgets
+        widgets = self._write(widget_state, trigger=trigger).widgets
+        if not widgets and widget_state is not None:
+            (key,) = widget_state
+            assert self._held(key) == expected
+            return
+        (encoded,) = widgets
         assert self._read_back(encoded) == expected
+
+    def _held(self, key: str) -> Any:
+        """The value the widget with ``key`` holds."""
+        return self._session_state().get_widget_value(self._element_id(key))
 
     def _element_id(self, key: str) -> str:
         element_id = self._session_state().get_widget_id_from_key(key)
@@ -176,8 +191,12 @@ class WidgetWritesTest(SnapshotCase):
         assert metadata is not None
         state._set_widget_metadata(replace(metadata, **changes))
 
-    def test_every_reported_value_is_accepted_and_reads_back_unchanged(self) -> None:
-        """Each reported value, sent alone or all at once, is what the widget holds."""
+    def test_every_reported_value_is_accepted_and_changes_nothing(self) -> None:
+        """Each reported value, sent alone or all at once, is what the widget holds.
+
+        It equals the stored value on the wire, so it is left out of the
+        states: the runtime has nothing to resolve, not even a shared label.
+        """
         render_value_widgets()
         snapshot = self._build()
         nodes = {
@@ -194,16 +213,42 @@ class WidgetWritesTest(SnapshotCase):
             reported
         )
 
-        session_state = self._session_state()
         for key, value in reported.items():
-            (encoded,) = self._write({key: value}, snapshot=snapshot).widgets
-            stored = session_state.get_widget_value(encoded.id)
-            assert self._read_back(encoded) == stored, key
+            assert not self._write({key: value}, snapshot=snapshot).widgets, key
 
-        batch = self._write(reported, snapshot=snapshot)
-        assert [encoded.id for encoded in batch.widgets] == [
-            self._element_id(key) for key in reported
+        assert not self._write(reported, snapshot=snapshot).widgets
+
+    @parameterized.expand(
+        [
+            ("selectbox", lambda held: {"index": _SHARED_OPTIONS.index(held)}, False),
+            ("radio", lambda held: {"index": _SHARED_OPTIONS.index(held)}, False),
+            ("pills", lambda held: {"default": held}, False),
+            ("select_slider", lambda held: {"value": held}, False),
+            ("multiselect", lambda held: {"default": [held]}, True),
         ]
+    )
+    def test_a_shared_label_names_only_the_held_option(
+        self, command: str, holding: Callable[[str], dict[str, Any]], as_list: bool
+    ) -> None:
+        """Sending back the label of the held option changes nothing.
+
+        "a" and "A" both show as "A". Sent, the label would resolve to the last
+        option that shows it, so the echo is left out rather than flipping the
+        widget to "A". Sent to a widget holding another option, the label does
+        not say which option it means and is refused, as before.
+        """
+        widget = getattr(st, command)
+        for key, held in (("held", "a"), ("other", "b")):
+            widget(
+                key, _SHARED_OPTIONS, format_func=str.upper, key=key, **holding(held)
+            )
+        label: Any = ["A"] if as_list else "A"
+
+        assert not self._write({"held": label}).widgets
+        assert self._held("held") == (["a"] if as_list else "a")
+        error = self._refusal({"other": label})
+        assert error.code == "invalid_value"
+        assert "Several options for 'other' display as 'A'" in error.message
 
     def test_keys_resolve_like_session_state(self) -> None:
         """An authored key maps to its widget; IDs and non-widget keys stay as sent."""
@@ -480,18 +525,16 @@ class WidgetWritesTest(SnapshotCase):
                 1,
                 _Refused("must be a string"),
             ),
-            # Read as text, a shared label resolves the way the widget resolves
-            # it for a browser, which sends the same label.
-            ("accept_new_shared_label", "same_open", "Same", "y"),
+            # The label of the held option, so it changes nothing, and the
+            # widget keeps the option it holds rather than the last with it.
+            ("accept_new_shared_label", "same_open", "Same", "x"),
             (
                 "shared_label",
                 "shared",
                 "A",
                 _Refused("Several options for 'shared' display as 'A'"),
             ),
-            # Equal to the stored value on the wire, so it is unchanged. It
-            # resolves as a browser's echo of the same label does.
-            ("unchanged_shared_label", "shared_default", "A", "A"),
+            ("unchanged_shared_label", "shared_default", "A", "a"),
             (
                 "shared_label_in_a_list",
                 "shared_tags",
@@ -706,12 +749,12 @@ class WidgetWritesTest(SnapshotCase):
         validator = MagicMock(return_value=None)
         self._patch_metadata("name", validator=validator)
 
-        (unchanged,) = self._write({"name": "Ada"}).widgets
+        assert not self._write({"name": "Ada"}).widgets
         validator.assert_not_called()
         (changed,) = self._write({"name": "Bob"}).widgets
 
         validator.assert_called_once()
-        assert (unchanged.string_value, changed.string_value) == ("Ada", "Bob")
+        assert changed.string_value == "Bob"
 
     def test_a_value_the_widget_validator_refuses_is_refused(self) -> None:
         """A violation from the widget's own validator refuses the request."""
@@ -756,8 +799,7 @@ class WidgetWritesTest(SnapshotCase):
             assert error.code == "not_on_page"
             assert "the latest run did not render it" in error.message
         # A value that reads as the stored one changes nothing, so it passes.
-        (encoded,) = self._write({"agree": False}, snapshot=snapshot).widgets
-        assert encoded.bool_value is False
+        assert not self._write({"agree": False}, snapshot=snapshot).widgets
 
     @parameterized.expand(
         [
@@ -787,7 +829,14 @@ class WidgetWritesTest(SnapshotCase):
         st.session_state.emptied = None
         st.datetime_input("Emptied", dt.datetime(2026, 1, 1, 12, 0), key="emptied")
 
-        (encoded,) = self._write({key: sent}).widgets
+        widgets = self._write({key: sent}).widgets
+        if field is None:
+            # The unset form reads as the default, which the widget already
+            # holds, so nothing is sent.
+            assert not widgets
+            assert self._held(key) == expected
+            return
+        (encoded,) = widgets
         assert encoded.WhichOneof("value") == field
         assert self._read_back(encoded) == expected
 

@@ -443,7 +443,7 @@ def _widget_state_schema() -> dict[str, Any]:
             "is refused. `null` inside a list is refused.\n"
             "- A value outside `options`, or over `max_selections`.\n"
             "- A label several options share, unless the widget accepts new "
-            "options.\n"
+            "options or the value is the one the snapshot reports.\n"
             "- A number outside the widget's bounds, a fraction for an integer "
             "`st.number_input` or slider, a range with the wrong number of ends "
             "or its higher end first, an `st.date_input` date not written as "
@@ -452,7 +452,8 @@ def _widget_state_schema() -> dict[str, Any]:
             "- A change that empties a `required` widget, such as text of only "
             "whitespace, or `null` where the widget's default is empty.\n"
             "- A value the widget cannot read.\n\n"
-            "Otherwise a value is applied as sent. `null` resets a widget to its "
+            "Otherwise a value is applied as sent, and one the widget already "
+            "holds changes nothing. `null` resets a widget to its "
             "default, unless its node has `clearable: true`: a browser user can "
             "empty it, and `null` does. `[]` clears a list. Only a browser "
             "checks `validate` and `step`, so send values that pass them, and "
@@ -724,11 +725,12 @@ def _node_schema() -> dict[str, Any]:
                 "description": (
                     "What a widget holds now, in the form a request sends back: a "
                     "`format_func` widget's formatted label, and typed new text as "
-                    "typed. Sending it back unchanged is valid, except a label "
-                    "several options share. Absent for a display element, whose "
-                    "content is in `props`; for a trigger, whose payload resets "
-                    "once its run finishes; and for a password input, which can "
-                    "be set but is never reported."
+                    "typed. Sending it back unchanged is valid and changes "
+                    "nothing, even a label several options share. Absent for a "
+                    "display element, whose content is in `props`; for a "
+                    "trigger, whose payload resets once its run finishes; and "
+                    "for a password input, which can be set but is never "
+                    "reported."
                 )
             },
             "value_schema": {
