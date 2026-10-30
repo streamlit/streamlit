@@ -321,12 +321,14 @@ def items_of(
     max_items: int | None = None,
     unique: bool = True,
     accept_new: bool = False,
+    held: Mapping[str, int] | None = None,
 ) -> Violation | None:
     """Check a list of labels against the labels a widget shows.
 
     A label that several options share may be listed as often as they share
     it, as a multiselect's "Select all" does. That is ``ambiguous_option``,
-    which is reported only when nothing else is wrong.
+    which is reported only when nothing else is wrong. A label may also be
+    listed as often as the held value lists it.
 
     Parameters
     ----------
@@ -344,6 +346,10 @@ def items_of(
         Whether the widget accepts new options, as ``accept_new_options``
         does. Then any non-empty text is legal, a shared label included, and a
         new label can be listed once.
+    held : Mapping[str, int] or None
+        How often the widget's held value lists each label, for a value that
+        repeats one, such as an author's ``default=["a", "a"]``. The browser
+        keeps those repeats when the user adds an option, but never adds one.
 
     Returns
     -------
@@ -369,7 +375,8 @@ def items_of(
         if unique:
             listed[item] += 1
             # A new label counts as offered once, by the user who typed it.
-            if listed[item] > max(offered, 1):
+            allowed = max(offered, 1, held.get(item, 0) if held else 0)
+            if listed[item] > allowed:
                 if duplicate is None:
                     duplicate = position
                 continue

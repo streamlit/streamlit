@@ -70,7 +70,7 @@ browser enforces, what the server does with a client value that violates it as o
 | `selectbox`, `multiselect` | `accept_new_options` | Any non-empty text | Any string, by design | 2: non-empty text stays legal |
 | `multiselect` | `options` | Closed list | late reset: filtered after the callback | 2 |
 | `multiselect` | `max_selections` | Refuses more | raises after the callback, with a message blaming `default` | 2 |
-| `multiselect`, multi `pills` | No duplicates | Impossible in the UI | pass | 2 |
+| `multiselect`, multi `pills` | No duplicates | Impossible in the UI, beyond the repeats a held value has, which a multiselect keeps when options are added | pass | 2: a multiselect accepts the held value's repeats |
 | `select_slider` | `options`, range | Index mapped to a label | deser: an unknown label falls back to the default; a reversed range is sorted | 2, 4 |
 | `pills`, `segmented_control` | `options` | Closed list | deser in single mode; unknown values dropped in multi mode | 2 |
 | `pills`, `segmented_control` | `required` in single mode | Cannot deselect | pass: the callback fires with `None` | 5 |

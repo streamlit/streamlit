@@ -591,6 +591,23 @@ def test_one_of(value: str, accept_new: bool, expected: Violation | None) -> Non
             {"accept_new": True},
             Violation("not_an_option", {"options": ("a", "b", "X"), "positions": (0,)}),
         ),
+        # A label repeats as often as the held value repeats it, never more.
+        (("a", "a", "b"), {"held": Counter(["a", "a"])}, None),
+        (
+            ("a", "a", "a"),
+            {"held": Counter(["a", "a"])},
+            Violation("duplicate_items", {"positions": (2,)}),
+        ),
+        (
+            ("a", "b", "b"),
+            {"held": Counter(["a", "a"])},
+            Violation("duplicate_items", {"positions": (2,)}),
+        ),
+        (
+            ("X", "X", "X"),
+            {"held": Counter(["X"] * 3)},
+            Violation("ambiguous_option", {"positions": (0,)}),
+        ),
     ],
 )
 def test_items_of(

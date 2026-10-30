@@ -337,6 +337,15 @@ selected_chips = st.multiselect(
 )
 st.text(f"select_all custom chips: {selected_chips}")
 
+selected_repeated = st.multiselect(
+    "select_all repeated default",
+    ["a", "b", "c"],
+    default=["a", "a"],
+    select_all=True,
+    key="select_all_repeated",
+)
+st.text(f"select_all repeated default: {selected_repeated}")
+
 # --- Bound multiselect widgets ---
 
 bound_multi = st.multiselect(

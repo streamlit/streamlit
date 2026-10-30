@@ -932,6 +932,32 @@ class TestMultiSelectSerde:
         res = serde.serialize(deepcopied_values)
         assert res == ["a", "b"]
 
+    @pytest.mark.parametrize(
+        ("previous", "expected"),
+        [
+            # The held value repeats "a", and the browser keeps the repeat.
+            (["a", "a"], None),
+            # No repeat to keep: a repeat is one the browser never sends.
+            (["a"], "duplicate_items"),
+            (None, "duplicate_items"),
+        ],
+    )
+    def test_validate_allows_the_repeats_the_held_value_has(
+        self, previous: Any, expected: str | None
+    ) -> None:
+        """A label may repeat as often as the held value repeats it."""
+        options = ["a", "b"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+        )
+
+        violation = serde.validate(["a", "a", "b"], previous=previous)
+
+        assert (violation.kind if violation else None) == expected
+
 
 def test_multiselect_preserves_selection_when_options_expand():
     """Test that valid selections are preserved when options are expanded."""

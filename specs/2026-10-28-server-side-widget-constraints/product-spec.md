@@ -188,7 +188,9 @@ value from a client satisfies all of the following:
   options. It is within `max_selections` and lists no option twice. A label several
   options share may appear as often as they share it, as the multiselect's "Select all"
   sends it, and it resolves as before: to the first such option in `st.multiselect`, and
-  to the last elsewhere.
+  to the last elsewhere. A multiselect may also repeat an option as often as the value it
+  holds does, such as an author's `default=["a", "a"]`, which the browser keeps when the
+  user adds options.
 - It is within `min_value`/`max_value` and `max_chars`, and is a well-formed date, time,
   color, or range. The author's own default passes as written, even text past
   `max_chars` or a color with a trailing newline, because the browser shows it and

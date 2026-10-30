@@ -159,9 +159,14 @@ class MultiSelectSerde(Generic[T]):
         return Counter(self.formatted_options)
 
     def validate(
-        self, ui_value: Sequence[str] | None, **_kwargs: Any
+        self, ui_value: Sequence[str] | None, *, previous: Any = None, **_kwargs: Any
     ) -> Violation | None:
-        """Refuse labels a client was not shown, too many, or a repeated one."""
+        """Refuse labels a client was not shown, too many, or a repeated one.
+
+        A label may repeat as often as the held value repeats it. The browser
+        keeps every item it holds when the user adds options, so an author's
+        ``default=["a", "a"]`` followed by "Select all" sends ``"a"`` twice.
+        """
         if ui_value is None:
             return None
         return widget_checks.items_of(
@@ -169,7 +174,19 @@ class MultiSelectSerde(Generic[T]):
             ui_value,
             max_items=self.max_selections,
             accept_new=self.accept_new_options,
+            held=self._held_label_counts(previous),
         )
+
+    def _held_label_counts(self, previous: Any) -> Counter[str] | None:
+        """How often the held value lists each label, if it repeats one."""
+        if previous is None:
+            return None
+        try:
+            held = Counter(self.serialize(previous))
+        except Exception:  # pragma: no cover - defensive, serialize falls back to str
+            # A value the serializer cannot read allows no repeats.
+            return None
+        return held if len(held) < held.total() else None
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)

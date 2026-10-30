@@ -524,6 +524,59 @@ def test_a_shared_label_repeated_past_its_options_is_refused() -> None:
     assert "calls" not in at.session_state
 
 
+def _repeated_default_app() -> None:
+    import streamlit as st
+
+    def on_change() -> None:
+        st.session_state.calls = st.session_state.get("calls", 0) + 1
+
+    st.multiselect(
+        "Tags",
+        ["a", "b", "c"],
+        default=["a", "a"],
+        select_all=True,
+        key="tags",
+        on_change=on_change,
+    )
+
+
+@pytest.mark.parametrize(
+    ("labels", "accepted"),
+    [
+        # "Select all" adds the options not yet selected and keeps the rest.
+        (("a", "a", "b", "c"), True),
+        # Adding one option keeps the repeat too.
+        (("a", "a", "c"), True),
+        (("a", "b"), True),
+        # A browser never repeats a label more often than the held value does.
+        (("a", "a", "a", "b"), False),
+        (("a", "a", "b", "b"), False),
+    ],
+)
+def test_a_repeat_the_held_value_has_is_accepted(
+    labels: tuple[str, ...], accepted: bool, refusal_logs: list[str]
+) -> None:
+    """An author's default may repeat an option, and the browser keeps the repeat."""
+    at = AppTest.from_function(_repeated_default_app).run()
+
+    with patch_config_options({"global.e2eTest": True}):
+        at._run(
+            widget_state=forged(
+                at.multiselect[0].id, string_array_value=_labels(*labels)
+            )
+        )
+
+    if accepted:
+        assert at.multiselect[0].value == list(labels)
+        assert at.session_state.calls == 1
+        assert refusal_logs == []
+    else:
+        assert at.multiselect[0].value == ["a", "a"]
+        assert "calls" not in at.session_state
+        assert len(refusal_logs) == 1
+        assert "(duplicate_items)" in refusal_logs[0]
+
+
 def test_a_new_session_keeps_a_shared_label() -> None:
     """A browser map with shared labels, resent to a new session, keeps them."""
     first = AppTest.from_function(_shared_label_app).run()

@@ -301,8 +301,8 @@ class WidgetValidator(Protocol):
         """Return a violation for one changed client value, or None.
 
         `ui_value` is the unpacked wire value, `value` is that value after
-        `deserialize`, and `previous` is the stored value. Only the data editor
-        reads the keywords.
+        `deserialize`, and `previous` is the stored value. Only the multiselect
+        and the data editor read the keywords.
         """
 
 
@@ -431,7 +431,7 @@ times.
 functions that return a `Violation` with its details:
 
 - `one_of(counts, value, accept_new)`,
-  `items_of(counts, values, max_items, unique, accept_new)`
+  `items_of(counts, values, max_items, unique, accept_new, held)`
 - `within(value, min, max)`, `finite`, `whole_number`, `item_count(values, allowed)`,
   `ordered(values)`
 - `iso_date`, `iso_time`, `iso_datetime_minutes`, `hex_color`, each a full match of
@@ -457,13 +457,20 @@ of the first extra repeat. With `accept_new`, which `accept_new_options` sets, a
 non-empty label is legal, a shared label included, because the browser lets the user type
 one. `max_items` and `unique` still apply, and a new label can be listed once.
 
+A multiselect may also list a label as often as the value it holds lists it, which
+`items_of` takes as `held`. An author's `default` or a session-state value can repeat an
+option, such as `default=["a", "a"]`, and the browser keeps every item it holds when the
+user adds options, so "Select all" then sends `["a", "a", "b", "c"]`. The browser never
+adds a repeat, so a label listed more often than both the options and the held value
+list it is still `duplicate_items`.
+
 **The previous value.** Check 3 already passes unchanged values, so a validator sees only
-changes and almost never needs the previous value. The data editor is the exception: its
-payload is cumulative, so `DataEditorSerde.validate` uses the `previous` keyword to check
-only new or changed entries. `previous` is the deserialized `_old_state` value, so
-`check_client_value` also passes check 2's deserialized payload as `value`. Both then
-have integer row keys, and the JSON is parsed once. Every other serde ignores both
-keywords.
+changes and rarely needs the previous value. The multiselect reads it for the repeats
+above. The data editor needs it most: its payload is cumulative, so
+`DataEditorSerde.validate` uses the `previous` keyword to check only new or changed
+entries. `previous` is the deserialized `_old_state` value, so `check_client_value` also
+passes check 2's deserialized payload as `value`. Both then have integer row keys, and
+the JSON is parsed once. Every other serde ignores both keywords.
 
 URL seeding reuses `validate` as well. See
 [Other value sources](#other-value-sources-url-binding-and-session-state).
