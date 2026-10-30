@@ -30,7 +30,7 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | Clicking a network node or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
 | A built-in zoom slider (`dataZoom`), in-chart toolbox, or color-range filter (`visualMap`) | `st.echarts_chart` |
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
-| Line, bar, or scatter series with many thousands of points | `st.echarts_chart` (`sampling: "lttb"` for lines, `large: True` for bars and scatter) |
+| Line, bar, or scatter charts with more than about 100,000 points, or with tens of thousands of points on a chart that reruns often | `st.echarts_chart` (see [Large datasets](#large-datasets)) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
 | 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
 | An existing Matplotlib or seaborn figure | `st.pyplot` (static image; not for new charts) |
@@ -195,8 +195,19 @@ st.dataframe(visits.iloc[rows])
 
 ## Large datasets
 
-- Pre-aggregate in pandas, Polars, or SQL before charting. All rows reach the browser, and Vega-Lite transforms such as `aggregate` and `bin` run there.
-- For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table. For dense series, ECharts' `sampling: "lttb"` and `large: True` options help.
+Every row reaches the browser and is processed there. From about 10,000 points per chart, rendering takes longer than the Python side, so pick the command by size:
+
+| Points per chart | Line | Scatter | Bar |
+| --- | --- | --- | --- |
+| Up to about 10,000 | Any command; choose by features | Any command | Any command |
+| About 10,000 to 100,000 | Vega-based or `st.echarts_chart` | Vega-based or `st.echarts_chart` | Vega-based or `st.echarts_chart` |
+| About 100,000 to 1,000,000 | `st.echarts_chart`; add `"sampling": "lttb"` to the densest lines | `st.echarts_chart` | `st.echarts_chart` |
+| More than 1,000,000 | Aggregate first; `st.echarts_chart` draws up to about 2,000,000 | Aggregate first | Aggregate first |
+
+- Pre-aggregate in pandas, Polars, or SQL before charting. Vega-Lite transforms such as `aggregate` and `bin` also run in the browser, on every row.
+- Size charts that rerun often (filters, timers) by their update cost. A Vega-based chart redraws from scratch on every rerun, which takes about as long as its first render (one to two seconds at 100,000 rows). `st.echarts_chart` updates in a fraction of that, so prefer it from about 50,000 points on such charts.
+- An existing Plotly Express line or scatter figure also holds up to about 1,000,000 points, because it switches to WebGL above 1,000 points. A `go.Scatter` trace stays SVG; use `go.Scattergl` for large data.
+- For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
 
 ## Plotly and Matplotlib

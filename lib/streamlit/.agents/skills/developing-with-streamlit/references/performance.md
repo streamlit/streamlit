@@ -421,6 +421,7 @@ Move expensive work outside the main flow:
 - Compute aggregations in SQL/dbt, not Python
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
+- Aggregate chart data before plotting: charts process every row in the browser, which outweighs the Python side from about 10,000 points. For which chart command holds up at which size, see [charts.md](charts.md#large-datasets)
 
 ## Render stable UI before slow work
 

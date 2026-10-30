@@ -626,14 +626,20 @@ class PlotlyMixin:
             https://plot.ly/python/ for examples of graph descriptions.
 
             .. note::
-                If your chart contains more than 1000 data points, Plotly will
-                use a WebGL renderer to display the chart. Different browsers
-                have different limits on the number of WebGL contexts per page.
-                If you have multiple WebGL contexts on a page, you may need to
-                switch to SVG rendering mode. You can do this by setting
-                ``render_mode="svg"`` within the figure. For example, the
-                following code defines a Plotly Express line chart that will
-                render in SVG mode when passed to ``st.plotly_chart``:
+                Plotly Express line and scatter charts with more than 1,000
+                data points use a WebGL renderer by default
+                (``render_mode="auto"``). Other figures render to SVG unless
+                they use a WebGL trace type such as ``go.Scattergl``. SVG
+                creates one page element per point, so use WebGL for line and
+                scatter charts with many thousands of points.
+
+                Different browsers have different limits on the number of
+                WebGL contexts per page. If you have many WebGL charts on a
+                page, you may need to switch some of them to SVG. You can do
+                this by setting ``render_mode="svg"`` within the figure. For
+                example, the following code defines a Plotly Express line
+                chart that will render in SVG mode when passed to
+                ``st.plotly_chart``:
                 ``px.line(df, x="x", y="y", render_mode="svg")``.
 
         width : "stretch", "content", or int
