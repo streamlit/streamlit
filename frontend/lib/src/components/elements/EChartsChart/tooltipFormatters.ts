@@ -373,7 +373,7 @@ export function applyTooltipFormatters(
 /** The cartesian axis keys whose ``type: "time"`` axes get date labels. */
 const CARTESIAN_AXIS_KEYS = ["xAxis", "yAxis"] as const
 
-/** ECharts' time label templates for day and second precision. */
+/** Label templates at day and second precision, matching ECharts' own. */
 const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
 const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
 
@@ -383,6 +383,8 @@ const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
  */
 function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
   const date = echarts.time.parse(value)
+  // Format through ECharts so the check uses the label's UTC or local clock.
+  // Milliseconds count, so 00:00:00.250 is not midnight.
   const isMidnight =
     echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
   return echarts.time.format(
@@ -408,14 +410,16 @@ function hasLabelFormatter(target: unknown): boolean {
  *
  * - The midnight check runs per value, so it needs no scan of the axis data.
  *   An hourly series shows its midnight points without a time, and other
- *   values show their time to the second.
+ *   values show their time to the second, without milliseconds.
  * - A label formatter on the axis, ``tooltip.axisPointer``,
- *   ``grid.tooltip.axisPointer``, or the top-level ``axisPointer`` wins. The
- *   shared ones skip every axis, since an axis formatter would override them.
- * - Only the chart option is read: ``baseOption`` on a timeline, as with
- *   ``useUTC``. Timeline ticks and ``media`` overrides aren't converted.
- * - It changes ECharts' default formatting rather than reading the spec, so
- *   ``theme=None`` keeps ECharts' labels.
+ *   ``grid.tooltip.axisPointer``, or the top-level ``axisPointer`` wins. If
+ *   any shared one is set, no axis gets Streamlit's formatter, because an
+ *   axis-level formatter would override it.
+ * - On a timeline, only ``baseOption`` is read and converted, and ``useUTC``
+ *   comes from there too. A formatter set only in a timeline tick or
+ *   ``media`` override isn't detected, and those variants stay as given.
+ * - Only the Streamlit theme adds these formatters, so ``theme=None`` keeps
+ *   ECharts' labels.
  *
  * @param option The option object to convert.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
@@ -449,7 +453,7 @@ export function applyTimeLabelFormatters(
   const useUTC = chartOption.useUTC === true
   const formatter = (params: unknown): string =>
     formatTimeAxisValue(get(params, "value"), useUTC)
-  const withFormatter = (axis: unknown): unknown => {
+  const withTimeLabelFormatter = (axis: unknown): unknown => {
     if (!isPlainObject(axis)) {
       return axis
     }
@@ -476,8 +480,8 @@ export function applyTimeLabelFormatters(
       result,
       key,
       Array.isArray(axes)
-        ? mapPreservingIdentity(axes, withFormatter)
-        : withFormatter(axes)
+        ? mapPreservingIdentity(axes, withTimeLabelFormatter)
+        : withTimeLabelFormatter(axes)
     )
   }
   return hasBaseOption ? withProperty(option, "baseOption", result) : result

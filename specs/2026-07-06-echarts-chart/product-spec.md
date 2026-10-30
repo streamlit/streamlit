@@ -243,13 +243,15 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   per axis, so daily data spanning less than about five months otherwise reads
   `2026-08-18 00:00:00`.
   - Streamlit decides per value, which needs no data scan. Other values show their date and
-    time to the second, also on long axes where ECharts shows only the date. An hourly series
-    shows its midnight points without a time.
+    time to the second, also on long axes where ECharts shows only the date, and without the
+    milliseconds ECharts shows on sub-second axes. An hourly series shows its midnight points
+    without a time.
   - Labels use UTC when the spec sets `useUTC: true`, as ECharts does.
-  - Any axis pointer label formatter in the spec wins (axis, `tooltip.axisPointer`,
-    `grid.tooltip.axisPointer`, top-level `axisPointer`).
-  - Only the chart option (`baseOption` on a timeline) is converted. Slider `dataZoom` labels,
-    timeline ticks, and `media` overrides keep ECharts' labels.
+  - An axis pointer label formatter in the chart option wins (axis, `tooltip.axisPointer`,
+    `grid.tooltip.axisPointer`, top-level `axisPointer`). `"{value}"` restores ECharts' label.
+  - Only the chart option (`baseOption` on a timeline) is read and converted. Slider
+    `dataZoom` labels, timeline ticks, and `media` overrides keep ECharts' labels, and a
+    formatter set only in a timeline tick or `media` override isn't detected.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.

@@ -403,8 +403,9 @@ describe("applyTimeLabelFormatters", () => {
     expect(formatter({ value: localTime(0, 0, 250) })).toBe(
       "2026-08-18 00:00:00"
     )
-    // ECharts passes a naive ISO string through as local time.
+    // ECharts parses naive ISO and date-only strings as local time.
     expect(formatter({ value: "2026-08-18T00:00:00.000" })).toBe("2026-08-18")
+    expect(formatter({ value: "2026-08-18" })).toBe("2026-08-18")
     // A value axis keeps ECharts' number labels.
     expect(result.yAxis).toBe(timeAxisOption.yAxis)
     // The input spec is not mutated.
