@@ -215,7 +215,7 @@ across `baseOption` and each timeline `options` entry):
 |--------|----------------|
 | Custom series | `series.type` `"custom"` (needs a JS `renderItem`) |
 | Map / geo | `"map"`, `"geo"` (need registered GeoJSON; includes `geo` / `map` components) |
-| ECharts GL | `"scatter3D"`, `"bar3D"`, `"line3D"`, `"lines3D"`, `"polygons3D"`, `"surface"`, `"map3D"`, `"scatterGL"`, `"linesGL"`, `"flowGL"`, `"graphGL"`, `"grid3D"`, `"geo3D"`, `"globe"` |
+| ECharts GL | `"scatter3D"`, `"bar3D"`, `"line3D"`, `"lines3D"`, `"polygons3D"`, `"surface"`, `"map3D"`, `"scatterGL"`, `"linesGL"`, `"flowGL"`, `"graphGL"`, `"grid3D"`, `"geo3D"`, `"globe"`, `"mapbox3D"`, `"maptalks3D"` |
 
 JSON-serializable `pyecharts` charts that still need an **unbundled** extension are rejected the
 same way, since they serialize cleanly and would otherwise render empty: `wordCloud`
