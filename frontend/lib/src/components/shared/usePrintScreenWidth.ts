@@ -54,6 +54,8 @@ export function usePrintScreenWidth(
     const handleBeforePrint = (): void => {
       const element = ref.current
       if (element) {
+        // Clear a width left over from a print whose afterprint never fired.
+        element.style.removeProperty(PRINT_SCREEN_WIDTH_VAR)
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Print starts right after beforeprint, before a resize observer could report
         const { width } = element.getBoundingClientRect()
         // A hidden element measures 0, which would collapse the print width

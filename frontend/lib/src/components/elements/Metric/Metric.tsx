@@ -416,6 +416,7 @@ function Metric({
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef<HTMLDivElement>(null)
+  const flexContext = useContext(FlexContext)
 
   // A metric without a fixed width inside a content-width container is also
   // sized by its value.
@@ -423,7 +424,7 @@ function Metric({
     hasContentWidth: Boolean(widthConfig?.useContent),
     hasFixedWidth:
       (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0,
-    parentContext: useContext(FlexContext),
+    parentContext: flexContext,
   })
 
   useEffect(() => {

@@ -408,25 +408,31 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     # A vertical fixed-height container fits the chart row side by side, but
     # not once it stacks. Print cannot scroll, so the container grows to fit
-    # both charts instead of clipping the second one.
+    # both charts instead of clipping the second one. A stretch-height chart
+    # below the row keeps a usable height instead of collapsing onto the
+    # next element.
     fixed_height_container = get_element_by_key(app, "fixed_height_chart_row")
     fixed_height_charts = fixed_height_container.get_by_test_id("stVegaLiteChart")
     after_fixed_height = app.get_by_text("After the fixed-height chart row", exact=True)
-    expect(fixed_height_charts).to_have_count(2)
+    expect(fixed_height_charts).to_have_count(3)
     expect(after_fixed_height).to_be_visible()
 
     def fixed_height_container_grows() -> None:
         container_box = fixed_height_container.bounding_box()
         first_box = fixed_height_charts.nth(0).bounding_box()
         second_box = fixed_height_charts.nth(1).bounding_box()
+        stretch_box = fixed_height_charts.nth(2).bounding_box()
         after_box = after_fixed_height.bounding_box()
         assert container_box is not None
         assert first_box is not None
         assert second_box is not None
+        assert stretch_box is not None
         assert after_box is not None
         container_bottom = container_box["y"] + container_box["height"]
         assert first_box["y"] + first_box["height"] <= second_box["y"] + 1
-        assert second_box["y"] + second_box["height"] <= container_bottom + 1
+        assert second_box["y"] + second_box["height"] <= stretch_box["y"] + 1
+        assert stretch_box["height"] > 100
+        assert stretch_box["y"] + stretch_box["height"] <= container_bottom + 1
         assert container_bottom <= after_box["y"] + 1
 
     wait_until(app, fixed_height_container_grows)

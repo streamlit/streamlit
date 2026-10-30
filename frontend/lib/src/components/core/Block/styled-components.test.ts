@@ -286,6 +286,11 @@ describe("StyledFlexContainerBlock print layout", () => {
       /:has\(\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
     )
     expect(css).toContain("margin-bottom:17px")
+    // A stretch-height element was sized by the fixed height through size
+    // containment. It drops containment so it keeps its content's height.
+    expect(css).toMatch(
+      /:has\(\.stHorizontalBlock [^{]*>[^{]*\{contain:none;?\}/
+    )
 
     const centered = cssOf(
       render(
