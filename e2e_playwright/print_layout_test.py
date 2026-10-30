@@ -47,7 +47,22 @@ def test_print_stacks_chart_rows_without_overlap(
     expect(app.get_by_text("Bordered column")).to_be_visible()
 
     app.set_viewport_size(_PORTRAIT)
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    screen_sidebar = sidebar.bounding_box()
+    assert screen_sidebar is not None
+    assert abs(screen_sidebar["width"] - 480) < 2
+
     start_browser_print(app)
+
+    # Print ignores the configured sidebar width and uses the minimum
+    # (12.5rem), so the main column keeps most of the page.
+    def sidebar_prints_at_minimum_width() -> None:
+        print_sidebar = sidebar.bounding_box()
+        assert print_sidebar is not None
+        assert abs(print_sidebar["width"] - 200) < 2
+
+    wait_until(app, sidebar_prints_at_minimum_width)
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
