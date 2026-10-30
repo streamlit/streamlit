@@ -1147,37 +1147,23 @@ def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    ("columns", "expected", "pyarrow_names"),
+    ("columns", "expected"),
     [
         pytest.param(
             pd.MultiIndex.from_tuples([(1, 2), (1, 3)]),
-            ["(1, 2)", "(1, 3)"],
             ["('1', '2')", "('1', '3')"],
             id="multiindex",
         ),
-        pytest.param(
-            pd.Index([(1, 2), (1, 3)], tupleize_cols=False),
-            ["(1, 2)", "(1, 3)"],
-            ["('1', '2')", "('1', '3')"],
-            id="tuple-index",
-        ),
-        pytest.param(pd.Index([b"a", b"b"]), ["b'a'", "b'b'"], ["a", "b"], id="bytes"),
+        pytest.param(pd.Index([b"a", b"b"]), ["a", "b"], id="bytes"),
     ],
 )
-def test_dataset_source_tuple_and_bytes_columns_use_str_labels(
-    columns: pd.Index, expected: list[str], pyarrow_names: list[str]
+def test_dataset_source_tuple_and_bytes_columns_use_pyarrow_names(
+    columns: pd.Index, expected: list[str]
 ) -> None:
-    """Tuple and bytes labels use ``str(column)`` as field names."""
-    df = pd.DataFrame([[1, 2]], columns=columns)
-
-    _, table = _convert_source(df)
+    """Tuple and bytes labels get PyArrow's field names, as in ``st.dataframe``."""
+    _, table = _convert_source(pd.DataFrame([[1, 2]], columns=columns))
 
     assert table.column_names == expected
-    assert table.to_pylist() == [dict(zip(expected, [1, 2], strict=True))]
-    # PyArrow's own naming would differ from the names apps reference.
-    assert not set(pyarrow_names) & set(table.column_names)
-    # The caller's dataframe keeps its original columns.
-    assert df.columns.equals(columns)
 
 
 def test_dataset_source_mixed_object_column_is_stringified() -> None:

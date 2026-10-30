@@ -432,35 +432,6 @@ def _loads_json_option(raw: str) -> Any:
     return option
 
 
-def _prepare_dataset_source(source: Any) -> Any:
-    """Prepare a dataframe-like ``dataset.source`` for Arrow conversion.
-
-    PyArrow tables and Polars objects are returned unchanged. Anything else
-    becomes a pandas dataframe, with tuple and bytes column labels renamed to
-    ``str(column)``.
-    """
-    import pandas as pd
-    import pyarrow as pa
-
-    if (
-        isinstance(source, pa.Table)
-        or dataframe_util.is_polars_dataframe(source)
-        or dataframe_util.is_polars_series(source)
-        or dataframe_util.is_polars_lazyframe(source)
-    ):
-        return source
-
-    df = dataframe_util.convert_anything_to_pandas_df(source)
-    if any(isinstance(column, (tuple, bytes)) for column in df.columns):
-        # Keep `str(column)` names such as `"(1, 2)"`, which apps write in
-        # `encode` and `dimensions`. PyArrow would name tuple labels (MultiIndex
-        # or tuple-valued headers) `"('1', '2')"` and decode bytes labels. The
-        # shallow copy leaves the caller's dataframe unchanged.
-        df = df.copy(deep=False)
-        df.columns = pd.Index([str(column) for column in df.columns])
-    return df
-
-
 def _convert_single_dataset(
     dataset: dict[str, Any], arrow_datasets: dict[str, bytes]
 ) -> None:
@@ -483,9 +454,7 @@ def _convert_single_dataset(
         ValueError,
     )
     try:
-        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(
-            _prepare_dataset_source(source)
-        )
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(source)
     except conversion_errors as ex:
         raise StreamlitDataframeConversionError(
             "The provided ECharts `dataset.source` could not be converted for "
