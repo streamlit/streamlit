@@ -24,15 +24,19 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | --- | --- |
 | A quick line, bar, area, or scatter chart from a dataframe | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` |
 | More control: titles, custom tooltips, layers, dual axes, log scales, faceting, aggregation, binning, regression | `st.altair_chart` (Altair ships with Streamlit) |
+| Brushing in one chart to filter linked views | `st.altair_chart` |
 | An existing Vega-Lite JSON spec | `st.vega_lite_chart` |
 | Network graphs, trees, sankey, chord, sunburst, treemap, gauges, radar, funnel, calendar heatmaps, candlesticks | `st.echarts_chart` |
+| Clicking a network node or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
 | A built-in zoom slider (`dataZoom`), in-chart toolbox, or color-range filter (`visualMap`) | `st.echarts_chart` |
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
+| Many dense charts on one page | `st.echarts_chart` (canvas, no WebGL context limit) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
-| 3D surfaces, meshes, or volumes, or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
+| 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
 | An existing Matplotlib or seaborn figure | `st.pyplot` (static image; not for new charts) |
 | Points on a map / layered or 3D geospatial data | `st.map` / `st.pydeck_chart` |
 | Flowcharts, sequence diagrams, ER models | `st.mermaid_chart` |
+| A diagram that needs Graphviz layout engines or clusters | `st.graphviz_chart` |
 | A tiny trend inside a metric or table cell | `st.metric(chart_data=...)` or `LineChartColumn` / `BarChartColumn` / `AreaChartColumn` (see [data-display.md](data-display.md)) |
 
 Start with a simple chart and move to `st.altair_chart` when it runs out of options. Move to `st.echarts_chart` for the chart types and in-chart features in the table that Vega-Lite doesn't have, not to redraw a plain line, bar, or scatter chart that Altair already handles.
