@@ -479,26 +479,25 @@ export const StyledFlexContainerBlock =
       // A height that fit a side-by-side row cuts off the row once it
       // stacks, and print cannot scroll, so the block grows to fit it. It
       // prints as a block box then, unless it centers or end-aligns.
-      const releasesPrintHeightForStackedRow: CSSObject =
-        keepsPrintFlexForHeight
-          ? {
-              [`&:has(${PRINT_STACKING_ROW})`]: {
-                height: "auto",
-                maxHeight: "none",
-                overflow: "visible",
-                // A stretch-height element shared the fixed height through
-                // `height: 100%` and size containment. Without containment
-                // it takes its content's height instead of collapsing.
-                [`& > ${StyledElementContainer}`]: {
-                  contain: "none",
-                },
-                ...(!keepsPrintFlexForAlignment && {
-                  display: "block",
-                  ...printBlockGapMargins(gapWidth, theme),
-                }),
+      const stackedRowHeightReleaseRules: CSSObject = keepsPrintFlexForHeight
+        ? {
+            [`&:has(${PRINT_STACKING_ROW})`]: {
+              height: "auto",
+              maxHeight: "none",
+              overflow: "visible",
+              // A stretch-height element shared the fixed height through
+              // `height: 100%` and size containment. Without containment
+              // it takes its content's height instead of collapsing.
+              [`& > ${StyledElementContainer}`]: {
+                contain: "none",
               },
-            }
-          : {}
+              ...(!keepsPrintFlexForAlignment && {
+                display: "block",
+                ...printBlockGapMargins(gapWidth, theme),
+              }),
+            },
+          }
+        : {}
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
@@ -566,7 +565,7 @@ export const StyledFlexContainerBlock =
               },
             }
           : keepsPrintFlex
-            ? releasesPrintHeightForStackedRow
+            ? stackedRowHeightReleaseRules
             : {
                 display: "block",
                 ...printBlockGapMargins(gapWidth, theme),
