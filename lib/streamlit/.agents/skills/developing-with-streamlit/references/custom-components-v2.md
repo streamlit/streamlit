@@ -3,6 +3,12 @@
 
 Use Streamlit Custom Components v2 (CCv2) when core Streamlit doesn’t have the UI you need and you want to ship a reusable, interactive element (from “tiny inline HTML” to “full bundled frontend app”).
 
+## Prefer a native command first
+
+Before building a component, check the mapping in [third-party-components.md](third-party-components.md) and use the native command if one covers the behavior. If that command is newer than the app's installed Streamlit, suggest upgrading.
+
+Use CCv2 only for UI Streamlit does not provide (for example drag-and-drop or canvas drawing).
+
 ## CRITICAL: CCv2 only — NEVER use v1 APIs for new components
 
 Custom Components **v1 is legacy and superseded by v2**. The `st.components.v1` module still exists in Streamlit (e.g., `declare_component` for existing third-party components), but specific v1 APIs like `components.v1.html()` and `components.v1.iframe()` are deprecated. **For new components, always use CCv2.** The following v1 APIs must **NEVER** appear in new code:

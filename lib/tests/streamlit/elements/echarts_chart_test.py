@@ -119,10 +119,8 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert dataset.has_name
         assert dataset.name == calc_hash(dataset.data.data)
         assert not dataset.data.HasField("styler")
-        assert json.loads(el.spec)["dataset"] == {
-            "source": {"name": dataset.name},
-            "dimensions": ["product", "2015"],
-        }
+        # The browser sets the default ``dimensions`` from the Arrow fields.
+        assert json.loads(el.spec)["dataset"] == {"source": {"name": dataset.name}}
         pd.testing.assert_frame_equal(
             dataframe_util.convert_arrow_bytes_to_pandas_df(dataset.data.data), df
         )
@@ -130,7 +128,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert "43.3" not in el.spec
 
     def test_dataset_source_dataframe_preserves_user_dimensions(self):
-        """A user-provided ``dimensions`` is not overwritten by column order."""
+        """A user-provided ``dimensions`` is sent unchanged."""
         df = pd.DataFrame({"product": ["a"], "2015": [43.3]})
         st.echarts_chart(
             {
@@ -935,6 +933,82 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    @parameterized.expand(
+        [
+            ("named_format", {"valueFormatter": "dollar"}),
+            ("printf_format", {"valueFormatter": "%,d sessions"}),
+            ("printf_with_escaped_percent", {"valueFormatter": "%.1f%%"}),
+            ("null", {"valueFormatter": None}),
+            ("dimension_template", {"formatter": "{b}: {@[2]} sessions"}),
+        ]
+    )
+    def test_no_warning_for_supported_tooltip_formatters(
+        self, _name: str, tooltip: dict[str, Any]
+    ) -> None:
+        """Number formats and dimension templates are supported, so nothing logs."""
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart({**_BASIC_SPEC, "tooltip": tooltip})
+
+        mock_warning.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("top_level", {"tooltip": {"valueFormatter": "{value} €"}}),
+            ("tooltip_list", {"tooltip": [{"valueFormatter": "{value} €"}]}),
+            (
+                "series",
+                {
+                    "series": [
+                        {"type": "bar", "tooltip": {"valueFormatter": "{value} €"}}
+                    ]
+                },
+            ),
+            ("timeline", {"baseOption": {"tooltip": {"valueFormatter": "{value} €"}}}),
+            (
+                "timeline_option",
+                {"options": [{"tooltip": {"valueFormatter": "{value} €"}}]},
+            ),
+            (
+                "media",
+                {"media": [{"option": {"tooltip": {"valueFormatter": "{value} €"}}}]},
+            ),
+            ("non_string", {"tooltip": {"valueFormatter": 42}}),
+            ("printf_trailing_percent", {"tooltip": {"valueFormatter": "100%"}}),
+            ("printf_unknown_type", {"tooltip": {"valueFormatter": "%q"}}),
+            ("printf_escaped_only", {"tooltip": {"valueFormatter": "100%%"}}),
+            ("empty_string", {"tooltip": {"valueFormatter": ""}}),
+        ]
+    )
+    def test_warns_on_unsupported_tooltip_value_formatter(
+        self, _name: str, spec: dict[str, Any]
+    ) -> None:
+        """A valueFormatter that is not a number format is logged, not raised."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 1
+        assert "is not a number format" in logs.output[0]
+        # The chart still renders, and the spec reaches the frontend unchanged.
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec == spec
+
+    def test_does_not_warn_for_per_item_tooltips(self) -> None:
+        """Per-data-item tooltips are not walked, matching the frontend."""
+        spec = {
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [{"value": 1, "tooltip": {"valueFormatter": "{value} €"}}],
+                }
+            ]
+        }
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec)
+
+        mock_warning.assert_not_called()
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""
@@ -976,7 +1050,7 @@ def test_dataset_source_dtypes_round_trip_through_arrow() -> None:
 
     dataset, table = _convert_source(df)
 
-    assert dataset["dimensions"] == list(df.columns)
+    assert table.column_names == list(df.columns)
     # No value is pre-formatted into the spec JSON.
     assert "2020" not in json.dumps(dataset)
     types = {field.name: field.type for field in table.schema}
@@ -1008,122 +1082,88 @@ _MULTI_INDEXED_DF = pd.DataFrame(
         _INDEXED_DF,
         pd.DataFrame({"v": [1, 2]}, index=[10, 20]),
         _MULTI_INDEXED_DF,
+    ],
+    ids=["named_index", "unnamed_int_index", "multi_index"],
+)
+def test_dataset_source_sends_pandas_index_named_in_metadata(
+    source: pd.DataFrame,
+) -> None:
+    """A pandas index is sent like in ``st.dataframe``; the browser skips it.
+
+    The browser recognizes index fields by the pandas metadata's
+    ``index_columns``, so every index field must be listed there.
+    """
+    _, table = _convert_source(source)
+
+    index_columns = table.schema.pandas_metadata["index_columns"]
+    assert table.column_names == ["v", *index_columns]
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        pa.table({"a": [1, 2], "b": [3, 4]}),
         pa.Table.from_pandas(_INDEXED_DF),
         pa.Table.from_pandas(_MULTI_INDEXED_DF),
-        pa.Table.from_pandas(pd.DataFrame({"v": [1, 2]})),
-        pa.Table.from_pandas(_INDEXED_DF, preserve_index=False),
         # ``select`` keeps the pandas metadata naming the dropped index field.
         pa.Table.from_pandas(_INDEXED_DF).select(["v"]),
     ],
-    ids=[
-        "named_index",
-        "unnamed_int_index",
-        "multi_index",
-        "pyarrow_named_index",
-        "pyarrow_multi_index",
-        "pyarrow_range_index",
-        "pyarrow_without_index",
-        "pyarrow_stale_index",
-    ],
+    ids=["plain", "pandas_index", "pandas_multi_index", "pandas_stale_index"],
 )
-def test_dataset_source_drops_pandas_index(source: Any) -> None:
-    """The dataframe index is neither sent nor listed in ``dimensions``."""
-    dataset, table = _convert_source(source)
-
-    assert dataset["dimensions"] == ["v"]
-    assert table.column_names == ["v"]
-    # The browser fails to parse a table whose metadata names missing fields.
-    pandas_metadata = table.schema.pandas_metadata
-    assert pandas_metadata["index_columns"] == []
-    assert [column["field_name"] for column in pandas_metadata["columns"]] == ["v"]
-
-
-def test_pyarrow_table_source_keeps_pandas_type_tags() -> None:
-    """Dropping the index keeps the pandas type tags of the data columns."""
-    df = pd.DataFrame(
-        {"month": pd.period_range("2020-01", periods=2, freq="M")},
-        index=pd.Index([5, 6], name="row"),
-    )
-
-    _, table = _convert_source(pa.Table.from_pandas(df))
-
-    (column,) = table.schema.pandas_metadata["columns"]
-    assert column["numpy_type"] == "period[M]"
-
-
-def test_pyarrow_table_source_without_pandas_metadata_is_sent_as_is() -> None:
-    """A plain Arrow table is serialized without any rewriting."""
-    table = pa.table({"a": [1, 2], "b": [3, 4]})
-
+def test_pyarrow_table_source_is_sent_as_is(table: pa.Table) -> None:
+    """A PyArrow table is serialized unchanged; the browser skips its index."""
     option, arrow_datasets = _normalize_spec({"dataset": {"source": table}})
 
     assert list(arrow_datasets.values()) == [
         dataframe_util.convert_arrow_table_to_arrow_bytes(table)
     ]
-    assert option["dataset"]["dimensions"] == ["a", "b"]
+    assert "dimensions" not in option["dataset"]
 
 
-def test_pyarrow_table_source_drops_unparseable_pandas_metadata() -> None:
-    """Malformed pandas metadata is dropped while other schema metadata is kept."""
-    table = pa.table({"v": [1]}).replace_schema_metadata(
-        {b"pandas": b"{not json", b"origin": b"test"}
-    )
-
-    _, sent = _convert_source(table)
-
-    assert sent.schema.metadata == {b"origin": b"test"}
+def test_dataset_source_exact_duplicate_pandas_columns_raise() -> None:
+    """PyArrow rejects exact duplicate pandas column names."""
+    with pytest.raises(StreamlitDataframeConversionError, match="Duplicate column"):
+        _normalize_spec(
+            {"dataset": {"source": pd.DataFrame([[1, 2]], columns=["a", "a"])}}
+        )
 
 
 @pytest.mark.parametrize(
     "source",
     [
         pd.DataFrame([[1, 2]], columns=[1, "1"]),
-        pd.DataFrame([[1, 2]], columns=["a", "a"]),
         pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
     ],
-    ids=["stringified_collision", "exact_duplicate", "pyarrow_table"],
+    ids=["stringified_collision", "pyarrow_table"],
 )
-def test_dataset_source_duplicate_column_labels_raise(source: Any) -> None:
-    """Column labels that collide as strings are rejected for every source type."""
-    with pytest.raises(StreamlitAPIException) as exc:
-        _normalize_spec({"dataset": {"source": source}})
+def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
+    """Labels that only collide as Arrow field names are left to the browser.
 
-    assert exc.value.error_id == "echarts-dataset-duplicate-columns"
+    The browser rejects a dataset whose data columns share a name.
+    """
+    _, table = _convert_source(source)
+
+    assert len(set(table.column_names)) < len(table.column_names)
 
 
 @pytest.mark.parametrize(
-    ("columns", "expected", "pyarrow_names"),
+    ("columns", "expected"),
     [
         pytest.param(
             pd.MultiIndex.from_tuples([(1, 2), (1, 3)]),
-            ["(1, 2)", "(1, 3)"],
             ["('1', '2')", "('1', '3')"],
             id="multiindex",
         ),
-        pytest.param(
-            pd.Index([(1, 2), (1, 3)], tupleize_cols=False),
-            ["(1, 2)", "(1, 3)"],
-            ["('1', '2')", "('1', '3')"],
-            id="tuple-index",
-        ),
-        pytest.param(pd.Index([b"a", b"b"]), ["b'a'", "b'b'"], ["a", "b"], id="bytes"),
+        pytest.param(pd.Index([b"a", b"b"]), ["a", "b"], id="bytes"),
     ],
 )
-def test_dataset_source_tuple_and_bytes_columns_use_str_labels(
-    columns: pd.Index, expected: list[str], pyarrow_names: list[str]
+def test_dataset_source_tuple_and_bytes_columns_use_pyarrow_names(
+    columns: pd.Index, expected: list[str]
 ) -> None:
-    """Tuple and bytes labels use ``str(column)`` as field names and ``dimensions``."""
-    df = pd.DataFrame([[1, 2]], columns=columns)
-
-    dataset, table = _convert_source(df)
+    """Tuple and bytes labels get PyArrow's field names, as in ``st.dataframe``."""
+    _, table = _convert_source(pd.DataFrame([[1, 2]], columns=columns))
 
     assert table.column_names == expected
-    assert dataset["dimensions"] == expected
-    assert table.to_pylist() == [dict(zip(expected, [1, 2], strict=True))]
-    # PyArrow's own naming would differ from the names apps reference.
-    assert not set(pyarrow_names) & set(dataset["dimensions"])
-    # The caller's dataframe keeps its original columns.
-    assert df.columns.equals(columns)
 
 
 def test_dataset_source_mixed_object_column_is_stringified() -> None:
@@ -1146,10 +1186,9 @@ def test_dataset_source_polars_arrow_failure_falls_back_to_pandas() -> None:
     with patch.object(
         echarts_chart_module.dataframe_util, "is_polars_dataframe", return_value=True
     ):
-        dataset, table = _convert_source(_FailingPolarsFrame())
+        _, table = _convert_source(_FailingPolarsFrame())
 
-    assert dataset["dimensions"] == ["a"]
-    assert table.column("a").to_pylist() == [1, 2]
+    assert table.to_pydict() == {"a": [1, 2]}
 
 
 @pytest.mark.require_integration
@@ -1159,9 +1198,8 @@ def test_dataset_source_polars_dataframe() -> None:
 
     df = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
 
-    dataset, table = _convert_source(df)
+    _, table = _convert_source(df)
 
-    assert dataset["dimensions"] == ["a", "b"]
     assert table.to_pydict() == {"a": [1, 2], "b": [3, 4]}
 
 
@@ -1170,9 +1208,8 @@ def test_dataset_source_polars_series() -> None:
     """A Polars Series ``dataset.source`` becomes a single named column."""
     import polars as pl
 
-    dataset, table = _convert_source(pl.Series("sales", [1, 2]))
+    _, table = _convert_source(pl.Series("sales", [1, 2]))
 
-    assert dataset["dimensions"] == ["sales"]
     assert table.to_pydict() == {"sales": [1, 2]}
 
 
@@ -1200,7 +1237,6 @@ def test_normalize_spec_does_not_mutate_user_mapping() -> None:
     option, _ = _normalize_spec(original)
 
     assert original["dataset"]["source"] is df
-    assert "dimensions" not in original["dataset"]
     assert original["series"][0]["data"] == [1, 2, 3]
     option["series"][0]["type"] = "bar"
     assert "type" not in original["series"][0]
@@ -1217,7 +1253,6 @@ def test_normalize_spec_does_not_mutate_dataset_list_with_leading_non_dict() -> 
     assert original["dataset"][1] is dataset_entry
     assert original["dataset"][1]["source"] is df
     assert option["dataset"][1]["source"] == {"name": next(iter(arrow_datasets))}
-    assert option["dataset"][1]["dimensions"] == ["a"]
 
 
 def test_normalize_spec_converts_tuple_dataset() -> None:
@@ -1229,7 +1264,6 @@ def test_normalize_spec_converts_tuple_dataset() -> None:
 
     assert original["dataset"][0]["source"] is df
     assert option["dataset"][0]["source"] == {"name": next(iter(arrow_datasets))}
-    assert option["dataset"][0]["dimensions"] == ["a"]
 
 
 def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
@@ -1252,7 +1286,7 @@ def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
         patch.object(
             echarts_chart_module.dataframe_util,
             "convert_anything_to_pandas_df",
-            lambda _value: df,
+            lambda *_args: df,
         ),
     ):
         option, arrow_datasets = _normalize_spec(original)

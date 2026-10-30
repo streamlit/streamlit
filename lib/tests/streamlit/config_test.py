@@ -828,6 +828,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.cacheBackgroundRefreshMaxWorkers",
                 "runner.cacheBackgroundRefreshTTLMultiplier",
                 "runner.cacheHashSeed",
+                "runner.connectionDefaultTTL",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
@@ -839,6 +840,7 @@ class ConfigTest(unittest.TestCase):
                 "secrets.files",
                 "server.address",
                 "server.agentMaxSessions",
+                "server.agentPreviewRows",
                 "server.agentSessionTTL",
                 "server.agentWaitTimeout",
                 "server.allowedHosts",
@@ -1129,6 +1131,40 @@ class ConfigTest(unittest.TestCase):
         assert option.visibility == "visible"
         assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
 
+    def test_connection_default_ttl_option_attrs(self) -> None:
+        """The connection TTL defaults to unset and is a float option."""
+        ttl_option = config._config_options_template["runner.connectionDefaultTTL"]
+        assert ttl_option.default_val is None
+        assert ttl_option.type is float
+        assert ttl_option.sensitive is False
+        assert ttl_option.env_var == "STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"
+
+    def test_connection_default_ttl_flag_overrides_toml(self) -> None:
+        """A CLI flag, which is how ``streamlit run`` delivers the env var, overrides config.toml."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".toml", delete=False, encoding="utf-8"
+        ) as toml_file:
+            toml_file.write("[runner]\nconnectionDefaultTTL = 10\n")
+            toml_path = toml_file.name
+
+        try:
+            with patch("streamlit.config.get_config_files", return_value=[toml_path]):
+                config.get_config_options(force_reparse=True)
+                assert config.get_option("runner.connectionDefaultTTL") == 10
+
+                config.get_config_options(
+                    force_reparse=True,
+                    options_from_flags={"runner.connectionDefaultTTL": 7.0},
+                )
+        finally:
+            os.unlink(toml_path)
+
+        assert config.get_option("runner.connectionDefaultTTL") == 7.0
+        assert (
+            config.get_where_defined("runner.connectionDefaultTTL")
+            == config._DEFINED_BY_FLAG
+        )
+
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """
         [server]
@@ -1184,17 +1220,18 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
 
-    def test_agent_api_options_are_hidden_with_their_defaults(self) -> None:
-        """The agent API options stay hidden and default to the documented values."""
+    def test_agent_api_options_are_visible_with_their_defaults(self) -> None:
+        """The agent API options are public and default to the documented values."""
         expected_defaults = {
             "server.enableAgentApi": False,
             "server.agentWaitTimeout": 30,
             "server.agentSessionTTL": 900,
             "server.agentMaxSessions": 100,
+            "server.agentPreviewRows": 100,
         }
         for key, default_val in expected_defaults.items():
             option = config._config_options[key]
-            assert option.visibility == "hidden"
+            assert option.visibility == "visible"
             assert option.default_val == default_val
             assert config.get_option(key) == default_val
 

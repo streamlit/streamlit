@@ -236,7 +236,10 @@ class SnapshotBuilderTest(SnapshotCase):
         )
         assert "table" not in by_key
         assert _one(document, "dataframe")["support"] == "action_unsupported"
-        assert "data" not in _one(document, "dataframe")
+        # Selections are reported, not driven, and the table's data still is.
+        table_data = _one(document, "dataframe")["data"]
+        assert table_data["complete"] is True
+        assert table_data["url"].startswith("/media/")
         assert by_key["save"]["kind"] == "trigger"
         assert "later" not in by_key
         assert (
@@ -354,6 +357,9 @@ class SnapshotBuilderTest(SnapshotCase):
     def test_clearable_records_an_empty_default_the_value_hides(self) -> None:
         """A chosen value hides an empty default, so `clearable` says null empties it."""
         st.selectbox("City", ["Paris"], index=None, key="optional_city")
+        st.selectbox(
+            "Needed city", ["Paris"], index=None, required=True, key="needed_city"
+        )
         st.selectbox("Home", ["Paris"], key="home_city")
         st.radio("Choice", ["a"], index=None, key="choice")
         st.number_input("Count", value=None, key="count")
@@ -370,6 +376,9 @@ class SnapshotBuilderTest(SnapshotCase):
         optional = _one_keyed(snapshot.document, "selectbox", "optional_city")
         assert optional["clearable"] is True
         assert _state(snapshot, "selectbox", "optional_city").clearable is True
+        assert "clearable" not in _one_keyed(
+            snapshot.document, "selectbox", "needed_city"
+        )
         assert "clearable" not in _one_keyed(
             snapshot.document, "selectbox", "home_city"
         )
@@ -640,8 +649,8 @@ class SnapshotBuilderTest(SnapshotCase):
 
 
 def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
-    """Media and static file URLs in url, src, and avatar get the prefix, in lists
-    and nested nodes.
+    """Media and static file URLs in url, src, avatar, and data.url get the prefix,
+    in lists and nested nodes.
     """
     document: dict[str, Any] = {
         "tree": {
@@ -663,6 +672,10 @@ def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
                         },
                         {"type": "iframe", "props": {"src": "/media/e.html"}},
                         {"type": "video", "props": {"url": "/app/static/f.mp4"}},
+                        {
+                            "type": "dataframe",
+                            "data": {"complete": False, "url": "/media/g"},
+                        },
                     ],
                 }
             ],
@@ -671,12 +684,15 @@ def test_rebase_media_urls_rewrites_media_props_throughout_the_tree() -> None:
 
     rebase_media_urls(document, paths=("/media", "/app/static"), prefix="../..")
 
-    image, chat_message, iframe, video = document["tree"]["children"][0]["children"]
+    image, chat_message, iframe, video, dataframe = document["tree"]["children"][0][
+        "children"
+    ]
     assert image["props"]["url"] == ["../../media/a.png", "../../app/static/b.png"]
     assert chat_message["props"]["avatar"] == "../../media/c.png"
     assert chat_message["children"][0]["props"]["url"] == "../../media/d.wav"
     assert iframe["props"]["src"] == "../../media/e.html"
     assert video["props"]["url"] == "../../app/static/f.mp4"
+    assert dataframe["data"]["url"] == "../../media/g"
 
 
 def test_rebase_media_urls_leaves_other_values_untouched() -> None:
@@ -696,6 +712,10 @@ def test_rebase_media_urls_leaves_other_values_untouched() -> None:
                 {"type": "audio", "props": {"url": "/app/staticfiles/x.wav"}},
                 {"type": "chat_message", "props": {"name": "user", "avatar": "🧑"}},
                 {"type": "markdown", "props": {"body": "![](/media/z.png)"}},
+                {
+                    "type": "dataframe",
+                    "data": {"complete": False, "url": "https://example.com/media/x"},
+                },
             ],
         }
     }

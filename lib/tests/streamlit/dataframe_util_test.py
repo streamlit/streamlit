@@ -1793,6 +1793,35 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
     assert result.field("nums").type == pa.list_(pa.int32())
 
 
+@pytest.mark.parametrize(
+    ("input_type", "expected", "values"),
+    [
+        (
+            pa.list_(pa.large_list(pa.int64())),
+            pa.list_(pa.list_(pa.int64())),
+            [[[1, 2], None], None, [[3]]],
+        ),
+        (
+            pa.large_list(pa.list_(pa.large_list(pa.int64()))),
+            pa.list_(pa.list_(pa.list_(pa.int64()))),
+            [[[[1, 2], None]], None, [[[3]]]],
+        ),
+    ],
+    ids=["list_of_large_list", "large_list_list_large_list"],
+)
+def test_convert_arrow_table_to_arrow_bytes_downcasts_nested_large_list(
+    input_type: pa.DataType, expected: pa.DataType, values: list[Any]
+) -> None:
+    """A large_list nested inside a regular list is downcast and keeps its values."""
+    table = pa.table({"nested": pa.array(values, type=input_type)})
+
+    result_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+    result_table = pa.ipc.open_stream(result_bytes).read_all()
+
+    assert result_table.schema.field("nested").type == expected
+    assert result_table.column("nested").to_pylist() == values
+
+
 def test_pandas_df_to_series_raises_on_multi_column() -> None:
     """``_pandas_df_to_series`` raises StreamlitDataframeConversionError on multi-column inputs."""
     df = pd.DataFrame({"a": [1], "b": [2]})

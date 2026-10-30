@@ -74,14 +74,17 @@ type EChartsSourceValue =
 /** One `dataset.source` row, keyed by Arrow field name. */
 type EChartsSourceRow = Record<string, EChartsSourceValue>
 
-/** Converts one decoded Arrow cell of a known column type. */
-type CellConverter = (content: DataType) => EChartsSourceValue
-
-/** A parsed dataset and its rows, cached by name while hydrating one option. */
-interface HydratedDataset {
+/**
+ * A parsed sent dataset, its rows, and its data column names in column order.
+ */
+type HydratedSource = {
   quiver: Quiver
   rows: EChartsSourceRow[]
+  dimensions: string[]
 }
+
+/** Converts one decoded Arrow cell of a known column type. */
+type CellConverter = (content: DataType) => EChartsSourceValue
 
 /**
  * The largest absolute epoch-millisecond value a `Date` can represent.
@@ -280,21 +283,25 @@ function getCellConverter(type: ArrowType): CellConverter {
   return content => (isNullOrUndefined(content) ? null : convert(content))
 }
 
+/** Returns the data column types of a Quiver, which lists index columns first. */
+function getDataColumnTypes(quiver: Quiver): ArrowType[] {
+  return quiver.columnTypes.slice(quiver.dimensions.numIndexColumns)
+}
+
 /**
  * Converts the data columns of a Quiver into ECharts `dataset.source` rows.
  *
- * Index columns are never emitted, matching how Python sends dataframes
- * without their index. Row keys are the Arrow field names, which are the same
- * strings Python puts in `dataset.dimensions`.
+ * Index columns are skipped, so a PyArrow table built from an indexed pandas
+ * dataframe charts only its data columns. Row keys are the Arrow field names,
+ * which `hydrateArrowDatasetSources` also uses as the default
+ * `dataset.dimensions`.
  *
  * @param quiver The parsed Arrow table.
  * @returns One plain object of JSON-like values per data row.
  */
 export function quiverToEChartsRows(quiver: Quiver): EChartsSourceRow[] {
-  const { numIndexColumns, numDataRows, numDataColumns } = quiver.dimensions
-  const columns = Array.from({ length: numDataColumns }, (_, index) => {
-    // Column types list the index columns first.
-    const type = quiver.columnTypes[numIndexColumns + index]
+  const { numDataRows } = quiver.dimensions
+  const columns = getDataColumnTypes(quiver).map((type, index) => {
     const key = type.arrowField.name
     return {
       key,
@@ -325,6 +332,29 @@ export function quiverToEChartsRows(quiver: Quiver): EChartsSourceRow[] {
     rows.push(row)
   }
   return rows
+}
+
+/**
+ * Throws when two data columns share a name. Each row is an object keyed by
+ * column name, so the second column would silently replace the first.
+ */
+function ensureUniqueColumnNames(names: readonly string[]): void {
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  for (const name of names) {
+    if (seen.has(name)) {
+      duplicates.add(name)
+    }
+    seen.add(name)
+  }
+  if (duplicates.size > 0) {
+    throw new Error(
+      `The ECharts dataset.source has duplicate column labels: ${[
+        ...duplicates,
+      ].join(", ")}. Labels are compared as strings, so 1 and "1" also ` +
+        "collide. Rename the columns so each label is unique."
+    )
+  }
 }
 
 /** Parses the Arrow bytes of a dataset that a placeholder points to. */
@@ -412,6 +442,9 @@ function getPlaceholderName(source: unknown): string | null {
  * Replaces the `dataset.source` placeholders of a freshly parsed option with
  * rows from the matching Arrow datasets.
  *
+ * A dataset without `dimensions` gets the data column names, so ECharts keeps
+ * the dataframe's column order.
+ *
  * The option is mutated in place, so pass an object nobody else holds (for
  * example, the result of `JSON.parse`). Each dataset is parsed once, and
  * placeholders that share a name share one rows array.
@@ -422,7 +455,8 @@ function getPlaceholderName(source: unknown): string | null {
  * uses, preferring the chart that renders by default over timeline ticks and
  * `media` overrides. `null` when the option uses none.
  * @throws When a placeholder points to a dataset whose bytes are missing or
- * cannot be read, so the chart never renders the placeholder as a row.
+ * cannot be read, so the chart never renders the placeholder as a row, or
+ * whose data columns share a name.
  */
 export function hydrateArrowDatasetSources(
   option: EChartsOptionObject,
@@ -440,10 +474,10 @@ export function hydrateArrowDatasetSources(
     }
   }
 
-  const hydratedByName = new Map<string, HydratedDataset>()
+  const sourcesByName = new Map<string, HydratedSource>()
   /** Parses a sent dataset on first use; `undefined` if none has `name`. */
-  const hydrate = (name: string): HydratedDataset | undefined => {
-    const cached = hydratedByName.get(name)
+  const getSource = (name: string): HydratedSource | undefined => {
+    const cached = sourcesByName.get(name)
     if (cached !== undefined) {
       return cached
     }
@@ -452,9 +486,13 @@ export function hydrateArrowDatasetSources(
       return undefined
     }
     const quiver = parseDataset(dataset)
-    const entry = { quiver, rows: quiverToEChartsRows(quiver) }
-    hydratedByName.set(name, entry)
-    return entry
+    const dimensions = getDataColumnTypes(quiver).map(
+      type => type.arrowField.name
+    )
+    ensureUniqueColumnNames(dimensions)
+    const source = { quiver, rows: quiverToEChartsRows(quiver), dimensions }
+    sourcesByName.set(name, source)
+    return source
   }
 
   let dataViewData: Quiver | null = null
@@ -469,10 +507,13 @@ export function hydrateArrowDatasetSources(
       const name = getPlaceholderName(datasetOption.source)
       // Only names that were sent count. A user-authored one-row source such
       // as `{"name": "Matcha"}` stays untouched.
-      const hydrated = name === null ? undefined : hydrate(name)
-      if (hydrated !== undefined) {
-        datasetOption.source = hydrated.rows
-        dataViewData ??= hydrated.quiver
+      const source = name === null ? undefined : getSource(name)
+      if (source !== undefined) {
+        datasetOption.source = source.rows
+        if (datasetOption.dimensions === undefined) {
+          datasetOption.dimensions = source.dimensions
+        }
+        dataViewData ??= source.quiver
       }
     }
   }

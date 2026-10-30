@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E tests for the agent API's `POST /_stcore/agent/interact` route.
+"""E2E tests for the agent API's interact route and its OpenAPI document.
 
-The tests call the route over HTTP with `page.request`, which sends no
+`POST /_stcore/agent/interact` drives the app, and the app's HTML links
+`GET /_stcore/agent/openapi.json`, which describes it.
+
+The tests call the routes over HTTP with `page.request`, which sends no
 `Origin` header, like the programmatic clients the route serves. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
 with `server.enableAgentApi` on, so they derive every URL from `app_base_url`
-and tolerate headers a hosting platform adds.
+and tolerate headers a hosting platform adds. They open the app before calling
+the route, because a host that guards the app's origin with a login cookie,
+as Snowflake does, sets it while the app loads, and `page.request` sends the
+browser context's cookies.
 """
 
 from __future__ import annotations
@@ -26,16 +32,22 @@ from __future__ import annotations
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlsplit
 
+import pyarrow as pa
 import pytest
+from playwright.sync_api import expect
 
 from e2e_playwright.conftest import build_app_url
 
 if TYPE_CHECKING:
     from playwright.sync_api import APIResponse, Page
 
+    from e2e_playwright.shared.app_target import AppTarget
+
 _INTERACT_PATH: Final = "/_stcore/agent/interact"
+_SCHEMA_PATH: Final = "/_stcore/agent/openapi.json"
+_ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
 _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
 _TOKEN_VALUE: Final = "e2e-callers-rights-token"
@@ -52,6 +64,14 @@ def app_server_extra_args() -> list[str]:
     return ["--server.enableAgentApi=true", "--server.agentWaitTimeout=5"]
 
 
+@pytest.fixture
+def app_page(app_target: AppTarget) -> Page:
+    """Return the page after the app has loaded, so its context holds any
+    login cookie the host sets.
+    """
+    return app_target.page
+
+
 def _interact_url(app_base_url: str) -> str:
     return build_app_url(app_base_url, path=_INTERACT_PATH)
 
@@ -63,12 +83,29 @@ def _interact(
     *,
     headers: dict[str, str] | None = None,
 ) -> APIResponse:
-    return page.request.post(_interact_url(app_base_url), data=body, headers=headers)
+    # A login redirect can turn the POST into a GET without its body, which
+    # the route refuses with a 405 that hides the redirect.
+    return page.request.post(
+        _interact_url(app_base_url), data=body, headers=headers, max_redirects=0
+    )
+
+
+def _describe(response: APIResponse) -> str:
+    """Return the headers and body that show who answered a failed request.
+
+    A redirect sets `Location`. The route's own 405 sends `Allow: POST`, so a
+    405 without it came from a proxy in front of the app.
+    """
+    headers = response.headers
+    return (
+        f"Location: {headers.get('location')}, Allow: {headers.get('allow')}, "
+        f"body: {response.text()!r}"
+    )
 
 
 def _snapshot(response: APIResponse) -> dict[str, Any]:
     """Return the snapshot of a successful interaction."""
-    assert response.status == 200, response.text()
+    assert response.status == 200, _describe(response)
     assert response.headers["content-type"].startswith("application/json")
     document: dict[str, Any] = response.json()
     return document
@@ -76,7 +113,7 @@ def _snapshot(response: APIResponse) -> dict[str, Any]:
 
 def _refusal(response: APIResponse, status: int, code: str) -> dict[str, Any]:
     """Return the body of a refused interaction, checked for status and code."""
-    assert response.status == status, response.text()
+    assert response.status == status, _describe(response)
     body: dict[str, Any] = response.json()
     assert body["error"]["code"] == code, body
     assert body["error"]["message"]
@@ -272,9 +309,48 @@ def test_slow_run_times_out_and_is_collected(page: Page, app_base_url: str) -> N
     assert (lines["starts"], lines["done"], lines["runs"]) == ("1", "1", "1")
 
 
+def test_data_urls_serve_every_row_the_snapshot_counts(
+    page: Page, app_base_url: str
+) -> None:
+    """A table's and a chart's `data.url`, resolved against the request's URL,
+    serve the Arrow stream their `data` describes, rows past the preview
+    included; a table that shrinks under the preview limit is complete.
+    """
+    created = _snapshot(_interact(page, app_base_url, {"page": "data"}))
+    table = _keyed(created, "orders")["data"]
+    assert table["row_count"] == 250
+    assert table["complete"] is False
+    assert len(table["preview"]["rows"]) == 100
+    assert "unavailable" not in table
+    chart = next(
+        node["data"] for node in _nodes(created) if node["type"] == "line_chart"
+    )
+    for data in (table, chart):
+        assert data["url"].startswith("../../media/")
+        served = page.request.get(urljoin(_interact_url(app_base_url), data["url"]))
+        assert served.status == 200
+        assert served.headers["content-type"] == _ARROW_MIMETYPE
+        arrow = pa.ipc.open_stream(served.body()).read_all()
+        assert arrow.num_rows == data["row_count"]
+        assert arrow.column_names == [column["name"] for column in data["columns"]]
+
+    shrunk = _snapshot(
+        _interact(
+            page,
+            app_base_url,
+            {"session_id": created["session_id"], "widget_state": {"rows": 40}},
+        )
+    )
+    small_table = _keyed(shrunk, "orders")["data"]
+    assert small_table["complete"] is True
+    assert len(small_table["preview"]["rows"]) == small_table["row_count"] == 40
+    # The URL follows the table rather than serving the one it replaced.
+    assert small_table["url"] != table["url"]
+
+
 @pytest.mark.external_test
 def test_snapshot_urls_context_and_headers_follow_the_request(
-    page: Page, app_base_url: str
+    app_page: Page, app_base_url: str
 ) -> None:
     """Media URLs resolve against the request's URL, `context` reaches the
     app's `st.context`, and every interaction's run sees that request's
@@ -285,7 +361,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     """
     token_header = {_TOKEN_HEADER: _TOKEN_VALUE}
     response = _interact(
-        page,
+        app_page,
         app_base_url,
         {"context": {"timezone": "Asia/Kolkata", "locale": "de-DE"}},
         headers=token_header,
@@ -304,13 +380,13 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     )
     # Relative to the request, the one base a path-stripping proxy cannot hide.
     assert image_url.startswith("../../media/")
-    image = page.request.get(urljoin(_interact_url(app_base_url), image_url))
+    image = app_page.request.get(urljoin(_interact_url(app_base_url), image_url))
     assert image.status == 200
     assert image.headers["content-type"].startswith("image/")
 
     rerun = _snapshot(
         _interact(
-            page,
+            app_page,
             app_base_url,
             {"session_id": created["session_id"]},
             headers=token_header,
@@ -324,24 +400,28 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
 
 @pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
-    page: Page, app_base_url: str
+    app_page: Page, app_base_url: str
 ) -> None:
     """A web page's request and other methods than POST are refused without
     the app's HTML, and neither made-up identity headers nor cookies, a forged
     login cookie included, reach `st.user` or `st.context.cookies`.
     """
     _refusal(
-        _interact(page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}),
+        _interact(
+            app_page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}
+        ),
         403,
         "origin_not_allowed",
     )
     for method in ["GET", "PUT"]:
-        response = page.request.fetch(_interact_url(app_base_url), method=method)
-        assert response.status == 405, f"{method}: {response.status}"
+        response = app_page.request.fetch(
+            _interact_url(app_base_url), method=method, max_redirects=0
+        )
+        assert response.status == 405, f"{method}: {_describe(response)}"
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
-    page.context.add_cookies(
+    app_page.context.add_cookies(
         [
             {
                 "name": "_streamlit_user",
@@ -357,7 +437,7 @@ def test_refuses_web_pages_and_ignores_client_identity(
         "Remote-User",
     ]
     response = _interact(
-        page,
+        app_page,
         app_base_url,
         {},
         headers=dict.fromkeys(identity_headers, _SPOOFED_IDENTITY),
@@ -366,3 +446,41 @@ def test_refuses_web_pages_and_ignores_client_identity(
     assert lines["logged_in"] == "False"
     assert lines["cookies"] == "0"
     assert _SPOOFED_IDENTITY not in response.text()
+
+
+@pytest.mark.external_test
+def test_the_app_links_a_description_that_reaches_the_api(
+    app_target: AppTarget, app_base_url: str
+) -> None:
+    """The loaded app's HTML links the OpenAPI document, in its head and in the
+    text a reader without JavaScript gets. The document says the API is on,
+    and its server, resolved against the document's URL, reaches the interact
+    route through `server.baseUrlPath` and any prefix a host adds.
+
+    The `Link` header is not checked, because hosts may strip it.
+    """
+    relative_link = f".{_SCHEMA_PATH}"
+    expect(app_target.locator("link[rel='service-desc']")).to_have_attribute(
+        "href", relative_link
+    )
+    # Read from the DOM, since Playwright's text matching skips `<noscript>`.
+    noscript = app_target.locator("noscript").text_content() or ""
+    assert _SCHEMA_PATH.lstrip("/") in noscript
+
+    page = app_target.page
+    schema_url = build_app_url(app_base_url, path=_SCHEMA_PATH)
+    response = page.request.get(schema_url, max_redirects=0)
+    assert response.status == 200, _describe(response)
+    assert response.headers["content-type"].startswith("application/json")
+    document: dict[str, Any] = response.json()
+    assert document["openapi"].startswith("3.1")
+    assert document["info"]["x-streamlit-agent-api"] == "available"
+
+    [interact_path] = [
+        path for path, item in document["paths"].items() if "post" in item
+    ]
+    root = urljoin(schema_url, document["servers"][0]["url"])
+    interact_url = root + interact_path.lstrip("/")
+    assert urlsplit(interact_url).path == urlsplit(_interact_url(app_base_url)).path
+    created = _snapshot(page.request.post(interact_url, data={}, max_redirects=0))
+    assert _SESSION_ID.fullmatch(created["session_id"])

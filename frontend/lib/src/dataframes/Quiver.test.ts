@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { Field } from "apache-arrow"
+import {
+  Field,
+  Float64,
+  Table,
+  tableToIPC,
+  vectorFromArray,
+} from "apache-arrow"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
@@ -966,5 +972,52 @@ describe("Quiver", () => {
         ])
       })
     })
+  })
+})
+
+describe("Quiver with stale pandas index metadata", () => {
+  it("loads a table whose pandas metadata names a missing index field", () => {
+    // `pa.Table.from_pandas(df).select(["v"])` keeps the metadata naming the
+    // dropped "row" index field.
+    const table = new Table({ v: vectorFromArray([1, 2], new Float64()) })
+    table.schema.metadata.set(
+      "pandas",
+      JSON.stringify({
+        index_columns: ["row"],
+        column_indexes: [
+          {
+            name: null,
+            field_name: null,
+            pandas_type: "unicode",
+            numpy_type: "str",
+            metadata: { encoding: "UTF-8" },
+          },
+        ],
+        columns: [
+          {
+            name: "v",
+            field_name: "v",
+            pandas_type: "float64",
+            numpy_type: "float64",
+            metadata: null,
+          },
+          {
+            name: "row",
+            field_name: "row",
+            pandas_type: "object",
+            numpy_type: "str",
+            metadata: null,
+          },
+        ],
+      })
+    )
+
+    const quiver = new Quiver({ data: tableToIPC(table, "stream") })
+
+    expect(quiver.dimensions.numIndexColumns).toBe(0)
+    expect(quiver.dimensions.numDataColumns).toBe(1)
+    expect(quiver.getDataColumnReader(0)(1)).toBe(2)
+    // The pandas type tags of the data columns are still read.
+    expect(quiver.columnTypes[0].pandasType?.pandas_type).toBe("float64")
   })
 })

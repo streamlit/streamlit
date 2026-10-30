@@ -678,10 +678,11 @@ export default defineConfig([
   // rule's suggested `=== false` is false for null and undefined. The rule
   // always reports mixed-type unions (for example `string | number`); disable
   // those inline with a reason. Other types, including `any`, stay allowed.
-  // The glob covers all of `lib/src`, tests and `vendor/` included; other
-  // packages stay off until they are cleaned up.
+  // The rule covers every package, tests included. The glob has no package
+  // prefix because `app/eslint.config.mjs` re-exports this config, and globs
+  // resolve relative to that file.
   {
-    files: ["lib/src/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

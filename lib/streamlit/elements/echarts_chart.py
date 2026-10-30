@@ -26,11 +26,12 @@ from typing import (
     Protocol,
     TypeAlias,
     cast,
+    get_args,
     overload,
 )
 
 from streamlit import dataframe_util
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec, column_types
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -64,8 +65,6 @@ from streamlit.runtime.state import (
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
-    import pyarrow as pa
-
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -133,6 +132,20 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 # pyecharts ``JsCode`` wraps JavaScript as ``--x_x--<code>--x_x--``.
 # ``dump_options_with_quotes`` emits that encoding as a JSON string value.
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
+
+# The named formats a tooltip ``valueFormatter`` string accepts (the same set as
+# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
+# ``util/formatNumber.ts``.
+_NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# One token of a printf-style format string: literal text, an escaped ``%%``, or
+# a placeholder. The alternatives and their order mirror the parser of the
+# frontend's vendored sprintf (``frontend/lib/src/vendor/sprintf.js``), so a
+# string this rejects would also fail there.
+_PRINTF_TOKEN: Final = re.compile(
+    r"[^%]+|%%|(?P<placeholder>%(?:[1-9][0-9]*\$|\([^)]+\))?\+?(?:0|'[^$])?-?"
+    r"[,_]?[0-9]*(?:\.[0-9]+)?[b-gijostTuvxX])"
+)
 
 
 class EChartsCompatible(Protocol):
@@ -419,111 +432,6 @@ def _loads_json_option(raw: str) -> Any:
     return option
 
 
-def _ensure_unique_dataset_labels(labels: list[str]) -> None:
-    """Reject dataset column labels that collide once stringified.
-
-    The labels become ECharts ``dimensions`` and the keys of each source row,
-    so a collision would silently merge two columns in the browser.
-    """
-    if len(labels) != len(set(labels)):
-        raise StreamlitAPIException(
-            "The provided ECharts dataset has duplicate column labels after "
-            'converting them to strings (for example both `1` and `"1"`). '
-            "Rename the columns so each label is unique.",
-            error_id="echarts-dataset-duplicate-columns",
-        )
-
-
-def _drop_pandas_index_fields(table: pa.Table) -> pa.Table:
-    """Remove pandas index fields so only data columns reach the chart.
-
-    A table built with ``pyarrow.Table.from_pandas`` can store the dataframe
-    index as real fields. Rewrites the pandas metadata rather than dropping it.
-    The browser reads pandas-only type tags (for example, for period columns)
-    from it, and fails to parse metadata that names index fields the table no
-    longer has.
-    """
-    metadata = table.schema.metadata or {}
-    raw_pandas_metadata = metadata.get(b"pandas")
-    if raw_pandas_metadata is None:
-        # Polars or plain Arrow tables have no pandas index.
-        return table
-
-    try:
-        pandas_metadata = json.loads(raw_pandas_metadata)
-        index_columns = pandas_metadata.get("index_columns") or []
-        if not index_columns:
-            return table
-        # A RangeIndex is stored as a dict without a physical field.
-        index_fields = {column for column in index_columns if isinstance(column, str)}
-        pandas_metadata["index_columns"] = []
-        pandas_metadata["columns"] = [
-            column
-            for column in pandas_metadata.get("columns") or []
-            if column.get("field_name") not in index_fields
-        ]
-    except (ValueError, TypeError, AttributeError):
-        # Malformed pandas metadata would also fail to parse in the browser,
-        # so drop it and send the table as plain Arrow.
-        return table.replace_schema_metadata(
-            {key: value for key, value in metadata.items() if key != b"pandas"}
-        )
-
-    if index_fields:
-        # Select by position so duplicate data field names survive until the
-        # duplicate-label check reports them.
-        table = table.select(
-            [
-                position
-                for position, name in enumerate(table.column_names)
-                if name not in index_fields
-            ]
-        )
-    return table.replace_schema_metadata(
-        {**metadata, b"pandas": json.dumps(pandas_metadata).encode()}
-    )
-
-
-def _dataset_source_to_arrow_table(source: Any) -> pa.Table:
-    """Convert a dataframe-like ``dataset.source`` to an Arrow table.
-
-    Only data columns are kept: the dataframe index never becomes a column of
-    the chart's source rows or ``dimensions``.
-    """
-    import pandas as pd
-    import pyarrow as pa
-
-    if dataframe_util.is_polars_lazyframe(source):
-        source = dataframe_util.collect_polars_lazyframe(source)
-    if dataframe_util.is_polars_series(source):
-        source = source.to_frame()
-    if dataframe_util.is_polars_dataframe(source):
-        try:
-            return cast("pa.Table", source.to_arrow())
-        except Exception:
-            _LOGGER.debug(
-                "Direct Polars→Arrow conversion failed, falling back to pandas",
-                exc_info=True,
-            )
-    elif isinstance(source, pa.Table):
-        return _drop_pandas_index_fields(source)
-
-    df = dataframe_util.convert_anything_to_pandas_df(source)
-    labels = [str(column) for column in df.columns]
-    # Check before converting: PyArrow raises a bare ValueError for exact
-    # duplicates, which would otherwise surface as a conversion error.
-    _ensure_unique_dataset_labels(labels)
-    if any(isinstance(column, (tuple, bytes)) for column in df.columns):
-        # PyArrow names tuple labels (MultiIndex or tuple-valued headers) after
-        # their stringified levels (`"('1', '2')"` for `(1, 2)`) and decodes
-        # bytes labels. Use `str(column)` (`"(1, 2)"`) instead, the name apps
-        # write in `encode` and `dimensions`. The shallow copy leaves the
-        # caller's dataframe unchanged.
-        df = df.copy(deep=False)
-        df.columns = pd.Index(labels)
-    return dataframe_util.convert_pandas_df_to_arrow_table(df, preserve_index=False)
-
-
 def _convert_single_dataset(
     dataset: dict[str, Any], arrow_datasets: dict[str, bytes]
 ) -> None:
@@ -537,6 +445,8 @@ def _convert_single_dataset(
     if source is None or not dataframe_util.is_dataframe_like(source):
         return
 
+    # Dataframe and PyArrow conversions raise plain TypeError and ValueError
+    # for unsupported values, such as duplicate pandas column names.
     conversion_errors: tuple[type[BaseException], ...] = (
         StreamlitDataframeConversionError,
         *dataframe_util.get_arrow_conversion_errors(),
@@ -544,26 +454,19 @@ def _convert_single_dataset(
         ValueError,
     )
     try:
-        table = _dataset_source_to_arrow_table(source)
-        # The browser keys each row by Arrow field name, so ``dimensions`` and
-        # the duplicate check use those names.
-        labels = table.column_names
-        _ensure_unique_dataset_labels(labels)
-        data_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(source)
     except conversion_errors as ex:
         raise StreamlitDataframeConversionError(
             "The provided ECharts `dataset.source` could not be converted for "
             "display. Convert or drop the columns that cannot be serialized "
-            f"(for example, cast them to strings).\n\n{ex}",
+            "(for example, cast object columns to strings, or call "
+            f"`.sparse.to_dense()` on sparse columns).\n\n{ex}",
             error_id="echarts-dataset-not-arrow-serializable",
         ) from ex
 
     name = calc_hash(data_bytes)
     arrow_datasets.setdefault(name, data_bytes)
     dataset["source"] = {"name": name}
-    # Preserve column order via ``dimensions`` unless the user set it explicitly.
-    if "dimensions" not in dataset:
-        dataset["dimensions"] = labels
 
 
 def _iter_sequence_entries(value: Any, key: str) -> Iterator[Any]:
@@ -607,12 +510,15 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
             yield from _iter_media_options(timeline_option)
 
 
-def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
-    """Yield series configs from a ``series`` value (object, list, or tuple)."""
-    if isinstance(series, dict):
-        yield series
-    elif isinstance(series, (list, tuple)):
-        for entry in series:
+def _iter_config_entries(value: Any) -> Iterator[dict[str, Any]]:
+    """Yield the dicts of a value that is one dict or a list or tuple of dicts.
+
+    Used for option keys such as ``series`` and ``tooltip``.
+    """
+    if isinstance(value, dict):
+        yield value
+    elif isinstance(value, (list, tuple)):
+        for entry in value:
             if isinstance(entry, dict):
                 yield entry
 
@@ -639,7 +545,7 @@ def _author_aria_label_description(option: dict[str, Any]) -> str | None:
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
-        yield from _iter_series_entries(variant.get("series"))
+        yield from _iter_config_entries(variant.get("series"))
 
 
 def _enables_selection(option: dict[str, Any]) -> bool:
@@ -730,6 +636,62 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
+def _iter_tooltips(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield top-level and series tooltip configs across option variants.
+
+    Skips per-data-item tooltips, which the frontend does not convert either.
+    """
+    for variant in _iter_option_variants(option):
+        yield from _iter_config_entries(variant.get("tooltip"))
+    for series in _iter_series(option):
+        yield from _iter_config_entries(series.get("tooltip"))
+
+
+def _is_printf_format(value: str) -> bool:
+    """Whether ``value`` parses as printf and has at least one placeholder.
+
+    A string without a placeholder (an escaped ``%%`` is not one) would print
+    the same text for every value.
+    """
+    has_placeholder = False
+    position = 0
+    while position < len(value):
+        token = _PRINTF_TOKEN.match(value, position)
+        if token is None:
+            return False
+        has_placeholder = has_placeholder or token["placeholder"] is not None
+        position = token.end()
+    return has_placeholder
+
+
+def _is_number_format(value: Any) -> bool:
+    """Whether ``value`` is a named number format or a printf-style string."""
+    return isinstance(value, str) and (
+        value in _NAMED_NUMBER_FORMATS or _is_printf_format(value)
+    )
+
+
+def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
+    """Log tooltip ``valueFormatter`` values that are not number formats.
+
+    ECharts only accepts a function there, which a JSON spec cannot carry, so
+    Streamlit reads a string as a number format. The frontend drops any other
+    value and keeps the default tooltip formatting, so the chart still renders.
+    """
+    for tooltip in _iter_tooltips(option):
+        value_formatter = tooltip.get("valueFormatter")
+        if value_formatter is None or _is_number_format(value_formatter):
+            continue
+        message = (
+            "The provided ECharts spec sets a tooltip `valueFormatter` of "
+            f"{value_formatter!r}, which is not a number format, so Streamlit "
+            "ignores it and uses the default tooltip formatting. Use a named "
+            'format such as "dollar" or "compact", or a printf-style string '
+            'such as "%.2f" (for example, "%.2f €" instead of "{value} €").'
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
 def _convert_datasets_in_variant(
     option: dict[str, Any], arrow_datasets: dict[str, bytes]
 ) -> None:
@@ -818,6 +780,7 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
         )
 
     _validate_supported_features(option)
+    _warn_on_unsupported_value_formatters(option)
     arrow_datasets = _convert_dataset_sources(option)
     return option, arrow_datasets
 
@@ -926,6 +889,38 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
     return _DEFAULT_CONTENT_HEIGHT
 
 
+def _echarts_data(
+    proto: EChartsChartProto, *, coordinates: str
+) -> dict[str, Any] | None:
+    """Build the agent ``data`` block for an ECharts chart.
+
+    - No Arrow dataset: the option holds all values, so it is reported as
+      complete.
+    - One dataset: the table is summarized and served like a dataframe, with
+      the option (holding its ``{"name": <hash>}`` placeholder) under ``spec``.
+    - Several datasets: no single table describes the chart, so none is served.
+    """
+    datasets = proto.datasets
+    if not datasets:
+        return agent_data.raw_spec(proto.spec)
+
+    data: dict[str, Any]
+    if len(datasets) > 1:
+        data = agent_data.unavailable("multiple_datasets")
+    else:
+        # agent_data.arrow returns None for empty bytes and for bytes that can
+        # neither be summarized nor served. A converted dataset is never
+        # empty, and in a recording session only server.maxMessageSize
+        # prevents serving.
+        data = agent_data.arrow(
+            datasets[0].data.data, coordinates=coordinates
+        ) or agent_data.unavailable("too_large_to_serve")
+    spec = agent_data.parse_spec(proto.spec)
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
 class EChartsMixin:
     @overload
     def echarts_chart(
@@ -983,8 +978,9 @@ class EChartsMixin:
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
-            ``renderItem``) is not supported. Most formatting needs are covered
-            by ECharts' string-template formatters (e.g. ``"formatter": "{b}: {c}"``).
+            ``renderItem``) is not supported. Use ECharts' string templates
+            instead (e.g. ``"formatter": "{b}: {c}"``). To format tooltip
+            values, see the tooltip note below.
 
             Consequently, three families of ECharts charts are unavailable and
             raise an error: ``custom`` series (which require a ``renderItem``
@@ -1001,6 +997,35 @@ class EChartsMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
+        .. note::
+            Streamlit extends two tooltip options so you can format tooltips
+            without JavaScript. Both work in ``tooltip`` and
+            ``series[i].tooltip``. Per-item tooltips inside ``series[i].data``
+            support neither, so set these options on the series instead:
+
+            - ``valueFormatter`` accepts a number format string, which formats
+              each value in the default tooltip. Use a named format
+              (``"plain"``, ``"localized"``, ``"dollar"``, ``"euro"``,
+              ``"yen"``, ``"percent"``, ``"compact"``, ``"scientific"``,
+              ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
+              printf-style format string (e.g. ``"%,d sessions"``). These are
+              the same formats as in |st.metric|_. ``"percent"`` multiplies
+              values by 100. One format applies to every value of a series, so
+              use ``encode.tooltip`` to choose which dimensions the tooltip
+              shows. Streamlit ignores any other value, including a malformed
+              printf-style string, and the tooltip keeps its default
+              formatting.
+            - String ``formatter`` templates in tooltips expand the
+              ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
+              otherwise supports only in series labels (e.g.
+              ``"{b}: {@[2]} sessions"``). In an axis tooltip, they read the
+              first series. Template values are inserted as escaped text,
+              without a number format. The template itself is HTML, as in any
+              other ECharts tooltip string.
+
+            .. |st.metric| replace:: ``st.metric``
+            .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
+
         Parameters
         ----------
         spec : dict, str, or pyecharts chart
@@ -1015,15 +1040,12 @@ class EChartsMixin:
 
             If your option object includes a ``dataset`` with a dataframe-like
             ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
-            its rows to ECharts and preserves the column order through
-            ``dataset.dimensions`` when you haven't set it. Datetimes arrive as
-            ISO-8601 strings: naive values keep the wall-clock time with no
-            timezone suffix, and timezone-aware values use a ``Z`` suffix.
-            Dates arrive as ``YYYY-MM-DD``, times of day as ``HH:mm:ss`` (with
-            milliseconds when set), and durations as milliseconds. Missing
-            values become ``null``. The dataframe index
-            isn't included. To plot the index, reset it into a column first
-            (``df.reset_index()``).
+            its rows to ECharts and keeps the column order through
+            ``dataset.dimensions`` when you haven't set it. The dataframe index
+            isn't included, so use ``df.reset_index()`` to plot it. Datetimes
+            become ISO-8601 strings (in UTC if timezone-aware), durations become
+            milliseconds, and missing values become ``null``. Other non-numeric
+            values use the text ``st.dataframe`` shows.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -1077,8 +1099,9 @@ class EChartsMixin:
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened. Set
-            ``tooltip.formatter`` to a string template (for example
-            ``"{b}: {c}"``) to use your own formatting.
+            ``tooltip.valueFormatter`` to a number format (for example
+            ``"dollar"``) or ``tooltip.formatter`` to a string template (for
+            example ``"{b}: {c}"``) to use your own formatting.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
@@ -1455,15 +1478,20 @@ class EChartsMixin:
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
-        # A callback reaches the server, so it is the same mode as "rerun".
         # A display-only chart has an element ID only when the author set a key.
         # An active selection is reported, not settable through this API.
         agent_props = agent_spec.element(
             "echarts_chart",
             key=echarts_chart_proto.id or None,
             support="action_unsupported" if is_selection_activated else None,
-            on_select="ignore" if on_select == "ignore" else "rerun",
+            # Reported only with selections on; the documented default,
+            # "ignore", is left out. A callback reaches the server too, so
+            # it is "rerun".
+            on_select="rerun" if is_selection_activated else None,
             alt=echarts_chart_proto.alt or None,
+            data_builder=lambda: _echarts_data(
+                echarts_chart_proto, coordinates=self.dg._get_write_delta_path_str()
+            ),
         )
 
         if not is_selection_activated:

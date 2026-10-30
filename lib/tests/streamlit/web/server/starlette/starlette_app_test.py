@@ -1366,19 +1366,29 @@ def test_static_files_fall_back_to_index(tmp_path: Path) -> None:
 def test_agent_api_route_answers_instead_of_the_app_html(
     starlette_client: tuple[TestClient, _DummyRuntime],
 ) -> None:
-    """With defaults, the agent route refuses a POST and any other method,
-    rather than falling through to the app's HTML.
+    """With defaults, the agent routes answer rather than falling through to
+    the app's HTML: the interact route refuses a POST and any other method,
+    and the schema route reports that the API is off and refuses a POST
+    itself, rather than leaving it to the static files mount.
     """
     client, runtime = starlette_client
 
     posted = client.post("/_stcore/agent/interact", json={})
     fetched = client.get("/_stcore/agent/interact")
+    schema = client.get("/_stcore/agent/openapi.json")
+    schema_posted = client.post("/_stcore/agent/openapi.json")
 
     assert posted.status_code == HTTPStatus.FORBIDDEN
     assert posted.json()["error"]["code"] == "not_available"
     assert fetched.status_code == HTTPStatus.METHOD_NOT_ALLOWED
     assert fetched.headers["Allow"] == "POST"
     assert "<html>" not in fetched.text
+    assert schema.status_code == HTTPStatus.OK
+    assert schema.json()["info"]["x-streamlit-agent-api"] == "disabled"
+    assert schema_posted.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert schema_posted.headers["Allow"] == "GET, HEAD"
+    assert schema_posted.headers["Link"] == '<openapi.json>; rel="service-desc"'
+    assert schema_posted.content == b""
     assert runtime.last_user_info is None
 
 

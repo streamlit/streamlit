@@ -129,7 +129,7 @@ export function DeployDialog(
       return
     }
 
-    if (module && untrackedFiles?.includes(module)) {
+    if (module && untrackedFiles?.includes(module) === true) {
       const dialog = ModuleIsNotAdded(module)
 
       showDeployError(dialog.title, dialog.body)

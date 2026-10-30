@@ -26,8 +26,12 @@ import {
   Float64,
   Int64,
   Int8,
+  LargeList,
   List,
+  makeData,
   Null,
+  RecordBatch,
+  Schema,
   Struct,
   Table,
   tableToIPC,
@@ -429,6 +433,19 @@ describe("quiverToEChartsRows", () => {
       expected: [-0.005, -0.05, null],
     },
     {
+      name: "Decimal with a negative scale",
+      column: {
+        // Unscaled 123 and -5 with scale -2 are 12300 and -500.
+        values: [
+          new Uint32Array([123, 0, 0, 0]),
+          new Uint32Array([-5 >>> 0, 0xffffffff, 0xffffffff, 0xffffffff]),
+          null,
+        ],
+        type: new Decimal(-2, 10),
+      },
+      expected: [12300, -500, null],
+    },
+    {
       name: "Uint64 above MAX_SAFE_INTEGER",
       column: { values: [maxSafe + BigInt(2)], type: new Uint64() },
       expected: [Number(maxSafe + BigInt(2))],
@@ -501,6 +518,22 @@ describe("quiverToEChartsRows", () => {
       expected: ['{"a":1,"b":"x"}', null],
     },
     {
+      // Python sends Polars struct columns with list fields as
+      // struct<large_list> without downcasting them.
+      name: "Struct with a LargeList child",
+      column: {
+        values: [{ v: [BigInt(1), null, BigInt(3)] }, { v: [] }, null],
+        type: new Struct([
+          new Field(
+            "v",
+            new LargeList(new Field("item", new Int64(), true)),
+            true
+          ),
+        ]),
+      },
+      expected: ['{"v":[1,null,3]}', '{"v":[]}', null],
+    },
+    {
       name: "Dictionary<Timestamp>",
       column: {
         values: [1_577_836_800_000, null, 1_577_836_800_000],
@@ -527,11 +560,11 @@ describe("quiverToEChartsRows", () => {
     {
       name: "Duration nanoseconds",
       column: {
-        // 1.5ms keeps its fraction; above MAX_SAFE_INTEGER keeps whole ms.
+        // Sub-millisecond fractions are kept, also above MAX_SAFE_INTEGER.
         values: [BigInt(1_500_000), maxSafe * BigInt(2), null],
         type: new Duration(TimeUnit.NANOSECOND),
       },
-      expected: [1.5, 18_014_398_509, null],
+      expected: [1.5, 18_014_398_509 + 0.481982, null],
     },
     {
       name: "Null",
@@ -593,16 +626,16 @@ describe("hydrateArrowDatasetSources", () => {
 
   const DATASETS = [namedDataset("h1", FIRST), namedDataset("h2", SECOND)]
 
-  it("replaces a top-level placeholder with rows and returns the first dataset", () => {
+  it("replaces a top-level placeholder with rows, keeps the app's dimensions, and returns the first dataset", () => {
     const option: Record<string, unknown> = {
-      dataset: { source: { name: "h1" }, dimensions: ["product", "sales"] },
+      dataset: { source: { name: "h1" }, dimensions: ["sales", "product"] },
     }
 
     const firstDataset = hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual({
       source: FIRST_ROWS,
-      dimensions: ["product", "sales"],
+      dimensions: ["sales", "product"],
     })
     expect(firstDataset).toBeInstanceOf(Quiver)
     expect(firstDataset?.dimensions.numDataRows).toBe(2)
@@ -610,6 +643,21 @@ describe("hydrateArrowDatasetSources", () => {
       "product",
       "sales",
     ])
+  })
+
+  it("sets the default dimensions to the data column names, without index columns", () => {
+    const option: Record<string, unknown> = {
+      dataset: { source: { name: "indexed" } },
+    }
+
+    hydrateArrowDatasetSources(option, [namedDataset("indexed", NAMED_INDEX)])
+
+    const { source, dimensions } = option.dataset as {
+      source: Record<string, unknown>[]
+      dimensions: string[]
+    }
+    expect(dimensions).toEqual(Object.keys(source[0]))
+    expect(dimensions).not.toContain("INDEX")
   })
 
   it("hydrates every dataset of a dataset list and leaves inline sources alone", () => {
@@ -626,9 +674,9 @@ describe("hydrateArrowDatasetSources", () => {
     hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual([
-      { source: FIRST_ROWS },
+      { source: FIRST_ROWS, dimensions: ["product", "sales"] },
       { source: inline },
-      { source: SECOND_ROWS },
+      { source: SECOND_ROWS, dimensions: ["x"] },
       { transform: { type: "filter" } },
     ])
   })
@@ -729,6 +777,35 @@ describe("hydrateArrowDatasetSources", () => {
       expect(option.dataset.source).toEqual({ name: "h1" })
     }
   )
+
+  it("throws for a dataset whose data columns share a name", () => {
+    // Python sends `pd.DataFrame([[1, 2]], columns=[1, "1"])` as two fields
+    // named "1", which would merge into one key of each row.
+    const fields = [
+      new Field("1", new Float64(), true),
+      new Field("1", new Float64(), true),
+      new Field("other", new Float64(), true),
+    ]
+    const batch = new RecordBatch(
+      new Schema(fields),
+      makeData({
+        type: new Struct(fields),
+        length: 1,
+        nullCount: 0,
+        children: [1, 2, 3].map(
+          value => vectorFromArray([value], new Float64()).data[0]
+        ),
+      })
+    )
+    const option = { dataset: { source: { name: "dup" } } }
+
+    expect(() =>
+      hydrateArrowDatasetSources(option, [
+        namedDataset("dup", tableToIPC(new Table(batch), "stream")),
+      ])
+    ).toThrow(/^The ECharts dataset\.source has duplicate column labels: 1\. /)
+    expect(option.dataset.source).toEqual({ name: "dup" })
+  })
 
   it("does not read datasets that no placeholder points to", () => {
     const option = { dataset: { source: { name: "h2" } } }
