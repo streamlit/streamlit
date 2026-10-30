@@ -17,7 +17,6 @@
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import { type TopLevelSpec, version as vegaLiteVersion } from "vega-lite"
-import { vi } from "vitest"
 
 import {
   LabelVisibility as LabelVisibilityProto,
