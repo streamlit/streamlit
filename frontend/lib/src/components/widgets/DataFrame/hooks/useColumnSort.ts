@@ -19,6 +19,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import type { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   type BaseColumn,
   toGlideColumn,
@@ -197,7 +199,7 @@ function useColumnSort({
     // renamed label (via column_config) or, for multi-level headers, only the
     // last level, neither of which reliably identifies the backend column.
     const fieldName = column?.arrowType.arrowField.name
-    if (!fieldName) {
+    if (isNullOrEmptyString(fieldName)) {
       return undefined
     }
     return { column: fieldName, descending: sort.direction === "desc" }

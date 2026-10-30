@@ -20,6 +20,8 @@ import {
   type TextCell,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -49,7 +51,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
   let validateRegex: RegExp | string | undefined = undefined
 
-  if (parameters.validate) {
+  if (!isNullOrEmptyString(parameters.validate)) {
     // Prepare the validation regex:
     try {
       // u flag allows unicode characters

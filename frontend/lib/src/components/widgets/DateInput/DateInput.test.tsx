@@ -4029,7 +4029,7 @@ describe("DateInput range-mode Escape with the calendar closed", () => {
       await user.keyboard("0")
       expect(end.day).toHaveTextContent("10")
 
-      if (key) {
+      if (key !== null) {
         await user.keyboard(key)
       } else {
         await user.click(document.body)

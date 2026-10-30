@@ -65,6 +65,7 @@ import {
   STREAMLIT_THEME,
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
+import { applyLargeDataDefaults } from "./largeDataDefaults"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -73,7 +74,10 @@ import {
   StyledEChartsError,
   StyledEChartsErrorOverlay,
 } from "./styled-components"
-import { applyTooltipFormatters } from "./tooltipFormatters"
+import {
+  applyTimeLabelFormatters,
+  applyTooltipFormatters,
+} from "./tooltipFormatters"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -409,8 +413,11 @@ export function EChartsChart({
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
   // The option handed to setOption:
+  // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
   // - Streamlit theme defaults.
   // - Tooltip string formatters turned into functions.
+  // - Under the Streamlit theme, time axis labels that show midnight values
+  //   as dates.
   // - On display-only charts, a non-pointer series cursor so they don't look
   //   clickable. Selection widgets keep the author's cursor.
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
@@ -422,8 +429,15 @@ export function EChartsChart({
       return null
     }
     let prepared = configureSelectionOption(
-      applyTooltipFormatters(
-        applyStreamlitOptionDefaults(option, element.theme, theme)
+      applyTimeLabelFormatters(
+        applyTooltipFormatters(
+          applyStreamlitOptionDefaults(
+            applyLargeDataDefaults(option, element.selectionActivated),
+            element.theme,
+            theme
+          )
+        ),
+        element.theme
       )
     )
     // Proto `alt` wins over generated / author aria.label.description and
@@ -439,6 +453,7 @@ export function EChartsChart({
   }, [
     option,
     element.theme,
+    element.selectionActivated,
     configureSelectionOption,
     element.alt,
     spacing.sm,

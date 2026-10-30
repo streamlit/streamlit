@@ -34,6 +34,16 @@ export function isNullOrUndefined<T>(
 ): value is null | undefined {
   return <T>value === null || <T>value === undefined
 }
+/**
+ * A type predicate that is true if the given string is undefined, null, or
+ * empty. Negate it to check for a non-empty string; `value` then narrows to
+ * `string`.
+ */
+export function isNullOrEmptyString(
+  value: string | null | undefined
+): value is null | undefined | "" {
+  return value === null || value === undefined || value === ""
+}
 
 export interface StreamlitWindowObject {
   // URL pointing to where the Streamlit server is running. This is useful in
