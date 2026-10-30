@@ -980,7 +980,7 @@ function SingleDateTimeInput({
         aria-keyshortcuts="Alt+ArrowDown"
         data-testid="stDateTimeInputField"
         data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
+        data-has-error={error !== null ? "" : undefined}
         aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -1000,8 +1000,8 @@ function SingleDateTimeInput({
                 // commit.
                 key={resetKey}
                 aria-label={label}
-                aria-describedby={error ? errorId : undefined}
-                isInvalid={!!error}
+                aria-describedby={error !== null ? errorId : undefined}
+                isInvalid={error !== null}
                 // Keep invalid state tied to Streamlit's error, not native
                 // constraint validation. Required is exposed on the field
                 // group that contains the focused segments, not via RAC
@@ -1026,7 +1026,7 @@ function SingleDateTimeInput({
           </I18nProvider>
         </StyledDateFieldsScroller>
         <StyledTrailingIcons>
-          {error && (
+          {error !== null && (
             <StyledErrorIconContainer data-testid="stDateTimeInputError">
               <Tooltip
                 content={
@@ -1067,7 +1067,7 @@ function SingleDateTimeInput({
             <Icon content={CalendarToday} size="base" />
           </StyledCalendarButton>
         </StyledTrailingIcons>
-        {error && (
+        {error !== null && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
@@ -1134,8 +1134,8 @@ function SingleDateTimeInput({
                     // so this does not depend on those two happening to differ.
                     key={resetKey}
                     aria-labelledby={`${id}-time-label`}
-                    aria-describedby={error ? errorId : undefined}
-                    isInvalid={!!error}
+                    aria-describedby={error !== null ? errorId : undefined}
+                    isInvalid={error !== null}
                     value={popoverTimeValue}
                     onChange={handlePopoverTimeChange}
                     granularity="minute"

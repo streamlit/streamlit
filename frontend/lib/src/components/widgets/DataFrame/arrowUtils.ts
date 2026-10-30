@@ -23,12 +23,16 @@ import {
   type UriCell,
 } from "@glideapps/glide-data-grid"
 import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
-import { Field, Null } from "apache-arrow"
+import { Field, Null, TimeUnit } from "apache-arrow"
 import moment from "moment"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
+  convertTimestampToSeconds,
   convertTimeToDate,
   format as formatArrowCell,
+  getArrowTimeUnit,
 } from "~lib/dataframes/arrowFormatUtils"
 import {
   type ArrowType,
@@ -39,6 +43,7 @@ import {
   isDatetimeType,
   isDateType,
   isDecimalType,
+  isDurationType,
   isEmptyType,
   isListType,
   isNumericType,
@@ -60,6 +65,7 @@ import {
   DateColumn,
   DateTimeColumn,
   type DateTimeColumnParams,
+  getErrorCell,
   isErrorCell,
   type LinkColumnParams,
   ListColumn,
@@ -71,6 +77,16 @@ import {
   TextColumn,
   TimeColumn,
 } from "./columns"
+
+/**
+ * Public column type names, keyed by the column kinds that show a point in
+ * time (date, time, datetime) rather than an elapsed duration.
+ */
+const CLOCK_COLUMN_PUBLIC_NAMES = new Map([
+  ["time", "TimeColumn"],
+  ["date", "DateColumn"],
+  ["datetime", "DatetimeColumn"],
+])
 
 /**
  * Extracts a CSS property value from a given CSS style string by using a regex.
@@ -133,7 +149,7 @@ export function applyPandasStylerCss(
 
   // Extract and apply the font color
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
-  if (fontColor) {
+  if (!isNullOrEmptyString(fontColor)) {
     themeOverride.textDark = fontColor
 
     // Apply text color also for cells that don't use textDark:
@@ -156,7 +172,7 @@ export function applyPandasStylerCss(
     "background-color",
     cssStyles
   )
-  if (backgroundColor) {
+  if (!isNullOrEmptyString(backgroundColor)) {
     themeOverride.bgCell = backgroundColor
   }
 
@@ -170,7 +186,7 @@ export function applyPandasStylerCss(
 
   // Extract and apply the font weight:
   const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
-  if (fontWeight) {
+  if (!isNullOrEmptyString(fontWeight)) {
     // It's not recommended to directly use the theme primitives. However,
     // we don't change our fontsize primitives (since they are already in rem)
     // and we don't have access to the theme here (would be quite a big refactoring to
@@ -208,7 +224,7 @@ export function getColumnTypeFromArrow(arrowType: ArrowType): ColumnCreator {
   if (isBooleanType(arrowType)) {
     return CheckboxColumn
   }
-  if (isNumericType(arrowType)) {
+  if (isNumericType(arrowType) || isDurationType(arrowType)) {
     return NumberColumn
   }
   if (isCategoricalType(arrowType)) {
@@ -313,8 +329,10 @@ export function initIndexFromArrow(
 
   let isEditable = true
 
-  if (isRangeIndexType(arrowType)) {
-    // Range indices are not editable
+  if (isRangeIndexType(arrowType) || isDurationType(arrowType)) {
+    // Range indexes are generated, so editing them is not meaningful.
+    // Duration indexes stay read-only: TimedeltaIndex is not a supported
+    // data_editor index type.
     isEditable = false
   }
 
@@ -452,7 +470,22 @@ export function getCellFromArrow(
         : null
     )
   } else if (
-    ["time", "date", "datetime"].includes(column.kind) &&
+    CLOCK_COLUMN_PUBLIC_NAMES.has(column.kind) &&
+    isDurationType(arrowCell.contentType) &&
+    notNullOrUndefined(arrowCell.content)
+  ) {
+    // Duration values are elapsed time, not a clock time. Applying a
+    // time/date/datetime column would display them incorrectly
+    // (e.g. 1s → 00:16:40).
+    const publicColumnName =
+      CLOCK_COLUMN_PUBLIC_NAMES.get(column.kind) ?? column.kind
+    cellTemplate = getErrorCell(
+      "Unsupported type",
+      `${publicColumnName} does not support timedelta/duration values. ` +
+        "Use st.column_config.NumberColumn instead."
+    )
+  } else if (
+    CLOCK_COLUMN_PUBLIC_NAMES.has(column.kind) &&
     notNullOrUndefined(arrowCell.content) &&
     (typeof arrowCell.content === "number" ||
       typeof arrowCell.content === "bigint")
@@ -482,6 +515,28 @@ export function getCellFromArrow(
       ? null
       : formatArrowCell(arrowCell.content, arrowCell.contentType)
     cellTemplate = column.getCell(decimalStr)
+  } else if (
+    isDurationType(arrowCell.contentType) &&
+    notNullOrUndefined(arrowCell.content) &&
+    (typeof arrowCell.content === "number" ||
+      typeof arrowCell.content === "bigint")
+  ) {
+    // Number and progress columns get the duration in seconds, so values sort
+    // numerically and stay within JS safe integers. Nanosecond durations
+    // longer than about 104 days lose some nanosecond precision. Other column
+    // kinds get the humanized duration string.
+    if (column.kind === "number" || column.kind === "progress") {
+      cellTemplate = column.getCell(
+        convertTimestampToSeconds(
+          arrowCell.content,
+          getArrowTimeUnit(arrowCell.field, TimeUnit.NANOSECOND)
+        )
+      )
+    } else {
+      cellTemplate = column.getCell(
+        formatArrowCell(arrowCell.content, arrowCell.contentType)
+      )
+    }
   } else {
     cellTemplate = column.getCell(arrowCell.content)
   }
@@ -547,12 +602,9 @@ export function getCellFromArrow(
       }
     }
 
-    if (cssStyles && styledCell?.cssId) {
-      cellTemplate = applyPandasStylerCss(
-        cellTemplate,
-        styledCell.cssId,
-        cssStyles
-      )
+    const cssId = styledCell?.cssId
+    if (!isNullOrEmptyString(cssStyles) && !isNullOrEmptyString(cssId)) {
+      cellTemplate = applyPandasStylerCss(cellTemplate, cssId, cssStyles)
     }
   }
   return cellTemplate

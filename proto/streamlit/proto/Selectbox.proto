@@ -41,7 +41,11 @@ message Selectbox {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 16;
-  // Next: 17
+
+  // If true, an empty selection (None) cannot be committed or submitted
+  // (client-side).
+  bool required = 17;
+  // Next: 18
 
   reserved 7;
 }

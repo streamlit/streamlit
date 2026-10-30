@@ -19,14 +19,19 @@ import styled from "@emotion/styled"
 /**
  * Outermost chart chrome. Stretch height uses the content-size floor so
  * `height: 100%` does not collapse to 0 outside a sized parent.
+ *
+ * `isHidden` hides the chart while the data table is shown. The chart stays
+ * mounted so the ECharts instance keeps its zoom, legend, and timeline state.
  */
 export const StyledEChartsChartRoot = styled.div<{
   isStretchHeight?: boolean
-}>(({ theme, isStretchHeight = false }) => ({
+  isHidden?: boolean
+}>(({ theme, isStretchHeight = false, isHidden = false }) => ({
   position: "relative",
   width: "100%",
   height: "100%",
   ...(isStretchHeight && { minHeight: theme.sizes.defaultChartHeight }),
+  ...(isHidden && { display: "none" }),
 }))
 
 /**

@@ -62,7 +62,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
-| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations and selection-driven interactions. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for chart types and in-chart controls that Vega-based charts lack, or for an existing ECharts option. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -74,7 +74,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
-| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for directed graphs, diagrams, and node-edge visualizations. |
+| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for diagrams that need Graphviz layout engines or clusters; prefer `st.mermaid_chart` for other diagrams. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
 | `st.html` | Insert HTML into your app. JavaScript is ignored by default; for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
@@ -100,7 +100,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
 | `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
-| `st.plotly_chart` | Display an interactive Plotly chart. Use it when Plotly is already available or chart interactions/customization require Plotly. |
+| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that Vega-based charts and ECharts cannot draw, or for an existing Plotly figure. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
@@ -161,7 +161,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.column_config.ListColumn` | Configure a list column in `st.dataframe` or `st.data_editor`. Use it for arrays or repeated values that should render as structured list content. |
 | `st.column_config.MarkdownColumn` | Configure a markdown column in `st.dataframe` or `st.data_editor`. Cells show plain text, and clicking a cell opens an overlay that renders the Markdown. |
 | `st.column_config.MultiselectColumn` | Configure a multiselect column in `st.dataframe` or `st.data_editor`. Use it when each row can contain multiple choices from a known set. |
-| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, min/max bounds, step sizes, and numeric formatting. |
+| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, timedelta/duration values, min/max bounds, step sizes, and numeric formatting. |
 | `st.column_config.ProgressColumn` | Configure a progress column in `st.dataframe` or `st.data_editor`. Use it for percentages, completion values, scores, or bounded progress-like quantities. |
 | `st.column_config.SelectboxColumn` | Configure a selectbox column in `st.dataframe` or `st.data_editor`. Use it when each row should choose exactly one option from a known set. |
 | `st.column_config.TextColumn` | Configure a text column in `st.dataframe` or `st.data_editor`. Use it for strings with optional validation, length bounds, and text-specific display or editing behavior. |

@@ -189,7 +189,7 @@ Replay of a cached element or block message copies its stored `agent_props` only
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
-- `/_stcore/agent/interact`: Agent API (POST only; off unless the hidden `server.enableAgentApi` is set)
+- `/_stcore/agent/interact`: Agent API (POST only; off unless `server.enableAgentApi` is set)
 - `/_stcore/agent/openapi.json`: The agent API's OpenAPI document (GET; always served, and with the API off it only reports that the API is disabled, via `info.x-streamlit-agent-api`)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
