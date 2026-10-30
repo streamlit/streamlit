@@ -181,12 +181,20 @@ class WidgetValidator(Protocol):
     """What a client may send for one widget: the serde's ``validate`` method."""
 
     def __call__(
-        self, ui_value: Any, *, previous: Any = None, value: Any = None
+        self,
+        ui_value: Any,
+        *,
+        previous: Any = None,
+        value: Any = None,
+        exact: bool = False,
     ) -> Violation | None:
         """Return a violation for one changed client value, or None.
 
         ``ui_value`` is the unpacked wire value, ``value`` is that value after
         the widget's deserializer, and ``previous`` is the stored value.
+        ``exact`` holds the value to the author's constraints as written,
+        without the allowance a browser needs, such as the bound a float
+        slider rounds to. The agent API sets it.
         """
 
 

@@ -196,7 +196,9 @@ value from a client satisfies all of the following:
   `max_chars` or a color with a trailing newline, because the browser shows it and
   sends it back. A float `st.slider` also accepts a bound as the browser rounds it to
   the step's precision (`min_value=0.123` with `step=0.1` sends `0.12`), and reads it as
-  the bound, so the app never sees a value past `min_value` or `max_value`.
+  the bound, so the app never sees a value past `min_value` or `max_value`. The agent
+  API gets no such allowance, so it never moves a request's value: `0.12` is refused
+  there.
 - It does not empty a `required` widget. `required` limits what a user can submit, not
   what the widget holds: an untouched required widget still reads as empty (`None`, `""`,
   or `[]`), exactly as in the browser, so an app still has to handle that case. Neither

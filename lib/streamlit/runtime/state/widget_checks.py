@@ -650,8 +650,10 @@ def check_client_value(
         stricter: a value the deserializer converts onto the stored one, such
         as ``2.5`` for an integer input holding ``2``, still reaches the
         validator. A ``state`` with no value field reads as the default
-        without a conversion, so it is compared deserialized either way. The
-        agent API uses it.
+        without a conversion, so it is compared deserialized either way.
+        ``True`` also asks the validator for the author's constraints as
+        written (``exact``), without the allowance a browser needs for its
+        rounding. The agent API uses it.
     stored_state : WidgetState or None
         The stored value in its wire form, for ``compare_wire``. ``None`` means
         there is none, so a value with a field always counts as changed.
@@ -706,12 +708,16 @@ def check_client_value(
     if metadata.disabled:
         return CheckResult(Violation("disabled"), value)
 
-    # The widget's own rules.
+    # The widget's own rules. The agent API, which compares on the wire, gets
+    # no allowance for the browser's rounding either, so nothing it sends is
+    # corrected silently.
     violation: Violation | None = None
     validator = metadata.validator
     if validator is not None:
         try:
-            violation = validator(ui_value, previous=previous, value=value)
+            violation = validator(
+                ui_value, previous=previous, value=value, exact=compare_wire
+            )
         except Exception as exc:
             # The message is left out: it may quote the value.
             frame = traceback.extract_tb(exc.__traceback__)[-1]

@@ -286,8 +286,15 @@ def test_a_comparison_that_raises_counts_as_a_change() -> None:
     validator.assert_called_once()
 
 
-def test_the_validator_receives_the_wire_value_previous_and_deserialized() -> None:
-    """The validator is called with the unpacked value and both keywords."""
+@pytest.mark.parametrize("compare_wire", [False, True])
+def test_the_validator_receives_the_wire_value_previous_and_deserialized(
+    compare_wire: bool,
+) -> None:
+    """The validator is called with the unpacked value and the keywords.
+
+    A wire comparison, which the agent API uses, also asks for the author's
+    constraints as written.
+    """
     validator = MagicMock(return_value=None)
 
     result = check_client_value(
@@ -295,9 +302,10 @@ def test_the_validator_receives_the_wire_value_previous_and_deserialized() -> No
         metadata=_metadata(deserializer=int, validator=validator),
         previous=2,
         is_rendered=True,
+        compare_wire=compare_wire,
     )
 
-    validator.assert_called_once_with("3", previous=2, value=3)
+    validator.assert_called_once_with("3", previous=2, value=3, exact=compare_wire)
     assert result == (None, 3, True)
 
 

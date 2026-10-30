@@ -1289,6 +1289,29 @@ def test_a_value_past_what_the_browser_rounds_to_is_refused(
     assert serde.deserialize([sent]) == sent
 
 
+@pytest.mark.parametrize(
+    ("bounds", "sent"),
+    [
+        ((0.123, 1.0), [0.12]),
+        ((0.0, 0.9996), [1.0]),
+        ((0.123, 0.9996), [0.12, 0.92]),
+    ],
+)
+def test_an_exact_check_has_no_rounding_band(
+    bounds: tuple[float, float], sent: list[float]
+) -> None:
+    """The agent API holds a value to the bounds as written, so it is never moved."""
+    serde = _rounding_serde(*bounds, single_value=len(sent) == 1)
+
+    assert serde.validate(_doubles(*sent), exact=True) == Violation(
+        "out_of_range", {"min_value": bounds[0], "max_value": bounds[1]}
+    )
+    # The bounds themselves are accepted.
+    exact_values = [[bound] for bound in bounds] if len(sent) == 1 else [bounds]
+    for values in exact_values:
+        assert serde.validate(_doubles(*values), exact=True) is None
+
+
 def test_an_integer_slider_has_no_rounding_band() -> None:
     """A whole step never rounds, so the bounds are exact."""
     serde = _make_int_serde(value=[20], min_value=10, max_value=100)

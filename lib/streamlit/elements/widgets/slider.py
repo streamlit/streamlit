@@ -340,14 +340,19 @@ class SliderSerde:
         return value
 
     def validate(
-        self, ui_value: Sequence[float] | None, **_kwargs: Any
+        self,
+        ui_value: Sequence[float] | None,
+        *,
+        exact: bool = False,
+        **_kwargs: Any,
     ) -> Violation | None:
         """Refuse values the browser would not send.
 
         The browser sends one value, or a range's two ends lowest first, each
         a finite number within the bounds. A bound may arrive rounded to the
         step's precision, just past it, which the deserializer reads as the
-        bound. ``step`` is not checked otherwise.
+        bound, unless ``exact`` holds the value to the bounds as written.
+        ``step`` is not checked otherwise.
         """
         if ui_value is None:
             return None
@@ -356,7 +361,7 @@ class SliderSerde:
         )
         if violation is not None:
             return violation
-        low, high = self._browser_range
+        low, high = (self.min_value, self.max_value) if exact else self._browser_range
         for item in ui_value:
             violation = widget_checks.finite(item)
             if violation is None and self.data_type == SliderProto.INT:

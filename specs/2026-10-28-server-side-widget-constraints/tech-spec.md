@@ -296,13 +296,20 @@ other two are:
 # runtime/state/common.py
 class WidgetValidator(Protocol):
     def __call__(
-        self, ui_value: Any, *, previous: Any = None, value: Any = None
+        self,
+        ui_value: Any,
+        *,
+        previous: Any = None,
+        value: Any = None,
+        exact: bool = False,
     ) -> Violation | None:
         """Return a violation for one changed client value, or None.
 
         `ui_value` is the unpacked wire value, `value` is that value after
         `deserialize`, and `previous` is the stored value. Only the multiselect
-        and the data editor read the keywords.
+        and the data editor read them. `exact`, which the agent API sets, holds
+        the value to the author's constraints as written, without the allowance
+        a browser needs for its rounding; only a float slider has one.
         """
 
 
@@ -750,7 +757,9 @@ Items 1–3 are covered above.
   so integer, date, and time sliders keep exact bounds. The mirror matched React Aria
   for every end and step of 4,000 random float sliders, and an e2e test drives both
   ends. `number_input` needs no such band: its frontend refuses an out-of-range commit
-  itself (`commitValue`).
+  itself (`commitValue`). The band is only for the browser. The agent API's wire mode
+  passes `exact=True` to the validator, which then checks the bounds as written, so a
+  request is never moved onto a bound: `0.12` is refused with the author's bounds.
 - `slider`, `select_slider`, `date_input` ranges: the item count is fixed. `date_input`
   allows up to two items, and an empty or start-only range. The values must be ordered,
   which the browser guarantees.

@@ -647,6 +647,15 @@ class WidgetWritesTest(SnapshotCase):
             # An emoji is two UTF-16 code units, as the browser counts it.
             ("emoji_past_max_chars", "short", "ab😀", _Refused("at most 3 characters")),
             ("emoji_at_max_chars", "short", "a😀", "a😀"),
+            # A browser may commit 0.12 for this bound, which the slider reads
+            # as 0.123. A request is held to the bound as written instead.
+            (
+                "slider_below_a_rounded_bound",
+                "rounded",
+                0.12,
+                _Refused("'rounded' takes values from 0.123 to 1.0, inclusive."),
+            ),
+            ("slider_at_a_rounded_bound", "rounded", 0.123, 0.123),
         ]
     )
     def test_bounds_shapes_and_lengths(
@@ -661,6 +670,7 @@ class WidgetWritesTest(SnapshotCase):
         st.number_input("Bounded", 0, 10, 5, key="bounded")
         st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
         st.text_input("Short", max_chars=3, key="short")
+        st.slider("Rounded", 0.123, 1.0, 0.5, step=0.1, key="rounded")
         self._check({key: sent}, expected)
 
     @parameterized.expand(
