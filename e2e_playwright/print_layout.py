@@ -22,6 +22,13 @@ st.set_page_config(initial_sidebar_state=480)
 
 with st.sidebar:
     st.text("Sidebar filter")
+    st.markdown("Sidebar_label_without_any_spaces_that_could_wrap_onto_lines")
+    st.metric("Sidebar metric", "1,234,567,890", "12%")
+    st.bar_chart(pd.DataFrame({"value": [4, 2, 3]}), height=160)
+    st.dataframe(
+        pd.DataFrame({f"column {index}": [index * 100] for index in range(8)}),
+        hide_index=True,
+    )
 
 left, right = st.columns(2)
 with left:

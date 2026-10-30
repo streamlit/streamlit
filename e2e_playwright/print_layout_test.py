@@ -65,6 +65,51 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     wait_until(app, sidebar_prints_at_minimum_width)
 
+    # At that width, wide sidebar content stays inside the sidebar and the
+    # main column starts to its right, so nothing overlaps. Text wraps or
+    # shrinks to fit. A dataframe keeps its own scroller, which clips the
+    # columns that do not fit.
+    main_content = app.get_by_test_id("stMainBlockContainer")
+    sidebar_text = [
+        sidebar.get_by_text("Sidebar_label_without", exact=False),
+        sidebar.get_by_test_id("stMetricValue"),
+    ]
+    sidebar_parts = [
+        *sidebar_text,
+        sidebar.get_by_test_id("stVegaLiteChart"),
+        sidebar.get_by_test_id("stDataFrame"),
+    ]
+    for part in sidebar_parts:
+        expect(part).to_be_visible()
+
+    def sidebar_content_stays_in_the_sidebar() -> None:
+        sidebar_box = sidebar.bounding_box()
+        main_box = main_content.bounding_box()
+        assert sidebar_box is not None
+        assert main_box is not None
+        sidebar_right = sidebar_box["x"] + sidebar_box["width"]
+        assert main_box["x"] >= sidebar_right - 1
+        for part in sidebar_text:
+            assert part.evaluate(
+                "element => element.scrollWidth <= element.clientWidth + 1"
+            )
+        for part in sidebar_parts:
+            box = part.bounding_box()
+            assert box is not None
+            assert box["x"] + box["width"] <= sidebar_right + 1
+        # Charts and the dataframe grid paint into SVG and canvas, so those
+        # surfaces must end inside the sidebar too.
+        graphics = sidebar.locator(
+            "[data-testid='stVegaLiteChart'] svg, [data-testid='stDataFrame'] canvas"
+        )
+        assert graphics.count() > 0
+        for graphic_right in graphics.evaluate_all(
+            "elements => elements.map(element => element.getBoundingClientRect().right)"
+        ):
+            assert graphic_right <= sidebar_right + 1
+
+    wait_until(app, sidebar_content_stays_in_the_sidebar)
+
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
     metric_row = get_element_by_key(app, "metric_row").get_by_test_id(
