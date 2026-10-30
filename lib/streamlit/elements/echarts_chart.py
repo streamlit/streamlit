@@ -1040,26 +1040,12 @@ class EChartsMixin:
 
             If your option object includes a ``dataset`` with a dataframe-like
             ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
-            its rows to ECharts and preserves the column order through
+            its rows to ECharts and keeps the column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
-            isn't included. To plot it, reset it into a column first
-            (``df.reset_index()``). Cell values are converted as follows:
-
-            - Naive datetimes: ISO-8601 strings without a timezone suffix.
-            - Timezone-aware datetimes: ISO-8601 strings in UTC with a ``Z``
-              suffix. A value at 05:00 in ``America/New_York`` becomes
-              ``2020-01-01T10:00:00.000Z``.
-            - Dates: ``YYYY-MM-DD``.
-            - Times of day: ``HH:mm:ss``, with milliseconds when set.
-            - Durations: milliseconds.
-            - Decimals: numbers.
-            - Periods and intervals: labels such as ``2020-01`` and ``(0, 1]``.
-            - Lists: arrays.
-            - Bytes: their comma-separated byte values, such as ``97,98`` for
-              ``b"ab"``.
-            - Structs, mixed-type columns, and other objects: the text
-              ``st.dataframe`` shows.
-            - Missing values and non-finite floats: ``null``.
+            isn't included, so use ``df.reset_index()`` to plot it. Datetimes
+            become ISO-8601 strings (in UTC if timezone-aware), durations become
+            milliseconds, and missing values become ``null``. Other non-numeric
+            values use the text ``st.dataframe`` shows.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
