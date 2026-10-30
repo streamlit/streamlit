@@ -29,11 +29,10 @@ export const PRINT_INACTIVE_ATTRIBUTE = "data-st-inactive"
 export const PRINT_VISIBLE_FILTER = `:not([${PRINT_INACTIVE_ATTRIBUTE}] *):not(details:not([open]) *)`
 
 /**
- * Charts by their own element classes. A chart's SVG or canvas prints as one
- * piece, so the browser moves it to the next page instead of splitting it.
- * Only built-in chart renderers with a stable frontend class are listed. A
- * new chart element must be added here to stack its column row and stay on
- * one page in print.
+ * Selects built-in chart renderers by their stable element classes. A chart's
+ * SVG or canvas prints as one piece, so the browser moves it to the next page
+ * instead of splitting it. A new chart element must be added here to stack
+ * its column row and stay on one page in print.
  */
 export const PRINT_CHART_SELECTOR =
   ":is(.stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)"

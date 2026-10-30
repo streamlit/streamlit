@@ -396,8 +396,9 @@ export interface StyledFlexContainerBlockProps {
   /**
    * Whether the block has a definite height to share among its children.
    * Print keeps flex for these so stretch children share the height.
-   * Defaults to true for a fixed length. A percentage height is only
-   * definite inside a definite-height parent, which the style cannot see.
+   * When unset, it is inferred from `height`: true for a fixed length, false
+   * for auto or a percentage (a percentage is only definite inside a
+   * definite-height parent, which this style cannot see).
    */
   hasDefiniteHeight?: boolean
   /**
@@ -450,11 +451,10 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children. Stacked columns stay
-      //   close to their screen width; other children are full width. Columns of a
-      //   row that stays side by side are size containers (unless the row
-      //   is content-sized), so a content-width metric can scale to its
-      //   printed column.
+      //   dataframe, or table stacks its children. Stacked columns stay close
+      //   to their screen width; other children are full width.
+      // - Columns of a side-by-side row are size containers (unless the row is
+      //   content-sized), so a content-width metric can scale to its column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =

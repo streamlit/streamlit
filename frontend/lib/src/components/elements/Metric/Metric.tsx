@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useEffect, useId, useRef } from "react"
+import {
+  memo,
+  type ReactElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react"
 
 import { Global } from "@emotion/react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -31,6 +38,7 @@ import {
 } from "@streamlit/lib"
 import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -64,20 +72,13 @@ const LOG = getLogger("Metric")
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
 /**
- * Record the value's width at the card's font size.
+ * Records the value's unclipped width at its unscaled font size, so print CSS
+ * can shrink the figure to a narrower printed card.
  *
- * Print layout narrows the card after `beforeprint`. Print CSS divides the
- * available width by this length and shrinks the figure only when that slot
- * is narrower. A stretch metric uses the card (100cqi); a content-width
- * metric uses the narrower of the width from `recordMetricAvailableWidth`
- * and its printed column (100cqi).
- *
- * The on-screen markdown is ellipsized, so its box is the clipped width. A
- * clone of that markdown is measured unconstrained. The clone keeps bold and
- * inline code, which are wider than the container's plain font. The clone
- * stays inside the value to inherit its font, because Firefox returns an
- * empty `font` shorthand from `getComputedStyle` when the theme sets font
- * longhands.
+ * - Screen styles ellipsize the markdown, so its own box is clipped. Measure
+ *   an unconstrained clone instead, which keeps bold and inline code widths.
+ * - The clone stays inside the value to inherit its font. Firefox returns an
+ *   empty `font` shorthand when the theme sets font longhands.
  */
 function recordMetricValueWidth(value: HTMLElement): void {
   // Clear any previously recorded width so print CSS does not scale the probe.
@@ -413,7 +414,14 @@ function Metric({
   const chartRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef<HTMLDivElement>(null)
 
-  const isContentWidth = Boolean(widthConfig?.useContent)
+  const flexContext = useContext(FlexContext)
+  // A metric without a fixed width inside a content-width container is also
+  // sized by its value.
+  const hasFixedWidth =
+    (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0
+  const isContentWidth =
+    Boolean(widthConfig?.useContent) ||
+    (!hasFixedWidth && flexContext?.isInContentWidthContainer === true)
 
   useEffect(() => {
     const handleBeforePrint = (): void => {
