@@ -181,4 +181,36 @@ describe("StyledVegaLiteChartContainer print layout", () => {
     expect(css).toContain("svg.marks")
     expect(css).toContain("canvas.marks")
   })
+
+  it.each([
+    [true, false, false, true],
+    [true, true, false, false],
+    [true, false, true, false],
+    [false, false, false, false],
+  ])(
+    "scales a stretch-width chart up to a limit (width %s, container height %s, contained %s)",
+    (useContainerWidth, useContainerHeight, isSizeContained, scalesUp) => {
+      const { container } = render(
+        createElement(StyledVegaLiteChartContainer, {
+          useContainerWidth,
+          useContainerHeight,
+          isSizeContained,
+          hasFallbackHeight: false,
+        })
+      )
+      const classNames = [
+        ...(container.firstElementChild?.classList ?? []),
+      ].filter(className => className.startsWith("css-"))
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .filter(rule =>
+          classNames.some(className => rule.includes(`.${className}`))
+        )
+        .join("\n")
+
+      const upscaleRule =
+        "width:min(100%, calc(var(--st-print-screen-width, 100%) * 1.25))!important;height:auto!important"
+      expect(css.includes(upscaleRule)).toBe(scalesUp)
+    }
+  )
 })
