@@ -311,7 +311,7 @@ describe("Metric element", () => {
     // the measured slot and the printed column, which resolves `cqi`.
     expect(css).not.toContain("container-type:inline-size")
     expect(css).toContain(
-      "atan2(min(var(--st-metric-available, 100cqi), calc(100cqi - 0px)), var(--st-metric-text-width, min(var(--st-metric-available, 100cqi), calc(100cqi - 0px))))"
+      "atan2(min(var(--st-metric-available-width, 100cqi), calc(100cqi - 0px)), var(--st-metric-text-width, min(var(--st-metric-available-width, 100cqi), calc(100cqi - 0px))))"
     )
     expect(css).not.toContain("100vw")
     expect(css).not.toContain("overflow:hidden")
@@ -342,13 +342,17 @@ describe("Metric element", () => {
     rect.mockRestore()
 
     const value = screen.getByTestId("stMetricValue")
-    expect(value.style.getPropertyValue("--st-metric-available")).toBe("80px")
+    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
+      "80px"
+    )
     expect(value.style.getPropertyValue("--st-metric-text-width")).toBe(
       "112px"
     )
 
     window.dispatchEvent(new Event("afterprint"))
-    expect(value.style.getPropertyValue("--st-metric-available")).toBe("")
+    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
+      ""
+    )
     expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
   })
 
@@ -390,7 +394,7 @@ describe("Metric element", () => {
     expect(metricRules.includes("container-type:inline-size")).toBe(
       isContained
     )
-    expect(metricRules.includes("var(--st-metric-available")).toBe(
+    expect(metricRules.includes("var(--st-metric-available-width")).toBe(
       !isContained
     )
   })
@@ -423,10 +427,12 @@ describe("Metric element", () => {
     closest.mockRestore()
 
     // 120px slot minus 2 * 14px padding and 2 * 1px border.
-    expect(value.style.getPropertyValue("--st-metric-available")).toBe("90px")
-    expect(value.style.getPropertyValue("--st-metric-available")).not.toBe(
-      "120px"
+    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
+      "90px"
     )
+    expect(
+      value.style.getPropertyValue("--st-metric-available-width")
+    ).not.toBe("120px")
   })
 
   it("refits a content-width metric on print media only after beforeprint", () => {
@@ -470,11 +476,15 @@ describe("Metric element", () => {
 
     // Print emulation without beforeprint has no text width to scale by.
     listeners[0]()
-    expect(value.style.getPropertyValue("--st-metric-available")).toBe("")
+    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
+      ""
+    )
 
     value.style.setProperty("--st-metric-text-width", "112px")
     listeners[0]()
-    expect(value.style.getPropertyValue("--st-metric-available")).toBe("80px")
+    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
+      "80px"
+    )
 
     closest.mockRestore()
     matchMedia.mockRestore()

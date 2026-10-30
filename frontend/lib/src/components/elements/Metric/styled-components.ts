@@ -42,7 +42,7 @@ export const METRIC_TEXT_WIDTH_VAR = "--st-metric-text-width"
  * value is not a size container, so the font rule reads this together with
  * the printed column's `cqi`.
  */
-export const METRIC_AVAILABLE_VAR = "--st-metric-available"
+export const METRIC_AVAILABLE_WIDTH_VAR = "--st-metric-available-width"
 
 interface StyledMetricContainerProps {
   showBorder: boolean
@@ -59,7 +59,7 @@ export const StyledMetricContainer = styled.div<StyledMetricContainerProps>(
   ({ theme, showBorder, isContentWidth }) => {
     // A bordered card's border plus padding is `lg` on each side.
     const cardInset = showBorder ? `2 * ${theme.spacing.lg}` : "0px"
-    const contentWidthSlot = `min(var(${METRIC_AVAILABLE_VAR}, 100cqi), calc(100cqi - ${cardInset}))`
+    const contentWidthSlot = `min(var(${METRIC_AVAILABLE_WIDTH_VAR}, 100cqi), calc(100cqi - ${cardInset}))`
     return {
       height: "100%",
       ...(showBorder && {
