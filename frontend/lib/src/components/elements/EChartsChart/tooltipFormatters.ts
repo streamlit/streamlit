@@ -15,7 +15,7 @@
  */
 
 import * as echarts from "echarts"
-import { isPlainObject, omit } from "lodash-es"
+import { get, isPlainObject, omit } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
@@ -25,7 +25,11 @@ import {
 } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { type EChartsOptionObject, formatTooltipItem } from "./CustomTheme"
+import {
+  type EChartsOptionObject,
+  formatTooltipItem,
+  STREAMLIT_THEME,
+} from "./CustomTheme"
 
 const LOG = getLogger("EChartsChart")
 
@@ -180,7 +184,7 @@ function buildValueFormatter(format: string): TooltipValueFormatter | null {
 /** Map an array, returning the input array when no entry changed. */
 function mapPreservingIdentity(
   entries: unknown[],
-  transform: (entry: unknown) => unknown
+  transform: (entry: unknown, index: number) => unknown
 ): unknown[] {
   const mapped = entries.map(transform)
   return mapped.some((entry, index) => entry !== entries[index])
@@ -278,16 +282,19 @@ function convertOptionTooltips(
   )
 }
 
-/** Convert an option variant plus its responsive ``media[*].option`` overrides. */
-function convertOptionAndMediaTooltips(
-  target: EChartsOptionObject,
-  useUTC: boolean
+/**
+ * Apply ``convert`` to every option variant: the option, its timeline
+ * ``baseOption`` and ``options[*]``, and the ``media[*].option`` overrides of
+ * each. Returns the input when no variant changed.
+ *
+ * This visits the same variants as Python's ``_iter_option_variants``, so both
+ * sides agree. That includes the root and ``baseOption.media``, which ECharts
+ * ignores when ``baseOption`` is set; converting them is harmless.
+ */
+function mapOptionVariants(
+  option: EChartsOptionObject,
+  convert: (variant: EChartsOptionObject) => EChartsOptionObject
 ): EChartsOptionObject {
-  const result = convertOptionTooltips(target, useUTC)
-  const { media } = result
-  if (!Array.isArray(media)) {
-    return result
-  }
   const convertMediaEntry = (entry: unknown): unknown => {
     if (!isPlainObject(entry)) {
       return entry
@@ -297,18 +304,57 @@ function convertOptionAndMediaTooltips(
       ? withProperty(
           mediaEntry,
           "option",
-          convertOptionTooltips(
-            mediaEntry.option as EChartsOptionObject,
-            useUTC
-          )
+          convert(mediaEntry.option as EChartsOptionObject)
         )
       : mediaEntry
   }
-  return withProperty(
-    result,
-    "media",
-    mapPreservingIdentity(media, convertMediaEntry)
-  )
+  const convertWithMedia = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const result = convert(target)
+    const { media } = result
+    return Array.isArray(media)
+      ? withProperty(
+          result,
+          "media",
+          mapPreservingIdentity(media, convertMediaEntry)
+        )
+      : result
+  }
+
+  let result = convertWithMedia(option)
+  const { baseOption } = result
+  if (isPlainObject(baseOption)) {
+    result = withProperty(
+      result,
+      "baseOption",
+      convertWithMedia(baseOption as EChartsOptionObject)
+    )
+  }
+  const { options } = result
+  if (Array.isArray(options)) {
+    const convertTimelineOption = (tick: unknown): unknown =>
+      isPlainObject(tick)
+        ? convertWithMedia(tick as EChartsOptionObject)
+        : tick
+    result = withProperty(
+      result,
+      "options",
+      mapPreservingIdentity(options, convertTimelineOption)
+    )
+  }
+  return result
+}
+
+/**
+ * Read ``useUTC`` as ECharts does. A declared ``baseOption`` holds the chart,
+ * so ECharts reads ``useUTC`` only from there and ignores the root.
+ */
+function readUseUTC(option: EChartsOptionObject): boolean {
+  const chartOption = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  return chartOption.useUTC === true
 }
 
 /**
@@ -335,32 +381,307 @@ function convertOptionAndMediaTooltips(
 export function applyTooltipFormatters(
   option: EChartsOptionObject
 ): EChartsOptionObject {
-  const baseOption = isPlainObject(option.baseOption)
-    ? (option.baseOption as EChartsOptionObject)
-    : undefined
-  // A declared ``baseOption`` holds the chart, so ECharts reads ``useUTC``
-  // only from there and ignores the root.
-  const useUTC = (baseOption ? baseOption.useUTC : option.useUTC) === true
-  const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
-    convertOptionAndMediaTooltips(variant, useUTC)
+  const useUTC = readUseUTC(option)
+  return mapOptionVariants(option, variant =>
+    convertOptionTooltips(variant, useUTC)
+  )
+}
 
-  // Convert every location Python's ``_iter_option_variants`` warns about, so
-  // both sides agree. That includes the root tooltips and ``baseOption.media``,
-  // which ECharts ignores when ``baseOption`` is set; converting them is
-  // harmless.
-  let result = convertVariant(option)
-  if (baseOption) {
-    result = withProperty(result, "baseOption", convertVariant(baseOption))
-  }
-  const { options } = result
-  if (Array.isArray(options)) {
-    const convertTimelineOption = (tick: unknown): unknown =>
-      isPlainObject(tick) ? convertVariant(tick as EChartsOptionObject) : tick
-    result = withProperty(
-      result,
-      "options",
-      mapPreservingIdentity(options, convertTimelineOption)
+/** The cartesian axis keys whose ``type: "time"`` axes get date labels. */
+const CARTESIAN_AXIS_KEYS = ["xAxis", "yAxis"] as const
+
+/**
+ * The time label templates ECharts uses for its tooltip header and slider
+ * labels (``fullLeveledFormatter`` in its ``util/time``).
+ */
+const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
+const SECOND_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
+const MILLISECOND_LABEL_TEMPLATE = `${SECOND_LABEL_TEMPLATE} {SSS}`
+/** The label templates above that include a time of day. */
+const TIME_OF_DAY_LABEL_TEMPLATES = [
+  SECOND_LABEL_TEMPLATE,
+  MILLISECOND_LABEL_TEMPLATE,
+] as const
+
+/**
+ * Whether ``date`` is exactly midnight: in UTC when ``useUTC`` is set, and in
+ * local time otherwise.
+ */
+function isMidnight(date: Date, useUTC: boolean): boolean {
+  return echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
+}
+
+/**
+ * Format a time axis value for the axis tooltip header and axis pointer
+ * labels.
+ *
+ * ECharts picks one precision per axis from its tick interval, so daily data
+ * spanning less than about five months reads "2026-08-18 00:00:00". This
+ * decides per value instead:
+ *
+ * - A midnight value shows only its date.
+ * - Any other value shows its date and time to the second, ECharts' format for
+ *   all but sub-second axes. That keeps an axis pointer that doesn't snap to
+ *   data from printing a changing millisecond, and it shows the time even
+ *   where ECharts would show only the date.
+ *
+ * Deciding per value needs no scan of the axis data, but an hourly series
+ * shows its midnight points without a time.
+ */
+function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
+  const date = echarts.time.parse(value)
+  return echarts.time.format(
+    date,
+    isMidnight(date, useUTC) ? DATE_LABEL_TEMPLATE : SECOND_LABEL_TEMPLATE,
+    useUTC
+  )
+}
+
+/**
+ * Drop the time from a slider ``dataZoom`` handle label that ECharts printed
+ * for a midnight value. A slider can control a value or category axis, so any
+ * label other than ECharts' time label for that value stays unchanged.
+ */
+function trimMidnightSliderLabel(
+  value: number,
+  valueStr: string,
+  useUTC: boolean
+): string {
+  // ECharts builds ``valueStr`` from the rounded value, so format the same
+  // instant.
+  const date = echarts.time.parse(Math.round(value))
+  const isMidnightTimeLabel =
+    isMidnight(date, useUTC) &&
+    TIME_OF_DAY_LABEL_TEMPLATES.some(
+      template => echarts.time.format(date, template, useUTC) === valueStr
+    )
+  return isMidnightTimeLabel
+    ? echarts.time.format(date, DATE_LABEL_TEMPLATE, useUTC)
+    : valueStr
+}
+
+/**
+ * List the configs of a component option (one config or a list of them) with
+ * their indexes, skipping entries that aren't objects.
+ */
+function indexedComponents(
+  value: unknown
+): Array<[Record<string, unknown>, number]> {
+  const entries: unknown[] = Array.isArray(value) ? value : [value]
+  const components: Array<[Record<string, unknown>, number]> = []
+  entries.forEach((entry, index) => {
+    if (isPlainObject(entry)) {
+      components.push([entry as Record<string, unknown>, index])
+    }
+  })
+  return components
+}
+
+/**
+ * Map the configs of a component option (one config or a list of them),
+ * leaving entries that aren't objects unchanged. Returns the input when no
+ * config changed.
+ */
+function mapComponents(
+  value: unknown,
+  transform: (
+    entry: Record<string, unknown>,
+    index: number
+  ) => Record<string, unknown>
+): unknown {
+  if (Array.isArray(value)) {
+    return mapPreservingIdentity(value, (entry, index) =>
+      isPlainObject(entry)
+        ? transform(entry as Record<string, unknown>, index)
+        : entry
     )
   }
-  return result
+  return isPlainObject(value)
+    ? transform(value as Record<string, unknown>, 0)
+    : value
+}
+
+/** Whether ``target`` has a non-null value at the lodash ``path``. */
+function hasValueAt(target: unknown, path: string): boolean {
+  return !isNullOrUndefined(get(target, path))
+}
+
+/**
+ * Where one axis pointer label formatter covers every axis, as
+ * ``[option key, path]``. An axis-level formatter would override it.
+ */
+const SHARED_AXIS_POINTER_FORMATTERS = [
+  ["tooltip", "axisPointer.label.formatter"],
+  ["grid", "tooltip.axisPointer.label.formatter"],
+  ["axisPointer", "label.formatter"],
+] as const
+
+/**
+ * The axes and sliders that keep ECharts' own time labels, collected across
+ * every option variant.
+ *
+ * Timeline and ``media`` variants merge into the chart by component index, so
+ * a slot such as ``xAxis:0`` is skipped in every variant when any variant sets
+ * its formatter, or declares it as a non-time axis that would inherit a time
+ * formatter.
+ */
+interface TimeLabelExclusions {
+  /**
+   * Whether a ``tooltip``, ``grid.tooltip``, or top-level ``axisPointer``
+   * label formatter applies to every axis.
+   */
+  hasSharedAxisPointerFormatter: boolean
+  /**
+   * Whether any variant has a ``type: "time"`` axis. Sliders keep ECharts'
+   * labels on charts without one.
+   */
+  hasTimeAxis: boolean
+  /** Slots such as ``xAxis:0`` or ``dataZoom:1`` that keep ECharts' labels. */
+  skippedSlots: Set<string>
+}
+
+/**
+ * Collect, across every option variant, the axes and sliders whose labels the
+ * author already controls.
+ */
+function findTimeLabelExclusions(
+  option: EChartsOptionObject
+): TimeLabelExclusions {
+  const exclusions: TimeLabelExclusions = {
+    hasSharedAxisPointerFormatter: false,
+    hasTimeAxis: false,
+    skippedSlots: new Set(),
+  }
+  // ``mapOptionVariants`` only visits each variant here: ``collect`` returns
+  // it unchanged, and the mapped result is discarded.
+  const collect = (variant: EChartsOptionObject): EChartsOptionObject => {
+    for (const [key, path] of SHARED_AXIS_POINTER_FORMATTERS) {
+      if (
+        indexedComponents(variant[key]).some(([entry]) =>
+          hasValueAt(entry, path)
+        )
+      ) {
+        exclusions.hasSharedAxisPointerFormatter = true
+      }
+    }
+    for (const key of CARTESIAN_AXIS_KEYS) {
+      for (const [axis, index] of indexedComponents(variant[key])) {
+        if (axis.type === "time") {
+          exclusions.hasTimeAxis = true
+        }
+        if (
+          (axis.type !== undefined && axis.type !== "time") ||
+          hasValueAt(axis, "axisPointer.label.formatter")
+        ) {
+          exclusions.skippedSlots.add(`${key}:${index}`)
+        }
+      }
+    }
+    for (const [zoom, index] of indexedComponents(variant.dataZoom)) {
+      if (hasValueAt(zoom, "labelFormatter")) {
+        exclusions.skippedSlots.add(`dataZoom:${index}`)
+      }
+    }
+    return variant
+  }
+  mapOptionVariants(option, collect)
+  return exclusions
+}
+
+/**
+ * Show midnight time values as dates in the Streamlit theme's axis labels.
+ *
+ * ECharts picks one label precision per time axis, so daily data spanning
+ * less than about five months reads "2026-08-18 00:00:00". This sets
+ * plain-text formatters, which ECharts escapes:
+ *
+ * - ``axisPointer.label.formatter`` on each ``type: "time"`` ``xAxis`` and
+ *   ``yAxis`` (the axis tooltip header and axis pointer labels).
+ * - ``labelFormatter`` on each slider ``dataZoom`` of a chart with a time
+ *   axis.
+ *
+ * Author formatters always win, including a shared one on ``tooltip``,
+ * ``grid.tooltip``, or the top-level ``axisPointer`` (an axis formatter would
+ * override it). Values use UTC when the chart sets ``useUTC: true``, as ECharts
+ * does; naive datetimes arrive as local ISO strings. This changes ECharts'
+ * default formatting rather than reading the spec, so ``theme=None`` keeps
+ * ECharts' labels.
+ *
+ * @param option The option object to convert.
+ * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
+ * @returns The option with time label formatters, or the input when no axis
+ * or slider needs one.
+ */
+export function applyTimeLabelFormatters(
+  option: EChartsOptionObject,
+  themeStr: string
+): EChartsOptionObject {
+  if (themeStr !== STREAMLIT_THEME) {
+    return option
+  }
+  const { hasSharedAxisPointerFormatter, hasTimeAxis, skippedSlots } =
+    findTimeLabelExclusions(option)
+  if (!hasTimeAxis) {
+    return option
+  }
+  const useUTC = readUseUTC(option)
+  const axisPointerFormatter = (params: unknown): string =>
+    formatTimeAxisValue(get(params, "value"), useUTC)
+  const sliderLabelFormatter = (value: number, valueStr: string): string =>
+    trimMidnightSliderLabel(value, valueStr, useUTC)
+
+  const withAxisPointerFormatter = (
+    axis: Record<string, unknown>
+  ): Record<string, unknown> => {
+    const axisPointer = isPlainObject(axis.axisPointer)
+      ? (axis.axisPointer as Record<string, unknown>)
+      : {}
+    const label = isPlainObject(axisPointer.label)
+      ? (axisPointer.label as Record<string, unknown>)
+      : {}
+    return {
+      ...axis,
+      axisPointer: {
+        ...axisPointer,
+        label: { ...label, formatter: axisPointerFormatter },
+      },
+    }
+  }
+
+  const convertVariant = (
+    variant: EChartsOptionObject
+  ): EChartsOptionObject => {
+    let result = variant
+    if (!hasSharedAxisPointerFormatter) {
+      for (const key of CARTESIAN_AXIS_KEYS) {
+        const convertAxis = (
+          axis: Record<string, unknown>,
+          index: number
+        ): Record<string, unknown> =>
+          axis.type === "time" && !skippedSlots.has(`${key}:${index}`)
+            ? withAxisPointerFormatter(axis)
+            : axis
+        result = withProperty(
+          result,
+          key,
+          mapComponents(result[key], convertAxis)
+        )
+      }
+    }
+    // ECharts defaults a ``dataZoom`` without a ``type`` to a slider.
+    const convertZoom = (
+      zoom: Record<string, unknown>,
+      index: number
+    ): Record<string, unknown> =>
+      (zoom.type ?? "slider") === "slider" &&
+      !skippedSlots.has(`dataZoom:${index}`)
+        ? { ...zoom, labelFormatter: sliderLabelFormatter }
+        : zoom
+    return withProperty(
+      result,
+      "dataZoom",
+      mapComponents(result.dataZoom, convertZoom)
+    )
+  }
+  return mapOptionVariants(option, convertVariant)
 }

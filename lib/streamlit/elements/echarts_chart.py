@@ -1101,7 +1101,10 @@ class EChartsMixin:
             also applied, and long tooltip numbers are shortened. Set
             ``tooltip.valueFormatter`` to a number format (for example
             ``"dollar"``) or ``tooltip.formatter`` to a string template (for
-            example ``"{b}: {c}"``) to use your own formatting.
+            example ``"{b}: {c}"``) to use your own formatting. On a time
+            ``xAxis`` or ``yAxis``, the tooltip header and slider labels show
+            midnight values as dates (for example ``2026-08-18``) unless you
+            set ``axisPointer.label.formatter`` or ``dataZoom.labelFormatter``.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

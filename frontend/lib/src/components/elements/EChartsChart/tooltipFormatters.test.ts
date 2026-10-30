@@ -18,7 +18,10 @@ import { getLogger } from "loglevel"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { EChartsOptionObject } from "./CustomTheme"
-import { applyTooltipFormatters } from "./tooltipFormatters"
+import {
+  applyTimeLabelFormatters,
+  applyTooltipFormatters,
+} from "./tooltipFormatters"
 
 const LOG = getLogger("EChartsChart")
 
@@ -351,5 +354,295 @@ describe("applyTooltipFormatters", () => {
 
     expect(result).toBe(option)
     expect(dataItem.tooltip.valueFormatter).toBe("dollar")
+  })
+})
+
+type AxisPointerFormatter = (params: { value: unknown }) => string
+type SliderLabelFormatter = (value: number, valueStr: string) => string
+
+const AUTHOR_AXIS_POINTER = { label: { formatter: "{value}" } }
+
+/** Read the axis pointer label formatter set on an axis config. */
+function axisPointerFormatterOf(axis: unknown): AxisPointerFormatter {
+  const formatter = (
+    axis as { axisPointer?: { label?: { formatter?: unknown } } }
+  ).axisPointer?.label?.formatter
+  expect(formatter).toBeTypeOf("function")
+  return formatter as AxisPointerFormatter
+}
+
+/** Read the handle label formatter set on a dataZoom config. */
+function sliderLabelFormatterOf(zoom: unknown): SliderLabelFormatter {
+  const { labelFormatter } = zoom as { labelFormatter?: unknown }
+  expect(labelFormatter).toBeTypeOf("function")
+  return labelFormatter as SliderLabelFormatter
+}
+
+/** A timestamp on 2026-08-18 in the test's local time zone. */
+function localTime(hours = 0, minutes = 0, milliseconds = 0): number {
+  return new Date(2026, 7, 18, hours, minutes, 0, milliseconds).getTime()
+}
+
+describe("applyTimeLabelFormatters", () => {
+  const timeAxisOption = {
+    xAxis: { type: "time" },
+    yAxis: { type: "value" },
+    tooltip: { trigger: "axis" },
+  }
+
+  beforeEach(() => {
+    // A zone behind UTC, so local and UTC midnight differ. Streamlit sends
+    // naive datetimes as local ISO strings.
+    process.env.TZ = "America/New_York"
+  })
+
+  afterEach(() => {
+    process.env.TZ = "UTC"
+  })
+
+  it("shows midnight values on a time axis as dates", () => {
+    const result = applyTimeLabelFormatters(timeAxisOption, "streamlit")
+    const formatter = axisPointerFormatterOf(result.xAxis)
+
+    expect(formatter({ value: localTime() })).toBe("2026-08-18")
+    expect(formatter({ value: localTime(14, 30) })).toBe("2026-08-18 14:30:00")
+    // An axis pointer that doesn't snap to data passes any instant, so the
+    // label stops at seconds instead of printing a changing millisecond.
+    expect(formatter({ value: localTime(14, 30, 250) })).toBe(
+      "2026-08-18 14:30:00"
+    )
+    expect(formatter({ value: localTime(0, 0, 250) })).toBe(
+      "2026-08-18 00:00:00"
+    )
+    // ECharts passes a naive ISO string through as local time.
+    expect(formatter({ value: "2026-08-18T00:00:00.000" })).toBe("2026-08-18")
+    // A value axis keeps ECharts' number labels.
+    expect(result.yAxis).toBe(timeAxisOption.yAxis)
+    // The input spec is not mutated.
+    expect(timeAxisOption.xAxis).toEqual({ type: "time" })
+  })
+
+  it("formats in UTC when the chart sets useUTC", () => {
+    const utcMidnight = Date.UTC(2026, 7, 18)
+    const format = (option: EChartsOptionObject, value: number): string =>
+      axisPointerFormatterOf(
+        applyTimeLabelFormatters(option, "streamlit").xAxis
+      )({ value })
+
+    expect(
+      format({ useUTC: true, xAxis: { type: "time" } }, utcMidnight)
+    ).toBe("2026-08-18")
+    // Local midnight in New York is 04:00 UTC.
+    expect(
+      format({ useUTC: true, xAxis: { type: "time" } }, localTime())
+    ).toBe("2026-08-18 04:00:00")
+    expect(format({ xAxis: { type: "time" } }, utcMidnight)).toBe(
+      "2026-08-17 20:00:00"
+    )
+  })
+
+  it("reads useUTC from a declared baseOption, not the root", () => {
+    const result = applyTimeLabelFormatters(
+      {
+        useUTC: true,
+        baseOption: { xAxis: { type: "time" } },
+      },
+      "streamlit"
+    )
+    const baseOption = result.baseOption as EChartsOptionObject
+
+    expect(
+      axisPointerFormatterOf(baseOption.xAxis)({ value: localTime() })
+    ).toBe("2026-08-18")
+  })
+
+  it("fills every time axis and keeps existing axis pointer settings", () => {
+    const result = applyTimeLabelFormatters(
+      {
+        xAxis: [
+          { type: "time", axisPointer: { label: { show: true } } },
+          { type: "category" },
+        ],
+        yAxis: { type: "time" },
+      },
+      "streamlit"
+    )
+
+    const [timeAxis, categoryAxis] = result.xAxis as Array<{
+      axisPointer?: { label?: { show?: boolean } }
+    }>
+    expect(axisPointerFormatterOf(timeAxis)({ value: localTime() })).toBe(
+      "2026-08-18"
+    )
+    expect(timeAxis.axisPointer?.label?.show).toBe(true)
+    expect(categoryAxis).toEqual({ type: "category" })
+    expect(axisPointerFormatterOf(result.yAxis)({ value: localTime() })).toBe(
+      "2026-08-18"
+    )
+  })
+
+  it.each([
+    [
+      "the axis",
+      { xAxis: { type: "time", axisPointer: AUTHOR_AXIS_POINTER } },
+    ],
+    [
+      "tooltip.axisPointer",
+      { ...timeAxisOption, tooltip: { axisPointer: AUTHOR_AXIS_POINTER } },
+    ],
+    [
+      "a tooltip in a list",
+      {
+        ...timeAxisOption,
+        tooltip: [{ trigger: "axis" }, { axisPointer: AUTHOR_AXIS_POINTER }],
+      },
+    ],
+    [
+      "grid.tooltip.axisPointer",
+      {
+        ...timeAxisOption,
+        grid: [{ tooltip: { axisPointer: AUTHOR_AXIS_POINTER } }],
+      },
+    ],
+    [
+      "the top-level axisPointer",
+      { ...timeAxisOption, axisPointer: AUTHOR_AXIS_POINTER },
+    ],
+  ])("keeps an axis pointer formatter set on %s", (_case, option) => {
+    expect(applyTimeLabelFormatters(option, "streamlit")).toBe(option)
+  })
+
+  it.each([
+    ["theme=None", timeAxisOption, ""],
+    [
+      "a chart without a time axis",
+      { xAxis: { type: "category" }, yAxis: {}, dataZoom: {} },
+      "streamlit",
+    ],
+  ])("returns the input for %s", (_case, option, theme) => {
+    expect(applyTimeLabelFormatters(option, theme)).toBe(option)
+  })
+
+  it("converts timeline and media variants", () => {
+    const result = applyTimeLabelFormatters(
+      {
+        baseOption: {
+          xAxis: { type: "time" },
+          media: [{ query: {}, option: { yAxis: [{ type: "time" }] } }],
+        },
+        options: [{ xAxis: { type: "time" } }, 1],
+        media: [{ option: { xAxis: { type: "time" } } }],
+      },
+      "streamlit"
+    )
+
+    const baseOption = result.baseOption as EChartsOptionObject
+    const baseMedia = baseOption.media as Array<{
+      option: EChartsOptionObject
+    }>
+    const [tick, otherTick] = result.options as unknown[]
+    const rootMedia = result.media as Array<{ option: EChartsOptionObject }>
+    axisPointerFormatterOf(baseOption.xAxis)
+    axisPointerFormatterOf((baseMedia[0].option.yAxis as unknown[])[0])
+    axisPointerFormatterOf((tick as EChartsOptionObject).xAxis)
+    axisPointerFormatterOf(rootMedia[0].option.xAxis)
+    expect(otherTick).toBe(1)
+  })
+
+  it.each([
+    [
+      "sets a formatter",
+      {
+        baseOption: {
+          xAxis: { type: "time", axisPointer: AUTHOR_AXIS_POINTER },
+        },
+        options: [{ xAxis: { type: "time" } }],
+      },
+    ],
+    [
+      "declares a non-time type",
+      {
+        baseOption: { xAxis: { type: "time" } },
+        options: [{ xAxis: { type: "value" } }],
+      },
+    ],
+  ])(
+    "skips an axis slot in every variant when one variant %s",
+    (_case, option) => {
+      expect(applyTimeLabelFormatters(option, "streamlit")).toBe(option)
+    }
+  )
+
+  describe("slider dataZoom labels", () => {
+    const zoomOption = {
+      xAxis: { type: "time" },
+      dataZoom: [
+        { type: "slider" },
+        {},
+        { type: "inside" },
+        { type: "slider", labelFormatter: "{value}" },
+      ],
+    }
+
+    it("sets a formatter on sliders without one", () => {
+      const [slider, untyped, inside, authored] = applyTimeLabelFormatters(
+        zoomOption,
+        "streamlit"
+      ).dataZoom as Array<Record<string, unknown>>
+
+      sliderLabelFormatterOf(slider)
+      // ECharts defaults a dataZoom without a type to a slider.
+      sliderLabelFormatterOf(untyped)
+      expect(inside).toEqual({ type: "inside" })
+      expect(authored.labelFormatter).toBe("{value}")
+    })
+
+    it("trims slider labels when an axis pointer formatter is shared", () => {
+      const result = applyTimeLabelFormatters(
+        { ...zoomOption, axisPointer: AUTHOR_AXIS_POINTER },
+        "streamlit"
+      )
+
+      // The author's shared axis pointer formatter covers the axis...
+      expect(result.xAxis).toBe(zoomOption.xAxis)
+      // ...but not the slider labels.
+      sliderLabelFormatterOf((result.dataZoom as unknown[])[0])
+    })
+
+    it("checks midnight in UTC when the chart sets useUTC", () => {
+      const [slider] = applyTimeLabelFormatters(
+        { ...zoomOption, useUTC: true },
+        "streamlit"
+      ).dataZoom as unknown[]
+      const formatter = sliderLabelFormatterOf(slider)
+
+      expect(formatter(Date.UTC(2026, 7, 18), "2026-08-18 00:00:00")).toBe(
+        "2026-08-18"
+      )
+      // Local midnight in New York is 04:00 UTC.
+      expect(formatter(localTime(), "2026-08-18 04:00:00")).toBe(
+        "2026-08-18 04:00:00"
+      )
+    })
+
+    it("drops the time only from ECharts' midnight time labels", () => {
+      const [slider] = applyTimeLabelFormatters(zoomOption, "streamlit")
+        .dataZoom as unknown[]
+      const formatter = sliderLabelFormatterOf(slider)
+
+      expect(formatter(localTime(), "2026-08-18 00:00:00")).toBe("2026-08-18")
+      // ECharts labels the rounded window edge.
+      expect(formatter(localTime() + 0.4, "2026-08-18 00:00:00 000")).toBe(
+        "2026-08-18"
+      )
+      expect(formatter(localTime(14, 30), "2026-08-18 14:30:00")).toBe(
+        "2026-08-18 14:30:00"
+      )
+      // A slider on a value or category axis keeps its labels.
+      expect(formatter(localTime(), String(localTime()))).toBe(
+        String(localTime())
+      )
+      expect(formatter(0, "Mon")).toBe("Mon")
+    })
   })
 })
