@@ -91,11 +91,22 @@ class PyplotMixin:
         alt: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
-        """Display a matplotlib.pyplot figure.
+        """Display a matplotlib.pyplot figure as a static image.
 
         Streamlit renders the figure by calling Matplotlib's ``savefig`` with
         ``bbox_inches="tight"`` and ``dpi=200`` so charts look sharp and cropped
         by default.
+
+        .. note::
+            For new charts, prefer a Vega-based chart command (``st.line_chart``,
+            ``st.bar_chart``, ``st.area_chart``, ``st.scatter_chart``, or
+            ``st.altair_chart``) or ``st.echarts_chart``. A ``st.pyplot`` chart
+            is a static image with no zoom, tooltips, or selections. It doesn't
+            follow the app's theme, so a default figure stays white on a dark
+            theme, and it's rendered on the server on every rerun. Use
+            ``st.pyplot`` to display a Matplotlib figure you already have, or
+            output from libraries that only produce Matplotlib figures, such as
+            seaborn.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
