@@ -77,8 +77,9 @@ class ColorPickerSerde:
         The author's ``value`` is accepted as written, because the browser
         sends it back as it received it.
         """
-        # None or an empty string is unset and reads as the default.
-        if not ui_value or ui_value == self.value:
+        # A state with no value field is unset and reads as the default. An
+        # empty string is a value the picker never sends, so it is refused.
+        if ui_value is None or ui_value == self.value:
             return None
         return widget_checks.hex_color(ui_value)
 

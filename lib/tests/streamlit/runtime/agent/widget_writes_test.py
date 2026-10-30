@@ -661,6 +661,13 @@ class WidgetWritesTest(SnapshotCase):
                 "red",
                 _Refused("'color' takes a hex color as #rgb or #rrggbb."),
             ),
+            # Only a missing field reads as the default.
+            (
+                "empty_color",
+                "color",
+                "",
+                _Refused("'color' takes a hex color as #rgb or #rrggbb."),
+            ),
             (
                 "page_past_the_last",
                 "page",

@@ -1443,7 +1443,8 @@ _LEGAL_COLOR: dict[str, dict[str, Any]] = {"color": {"string_value": "#123456"}}
 
 @pytest.mark.parametrize(
     "color",
-    ["red", "#12345", "#ffffff\n", "##123456", "654321", "#12345g"],
+    # "" would read as the default, which differs from the held color.
+    ["red", "#12345", "#ffffff\n", "##123456", "654321", "#12345g", ""],
 )
 def test_a_color_the_picker_never_sends_is_refused(color: str) -> None:
     """A malformed color runs no callback, keeps the previous one, and re-syncs."""

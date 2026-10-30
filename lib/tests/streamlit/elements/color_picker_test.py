@@ -292,8 +292,8 @@ class TestColorPickerSerde:
         ("ui_value", "is_valid"),
         [
             (None, True),
-            # An empty string is unset and reads as the default.
-            ("", True),
+            # Only a missing field is unset. The picker never sends "".
+            ("", False),
             ("#abc", True),
             ("#ABCDEF", True),
             ("#a1b2c3", True),
