@@ -30,7 +30,7 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | Clicking a network node or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
 | A built-in zoom slider (`dataZoom`), in-chart toolbox, or color-range filter (`visualMap`) | `st.echarts_chart` |
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
-| Many dense charts on one page | `st.echarts_chart` (canvas, no WebGL context limit) |
+| Line, bar, or scatter series with many thousands of points | `st.echarts_chart` (`sampling: "lttb"` for lines, `large: True` for bars and scatter) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
 | 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
 | An existing Matplotlib or seaborn figure | `st.pyplot` (static image; not for new charts) |
@@ -113,7 +113,10 @@ Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately 
 
 ## Apache ECharts
 
-Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from a dataframe in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`, and map columns with `series[i].encode` when the column order isn't enough. Streamlit sends the frame as Arrow, which is smaller and faster than inline values for large data, and keeps its column order. The agent API also reports it as a table (schema, preview, and the full data), while inline values only appear inside the raw option. Use one dataframe per chart where possible; with several, no single table is reported.
+Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`:
+
+- Streamlit sends the frame as Arrow, which is smaller and faster than inline values for large data, and keeps its column order. Map columns with `series[i].encode` when the order isn't enough.
+- The agent API reports the frame as a table (schema, preview, and the full data). Inline values only appear inside the raw option, and a chart with several dataframes reports no single table.
 
 ```python
 df = pd.DataFrame(
@@ -201,7 +204,7 @@ st.dataframe(visits.iloc[rows])
 Don't reach for Plotly or Matplotlib for ordinary 2D charts. Vega-based charts and ECharts cover them and match the app better.
 
 - **`st.plotly_chart`** fits when you need what neither Vega-Lite nor ECharts draws: 3D charts (`scatter3d`, `surface`, `mesh3d`, `volume`), scientific traces (violin, ternary, carpet, Smith charts), a tile basemap under a chart, or a Plotly figure the user already has. It needs the `plotly` package. Browsers allow only a handful of WebGL contexts per page, so keep WebGL-heavy Plotly charts to a few per page.
-- **`st.pyplot`** displays a Matplotlib figure as a static image: no zoom, hover, or selection. It doesn't follow the app theme, so a default figure is a white box on a dark theme. It also renders on the server on every rerun. Use it only for a figure you already have, or for libraries that only produce Matplotlib output (seaborn, statsmodels, scikit-learn displays). Pass the `Figure`, not an `Axes`: pandas `.plot()` returns an `Axes`, so pass `ax.get_figure()`.
+- **`st.pyplot`** displays a Matplotlib figure as a static image: no zoom, hover, or selection. It doesn't follow the app theme, so a default figure is a white box on a dark theme. It also renders on the server on every rerun. Use it only for a figure you already have, or for libraries that only produce Matplotlib output (seaborn, statsmodels, scikit-learn displays). Pass the `Figure`, not an `Axes`: pandas `.plot()` returns an `Axes`, so pass its `.get_figure()` result.
 
 ## Maps and diagrams
 
