@@ -31,6 +31,7 @@ import {
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
+import { PRINT_UPSCALED_WIDTH } from "~lib/components/shared/usePrintScreenWidth"
 import {
   DATAFRAME_PRINT_NOTE_CLASS,
   DATAFRAME_PRINT_TABLE_CLASS,
@@ -464,7 +465,8 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks into full-width children. Columns of a
+      //   dataframe, or table stacks its children. Stacked columns stay
+      //   close to their screen width; other children are full width. Columns of a
       //   row that stays side by side are size containers (unless the row
       //   is content-sized), so a content-width metric can scale to its
       //   printed column.
@@ -497,9 +499,16 @@ export const StyledFlexContainerBlock =
                 display: "block",
                 "> .stColumn": {
                   display: "block",
-                  width: "100%",
+                  // Grow only as far as its chart can scale, so a card does
+                  // not stretch across the page around a narrower chart.
+                  width: PRINT_UPSCALED_WIDTH,
                   maxWidth: "100%",
                   minWidth: 0,
+                  // A print table scales its text to the column, so it
+                  // gets the full page width.
+                  [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+                    width: "100%",
+                  },
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
                       "&:not(:last-of-type)": {

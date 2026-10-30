@@ -86,6 +86,12 @@ describe("StyledFlexContainerBlock print layout", () => {
     // block would stay a flex column and collapse in Chrome print.
     expect(css).toContain(".stVerticalBlock{display:block")
     expect(css).toContain("margin-bottom:1rem")
+    // A stacked column grows only as far as its chart can scale, so a card
+    // does not stretch across the page around a narrower chart.
+    expect(css).toContain(
+      ">.stColumn{display:block;width:min(100%, calc(var(--st-print-screen-width, 100%) * 1.25))"
+    )
+    expect(css).toContain(">.stColumn:has(.stDataFramePrintTable){width:100%")
   })
 
   it("makes the columns of a side-by-side row size containers", () => {

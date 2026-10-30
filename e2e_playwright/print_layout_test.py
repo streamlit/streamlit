@@ -53,6 +53,10 @@ def test_print_stacks_columns_and_fits_the_dataframe(
     screen_sidebar = sidebar.bounding_box()
     assert screen_sidebar is not None
     assert abs(screen_sidebar["width"] - 480) < 2
+    chart_row = get_element_by_key(app, "chart_row")
+    chart_column = chart_row.get_by_test_id("stColumn").first
+    screen_chart_column = chart_column.bounding_box()
+    assert screen_chart_column is not None
 
     start_browser_print(app)
 
@@ -276,7 +280,6 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     wait_until(app, centered_chart_and_table_do_not_overlap)
 
-    chart_row = get_element_by_key(app, "chart_row")
     chart = chart_row.get_by_test_id("stVegaLiteChart")
     after_chart = app.get_by_text("After the chart row", exact=True)
     expect(chart).to_be_visible()
@@ -300,6 +303,24 @@ def test_print_stacks_columns_and_fits_the_dataframe(
         assert chart_box["y"] + chart_box["height"] <= after_box["y"] + 1
 
     wait_until(app, chart_stays_above_the_heading)
+
+    # A stacked column grows to at most 1.25x its screen width instead of
+    # the full page, and its stretch-width chart scales up to fill it.
+    def stacked_column_hugs_its_chart() -> None:
+        column_box = chart_column.bounding_box()
+        main_box = main_content.bounding_box()
+        graphic_box = chart.locator("svg.marks, canvas.marks").first.bounding_box()
+        assert column_box is not None
+        assert main_box is not None
+        assert graphic_box is not None
+        assert column_box["width"] <= screen_chart_column["width"] * 1.25 + 1
+        assert column_box["width"] < main_box["width"] - 20
+        assert graphic_box["width"] > screen_chart_column["width"]
+        assert graphic_box["x"] + graphic_box["width"] <= (
+            column_box["x"] + column_box["width"] + 1
+        )
+
+    wait_until(app, stacked_column_hugs_its_chart)
 
     # The geometry checks above cover the whole page. The snapshot keeps to
     # the stacked chart row.

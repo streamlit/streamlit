@@ -82,6 +82,13 @@ export const StyledResizableContainer =
         // narrower page does not spill it. The canvas keeps its fixed or
         // content width when no print table is built.
         ...printWidthCapRules,
+        // Without a print table the canvas paints its full on-screen width.
+        // Clip it to the container, so a grid wider than the printed card
+        // does not spill past the border. `clip` does not make a scroll
+        // container, unlike `hidden`.
+        [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
+          overflow: "clip",
+        },
         [`&:has(.${DATAFRAME_PRINT_NOTE_CLASS}), &:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]:
           {
             // A note or a print table sits under the canvas, not beside it.
