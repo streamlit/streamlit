@@ -33,8 +33,14 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_text_area,
 )
+from e2e_playwright.shared.input_utils import (
+    MAX_CHARS_PARITY_MULTILINE,
+    MAX_CHARS_PARITY_TEXTS,
+    MAX_CHARS_PARITY_TOO_LONG,
+    code_points,
+)
 
-NUM_TEXT_AREAS = 32
+NUM_TEXT_AREAS = 33
 
 
 def test_text_area_widget_rendering(
@@ -197,6 +203,35 @@ def test_text_area_limits_input_via_max_chars(app: Page):
     text_area_field.press("Control+Enter")
 
     expect_markdown(app, "value 10: 12345")
+
+
+def test_text_area_max_chars_counts_as_the_server_does(app: Page):
+    """Text of exactly max_chars UTF-16 code units reaches the app unchanged.
+
+    The browser and the server both count UTF-16 code units, so astral emoji,
+    combining sequences, and line breaks at the limit are accepted, and the
+    parity gate fails the test if the server refuses one. One unit more is
+    blocked.
+    """
+    field = get_text_area(app, "Parity text area (max_chars=8)").locator("textarea")
+    for text in (*MAX_CHARS_PARITY_TEXTS, MAX_CHARS_PARITY_MULTILINE):
+        field.fill(text)
+        expect(field).to_have_value(text)
+        field.press("Control+Enter")
+        expect_prefixed_markdown(
+            app, "Parity text area code points:", code_points(text), exact_match=True
+        )
+
+    # The browser keeps the text it held, and the app still has it.
+    field.fill(MAX_CHARS_PARITY_TOO_LONG)
+    expect(field).to_have_value(MAX_CHARS_PARITY_MULTILINE)
+    field.blur()
+    expect_prefixed_markdown(
+        app,
+        "Parity text area code points:",
+        code_points(MAX_CHARS_PARITY_MULTILINE),
+        exact_match=True,
+    )
 
 
 def test_text_area_has_correct_value_on_blur(app: Page):

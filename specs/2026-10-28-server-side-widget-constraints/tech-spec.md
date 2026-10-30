@@ -1024,6 +1024,15 @@ a client value no longer rebuilds the widget's metadata.
   value. Examples are the `st.feedback` clear `""`, a shared `format_func` label, also
   repeated by "Select all", a new option on an `accept_new_options` widget, `max_chars=0`,
   and each date and time layout above.
+- **`max_chars` parity**: the same table of strings, each at its length in UTF-16 code
+  units, is checked on both sides. `_MAX_CHARS_PARITY` in `widget_checks_test.py` checks
+  the server's count, and `MAX_CHARS_PARITY` in `useOnInputChange.test.ts` and
+  `ChatInput.test.tsx` checks that the frontend accepts each string at the limit and
+  refuses it one unit past. The table holds ASCII, CJK, astral emoji, combining marks,
+  a ZWJ sequence, a flag, and line breaks. E2E tests for `st.text_input`,
+  `st.text_area`, and `st.chat_input` send text of exactly `max_chars` units made of
+  astral emoji and combining sequences, check that it reaches the app unchanged under
+  the parity gate, and check that one unit more is blocked.
 - **Per widget**, forged `WidgetStates` through `AppTest._run(widget_state=...)`. Assert
   that the callback did not fire, the previous value was kept, and `set_value` was sent,
   also while the widget still holds its default. Also assert that an unchanged default

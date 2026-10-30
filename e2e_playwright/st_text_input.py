@@ -363,4 +363,12 @@ required_search = st.text_input(
     "Required search", key="required_search", type="search", required=True
 )
 st.write("required search:", required_search)
+
+# max_chars counts UTF-16 code units in the browser and on the server, so text of
+# exactly max_chars units, such as astral emoji, reaches the app unchanged.
+parity_text = st.text_input("Parity text input (max_chars=8)", max_chars=8)
+st.write(
+    "Parity text input code points:",
+    " ".join(f"U+{ord(char):04X}" for char in parity_text) or "none",
+)
 st.write("Required rerun counter:", st.session_state.required_rerun_counter)

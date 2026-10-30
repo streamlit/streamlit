@@ -22,7 +22,7 @@ global hotkeys.
 from __future__ import annotations
 
 import string
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from playwright.sync_api import Locator, Page, expect
 
@@ -38,6 +38,36 @@ _COMMON_TYPED_CHARACTERS = (
     + " "
     + ".,-_@/:;?!'\"()[]{}<>+=*&^%$#~`|\\"
 )
+
+
+# Text exactly `MAX_CHARS_PARITY_LIMIT` UTF-16 code units long, made of astral
+# emoji and combining sequences. `max_chars` counts that unit in the browser
+# (`value.length`) and on the server (`widget_checks.utf16_length`). The unit
+# tables that pin each side's count are `_MAX_CHARS_PARITY` in
+# lib/tests/streamlit/runtime/state/widget_checks_test.py and `MAX_CHARS_PARITY`
+# in frontend/lib/src/hooks/useOnInputChange.test.ts.
+MAX_CHARS_PARITY_LIMIT: Final = 8
+MAX_CHARS_PARITY_TEXTS: Final = (
+    # A family: woman, zero-width joiner, woman, zero-width joiner, girl.
+    "\U0001f469\u200d\U0001f469\u200d\U0001f467",
+    # A grinning face and "e" with a combining acute accent, twice.
+    "\U0001f600e\u0301\U0001f600e\u0301",
+    # The German and French flags, each two regional indicator symbols.
+    "\U0001f1e9\U0001f1ea\U0001f1eb\U0001f1f7",
+)
+# The same, with line breaks, for a text area or chat input.
+MAX_CHARS_PARITY_MULTILINE: Final = "\U0001f600\ne\u0301\n\U0001f600"
+# One code unit past the limit.
+MAX_CHARS_PARITY_TOO_LONG: Final = "\U0001f600\U0001f600\U0001f600e\u0301x"
+
+
+def code_points(text: str) -> str:
+    """Text as the max_chars parity apps write it, such as ``U+1F600 U+0065``.
+
+    Code points show exactly what reached the app, including a combining mark
+    or a zero-width joiner that rendered text hides.
+    """
+    return " ".join(f"U+{ord(char):04X}" for char in text) or "none"
 
 
 def type_common_characters_into_input(

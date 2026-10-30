@@ -45,6 +45,12 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
     select_selectbox_option,
 )
+from e2e_playwright.shared.input_utils import (
+    MAX_CHARS_PARITY_MULTILINE,
+    MAX_CHARS_PARITY_TEXTS,
+    MAX_CHARS_PARITY_TOO_LONG,
+    code_points,
+)
 
 
 def use_chat_input(key: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
@@ -374,6 +380,38 @@ def test_max_characters_enforced(
     )
     expect(chat_input_area).to_have_value(expected_text)
     assert_snapshot(chat_input, name="st_chat_input-max_chars")
+
+
+@use_chat_input("max_chars_parity")
+def test_max_chars_counts_as_the_server_does(app: Page):
+    """A message of exactly max_chars UTF-16 code units lands unchanged.
+
+    The browser and the server both count UTF-16 code units, so astral emoji,
+    combining sequences, and line breaks at the limit are accepted, and the
+    parity gate fails the test if the server refuses one. One unit more is
+    blocked.
+    """
+    field = get_element_by_key(app, "max_chars_parity").locator("textarea").first
+    for text in (*MAX_CHARS_PARITY_TEXTS, MAX_CHARS_PARITY_MULTILINE):
+        field.fill(text)
+        expect(field).to_have_value(text)
+        field.press("Enter")
+        wait_for_app_run(app)
+        expect_prefixed_markdown(
+            app, "max_chars_parity - code points:", code_points(text), exact_match=True
+        )
+        expect(field).to_have_value("")
+
+    # The field stays empty, so Enter sends nothing.
+    field.fill(MAX_CHARS_PARITY_TOO_LONG)
+    expect(field).to_have_value("")
+    field.press("Enter")
+    expect_prefixed_markdown(
+        app,
+        "max_chars_parity - code points:",
+        code_points(MAX_CHARS_PARITY_MULTILINE),
+        exact_match=True,
+    )
 
 
 def test_embedded_app_with_bottom_chat_input(

@@ -886,6 +886,48 @@ def test_text_length(text: str, max_chars: int | None, fits: bool) -> None:
         assert result == Violation("too_long", {"max_chars": max_chars})
 
 
+# Strings and their length in UTF-16 code units, which the browser counts as
+# `value.length` and the server as `utf16_length`. The frontend's parity tables
+# check the same strings: `MAX_CHARS_PARITY` in
+# frontend/lib/src/hooks/useOnInputChange.test.ts and
+# frontend/lib/src/components/widgets/ChatInput/ChatInput.test.tsx. Change all
+# three together.
+_MAX_CHARS_PARITY: Final = [
+    pytest.param("abcde", 5, id="ascii"),
+    # 漢字のテスト, in the Basic Multilingual Plane.
+    pytest.param("\u6f22\u5b57\u306e\u30c6\u30b9\u30c8", 6, id="cjk"),
+    # Three grinning faces, each a surrogate pair.
+    pytest.param("\U0001f600\U0001f600\U0001f600", 6, id="astral_emoji"),
+    # "e" and a combining acute accent, twice.
+    pytest.param("e\u0301e\u0301", 4, id="combining_marks"),
+    # A family: woman, zero-width joiner, woman, zero-width joiner, girl.
+    pytest.param("\U0001f469\u200d\U0001f469\u200d\U0001f467", 8, id="zwj_sequence"),
+    # The German flag, two regional indicator symbols.
+    pytest.param("\U0001f1e9\U0001f1ea", 4, id="flag"),
+    pytest.param("a\nb\nc", 5, id="line_breaks"),
+    pytest.param("a\U0001f600e\u0301\n\u6f22", 7, id="mixed"),
+]
+
+
+@pytest.mark.parametrize(("text", "units"), _MAX_CHARS_PARITY)
+def test_max_chars_counts_as_the_browser_does(text: str, units: int) -> None:
+    """Text of exactly max_chars UTF-16 code units passes, and one unit more does not.
+
+    A link's text past the limit is cut without splitting a character.
+    """
+    assert widget_checks.utf16_length(text) == units
+    assert widget_checks.text_length(text, units) is None
+    assert widget_checks.text_length(text, units - 1) == Violation(
+        "too_long", {"max_chars": units - 1}
+    )
+    assert widget_checks.truncate_utf16(text, units) == text
+    cut = widget_checks.truncate_utf16(text, units - 1)
+    assert text.startswith(cut)
+    assert widget_checks.text_length(cut, units - 1) is None
+    # Only a character that does not fit is left out.
+    assert widget_checks.utf16_length(cut) >= units - 2
+
+
 def test_utf16_length_counts_astral_characters_twice() -> None:
     """A character outside the Basic Multilingual Plane counts as two units."""
     assert widget_checks.utf16_length("a😀é") == 4
