@@ -196,9 +196,9 @@ export const ContainerContentsWrapper = (
     flex: 1,
     gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
-    // A column's 100% resolves against its row, which stretches it. Other
-    // wrappers (forms, expanders, chat messages) resolve 100% to auto
-    // unless they have a definite height themselves.
+    // Print keeps flex only for a block whose 100% height is definite. A column
+    // is stretched by its row, so it always is. Other wrappers (forms, expanders,
+    // chat messages) only are when their own height config makes them definite.
     hasDefiniteHeight:
       isColumn ||
       getHasDefiniteHeight({ ...heightContextProps, parentContext }),

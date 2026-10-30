@@ -267,8 +267,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       data-testid="stSidebar"
       aria-label="Sidebar"
       data-collapsed={isCollapsed ? "true" : "false"}
-      // A collapsed sidebar is not printed. The marker makes print selectors
-      // skip its charts and dataframes, as for closed tabs.
+      // A collapsed sidebar is not printed. The marker treats it like a closed
+      // tab, so print code that checks whether an element is on the printed
+      // page skips the sidebar's contents.
       {...{ [PRINT_INACTIVE_ATTRIBUTE]: isCollapsed ? "" : undefined }}
       enable={{
         top: false,

@@ -56,7 +56,7 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
-  METRIC_AVAILABLE_VAR,
+  METRIC_AVAILABLE_WIDTH_VAR,
   METRIC_TEXT_WIDTH_VAR,
   StyledDeltaContainer,
   StyledDeltaDescription,
@@ -121,12 +121,12 @@ function recordMetricValueWidth(value: HTMLElement): void {
 
 /**
  * Record the width a content-width metric can use in print
- * (`--st-metric-available`).
+ * (`--st-metric-available-width`).
  *
  * - Measures the element container, which is capped at its column width.
  *   The value itself is not a size container. `beforeprint` reads the
  *   screen slot, and the print-media change reads the printed one.
- * - Clears `--st-metric-available` first, so the slot is read around the
+ * - Clears `--st-metric-available-width` first, so the slot is read around the
  *   unscaled figure.
  * - Subtracts the card's border and padding between the slot and the value.
  *   The value can overflow a narrow slot, so its own width is not a
@@ -141,7 +141,7 @@ function recordMetricAvailableWidth(value: HTMLElement): void {
   if (!(box instanceof HTMLElement)) {
     return
   }
-  value.style.removeProperty(METRIC_AVAILABLE_VAR)
+  value.style.removeProperty(METRIC_AVAILABLE_WIDTH_VAR)
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
   let available = box.clientWidth
   for (
@@ -157,7 +157,7 @@ function recordMetricAvailableWidth(value: HTMLElement): void {
       (Number.parseFloat(style.borderRightWidth) || 0)
   }
   if (available > 0) {
-    value.style.setProperty(METRIC_AVAILABLE_VAR, `${available}px`)
+    value.style.setProperty(METRIC_AVAILABLE_WIDTH_VAR, `${available}px`)
   }
 }
 
@@ -440,7 +440,7 @@ function Metric({
     // Clear the recorded widths so a later print measures the current layout.
     const handleAfterPrint = (): void => {
       valueRef.current?.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
-      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_VAR)
+      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_WIDTH_VAR)
     }
 
     window.addEventListener("beforeprint", handleBeforePrint)
