@@ -1221,7 +1221,8 @@ class EChartsMixin:
 
         Pass a dataframe as ``dataset.source``. Streamlit preserves its column
         order through ``dataset.dimensions``, so ECharts maps the first column
-        to the category axis and each remaining column to a series.
+        to the category axis and each remaining column to a series. Hover the
+        chart and choose **Show data** to view the dataframe in a table.
 
         .. code-block:: python
            :filename: streamlit_app.py

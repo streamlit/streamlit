@@ -75,7 +75,8 @@ type EChartsSourceValue =
 type EChartsSourceRow = Record<string, EChartsSourceValue>
 
 /**
- * A parsed sent dataset, its rows, and its data column names in column order.
+ * A sent Arrow dataset: its parsed `Quiver`, its ECharts rows, and its data
+ * column names in column order.
  */
 type HydratedSource = {
   quiver: Quiver
@@ -399,10 +400,10 @@ function getMediaOptions(option: EChartsOptionObject): EChartsOptionObject[] {
 }
 
 /**
- * Returns the option plus its timeline and media variants (the same set as
- * the Python `_iter_option_variants` walker). The order puts the chart that
- * renders by default first: the option, the `baseOption`, each `options[i]`
- * timeline tick, and then all `media[*].option` overrides.
+ * Returns every variant Python's `_iter_option_variants` visits, in data
+ * viewer order: the option, then `baseOption`, then each `options[i]`
+ * timeline tick. `media[*].option` overrides come last, so a media dataset
+ * does not replace the default chart's.
  */
 function getOptionVariants(
   option: EChartsOptionObject
@@ -451,9 +452,9 @@ function getPlaceholderName(source: unknown): string | null {
  *
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
- * @returns The parsed dataset for the data viewer: the first one the option
- * uses, preferring the chart that renders by default over timeline ticks and
- * `media` overrides. `null` when the option uses none.
+ * @returns The parsed dataframe to show in the chart's Show data table: the
+ * first one the option uses, preferring the chart that renders by default
+ * over timeline ticks and `media` overrides. `null` when the option uses none.
  * @throws When a placeholder points to a dataset whose bytes are missing or
  * cannot be read, so the chart never renders the placeholder as a row, or
  * whose data columns share a name.

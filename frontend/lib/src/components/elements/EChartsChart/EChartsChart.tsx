@@ -614,25 +614,24 @@ export function EChartsChart({
     element.theme,
   ])
 
-  // "Show data" swaps the chart for a read-only table of the dataset that
-  // `hydrateArrowDatasetSources` picks (the default chart's dataset first).
+  // "Show data" swaps the chart for a read-only table of its first dataframe.
   // The chart is hidden, not unmounted, so ECharts keeps its zoom, legend, and
   // timeline state.
   const [isShowingData, setIsShowingData] = useState(false)
   const [dataViewHeight, setDataViewHeight] = useState<number | undefined>()
-  // Close the table when a rerun drops its dataset, so the chart shows instead
-  // of an empty element and a later rerun that restores the data doesn't
-  // reopen the table.
+  // Close the table when a rerun drops its dataset:
+  // - The chart shows instead of an empty slot.
+  // - A later rerun that restores the data leaves the table closed.
   if (isShowingData && dataViewData === null) {
     setIsShowingData(false)
   }
   const isDataViewOpen = isShowingData && dataViewData !== null
 
-  // The table takes the chart's inline height. A pixel height (which
-  // "content" also resolves to) comes from the layout config, so a rerun that
-  // changes it resizes the open table. A stretch height has to be measured,
-  // but the chart measures the screen in fullscreen and 0 while hidden, so
-  // keep the last inline measurement.
+  // The open table uses the chart's inline height:
+  // - A pixel height, including resolved "content", comes from the layout
+  //   config, so a rerun that changes it resizes the table.
+  // - Stretch height uses the last inline measurement, because the hidden
+  //   chart measures 0 and the fullscreen chart measures the screen.
   const pixelHeight = heightConfig?.pixelHeight ?? undefined
   const inlineHeightRef = useRef<number | undefined>(undefined)
   useEffect(() => {

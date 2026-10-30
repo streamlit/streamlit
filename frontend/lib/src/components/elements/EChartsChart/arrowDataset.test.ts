@@ -626,23 +626,17 @@ describe("hydrateArrowDatasetSources", () => {
 
   const DATASETS = [namedDataset("h1", FIRST), namedDataset("h2", SECOND)]
 
-  it("replaces a top-level placeholder with rows, keeps the app's dimensions, and returns the first dataset", () => {
+  it("replaces a top-level placeholder with rows and keeps the app's dimensions", () => {
     const option: Record<string, unknown> = {
       dataset: { source: { name: "h1" }, dimensions: ["sales", "product"] },
     }
 
-    const firstDataset = hydrateArrowDatasetSources(option, DATASETS)
+    hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual({
       source: FIRST_ROWS,
       dimensions: ["sales", "product"],
     })
-    expect(firstDataset).toBeInstanceOf(Quiver)
-    expect(firstDataset?.dimensions.numDataRows).toBe(2)
-    expect(firstDataset?.columnTypes.map(t => t.arrowField.name)).toEqual([
-      "product",
-      "sales",
-    ])
   })
 
   it("sets the default dimensions to the data column names, without index columns", () => {
@@ -824,6 +818,8 @@ describe("hydrateArrowDatasetSources", () => {
 
     const dataViewData = hydrateArrowDatasetSources(option, DATASETS)
 
+    expect(dataViewData).toBeInstanceOf(Quiver)
+    expect(dataViewData?.dimensions.numDataRows).toBe(3)
     expect(dataViewData?.columnTypes.map(t => t.arrowField.name)).toEqual([
       "x",
     ])

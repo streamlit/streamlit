@@ -443,6 +443,10 @@ def test_arrow_dataset_chart_and_show_data(
     dataframe = container.get_by_test_id("stDataFrame")
     expect(dataframe).to_be_visible()
     expect(chart).to_be_hidden()
+    # The grid draws its cells on a canvas and mirrors the visible ones in an
+    # accessibility table, so check a value of the chart's dataframe there.
+    # Column 0 is the pandas index, so column 1 is "day".
+    expect(dataframe.get_by_test_id("glide-cell-1-0")).to_have_text("2020-01-01")
 
     dataframe.hover()
     show_chart_button = dataframe.get_by_role("button", name="Show chart")
