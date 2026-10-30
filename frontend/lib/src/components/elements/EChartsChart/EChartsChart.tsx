@@ -65,6 +65,7 @@ import {
   STREAMLIT_THEME,
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
+import { applyLargeDataDefaults } from "./largeDataDefaults"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -412,6 +413,7 @@ export function EChartsChart({
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
   // The option handed to setOption:
+  // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
   // - Streamlit theme defaults.
   // - Tooltip string formatters turned into functions.
   // - Under the Streamlit theme, time axis labels that show midnight values
@@ -429,7 +431,11 @@ export function EChartsChart({
     let prepared = configureSelectionOption(
       applyTimeLabelFormatters(
         applyTooltipFormatters(
-          applyStreamlitOptionDefaults(option, element.theme, theme)
+          applyStreamlitOptionDefaults(
+            applyLargeDataDefaults(option, element.selectionActivated),
+            element.theme,
+            theme
+          )
         ),
         element.theme
       )
@@ -447,6 +453,7 @@ export function EChartsChart({
   }, [
     option,
     element.theme,
+    element.selectionActivated,
     configureSelectionOption,
     element.alt,
     spacing.sm,

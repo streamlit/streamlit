@@ -1028,6 +1028,37 @@ class EChartsMixin:
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
 
+        .. note::
+            To keep large charts fast, Streamlit sets two ECharts options when
+            your ``spec`` doesn't set them. It counts the items in each
+            series' ``data`` or in its dataset's ``source``:
+
+            - ``"large": True`` on ``scatter`` series with more than 20,000
+              points and on ``bar`` series with more than 2,000 bars. ECharts
+              then draws each series in a few batched paths instead of one
+              shape per item, which loads much faster. At these sizes ECharts
+              already skips animations. Tooltips still work, but hovering no
+              longer highlights an item, and series labels aren't drawn.
+            - ``"showSymbol": False`` on ``line`` series with more than 2,000
+              points on a value or time axis, where the symbols would merge
+              into a solid band. An axis tooltip
+              (``"tooltip": {"trigger": "axis"}``) still marks the hovered
+              point.
+
+            Streamlit leaves series unchanged in charts with selections
+            (``on_select``, ``selectedMode``, or a ``brush``) and series whose
+            ``data`` items are objects with their own settings. Large mode
+            also skips charts with a ``visualMap`` and series with
+            ``"colorBy": "data"``. Line series keep their symbols when the
+            chart uses an item tooltip or the line has empty values. To opt
+            out, set the option yourself, for example ``"large": False``.
+            pyecharts charts always set ``large`` and ``showSymbol``, so pass
+            ``is_large=True`` or ``is_symbol_show=False`` yourself. For line
+            charts with even more points, you can set ``"sampling": "lttb"``,
+            which draws a subset of points that keeps the line's shape.
+            Streamlit doesn't set it for you because it changes which points
+            are drawn and which points tooltips show.
+
         Parameters
         ----------
         spec : dict, str, or pyecharts chart

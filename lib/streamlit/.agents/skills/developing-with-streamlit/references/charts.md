@@ -210,6 +210,11 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 - For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
 
+Streamlit fills rendering defaults that you haven't set yourself, so don't add them by hand:
+
+- Vega-based charts with more than 2,000 per-row marks (points, bars, or `st.line_chart`'s hover points) render to canvas, which exposes only the chart's `alt` name to screen readers. To keep an Altair chart on SVG, use `chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})`.
+- ECharts scatter series with more than 20,000 points and bar series with more than 2,000 bars use `"large": True`. ECharts lines with more than 2,000 points on a value or time axis hide their symbols.
+
 ## Plotly and Matplotlib
 
 Don't reach for Plotly or Matplotlib for ordinary 2D charts. Vega-based charts and ECharts cover them and match the app better.

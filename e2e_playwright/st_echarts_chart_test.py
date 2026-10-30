@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 26
+_EXPECTED_CHART_COUNT = 30
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -522,4 +522,39 @@ def test_echarts_chart_alt_sets_accessible_name(app: Page):
 
     overridden = _get_chart(app, "c_echarts_alt_overrides_description")
     expect(overridden).to_have_accessible_name("Streamlit alt overrides description")
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def test_large_data_defaults(app: Page):
+    """Dense bar and line series get large-data settings unless the spec sets them.
+
+    The charts use the SVG renderer, so every drawn shape is a ``path``.
+    """
+    shapes = {
+        key: _get_chart(app, key).locator("svg path")
+        for key in (
+            "c_dense_bar",
+            "c_dense_bar_opt_out",
+            "c_dense_line",
+            "c_dense_line_opt_out",
+        )
+    }
+    # An explicit setting wins: one shape per bar and per line point.
+    wait_until(app, lambda: shapes["c_dense_bar_opt_out"].count() >= 2001)
+    wait_until(app, lambda: shapes["c_dense_line_opt_out"].count() >= 2001)
+
+    # Large mode draws the bars as a few paths, and the line draws no symbols,
+    # so only the axes, grid, and series paths remain.
+    for key in ("c_dense_bar", "c_dense_line"):
+        expect(_get_chart(app, key)).to_have_attribute("aria-busy", "false")
+    wait_until(app, lambda: 0 < shapes["c_dense_bar"].count() < 100)
+    wait_until(app, lambda: 0 < shapes["c_dense_line"].count() < 100)
+
+    # The axis tooltip still shows the hovered point and marks it with a symbol.
+    tooltip = app.locator(".echarts-dense-tooltip")
+    expect(tooltip).not_to_be_visible()
+    line_shape_count = shapes["c_dense_line"].count()
+    _get_chart(app, "c_dense_line").hover()
+    expect(tooltip).to_be_visible()
+    wait_until(app, lambda: shapes["c_dense_line"].count() > line_shape_count)
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
