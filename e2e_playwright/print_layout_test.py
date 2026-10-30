@@ -383,21 +383,25 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     assert _container_type(content_column) == "inline-size"
 
     # Plotly, ECharts, and DeckGL charts stack their row like the built-in
-    # charts. Each stays inside its column and above the following element.
-    for row_key, chart_test_id, name in [
-        ("plotly_row", "stPlotlyChart", "Plotly"),
-        ("echarts_row", "stEChartsChart", "ECharts"),
-        ("deck_row", "stDeckGlJsonChart", "DeckGL"),
+    # charts. Each chart and its rendered graphic stay inside the column, and
+    # the chart stays above the following element.
+    for row_key, chart_test_id, graphic_selector, name in [
+        ("plotly_row", "stPlotlyChart", ".main-svg", "Plotly"),
+        ("echarts_row", "stEChartsChart", "svg, canvas", "ECharts"),
+        ("deck_row", "stDeckGlJsonChart", "canvas", "DeckGL"),
     ]:
         row = get_element_by_key(app, row_key)
         row_column = row.get_by_test_id("stColumn").first
         row_chart = row_column.get_by_test_id(chart_test_id)
+        row_graphic = row_chart.locator(graphic_selector).first
         beside_text = row.get_by_text(f"Beside the {name} chart", exact=True)
         after_row = app.get_by_text(f"After the {name} row", exact=True)
         expect(row_chart).to_be_visible()
+        expect(row_graphic).to_be_attached()
 
         def chart_row_stacks(
             row_chart: Locator = row_chart,
+            row_graphic: Locator = row_graphic,
             row_column: Locator = row_column,
             beside_text: Locator = beside_text,
             after_row: Locator = after_row,
@@ -409,6 +413,7 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
             assert beside_box is not None
             assert after_box is not None
             _assert_inside(row_chart, row_column)
+            _assert_inside(row_graphic, row_column)
             assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
             assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 

@@ -73,6 +73,25 @@ export function hasStretchHeightFallback(
 }
 
 /**
+ * Whether an element or container is sized by its content: it has content
+ * width, or it has no fixed width inside a content-width container.
+ */
+export function getIsContentSized({
+  hasContentWidth,
+  hasFixedWidth,
+  parentContext,
+}: {
+  hasContentWidth: boolean
+  hasFixedWidth: boolean
+  parentContext: IFlexContext | null | undefined
+}): boolean {
+  return (
+    hasContentWidth ||
+    (!hasFixedWidth && parentContext?.isInContentWidthContainer === true)
+  )
+}
+
+/**
  * Whether a container gives stretch-height children a definite height: it
  * has a fixed height, or it stretches inside a definite-height parent.
  */

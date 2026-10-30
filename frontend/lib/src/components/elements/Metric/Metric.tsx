@@ -38,7 +38,10 @@ import {
 } from "@streamlit/lib"
 import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import {
+  FlexContext,
+  getIsContentSized,
+} from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -414,14 +417,14 @@ function Metric({
   const chartRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef<HTMLDivElement>(null)
 
-  const flexContext = useContext(FlexContext)
   // A metric without a fixed width inside a content-width container is also
   // sized by its value.
-  const hasFixedWidth =
-    (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0
-  const isContentWidth =
-    Boolean(widthConfig?.useContent) ||
-    (!hasFixedWidth && flexContext?.isInContentWidthContainer === true)
+  const isContentWidth = getIsContentSized({
+    hasContentWidth: Boolean(widthConfig?.useContent),
+    hasFixedWidth:
+      (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0,
+    parentContext: useContext(FlexContext),
+  })
 
   useEffect(() => {
     const handleBeforePrint = (): void => {

@@ -30,6 +30,7 @@ import {
   FlexContext,
   FlexContextProvider,
   getHasDefiniteHeight,
+  getIsContentSized,
 } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
@@ -308,9 +309,11 @@ export const FlexBoxContainer = (
   const hasFixedWidth =
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
-  const isContentSized =
-    hasContentWidth ||
-    (!hasFixedWidth && parentContext?.isInContentWidthContainer === true)
+  const isContentSized = getIsContentSized({
+    hasContentWidth,
+    hasFixedWidth,
+    parentContext,
+  })
 
   return (
     <FlexContextProvider
