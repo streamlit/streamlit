@@ -1029,7 +1029,7 @@ def test_serde_deserialize_passes_a_non_finite_number_through(
     assert serde.deserialize(ui_value) is ui_value
 
 
-_OUT_OF_INT_RANGE = Violation("out_of_range", {"min_value": 0, "max_value": 100})
+_OUT_OF_RANGE = Violation("out_of_range", {"min_value": 0, "max_value": 100})
 _NOT_FINITE = Violation("malformed", {"expected": "a finite number"})
 
 
@@ -1041,18 +1041,14 @@ _NOT_FINITE = Violation("malformed", {"expected": "a finite number"})
         # The bounds are inclusive, and a double holding a whole number is fine.
         (NumberInput.INT, 0, None),
         (NumberInput.INT, 100.0, None),
-        (NumberInput.INT, 150, _OUT_OF_INT_RANGE),
-        (NumberInput.INT, -50, _OUT_OF_INT_RANGE),
+        (NumberInput.INT, 150, _OUT_OF_RANGE),
+        (NumberInput.INT, -50, _OUT_OF_RANGE),
         (NumberInput.INT, 2.5, Violation("malformed", {"expected": "a whole number"})),
-        (NumberInput.INT, float("inf"), _NOT_FINITE),
+        (NumberInput.INT, math.inf, _NOT_FINITE),
         (NumberInput.FLOAT, 2.5, None),
-        (NumberInput.FLOAT, float("nan"), _NOT_FINITE),
-        (NumberInput.FLOAT, -float("inf"), _NOT_FINITE),
-        (
-            NumberInput.FLOAT,
-            100.5,
-            Violation("out_of_range", {"min_value": 0, "max_value": 100}),
-        ),
+        (NumberInput.FLOAT, math.nan, _NOT_FINITE),
+        (NumberInput.FLOAT, -math.inf, _NOT_FINITE),
+        (NumberInput.FLOAT, 100.5, _OUT_OF_RANGE),
     ],
 )
 def test_serde_validate(

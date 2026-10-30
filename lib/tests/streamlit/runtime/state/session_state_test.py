@@ -6737,25 +6737,29 @@ def test_boundary_drops_a_value_in_the_wrong_field(
 @pytest.mark.parametrize(
     ("first", "last", "accepted"),
     [
-        (WidgetStateProto(id="w", bool_value=True), "new", True),
-        (WidgetStateProto(id="w", string_value="new"), None, False),
+        (
+            WidgetStateProto(id="w", bool_value=True),
+            WidgetStateProto(id="w", string_value="new"),
+            True,
+        ),
+        (
+            WidgetStateProto(id="w", string_value="new"),
+            WidgetStateProto(id="w", bool_value=True),
+            False,
+        ),
     ],
+    ids=["legal_last", "forged_last"],
 )
 def test_boundary_judges_a_repeated_id_on_its_last_entry(
-    first: WidgetStateProto, last: str | None, accepted: bool
+    first: WidgetStateProto, last: WidgetStateProto, accepted: bool
 ) -> None:
     """Only the last entry of a repeated ID is checked, and its callback runs once."""
     callback = MagicMock()
     ss = _session_with(
         _boundary_metadata("w", callback=callback), old_state={"w": "previous"}
     )
-    last_state = (
-        WidgetStateProto(id="w", string_value=last)
-        if last is not None
-        else WidgetStateProto(id="w", bool_value=True)
-    )
 
-    ss.on_script_will_rerun(_message(first, last_state))
+    ss.on_script_will_rerun(_message(first, last))
 
     assert callback.call_count == (1 if accepted else 0)
     assert ss["w"] == ("new" if accepted else "previous")
@@ -7180,7 +7184,7 @@ def test_client_widget_ids_never_add_a_rendered_widget() -> None:
 
 
 def test_a_hidden_widget_stops_waiting_for_a_resync() -> None:
-    """A pending re-sync is forgotten with the rendered widget, but kept with it."""
+    """A hidden widget's pending re-sync is forgotten, and a shown widget's is kept."""
     ss = _registered(_boundary_metadata("shown"), _boundary_metadata("hidden"))
     ss._pending_resync.update({"shown", "hidden"})
 

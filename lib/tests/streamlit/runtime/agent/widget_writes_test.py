@@ -256,7 +256,7 @@ class WidgetWritesTest(SnapshotCase):
         "a" and "A" both show as "A". Sent, the label would resolve to the last
         option that shows it, so the echo is left out rather than flipping the
         widget to "A". Sent to a widget holding another option, the label does
-        not say which option it means and is refused, as before.
+        not say which option it means, so it is refused.
         """
         widget = getattr(st, command)
         for key, held in (("held", "a"), ("other", "b")):

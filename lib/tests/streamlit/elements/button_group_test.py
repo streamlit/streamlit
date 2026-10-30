@@ -291,7 +291,7 @@ class TestButtonGroupSerde:
 
         Known labels in the same list are still resolved, and validate refuses
         the unknown one before it reaches session_state or callbacks. An
-        all-unknown list no longer falls back to the default.
+        all-unknown list passes through too, never reading as the default.
         """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]

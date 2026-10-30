@@ -329,8 +329,6 @@ class SnapshotBuilderTest(SnapshotCase):
         st.segmented_control("Mode", ["a", "b"], key="mode")
         st.selectbox("City", ["Paris"], accept_new_options=True, key="open_city")
         st.selectbox("Closed", ["Paris"], key="closed_city")
-        st.multiselect("Pick", ["a", "b", "c"], max_selections=2, key="limited")
-        st.multiselect("Any", ["a", "b", "c"], key="any")
         with st.form("edit"):
             st.text_input("Name", key="name")
 

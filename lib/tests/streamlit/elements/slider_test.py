@@ -1075,17 +1075,17 @@ def test_slider_serde_deserialize_passes_a_wrong_length_through(
 
 
 @pytest.mark.parametrize(
-    ("ui_value", "expected"),
-    [([5], 5), ([200.0], 200), ([80, 20], (80, 20))],
+    ("value", "ui_value", "expected"),
+    [([20], [5], 5), ([20], [200.0], 200), ([20, 30], [80, 20], (80, 20))],
     ids=["below_min", "above_max", "reversed"],
 )
 def test_slider_serde_deserialize_converts_and_never_replaces(
-    ui_value: list[float], expected: int | tuple[int, int]
+    value: list[float], ui_value: list[float], expected: int | tuple[int, int]
 ) -> None:
     """Out-of-range and reversed values are validate's to refuse."""
-    single = _make_int_serde(value=[20], min_value=10, max_value=100)
-    span = _make_int_serde(value=[20, 30], single_value=False)
-    serde = span if len(ui_value) == 2 else single
+    serde = _make_int_serde(
+        value=value, single_value=len(value) == 1, min_value=10, max_value=100
+    )
     assert serde.deserialize(ui_value) == expected
 
 
@@ -1095,7 +1095,7 @@ def test_slider_serde_deserialize_passes_a_non_finite_value_through() -> None:
     assert math.isnan(_make_float_serde(value=[0.5]).deserialize([math.nan]))
 
 
-def test_slider_serde_deserialize_still_raises_for_text() -> None:
+def test_slider_serde_deserialize_raises_for_text() -> None:
     """URL seeding relies on a TypeError for a value that is not a number."""
     with pytest.raises(TypeError):
         _make_int_serde(value=[20]).deserialize(["abc"])  # type: ignore[list-item]
@@ -1122,7 +1122,7 @@ def _doubles(*values: float) -> Any:
         ),
         (
             True,
-            _doubles(2.5 + 10),
+            _doubles(12.5),
             Violation("malformed", {"expected": "a whole number"}),
         ),
         (
@@ -1172,8 +1172,8 @@ def test_slider_serde_validate_reports_temporal_bounds_in_their_own_type() -> No
         "out_of_range",
         {"min_value": date(1970, 1, 1), "max_value": date(1970, 1, 2)},
     )
-    # Only an integer slider refuses a fraction. A date slider truncates its
-    # microseconds, as before.
+    # Only an integer slider refuses a fraction. A date slider truncates a
+    # fraction of a microsecond instead.
     assert serde.validate(_doubles(0.5)) is None
 
 

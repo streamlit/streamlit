@@ -989,6 +989,13 @@ class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert list(c.default) == ["2025-03-01", "2025-03-15"]
 
 
+def _wire(dates: list[str] | None) -> Any:
+    """Dates as a validator receives them: a protobuf array, or None when unset."""
+    if dates is None:
+        return None
+    return WidgetState(string_array_value={"data": dates}).string_array_value.data
+
+
 class TestDateInputSerdeISO:
     """Tests for DateInputSerde ISO 8601 format parsing."""
 
@@ -1130,14 +1137,7 @@ class TestDateInputSerdeISO:
                 max=date(2026, 12, 31),
             )
         )
-        # A protobuf array, as the boundary passes it.
-        violation = serde.validate(
-            None
-            if ui_value is None
-            else WidgetState(
-                string_array_value={"data": ui_value}
-            ).string_array_value.data
-        )
+        violation = serde.validate(_wire(ui_value))
         if expected is None:
             assert violation is None
         elif isinstance(expected, dict):
@@ -1177,13 +1177,7 @@ class TestDateInputSerdeISO:
             min=date(2020, 1, 1),
             max=date(2026, 12, 31),
         )
-        wire = (
-            None
-            if ui_value is None
-            else WidgetState(
-                string_array_value={"data": ui_value}
-            ).string_array_value.data
-        )
+        wire = _wire(ui_value)
 
         violation = DateInputSerde(values, required=True).validate(wire)
 

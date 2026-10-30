@@ -181,10 +181,8 @@ def test_numeric_fields_are_interchangeable_within_double_precision(
         state, metadata=_metadata(value_type), previous=None, is_rendered=True
     )
 
-    if accepted:
-        assert result.violation is None
-    else:
-        assert result.violation == Violation("wrong_type", result.violation.detail)
+    kind = None if result.violation is None else result.violation.kind
+    assert kind == (None if accepted else "wrong_type")
 
 
 @pytest.mark.parametrize(
@@ -353,7 +351,7 @@ def test_the_first_violation_wins() -> None:
 def test_a_widget_that_is_not_rendered_takes_no_change(
     state: WidgetStateProto, previous: str, expected_kind: ViolationKind | None
 ) -> None:
-    """Check 4 refuses a change for a widget the latest run did not render."""
+    """A widget the latest run did not render refuses a change before `disabled`."""
     validator = MagicMock(return_value=None)
     metadata = dataclasses.replace(_metadata(validator=validator), disabled=True)
 
@@ -689,12 +687,12 @@ def test_within(
 )
 def test_finite_and_whole_number(value: float, finite: bool, whole: bool) -> None:
     """NaN and infinity are malformed, and so is a fraction for a whole number."""
-    assert (widget_checks.finite(value) is None) is finite
-    assert (widget_checks.whole_number(value) is None) is whole
-    if not whole:
-        assert widget_checks.whole_number(value) == Violation(
-            "malformed", {"expected": "a whole number"}
-        )
+    assert widget_checks.finite(value) == (
+        None if finite else Violation("malformed", {"expected": "a finite number"})
+    )
+    assert widget_checks.whole_number(value) == (
+        None if whole else Violation("malformed", {"expected": "a whole number"})
+    )
 
 
 def test_item_count_names_the_allowed_counts() -> None:

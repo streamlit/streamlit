@@ -409,7 +409,7 @@ def _option_app() -> None:
         ("selectbox", {"string_value": "zzz"}),
         ("radio", {"string_value": "XL"}),
         ("multiselect", {"string_array_value": _labels("x", "q")}),
-        # Over `max_selections`, which no longer raises for a client value.
+        # Over `max_selections`, which is refused rather than raised.
         ("multiselect", {"string_array_value": _labels("x", "y", "z")}),
         ("multiselect", {"string_array_value": _labels("y", "y")}),
     ],
@@ -719,16 +719,17 @@ _LEGAL_CHOICES: dict[str, dict[str, Any]] = {
 }
 
 
-def _choose_legal_values(at: AppTest) -> None:
+def _send_legal_values(at: AppTest, legal: dict[str, dict[str, Any]]) -> None:
+    """Change each widget in ``legal`` away from its default, as a browser does."""
     at._run(
         widget_state=forged_many(
             *(
                 WidgetState(id=_widget_id(at, key), **field)
-                for key, field in _LEGAL_CHOICES.items()
+                for key, field in legal.items()
             )
         )
     )
-    assert at.session_state.calls == list(_LEGAL_CHOICES)
+    assert at.session_state.calls == list(legal)
 
 
 def _chosen_values(at: AppTest) -> dict[str, Any]:
@@ -763,7 +764,7 @@ def test_a_choice_outside_the_options_is_refused(
 ) -> None:
     """A forged choice runs no callback and keeps every previous value."""
     at = AppTest.from_function(_choice_app).run()
-    _choose_legal_values(at)
+    _send_legal_values(at, _LEGAL_CHOICES)
     chosen = _chosen_values(at)
 
     at._run(widget_state=forged(_widget_id(at, key), **field))
@@ -985,19 +986,6 @@ def test_a_pill_label_with_edge_whitespace_reaches_the_browser_trimmed() -> None
 def _numbers(*values: float) -> dict[str, list[float]]:
     """A ``double_array_value`` for ``forged``."""
     return {"data": list(values)}
-
-
-def _send_legal_values(at: AppTest, legal: dict[str, dict[str, Any]]) -> None:
-    """Change each widget in ``legal`` away from its default, as a browser does."""
-    at._run(
-        widget_state=forged_many(
-            *(
-                WidgetState(id=_widget_id(at, key), **field)
-                for key, field in legal.items()
-            )
-        )
-    )
-    assert at.session_state.calls == list(legal)
 
 
 def _assert_refused_and_resynced(
@@ -1358,7 +1346,7 @@ def test_a_bound_url_date_or_time_is_repaired_or_cleared(
     expected_value: Any,
     expected_param: str | list[str] | None,
 ) -> None:
-    """A link is read in any layout it used to be read in, then checked."""
+    """A link is read in the current or a legacy layout, then checked."""
     script = (
         "import datetime as dt\n"
         "import streamlit as st\n"
@@ -1426,7 +1414,7 @@ def test_a_color_in_either_case_and_length_is_accepted(color: str) -> None:
         ("ff0000", "#ff0000", "#ff0000"),
         ("#abc", "#abc", "#abc"),
         ("red", "#00FF00", None),
-        # Matched in full, so a trailing newline no longer seeds.
+        # Matched in full, so a trailing newline does not seed.
         ("#ffffff\n", "#00FF00", None),
     ],
 )
@@ -2023,7 +2011,7 @@ def _placeholder_app() -> None:
 
 
 def test_a_widget_replaced_later_in_the_same_run_still_counts_as_rendered() -> None:
-    """The gate names registration: a widget the run emitted and then replaced."""
+    """A widget counts as rendered once it registers, even if the run replaces it."""
     at = AppTest.from_function(_placeholder_app).run()
     assert not at.button
 
