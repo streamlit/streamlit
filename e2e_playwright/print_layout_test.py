@@ -32,6 +32,10 @@ def _break_inside(locator: Locator) -> str:
     return str(locator.evaluate("element => getComputedStyle(element).breakInside"))
 
 
+def _container_type(locator: Locator) -> str:
+    return str(locator.evaluate("element => getComputedStyle(element).containerType"))
+
+
 def test_print_stacks_columns_and_fits_the_dataframe(
     app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
@@ -44,7 +48,22 @@ def test_print_stacks_columns_and_fits_the_dataframe(
 
     # The print-media change refits the table to the printed column.
     app.set_viewport_size(_PORTRAIT)
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_be_visible()
+    screen_sidebar = sidebar.bounding_box()
+    assert screen_sidebar is not None
+    assert abs(screen_sidebar["width"] - 480) < 2
+
     start_browser_print(app)
+
+    # Print ignores the configured sidebar width and uses the minimum
+    # (12.5rem), so the main column keeps most of the page.
+    def sidebar_prints_at_minimum_width() -> None:
+        print_sidebar = sidebar.bounding_box()
+        assert print_sidebar is not None
+        assert abs(print_sidebar["width"] - 200) < 2
+
+    wait_until(app, sidebar_prints_at_minimum_width)
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
@@ -257,7 +276,7 @@ def _assert_inside(inner: Locator, outer: Locator) -> None:
 
 
 def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
-    """Metric variants fit their card, Plotly rows and horizontal containers
+    """Metric variants fit their card, chart rows and horizontal containers
     with a chart stack, and a trailing placeholder adds no gap.
     """
     expect(app.get_by_text("After the Plotly row", exact=True)).to_be_visible()
@@ -293,25 +312,42 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         _assert_inside(sparkline_graphic, chart_column)
 
     wait_until(app, metrics_fit_their_columns)
+    # A side-by-side column is a size container, so `cqi` in the metric's
+    # font rule resolves at paper width without a re-measure in JavaScript.
+    assert _container_type(content_column) == "inline-size"
 
-    # A Plotly chart stacks its row like the built-in charts.
-    plotly_row = get_element_by_key(app, "plotly_row")
-    plotly_chart = plotly_row.get_by_test_id("stPlotlyChart")
-    beside_text = plotly_row.get_by_text("Beside the Plotly chart", exact=True)
-    after_plotly = app.get_by_text("After the Plotly row", exact=True)
-    expect(plotly_chart).to_be_visible()
+    # Plotly, ECharts, and DeckGL charts stack their row like the built-in
+    # charts. Each stays inside its column and above the following element.
+    for row_key, chart_test_id, name in [
+        ("plotly_row", "stPlotlyChart", "Plotly"),
+        ("echarts_row", "stEChartsChart", "ECharts"),
+        ("deck_row", "stDeckGlJsonChart", "DeckGL"),
+    ]:
+        row = get_element_by_key(app, row_key)
+        row_column = row.get_by_test_id("stColumn").first
+        row_chart = row_column.get_by_test_id(chart_test_id)
+        beside_text = row.get_by_text(f"Beside the {name} chart", exact=True)
+        after_row = app.get_by_text(f"After the {name} row", exact=True)
+        expect(row_chart).to_be_visible()
 
-    def plotly_row_stacks() -> None:
-        chart_box = plotly_chart.bounding_box()
-        beside_box = beside_text.bounding_box()
-        after_box = after_plotly.bounding_box()
-        assert chart_box is not None
-        assert beside_box is not None
-        assert after_box is not None
-        assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
-        assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
+        def chart_row_stacks(
+            row_chart: Locator = row_chart,
+            row_column: Locator = row_column,
+            beside_text: Locator = beside_text,
+            after_row: Locator = after_row,
+        ) -> None:
+            chart_box = row_chart.bounding_box()
+            beside_box = beside_text.bounding_box()
+            after_box = after_row.bounding_box()
+            assert chart_box is not None
+            assert beside_box is not None
+            assert after_box is not None
+            _assert_inside(row_chart, row_column)
+            assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
+            assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
-    wait_until(app, plotly_row_stacks)
+        wait_until(app, chart_row_stacks)
+        assert _container_type(row_column) == "normal"
 
     # A horizontal container with a chart stacks like a column row, and the
     # chart spans the container. Its fixed height fits the row but not the

@@ -295,10 +295,13 @@ describe("Metric element", () => {
       .join("\n")
 
     // Containing the value would zero its intrinsic width, so the card
-    // would shrink to the label. The figure still scales to the column.
+    // would shrink to the label. The figure still scales to the narrower of
+    // the measured slot and the printed column, which resolves `cqi`.
     expect(css).not.toContain("container-type:inline-size")
-    expect(css).toContain("--st-metric-available")
-    expect(css).not.toContain("100cqi")
+    expect(css).toContain(
+      "atan2(min(var(--st-metric-available, 100cqi), calc(100cqi - 0px)), var(--st-metric-text-width, min(var(--st-metric-available, 100cqi), calc(100cqi - 0px))))"
+    )
+    expect(css).not.toContain("100vw")
     expect(css).not.toContain("overflow:hidden")
 
     const column = document.createElement("div")

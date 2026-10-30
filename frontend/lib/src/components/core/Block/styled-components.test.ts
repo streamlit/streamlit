@@ -88,6 +88,45 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain("margin-bottom:1rem")
   })
 
+  it("makes the columns of a side-by-side row size containers", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+        })
+      )
+    )
+
+    // `cqi` inside a printed column then resolves at paper width, which a
+    // content-width metric scales to. A stacking row is not matched.
+    expect(css).toMatch(
+      /:not\(:has\(> ?\.stColumn :is\(\.stDataFrame[^{]*\)\) ?> ?\.stColumn\{container-type:inline-size/
+    )
+    expect(css).not.toContain("float:")
+    expect(
+      cssOf(
+        render(
+          createElement(StyledFlexContainerBlock, {
+            direction: Direction.HORIZONTAL,
+            border: false,
+            isContentSized: true,
+          })
+        )
+      )
+    ).not.toContain("container-type")
+    expect(
+      cssOf(
+        render(
+          createElement(StyledFlexContainerBlock, {
+            direction: Direction.VERTICAL,
+            border: false,
+          })
+        )
+      )
+    ).not.toContain("container-type")
+  })
+
   it("stacks a horizontal container that holds a chart", () => {
     const css = cssOf(
       render(
