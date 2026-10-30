@@ -250,8 +250,9 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   - An axis pointer label formatter anywhere in the spec wins (axis, `tooltip.axisPointer`,
     `grid.tooltip.axisPointer`, top-level `axisPointer`), including one set only in a timeline
     tick or `media` override. `"{value}"` restores ECharts' label.
-  - Only the chart option (`baseOption` on a timeline) is converted. Slider `dataZoom` labels,
-    timeline ticks, and `media` overrides keep ECharts' labels.
+  - Only the chart option (`baseOption` on a timeline) gets the formatter. Timeline ticks and
+    `media` overrides inherit it when they merge over a base time axis, but a time axis that
+    only a tick or override declares keeps ECharts' labels, as do slider `dataZoom` labels.
 - **Backgrounds / axes / grid** — transparent chart background over the app background, with
   gridlines, axis lines, and tick labels colored from the Streamlit gray scale. Interaction
   components (`tooltip`, `legend`, `dataZoom`, `brush`, `toolbox`) also get themed defaults.

@@ -438,9 +438,11 @@ export function applyTimeLabelFormatters(
   const chartOption = hasBaseOption
     ? (option.baseOption as EChartsOptionObject)
     : option
-  // Timeline ticks and media overrides merge over the chart, where Streamlit's
-  // axis-level formatter would beat a shared one they set. ECharts reads
-  // ``media`` only on the root; ``baseOption.media`` is checked to be safe.
+  // Look for shared formatters in every variant. Ticks and media overrides
+  // merge over the chart, so Streamlit's axis-level formatter would beat a
+  // shared one they set. ECharts reads ``media`` only on the root;
+  // ``baseOption.media`` is included so a formatter written there still opts
+  // the chart out.
   const mediaLists = hasBaseOption
     ? [option.media, chartOption.media]
     : [option.media]

@@ -1105,10 +1105,11 @@ class EChartsMixin:
             ``xAxis`` or ``yAxis``, the axis tooltip header and axis pointer
             label show a midnight value as a date (for example
             ``2026-08-18``) and any other value as a date and time to the
-            second, so an hourly point at midnight shows no time. An
-            ``axisPointer.label.formatter`` set on the axis, ``tooltip``,
-            ``grid.tooltip``, or the top level replaces this, and
-            ``"{value}"`` restores ECharts' default label.
+            second. An hourly point at midnight therefore shows only its
+            date. An ``axisPointer.label.formatter`` on the axis,
+            ``tooltip``, ``grid.tooltip``, or the top-level ``axisPointer``
+            replaces this, including one set in a timeline tick or ``media``
+            override. ``"{value}"`` restores ECharts' default label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
