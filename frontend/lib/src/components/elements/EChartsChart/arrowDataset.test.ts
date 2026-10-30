@@ -813,20 +813,60 @@ describe("hydrateArrowDatasetSources", () => {
     expect(option.dataset.source).toEqual(SECOND_ROWS)
   })
 
+  it("returns the first dataset the option uses, even when it is not the first sent", () => {
+    const option = { dataset: { source: { name: "h2" } } }
+
+    const dataViewData = hydrateArrowDatasetSources(option, DATASETS)
+
+    expect(dataViewData).toBeInstanceOf(Quiver)
+    expect(dataViewData?.dimensions.numDataRows).toBe(3)
+    expect(dataViewData?.columnTypes.map(t => t.arrowField.name)).toEqual([
+      "x",
+    ])
+    expect(option.dataset.source).toEqual(SECOND_ROWS)
+  })
+
+  it("returns the default chart's dataset rather than a media override's", () => {
+    // Python lists the top-level media override's frame first.
+    const option = {
+      media: [
+        {
+          query: { maxWidth: 400 },
+          option: { dataset: { source: { name: "h1" } } },
+        },
+      ],
+      baseOption: { dataset: { source: { name: "h2" } } },
+    }
+
+    const dataViewData = hydrateArrowDatasetSources(option, DATASETS)
+
+    expect(dataViewData?.columnTypes.map(t => t.arrowField.name)).toEqual([
+      "x",
+    ])
+    expect(option.media[0].option.dataset.source).toEqual(FIRST_ROWS)
+  })
+
+  it("returns null when the option uses no sent dataset", () => {
+    const option = { dataset: { source: { name: "Matcha" } } }
+
+    expect(hydrateArrowDatasetSources(option, DATASETS)).toBeNull()
+  })
+
   it.each([
     { name: "undefined", datasets: undefined },
     { name: "null", datasets: null },
     { name: "empty", datasets: [] },
-  ])("does not walk the option for $name datasets", ({ datasets }) => {
-    const option = {}
-    Object.defineProperty(option, "dataset", {
-      get: () => {
-        throw new Error("The option must not be walked.")
-      },
-    })
+  ])(
+    "returns null without walking the option for $name datasets",
+    ({ datasets }) => {
+      const option = {}
+      Object.defineProperty(option, "dataset", {
+        get: () => {
+          throw new Error("The option must not be walked.")
+        },
+      })
 
-    expect(() => {
-      hydrateArrowDatasetSources(option, datasets)
-    }).not.toThrow()
-  })
+      expect(hydrateArrowDatasetSources(option, datasets)).toBeNull()
+    }
+  )
 })
