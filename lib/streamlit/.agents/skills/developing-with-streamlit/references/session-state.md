@@ -83,7 +83,7 @@ Notes:
 
 ## Widget input constraints
 
-The server checks every value a client sends, including a bound URL parameter, against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs. The widget keeps its previous value. This holds for a modified client too, so app code doesn't need to re-check:
+The server checks every value a client sends, including a bound URL parameter, against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs. The widget keeps its previous value. This holds for a modified client too, so app code doesn't need to re-check these:
 
 - `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …) and `max_selections`
 - `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range
@@ -96,6 +96,8 @@ Still not enforced on the server, so check these yourself when they matter:
 - `validate` on `st.text_input`, including the email or URL check `type` implies. It runs only in the browser.
 - `step`: any value within the bounds is accepted.
 - `st.data_editor` edits and column constraints, and dataframe or chart selections.
+- Custom component values: a component declares no constraints, so any value it can send is accepted.
+- Uploads to `st.file_uploader`, `st.camera_input`, `st.audio_input`, and `st.chat_input`: a file's contents, the MIME type the client reports, and a widget's own `max_upload_size`. The server checks only the file name's extension against `type`, and the size against `server.maxUploadSize`.
 - An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it. Only the browser blocks a form submit while a required field is empty, and a required `st.pills` or `st.segmented_control` without a default can return to empty inside a form.
 - Authorization, file contents, and business rules, such as whether *this* user may pick an option:
 
