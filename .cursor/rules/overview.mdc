@@ -96,6 +96,7 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
+- **Keep fixes proportionate**: Before handling an edge case, weigh how likely real apps are to hit it and how bad the failure would be against the complexity the fix adds. Rare or theoretical cases seldom justify new state, abstractions, parameters, or long special-case branches. A clear error, a short doc note, or leaving the code as is is often the better trade-off. Security issues and data loss still need a real fix. This applies to review feedback too: a reviewer, human or bot, flagging an edge case does not by itself justify a complex fix.
 - Comments must describe current behavior or why the code exists. Do not describe a previous state of the code or rely on change history.
 - **Subagent model**: When launching subagents, use the same model as the parent session (`model: inherit` / omit any model override). Do not switch to a different or faster model unless the user explicitly requests it. Prefer the named custom agents in `.claude/agents/` when available.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
