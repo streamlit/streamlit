@@ -389,8 +389,8 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
 
-  // Every rerun delivers new dataset objects, so the spec only regenerates
-  // when a row count changes, not on every data update.
+  // Compare row counts by value so the spec regenerates only when a count
+  // changes. Every rerun delivers new dataset objects.
   const rowCountsKey = JSON.stringify(getDatasetRowCounts(data, datasets))
   const rowCounts = useMemo(
     () => JSON.parse(rowCountsKey) as DatasetRowCounts,

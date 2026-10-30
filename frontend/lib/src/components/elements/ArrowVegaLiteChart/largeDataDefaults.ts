@@ -61,9 +61,14 @@ const PER_DATUM_MARKS: ReadonlySet<string> = new Set([
 const PATH_MARKS: ReadonlySet<string> = new Set(["line", "area", "trail"])
 
 interface MarkCounts {
-  /** Rows drawn by per-datum marks; compared with the canvas threshold. */
+  /**
+   * Rows drawn by per-datum marks, compared with ``CANVAS_RENDERER_THRESHOLD``.
+   */
   perDatum: number
-  /** Rows drawn by per-datum and path marks; compared with the ARIA one. */
+  /**
+   * Rows drawn by per-datum and path marks, compared with
+   * ``MARK_ARIA_THRESHOLD``.
+   */
   total: number
 }
 
@@ -180,10 +185,10 @@ function countMarks(
  *   Vega-Lite otherwise evaluates a screen-reader description for every data
  *   point. On SVG charts, axes and legends stay in the accessibility tree.
  *
- * The spec is changed in place, like the other ``generateSpec`` steps.
+ * Mutates ``spec`` in place, like the other ``generateSpec`` steps.
  *
- * @param spec The parsed Vega-Lite spec, after the usermeta embed options
- * were sanitized.
+ * @param spec The parsed Vega-Lite spec, after
+ * ``sanitizeUsermetaEmbedOptions``.
  * @param rowCounts The row counts of the chart's Arrow datasets.
  */
 export function applyLargeDataDefaults(

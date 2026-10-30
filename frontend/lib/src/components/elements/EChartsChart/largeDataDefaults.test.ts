@@ -114,10 +114,19 @@ describe("applyLargeDataDefaults", () => {
     ["selectedMode", { selectedMode: "multiple" }, {}],
     ["a visualMap", {}, { visualMap: { min: 0, max: 7 } }],
     ["per-item colors", { colorBy: "data" }, {}],
+    ["chart-level per-item colors", {}, { colorBy: "data" }],
+    ["a row layout", { seriesLayoutBy: "row" }, {}],
     ["polar coordinates", { coordinateSystem: "polar" }, {}],
   ])("skips large mode for %s", (_, series, extra) => {
     const option = chart({ type: "bar", ...series }, DENSE, extra)
     expect(applyLargeDataDefaults(option, false)).toBe(option)
+  })
+
+  it("lets a series colorBy override the chart's", () => {
+    const option = chart({ type: "bar", colorBy: "series" }, DENSE, {
+      colorBy: "data",
+    })
+    expect(prepare(option).large).toBe(true)
   })
 
   it("skips series whose data items carry their own settings", () => {

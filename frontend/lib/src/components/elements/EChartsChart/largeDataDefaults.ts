@@ -49,8 +49,8 @@ function getSeriesRows(
   if (series.data !== undefined) {
     return Array.isArray(series.data) ? series.data : undefined
   }
-  // A series that names its dataset by id isn't counted.
-  if (series.datasetId !== undefined) {
+  // A series that names its dataset by id, or reads it by row, isn't counted.
+  if (series.datasetId !== undefined || series.seriesLayoutBy === "row") {
     return undefined
   }
   const index =
@@ -81,8 +81,9 @@ function hasToolboxBrush(option: EChartsOptionObject): boolean {
 }
 
 /**
- * Whether the series shows item tooltips. Its own ``tooltip.trigger`` wins
- * over the chart's, and ECharts triggers on items when neither sets one.
+ * Whether this series opens a tooltip on a symbol. The series' own
+ * ``tooltip.trigger`` wins over the chart's, and ECharts uses ``item`` when a
+ * tooltip omits ``trigger``.
  */
 function hasItemTooltip(
   series: SeriesOption,
@@ -162,7 +163,7 @@ function withLargeDataDefault(
     "large" in seriesOption ||
     rows.length <= threshold ||
     option.visualMap !== undefined ||
-    seriesOption.colorBy === "data" ||
+    (seriesOption.colorBy ?? option.colorBy) === "data" ||
     (seriesOption.coordinateSystem ?? "cartesian2d") !== "cartesian2d" ||
     hasItemSettings(seriesOption)
   return keepsDefaultMode ? series : { ...seriesOption, large: true }

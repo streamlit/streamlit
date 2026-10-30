@@ -966,7 +966,8 @@ class VegaChartsMixin:
             columns) renders to a canvas instead of SVG so it stays
             responsive. On a canvas, assistive technologies only get the
             chart's accessible name (``alt``). To keep SVG, build the chart
-            with ``st.altair_chart`` and set its renderer.
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
 
         Parameters
         ----------
@@ -1567,7 +1568,8 @@ class VegaChartsMixin:
             columns) renders to a canvas instead of SVG so it stays
             responsive. On a canvas, assistive technologies only get the
             chart's accessible name (``alt``). To keep SVG, build the chart
-            with ``st.altair_chart`` and set its renderer.
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
 
         Parameters
         ----------
@@ -1937,7 +1939,8 @@ class VegaChartsMixin:
             columns) renders to a canvas instead of SVG so it stays
             responsive. On a canvas, assistive technologies only get the
             chart's accessible name (``alt``). To keep SVG, build the chart
-            with ``st.altair_chart`` and set its renderer.
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
 
         Parameters
         ----------
