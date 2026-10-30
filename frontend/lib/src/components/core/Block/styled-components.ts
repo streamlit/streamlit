@@ -74,9 +74,20 @@ const PRINT_STACK_TRIGGER_IN_COLUMN = `> .stColumn ${PRINT_STACK_TRIGGER}${PRINT
  */
 const PRINT_STACK_HORIZONTAL_CONTAINER = `&:not(:has(> .stColumn)):has(${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`
 
+/**
+ * Relative selector for a descendant column row or horizontal container that
+ * stacks in print because it holds a dataframe, table, or chart. It has no
+ * leading `&`, so wrap it in `&:has(...)`.
+ */
+const PRINT_STACKING_ROW = `.stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER}`
+
 const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 
-/** Element types whose container is `display: none` in print. */
+/**
+ * Element types whose container takes no space on the printed page (`empty`
+ * is always hidden; balloons and snow are hidden in print), so print gap
+ * margins skip them.
+ */
 export const PRINT_HIDDEN_ELEMENT_TYPES = new Set([
   "empty",
   ...GLOBAL_ELEMENTS,
@@ -465,6 +476,23 @@ export const StyledFlexContainerBlock =
         (hasDefiniteHeight ?? isFixedLengthHeight(height))
       const keepsPrintFlex =
         keepsPrintFlexForAlignment || keepsPrintFlexForHeight
+      // A height that fit a side-by-side row cuts off the row once it
+      // stacks, and print cannot scroll, so the block grows to fit it. It
+      // prints as a block box then, unless it centers or end-aligns.
+      const releasesPrintHeightForStackedRow: CSSObject =
+        keepsPrintFlexForHeight
+          ? {
+              [`&:has(${PRINT_STACKING_ROW})`]: {
+                height: "auto",
+                maxHeight: "none",
+                overflow: "visible",
+                ...(!keepsPrintFlexForAlignment && {
+                  display: "block",
+                  ...printBlockGapMargins(gapWidth, theme),
+                }),
+              },
+            }
+          : {}
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
@@ -532,7 +560,7 @@ export const StyledFlexContainerBlock =
               },
             }
           : keepsPrintFlex
-            ? {}
+            ? releasesPrintHeightForStackedRow
             : {
                 display: "block",
                 ...printBlockGapMargins(gapWidth, theme),
@@ -663,15 +691,15 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
         hasDefiniteHeight !== true && {
           display: "block",
         }),
-      // A horizontal container with a chart stacks its children in print
-      // and outgrows its fixed height, so its wrapper follows its height.
-      [`&:has(> .stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VISIBLE_FILTER})`]:
-        {
-          display: "block",
-          flex: "0 0 auto",
-          height: "auto",
-          maxHeight: "none",
-        },
+      // A row that stacks in print outgrows a fixed height that fit it side
+      // by side, whether the height is on the row's own container or on a
+      // container around it, so the wrapper follows its content's height.
+      [`&:has(${PRINT_STACKING_ROW})`]: {
+        display: "block",
+        flex: "0 0 auto",
+        height: "auto",
+        maxHeight: "none",
+      },
     },
   })
 )

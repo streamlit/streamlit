@@ -45,10 +45,9 @@ export const printKeepTogetherRules: CSSObject = {
 }
 
 /**
- * Keeps a bordered card that holds a chart on one page. The chart moves to
- * the next page as one piece, so a split card would leave its title and an
- * empty bordered strip behind. Text and metric cards split line by line
- * like the rest of the page. A card taller than a page still breaks; this
- * rule never clips content.
+ * Emotion selector that matches this box when it contains a chart that
+ * prints (not inside a closed tab, a collapsed sidebar, or a closed
+ * expander). Pair it with `printKeepTogetherRules` so the box is not split
+ * from that chart. A box taller than a page still breaks.
  */
 export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_CHART})`

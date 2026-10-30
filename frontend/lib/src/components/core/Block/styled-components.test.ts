@@ -49,8 +49,8 @@ const cssOf = ({ container }: RenderResult): string => {
     .join("\n")
 }
 
-/** A print `display:block` on the wrapper's own class, not a nested rule. */
-const WRAPPER_OWN_PRINT_BLOCK = /@media print\{\.[\w-]+\{[^}]*display:block/
+/** A print `display:block` on the component's own class, not a nested rule. */
+const OWN_PRINT_BLOCK = /@media print\{\.[\w-]+\{[^}]*display:block/
 
 describe("StyledFlexContainerBlock print layout", () => {
   it("only stacks a column row that holds a dataframe, table, or chart", () => {
@@ -261,10 +261,56 @@ describe("StyledFlexContainerBlock print layout", () => {
 
     // Stretch children are height 100%. A block parent gives each of them
     // the full container, so a fixed-height container keeps flex and its
-    // gap, and print adds no block margin.
+    // gap, and print adds no block margin on its own class.
     expect(css).toContain("height:300px")
-    expect(css).not.toContain("display:block")
-    expect(css).not.toContain("margin-bottom")
+    expect(css).not.toMatch(OWN_PRINT_BLOCK)
+    expect(css).not.toMatch(/\.css-[\w-]+ ?> ?:has\(~/)
+  })
+
+  it("releases a fixed height around a descendant row that stacks in print", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "300px",
+          overflow: "auto",
+          gap: { pixelGap: 17 },
+        })
+      )
+    )
+
+    // Print cannot scroll, so the stacked row would be cut off at the
+    // fixed height. The block grows to fit it as a block box.
+    expect(css).toMatch(
+      /:has\(\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
+    )
+    expect(css).toContain("margin-bottom:17px")
+
+    const centered = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+          height: "301px",
+          align: BlockProto.FlexContainer.Align.ALIGN_CENTER,
+        })
+      )
+    )
+    expect(centered).toMatch(
+      /:has\(\.stHorizontalBlock [^{]*\{height:auto;max-height:none;overflow:visible;?\}/
+    )
+    expect(centered).not.toContain("display:block")
+
+    const contentHeight = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.VERTICAL,
+          border: false,
+        })
+      )
+    )
+    expect(contentHeight).not.toContain(":has(.stHorizontalBlock")
   })
 
   it("keeps flex for a percentage height only when it is definite", () => {
@@ -293,7 +339,7 @@ describe("StyledFlexContainerBlock print layout", () => {
         })
       )
     )
-    expect(definite).not.toContain("display:block")
+    expect(definite).not.toMatch(OWN_PRINT_BLOCK)
   })
 
   it("uses block layout for a content-height container that only aligns vertically", () => {
@@ -373,12 +419,12 @@ describe("StyledLayoutWrapper print layout", () => {
 
     // Stays flex so its child retains the fixed height.
     expect(css).toContain("height:300px")
-    expect(css).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
+    expect(css).not.toMatch(OWN_PRINT_BLOCK)
 
     const contentHeight = cssOf(
       render(createElement(StyledLayoutWrapper, { height: "auto" }))
     )
-    expect(contentHeight).toMatch(WRAPPER_OWN_PRINT_BLOCK)
+    expect(contentHeight).toMatch(OWN_PRINT_BLOCK)
 
     const stretchInDefiniteParent = cssOf(
       render(
@@ -390,10 +436,10 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
     expect(stretchInDefiniteParent).toContain("flex:0 1 100%")
-    expect(stretchInDefiniteParent).not.toMatch(WRAPPER_OWN_PRINT_BLOCK)
+    expect(stretchInDefiniteParent).not.toMatch(OWN_PRINT_BLOCK)
   })
 
-  it("releases a fixed height around a horizontal container that stacks a chart", () => {
+  it("releases a fixed height around a row that stacks a chart", () => {
     const css = cssOf(
       render(
         createElement(StyledLayoutWrapper, {
@@ -403,8 +449,10 @@ describe("StyledLayoutWrapper print layout", () => {
       )
     )
 
+    // The row can be the wrapper's own container or nested inside it.
     expect(css).toMatch(
-      /:has\(> ?\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
+      /:has\(\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
     )
+    expect(css).not.toContain(":has(> .stHorizontalBlock")
   })
 })
