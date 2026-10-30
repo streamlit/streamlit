@@ -3,7 +3,7 @@
 From `all_inline_comments.json`, triage the candidate inline comments from individual reviews:
 
 1. **Deduplicate** — merge near-identical comments targeting the same file and line (or adjacent lines) with similar feedback. Keep the clearest wording.
-2. **Rank** — order by impact and actionability. Prefer `high` severity, concrete suggestions, and security/correctness findings over style nits. Rank rare or theoretical edge cases low regardless of their stated severity. Drop those whose proposed fix would add more complexity than the case's likelihood and impact justify.
+2. **Rank** — order by impact and actionability. Prefer `high` severity, concrete suggestions, and security/correctness findings over style nits. Rank rare or theoretical edge cases without security or data-loss impact low, regardless of their stated severity, and drop those whose proposed fix would add more complexity than the case's likelihood and impact justify. Keep security and data-loss findings at their stated rank even when rare.
 3. **Cap** — keep only the top 20 comments. Drop the rest.
 
 Write the triaged results to `inline_comments.json` using this exact JSON structure:

@@ -110,13 +110,13 @@ If there are uncommitted changes, commit with a descriptive message and push.
 
 ### 9. Request a final AI review if this iteration addressed one
 
-If this iteration pushed commits that address the previous review, and the PR is blocked by `do-not-merge`, add `ai-final-review` after that push. Skip this when the label is already present, or when this iteration did not push review fixes.
+If this iteration addressed the previous review, and the PR is blocked by `do-not-merge`, add `ai-final-review` after the push or replies. Addressing it means pushing fixes, or replying to decline its blocking findings when they fail the proportionality check. Skip this when the label is already present, or when this iteration did neither.
 
 ```bash
 gh pr edit --add-label "ai-final-review"
 ```
 
-Then return to step 3 so that review runs on the new commits.
+Then return to step 3 so that review sees the new commits or replies.
 
 ### 10. Repeat until CI passes
 
@@ -133,12 +133,12 @@ Before a successful exit, refetch mergeability even when this iteration pushed n
 
 - **Focus on root cause**: Fix the primary error, not cascading failures
 - **Minimal fixes**: Smallest change that resolves the issue
-- **Proportionate review fixes**: Do not add state, abstractions, or long special-case branches for rare or theoretical cases just to satisfy a review. Each added branch also invites new comments in the next review round
+- **Proportionate review fixes**: Do not add state, abstractions, or long special-case branches for rare or theoretical cases just to satisfy a review. Each added branch also invites new comments in the next review round. Security issues and data loss still need a real fix
 - **Don't skip tests**: Never disable tests to "fix" CI
 - **Verify locally**: Always run `make check` before pushing
 - **Snapshot mismatches**: Always use the `update-snapshots` label, never fix snapshot files manually. Merge the snapshot PR the workflow opens against this branch. Skip a conflicting snapshot PR and continue.
 - **Conflicts with the base branch**: Merge the base into this branch and resolve every conflict. Keep this PR's intended change together with the incoming base changes. Run `make check` before pushing the resolution. Recheck mergeability before a green-CI exit, including when this iteration pushed nothing. Stop only when a conflict has no clear resolution.
-- **Blocked PRs**: After pushing review fixes, add `ai-final-review` when `do-not-merge` is present and `ai-final-review` is not
+- **Blocked PRs**: After pushing review fixes, or declining blocking findings with replies, add `ai-final-review` when `do-not-merge` is present and `ai-final-review` is not
 - **Limit iterations**: Stop after 5 fix-push-wait cycles to avoid infinite loops
 
 ## Error handling

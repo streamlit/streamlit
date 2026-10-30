@@ -192,8 +192,9 @@ Verdict criteria:
   merged spec is expected; still request changes for material alignment issues. Product
   questions and optional refinements are non-blocking; request changes when a mismatch would
   create material user harm or lasting, unjustified complexity in the public surface.
-- If a PR exists, check its earlier review threads before raising an edge case. If a reply
-  declined a finding as too rare to justify its fix, do not raise it again unless you can show
-  the case is more likely or more harmful than the reply assumed.
+- If a PR exists, check its earlier review threads before raising an edge case. If the PR
+  author or a maintainer declined a finding as too rare to justify its fix, do not raise it
+  again unless you can show the case is more likely or more harmful than the reply assumed.
+  This never applies to security or data-loss findings.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.
 - Agent and skill instructions (`.claude/agents/`, `.claude/skills/`, and the generated copies under `.cursor/rules/` and `.github/instructions/`) stay high-level on purpose. Do not ask for shell scripts, command sequences, or step-by-step procedures in those files. Comment only when the goal or a real constraint is missing or wrong.
