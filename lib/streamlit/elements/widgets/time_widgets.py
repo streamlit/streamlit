@@ -511,10 +511,11 @@ class DateTimeInputSerde:
         return widget_checks.within(parsed, self.min, self.max)
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
-        # Converts but never replaces a value: the boundary compares the
-        # result with the stored value, and validate refuses what a client
-        # may not send. The legacy layout is read for URL values, which
-        # URL seeding validates after serializing them again.
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. The legacy layout is
+        # read for URL values, which URL seeding validates after serializing
+        # them again.
         if ui_value is None or len(ui_value) == 0:
             return self.value
         for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
@@ -553,9 +554,9 @@ class TimeInputSerde:
         return parsed if isinstance(parsed, widget_checks.Violation) else None
 
     def deserialize(self, ui_value: str | None) -> time | None:
-        # Converts but never replaces a value: the boundary compares the
-        # result with the stored value, and validate refuses what a client
-        # may not send.
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send.
         if ui_value is None:
             return self.value
         # Try HH:MM:SS first (sub-minute step), fall back to HH:MM for backward compat.
@@ -752,11 +753,11 @@ class DateInputSerde:
         return widget_checks.ordered(dates)
 
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
-        # Converts but never replaces a value: the boundary compares the
-        # result with the stored value, and validate refuses what a client
-        # may not send. Text in neither layout raises a ValueError. The
-        # legacy layout is read for URL values, which URL seeding validates
-        # after serializing them again.
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. Text in neither layout
+        # raises a ValueError. The legacy layout is read for URL values, which
+        # URL seeding validates after serializing them again.
         return_value: Sequence[date] | None
         if ui_value is not None:
             return_value = tuple(self._parse_date(v) for v in ui_value)

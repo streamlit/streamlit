@@ -33,6 +33,7 @@ from streamlit.elements.widgets.data_editor import DataEditorSerde
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.elements.widgets.text_widgets import TextInputSerde
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -176,7 +177,10 @@ def test_pruning_a_thousand_rendered_widgets(
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=SimpleNamespace(fragment_ids_this_run=fragment_ids_this_run),
+        return_value=SimpleNamespace(
+            fragment_ids_this_run=fragment_ids_this_run,
+            fragment_storage=MemoryFragmentStorage(),
+        ),
     ):
         benchmark(ss.prune_rendered_widgets, registered)
 

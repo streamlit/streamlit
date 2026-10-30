@@ -85,7 +85,7 @@ Notes:
 
 The server checks every value a client sends, including a bound URL parameter, against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs. The widget keeps its previous value. This holds for a modified client too, so app code doesn't need to re-check these:
 
-- `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …) and `max_selections`
+- `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …), unless `accept_new_options=True` lets the user type any non-empty text, and `max_selections`
 - `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range
 - `required`: a client can't empty a required widget
 - `disabled`: a disabled widget accepts nothing

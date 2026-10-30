@@ -221,7 +221,8 @@ class LocalScriptRunner(ScriptRunner):
             )
         elif ctx.has_script_started and not self._stop_requested:
             # st.stop() or an uncaught exception ended the body early: the
-            # widgets it did not send are no longer rendered.
+            # widgets it did not send are no longer rendered. When the session
+            # requested the stop, nothing is pruned.
             self._session_state.prune_rendered_widgets(
                 ctx.shared.widget_ids_this_run.snapshot()
             )

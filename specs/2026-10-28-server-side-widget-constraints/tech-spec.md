@@ -359,8 +359,9 @@ class NumberInputSerde:
         return widget_checks.within(ui_value, self.min_value, self.max_value)
 
     def deserialize(self, ui_value: Number | None) -> Number | None:
-        # Converts but never replaces a value: check 3 compares the result with
-        # the stored value, and validate refuses what a client may not send.
+        # Converts a value, but never swaps an invalid one for the default:
+        # check 3 compares the result with the stored value, and validate
+        # refuses what a client may not send.
         val = ui_value if ui_value is not None else self.value
         is_int = self.data_type == NumberInputProto.INT
         if is_int and val is not None and math.isfinite(val):
@@ -509,7 +510,8 @@ URL seeding reuses `validate` as well. See
 ### Rendered-widget gate
 
 `WStates` gains `rendered_ids`: the widgets registered by the latest run that covered
-them. A full run covers every widget, and a fragment run covers its fragment's widgets.
+them. A full run covers every widget, and a fragment run covers its fragment's widgets
+and those of the nested fragments it removed.
 
 "Registered" is deliberately broader than "displayed". A widget the app removes later in
 the same run still counts, for example after `placeholder.empty()` or another element
@@ -532,7 +534,23 @@ The set changes at three points:
   run covered but did not register, and it never adds one. This happens in
   `on_script_finished` with `remove_stale_widgets=True`, and uses the same rule that
   scopes states to `fragment_ids_this_run`. After a fragment run, only that fragment's
-  widgets are pruned.
+  widgets are pruned, plus those of the nested fragments the run removed.
+  - A parent fragment that runs without calling a nested one removes it from fragment
+    storage (`clear_stale_descendants`), and the browser removes the nested
+    fragment's elements inside the parent. `fragment_ids_this_run` names only the
+    fragments the client asked for, so the state rule keeps those widgets. The prune
+    therefore also drops a widget the run did not register whose fragment is gone from
+    storage. Their states stay, as before. An element the nested fragment wrote to a
+    container outside the parent stays in the browser until a full run, but
+    `AppSession.request_rerun` already drops a rerun request from a fragment that is
+    gone, so that widget no longer works either.
+  - A nested fragment that runs again but stops rendering one of its widgets keeps
+    that widget in the set until a run covers the nested fragment itself or the whole
+    app. The browser removes such a widget inside the parent's elements, but keeps one
+    the nested fragment wrote to a container outside the parent, because its stale-node
+    pass only collects the wrappers of the fragments in `fragment_ids_this_run`, and
+    that widget still works. Telling the two apart needs delta paths, which the set does
+    not track.
 - **When a run ends in `st.stop()` or an uncaught exception,** the set is pruned the
   same way (`SessionState.prune_rendered_widgets`). That path sets `premature_stop`, so
   `_on_script_finished` skips `on_script_finished` and no state is pruned, which keeps

@@ -122,7 +122,8 @@ class CheckResult(NamedTuple):
     # The deserialized value, once the deserializer has read it.
     value: Any = None
     # Whether the value differs from the stored one. Always False for a value
-    # a browser session drops.
+    # a browser session drops. A shared label (`ambiguous_option`) is kept, so
+    # it can be a change.
     changed: bool = False
 
 
@@ -190,16 +191,19 @@ _ECMASCRIPT_WHITESPACE: Final = (
 
 # The layouts the browser sends. `[0-9]` rather than `\d`, which also matches
 # the digits of other scripts. Each is matched in full, so a trailing newline
-# is refused too.
+# is refused too. The hour stops at 23 here because Python 3.14's
+# `fromisoformat` reads hour 24 as midnight, which the browser never sends.
 _ISO_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
-_ISO_TIME: Final = re.compile(r"[0-9]{2}:[0-9]{2}(?::[0-9]{2})?")
+_HOUR: Final = r"(?:[01][0-9]|2[0-3])"
+_ISO_TIME: Final = re.compile(rf"{_HOUR}:[0-9]{{2}}(?::[0-9]{{2}})?")
 _ISO_DATETIME_MINUTES: Final = re.compile(
-    r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+    rf"[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}T{_HOUR}:[0-9]{{2}}"
 )
 _HEX_COLOR: Final = re.compile(r"#(?:[0-9a-fA-F]{3}){1,2}")
 
 # The fixed text that starts every refusal log line. The e2e parity gate looks
-# for it in the server output.
+# for it in the server output, through copies in e2e_playwright/conftest.py and
+# pytest.ini, which widget_checks_test.py checks against this one.
 REFUSAL_LOG_MARKER: Final = "Refused a client value for widget"
 
 # Ends the explanation of a kind that a correct browser never causes.

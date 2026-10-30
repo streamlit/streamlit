@@ -801,7 +801,9 @@ def test_iso_date(text: str, expected: dt.date | None) -> None:
         # Seconds are accepted for any step, such as step=60.
         ("10:00:00", dt.time(10, 0)),
         ("23:59:59", dt.time(23, 59, 59)),
+        # Python 3.14 reads hour 24 as midnight.
         ("24:00", None),
+        ("24:00:00", None),
         ("10:60", None),
         ("10:00:60", None),
         ("1:00", None),
@@ -830,6 +832,8 @@ def test_iso_time(text: str, expected: dt.time | None) -> None:
         ("2026-10-29", None),
         ("2026-10-29T10:15+01:00", None),
         ("2026-10-29T25:00", None),
+        # Python 3.14 reads hour 24 as midnight of the next day.
+        ("2026-10-29T24:00", None),
     ],
 )
 def test_iso_datetime_minutes(text: str, expected: dt.datetime | None) -> None:

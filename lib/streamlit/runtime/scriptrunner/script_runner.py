@@ -1020,8 +1020,9 @@ class ScriptRunner:
         elif ctx.has_script_started and not self._stop_requested:
             # st.stop() or an uncaught exception ended the body early. The
             # widget values stay, but the browser removes every widget the run
-            # did not send, so those no longer count as rendered. A stop the
-            # session requested interrupts the run instead.
+            # did not send, so those no longer count as rendered. When the
+            # session requested the stop (fast reruns), the browser still shows
+            # this run's widgets, so nothing is pruned.
             self._session_state.prune_rendered_widgets(
                 ctx.shared.widget_ids_this_run.snapshot()
             )

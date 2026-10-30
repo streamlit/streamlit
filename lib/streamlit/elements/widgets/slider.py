@@ -394,9 +394,10 @@ class SliderSerde:
         return widget_checks.ordered(ui_value)
 
     def deserialize(self, ui_value: list[float] | None) -> Any:
-        # Converts but never replaces a value: the boundary compares the
-        # result with the stored value, and validate refuses what a client
-        # may not send. URL seeding validates the result.
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. URL seeding validates
+        # the result.
         # TODO(query-params): URL values that don't align to the step (e.g.,
         # ?val=0.15 with step=0.1) are accepted as-is. Consider snapping to the
         # nearest valid step for consistency with the UI.

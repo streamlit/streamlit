@@ -141,9 +141,10 @@ class NumberInputSerde:
         return v
 
     def deserialize(self, ui_value: Number | None) -> Number | None:
-        # Converts but never replaces a value: the boundary compares the
-        # result with the stored value, and validate refuses what a client
-        # may not send. URL seeding validates the result.
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. URL seeding validates
+        # the result.
         val: Number | None = ui_value if ui_value is not None else self.value
         if (
             self.data_type == NumberInputProto.INT

@@ -88,6 +88,7 @@ from streamlit.runtime.stats import (
 _LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner import RerunData
     from streamlit.runtime.session_manager import SessionManager
     from streamlit.runtime.state.widget_checks import Violation
@@ -228,10 +229,10 @@ class WStates(MutableMapping[str, Any]):
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
     # The widgets registered by the latest run that covered them. A full run
-    # covers every widget, and a fragment run only its fragment's widgets.
-    # Only registration adds an ID; SessionState.prune_rendered_widgets removes
-    # the ones a run covered but did not register. Like the metadata, it
-    # survives `clear`.
+    # covers every widget, and a fragment run only its fragment's widgets and
+    # those of the nested fragments it removed. Only registration adds an ID;
+    # SessionState.prune_rendered_widgets removes the ones a run covered but
+    # did not register. Like the metadata, it survives `clear`.
     rendered_ids: set[str] = field(default_factory=set)
 
     def __repr__(self) -> str:
@@ -288,11 +289,13 @@ class WStates(MutableMapping[str, Any]):
         return {self[wid] for wid in self}
 
     def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[invalid-method-override]
-        """Copy all widget values and metadata from 'other' into this mapping,
-        overwriting any data in this mapping that's also present in 'other'.
+        """Copy all widget values, metadata, and rendered IDs from 'other' into
+        this mapping, overwriting any data in this mapping that's also present
+        in 'other'.
         """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
+        self.rendered_ids.update(other.rendered_ids)
 
     def clear(self) -> None:
         """Forget every widget value, keeping the metadata.
@@ -783,6 +786,7 @@ class SessionState:
         self._rejected_client_values = frozenset()
         self._pending_resync.clear()
         self._unregistered_client_ids.clear()
+        self._warned_widget_ids.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -1064,6 +1068,7 @@ class SessionState:
                 is_rendered=is_rendered,
             )
             violation = result.violation
+            # A shared label is accepted here; only the agent API refuses it.
             if widget_checks.browser_refuses(violation):
                 widget_state.drop(widget_id)
                 rejected.add(widget_id)
@@ -1666,9 +1671,10 @@ class SessionState:
         """Forget the rendered widgets that a run covered but did not register.
 
         A full run covers every widget, and a fragment run only its fragment's
-        widgets, as ``_is_stale_widget`` decides for stale widget states. This
-        never adds an ID, so a client's list of widget IDs can only shrink the
-        set. A forgotten widget also stops waiting for a re-sync, because the
+        widgets, as ``_is_stale_widget`` decides for stale widget states. A
+        fragment run also covers the widgets of the nested fragments it
+        removed, whose states stay. This never adds an ID, so a client's list of
+        widget IDs can only shrink the set. A forgotten widget also stops waiting for a re-sync, because the
         browser removed it.
 
         Stale widget removal calls this, and so does the script runner when
@@ -1688,6 +1694,7 @@ class SessionState:
         fragment_ids_this_run = ctx.fragment_ids_this_run
         if fragment_ids_this_run:
             metadata_by_id = widget_state.widget_metadata
+            fragment_storage = ctx.fragment_storage
             widget_state.rendered_ids = {
                 widget_id
                 for widget_id in widget_state.rendered_ids
@@ -1695,6 +1702,9 @@ class SessionState:
                     metadata_by_id.get(widget_id),
                     widget_ids_this_run,
                     fragment_ids_this_run,
+                )
+                and not _is_in_removed_fragment(
+                    metadata_by_id[widget_id], widget_ids_this_run, fragment_storage
                 )
             }
         else:
@@ -2105,9 +2115,9 @@ class SessionState:
     def _url_would_seed(self, widget_id: str, user_key: str) -> bool:
         """Whether the URL would seed a bound widget in this run if it were enabled.
 
-        That needs the parameter present and the URL to have priority. Elsewhere
-        the frontend has already dropped a parameter the server cleared, so
-        there is nothing to correct.
+        That needs the parameter present and the URL to have priority. When the
+        URL has no priority, the frontend has already dropped any parameter the
+        server cleared, so there is nothing to correct.
         """
         if self.query_params.get_initial_value(user_key) is None:
             return False
@@ -2400,6 +2410,28 @@ def _is_stale_widget(
     return not (
         metadata.id in active_widget_ids
         or (fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run)
+    )
+
+
+def _is_in_removed_fragment(
+    metadata: WidgetMetadata[Any],
+    widget_ids_this_run: frozenset[str],
+    fragment_storage: FragmentStorage,
+) -> bool:
+    """Whether a widget the run did not register belongs to a fragment that is gone.
+
+    A fragment run removes the nested fragments its fragments ran without
+    calling again (``FragmentStorage.clear_stale_descendants``), and the browser
+    removes their elements with them. ``fragment_ids_this_run`` names only the
+    fragments the client asked for, so ``_is_stale_widget`` keeps those widgets.
+    A rerun request from a removed fragment is already dropped
+    (``AppSession.request_rerun``).
+    """
+    fragment_id = metadata.fragment_id
+    return (
+        fragment_id is not None
+        and metadata.id not in widget_ids_this_run
+        and not fragment_storage.contains(fragment_id)
     )
 
 

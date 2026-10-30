@@ -86,8 +86,9 @@ class ColorPickerSerde:
         return str(v)
 
     def deserialize(self, ui_value: str | None) -> str:
-        # Converts but never replaces a value: validate refuses what a client
-        # may not send, and URL seeding validates the result.
+        # Converts a value, but never swaps an invalid one for the default:
+        # validate refuses what a client may not send, and URL seeding
+        # validates the result.
         # None or empty string means use default
         if ui_value is None or ui_value == "":
             return self.value

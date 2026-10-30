@@ -178,7 +178,7 @@ def pack_widget_state_value(
 
 
 class WidgetValidator(Protocol):
-    """What a client may send for one widget: the serde's ``validate`` method."""
+    """Checks one changed client value, usually a serde's ``validate`` method."""
 
     def __call__(
         self,

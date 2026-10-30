@@ -20,7 +20,7 @@ import json
 import logging
 import unittest
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -52,6 +52,7 @@ from streamlit.proto.Common_pb2 import (
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
+from streamlit.runtime.fragment import MemoryFragmentStorage, _FragmentLifetime
 from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_requests import (
@@ -3838,6 +3839,9 @@ class MockScriptRunCtx:
     is_history_navigation: bool = False
     # No script requests, so a callback's rerun request is not queued.
     script_requests: None = None
+    fragment_storage: MemoryFragmentStorage = field(
+        default_factory=MemoryFragmentStorage
+    )
 
 
 class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
@@ -7081,7 +7085,7 @@ def test_a_stale_widget_leaves_the_resync_set() -> None:
 
 
 def test_clear_resets_the_pending_client_value_sets() -> None:
-    """Clearing session state forgets refusals and unchecked client values."""
+    """Clearing session state forgets refusals, warnings, and unchecked values."""
     ss = _session_with(_boundary_metadata("w"), old_state={"w": "previous"})
     ss.on_script_will_rerun(
         _message(
@@ -7089,12 +7093,15 @@ def test_clear_resets_the_pending_client_value_sets() -> None:
             WidgetStateProto(id="new", string_value="x"),
         )
     )
+    assert ss._warned_widget_ids == {"w"}
 
     ss.clear()
 
     assert ss._rejected_client_values == frozenset()
     assert ss._pending_resync == set()
     assert ss._unregistered_client_ids == set()
+    # A widget that registers again after a cache clear warns again.
+    assert ss._warned_widget_ids == set()
 
 
 # endregion Client value boundary
@@ -7119,11 +7126,18 @@ def _finish_run(
     *registered: str,
     fragment_ids_this_run: list[str] | None = None,
     remove_stale_widgets: bool = True,
+    fragments: MemoryFragmentStorage | None = None,
 ) -> None:
-    """End a run that registered the widgets ``registered``."""
+    """End a run that registered the widgets ``registered``.
+
+    ``fragments`` holds the session's fragments once the run has ended.
+    """
+    ctx = MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run)
+    if fragments is not None:
+        ctx.fragment_storage = fragments
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
-        return_value=MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run),
+        return_value=ctx,
     ):
         ss.on_script_finished(
             frozenset(registered), remove_stale_widgets=remove_stale_widgets
@@ -7138,6 +7152,16 @@ def test_registration_marks_a_widget_rendered() -> None:
     ss.on_script_will_rerun(_message())
     ss.clear()
     assert ss._new_widget_state.rendered_ids == {"w"}
+
+
+def test_merging_widget_states_keeps_the_rendered_widgets() -> None:
+    """``WStates.update`` copies which widgets are rendered with their metadata."""
+    merged = _registered(_boundary_metadata("a"))
+    other = _registered(_boundary_metadata("b"))
+
+    merged._new_widget_state.update(other._new_widget_state)
+
+    assert merged._new_widget_state.rendered_ids == {"a", "b"}
 
 
 def test_a_full_run_forgets_the_widgets_it_did_not_register() -> None:
@@ -7158,9 +7182,65 @@ def test_a_fragment_run_forgets_only_its_own_widgets() -> None:
         _boundary_metadata("other_fragment", fragment_id="g"),
     )
 
-    _finish_run(ss, "kept", fragment_ids_this_run=["f"])
+    fragments = MemoryFragmentStorage()
+    fragments.register("f", MagicMock())
+    fragments.register("g", MagicMock())
+
+    _finish_run(ss, "kept", fragment_ids_this_run=["f"], fragments=fragments)
 
     assert ss._new_widget_state.rendered_ids == {"outside", "kept", "other_fragment"}
+
+
+def test_a_fragment_run_forgets_the_widgets_of_nested_fragments_it_removed() -> None:
+    """A parent fragment that stops calling a nested one hides its widgets too.
+
+    The client asked only for the parent, so the nested fragment's ID is not in
+    fragment_ids_this_run, but the run removed it. A dialog the parent opened
+    is never removed by a fragment run and stays mounted with its widgets.
+    """
+    clicked = MagicMock()
+    ss = _registered(
+        _boundary_metadata(
+            "parent_button", value_type="trigger_value", fragment_id="parent"
+        ),
+        _boundary_metadata(
+            "child_button",
+            value_type="trigger_value",
+            callback=clicked,
+            fragment_id="child",
+        ),
+        _boundary_metadata("dialog_input", fragment_id="dialog"),
+        _boundary_metadata("other_input", fragment_id="other"),
+    )
+    fragments = MemoryFragmentStorage()
+    fragments.register("parent", MagicMock())
+    fragments.register("child", MagicMock(), parent_fragment_id="parent")
+    fragments.register(
+        "dialog",
+        MagicMock(),
+        parent_fragment_id="parent",
+        lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+    )
+    fragments.register("other", MagicMock())
+    # The parent reruns without calling the child or opening the dialog.
+    assert fragments.clear_stale_descendants("parent", frozenset()) == ["child"]
+
+    _finish_run(
+        ss, "parent_button", fragment_ids_this_run=["parent"], fragments=fragments
+    )
+
+    assert ss._new_widget_state.rendered_ids == {
+        "parent_button",
+        "dialog_input",
+        "other_input",
+    }
+    # A forged click for the hidden button runs no callback.
+    ss._old_state["child_button"] = False
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="child_button", trigger_value=True))
+    )
+    clicked.assert_not_called()
+    assert ss._rejected_client_values == frozenset({"child_button"})
 
 
 def test_an_interrupted_run_forgets_no_rendered_widget() -> None:
