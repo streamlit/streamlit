@@ -339,7 +339,7 @@ class TestButtonGroupSerde:
             "Expected session_state_fallback ('B') to take priority over default ('A')"
         )
 
-    def test_multi_select_deserialize_stale_values_are_kept_as_labels(self):
+    def test_multi_select_deserialize_stale_values_are_kept_as_labels(self) -> None:
         """Without a session-state fallback, stale labels pass through as labels.
 
         When format_func changes dynamically, the frontend may send a mix of

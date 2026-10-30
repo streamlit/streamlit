@@ -505,7 +505,7 @@ class TestTimeInputSerdeDeserialization:
         result = serde.deserialize("09:10")
         assert result == time(9, 10)
 
-    def test_deserialize_invalid_format_raises(self):
+    def test_deserialize_invalid_format_raises(self) -> None:
         """Unparseable text raises, which URL seeding catches and clears."""
         serde = TimeInputSerde(value=time(8, 45))
         with pytest.raises(ValueError, match="does not match format"):
@@ -526,7 +526,7 @@ class TestTimeInputSerdeDeserialization:
             ("14:30:00.5", 30, False),
         ],
     )
-    def test_validate(self, ui_value: str | None, step: int, is_valid: bool):
+    def test_validate(self, ui_value: str | None, step: int, is_valid: bool) -> None:
         """HH:MM and HH:MM:SS, as the browser sends them."""
         violation = TimeInputSerde(value=time(8, 45), step=step).validate(ui_value)
         assert (violation is None) is is_valid

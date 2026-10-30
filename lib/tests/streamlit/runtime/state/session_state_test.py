@@ -228,7 +228,7 @@ class WStateTests(unittest.TestCase):
         assert self.wstates["widget_id_1"] == "5"
         assert self.wstates.states["widget_id_1"] == Value("5", "int_value")
 
-    def test_getitem_keeps_the_registered_value_type(self):
+    def test_getitem_keeps_the_registered_value_type(self) -> None:
         """Reading a value that arrived in another field leaves value_type alone."""
         widget_state = WidgetStateProto(id="widget_id_1", double_value=5.0)
         self.wstates.set_widget_from_proto(widget_state)
@@ -237,7 +237,7 @@ class WStateTests(unittest.TestCase):
         assert self.wstates.widget_metadata["widget_id_1"].value_type == "int_value"
         assert self.wstates.states["widget_id_1"] == Value("5.0", "double_value")
 
-    def test_get_serialized_writes_the_field_the_value_arrived_in(self):
+    def test_get_serialized_writes_the_field_the_value_arrived_in(self) -> None:
         """A value is serialized back to its arrived field, not the registered one."""
         self.wstates.cache_value("widget_id_2", 5, "double_value")
 
@@ -246,7 +246,7 @@ class WStateTests(unittest.TestCase):
         assert serialized.WhichOneof("value") == "double_value"
         assert serialized.double_value == 5.0
 
-    def test_get_serialized_component_bytes(self):
+    def test_get_serialized_component_bytes(self) -> None:
         """A Components v1 value that arrived as bytes is serialized as bytes."""
         self.wstates.set_widget_metadata(
             WidgetMetadata(
@@ -265,7 +265,7 @@ class WStateTests(unittest.TestCase):
 
         assert serialized.bytes_value == b"\x00\x01"
 
-    def test_drop(self):
+    def test_drop(self) -> None:
         """drop forgets a value and ignores an unknown ID."""
         self.wstates.drop("widget_id_2")
         self.wstates.drop("unknown")
@@ -2879,7 +2879,7 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             wstates["baz"]
 
-    def test_compact_state_drops_values_without_metadata(self):
+    def test_compact_state_drops_values_without_metadata(self) -> None:
         """Compaction drops every widget value, including ones it cannot read."""
         wstates = WStates()
         wstates.set_widget_from_proto(WidgetStateProto(id="no_metadata", int_value=1))

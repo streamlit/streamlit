@@ -59,7 +59,9 @@ class TestPaginationSerde:
         [0, -1, 11, 100],
         ids=["zero", "negative", "exceeds_max", "far_exceeds_max"],
     )
-    def test_deserialize_passes_an_out_of_range_page_through(self, ui_value: int):
+    def test_deserialize_passes_an_out_of_range_page_through(
+        self, ui_value: int
+    ) -> None:
         """An out-of-range page is validate's to refuse, never read as the default."""
         serde = PaginationSerde(default=1, num_pages=10)
         assert serde.deserialize(ui_value) == ui_value
@@ -74,7 +76,7 @@ class TestPaginationSerde:
             (11, Violation("out_of_range", {"min_value": 1, "max_value": 10})),
         ],
     )
-    def test_validate(self, ui_value: int | None, expected: Violation | None):
+    def test_validate(self, ui_value: int | None, expected: Violation | None) -> None:
         """A page is a whole number in 1..num_pages."""
         serde = PaginationSerde(default=1, num_pages=10)
         assert serde.validate(ui_value) == expected

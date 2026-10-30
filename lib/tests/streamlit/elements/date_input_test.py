@@ -1023,7 +1023,7 @@ class TestDateInputSerdeISO:
         result = serde.deserialize(["2025-03-01", "2025-03-15"])
         assert result == (date(2025, 3, 1), date(2025, 3, 15))
 
-    def test_deserialize_invalid_format_raises(self):
+    def test_deserialize_invalid_format_raises(self) -> None:
         """Unparseable text raises, which URL seeding catches and clears."""
         values = _DateInputValues(
             value=(date(2025, 1, 15),),
@@ -1036,7 +1036,7 @@ class TestDateInputSerdeISO:
             serde.deserialize(["not-a-date"])
         assert "not-a-date" not in str(raised.value)
 
-    def test_deserialize_reads_the_legacy_layout(self):
+    def test_deserialize_reads_the_legacy_layout(self) -> None:
         """The legacy YYYY/MM/DD layout of old links is still read."""
         values = _DateInputValues(
             value=(date(2025, 1, 15),),
@@ -1071,7 +1071,7 @@ class TestDateInputSerdeISO:
         result = serde.deserialize([])
         assert result == ()
 
-    def test_deserialize_passes_out_of_bounds_dates_through(self):
+    def test_deserialize_passes_out_of_bounds_dates_through(self) -> None:
         """Out-of-bounds and reversed dates are validate's to refuse."""
         single = DateInputSerde(
             _DateInputValues(

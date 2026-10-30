@@ -828,7 +828,7 @@ class TestDateTimeInputSerdeISO:
         result = serde.deserialize(["2025-06-20T14:30"])
         assert result == datetime(2025, 6, 20, 14, 30)
 
-    def test_deserialize_invalid_format_raises(self):
+    def test_deserialize_invalid_format_raises(self) -> None:
         """Unparseable text raises, which URL seeding catches and clears."""
         serde = DateTimeInputSerde(
             value=datetime(2025, 1, 15, 10, 0),
@@ -859,7 +859,7 @@ class TestDateTimeInputSerdeISO:
         result = serde.deserialize([])
         assert result == datetime(2025, 1, 15, 10, 0)
 
-    def test_deserialize_passes_out_of_bounds_values_through(self):
+    def test_deserialize_passes_out_of_bounds_values_through(self) -> None:
         """Out-of-bounds values are validate's to refuse."""
         serde = DateTimeInputSerde(
             value=datetime(2025, 6, 15, 12, 0),
@@ -887,7 +887,7 @@ class TestDateTimeInputSerdeISO:
             (["2025-06-15T12:00", "2025-06-16T12:00"], "bad_shape"),
         ],
     )
-    def test_validate(self, ui_value: list[str] | None, expected: str | None):
+    def test_validate(self, ui_value: list[str] | None, expected: str | None) -> None:
         """One YYYY-MM-DDTHH:MM within the bounds, or nothing."""
         serde = DateTimeInputSerde(
             value=None,
