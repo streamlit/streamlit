@@ -1063,6 +1063,68 @@ def test_serde_validate(
     assert serde.validate(ui_value) == expected
 
 
+_SAFE = 2**53 - 1
+
+
+@pytest.mark.parametrize(
+    ("has_min", "has_max", "ui_value", "expected"),
+    [
+        # Only the bounds the author set are named.
+        (
+            True,
+            False,
+            -1,
+            Violation("out_of_range", {"min_value": 0, "max_value": None}),
+        ),
+        (
+            False,
+            True,
+            2**53,
+            Violation("out_of_range", {"min_value": None, "max_value": 100}),
+        ),
+        # Past a limit that stands in for an unset bound, nothing names a bound.
+        (
+            True,
+            False,
+            2**60,
+            Violation(
+                "malformed",
+                {
+                    "expected": f"a whole number up to {_SAFE}, the largest a "
+                    "browser holds exactly"
+                },
+            ),
+        ),
+        (
+            False,
+            False,
+            -(2**60),
+            Violation(
+                "malformed",
+                {
+                    "expected": f"a whole number down to {-_SAFE}, the smallest a "
+                    "browser holds exactly"
+                },
+            ),
+        ),
+        (False, False, _SAFE, None),
+    ],
+)
+def test_serde_validate_names_only_the_bounds_the_author_set(
+    has_min: bool, has_max: bool, ui_value: int, expected: Violation | None
+) -> None:
+    """An unset bound is the JavaScript safe-integer limit, which is no author's bound."""
+    serde = NumberInputSerde(
+        value=50,
+        data_type=NumberInput.INT,
+        min_value=0 if has_min else -_SAFE,
+        max_value=100 if has_max else _SAFE,
+        has_min=has_min,
+        has_max=has_max,
+    )
+    assert serde.validate(ui_value) == expected
+
+
 @pytest.mark.parametrize(
     ("default", "required", "ui_value", "expected"),
     [

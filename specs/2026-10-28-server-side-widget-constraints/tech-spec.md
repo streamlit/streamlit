@@ -346,6 +346,8 @@ class NumberInputSerde:
             return Violation("malformed")
         if self.data_type == NumberInputProto.INT and not float(ui_value).is_integer():
             return Violation("malformed")
+        # An unset bound is the JavaScript safe-number limit, which the
+        # violation does not name as a bound (item 4).
         return widget_checks.within(ui_value, self.min_value, self.max_value)
 
     def deserialize(self, ui_value: Number | None) -> Number | None:
@@ -738,7 +740,11 @@ together with the follow-up that makes `AppTest.set_value` raise for an invalid 
 Items 1–3 are covered above.
 
 **Item 4: bounds, shapes, formats, length.**
-- `number_input`: a finite value within `min`/`max`.
+- `number_input`: a finite value within `min`/`max`. An unset bound is the JavaScript
+  safe-number limit the browser is sent, so the `out_of_range` detail names only the
+  bounds the author set, and a whole number past a limit that stands in for an unset
+  bound is `malformed`, with the limit in `expected`. A double holds every finite float,
+  so only an `INT` input reaches it.
 - Every integer-valued widget accepts a whole number only: an `INT` `number_input`, an
   `INT` `slider`, and `pagination`. Check 1 lets them receive a `double_value`, which
   their deserializers truncate (`int()`) or, for `pagination`, return unchanged, but the

@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast, overload
 
 from streamlit.elements.lib import agent_spec
@@ -79,6 +80,10 @@ class NumberInputSerde:
     min_value: Number
     max_value: Number
     required: bool = False
+    # Whether the author set each bound. An unset one is the JavaScript
+    # safe-number limit, which no refusal names as the widget's bound.
+    has_min: bool = True
+    has_max: bool = True
 
     def validate(self, ui_value: Number | None, **_kwargs: Any) -> Violation | None:
         """Refuse a number the browser would not commit.
@@ -99,8 +104,27 @@ class NumberInputSerde:
         violation = widget_checks.finite(ui_value)
         if violation is None and self.data_type == NumberInputProto.INT:
             violation = widget_checks.whole_number(ui_value)
-        return violation or widget_checks.within(
-            ui_value, self.min_value, self.max_value
+        if violation is not None:
+            return violation
+        if widget_checks.within(ui_value, self.min_value, self.max_value) is None:
+            return None
+        min_value = self.min_value if self.has_min else None
+        max_value = self.max_value if self.has_max else None
+        violation = widget_checks.within(ui_value, min_value, max_value)
+        if violation is not None:
+            return violation
+        # Past a limit that stands in for an unset bound, which only a whole
+        # number can reach: a double holds every finite float.
+        limit = (
+            f"up to {self.max_value}, the largest"
+            if ui_value > self.max_value
+            else f"down to {self.min_value}, the smallest"
+        )
+        return widget_checks.Violation(
+            "malformed",
+            MappingProxyType(
+                {"expected": f"a whole number {limit} a browser holds exactly"}
+            ),
         )
 
     def serialize(self, v: Number | None) -> Number | None:
@@ -920,6 +944,8 @@ class NumberInputMixin:
             min_value,
             max_value,
             required=required,
+            has_min=has_user_min,
+            has_max=has_user_max,
         )
         widget_state = register_widget(
             number_input_proto.id,

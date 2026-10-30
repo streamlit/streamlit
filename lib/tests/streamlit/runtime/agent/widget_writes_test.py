@@ -575,6 +575,14 @@ class WidgetWritesTest(SnapshotCase):
                 _Refused("'bounded' takes values from 0 to 10, inclusive."),
             ),
             ("number_at_max", "bounded", 10, 10),
+            # Only the bound the author set is named, not the browser's
+            # safe-integer limit that stands in for the other.
+            (
+                "number_below_its_only_bound",
+                "at_least_zero",
+                -1,
+                _Refused("'at_least_zero' takes values of at least 0, inclusive."),
+            ),
             (
                 "float_below_min",
                 "ratio",
@@ -668,6 +676,7 @@ class WidgetWritesTest(SnapshotCase):
         """
         render_value_widgets()
         st.number_input("Bounded", 0, 10, 5, key="bounded")
+        st.number_input("At least zero", min_value=0, key="at_least_zero")
         st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
         st.text_input("Short", max_chars=3, key="short")
         st.slider("Rounded", 0.123, 1.0, 0.5, step=0.1, key="rounded")
@@ -1003,12 +1012,16 @@ class WidgetWritesTest(SnapshotCase):
             ("decimal_label", "rate", "0.10", "0.10"),
             ("decimal_label_as_a_number", "rate", 0.1, _Refused("0.1 is not one")),
             ("largest_safe_integer", "whole", 2**53 - 1, 2**53 - 1),
-            # Past 2**53 it rounds to a double, which is past the widget's bounds.
+            # Past 2**53 it rounds to a double, which is past what a browser
+            # holds exactly. The widget sets no bound, so none is named.
             (
                 "integer_past_int64_is_refused",
                 "whole",
                 2**63,
-                _Refused("from -9007199254740991 to 9007199254740991, inclusive"),
+                _Refused(
+                    "'whole' takes a whole number up to 9007199254740991, the "
+                    "largest a browser holds exactly."
+                ),
             ),
             (
                 "integer_past_int64_on_pagination",
