@@ -479,9 +479,11 @@ def test_the_app_links_a_description_that_reaches_the_api(
     app_target: AppTarget, agent_api_base_url: str
 ) -> None:
     """The loaded app's HTML links the OpenAPI document, in its head and in the
-    text a reader without JavaScript gets. The document says the API is on,
-    and its server, resolved against the document's URL, reaches the interact
-    route through `server.baseUrlPath` and any prefix a host adds.
+    text a reader without JavaScript gets. The schema is fetched from the
+    backend URL, which on a split-origin host is not the iframe that served
+    the HTML. The document says the API is on, and its server, resolved
+    against that schema URL, reaches the interact route through
+    `server.baseUrlPath` and any prefix a host adds.
 
     The `Link` header is not checked, because hosts may strip it.
     """
@@ -494,6 +496,8 @@ def test_the_app_links_a_description_that_reaches_the_api(
     assert _SCHEMA_PATH.lstrip("/") in noscript
 
     page = app_target.page
+    # The relative HTML link resolves against the iframe. The schema is served
+    # by the backend, so the request uses that URL.
     schema_url = build_app_url(agent_api_base_url, path=_SCHEMA_PATH)
     response = page.request.get(schema_url, max_redirects=0)
     assert response.status == 200, _describe(response)
