@@ -430,8 +430,10 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       value: "",
       default: "",
     }
-    const readString = (wm: WidgetStateManager, el: MockProto): MockValue =>
-      wm.getStringValue(el) ?? ""
+    const readString = (
+      wm: WidgetStateManager,
+      el: MockProto
+    ): MockValue | undefined => wm.getStringValue(el)
     const writeString = (
       el: MockProto,
       wm: WidgetStateManager,
@@ -443,23 +445,22 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         fragmentId: undefined,
       })
     }
-    const mount = (): void => {
+    const mount = (el: MockProto = element): void => {
       renderHook(() =>
         useBasicWidgetState({
           getStateFromWidgetMgr: readString,
           getCurrStateFromProto,
           getDefaultStateFromProto,
           updateWidgetMgrState: writeString,
-          element,
+          element: el,
           widgetMgr,
           fragmentId: undefined,
           formClearBehavior: "resetValueOnly",
         })
       )
     }
-    const sentValue = (): string | null | undefined =>
-      widgetMgr.getActiveWidgetStates(new Set([element.id])).widgets[0]
-        ?.stringValue
+    const sentValue = (el: MockProto = element): string | null | undefined =>
+      widgetMgr.getActiveWidgetStates(new Set([el.id])).widgets[0]?.stringValue
 
     it("keeps the staged value out of the next rerun", () => {
       widgetMgr.setStringValue(element.id, "submitted", {
@@ -485,17 +486,19 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       expect(sentValue()).toBe("staged")
     })
 
-    it("still writes its value when nothing is staged", () => {
-      widgetMgr.setStringValue(element.id, "submitted", {
-        formId: element.formId,
-        fromUser: false,
-        fragmentId: undefined,
-      })
+    it("still writes its default when nothing is staged", () => {
+      const withDefault: MockProto = {
+        ...element,
+        id: "widget-15",
+        default: "the default",
+      }
 
-      mount()
+      mount(withDefault)
 
-      expect(sentValue()).toBe("submitted")
-      expect(widgetMgr.hasPendingFormValue(element)).toBe(false)
+      // The default is written as a server value, so the next rerun sends it,
+      // and the form holds nothing for its submit.
+      expect(sentValue(withDefault)).toBe("the default")
+      expect(widgetMgr.hasPendingFormValue(withDefault)).toBe(false)
     })
   })
 
