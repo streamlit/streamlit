@@ -258,9 +258,14 @@ def _step_precision(step: float) -> int:
 
 
 def _round_to_precision(value: float, precision: int) -> float:
-    """Round as React Aria does: ``Math.round(value * 10**p) / 10**p``."""
+    """Round as React Aria does: ``Math.round(value * 10**p) / 10**p``.
+
+    A value whose scaled form is not finite stays that way, as in JavaScript.
+    """
     scale = float(10**precision)
     scaled = value * scale
+    if not math.isfinite(scaled):
+        return scaled
     rounded = math.floor(scaled)
     # Math.round rounds a half up, toward positive infinity.
     if scaled - rounded >= 0.5:
@@ -285,8 +290,14 @@ def _browser_bounds(
     if precision == 0 or precision > _MAX_MIRRORED_PRECISION:
         return min_value, max_value
     low = _round_to_precision(min_value, precision)
-    steps = math.floor(_round_to_precision((max_value - min_value) / step, precision))
-    high = _round_to_precision(min_value + steps * step, precision)
+    steps = _round_to_precision((max_value - min_value) / step, precision)
+    if not math.isfinite(steps):
+        # Bounds this far apart pass the largest double once scaled, where
+        # the browser's rounding has no meaning, so the bounds stay exact.
+        return min_value, max_value
+    high = _round_to_precision(min_value + math.floor(steps) * step, precision)
+    if not (math.isfinite(low) and math.isfinite(high)):
+        return min_value, max_value
     return min(min_value, low), max(max_value, high)
 
 

@@ -1223,6 +1223,10 @@ def test_step_precision_matches_react_aria(step: float, precision: int) -> None:
         (0.0, 1.0, 0.1, (0.0, 1.0)),
         (0.125, 1.0, 0.1, (0.125, 1.0)),
         (0.0, 100.0, 1.0, (0.0, 100.0)),
+        # A span that passes the largest double once scaled keeps its bounds
+        # instead of overflowing.
+        (0.0, 1e306, 0.5, (0.0, 1e306)),
+        (-1e308, 1e308, 0.1, (-1e308, 1e308)),
     ],
 )
 def test_browser_bounds(
@@ -1328,6 +1332,13 @@ def test_an_integer_slider_has_no_rounding_band() -> None:
 
 class SliderEdgeCasesTest(DeltaGeneratorTestCase):
     """Tests for slider parameter validation edge cases."""
+
+    def test_huge_float_bounds_render(self) -> None:
+        """Bounds too far apart for the rounding band still render and read values."""
+        assert st.slider("the label", 0.0, 1e306, 0.5, step=0.5) == 0.5
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.max == 1e306
 
     def test_overlong_value_sequence_raises(self):
         """A list or tuple longer than two items raises StreamlitValueError."""
