@@ -32,9 +32,9 @@ import type { Quiver } from "~lib/dataframes/Quiver"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  getAliasedDataSets,
   getDataArray,
   getDataArrays,
-  getDataSets,
   getInlineData,
   type VegaLiteChartElement,
   type WrappedNamedDataset,
@@ -78,6 +78,10 @@ export function useVegaEmbed(
   const defaultDataNameRef = useRef<string>(DEFAULT_DATA_NAME)
   const prevDataRef = useRef<Quiver | null>(null)
   const prevDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // The dataset names compiled into the view, by alias. A data-only rerun of
+  // an Altair chart renames its datasets but keeps the view, so updates write
+  // to the names the view knows.
+  const viewDatasetNamesRef = useRef<Map<string, string>>(new Map())
   // Always-up-to-date props for safe access inside stable callbacks to avoid stale closure issues
   const latestDataRef = useRef<Quiver | null>(null)
   const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
@@ -151,7 +155,7 @@ export function useVegaEmbed(
         return
       }
 
-      if (dataArg.hash !== prevData.hash) {
+      if (!dataArg.hasSameBytes(prevData)) {
         // Data has changed, replace the dataset.
         view.data(name, getDataArray(dataArg))
         LOG.info(`Replaced the ${name} dataset in Vega view.`)
@@ -178,23 +182,33 @@ export function useVegaEmbed(
         updateData(view, defaultDataNameRef.current, prevData, inputData)
       }
 
-      const prevDataSets = getDataSets(prevDatasets) ?? {}
-      const dataSets = getDataSets(inputDatasets) ?? {}
+      // Match datasets by alias rather than name, since Altair renames a
+      // dataset whenever its data changes.
+      const prevDataSets = getAliasedDataSets(prevDatasets)
+      const dataSets = getAliasedDataSets(inputDatasets)
+      // The name the view compiled for this alias. A dataset the view hasn't
+      // seen keeps its own name, and an unnamed one uses the default dataset.
+      const getViewDatasetName = (alias: string, name: string): string =>
+        (viewDatasetNamesRef.current.get(alias) ?? name) ||
+        defaultDataNameRef.current
 
-      for (const [name, dataset] of Object.entries(dataSets)) {
-        const datasetName = name || defaultDataNameRef.current
-        const prevDataset = prevDataSets[datasetName]
-
-        updateData(view, datasetName, prevDataset, dataset)
+      for (const [alias, { name, data: dataset }] of dataSets) {
+        updateData(
+          view,
+          getViewDatasetName(alias, name),
+          prevDataSets.get(alias)?.data ?? null,
+          dataset
+        )
       }
 
-      // Remove all datasets that are in the previous but not the current datasets.
-      for (const name of Object.keys(prevDataSets)) {
+      // Remove the datasets that the new data no longer sends.
+      for (const [alias, { name }] of prevDataSets) {
+        const viewDatasetName = getViewDatasetName(alias, name)
         if (
-          !Object.hasOwn(dataSets, name) &&
-          name !== defaultDataNameRef.current
+          !dataSets.has(alias) &&
+          viewDatasetName !== defaultDataNameRef.current
         ) {
-          updateData(view, name, null, null)
+          updateData(view, viewDatasetName, null, null)
         }
       }
     },
@@ -282,6 +296,12 @@ export function useVegaEmbed(
 
         const createdView = maybeConfigureSelections(view)
         vegaViewRef.current = createdView
+        viewDatasetNamesRef.current = new Map(
+          Array.from(
+            getAliasedDataSets(compiledDatasets),
+            ([alias, { name }]) => [alias, name]
+          )
+        )
 
         const unbindRangeProgress = bindVegaRangeProgress(container)
         vegaFinalizerRef.current = () => {

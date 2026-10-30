@@ -665,8 +665,10 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     """
 
     # Altair 6.0.0 introduced a new way to handle parameters,
-    # by using hashes instead of pure counters:
-    pattern = re.compile(rf'"{prefix}[0-9a-z]+"')
+    # by using hashes instead of pure counters. Layered and concatenated
+    # views with params add a position suffix (``view_<hash>_<i>``), and the
+    # hash covers the view's dataset name, which changes with the data:
+    pattern = re.compile(rf'"{prefix}[0-9a-z]+(?:_[0-9]+)?"')
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.

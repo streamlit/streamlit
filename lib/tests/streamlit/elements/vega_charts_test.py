@@ -2962,6 +2962,29 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
+    def test_line_chart_spec_only_renames_datasets_when_data_changes(self):
+        """Test that new data changes only the dataset names in a line chart spec.
+
+        The frontend then swaps the new rows into the existing view instead
+        of rebuilding it.
+        """
+        specs = []
+        for values in ([4, 5, 6], [7, 8, 9]):
+            st.line_chart(pd.DataFrame({"a": [1, 2, 3], "b": values}), x="a", y="b")
+            proto = self.get_delta_from_queue().new_element.vega_lite_chart
+            spec = proto.spec
+            for index, dataset in enumerate(proto.datasets):
+                spec = spec.replace(dataset.name, f"dataset_{index}")
+            specs.append(spec)
+
+        assert specs[0] == specs[1]
+        # The hover layers are named, so their names must not depend on the data.
+        assert '"view_1"' in specs[0]
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_line_chart_hover_selection_large_dataset_throttling(self):
         """Test that line chart hover selection uses throttled events for large datasets."""
         import numpy as np
@@ -4052,6 +4075,11 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
                 '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
             ),  # Hash-based suffixes with duplicates
+            (
+                "view_",
+                '{"layer": ["view_79c4_0", "view_8532_1"], "a": "view_my_chart"}',
+                '{"layer": ["view_1", "view_2"], "a": "view_my_chart"}',
+            ),  # Hashes with a position suffix, but not other underscored names
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
