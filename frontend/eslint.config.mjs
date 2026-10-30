@@ -221,6 +221,19 @@ export const getNoRestrictedProperties = ({
   ]
 }
 
+// Base options for @typescript-eslint/strict-boolean-expressions. Scoped
+// blocks below tighten individual options for directories that are clean.
+const strictBooleanExpressionsOptions = {
+  allowString: true,
+  allowNumber: true,
+  allowNullableObject: true,
+  allowNullableBoolean: false,
+  allowNullableString: true,
+  allowNullableNumber: true,
+  allowNullableEnum: true,
+  allowAny: true,
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -686,16 +699,20 @@ export default defineConfig([
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
-        {
-          allowString: true,
-          allowNumber: true,
-          allowNullableObject: true,
-          allowNullableBoolean: false,
-          allowNullableString: true,
-          allowNullableNumber: true,
-          allowNullableEnum: true,
-          allowAny: true,
-        },
+        strictBooleanExpressionsOptions,
+      ],
+    },
+  },
+  // A nullable string in a condition treats `""` like a missing value. Use
+  // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
+  // compare with `null` / `undefined` when the value is never empty. Other
+  // directories stay on the base options until they are cleaned up.
+  {
+    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        { ...strictBooleanExpressionsOptions, allowNullableString: false },
       ],
     },
   },

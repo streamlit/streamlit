@@ -26,6 +26,8 @@ import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { Field, Null, TimeUnit } from "apache-arrow"
 import moment from "moment"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   convertTimestampToSeconds,
   convertTimeToDate,
@@ -147,7 +149,7 @@ export function applyPandasStylerCss(
 
   // Extract and apply the font color
   const fontColor = extractCssProperty(cssId, "color", cssStyles)
-  if (fontColor) {
+  if (!isNullOrEmptyString(fontColor)) {
     themeOverride.textDark = fontColor
 
     // Apply text color also for cells that don't use textDark:
@@ -170,7 +172,7 @@ export function applyPandasStylerCss(
     "background-color",
     cssStyles
   )
-  if (backgroundColor) {
+  if (!isNullOrEmptyString(backgroundColor)) {
     themeOverride.bgCell = backgroundColor
   }
 
@@ -184,7 +186,7 @@ export function applyPandasStylerCss(
 
   // Extract and apply the font weight:
   const fontWeight = extractCssProperty(cssId, "font-weight", cssStyles)
-  if (fontWeight) {
+  if (!isNullOrEmptyString(fontWeight)) {
     // It's not recommended to directly use the theme primitives. However,
     // we don't change our fontsize primitives (since they are already in rem)
     // and we don't have access to the theme here (would be quite a big refactoring to
@@ -600,12 +602,9 @@ export function getCellFromArrow(
       }
     }
 
-    if (cssStyles && styledCell?.cssId) {
-      cellTemplate = applyPandasStylerCss(
-        cellTemplate,
-        styledCell.cssId,
-        cssStyles
-      )
+    const cssId = styledCell?.cssId
+    if (!isNullOrEmptyString(cssStyles) && !isNullOrEmptyString(cssId)) {
+      cellTemplate = applyPandasStylerCss(cellTemplate, cssId, cssStyles)
     }
   }
   return cellTemplate
