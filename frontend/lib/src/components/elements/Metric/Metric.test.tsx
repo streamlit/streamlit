@@ -24,6 +24,11 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
@@ -345,6 +350,49 @@ describe("Metric element", () => {
     window.dispatchEvent(new Event("afterprint"))
     expect(value.style.getPropertyValue("--st-metric-available")).toBe("")
     expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
+  })
+
+  it.each([
+    [
+      "keeps a stretch metric in a content-width container at its own width",
+      new streamlit.WidthConfig({ useStretch: true }),
+      false,
+    ],
+    [
+      "contains a fixed-width metric in a content-width container",
+      new streamlit.WidthConfig({ pixelWidth: 200 }),
+      true,
+    ],
+  ])("%s when printing", (_name, widthConfig, isContained) => {
+    const contentWidthContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: true,
+    }
+    render(
+      <FlexContext.Provider value={contentWidthContext}>
+        <Metric {...getProps({ body: "$48.6M" })} widthConfig={widthConfig} />
+      </FlexContext.Provider>
+    )
+    const metricClasses = [...screen.getByTestId("stMetric").classList].filter(
+      cls => cls.includes("emotion-cache") || cls.startsWith("css-")
+    )
+    expect(metricClasses).not.toHaveLength(0)
+    const metricRules = [...document.querySelectorAll("style")]
+      .map(style => style.textContent ?? "")
+      .join("\n")
+      .split("}")
+      .filter(rule => metricClasses.some(cls => rule.includes(`.${cls}`)))
+      .join("}")
+
+    expect(metricRules.includes("container-type:inline-size")).toBe(
+      isContained
+    )
+    expect(metricRules.includes("var(--st-metric-available")).toBe(
+      !isContained
+    )
   })
 
   it("fits a bordered content-width metric inside the card's border and padding", () => {

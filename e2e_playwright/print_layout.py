@@ -18,6 +18,7 @@ import pydeck as pdk
 
 import streamlit as st
 
+# An int sets the sidebar width in pixels, wider than the printed minimum.
 st.set_page_config(initial_sidebar_state=480)
 
 with st.sidebar:
@@ -169,5 +170,6 @@ with st.container(border=True, key="trailing_empty"):
 with st.container(horizontal=True, height=180, key="horizontal_stretch_chart"):
     st.bar_chart(pd.DataFrame({"value": [1, 2, 3]}), height="stretch")
     st.line_chart(pd.DataFrame({"value": [3, 2, 1]}), height=120)
+    st.plotly_chart(go.Figure(go.Bar(x=["a", "b", "c"], y=[2, 1, 3])), height="stretch")
 
 st.markdown("After the horizontal stretch chart")
