@@ -51,7 +51,7 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
-Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of `st.columns`. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
+Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of four `st.columns`, which `layouts.md` recommends for up to four KPI cards. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
 
 ```python
 for start in range(0, len(kpis), 4):
