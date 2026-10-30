@@ -201,7 +201,8 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
 - `layouts.md` — Columns, containers, tabs, dialogs
-- `data-display.md` — Charts, dataframes, column configuration
+- `charts.md` — Choosing chart commands, consistent charts, chart selections
+- `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)

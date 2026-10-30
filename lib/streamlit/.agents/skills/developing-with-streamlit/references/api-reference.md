@@ -100,7 +100,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
 | `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
-| `st.plotly_chart` | Display an interactive Plotly chart. Use it when Plotly is already available or chart interactions/customization require Plotly. |
+| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that Vega-based charts and ECharts cannot draw, or for an existing Plotly figure. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
