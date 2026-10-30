@@ -60,9 +60,9 @@ export const StyledPlotlyChartContainer =
           maxWidth: "100% !important",
         },
       },
-      // Plotly's SVG layers have no viewBox, so a capped width crops the
-      // right edge of a plot wider than the printed column instead of
-      // scaling it.
+      // Cap the layered SVGs to the column. They have no viewBox, so a plot
+      // wider than the printed column is cropped at the right edge rather
+      // than scaled.
       "& .main-svg": printGraphicFitStyles,
     })
   )
