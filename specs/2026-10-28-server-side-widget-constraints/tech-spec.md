@@ -1061,7 +1061,10 @@ a client value no longer rebuilds the widget's metadata.
   server it started after each test, and a test fails on any line with the refusal
   marker. Reruns are disabled for that failure, so a flaky retry cannot hide it. A test
   that provokes a sync race on purpose opts out with
-  `@pytest.mark.allow_refused_widget_values(reason=...)`, and that list should stay short. Forged values cannot be sent from a browser, so
+  `@pytest.mark.allow_refused_widget_values(reason=...)`, and that list should stay
+  short. A refusal logged after a test's teardown read belongs to that test: the next
+  test reports it, naming the earlier one, unless the earlier one carries the marker.
+  Forged values cannot be sent from a browser, so
   the new e2e tests cover only what a correct browser can produce: re-sync, values that
   survive a reconnect to a new session (`websocket_reconnects_test.py` only resumes the
   same session), a click, form submit, and chat message that land as the first

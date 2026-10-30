@@ -451,19 +451,54 @@ def _read_refused_widget_values() -> list[str]:
     return refusals
 
 
+@dataclass
+class _PreviousTest:
+    """The test that ran last in this process.
+
+    A refusal logged after its teardown read, such as one a server writes
+    while the test is tearing down, belongs to it, so it follows that test's
+    marker rather than the next test's.
+    """
+
+    nodeid: str | None = None
+    allows_refusals: bool = False
+
+
+_previous_test = _PreviousTest()
+
+
+def _allows_refused_widget_values(node: pytest.Item | pytest.Collector) -> bool:
+    return node.get_closest_marker("allow_refused_widget_values") is not None
+
+
+def _read_late_refused_widget_values() -> list[str]:
+    """Return the refusals logged since the previous test's teardown read.
+
+    They are dropped when the previous test is marked as refusing widget
+    values on purpose.
+    """
+    refusals = _read_refused_widget_values()
+    return [] if _previous_test.allows_refusals else refusals
+
+
 def _report_refused_widget_values(
-    refusals: list[str], node: pytest.Item | pytest.Collector
+    refusals: list[str], *, late: list[str], late_from: str | None
 ) -> None:
-    """Fail unless ``node`` is marked as refusing widget values on purpose."""
-    if not refusals:
+    """Fail the current test for refusals no marked test caused.
+
+    ``late`` are the refusals logged after ``late_from`` finished.
+    """
+    if not refusals and not late:
         return
-    if node.get_closest_marker("allow_refused_widget_values"):
-        return
+    lines = list(refusals)
+    if late:
+        lines.append(f"Logged after {late_from} finished, which may have caused these:")
+        lines.extend(late)
     pytest.fail(
         "The server refused a widget value a browser sent. A correct browser "
         "must never be refused, so a check is stricter than the frontend. If "
         "the test provokes a sync race on purpose, mark it with "
-        "@pytest.mark.allow_refused_widget_values(reason=...).\n" + "\n".join(refusals),
+        "@pytest.mark.allow_refused_widget_values(reason=...).\n" + "\n".join(lines),
         pytrace=False,
     )
 
@@ -475,13 +510,20 @@ def fail_on_refused_widget_values(
     """Fail a test whose app server refused a value the browser sent.
 
     Autouse fixtures set up first, so this one tears down last, after fixtures
-    that stop a per-test server. A refusal logged between two tests, after the
-    previous test had already finished, is reported by the next one.
+    that stop a per-test server. A refusal logged before this test starts,
+    after the previous test's teardown read, belongs to the previous test:
+    it is dropped if that test is marked, and otherwise reported here. A
+    refusal logged during this test follows this test's marker.
     """
-    logged_before = _read_refused_widget_values()
+    late_from = _previous_test.nodeid
+    late = _read_late_refused_widget_values()
+    allows_refusals = _allows_refused_widget_values(request.node)
+    _previous_test.nodeid = request.node.nodeid
+    _previous_test.allows_refusals = allows_refusals
     yield
+    during = _read_refused_widget_values()
     _report_refused_widget_values(
-        logged_before + _read_refused_widget_values(), request.node
+        [] if allows_refusals else during, late=late, late_from=late_from
     )
 
 
@@ -714,8 +756,10 @@ def app_server(
     yield streamlit_proc
     streamlit_stdout = streamlit_proc.terminate()
     print(streamlit_stdout, flush=True)
-    # A refusal logged after the module's last test finished.
-    _report_refused_widget_values(_read_refused_widget_values(), request.node)
+    # A refusal logged after the module's last test finished belongs to it.
+    _report_refused_widget_values(
+        [], late=_read_late_refused_widget_values(), late_from=_previous_test.nodeid
+    )
 
 
 @pytest.fixture(autouse=True)
