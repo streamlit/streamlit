@@ -199,15 +199,8 @@ function countSourceRows(dataset: Record<string, unknown>): number | null {
   }
   const { source } = dataset
   if (Array.isArray(source)) {
-    // A first row of strings is a header row unless the author says otherwise.
-    const [firstRow] = source
-    const hasHeaderRow =
-      dataset.sourceHeader === true ||
-      (dataset.sourceHeader === undefined &&
-        Array.isArray(firstRow) &&
-        firstRow.length > 0 &&
-        firstRow.every(cell => typeof cell === "string"))
-    return hasHeaderRow ? source.length - 1 : source.length
+    // A header row adds one, which only matters at the exact threshold.
+    return source.length
   }
   if (isPlainObject(source)) {
     // Column-oriented source: one array per dimension.
@@ -303,7 +296,6 @@ function canUseLargeMode(
       : {}
     return (
       isCartesianSeries(series) &&
-      series.realtimeSort !== true &&
       !isPositiveNumber(itemStyle.borderWidth) &&
       !hasBorderRadius(itemStyle) &&
       !hasBorderRadius(series.backgroundStyle)

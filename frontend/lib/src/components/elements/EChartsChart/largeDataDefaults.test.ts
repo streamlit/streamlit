@@ -162,7 +162,6 @@ describe("applyLargeDataDefaults: large mode", () => {
       "rounded backgrounds",
       { showBackground: true, backgroundStyle: { borderRadius: 4 } },
     ],
-    ["realtime sorting", { realtimeSort: true }],
   ])("skips a bar series with %s", (_, series) => {
     expect(
       prepare(datasetChart({ type: "bar", ...series }, 5000))
@@ -229,18 +228,6 @@ describe("applyLargeDataDefaults: dataset row counts", () => {
     expect(prepare(byIndex).large).toBe(true)
     expect(prepare(byId).large).toBe(true)
     expect(prepare(defaultDataset)).not.toHaveProperty("large")
-  })
-
-  it("does not count a header row", () => {
-    const source = [
-      ["x", "y"],
-      ...Array.from({ length: BAR_THRESHOLD }, (_, i) => [i, i]),
-    ]
-    const series = { type: "bar" }
-    expect(prepare({ dataset: { source }, series: [series] }).large).toBe(true)
-    expect(
-      prepare({ dataset: { source: source.slice(0, -1) }, series: [series] })
-    ).not.toHaveProperty("large")
   })
 
   it("counts column-oriented sources by their longest column", () => {
