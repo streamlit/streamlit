@@ -1129,7 +1129,15 @@ class EChartsMixin:
             also applied, and long tooltip numbers are shortened. Set
             ``tooltip.valueFormatter`` to a number format (for example
             ``"dollar"``) or ``tooltip.formatter`` to a string template (for
-            example ``"{b}: {c}"``) to use your own formatting.
+            example ``"{b}: {c}"``) to use your own formatting. On a time
+            ``xAxis`` or ``yAxis``, the axis tooltip header and axis pointer
+            label show a midnight value as a date (for example
+            ``2026-08-18``) and any other value as a date and time to the
+            second. An hourly point at midnight therefore shows only its
+            date. An ``axisPointer.label.formatter`` on the axis,
+            ``tooltip``, ``grid.tooltip``, or the top-level ``axisPointer``
+            replaces this, including one set in a timeline tick or ``media``
+            override. ``"{value}"`` restores ECharts' default label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

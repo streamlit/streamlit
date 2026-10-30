@@ -588,6 +588,30 @@ with st.container(key="c_tooltip_value_format"):
         height=_HEIGHT,
     )
 
+# A month of daily naive datetimes on a time axis. ECharts' own axis tooltip
+# header prints "00:00:00" for daily data that spans less than about five
+# months.
+with st.container(key="c_daily_time_tooltip"):
+    st.echarts_chart(
+        {
+            "dataset": {
+                "source": pd.DataFrame(
+                    {
+                        "date": pd.date_range("2026-07-20", periods=30, freq="D"),
+                        "sessions": np.arange(30) * 10 + 100,
+                    }
+                )
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "tooltip": {"trigger": "axis", "className": "echarts-daily-tooltip"},
+            "series": [{"type": "line", "name": "Sessions"}],
+            **_NO_ANIM,
+        },
+        key="daily_time_tooltip",
+        height=_HEIGHT,
+    )
+
 # Large-data defaults. The SVG renderer makes the drawn shapes countable: large
 # mode draws a bar series as a few paths, and hidden line symbols draw nothing.
 _dense_rng = np.random.default_rng(17)

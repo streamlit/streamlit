@@ -681,7 +681,10 @@ export function buildStreamlitEChartsTheme(
   }
 }
 
-/** Read ``option[key]`` as a list of component configs, ignoring other shapes. */
+/**
+ * Normalize a component config, or a list of them, to a list of plain
+ * objects. Other shapes give an empty list.
+ */
 export function toComponentList(
   value: unknown
 ): Array<Record<string, unknown>> {
