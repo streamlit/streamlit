@@ -51,6 +51,14 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
+Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of four `st.columns`, which `layouts.md` recommends for up to four KPI cards. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
+
+```python
+for start in range(0, len(kpis), 4):
+    for col, (label, value, delta) in zip(st.columns(4), kpis[start : start + 4]):
+        col.metric(label, value, delta, border=True, height="stretch")
+```
+
 ## Zero deltas
 
 Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
@@ -129,35 +137,35 @@ def load_orders(): ...  # Another slow query / API call
 
 
 @st.fragment(parallel=True)
-def revenue_card():
-    with st.container(border=True):
-        st.subheader("Revenue by Region")
-        with st.skeleton(height=260):
-            data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
+def revenue_body():
+    with st.skeleton(height=260):
+        data = load_revenue()
+        st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
-def orders_card():
-    with st.container(border=True):
-        st.subheader("Recent Orders")
-        with st.skeleton(height=260):
-            data = load_orders()
-            st.dataframe(data, hide_index=True, alt="Recent orders")
+def orders_body():
+    with st.skeleton(height=260):
+        data = load_orders()
+        st.dataframe(data, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
-with col1:
-    revenue_card()
-with col2:
-    orders_card()
+with col1.container(border=True, height="stretch"):
+    st.subheader("Revenue by Region")
+    revenue_body()
+with col2.container(border=True, height="stretch"):
+    st.subheader("Recent Orders")
+    orders_body()
 ```
 
-The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
+Create each card and its title in the main script, then call the fragment inside the card. The fragment renders and reruns only its own body, so the title stays put while the body loads. Because the card lives in the main script, it can use `height="stretch"` to match its neighbors. A stretch card created inside a fragment does not stretch, because the fragment wraps its output in a plain container.
+
+The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible.
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
-Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
+Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
 ## Sidebar filters
 
