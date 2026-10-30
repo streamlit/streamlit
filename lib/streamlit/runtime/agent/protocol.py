@@ -879,7 +879,9 @@ def _element_data_schema() -> dict[str, Any]:
                     "into numbers, so its block is `complete`; a Deck.gl layer can "
                     "still name a URL its browser fetches, which is not fetched "
                     "here. A Vega-Lite chart's table is in `columns`, `preview`, "
-                    "and `url` instead."
+                    "and `url` instead, as is a dataframe given as an ECharts "
+                    "`dataset.source`, which `spec` replaces with a "
+                    '`{"name": ...}` placeholder.'
                 ),
             },
             "spec_omitted": {

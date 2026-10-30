@@ -889,8 +889,11 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
     import pyarrow as pa
 
     def _downcast_type(arrow_type: pa.DataType) -> pa.DataType:
-        if isinstance(arrow_type, pa.LargeListType):
-            return pa.list_(_downcast_type(arrow_type.value_type))
+        # Regular lists are rebuilt too, so a large_list nested inside one
+        # (for example, `list<large_list>`) is also downcast.
+        if isinstance(arrow_type, (pa.ListType, pa.LargeListType)):
+            value_field = arrow_type.value_field
+            return pa.list_(value_field.with_type(_downcast_type(value_field.type)))
         return arrow_type
 
     new_fields = [f.with_type(_downcast_type(f.type)) for f in schema]
@@ -1042,6 +1045,37 @@ def _show_data_information(msg: str) -> None:
     get_dg_singleton_instance().main_dg.caption(msg)
 
 
+def collect_polars_lazyframe(
+    data: Any, max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS
+) -> Any:
+    """Collect at most ``max_unevaluated_rows`` rows of a Polars LazyFrame.
+
+    Shows a caption in the app when it truncates the LazyFrame.
+
+    Parameters
+    ----------
+    data : polars.LazyFrame
+        The LazyFrame to collect.
+
+    max_unevaluated_rows : int
+        The maximum number of rows to collect, defaults to 10k.
+
+    Returns
+    -------
+    polars.DataFrame
+        The collected (and possibly truncated) DataFrame.
+    """
+    # Collect one extra row to detect truncation accurately.
+    collected = data.limit(max_unevaluated_rows + 1).collect()
+    if collected.height > max_unevaluated_rows:
+        collected = collected.head(max_unevaluated_rows)
+        _show_data_information(
+            f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+            "rows. Call `collect()` on the dataframe to show more."
+        )
+    return collected
+
+
 def _convert_polars_to_arrow_bytes(data: Any) -> bytes:
     """Convert Polars DataFrame to Arrow IPC bytes via to_arrow().
 
@@ -1105,15 +1139,9 @@ def convert_anything_to_arrow_bytes(
 
     # Fast path: Polars LazyFrame - must collect first with row limit
     if is_polars_lazyframe(data):
-        # Collect one extra row to detect truncation accurately
-        collected = data.limit(max_unevaluated_rows + 1).collect()
-        truncated = collected.height > max_unevaluated_rows
-        if truncated:
-            collected = collected.head(max_unevaluated_rows)
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `collect()` on the dataframe to show more."
-            )
+        collected = collect_polars_lazyframe(
+            data, max_unevaluated_rows=max_unevaluated_rows
+        )
         try:
             return _convert_polars_to_arrow_bytes(collected)
         except Exception:
@@ -1121,7 +1149,9 @@ def convert_anything_to_arrow_bytes(
                 "Direct Polars LazyFrame→Arrow IPC failed, falling back to Pandas path",
                 exc_info=True,
             )
-            # Fall through to Pandas conversion
+            # Fall through to Pandas conversion with the collected frame, so
+            # the LazyFrame is not collected (and captioned) a second time.
+            data = collected
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.

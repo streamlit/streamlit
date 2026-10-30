@@ -31,7 +31,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 24
+_EXPECTED_CHART_COUNT = 25
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -412,6 +412,26 @@ def test_toolbar_actions(app: Page):
 
     close_button.dispatch_event("click")
     expect(close_button).not_to_be_visible()
+
+
+# A negative UTC offset: a date converted through local time would land on the
+# previous day. The category axis prints the source string as given, so the
+# label is exactly the string produced for the Arrow date column.
+@pytest.mark.browser_context_args(timezone_id="America/New_York")
+def test_arrow_dataset_chart(app: Page, assert_snapshot: ImageCompareFunction):
+    """A DataFrame dataset renders from Arrow with wall-clock date labels."""
+    container = get_element_by_key(app, "c_dataset_arrow")
+    chart = container.get_by_test_id("stEChartsChart")
+    expect(chart.locator("svg")).to_be_visible()
+    # Must NOT happen: the Arrow dataset fails to hydrate.
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # Dates arrive as wall-clock "YYYY-MM-DD" labels, not epoch numbers and
+    # not shifted by the browser timezone.
+    axis_labels = chart.locator("svg text")
+    expect(axis_labels.filter(has_text=re.compile(r"^2020-01-01$"))).to_be_visible()
+    expect(axis_labels.filter(has_text="2019-12-31")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
 
 
 @pytest.mark.only_browser("chromium")

@@ -48,6 +48,7 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { hydrateArrowDatasetSources } from "./arrowDataset"
 import {
   applyAltToOption,
   applyStreamlitOptionDefaults,
@@ -235,7 +236,10 @@ export function EChartsChart({
   const renderError =
     opErrors.option ?? opErrors.theme ?? opErrors.resize ?? null
 
-  // Parse the spec, memoized on the spec string.
+  // Parse the spec and replace its Arrow `dataset.source` placeholders with
+  // rows. Memoized on the spec string, which embeds each dataset's content
+  // hash. An unreadable dataset is reported as a spec error, so ECharts never
+  // receives a placeholder.
   const { option, parseError } = useMemo<{
     option: EChartsOptionObject | null
     parseError: string | null
@@ -251,10 +255,13 @@ export function EChartsChart({
           parseError: "The ECharts option must be a JSON object.",
         }
       }
-      return { option: parsed as EChartsOptionObject, parseError: null }
+      const parsedOption = parsed as EChartsOptionObject
+      hydrateArrowDatasetSources(parsedOption, element.datasets)
+      return { option: parsedOption, parseError: null }
     } catch (error) {
       return { option: null, parseError: ensureError(error).message }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the spec embeds each dataset's content hash, so element.datasets only changes when element.spec does
   }, [element.spec])
 
   const rendererStr =

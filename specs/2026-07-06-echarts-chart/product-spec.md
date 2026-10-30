@@ -157,8 +157,20 @@ strings as plain text. Streamlit markdown is not applied inside `spec` (`title.t
 API lets multiple series share one data source. To *Embrace the Python Ecosystem*, Streamlit
 accepts a dataframe-like object (pandas, Polars, PyArrow, …) as `dataset.source` — on a single
 dataset object **or** on every entry of a dataset list (`[{"source": df1}, {"source": df2}]`) —
-and converts each to JSON-compatible rows (preserving column order via `dataset.dimensions` when
-the user hasn't set it) — the same spirit as `st.vega_lite_chart` accepting a `data` argument.
+the same spirit as `st.vega_lite_chart` accepting a `data` argument. Streamlit sends each frame
+as an Apache Arrow table next to the JSON option, and the browser turns it into ECharts `source`
+rows before rendering. Column order is preserved via `dataset.dimensions` when the user hasn't set
+it. The dataframe index is not included (use `df.reset_index()` to plot it). Cell values become:
+
+- Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
+- Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
+  shows the same wall-clock time. Timezone-aware datetimes: ISO-8601 in UTC with `Z`.
+- Dates: `YYYY-MM-DD`. Times of day: `HH:mm:ss` (with milliseconds when set). Durations:
+  milliseconds.
+- Periods and intervals: labels such as `2020-01` and `(0, 1]`. Bytes: their comma-separated
+  byte values (`97,98` for `b"ab"`). Structs and other objects: the text `st.dataframe` shows.
+  Lists: arrays.
+
 A dataframe-like object anywhere else (`series.data`, `xAxis.data`, …) is **not** converted; it
 fails the JSON-serializability check with an error that points the user at `dataset.source`:
 
@@ -574,9 +586,10 @@ renderer switch requires, just as it does after a `setTheme`.
   (*Fail Fast, Fail Helpfully*). Unsupported `custom`, map/geo, and ECharts GL chart families,
   detected JavaScript callbacks, non-finite numbers (`NaN`/`Infinity`), and a `dataset.source`
   dataframe whose column labels collide once stringified are rejected with similarly targeted
-  errors. Note that `NaN`/`NaT` *inside* a `dataset.source` dataframe is converted to `null`
-  (ECharts' own "no value" marker) rather than rejected; only non-finite floats the user writes
-  directly into the option raise.
+  errors; a dataframe that cannot be converted raises an error that names `dataset.source`.
+  Note that `NaN`/`NaT`/`±Infinity` *inside* a `dataset.source` dataframe become `null`
+  (ECharts' own "no value" marker) rather than being rejected; only non-finite floats the user
+  writes directly into the option raise.
 - **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
   chart area rather than crashing the app.
 
@@ -967,7 +980,8 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Typing: `lib/tests/streamlit/typing/echarts_chart_types.py` covers `on_select` overloads
   (`DeltaGenerator` vs `EChartsState`) and attribute/bracket access on the state
   (`event.selection.selected` and `event["selection"]["selected"]`).
-- Dataframes: pandas/Polars/PyArrow `dataset.source` conversion, including a dataset list.
+- Dataframes: pandas/Polars/PyArrow `dataset.source` conversion via Arrow transport, including a
+  dataset list.
 - Theme fidelity: light/dark snapshots of the default Streamlit theme.
 
 ## Checklist
