@@ -381,8 +381,10 @@ def _check_with_widget(
     stored value, so a write the widget would drop is refused before anything
     runs. The comparison is on the wire: a value counts as unchanged only if it
     equals the stored value serialized, so a value the deserializer would
-    convert onto the stored one still reaches the widget's validator. Unlike a
-    browser session, the agent API also refuses a label several options share.
+    convert onto the stored one still reaches the widget's validator. The
+    validator then checks the author's constraints as written, without the
+    allowance a browser needs for its rounding. Unlike a browser session, the
+    agent API also refuses a label several options share.
 
     Returns
     -------

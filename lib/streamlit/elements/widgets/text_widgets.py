@@ -555,7 +555,7 @@ class TextWidgetsMixin:
             skip validation.
 
             .. note::
-               Streamlit refuses a change that empties a required field, also
+               Streamlit refuses a change that empties a required field, even
                from a modified client. A field the user never filled still
                returns its empty default, and only the browser blocks a form
                submit while such a field is empty. If requiredness is
@@ -1212,7 +1212,7 @@ class TextWidgetsMixin:
             its default value until the user provides input.
 
             .. note::
-               Streamlit refuses a change that empties a required field, also
+               Streamlit refuses a change that empties a required field, even
                from a modified client. A field the user never filled still
                returns its empty default, and only the browser blocks a form
                submit while such a field is empty. If requiredness is

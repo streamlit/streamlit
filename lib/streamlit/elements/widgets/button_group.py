@@ -622,7 +622,7 @@ class ButtonGroupMixin:
 
             .. note::
                Outside a form, Streamlit refuses a change that clears a
-               required selection, also from a modified client. Inside a
+               required selection, even from a modified client. Inside a
                form, a widget without a default can return to no selection,
                as when a form with ``clear_on_submit=True`` clears it. A
                widget that starts without a selection returns ``None`` until
@@ -1057,7 +1057,7 @@ class ButtonGroupMixin:
 
             .. note::
                Outside a form, Streamlit refuses a change that clears a
-               required selection, also from a modified client. Inside a
+               required selection, even from a modified client. Inside a
                form, a widget without a default can return to no selection,
                as when a form with ``clear_on_submit=True`` clears it. A
                widget that starts without a selection returns ``None`` until

@@ -543,7 +543,7 @@ class SelectboxMixin:
 
             .. note::
                Streamlit refuses a change that clears a required selection,
-               also from a modified client. A selectbox the user never filled
+               even from a modified client. A selectbox the user never filled
                still returns its empty default (``None``), and only the
                browser blocks a form submit while it is empty. If
                requiredness is security-relevant, also check for ``None`` in

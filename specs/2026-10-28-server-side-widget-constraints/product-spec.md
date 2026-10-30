@@ -445,7 +445,7 @@ other changes affect only forged values, `AppTest`, and the agent API.
 - **A `st.pills` or `st.segmented_control` option whose label has an icon and edge
   whitespace,** such as `"🔥 Fire "`, can be selected. The browser trims the label it
   sends, so today the click changes nothing. Links and the agent API use the trimmed
-  label too.
+  label too, so a link saved with the untrimmed label no longer selects the option.
 - **The agent API accepts a shared label that is unchanged on the wire,** such as the
   reported value sent back, and it changes nothing: the widget keeps the option it
   holds, and no `on_change` runs. Any other label several options share is still

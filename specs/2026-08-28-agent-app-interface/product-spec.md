@@ -893,8 +893,10 @@ widget's own checks, which a browser value passes too, decide the rest:
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 
-Nothing else is adjusted, except when the run the request caused changes a widget's
-constraints, which shows in the next snapshot's `value`. A per-key note saying how each
+Nothing else is adjusted, apart from seconds: `st.datetime_input` drops them, and so
+does `st.time_input` unless its `step` is not a whole number of minutes. Refusing such a
+time instead is a follow-up. When the run the request caused changes a widget's
+constraints, that shows in the next snapshot's `value`. A per-key note saying how each
 value landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |

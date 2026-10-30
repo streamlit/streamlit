@@ -143,9 +143,10 @@ _DEFAULT_FIELDS: Final[Mapping[ValueFieldName, frozenset[ValueFieldName]]] = {
 
 # Kinds a correct browser can cause in a sync race, such as a rerun that
 # disables a widget, or changes its options, just before the user's change
-# arrives. They are logged at debug level. `too_long` is not one of them:
-# `max_chars` is part of a keyed widget's identity, so a rerun that changes it
-# gives the widget a new ID.
+# arrives. They are logged at debug level. A forged value of these kinds cannot
+# be told apart from a race, so it is logged at debug level too. `too_long` is
+# not one of them: `max_chars` is part of a keyed widget's identity, so a rerun
+# that changes it gives the widget a new ID.
 _RACE_KINDS: Final[frozenset[ViolationKind]] = frozenset(
     {
         "not_rendered",

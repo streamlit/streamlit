@@ -1674,8 +1674,8 @@ class SessionState:
         widgets, as ``_is_stale_widget`` decides for stale widget states. A
         fragment run also covers the widgets of the nested fragments it
         removed, whose states stay. This never adds an ID, so a client's list of
-        widget IDs can only shrink the set. A forgotten widget also stops waiting for a re-sync, because the
-        browser removed it.
+        widget IDs can only shrink the rendered set. A forgotten widget also
+        stops waiting for a re-sync, because the browser removed it.
 
         Stale widget removal calls this, and so does the script runner when
         ``st.stop()`` or an uncaught exception ends a run, which keeps the
@@ -1698,13 +1698,12 @@ class SessionState:
             widget_state.rendered_ids = {
                 widget_id
                 for widget_id in widget_state.rendered_ids
-                if not _is_stale_widget(
-                    metadata_by_id.get(widget_id),
-                    widget_ids_this_run,
-                    fragment_ids_this_run,
+                if (metadata := metadata_by_id.get(widget_id)) is not None
+                and not _is_stale_widget(
+                    metadata, widget_ids_this_run, fragment_ids_this_run
                 )
                 and not _is_in_removed_fragment(
-                    metadata_by_id[widget_id], widget_ids_this_run, fragment_storage
+                    metadata, widget_ids_this_run, fragment_storage
                 )
             }
         else:

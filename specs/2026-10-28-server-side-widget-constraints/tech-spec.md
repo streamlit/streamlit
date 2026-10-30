@@ -281,12 +281,14 @@ class CheckResult(NamedTuple):
 A rejection is logged at debug level when a correct browser can cause it in a sync race:
 `not_rendered`, `disabled` (a `run_every` rerun disables the widget before the click
 lands), `not_an_option`, `too_many_items`, `out_of_range`, and `empty_required`
-(`required` is outside keyed identity). It is logged at warning level otherwise, once
-per widget per session: `wrong_type`, `unreadable`, `duplicate_items`, `bad_shape`,
-`malformed`, and `too_long`, which a correct browser never sends. `max_chars` is part of
-a keyed text or chat input's identity, so no rerun lowers it under the user. A browser
-that reconnects to a new session can still send back text or a repeated option that
-app code wrote, which logs one of these warnings when its widget registers. Under the
+(`required` is outside keyed identity). A forged value of these kinds cannot be told
+apart from a race, so it is logged at debug level too. Any other rejection is logged at
+warning level, once per widget per session: `wrong_type`, `unreadable`,
+`duplicate_items`, `bad_shape`, `malformed`, and `too_long`, which a correct browser
+never sends. `max_chars` is part of a keyed text or chat input's identity, so no rerun
+lowers it under the user. A browser that reconnects to a new session can still send
+back text or a repeated option that app code wrote, which logs one of these warnings
+when its widget registers. Under the
 hidden `global.e2eTest` option every rejection is logged at warning level and never
 deduplicated, for the e2e parity gate. That dedup set only holds IDs with metadata: an
 unknown ID is checked only when its widget registers, and an entry whose widget never
