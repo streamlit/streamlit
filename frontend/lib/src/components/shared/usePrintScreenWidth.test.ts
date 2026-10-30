@@ -44,6 +44,14 @@ describe("usePrintScreenWidth", () => {
     expect(element.style.getPropertyValue(PRINT_SCREEN_WIDTH_VAR)).toBe("")
   })
 
+  it("records nothing for a hidden element with no width", () => {
+    const element = createElementWithWidth(0)
+    renderHook(() => usePrintScreenWidth({ current: element }))
+
+    window.dispatchEvent(new Event("beforeprint"))
+    expect(element.style.getPropertyValue(PRINT_SCREEN_WIDTH_VAR)).toBe("")
+  })
+
   it("records nothing when disabled", () => {
     const element = createElementWithWidth(230)
     renderHook(() => usePrintScreenWidth({ current: element }, false))
