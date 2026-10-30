@@ -110,7 +110,7 @@ If there are uncommitted changes, commit with a descriptive message and push.
 
 ### 9. Request a final AI review if this iteration addressed one
 
-If this iteration addressed the previous review, and the PR is blocked by `do-not-merge`, add `ai-final-review` after the push or replies. Addressing it means pushing fixes, or replying to decline its blocking findings when they fail the proportionality check. Skip this when the label is already present, or when this iteration did neither.
+If this iteration addressed the previous review, and the PR is blocked by `do-not-merge`, add `ai-final-review` after the push or replies. Addressing it means pushing fixes, or replying to decline its blocking findings when they fail the proportionality check. Skip this when `ai-final-review` is already present, or when this iteration neither pushed fixes nor declined blocking findings.
 
 ```bash
 gh pr edit --add-label "ai-final-review"
