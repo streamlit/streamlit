@@ -69,8 +69,8 @@ raises one untyped error:**
   most-requested AppTest issue). A click inside a fragment or dialog reruns the whole
   script. A dialog's buttons therefore never fire: the full rerun no longer calls the
   dialog, so the click is lost. Reproduced on current `develop`.
-- **Timeout error type.** A script timeout raises a bare `RuntimeError`, the only AppTest
-  failure that is not an `AppTestError`.
+- **Timeout error type.** A script timeout raises a bare `RuntimeError`, unlike other
+  failed AppTest actions, which raise `AppTestError`.
 
 ### Why this needs a spec
 
@@ -124,7 +124,7 @@ at.button(label="Save").click().run()  # -> Button
 at.text_input(label="Name").set_value("Ada").run()  # -> TextInput
 at.sidebar.selectbox(label="Country").select("Japan").run()
 at.markdown(text=re.compile(r"Revenue: \$12M"))  # -> Markdown
-at.expander(label="Details", exact=False)  # -> Block
+at.expander(label="Details", exact=False)  # -> Expander
 at.button("save", label="Save")  # key= and label= must both match
 ```
 
@@ -146,11 +146,11 @@ def __call__(
 | Rule | Behavior |
 | --- | --- |
 | Strictness | With `label=` or `text=`, exactly one node must match every given filter, `key` included: filters combine with AND. Zero or several raise `AppTestLookupError`, so `at.button("save", label="Save")` raises it, not `KeyError`, when the button keyed `"save"` has another label. |
-| `AppTestLookupError` | A new public exception exported from `streamlit.testing.v1`. It subclasses `AppTestError` and Python's `LookupError`, so `except LookupError` also catches the `KeyError` of key-only calls. Not `KeyError` itself, whose `str()` wraps the message in quotes. |
-| Key-only calls | `at.button("save")` keeps returning the first match and raising `KeyError`. Changing that would break existing tests. A call with no `key`, `label`, or `text` raises `TypeError`, as it does today. |
+| `AppTestLookupError` | A new public exception exported from `streamlit.testing.v1`. It subclasses `AppTestError` and `LookupError`, so one `except LookupError` catches both a key-only `KeyError` and a label or text miss. It does not subclass `KeyError`, because `KeyError.__str__` quotes the message. |
+| Key-only calls | `at.button("save")` keeps returning the first match and raising `KeyError`. Changing that would break existing tests. A call with no `key`, `label`, or `text` raises `TypeError`, as it does today. An explicit `key=None` counts as no key and raises `TypeError` too, where today it returns the first element without a key. |
 | `label=` | The command's `label` argument as the app passed it, including button text and container labels. Accepted on collections whose command takes a `label` (labeled widgets, `link_button`, `page_link`, `metric`, `expander`, `status`), and on `tabs`, where it matches each tab's entry in the `tabs` list. |
-| `text=` | The body the app passed, as Markdown source (`"**Revenue**"`), not rendered text. Accepted on `markdown`, `caption`, `text`, `code`, `latex`, `title`, `header`, `subheader`, the alert collections (`error`, `warning`, `info`, `success`), `toast`, and `exception` (its message). |
-| Normalization | Leading and trailing whitespace is trimmed, and inner whitespace runs are collapsed, on both the query and the value. |
+| `text=` | The body the app passed, as Markdown source (`"**Revenue**"`), not rendered text. Accepted on `markdown`, `caption`, `text`, `code`, `latex`, `title`, `header`, `subheader`, the alert collections (`error`, `warning`, `info`, `success`), `toast`, `exception` (its message), and `progress` (its `text`). |
+| Normalization | Leading and trailing whitespace is trimmed, and inner whitespace runs are collapsed, on both the query and the value. Keys are compared exactly. |
 | `exact=True` (default) | Whole-string, case-sensitive match. |
 | `exact=False` | Case-insensitive substring. |
 | Regex | `re.search` on the normalized value, so a multi-line body is searched as one line and `re.MULTILINE` anchors match only its ends. Its flags (`re.IGNORECASE`) decide case. `exact` is ignored. |
@@ -173,7 +173,8 @@ Richer errors, with the scope, the closest match, and the snapshot outline, come
 
 - **Option 1: keyword filters on the existing typed calls** ✅ PREFERRED. The element type
   is written once and kept in the return type, the shortest change from `at.button("save")`,
-  and the same `label` vocabulary as the commands (principles 7 and 18).
+  and the same `label` vocabulary as the commands (Standardized Vocabulary, Extend Before
+  Inventing).
 - **Option 2: separate methods (`at.button.by_label("Save")`).** Adds a second lookup
   method per collection for the same thing.
 - **Option 3: only universal `get_by_label()`.** Returns `Node`, so type checkers lose the
@@ -194,9 +195,9 @@ Richer errors, with the scope, the closest match, and the snapshot outline, come
    collection shares one `__call__` signature, so type checkers accept
    `at.dataframe(label=...)` and the call raises at runtime. P5.1b returns
    per-collection list types so type checkers reject filters a collection does not
-   support (principle 12). The alternative is holding #17625 until P5.1b. The runtime
-   error is clear and the next slice removes the gap, so this spec recommends shipping
-   the slice now.
+   support (Type Safety Without Burden). The alternative is holding #17625 until P5.1b.
+   The runtime error is clear and the next slice removes the gap, so this spec
+   recommends shipping the slice now.
 5. **Interim errors** list candidates without scope or an outline, as shown above.
 
 ### 2. Universal `get_by_label()` and `get_by_text()`
@@ -216,12 +217,14 @@ at.sidebar.get_by_text("Revenue", exact=False)
 
 They search every element and block in scope that §1 lets filter by `label` or `text`,
 including blocks without a typed collection, such as popovers. They use the same matching
-and strictness as §1 and raise `AppTestLookupError`. Docs lead with §1, because typed
-lookups keep the precise return type.
+and strictness as §1 and raise `AppTestLookupError`. `get_by_key()` keeps raising
+`KeyError` when nothing matches, but its error for a key that several nodes share becomes
+an `AppTestLookupError` too, which is compatible because it subclasses `AppTestError`. Docs
+lead with §1, because typed lookups keep the precise return type.
 
 The draft in #16041 also has an `element_type=` parameter. This spec leaves it out: the
 typed collections in §1 already express the type, and `get_by_key()` has no such
-parameter (principle 4). It can be added later without breaking anything.
+parameter (Start Minimal, Ship Fast). It can be added later without breaking anything.
 
 ### 3. `AppTest.snapshot()`
 
@@ -236,16 +239,17 @@ It is built from the same per-command descriptions (shipped in
 `schema_version`:
 
 - `type` is the command name (`badge`, `line_chart`), `props` keys are parameter names,
-  and values are in the form a request can send back: an option widget reports its
-  formatted label, while node properties such as `.value` keep returning raw options.
+  and values are in the form a request can send back. In the snapshot, an option
+  widget's `value` and `options` are the formatted labels. The AppTest node's `.value`
+  stays the raw option.
 - It keeps `schema_version`, `status`, `page`, `pages`, `query_params`, the merged
   `tree` for the current page, the `actions` index, `support` on nodes, and
   `undescribed_types`.
 - It leaves out `session_id`, which exists only over HTTP, and `observed_at`, which would
   change on every call. Both are required in an `interact` response, so AppTest
-  documents its snapshot as that response without these two fields, not as a valid
-  `interact` response. A placeholder `session_id` would invite an agent to send it back,
-  and making the fields optional would weaken the HTTP contract that clients rely on.
+  documents its snapshot as that response without these two fields. A placeholder
+  `session_id` would invite an agent to send it back, and making the fields optional
+  would weaken the HTTP contract that clients rely on.
 - Inside the tree, `data.url` and media URLs are left out, since no server serves them.
 - The document is deterministic, so it can back a snapshot test, but docs recommend
   focused assertions, which survive unrelated edits.
@@ -323,8 +327,13 @@ Using the same descriptions:
 
 - **`at.get()` accepts command names** the descriptions report, in addition to today's
   attribute and proto names: `at.get("badge")`, `at.get("line_chart")`,
-  `at.get("altair_chart")`, `at.get("map")`. A node's `.type` does not change, so
-  `at.get("markdown")` still includes badges.
+  `at.get("altair_chart")`, `at.get("map")`. A node's `.type` does not change, and a
+  string `at.get()` already accepts keeps today's result: `at.get("markdown")` still
+  includes badges, `at.get("button")` form submit buttons, `at.get("dataframe")` data
+  editors, and `at.get("tabs")` / `at.get("columns")` the tab and column blocks rather
+  than the `st.tabs` / `st.columns` container, which a test reaches with
+  `get_by_key()`. The narrower commands use their own names, such as
+  `form_submit_button`, `data_editor`, `line_chart`, and `map`.
 - **Unsupported interactions say why.** An interaction AppTest cannot perform raises
   `AppTestError` with the element's support reason and a pointer to browser testing.
   Today the error names the element type and gives the same generic advice for every
@@ -338,9 +347,10 @@ Using the same descriptions:
 | Inspectable | Reported accurately, but some input a browser user can give, such as a chart selection, cannot be sent. |
 | Browser-only | What renders may differ from what is reported, such as a custom component. Interaction requires a browser test. |
 
-These are the agent interface's `support` values (absent, `action_unsupported`,
-`browser_required`) with readable names. The draft in #16041 calls the middle one
-`read_only_in_v1`, but the shipped agent interface uses `action_unsupported`.
+These are the agent interface's `support` values with readable names: Interactive has no
+`support` field, Inspectable is `action_unsupported`, and Browser-only is
+`browser_required`. The draft in #16041 calls the middle one `read_only_in_v1`, but the
+shipped agent interface uses `action_unsupported`.
 
 ### 5. Raw option values before a rerun
 
@@ -354,16 +364,18 @@ sb.value  # {'id': 2, 'name': 'Grace'} (unchanged)
 ```
 
 AppTest resolves a value staged before `.run()` to the raw option, as it already does
-after `.run()`. That covers `select_index()` and a formatted label passed to `set_value()`
-or `select()`, on `selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, and
-`segmented_control`. `.options` keeps returning labels, the strings a user sees, which the
+after `.run()`. That covers `select_index()`, a formatted label passed to `set_value()`,
+`select()`, `unselect()`, or `click()`, and every entry of a list or range value, on
+`selectbox`, `radio`, `multiselect`, `select_slider`, `pills`, `segmented_control`, and
+`menu_button`. `.options` keeps returning labels, the strings a user sees, which the
 snapshot reports and `select()` accepts.
 
 When a staged string is both an option and another option's label, the option wins, as it
-does today. A label that several options share identifies none of them, so passing it
-raises `AppTestError`, as the agent interface refuses it. `select_index()` resolves by
-position, so it still selects any of them. A value that is neither an option nor a label
-behaves as today.
+already does after `.run()`. Options that share a label cannot be told apart once the
+value is sent, in a browser too: the server resolves the label to the last of them. So
+staging any of them, by label, by option, or with `select_index()`, raises `AppTestError`,
+as the agent interface refuses it. A value that is neither an option nor a label behaves
+as today.
 
 - **Option 1: fix staged values, keep `.options`** ✅ PREFERRED. No new API, and closes
   #10550.
@@ -373,7 +385,8 @@ behaves as today.
   and differs from the snapshot.
 
 Behavior change: `.value` read between staging and `.run()` returns the option, not its
-label.
+label, and staging an option whose label another option shares raises `AppTestError`
+instead of silently selecting the last of them.
 
 ### 6. Isolated caches per `AppTest` instance
 
@@ -383,6 +396,12 @@ Within one instance, caches persist across `.run()` calls, as they do on one ser
 isolation, not browser fidelity, and it deliberately differs from production: sessions on
 one server keep sharing caches by design, while a test needs a known starting state
 rather than whatever an earlier test cached.
+
+Code in the test body outside any run, such as a cached helper a test calls directly or
+`st.cache_data.clear()` in a fixture, keeps using the process-wide caches, which no
+instance reads. That fixture becomes harmless and unnecessary. Entries a function stores
+with `persist="disk"` are isolated too: each instance keeps them in its own temporary
+directory, so a test never loads a file an earlier test wrote.
 
 - **Option 1: isolated by default** ✅ PREFERRED. Tests pass or fail regardless of order,
   which is what #9139 expects and what tests need.
@@ -397,8 +416,8 @@ Behavior change: a suite that loads an expensive resource (a model, a connection
 Tests can mock the resource. An explicit sharing opt-in is out of scope until users ask
 for it. A likely implementation moves the cache registries from module globals onto the
 `Runtime`, as the abandoned [#9993](https://github.com/streamlit/streamlit/pull/9993)
-tried. A tech spec decides that, including how `clear()` and concurrent instances behave
-and how production sharing and the cache hit path stay unchanged.
+tried. A tech spec decides that, including how concurrent instances behave and how
+production sharing and the cache hit path stay unchanged.
 
 ### 7. Fragment- and dialog-scoped reruns
 
@@ -413,11 +432,12 @@ detail:
   upload, a form submit, and the other widget methods. Writes to `at.session_state` or
   `at.query_params` count as changes outside every fragment, since a browser never makes
   them from inside one.
-- Changes in more than one scope run as a full rerun. The exception is an open dialog: a
-  full rerun closes it without running its contents and discards what the test sent to
-  it. So a change inside a dialog combined with any change outside it, including one in
-  a fragment inside the dialog, raises `AppTestError`. The agent interface refuses the
-  same request (`cross_dialog_batch`), and a browser cannot produce it.
+- Changes in more than one scope run as a full rerun, unless any of them is in a dialog.
+  A full rerun closes a dialog without running its contents and discards what the test
+  sent to it. So when the changes do not all share one scope and any of them is in a
+  dialog, `.run()` raises `AppTestError`. That includes a dialog widget plus one in a
+  fragment nested in that dialog. The agent interface refuses the same request
+  (`cross_dialog_batch`), and a browser cannot produce it.
 
 ```python
 # App from #9786: a dialog whose "confirm" button sets state and calls st.rerun().
@@ -445,7 +465,7 @@ agent interface's headless client as #16041 suggests, and a tech spec.
 
 A script timeout raises `AppTestTimeoutError`, exported from `streamlit.testing.v1`, with
 today's message. It subclasses both `AppTestError` and `RuntimeError`, so
-`except AppTestError` catches every AppTest failure and existing
+`except AppTestError` catches timeouts like other failed AppTest actions, and existing
 `pytest.raises(RuntimeError)` tests keep passing. The alternatives are keeping
 `RuntimeError`, which leaves the inconsistency, or raising plain `AppTestError`, which
 breaks those tests.
@@ -507,7 +527,7 @@ signatures, and, for §3, the parity suite against `interact`.
 | Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | ✅ AppTest runs in the test process, independent of platform. §6 isolates caches per `AppTest` instance without changing production cache sharing. |
-| No breaking API changes | ✅ for the API: every addition is keyword-only, and key-only lookups keep their behavior. §5 and §7 change behavior where AppTest disagrees with a browser, and §6 where tests shared caches. Tests that relied on the old behavior can fail. The release notes call out each one. §8 keeps `RuntimeError` compatibility. |
+| No breaking API changes | ✅ for the API: every addition is keyword-only, and key-only lookups keep their behavior, except that an explicit `key=None` now raises `TypeError`. §5 and §7 change behavior where AppTest disagrees with a browser, and §6 where tests shared caches. Tests that relied on the old behavior can fail. The release notes call out each one. §8 keeps `RuntimeError` compatibility. |
 | No new dependencies | ✅ |
 | Metrics collected | No new telemetry. Track the `feature:app-testing` issues and docs feedback. |
 | Any security/legal impact? | Snapshots contain app-authored text, so docs tell agents to treat it as data, not instructions, as the agent interface does. The snapshot follows the shared rules: password values are write-only and secrets never appear. |
