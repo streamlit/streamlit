@@ -268,7 +268,15 @@ def _duplicate_items(violation: Violation, sent: _Sent) -> AgentRequestError:
 
 
 def _bound_text(bound: Any) -> str:
-    """A bound as a request would send it: ISO text for a date or time."""
+    """A bound as a request would send it: ISO text for a date or time.
+
+    A time of day is written to the minute unless it has seconds, as
+    `st.datetime_input` takes `YYYY-MM-DDTHH:MM`.
+    """
+    if isinstance(bound, (dt.datetime, dt.time)) and not (
+        bound.second or bound.microsecond
+    ):
+        return bound.isoformat(timespec="minutes")
     if isinstance(bound, (dt.date, dt.time)):
         return bound.isoformat()
     return str(bound)
@@ -320,10 +328,16 @@ def _too_long(violation: Violation, sent: _Sent) -> AgentRequestError:
 
 
 def _empty_required(_violation: Violation, sent: _Sent) -> AgentRequestError:
+    # Say why a value that is not plainly empty counts as empty. Only a text
+    # input refuses non-empty text, and only a date range a non-empty list.
+    if isinstance(sent.value, str) and sent.value:
+        why = " Text of only whitespace is empty."
+    elif isinstance(sent.value, list) and sent.value:
+        why = " A date range without both ends is empty."
+    else:
+        why = ""
     return AgentRequestError(
-        "invalid_value",
-        f"{sent.key!r} is required and cannot be emptied. Text of only whitespace "
-        "is empty, and so is a date range without both ends.",
+        "invalid_value", f"{sent.key!r} is required and cannot be emptied.{why}"
     )
 
 

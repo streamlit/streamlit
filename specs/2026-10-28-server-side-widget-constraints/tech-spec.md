@@ -944,8 +944,11 @@ they apply. Each item deletes the agent's own copy of its constraint, as listed 
 `_validate_options` and the `max_selections` half of `ElementState.max_items`, and item 4
 deletes the rest of it, the length of a range. A value a widget used to reset, sort, or
 cut is refused instead, and the error names the constraint: the `min_value` and
-`max_value`, the item count or order of a range, the layout, such as `YYYY-MM-DD` or a
-whole number, or `max_chars`.
+`max_value` the author set, written as a request sends them (a time of day to the
+minute unless it has seconds), the item count or order of a range, the layout, such as
+`YYYY-MM-DD` or a whole number, or `max_chars`. A `required` refusal says why only where
+the value is not plainly empty: text of only whitespace, or a date range without both
+ends.
 `ElementState.options` stays, but only as an encoding fact: for a widget with a closed
 list, a JSON number is sent as its text, such as `st.feedback`'s index, and the
 validator decides whether it names an option, while free text, including a widget with

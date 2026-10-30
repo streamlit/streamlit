@@ -97,6 +97,27 @@ def _render_option_widgets() -> None:
     )
 
 
+def _render_required_widgets() -> None:
+    """Required widgets, each empty or filled."""
+    st.text_input("Empty name", key="empty_name", required=True)
+    st.session_state.filled_name = "Ada"
+    st.text_input("Filled name", key="filled_name", required=True)
+    st.number_input("Empty age", value=None, key="empty_age", required=True)
+    st.session_state.filled_age = 30.0
+    st.number_input("Filled age", value=None, key="filled_age", required=True)
+    st.pills("Empty mood", ["calm", "busy"], key="empty_mood", required=True)
+    st.session_state.filled_mood = "calm"
+    st.pills("Filled mood", ["calm", "busy"], key="filled_mood", required=True)
+    st.date_input("Empty day", value=None, key="empty_day", required=True)
+    st.date_input("Trip", value=[], key="trip", required=True)
+    options = ["x", "y"]
+    st.selectbox("Empty pick", options, index=None, key="empty_pick", required=True)
+    st.session_state.filled_pick = "y"
+    st.selectbox("Filled pick", options, index=None, key="filled_pick", required=True)
+    st.session_state.first_pick = "y"
+    st.selectbox("First pick", options, key="first_pick", required=True)
+
+
 def _render_two_forms() -> None:
     """Two forms, one with two submit buttons, and controls outside both."""
     with st.form("profile"):
@@ -664,6 +685,16 @@ class WidgetWritesTest(SnapshotCase):
                 _Refused("'rounded' takes values from 0.123 to 1.0, inclusive."),
             ),
             ("slider_at_a_rounded_bound", "rounded", 0.123, 0.123),
+            # Bounds are written in the layout the widget takes, to the minute.
+            (
+                "datetime_before_min",
+                "window",
+                "2025-12-31T23:00",
+                _Refused(
+                    "'window' takes values from 2026-01-01T00:00 to "
+                    "2026-12-31T18:30, inclusive."
+                ),
+            ),
         ]
     )
     def test_bounds_shapes_and_lengths(
@@ -680,6 +711,13 @@ class WidgetWritesTest(SnapshotCase):
         st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
         st.text_input("Short", max_chars=3, key="short")
         st.slider("Rounded", 0.123, 1.0, 0.5, step=0.1, key="rounded")
+        st.datetime_input(
+            "Window",
+            dt.datetime(2026, 6, 1, 9, 30),
+            min_value=dt.datetime(2026, 1, 1),
+            max_value=dt.datetime(2026, 12, 31, 18, 30),
+            key="window",
+        )
         self._check({key: sent}, expected)
 
     @parameterized.expand(
@@ -709,32 +747,40 @@ class WidgetWritesTest(SnapshotCase):
                 "start_of_a_range",
                 "trip",
                 ["2026-01-05"],
-                _Refused("a date range without both ends"),
+                _Refused("A date range without both ends is empty."),
             ),
         ]
     )
     def test_required(self, _name: str, key: str, sent: Any, expected: Any) -> None:
         """A required widget can stay empty, but no request can empty it."""
-        st.text_input("Empty name", key="empty_name", required=True)
-        st.session_state.filled_name = "Ada"
-        st.text_input("Filled name", key="filled_name", required=True)
-        st.number_input("Empty age", value=None, key="empty_age", required=True)
-        st.session_state.filled_age = 30.0
-        st.number_input("Filled age", value=None, key="filled_age", required=True)
-        st.pills("Empty mood", ["calm", "busy"], key="empty_mood", required=True)
-        st.session_state.filled_mood = "calm"
-        st.pills("Filled mood", ["calm", "busy"], key="filled_mood", required=True)
-        st.date_input("Empty day", value=None, key="empty_day", required=True)
-        st.date_input("Trip", value=[], key="trip", required=True)
-        options = ["x", "y"]
-        st.selectbox("Empty pick", options, index=None, key="empty_pick", required=True)
-        st.session_state.filled_pick = "y"
-        st.selectbox(
-            "Filled pick", options, index=None, key="filled_pick", required=True
-        )
-        st.session_state.first_pick = "y"
-        st.selectbox("First pick", options, key="first_pick", required=True)
+        _render_required_widgets()
         self._check({key: sent}, expected)
+
+    @parameterized.expand(
+        [
+            ("empty_text", "filled_name", "", ""),
+            ("whitespace", "filled_name", " \t", " Text of only whitespace is empty."),
+            ("null_to_a_number", "filled_age", None, ""),
+            ("null_to_pills", "filled_mood", None, ""),
+            ("null_to_a_selectbox", "filled_pick", None, ""),
+            (
+                "start_of_a_range",
+                "trip",
+                ["2026-01-05"],
+                " A date range without both ends is empty.",
+            ),
+        ]
+    )
+    def test_a_required_refusal_explains_only_what_is_not_plainly_empty(
+        self, _name: str, key: str, sent: Any, why: str
+    ) -> None:
+        """Whitespace and a partial range get a reason; other empty values need none."""
+        _render_required_widgets()
+
+        error = self._refusal({key: sent})
+
+        assert error.code == "invalid_value"
+        assert error.message == f"{key!r} is required and cannot be emptied.{why}"
 
     def test_a_value_the_widget_cannot_read_is_refused(self) -> None:
         """A value the deserializer raises on would raise in every later run."""
