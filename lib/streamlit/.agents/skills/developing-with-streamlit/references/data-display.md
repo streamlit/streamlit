@@ -8,6 +8,7 @@ Present data clearly.
 - [Native charts first](#native-charts-first)
 - [Human-readable labels](#human-readable-labels)
 - [Altair for complex charts](#altair-for-complex-charts)
+- [When native charts aren't enough](#when-native-charts-arent-enough)
 - [Apache ECharts](#apache-echarts)
 - [Deprecated: use_container_width](#deprecated-use_container_width)
 - [Dataframe column configuration](#dataframe-column-configuration)
@@ -96,6 +97,24 @@ st.altair_chart(chart, alt="Revenue by region over time")
 - Multiple series with legends
 - Interactive tooltips
 - Layered visualizations
+
+## When native charts aren't enough
+
+Native charts share a single y-axis and can't express every shape. When the request needs something they can't do, escalate to **Altair** (bundled with Streamlit — no extra install) rather than forcing a native chart to approximate it; reach for Plotly only if your app already uses it. The most common trigger is **two series on very different scales** (e.g. revenue in the thousands vs. a 0–100% rate), which needs a **secondary y-axis** — on a single `st.line_chart` the smaller series flattens against the bottom. Other cases: combo charts (bars + line) and pie or donut charts.
+
+```python
+# BAD: both series on one axis — margin (0-100) is invisible next to revenue (thousands)
+st.line_chart(df, x="month", y=["revenue", "margin"])
+
+# GOOD: secondary axis in Altair — two layered marks with independent y-scales
+import altair as alt
+
+base = alt.Chart(df).encode(x="month:O")
+revenue = base.mark_bar().encode(y=alt.Y("revenue:Q", title="Revenue"))
+margin = base.mark_line(color="red").encode(y=alt.Y("margin:Q", title="Margin (%)"))
+chart = alt.layer(revenue, margin).resolve_scale(y="independent")
+st.altair_chart(chart, alt="Monthly revenue with margin on a second axis")
+```
 
 ## Apache ECharts
 
