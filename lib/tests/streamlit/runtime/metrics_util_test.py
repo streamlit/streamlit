@@ -1060,7 +1060,6 @@ def test_helper_thread_started_inside_tracked_command_records_its_own_top_level(
     tracking_ctx: ScriptRunContext,
 ) -> None:
     """A helper attached during an outer command still records its own top-level commands."""
-    started = threading.Event()
     done = threading.Event()
     errors: list[BaseException] = []
 
@@ -1070,7 +1069,6 @@ def test_helper_thread_started_inside_tracked_command_records_its_own_top_level(
 
     def helper_target() -> None:
         try:
-            started.set()
             helper_cmd()
         except BaseException as exc:
             errors.append(exc)
@@ -1082,7 +1080,6 @@ def test_helper_thread_started_inside_tracked_command_records_its_own_top_level(
         helper = threading.Thread(target=helper_target)
         add_script_run_ctx(helper, tracking_ctx)
         helper.start()
-        assert started.wait(timeout=_THREAD_TIMEOUT)
         assert done.wait(timeout=_THREAD_TIMEOUT)
         _join_threads([helper])
 

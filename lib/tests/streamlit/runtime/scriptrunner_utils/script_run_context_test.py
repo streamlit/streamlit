@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import threading
 import unittest
 from typing import TYPE_CHECKING
@@ -492,18 +493,45 @@ class ScriptRunContextTest(unittest.TestCase):
 
         ThreadState.initialize(command_tracking_deactivated=True)
         captured: dict[str, object] = {}
+        try:
 
-        def child_target() -> None:
-            captured["flag"] = ThreadState.get().command_tracking_deactivated
+            def child_target() -> None:
+                captured["flag"] = ThreadState.get().command_tracking_deactivated
 
-        t = threading.Thread(target=child_target)
-        add_script_run_ctx(t, ctx)
-        t.start()
-        t.join(timeout=5)
+            t = threading.Thread(target=child_target)
+            add_script_run_ctx(t, ctx)
+            t.start()
+            t.join(timeout=5)
 
-        assert not t.is_alive()
-        assert captured["flag"] is False
-        assert ThreadState.get().command_tracking_deactivated is True
+            assert not t.is_alive()
+            assert captured["flag"] is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
+
+    def test_add_script_run_ctx_self_attach_clears_inherited_command_tracking(
+        self,
+    ):
+        """Self-attach in a copied context starts tracking even if the parent is nested."""
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        copied = contextvars.copy_context()
+        captured: dict[str, object] = {}
+        try:
+
+            def in_copied_context() -> None:
+                add_script_run_ctx(ctx=ctx)
+                captured["flag"] = ThreadState.get().command_tracking_deactivated
+
+            copied.run(in_copied_context)
+
+            assert captured["flag"] is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
 
     def test_ctx_construction_creates_shared(self):
         """A freshly constructed ScriptRunContext owns its own SharedRunState."""

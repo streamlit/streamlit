@@ -100,14 +100,17 @@ class ThreadStateUnitTest(unittest.TestCase):
         """Updates to the nesting flag stay inside the copied context."""
         ThreadState.initialize(command_tracking_deactivated=True)
         child_ctx = contextvars.copy_context()
+        try:
 
-        def run_in_child():
-            ThreadState.update(command_tracking_deactivated=False)
-            assert ThreadState.get().command_tracking_deactivated is False
+            def run_in_child():
+                ThreadState.update(command_tracking_deactivated=False)
+                assert ThreadState.get().command_tracking_deactivated is False
 
-        child_ctx.run(run_in_child)
+            child_ctx.run(run_in_child)
 
-        assert ThreadState.get().command_tracking_deactivated is True
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
 
     def test_scoped_overrides_and_restores(self):
         ThreadState.initialize(fragment_id="outer", active_script_hash="hash1")
