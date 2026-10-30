@@ -486,6 +486,12 @@ export const StyledFlexContainerBlock =
                 height: "auto",
                 maxHeight: "none",
                 overflow: "visible",
+                // A stretch-height element shared the fixed height through
+                // `height: 100%` and size containment. Without containment
+                // it takes its content's height instead of collapsing.
+                [`& > ${StyledElementContainer}`]: {
+                  contain: "none",
+                },
                 ...(!keepsPrintFlexForAlignment && {
                   display: "block",
                   ...printBlockGapMargins(gapWidth, theme),
