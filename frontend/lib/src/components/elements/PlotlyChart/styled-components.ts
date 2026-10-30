@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 import {
   printGraphicFitStyles,
-  printWidthCapStyles,
+  printWidthCapRules,
 } from "~lib/components/shared/printWidthCap"
 
 interface StyledPlotlyChartContainerProps {
@@ -44,15 +44,25 @@ export const StyledPlotlyChartContainer =
         containIntrinsicHeight:
           fallbackHeight === undefined ? "none" : `${fallbackHeight}px`,
       }),
-      // Plotly writes a pixel width from the on-screen layout. Cap it so a
-      // narrower printed page does not spill the plot out of its column.
-      ...printWidthCapStyles,
+      "@media print": {
+        // Plotly writes a pixel width from the on-screen layout. Cap it so a
+        // narrower printed page does not spill the plot out of its column.
+        ...printWidthCapRules,
+        // Print can release the parent's height, for example when a
+        // fixed-height horizontal container stacks its children. Contain
+        // only the width, so the plot takes the height it rendered at
+        // instead of collapsing.
+        ...(isSizeContained && { contain: "inline-size" }),
+      },
       "& .js-plotly-plot, & .svg-container": {
         "@media print": {
           width: "100% !important",
           maxWidth: "100% !important",
         },
       },
+      // Plotly's SVG layers have no viewBox, so a capped width crops the
+      // right edge of a plot wider than the printed column instead of
+      // scaling it.
       "& .main-svg": printGraphicFitStyles,
     })
   )

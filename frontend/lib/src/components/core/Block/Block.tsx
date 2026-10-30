@@ -385,7 +385,8 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
-  // A stacked column prints close to its screen width instead of full width.
+  // Record the on-screen width so a stacked chart column can print near that
+  // width. Side-by-side rows never read the variable.
   const columnRef = useRef<HTMLDivElement>(null)
   usePrintScreenWidth(columnRef, Boolean(node.deltaBlock.column))
 

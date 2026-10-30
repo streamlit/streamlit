@@ -97,8 +97,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
         height: "auto !important",
         maxHeight: "none !important",
         // Override the inline width from re-resizable (set by
-        // `initial_sidebar_width` or dragging) with `minSidebarWidth`, so an
-        // expanded sidebar does not crowd out the main column when printed.
+        // `st.set_page_config(initial_sidebar_state=<int>)` or by dragging)
+        // with `minSidebarWidth`, so a wide sidebar does not crowd out the
+        // main column when printed.
         width: `${theme.sizes.minSidebarWidth} !important`,
         minWidth: `${theme.sizes.minSidebarWidth} !important`,
         maxWidth: `${theme.sizes.minSidebarWidth} !important`,
