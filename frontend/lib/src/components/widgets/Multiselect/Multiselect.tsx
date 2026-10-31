@@ -978,6 +978,9 @@ const Multiselect: FC<Props> = props => {
           <StyledPopover
             ref={setFloating}
             data-testid="stMultiSelectDropdown"
+            // Keeps an option press inside an enclosing popover. Without it,
+            // that popover blurs the field before the choice is saved.
+            data-st-overlay-root="true"
             placement="bottom left"
             isNonModal
             $isInSidebar={isInSidebar}
