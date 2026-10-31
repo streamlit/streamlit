@@ -158,3 +158,20 @@ class TestTTLCleanupCache:
         test_cache.safe_del(3)
         assert released_items == [11, 13]
         assert list(test_cache.keys()) == [0, 2, 4]
+
+    def test_on_evict_is_forwarded(self):
+        """Automatic evictions are reported; release-hook clears are not."""
+        evictions: list[tuple[str, int]] = []
+        test_cache = TTLCleanupCache(
+            maxsize=1,
+            ttl=math.inf,
+            timer=fake_timer,
+            on_release=lambda _: None,
+            on_evict=lambda reason, count: evictions.append((reason, count)),
+        )
+
+        test_cache[0] = 10
+        test_cache[1] = 11
+        test_cache.clear()
+
+        assert evictions == [("max_entries", 1)]

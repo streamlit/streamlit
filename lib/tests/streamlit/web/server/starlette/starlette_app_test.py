@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import sys
 import threading
@@ -37,12 +38,15 @@ from starlette.websockets import WebSocketDisconnect
 from streamlit import file_util
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.openmetrics_data_model_pb2 import COUNTER, HISTOGRAM
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
+from streamlit.runtime.caching.cache_metrics import CacheMetrics
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
+from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat, StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
@@ -709,6 +713,130 @@ def test_metrics_endpoint_unknown_only_families_returns_empty(
     assert response.status_code == 200
     assert response.text.strip() == "# EOF"
     assert "cache_memory_bytes" not in response.text
+
+
+_CACHE_METRICS_FAMILIES = (
+    "cache_lookups",
+    "cache_compute_duration_seconds",
+    "cache_evictions",
+)
+
+
+def _install_cache_metrics(runtime: _DummyRuntime) -> None:
+    """Serve a real cache metrics registry with known values from the runtime."""
+    registry = CacheMetrics()
+    metrics = registry.get_function_metrics(CacheType.DATA, "app.load")
+    for _ in range(3):
+        metrics.record_hit()
+    for seconds in (0.003, 0.3, 75.0):
+        metrics.record_miss()
+        metrics.record_compute_duration(seconds)
+    metrics.record_evictions("ttl", 2)
+    stats_mgr = StatsManager()
+    stats_mgr.register_provider(registry)
+    runtime.stats_mgr = stats_mgr  # type: ignore[assignment]
+
+
+def test_metrics_endpoint_cache_metrics_text(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Cache metrics follow the OpenMetrics counter and histogram text format."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(
+        "/_stcore/metrics?" + "&".join(f"families={f}" for f in _CACHE_METRICS_FAMILIES)
+    )
+
+    assert response.status_code == 200
+    lines = response.text.splitlines()
+    labels = 'cache="app.load",cache_type="st_cache_data"'
+
+    assert "# TYPE cache_lookups counter" in lines
+    assert not any(line.startswith("# UNIT cache_lookups") for line in lines)
+    assert f'cache_lookups_total{{{labels},result="hit"}} 3' in lines
+    assert f'cache_lookups_total{{{labels},result="miss"}} 3' in lines
+
+    assert "# TYPE cache_evictions counter" in lines
+    assert f'cache_evictions_total{{{labels},reason="ttl"}} 2' in lines
+    assert f'cache_evictions_total{{{labels},reason="max_entries"}} 0' in lines
+
+    assert "# TYPE cache_compute_duration_seconds histogram" in lines
+    assert "# UNIT cache_compute_duration_seconds seconds" in lines
+    bucket_lines = [
+        line
+        for line in lines
+        if line.startswith("cache_compute_duration_seconds_bucket")
+    ]
+    assert bucket_lines[0] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="0.005"}} 1'
+    )
+    assert f'cache_compute_duration_seconds_bucket{{{labels},le="0.5"}} 2' in lines
+    assert f'cache_compute_duration_seconds_bucket{{{labels},le="60.0"}} 2' in lines
+    assert bucket_lines[-1] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="+Inf"}} 3'
+    )
+    bucket_counts = [int(line.rsplit(" ", 1)[1]) for line in bucket_lines]
+    assert bucket_counts == sorted(bucket_counts)
+    assert f"cache_compute_duration_seconds_sum{{{labels}}} 75.303" in lines
+    assert f"cache_compute_duration_seconds_count{{{labels}}} 3" in lines
+    assert lines[-1] == "# EOF"
+
+
+@pytest.mark.parametrize("family", _CACHE_METRICS_FAMILIES)
+def test_metrics_endpoint_filters_cache_metrics_families(
+    starlette_client: tuple[TestClient, _DummyRuntime], family: str
+) -> None:
+    """Each cache metrics family can be requested on its own."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(f"/_stcore/metrics?families={family}")
+
+    assert response.status_code == 200
+    type_lines = [
+        line for line in response.text.splitlines() if line.startswith("# TYPE")
+    ]
+    assert len(type_lines) == 1
+    assert type_lines[0].startswith(f"# TYPE {family} ")
+
+
+def test_metrics_endpoint_cache_metrics_protobuf(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The protobuf response carries counter and histogram cache metric points."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(
+        "/_stcore/metrics?"
+        + "&".join(f"families={f}" for f in _CACHE_METRICS_FAMILIES),
+        headers={"Accept": "application/x-protobuf"},
+    )
+
+    assert response.status_code == 200
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    families = {family.name: family for family in metric_set.metric_families}
+    assert set(families) == set(_CACHE_METRICS_FAMILIES)
+    assert families["cache_lookups"].type == COUNTER
+    assert families["cache_evictions"].type == COUNTER
+
+    duration_family = families["cache_compute_duration_seconds"]
+    assert duration_family.type == HISTOGRAM
+    assert duration_family.unit == "seconds"
+    (metric,) = duration_family.metrics
+    assert {label.name: label.value for label in metric.labels} == {
+        "cache": "app.load",
+        "cache_type": "st_cache_data",
+    }
+    histogram = metric.metric_points[0].histogram_value
+    assert histogram.count == 3
+    assert histogram.double_value == pytest.approx(75.303)
+    bucket_counts = [bucket.count for bucket in histogram.buckets]
+    assert bucket_counts == sorted(bucket_counts)
+    assert histogram.buckets[-1].upper_bound == math.inf
+    assert histogram.buckets[-1].count == 3
 
 
 def test_media_endpoint_serves_file(

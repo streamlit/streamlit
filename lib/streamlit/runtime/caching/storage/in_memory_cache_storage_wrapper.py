@@ -20,7 +20,8 @@ import weakref
 from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_metrics, cache_utils
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.global_cache_budget import get_global_cache_budget
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
@@ -92,6 +93,15 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._generations: dict[str, int] = {}
         self._next_generation = 0
         self._oversized_warning_emitted = False
+        # Entries persisted to disk are reloaded on their next read, so dropping
+        # them from memory does not remove them from the cache.
+        self._eviction_metrics = (
+            cache_metrics.get_cache_metrics().get_function_metrics(
+                CacheType.DATA, self.function_display_name
+            )
+            if context.persist is None
+            else None
+        )
         self._mem_cache: TTLCache[str, bytes] = TTLCache[str, bytes](
             maxsize=self.max_entries,
             ttl=self.ttl_seconds,
@@ -99,6 +109,11 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             max_total_size=self._max_size_bytes,
             getsizeof=None if self._max_size_bytes is None else len,
             on_remove=_create_on_remove_callback(self),
+            on_evict=(
+                self._eviction_metrics.record_evictions
+                if self._eviction_metrics is not None
+                else None
+            ),
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
@@ -298,4 +313,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 del self._mem_cache[key]
             removals = self._take_pending_removals()
             self._report_removals(removals)
+        if is_live and self._eviction_metrics is not None:
+            self._eviction_metrics.record_evictions("global_budget")
         return is_live
