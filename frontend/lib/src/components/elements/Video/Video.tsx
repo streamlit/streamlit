@@ -19,6 +19,7 @@ import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 import { getLogger } from "loglevel"
 
 import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -52,6 +53,10 @@ function Video({
     muted,
     alt,
   } = element
+  const trimmedAlt = alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   let crossOrigin = useCrossOriginAttribute(url)
 
@@ -197,7 +202,7 @@ function Video({
       // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
       const videoId = youtubeUrl.pathname.split("/").pop()
 
-      if (videoId) {
+      if (!isNullOrEmptyString(videoId)) {
         youtubeUrl.searchParams.append("playlist", videoId)
       }
     }
@@ -223,8 +228,7 @@ function Video({
         // An iframe always needs a title for its accessible name, so the URL
         // stays as the fallback when the author did not provide a description.
         // Blank input must fall back too, or the iframe ends up untitled.
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank title uses the url
-        title={alt?.trim() || url}
+        title={accessibleName ?? url}
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -260,8 +264,7 @@ function Video({
       // Only set an accessible name when the author provided one. Blank input
       // is treated as absent: aria-label=" " computes to an empty accessible
       // name, which is worse than having no aria-label at all.
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-      aria-label={alt?.trim() || undefined}
+      aria-label={accessibleName}
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}

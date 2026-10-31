@@ -351,7 +351,7 @@ describe("DeckGlJsonChart", () => {
       props: DeckGLProps
     ): DeckGlElementState["selection"] | undefined => {
       const raw = props.widgetMgr.getStringValue({ id: props.element.id })
-      if (!raw) {
+      if (raw === undefined) {
         return undefined
       }
       return (JSON.parse(raw) as DeckGlElementState).selection

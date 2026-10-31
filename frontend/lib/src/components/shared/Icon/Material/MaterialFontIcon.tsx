@@ -16,6 +16,8 @@
 
 import type { ReactElement } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { IconSizeProp } from "~lib/theme/types"
 
 import {
@@ -42,8 +44,7 @@ const getDefaultProps = ({
   size: size ?? "md",
   margin: margin ?? "",
   padding: padding ?? "",
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank color inherits
-  color: color || "inherit",
+  color: isNullOrEmptyString(color) ? "inherit" : color,
 })
 
 const MaterialFontIcon = ({

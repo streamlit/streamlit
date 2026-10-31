@@ -28,10 +28,11 @@ import LinkButton, { type Props } from "./LinkButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
-  formatShortcutForDisplay: vi.fn(
-    (shortcut: string | null | undefined) =>
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty shortcut is omitted
-      shortcut?.replaceAll("+", " + ") || undefined
+  formatShortcutForDisplay: vi.fn((shortcut: string | null | undefined) =>
+    // An empty shortcut is omitted.
+    shortcut === null || shortcut === undefined || shortcut === ""
+      ? undefined
+      : shortcut.replaceAll("+", " + ")
   ),
 }))
 

@@ -19,6 +19,8 @@ import type { ReactElement } from "react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import Button, {
   BaseButtonKind,
 } from "~lib/components/shared/BaseButton/BaseButton"
@@ -41,7 +43,7 @@ import {
  */
 function toolbarActionAriaLabel(label: string, labelContext?: string): string {
   const context = labelContext?.trim()
-  return context ? `${label}: ${context}` : label
+  return isNullOrEmptyString(context) ? label : `${label}: ${context}`
 }
 
 export interface ToolbarActionProps {

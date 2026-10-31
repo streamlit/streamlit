@@ -710,7 +710,11 @@ export default defineConfig([
   // directories stay on the base options until they are cleaned up. The
   // `lib/` prefix is intentional: only the root config lints `lib/`.
   {
-    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    files: [
+      "lib/src/components/elements/**/*.{ts,tsx}",
+      "lib/src/components/shared/**/*.{ts,tsx}",
+      "lib/src/components/widgets/**/*.{ts,tsx}",
+    ],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

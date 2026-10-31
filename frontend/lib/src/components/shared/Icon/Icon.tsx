@@ -18,6 +18,8 @@ import { memo, type ReactElement, type ReactNode } from "react"
 
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { IconSizeProp } from "~lib/theme/types"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
@@ -45,8 +47,7 @@ const getDefaultProps = ({
   size: size ?? "md",
   margin: margin ?? "",
   padding: padding ?? "",
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank color means unset
-  color: color || undefined,
+  color: isNullOrEmptyString(color) ? undefined : color,
 })
 
 interface IconProps {
