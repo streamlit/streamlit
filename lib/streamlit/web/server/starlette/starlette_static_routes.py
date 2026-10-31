@@ -41,16 +41,16 @@ if TYPE_CHECKING:
 # Pattern for files that should not be cached (HTML and manifest.json)
 _NO_CACHE_PATTERN: Final = re.compile(r"(?:\.html$|^manifest\.json$)")
 
-# Reserved paths that should return 404 instead of index.html fallback. The
-# agent API's routes are among them because the app's HTML tells a reader
-# without JavaScript where to find them: appended to a page's URL rather than
-# the app's, the path would otherwise answer with the app's HTML and a 200,
-# which reads as success.
+# Reserved paths that return 404 instead of falling back to index.html. They
+# include the agent API routes, so a client that appends one to a page's URL
+# (such as `/page2/_stcore/agent/mcp`) gets a 404 rather than the app's HTML
+# and a 200, which would read as success.
 _RESERVED_STATIC_PATH_SUFFIXES: Final = (
     "_stcore/health",
     "_stcore/host-config",
     "_stcore/agent/interact",
     "_stcore/agent/openapi.json",
+    "_stcore/agent/mcp",
 )
 
 
@@ -63,7 +63,7 @@ def create_streamlit_static_handler(
     - SPA fallback (serving index.html on 404s for client-side routing)
     - Long-term caching of hashed assets
     - No-cache for HTML/manifest files
-    - Trailing slash redirect (301)
+    - Trailing slash redirect (301 for GET and HEAD, 308 for other methods)
     - Double-slash protection (400 for protocol-relative URL security)
     """
     from starlette.exceptions import HTTPException
@@ -106,8 +106,8 @@ def create_streamlit_static_handler(
                 await response(scope, receive, send)
                 return
 
-            # Handle trailing slash redirect: Returns 301 for paths with trailing
-            # slashes (except root "/" or mount root).
+            # Handle trailing slash redirect: Redirects paths with trailing
+            # slashes (except root "/" or mount root) to the path without them.
             # We replicate this for consistent URL handling and to avoid duplicate
             # content issues. When mounted (e.g., at "/app"), scope["path"] is the
             # full path "/app/" and scope["root_path"] is "/app", so we must not
@@ -119,15 +119,30 @@ def create_streamlit_static_handler(
                 if redirect_path == root_path:
                     await super().__call__(scope, receive, send)
                     return
-                # Build redirect URL without trailing slash
                 query_string = scope.get("query_string", b"")
-                if query_string:
-                    redirect_path += "?" + query_string.decode("latin-1")
-                response = RedirectResponse(
-                    url=redirect_path,
-                    status_code=301,
-                    headers={"Cache-Control": "no-cache"},
-                )
+                query = "?" + query_string.decode("latin-1") if query_string else ""
+                if scope["method"] in {"GET", "HEAD"}:
+                    response = RedirectResponse(
+                        url=redirect_path + query,
+                        status_code=301,
+                        headers={"Cache-Control": "no-cache"},
+                    )
+                else:
+                    # Clients turn a POST redirected with a 301 into a GET
+                    # without its body, so MCP SDKs don't follow one. A 308
+                    # keeps the method and the body, so a pasted MCP URL with
+                    # a trailing slash, such as `/_stcore/agent/mcp/`, still
+                    # connects. Its Location is relative (`../mcp`), so it
+                    # resolves against the URL the client called: behind a
+                    # proxy that strips a path prefix, an absolute path built
+                    # from scope["path"] would lose that prefix.
+                    trailing_slashes = len(path) - len(redirect_path)
+                    last_segment = redirect_path.rsplit("/", 1)[-1]
+                    response = RedirectResponse(
+                        url="../" * trailing_slashes + last_segment + query,
+                        status_code=308,
+                        headers={"Cache-Control": "no-cache"},
+                    )
                 await response(scope, receive, send)
                 return
 
@@ -140,7 +155,18 @@ def create_streamlit_static_handler(
             try:
                 response = await super().get_response(path, scope)
             except HTTPException as exc:
-                if exc.status_code != 404 or self._is_reserved(scope["path"]):
+                if self._is_reserved(scope["path"]):
+                    if path.replace("\\", "/") in _RESERVED_STATIC_PATH_SUFFIXES:
+                        # At the app's root, the static files' own answer
+                        # stands, such as a 405 for a `POST` to the health
+                        # check.
+                        raise
+                    # Appended to a page's URL, a reserved path is never a
+                    # static file, so it is a 404 for every method: a `POST`
+                    # from an MCP client would otherwise get the 405 that
+                    # static files answer to methods other than GET.
+                    raise HTTPException(status_code=404) from exc
+                if exc.status_code != 404:
                     raise
                 # Serve index.html for 404s (existing behavior):
                 response = FileResponse(self._index_path)

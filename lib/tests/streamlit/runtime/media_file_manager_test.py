@@ -1091,3 +1091,38 @@ def test_downloadable_file_marked_then_deleted_on_second_sweep() -> None:
 
     assert file_id not in manager._file_metadata
     storage_delete_spy.assert_called_once_with(file_id)
+
+
+@mock.patch(
+    "streamlit.runtime.media_file_manager._get_session_id",
+    MagicMock(return_value="mock_session_id"),
+)
+def test_read_file_returns_a_stored_file_and_never_runs_a_deferred_one() -> None:
+    """The in-memory storage reads a file back by id, with or without its
+    extension; a deferred download's placeholder id reads nothing, and its
+    callable does not run.
+    """
+    manager = MediaFileManager(MemoryMediaFileStorage("/media"))
+    url = manager.add(b"\x89PNG", "image/png", "1.2.3")
+    file_id = url.removeprefix("/media/").removesuffix(".png")
+    deferred = MagicMock(return_value=b"generated")
+    placeholder = manager.add_deferred(deferred, "text/csv", "1.2.4")
+
+    stored = manager.read_file(file_id)
+
+    assert manager.can_read_files is True
+    assert stored is not None
+    assert (stored.content, stored.mimetype) == (b"\x89PNG", "image/png")
+    assert manager.read_file(f"{file_id}.png") == stored
+    assert manager.read_file(placeholder) is None
+    assert manager.read_file("0" * 32) is None
+    deferred.assert_not_called()
+
+
+def test_read_file_needs_a_storage_that_can_return_files() -> None:
+    """A storage a host plugs in has no read, so the manager cannot read back."""
+    manager = MediaFileManager(MagicMock())
+
+    assert manager.can_read_files is False
+    with pytest.raises(MediaFileStorageError):
+        manager.read_file("0" * 32)

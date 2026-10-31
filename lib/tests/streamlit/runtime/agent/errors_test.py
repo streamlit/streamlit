@@ -92,3 +92,30 @@ def test_agent_request_error_defaults() -> None:
 
     assert error.session_id is None
     assert error.details == {}
+
+
+def test_mcp_catalog_lists_only_codes_no_http_route_returns() -> None:
+    """The MCP-only codes are their literal's, apart from the HTTP catalog,
+    and each has a one-line meaning.
+    """
+    codes = set(get_args(errors.McpErrorCode))
+
+    assert set(errors.MCP_ERROR_CATALOG) == codes
+    assert codes.isdisjoint(errors.ERROR_CATALOG)
+    for meaning in errors.MCP_ERROR_CATALOG.values():
+        assert meaning
+        assert "\n" not in meaning
+
+
+def test_error_body_carries_details_and_the_session_only_when_given() -> None:
+    """Details join the error object, and `session_id` sits beside it."""
+    bare = errors.error_body("unknown_file", "Gone.")
+    full = errors.error_body(
+        "unknown_page", "No page.", session_id="s_1", details={"pages": []}
+    )
+
+    assert bare == {"error": {"code": "unknown_file", "message": "Gone."}}
+    assert full == {
+        "error": {"code": "unknown_page", "message": "No page.", "pages": []},
+        "session_id": "s_1",
+    }
