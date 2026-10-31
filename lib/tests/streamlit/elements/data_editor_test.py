@@ -440,7 +440,7 @@ class DataEditorUtilTest(unittest.TestCase):
         # cleared or truncated one.
         assert df.iat[0, 0] in {pd.Timedelta(seconds=90), pd.Timedelta(seconds=90.5)}
 
-    # The 90.5s row widens the timedelta64[s] column, which pandas 3.1 deprecates.
+    # Pandas 3.1 warns when the 90.5s row widens the timedelta64[s] column.
     @pytest.mark.filterwarnings("ignore:Setting an item of incompatible dtype")
     def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
         """A finer-than-dtype duration row add must not crash the app."""

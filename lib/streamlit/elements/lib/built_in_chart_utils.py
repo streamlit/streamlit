@@ -610,8 +610,8 @@ def _maybe_reset_index(
 ) -> tuple[pd.DataFrame, str | None]:
     """Move the index into a column when the chart plots the index as x.
 
-    Return the dataframe and the x column name. Use the returned dataframe,
-    which may be a new object.
+    Return the dataframe to use, which may be a new object, and the x column
+    name.
     """
     if x_column is None and len(y_column_list) > 0:
         if df.index.name is None:
@@ -623,8 +623,9 @@ def _maybe_reset_index(
 
         df.index.name = x_column
         if dataframe_util.is_pandas_version_less_than("3.0.0"):
-            # Without Copy-on-Write (pandas < 3), reset_index() copies all
-            # data unless it runs in place. The caller passes a private copy.
+            # The caller passes a private copy, so mutating df is safe. Without
+            # Copy-on-Write (pandas < 3), only the in-place call avoids copying
+            # all data.
             df.reset_index(inplace=True)  # noqa: PD002
         else:
             # Copy-on-Write avoids the data copy, and pandas 3.1 deprecates
