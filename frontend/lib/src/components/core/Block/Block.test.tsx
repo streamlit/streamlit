@@ -1704,6 +1704,12 @@ describe("GridContainer Component", () => {
       expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
         "min-width: 848px"
       )
+      // Tracks that fit the port with no scrollbar gutter stay unscrolled
+      // vertically.
+      expect(screen.getByTestId("stGridScrollBody")).toHaveAttribute(
+        "data-test-scroll",
+        "false"
+      )
     } finally {
       restore()
     }
@@ -1744,6 +1750,34 @@ describe("GridContainer Component", () => {
       )
     } finally {
       restore()
+    }
+  })
+
+  it("scrolls a bounded no-wrap grid vertically when a horizontal scrollbar shortens the port", async () => {
+    // The 160px tracks fit the 160px border box. A classic horizontal
+    // scrollbar leaves 150px above it, so the bottom must scroll instead of
+    // being clipped by the cross-axis overflow.
+    const restoreWidths = mockGridAndPortWidths(900, 400)
+    const offsetSpy = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(160)
+    const clientSpy = vi
+      .spyOn(HTMLElement.prototype, "clientHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === "stGridScrollBody" ? 150 : 160
+      })
+    try {
+      renderBoundedNoWrapGrid()
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      await waitFor(() => {
+        expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+      expect(scrollBody).toHaveStyle("overflow-x: auto")
+    } finally {
+      clientSpy.mockRestore()
+      offsetSpy.mockRestore()
+      restoreWidths()
     }
   })
 

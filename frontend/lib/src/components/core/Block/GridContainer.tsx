@@ -300,9 +300,26 @@ const GridScrollport = ({
   const { values: contentHeights, elementRef: contentRef } =
     useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
   const observedPortWidth = portSize[1] ?? 0
+  // A classic horizontal scrollbar also sits inside the border box. Tracks
+  // that fit that box but not the height above the scrollbar would be cut
+  // off by the cross-axis `overflow-y: hidden`, with nothing to scroll, so
+  // the vertical decision subtracts the scrollbar.
+  const [horizontalScrollbarPx, setHorizontalScrollbarPx] = useState(0)
+  useLayoutEffect(() => {
+    const element = portRef.current
+    if (!bounded || !horizontalScroll || !element) {
+      setHorizontalScrollbarPx(0)
+      return
+    }
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Needed before the first paint so the last row is not clipped.
+    setHorizontalScrollbarPx(element.offsetHeight - element.clientHeight)
+  }, [bounded, horizontalScroll, portRef])
   const scroll =
     bounded &&
-    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portSize[0] ?? 0)
+    shouldEnableOverflowScroll(
+      contentHeights[0] ?? 0,
+      (portSize[0] ?? 0) - horizontalScrollbarPx
+    )
   // The grid inside this port grows to the track floor once horizontal
   // scrolling is on. Report the port's client width, not that grid and not
   // the border box: a classic vertical scrollbar sits inside the border box
