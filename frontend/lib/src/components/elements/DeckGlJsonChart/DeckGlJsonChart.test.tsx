@@ -20,6 +20,7 @@ import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { render } from "~lib/components/shared/ElementFullscreen/testUtils"
 import type * as GetColors from "~lib/theme/getColors"
@@ -351,7 +352,7 @@ describe("DeckGlJsonChart", () => {
       props: DeckGLProps
     ): DeckGlElementState["selection"] | undefined => {
       const raw = props.widgetMgr.getStringValue({ id: props.element.id })
-      if (raw === undefined) {
+      if (isNullOrEmptyString(raw)) {
         return undefined
       }
       return (JSON.parse(raw) as DeckGlElementState).selection

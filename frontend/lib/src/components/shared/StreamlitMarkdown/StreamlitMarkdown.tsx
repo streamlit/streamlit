@@ -441,7 +441,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
       const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
-      // A blank anchor is unset and is generated from the heading text.
+      // When the anchor is missing or empty, generate it from the heading text.
       const anchor = isNullOrEmptyString(propsAnchor)
         ? createAnchorFromText(textSource?.textContent ?? null)
         : propsAnchor
@@ -785,7 +785,7 @@ interface CustomHelpIconProps {
  */
 const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer the help parameter (context); fall back to the directive label
-  // when it is unset or blank.
+  // when it is unset or empty.
   const contextHelpText = useContext(HelpTextContext)
   const directiveLabel = typeof children === "string" ? children : ""
   const tooltipContent = isNullOrEmptyString(contextHelpText)

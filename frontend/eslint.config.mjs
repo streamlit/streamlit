@@ -708,7 +708,8 @@ export default defineConfig([
   // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
   // compare with `null` / `undefined` when the value is never empty. Other
   // directories stay on the base options until they are cleaned up. Globs
-  // resolve relative to this file, so they need the `lib/` prefix.
+  // resolve from the directory of the config ESLint loads. Linting `lib`
+  // loads this file, so these globs need the `lib/` prefix.
   {
     files: [
       "lib/src/components/elements/**/*.{ts,tsx}",
