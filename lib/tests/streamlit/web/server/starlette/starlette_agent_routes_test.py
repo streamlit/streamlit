@@ -174,7 +174,7 @@ def test_off_counts_nothing_the_route_would_refuse(
     assert counts == {}
 
 
-def test_on_the_route_leaves_counting_to_interact(
+def test_route_with_api_on_counts_nothing_itself(
     runtime: MagicMock, interact: AsyncMock
 ) -> None:
     """With the API on, the route counts nothing itself, neither a request it

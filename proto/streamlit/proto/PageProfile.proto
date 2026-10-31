@@ -60,12 +60,13 @@ message PageProfile {
 // browser was connected.
 message AgentApiUsage {
   // Random id of the server process, so that counts from different processes
-  // (restarts, replicas) are never mixed.
+  // (restarts, replicas, forked workers) are never mixed.
   string instance_id = 1;
   // Calls to the interact operation over HTTP, refused ones included. With the
   // API off, POSTs that pass the Host, Origin, and content-type checks.
   int64 http_interactions = 2;
-  // The same, for the MCP endpoint.
+  // Calls to the interact operation over MCP, refused ones included. With the
+  // API off, requests that pass the same checks as the HTTP route.
   int64 mcp_interactions = 3;
   // Agent sessions created.
   int64 sessions = 4;

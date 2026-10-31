@@ -15,9 +15,10 @@
 """Count agent API activity in this server process for the page profile.
 
 Browsers are the only telemetry sender, so the counts ride on the page profile
-each browser session reports after a run. They are cumulative and carry a
-random id of the process, so reports from restarts and replicas add up without
-counting anything twice.
+each browser session reports after a run. They are cumulative, so every later
+report repeats them, and they carry a random id of the process. Analysis takes
+each process's largest count and adds those up across restarts and replicas,
+which counts nothing twice.
 """
 
 from __future__ import annotations
@@ -50,7 +51,7 @@ _instance_id: str | None = None
 
 
 def record(counter: UsageCounter) -> None:
-    """Count one ``counter`` event, unless usage stats are off."""
+    """Increment ``counter`` by one, unless usage stats are off."""
     global _instance_id  # noqa: PLW0603
     # Read on every call, since `config.toml` can be reloaded while the server
     # runs: anything counted during an opt-out would be reported once usage
@@ -64,11 +65,7 @@ def record(counter: UsageCounter) -> None:
 
 
 def record_interaction(transport: Transport) -> None:
-    """Count one agent request on the counter for ``transport``, its route.
-
-    A route that refuses because the API is off calls this only after the Host,
-    Origin, and content-type checks pass, so a web page is never counted.
-    """
+    """Count one agent request on the counter for the route it arrived on."""
     record(_INTERACTION_COUNTERS[transport])
 
 

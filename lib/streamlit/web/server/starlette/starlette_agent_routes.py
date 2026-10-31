@@ -214,9 +214,9 @@ def _page_request_without_json(request: Request) -> bool:
 def _refusal_before_body(request: Request) -> tuple[errors.AgentErrorCode, str] | None:
     """The code and message to refuse ``request`` with before reading its body.
 
-    ``None`` when the request passes the Host, Origin and content-type checks.
-    Both the on and off paths run it, so with the API off only a request the
-    on path would pass is counted.
+    ``None`` when the request passes the Host, Origin, and content-type checks.
+    The route runs it whether or not the API is on, so with the API off it
+    counts only a request it would accept with the API on.
     """
     if _refused_host(request):
         return "host_not_allowed", _HOST_MESSAGE

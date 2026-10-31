@@ -105,7 +105,7 @@ message PageProfile {
 // browser was connected.
 message AgentApiUsage {
   // Random id of the server process, so that counts from different processes
-  // (restarts, replicas) are never mixed.
+  // (restarts, replicas, forked workers) are never mixed.
   string instance_id = 1;
   int64 http_interactions = 2;
   int64 mcp_interactions = 3;
@@ -142,7 +142,7 @@ _instance_id: str | None = None
 
 
 def record(counter: UsageCounter) -> None:
-    """Count one event, unless usage stats are off."""
+    """Increment ``counter`` by one, unless usage stats are off."""
     global _instance_id
     if not config.get_option("browser.gatherUsageStats"):
         return
@@ -153,7 +153,7 @@ def record(counter: UsageCounter) -> None:
 
 
 def record_interaction(transport: Transport) -> None:
-    """Count one agent request on the counter for ``transport``."""
+    """Count one agent request on the counter for the route it arrived on."""
     record(_INTERACTION_COUNTERS[transport])
 
 
@@ -174,8 +174,9 @@ def fill_page_profile(page_profile: PageProfile) -> None:
   another not yet. That skew is acceptable for telemetry.
 - **Cost:** one config read, one uncontended lock, and one dictionary increment per
   agent request, and one copy of three integers per page profile.
-  `streamlit.runtime.agent` imports nothing at package level, so `metrics_util` gains
-  no import cost.
+  `streamlit.runtime.agent` imports nothing at package level, and `usage.py` imports
+  only modules `metrics_util` already loads, so `metrics_util` gains only the cost of
+  that one small module.
 
 ### Analysis
 
