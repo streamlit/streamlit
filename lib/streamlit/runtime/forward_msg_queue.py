@@ -280,4 +280,7 @@ def _update_script_finished_message(
         or msg.script_finished != ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
     ):
         msg.script_finished = ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    # Status rewrites leave metadata (including run identity) on the same
+    # message so the frontend still attributes this finish to the run that
+    # produced it.
     return msg

@@ -182,6 +182,11 @@ export interface Props {
   isMobileViewport: boolean
 }
 
+interface FinishedRun {
+  scriptRunId: string
+  fragmentIds: string[]
+}
+
 interface State {
   connectionState: ConnectionState
   elements: AppRoot
@@ -1152,7 +1157,10 @@ export class App extends PureComponent<Props, State> {
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
-          this.handleScriptFinished(status),
+          this.handleScriptFinished(
+            status,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
@@ -2037,10 +2045,33 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Run identity from a script_finished message. Undefined when omitted;
+   * cleanup and cache aging then stay no-ops rather than guessing from React state.
+   */
+  private getFinishedRun(
+    metadata?: ForwardMsgMetadata | null
+  ): FinishedRun | undefined {
+    const scriptRunId = metadata?.scriptRunId
+    if (!scriptRunId) {
+      return undefined
+    }
+    return {
+      scriptRunId,
+      fragmentIds: metadata.fragmentIdsThisRun,
+    }
+  }
+
+  /**
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
+   * @param metadata identity of the backend execution that finished, when present
    */
-  handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+  handleScriptFinished(
+    status: ForwardMsg.ScriptFinishedStatus,
+    metadata?: ForwardMsgMetadata | null
+  ): void {
+    const finishedRun = this.getFinishedRun(metadata)
+
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
@@ -2049,7 +2080,7 @@ export class App extends PureComponent<Props, State> {
     // re-enable even when a run ends with a compilation error.
     this.setState(prevState => ({
       scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
+      scriptRunFinishedFragmentIds: finishedRun?.fragmentIds ?? [],
     }))
 
     // Clear history replaceState only on a real finish for the latest
@@ -2084,9 +2115,10 @@ export class App extends PureComponent<Props, State> {
       })
 
       if (
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        finishedRun &&
+        (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+          status ===
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
       ) {
         // Clear any stale elements left over from the previous run.
         // We only do that for completed runs, not for runs that were finished early
@@ -2096,42 +2128,41 @@ export class App extends PureComponent<Props, State> {
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun, elements }) => {
-            return {
-              // Apply any pending elements that haven't been applied.
-              elements: elements.clearStaleNodes(
-                scriptRunId,
-                fragmentIdsThisRun
-              ),
-            }
-          },
+          ({ elements }) => ({
+            // Cleanup is pinned to the run named by the server. React
+            // batching cannot retarget it to a later NewSession.
+            elements: elements.clearStaleNodes(
+              finishedRun.scriptRunId,
+              finishedRun.fragmentIds
+            ),
+          }),
           () => {
             this.removeInactiveWidgetState()
           }
         )
-      }
 
-      // Tell the ConnectionManager to increment the message cache run
-      // count. This will result in expired ForwardMsgs being removed from
-      // the cache. We expect the sessionInfo to be populated at this point,
-      // but we have observed race conditions tied to a rerun occurring
-      // before a NewSession message is processed. This issue should not
-      // disrupt users and is not a critical need for the message cache
-      if (
-        this.connectionManager !== null &&
-        status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
-        this.sessionInfo.isSet &&
-        // We only increment the message cache run count if we have received
-        // a NewSession message after the latest rerun request. This is done
-        // to ignore finished messages from previous script runs, which would
-        // cause issues with deleting cached messages that are needed for the
-        // current script run.
-        this.hasReceivedNewSession
-      ) {
-        this.connectionManager.incrementMessageCacheRunCount(
-          this.sessionInfo.current.maxCachedMessageAge,
-          this.state.fragmentIdsThisRun
-        )
+        // Tell the ConnectionManager to increment the message cache run
+        // count. This will result in expired ForwardMsgs being removed from
+        // the cache. We expect the sessionInfo to be populated at this point,
+        // but we have observed race conditions tied to a rerun occurring
+        // before a NewSession message is processed. This issue should not
+        // disrupt users and is not a critical need for the message cache
+        if (
+          this.connectionManager !== null &&
+          this.sessionInfo.isSet &&
+          // We only increment the message cache run count if we have received
+          // a NewSession message after the latest rerun request. This is done
+          // to ignore finished messages from previous script runs, which would
+          // cause issues with deleting cached messages that are needed for the
+          // current script run. Read the flag now, not in a setState callback:
+          // a later NewSession can set it before React commits.
+          this.hasReceivedNewSession
+        ) {
+          this.connectionManager.incrementMessageCacheRunCount(
+            this.sessionInfo.current.maxCachedMessageAge,
+            finishedRun.fragmentIds
+          )
+        }
       }
     }
   }

@@ -57,6 +57,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -1324,6 +1325,116 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
+    async def test_start_and_finish_use_the_same_run_descriptor(self):
+        """NewSession and script_finished must share the runner's descriptor."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        run_descriptor = RunDescriptor(
+            script_run_id="run-a",
+            fragment_ids_this_run=("frag-a",),
+        )
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["frag-a"],
+            run_descriptor=run_descriptor,
+        )
+        await asyncio.sleep(0)
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            run_descriptor=run_descriptor,
+        )
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        new_session_msgs = [
+            m for m in sent_messages if m.WhichOneof("type") == "new_session"
+        ]
+        finished_msgs = [
+            m for m in sent_messages if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(new_session_msgs) == 1
+        assert len(finished_msgs) == 1
+        assert new_session_msgs[0].new_session.script_run_id == "run-a"
+        assert list(new_session_msgs[0].new_session.fragment_ids_this_run) == ["frag-a"]
+        assert finished_msgs[0].script_finished == (
+            ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        assert finished_msgs[0].metadata.script_run_id == "run-a"
+        assert list(finished_msgs[0].metadata.fragment_ids_this_run) == ["frag-a"]
+
+    async def test_adjacent_runs_keep_distinct_matching_descriptors(self):
+        """Back-to-back runs enqueue matching start/finish identity per run."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        run_a = RunDescriptor(script_run_id="run-a", fragment_ids_this_run=("frag-a",))
+        run_b = RunDescriptor(script_run_id="run-b", fragment_ids_this_run=("frag-b",))
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["frag-a"],
+            run_descriptor=run_a,
+        )
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            run_descriptor=run_a,
+        )
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STARTED,
+            page_script_hash="",
+            fragment_ids_this_run=["frag-b"],
+            run_descriptor=run_b,
+        )
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            run_descriptor=run_b,
+        )
+        await asyncio.sleep(0)
+
+        sent_messages = session._browser_queue._queue
+        new_session_ids = [
+            m.new_session.script_run_id
+            for m in sent_messages
+            if m.WhichOneof("type") == "new_session"
+        ]
+        finished_ids = [
+            m.metadata.script_run_id
+            for m in sent_messages
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert new_session_ids == ["run-a", "run-b"]
+        assert finished_ids == ["run-a", "run-b"]
+        assert [
+            list(m.new_session.fragment_ids_this_run)
+            for m in sent_messages
+            if m.WhichOneof("type") == "new_session"
+        ] == [
+            ["frag-a"],
+            ["frag-b"],
+        ]
+        assert [
+            list(m.metadata.fragment_ids_this_run)
+            for m in sent_messages
+            if m.WhichOneof("type") == "script_finished"
+        ] == [
+            ["frag-a"],
+            ["frag-b"],
+        ]
+
     async def test_updates_page_script_hash_in_client_state_on_script_start(self):
         session = _create_test_session(asyncio.get_running_loop())
         session._client_state.page_script_hash = "some_page_script_hash"
@@ -1483,6 +1594,11 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         # AppSessionState values for our AppSession to build the list.
         expected_events = []
 
+        exception_run = RunDescriptor(
+            script_run_id="mock_scriptrun_id",
+            fragment_ids_this_run=(),
+        )
+
         with patch.object(session, "_state", new=AppSessionState.APP_IS_RUNNING):
             expected_events.extend(
                 [
@@ -1490,7 +1606,9 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
                     CLEAR_QUEUE,
-                    session._create_new_session_message(page_script_hash=""),
+                    session._create_new_session_message(
+                        page_script_hash="", run_descriptor=exception_run
+                    ),
                     session._create_session_status_changed_message(),
                 ]
             )
@@ -1499,7 +1617,8 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             expected_events.extend(
                 [
                     session._create_script_finished_message(
-                        ForwardMsg.FINISHED_SUCCESSFULLY
+                        ForwardMsg.FINISHED_SUCCESSFULLY,
+                        run_descriptor=exception_run,
                     ),
                     session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),

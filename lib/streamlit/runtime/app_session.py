@@ -53,6 +53,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -607,13 +608,20 @@ class AppSession:
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
+        exception_run = RunDescriptor(
+            script_run_id=_generate_scriptrun_id(),
+            fragment_ids_this_run=(),
+        )
         self._on_scriptrunner_event(
             self._scriptrunner,
             ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=exception_run,
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            run_descriptor=exception_run,
         )
 
         # Send an Exception message to the frontend.
@@ -943,6 +951,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -960,6 +969,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                run_descriptor,
             )
         )
 
@@ -987,6 +997,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -1023,6 +1034,10 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        run_descriptor : RunDescriptor | None
+            Immutable identity of the top-level execution that started or
+            finished. Set for SCRIPT_STARTED and matching terminal events.
         """
 
         if (
@@ -1062,7 +1077,10 @@ class AppSession:
             self._clear_queue(fragment_ids_this_run)
 
             msg = self._create_new_session_message(
-                page_script_hash, fragment_ids_this_run, pages
+                page_script_hash,
+                fragment_ids_this_run,
+                pages,
+                run_descriptor=run_descriptor,
             )
 
             self._enqueue_forward_msg(msg)
@@ -1082,7 +1100,11 @@ class AppSession:
             else:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            self._enqueue_forward_msg(self._create_script_finished_message(status))
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(
+                    status, run_descriptor=run_descriptor
+                )
+            )
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -1112,7 +1134,8 @@ class AppSession:
             self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(
                 self._create_script_finished_message(
-                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN,
+                    run_descriptor=run_descriptor,
                 )
             )
             if self._local_sources_watcher:
@@ -1173,18 +1196,25 @@ class AppSession:
         page_script_hash: str,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
 
-        msg.new_session.script_run_id = _generate_scriptrun_id()
+        if run_descriptor is not None:
+            msg.new_session.script_run_id = run_descriptor.script_run_id
+            fragment_ids = list(run_descriptor.fragment_ids_this_run)
+        else:
+            msg.new_session.script_run_id = _generate_scriptrun_id()
+            fragment_ids = list(fragment_ids_this_run or ())
+
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._pages_manager.main_script_path
         msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
 
-        if fragment_ids_this_run:
-            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
+        if fragment_ids:
+            msg.new_session.fragment_ids_this_run.extend(fragment_ids)
 
         self._populate_app_pages(
             msg.new_session, pages or self._pages_manager.get_pages()
@@ -1308,11 +1338,18 @@ class AppSession:
             return False, ""
 
     def _create_script_finished_message(
-        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
+        self,
+        status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
         """Create and return a script_finished ForwardMsg."""
         msg = ForwardMsg()
         msg.script_finished = status
+        if run_descriptor is not None:
+            msg.metadata.script_run_id = run_descriptor.script_run_id
+            msg.metadata.fragment_ids_this_run.extend(
+                run_descriptor.fragment_ids_this_run
+            )
         return msg
 
     def _create_exception_message(self, e: BaseException) -> ForwardMsg:

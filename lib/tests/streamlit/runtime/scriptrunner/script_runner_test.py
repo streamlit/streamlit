@@ -51,6 +51,7 @@ from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
+    RunDescriptor,
     ScriptRunner,
     ScriptRunnerEvent,
     StopException,
@@ -498,6 +499,14 @@ class ScriptRunnerTest(unittest.TestCase):
 
         Runtime._instance.media_file_mgr.clear_session_refs.assert_called_once()
 
+        started = scriptrunner.event_data[0]["run_descriptor"]
+        finished = scriptrunner.event_data[
+            scriptrunner.events.index(ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS)
+        ]["run_descriptor"]
+        assert isinstance(started, RunDescriptor)
+        assert started == finished
+        assert started.fragment_ids_this_run == ()
+
     def test_run_one_fragment(self):
         """Tests that we can run one fragment."""
         fragment = MagicMock()
@@ -522,6 +531,13 @@ class ScriptRunnerTest(unittest.TestCase):
         script_started_event_data["fragment_ids_this_run"] = ["my_fragment"]
 
         fragment.assert_called_once()
+
+        started = scriptrunner.event_data[0]["run_descriptor"]
+        finished = scriptrunner.event_data[
+            scriptrunner.events.index(ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS)
+        ]["run_descriptor"]
+        assert started == finished
+        assert started.fragment_ids_this_run == ("my_fragment",)
 
     def test_run_multiple_fragments(self):
         """Tests that we can run fragments."""
@@ -1274,6 +1290,56 @@ class ScriptRunnerTest(unittest.TestCase):
             ],
         )
         self._assert_text_deltas(scriptrunner, [])
+
+        started = scriptrunner.event_data[0]["run_descriptor"]
+        finished = scriptrunner.event_data[
+            scriptrunner.events.index(
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
+            )
+        ]["run_descriptor"]
+        assert started == finished
+
+    def test_adjacent_runs_keep_distinct_matching_descriptors(self):
+        """A rerun gets a new descriptor; each start matches its own finish."""
+        scriptrunner = TestScriptRunner("widgets_script.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        require_widgets_deltas([scriptrunner])
+        scriptrunner.request_rerun(RerunData())
+        t0 = time.time()
+        while time.time() - t0 < 5:
+            if scriptrunner.events.count(ScriptRunnerEvent.SCRIPT_STARTED) >= 2:
+                break
+            time.sleep(0.05)
+        scriptrunner.request_stop()
+        scriptrunner.join()
+
+        started_events = [
+            (event, data)
+            for event, data in zip(
+                scriptrunner.events, scriptrunner.event_data, strict=True
+            )
+            if event == ScriptRunnerEvent.SCRIPT_STARTED
+        ]
+        finished_events = [
+            (event, data)
+            for event, data in zip(
+                scriptrunner.events, scriptrunner.event_data, strict=True
+            )
+            if event
+            in {
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+            }
+        ]
+        assert len(started_events) == 2
+        assert len(finished_events) == 2
+        first_descriptor = started_events[0][1]["run_descriptor"]
+        second_descriptor = started_events[1][1]["run_descriptor"]
+        assert first_descriptor == finished_events[0][1]["run_descriptor"]
+        assert second_descriptor == finished_events[1][1]["run_descriptor"]
+        assert first_descriptor != second_descriptor
 
     @patch("streamlit.runtime.scriptrunner.script_runner.create_page_profile_message")
     def test_uncaught_exception_gets_tracked(self, patched_create_page_profile_message):

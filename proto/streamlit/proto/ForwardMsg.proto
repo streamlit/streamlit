@@ -202,6 +202,14 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
+  // Identifies the backend execution that produced a lifecycle message.
+  // Populated on script_finished so the frontend can attribute cleanup to the
+  // run that actually finished, not whichever run React state has committed.
+  string script_run_id = 6;
+
+  // Fragment roots selected for that execution. Empty means a full-app run.
+  repeated string fragment_ids_this_run = 7;
+
   reserved 3;
 }
 

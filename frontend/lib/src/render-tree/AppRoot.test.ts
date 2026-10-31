@@ -1320,6 +1320,52 @@ describe("AppRoot", () => {
       ).toHaveLength(3)
     })
 
+    it("keeps run A cleanup scoped to A after run B nodes exist", () => {
+      // Mirror #16708: enclosing fragment A renders a nested child, then A
+      // reruns without that child, then unrelated fragment B writes. Finish
+      // cleanup for A2 must drop A's stale nested node and keep B.
+      const enclosingA = makeProto(DeltaProto, {
+        addBlock: { vertical: {}, allowEmpty: true },
+        fragmentId: "frag_a",
+      })
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH)
+        .applyDelta("run_a", enclosingA, forwardMsgMetadata([0, 0]))
+        .applyDelta(
+          "run_a",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "stale nested from A" } },
+            fragmentId: "frag_a",
+          }),
+          forwardMsgMetadata([0, 0, 0])
+        )
+        .applyDelta("run_a2", enclosingA, forwardMsgMetadata([0, 0]))
+        .applyDelta(
+          "run_b",
+          makeProto(DeltaProto, {
+            addBlock: { vertical: {}, allowEmpty: true },
+            fragmentId: "frag_b",
+          }),
+          forwardMsgMetadata([0, 1])
+        )
+        .applyDelta(
+          "run_b",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "from B" } },
+            fragmentId: "frag_b",
+          }),
+          forwardMsgMetadata([0, 1, 0])
+        )
+
+      const pruned = root.clearStaleNodes("run_a2", ["frag_a"])
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 0])
+      ).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1, 0])
+      ).toBeTextNode("from B")
+    })
+
     it("uses ClearStaleNodeVisitor internally", () => {
       // Create a more complex tree with multiple nodes
       const delta1 = makeProto(DeltaProto, {
