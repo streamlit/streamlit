@@ -85,72 +85,6 @@ interface GridContainerProps extends BaseBlockProps {
 const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
 const HEIGHT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
 const PORT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height", "width"]
-// Descendants only. The scroll body itself is not included, so giving it
-// tabIndex={0} does not count as an existing tab stop. Native tab stops
-// that are not form controls are included so a media or iframe scrollport
-// does not add a second stop.
-const FOCUSABLE_DESCENDANT = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "summary:not([tabindex='-1'])",
-  "iframe:not([tabindex='-1'])",
-  "audio[controls]:not([tabindex='-1'])",
-  "video[controls]:not([tabindex='-1'])",
-  "[contenteditable]:not([contenteditable='false']):not([tabindex='-1'])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(", ")
-
-/**
- * Returns whether an active scrollport needs `tabIndex={0}` so keyboard
- * users can scroll it. This is false when the port already has a focusable
- * descendant, because those controls are the tab stops. No `role="region"`:
- * every cell would become a landmark with the same name.
- *
- * `dependency` re-runs the check when the React child list changes. The
- * observer covers later DOM mounts, including widgets that load lazily.
- */
-function useNeedsKeyboardScrollStop(
-  active: boolean,
-  elementRef: { readonly current: HTMLElement | null },
-  dependency: unknown
-): boolean {
-  const [needsTabStop, setNeedsTabStop] = useState(false)
-  const needsTabStopRef = useRef(false)
-  useLayoutEffect(() => {
-    const element = elementRef.current
-    const publish = (next: boolean): void => {
-      if (needsTabStopRef.current === next) {
-        return
-      }
-      needsTabStopRef.current = next
-      setNeedsTabStop(next)
-    }
-    if (!active || !element) {
-      publish(false)
-      return
-    }
-
-    // Widgets such as buttons load lazily. A check that only runs when the
-    // React child list changes misses that mount and leaves an extra tab stop.
-    const update = (): void => {
-      publish(element.querySelector(FOCUSABLE_DESCENDANT) === null)
-    }
-    update()
-
-    const observer = new MutationObserver(update)
-    observer.observe(element, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["disabled", "href", "tabindex"],
-    })
-    return () => observer.disconnect()
-  }, [active, elementRef, dependency])
-  return needsTabStop
-}
 
 interface GridCellProps {
   hasFixedRowHeight: boolean
@@ -237,13 +171,6 @@ const GridCell = ({
   const bodyRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const scroll = useCellOverflowScroll(hasFixedRowHeight, bodyRef, contentRef)
-  // A text-only scrollport is not in the tab order. Widgets already inside
-  // the cell are, so do not add a second stop in that case.
-  const keyboardScrollTarget = useNeedsKeyboardScrollStop(
-    scroll,
-    bodyRef,
-    children
-  )
 
   return (
     <StyledGridCell
@@ -261,7 +188,6 @@ const GridCell = ({
         $passthrough={!hasFixedRowHeight}
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
-        tabIndex={keyboardScrollTarget ? 0 : undefined}
       >
         <StyledGridCellContent
           ref={hasFixedRowHeight ? contentRef : undefined}
@@ -288,7 +214,6 @@ const GridScrollport = ({
   horizontalScroll,
   trackMinWidthPx,
   onPortWidthPx,
-  scrollTargetDependency,
   children,
 }: {
   bounded: boolean
@@ -296,9 +221,6 @@ const GridScrollport = ({
   horizontalScroll: boolean
   trackMinWidthPx?: number
   onPortWidthPx?: (widthPx: number) => void
-  // Stable identity for the keyboard-scroll effect. The element `children`
-  // is a new object on every parent render.
-  scrollTargetDependency?: unknown
   children: ReactNode
 }): ReactElement => {
   const { values: portSize, elementRef: portRef } =
@@ -356,11 +278,6 @@ const GridScrollport = ({
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Width is needed before the first paint.
     onPortWidthPx(element.clientWidth)
   }, [bounded, observedPortWidth, scroll, onPortWidthPx, portRef])
-  const keyboardScrollTarget = useNeedsKeyboardScrollStop(
-    bounded && (scroll || horizontalScroll),
-    portRef,
-    scrollTargetDependency
-  )
 
   return (
     <StyledGridScrollBody
@@ -370,7 +287,6 @@ const GridScrollport = ({
       $bounded={bounded}
       data-testid="stGridScrollBody"
       data-test-scroll={String(scroll)}
-      tabIndex={keyboardScrollTarget ? 0 : undefined}
     >
       <StyledGridContentMeasure
         ref={bounded ? contentRef : undefined}
@@ -670,11 +586,6 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
   )
   const boundedScrollMinWidthPx =
     gridHasBoundedHeight && horizontalScroll ? tracksMinWidthPx : undefined
-  const gridKeyboardScrollTarget = useNeedsKeyboardScrollStop(
-    !gridHasBoundedHeight && horizontalScroll,
-    elementRef,
-    childrenWithCells
-  )
 
   // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
@@ -733,7 +644,6 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
       wrap={wrap}
       horizontalScroll={horizontalScroll}
       trackMinWidthPx={boundedScrollMinWidthPx}
-      scrollTargetDependency={wrappedChildren}
       onPortWidthPx={handlePortWidthPx}
     >
       <StyledGridContainerBlock
@@ -754,7 +664,6 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
         data-testid="stGrid"
         data-test-column-count={columnCount}
         data-test-wrap={String(wrap)}
-        tabIndex={gridKeyboardScrollTarget ? 0 : undefined}
       >
         {wrappedChildren}
       </StyledGridContainerBlock>

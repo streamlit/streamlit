@@ -1433,7 +1433,7 @@ describe("GridContainer Component", () => {
     expect(getComputedStyle(gridContainer).paddingTop).toBe("")
   })
 
-  it("makes a text-only overflowing no-wrap grid keyboard scrollable", async () => {
+  it("scrolls a text-only no-wrap grid without adding a tab stop", () => {
     const block = makeGridBlock(
       {
         columns: 4,
@@ -1444,83 +1444,10 @@ describe("GridContainer Component", () => {
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
+    // Like st.container(height=...), a scrolling grid is not a tab stop.
     const gridContainer = screen.getByTestId("stGrid")
-    await waitFor(() => {
-      expect(gridContainer).toHaveAttribute("tabindex", "0")
-    })
-    expect(gridContainer).not.toHaveAttribute("role")
-  })
-
-  it("does not add a tab stop when a scrolling grid contains an iframe", async () => {
-    const block = makeGridBlock(
-      {
-        columns: 4,
-        minColumnWidthPx: 200,
-        wrap: false,
-      },
-      [makeTextElement("Note")]
-    )
-    renderWithContexts(makeGridNodeRendererComponent(block))
-
-    const gridContainer = screen.getByTestId("stGrid")
-    await waitFor(() => {
-      expect(gridContainer).toHaveAttribute("tabindex", "0")
-    })
-
-    const iframe = document.createElement("iframe")
-    iframe.title = "Embedded"
-    gridContainer.appendChild(iframe)
-
-    await waitFor(() => {
-      expect(gridContainer).not.toHaveAttribute("tabindex")
-    })
-  })
-
-  it("keeps a tab stop when the only iframe is removed from tab order", async () => {
-    const block = makeGridBlock(
-      {
-        columns: 4,
-        minColumnWidthPx: 200,
-        wrap: false,
-      },
-      [makeTextElement("Note")]
-    )
-    renderWithContexts(makeGridNodeRendererComponent(block))
-
-    const gridContainer = screen.getByTestId("stGrid")
-    await waitFor(() => {
-      expect(gridContainer).toHaveAttribute("tabindex", "0")
-    })
-
-    const iframe = document.createElement("iframe")
-    iframe.title = "Embedded"
-    iframe.tabIndex = -1
-    gridContainer.appendChild(iframe)
-
-    await waitFor(() => {
-      expect(gridContainer).toHaveAttribute("tabindex", "0")
-    })
-  })
-
-  it("does not add a tab stop on a no-wrap grid that already has a widget", async () => {
-    const block = makeGridBlock(
-      {
-        columns: 4,
-        minColumnWidthPx: 200,
-        wrap: false,
-      },
-      [makeButton("Edit")]
-    )
-    renderWithContexts(makeGridNodeRendererComponent(block))
-
-    const gridContainer = screen.getByTestId("stGrid")
-    await waitFor(() => {
-      expect(gridContainer).toHaveStyle("overflow-x: auto")
-      // The button mounts lazily. The scrollport must drop its own tab stop
-      // once that button is a descendant.
-      expect(screen.getByRole("button", { name: "Edit" })).toBeVisible()
-      expect(gridContainer).not.toHaveAttribute("tabindex")
-    })
+    expect(gridContainer).toHaveStyle("overflow-x: auto")
+    expect(gridContainer).not.toHaveAttribute("tabindex")
   })
 
   it("grows a stretch-height grid with its content instead of scrolling", () => {
@@ -2013,16 +1940,15 @@ describe("GridContainer Component", () => {
     )
   }
 
-  it("makes a text-only scrolling cell keyboard reachable", async () => {
+  it("scrolls a text-only fixed-height cell without adding a tab stop", async () => {
     const restore = mockMeasuredHeights()
     try {
       renderFixedHeightCell([makeTextElement("A long note")])
       const body = screen.getByTestId("stGridCellBody")
       await waitFor(() => {
-        expect(body).toHaveAttribute("tabindex", "0")
+        expect(body).toHaveAttribute("data-test-scroll", "true")
       })
-      expect(body).not.toHaveAttribute("role")
-      expect(body).not.toHaveAttribute("aria-label")
+      expect(body).not.toHaveAttribute("tabindex")
     } finally {
       restore()
     }
@@ -2039,23 +1965,6 @@ describe("GridContainer Component", () => {
       expect(body).toHaveStyle(
         "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
       )
-    } finally {
-      restore()
-    }
-  })
-
-  it("does not add a tab stop when a scrolling cell already has a widget", async () => {
-    const restore = mockMeasuredHeights()
-    try {
-      renderFixedHeightCell([makeButton("Edit")])
-      const body = screen.getByTestId("stGridCellBody")
-      await waitFor(() => {
-        expect(body).toHaveAttribute("data-test-scroll", "true")
-        // The button mounts lazily. The cell must drop its own tab stop
-        // once that button is inside the scrollport.
-        expect(screen.getByRole("button", { name: "Edit" })).toBeVisible()
-        expect(body).not.toHaveAttribute("tabindex")
-      })
     } finally {
       restore()
     }

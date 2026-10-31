@@ -506,8 +506,10 @@ provide. Sequential container semantics preserve reading and tab order.
 
 Wrapping and `wrap=False` change layout, not source order. Keyboard focus must scroll a
 horizontally off-screen cell into view, as in the wrap spec. A definite-height row can
-overflow inside the cell; that overflow must be keyboard-scrollable, and focused
-descendants must be brought into view.
+overflow inside the cell, and focused descendants must be brought into view. A scrolling
+cell or grid adds no tab stop of its own, matching `st.container(height=...)`. Keyboard
+access to scroll areas without focusable content is a follow-up for all scroll containers,
+not a grid-only fix.
 
 `dense` is a boolean because there is no third state to grow into (the Principle 16
 exception): backfill gaps or don't. CSS `grid-auto-flow` also selects a `row` or `column`
@@ -865,7 +867,7 @@ cell; `height="stretch"` on the grid does nothing at page top.
 | Metrics collected | ✅ Add `gather_metrics("grid")`; optionally track coarse non-content options such as `columns` mode, `wrap`, `border`, `dense`, and `height` / `row_height` mode. Height modes tell us whether the dashboard use case is being adopted. |
 | Any security/legal impact? | None expected. Layout-only feature; no new content execution path. |
 | Any docs changes needed? | ✅ Add API docs and update layout guide/examples. |
-| Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). `dense` stays opt-in (`False` by default) and ships only with that check. No ARIA `grid`/`row`/`gridcell`. Integer `row_height` overflow is keyboard-scrollable. See [Accessibility](#accessibility). |
+| Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). `dense` stays opt-in (`False` by default) and ships only with that check. No ARIA `grid`/`row`/`gridcell`. Scrolling cells follow `st.container(height=...)` keyboard behavior. See [Accessibility](#accessibility). |
 | First-paint column count | Estimate the grid width as `contentMaxWidth` minus `2 * theme.spacing.lg` (704px at the default layout), not the raw 736px content max width. `st.grid(4)` is 3 columns either way; other floors can paint one count and then jump. See [Responsive placement](#responsive-placement). |
 | Fragment cells | A fragment called as a direct child is one cell, because it wraps its output in a container. A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
 | Depends on other work? | `st.card` is planned as a separate spec and is not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate. This PR adds `st.grid` to the wrap spec's command table (`wrap=False` keeps column tracks in one row, not cells) and a grid-cell row to its `wrap=None` table (resolves to `False`, like a column). |
