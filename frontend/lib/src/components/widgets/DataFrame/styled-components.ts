@@ -34,6 +34,15 @@ export const StyledResizableContainer =
       display: disableResize ? "flex" : "inline-block",
       height: "100%",
 
+      "@media print": {
+        // The grid keeps the pixel width it measured on screen, and its
+        // canvas paints that full width. Clip it to its container, so a grid
+        // wider than the printed card does not spill past the border.
+        // `clip` does not make a scroll container, unlike `hidden`.
+        maxWidth: "100%",
+        overflow: "clip",
+      },
+
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
         minWidth: "100%",

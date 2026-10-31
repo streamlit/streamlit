@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { createElement } from "react"
+
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
 import type { Mock, MockInstance } from "vitest"
@@ -28,6 +30,7 @@ import GraphVizChart, {
   LOG,
   sanitizeGraphVizLinkUris,
 } from "./GraphVizChart"
+import { StyledGraphVizChart } from "./styled-components"
 
 interface MockGraphvizChain {
   zoom: () => MockGraphvizChain
@@ -293,5 +296,24 @@ describe("GraphVizChart Element", () => {
     sanitizeGraphVizLinkUris(container)
 
     expect(link.getAttribute("xlink:href")).toBe("#")
+  })
+})
+
+describe("StyledGraphVizChart print layout", () => {
+  it("prints the svg as a block so it stays in the flow", () => {
+    const before = document.querySelectorAll("style").length
+    render(
+      createElement(StyledGraphVizChart, {
+        shouldUseFullWidth: true,
+        shouldUseFullHeight: false,
+      })
+    )
+    const css = [...document.querySelectorAll("style")]
+      .slice(before)
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain("display:block")
   })
 })

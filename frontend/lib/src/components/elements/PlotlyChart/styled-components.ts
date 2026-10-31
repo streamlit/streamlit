@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapRules,
+} from "~lib/components/shared/printWidthCap"
+
 interface StyledPlotlyChartContainerProps {
   /**
    * Whether the container is size-contained, so the rendered plot can't feed
@@ -39,5 +44,25 @@ export const StyledPlotlyChartContainer =
         containIntrinsicHeight:
           fallbackHeight === undefined ? "none" : `${fallbackHeight}px`,
       }),
+      "@media print": {
+        // Plotly writes a pixel width from the on-screen layout. Cap it so a
+        // narrower printed page does not spill the plot out of its column.
+        ...printWidthCapRules,
+        // Print can release the parent's height, for example when a
+        // fixed-height horizontal container stacks its children. Contain
+        // only the width, so the plot takes the height it rendered at
+        // instead of collapsing.
+        ...(isSizeContained && { contain: "inline-size" }),
+      },
+      "& .js-plotly-plot, & .svg-container": {
+        "@media print": {
+          width: "100% !important",
+          maxWidth: "100% !important",
+        },
+      },
+      // Cap the layered SVGs to the column. They have no viewBox, so a plot
+      // wider than the printed column is cropped at the right edge rather
+      // than scaled.
+      "& .main-svg": printGraphicFitStyles,
     })
   )

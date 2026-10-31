@@ -96,6 +96,7 @@ export {
 } from "./components/shared/Modal/Modal"
 export { getBareEmbedOverlayToolbarPadding } from "./components/shared/Toolbar/overlayToolbarSpacing"
 export { CircularBuffer } from "./components/shared/Profiler/CircularBuffer"
+export { PRINT_INACTIVE_ATTRIBUTE } from "./components/shared/printPageBreak"
 export { Profiler } from "./components/shared/Profiler/Profiler"
 export { default as CopyButton } from "./components/shared/CopyButton/CopyButton"
 export { default as StreamlitMarkdown } from "./components/shared/StreamlitMarkdown/StreamlitMarkdown"

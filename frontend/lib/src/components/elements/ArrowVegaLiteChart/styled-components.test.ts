@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
+import { createElement } from "react"
+
 import { vi } from "vitest"
 
+import { render } from "~lib/test_util"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
   bindVegaRangeProgress,
   getVegaBindingStyles,
+  StyledVegaLiteChartContainer,
   syncVegaRangeProgress,
   VEGA_RANGE_PROGRESS_VAR,
 } from "./styled-components"
@@ -155,4 +159,58 @@ describe("bindVegaRangeProgress", () => {
     unbind()
     expect(removeSpy).not.toHaveBeenCalled()
   })
+})
+
+describe("StyledVegaLiteChartContainer print layout", () => {
+  it("fits an svg or canvas chart into its column when printing", () => {
+    const before = document.querySelectorAll("style").length
+    render(
+      createElement(StyledVegaLiteChartContainer, {
+        useContainerWidth: true,
+        useContainerHeight: false,
+        isSizeContained: false,
+        hasFallbackHeight: false,
+      })
+    )
+    const css = [...document.querySelectorAll("style")]
+      .slice(before)
+      .map(style => style.textContent ?? "")
+      .join("\n")
+
+    expect(css).toContain("@media print")
+    expect(css).toContain("svg.marks")
+    expect(css).toContain("canvas.marks")
+  })
+
+  it.each([
+    [true, false, false, true],
+    [true, true, false, false],
+    [true, false, true, false],
+    [false, false, false, false],
+  ])(
+    "scales a stretch-width chart up to a limit (width %s, container height %s, contained %s)",
+    (useContainerWidth, useContainerHeight, isSizeContained, scalesUp) => {
+      const { container } = render(
+        createElement(StyledVegaLiteChartContainer, {
+          useContainerWidth,
+          useContainerHeight,
+          isSizeContained,
+          hasFallbackHeight: false,
+        })
+      )
+      const classNames = [
+        ...(container.firstElementChild?.classList ?? []),
+      ].filter(className => className.startsWith("css-"))
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .filter(rule =>
+          classNames.some(className => rule.includes(`.${className}`))
+        )
+        .join("\n")
+
+      const upscaleRule =
+        "width:min(100%, calc(var(--st-print-screen-width, 100%) * 1.25))!important;height:auto!important"
+      expect(css.includes(upscaleRule)).toBe(scalesUp)
+    }
+  )
 })
