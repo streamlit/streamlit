@@ -34,7 +34,7 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.elements.lib import agent_spec
-from streamlit.runtime import Runtime, RuntimeConfig
+from streamlit.runtime import Runtime, RuntimeConfig, metrics_util
 from streamlit.runtime.agent import interaction, snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -1029,7 +1029,14 @@ async def test_usage_counts_every_interaction_and_each_session_created(
     """
     options["browser.gatherUsageStats"] = True
     options["server.agentMaxSessions"] = 1
-    with usage_counts.fresh():
+    # With usage stats on, a new session reads the machine id, which would be
+    # written under the test config's read-only home folder. A fresh
+    # installation with a fixed id keeps the test independent of test order.
+    with (
+        usage_counts.fresh(),
+        patch.object(metrics_util.Installation, "_instance", None),
+        patch.object(metrics_util, "_get_machine_id_v4", return_value="test-v4"),
+    ):
         async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
             created = await app.call()
             await app.call({"session_id": created["session_id"]})

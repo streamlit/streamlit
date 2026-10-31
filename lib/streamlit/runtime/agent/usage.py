@@ -78,7 +78,8 @@ def fill_page_profile(page_profile: PageProfile) -> None:
     with _lock:
         counts = dict(_counts)
         instance_id = _instance_id
-    if instance_id is None or not any(counts.values()):
+    # The id is created with the first count, so without one every count is zero.
+    if instance_id is None:
         return
     page_profile.agent_api_usage.instance_id = instance_id
     for name, value in counts.items():

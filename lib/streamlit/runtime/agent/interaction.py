@@ -593,8 +593,8 @@ async def interact(
     request : dict[str, Any]
         The parsed request body.
     transport : "http" or "mcp"
-        The route the request arrived on, whose counter this call increments
-        once, whatever its outcome.
+        The route the request arrived on. Each call counts once on this
+        transport's usage counter, whatever its outcome.
     user_info : UserInfoType
         What the deployment's trusted identity headers say about the caller,
         mapped the way the WebSocket maps them for a browser.
