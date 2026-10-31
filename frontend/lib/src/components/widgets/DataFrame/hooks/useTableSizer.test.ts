@@ -353,8 +353,7 @@ describe("useTableSizer hook", () => {
 
     expect(result.current.resizableSize.height).toEqual(CONFIGURED_HEIGHT)
 
-    // Enter fullscreen, then apply a later container measurement (the race
-    // that previously reset height back to the configured pixel value).
+    // Enter fullscreen without a new container measurement.
     rerender({
       fullscreenContainerHeight: CONTAINER_HEIGHT,
       isFullScreen: true,
@@ -363,6 +362,7 @@ describe("useTableSizer hook", () => {
     expect(result.current.maxHeight).toEqual(CONTAINER_HEIGHT)
     expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
 
+    // A later container measurement must not reset the configured pixel height.
     rerender({
       fullscreenContainerHeight: CONTAINER_HEIGHT,
       isFullScreen: true,
