@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import gc
 import threading
 import unittest
@@ -29,7 +30,7 @@ from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
@@ -62,10 +63,11 @@ from streamlit.runtime.scriptrunner import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.state.query_params import (
-    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
-    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
 )
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
@@ -75,7 +77,7 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 
@@ -89,6 +91,7 @@ def _create_test_session(
     event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
     is_hello: bool = False,
+    message_enqueued_callback: Callable[[], None] | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -108,7 +111,7 @@ def _create_test_session(
             script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
-            message_enqueued_callback=None,
+            message_enqueued_callback=message_enqueued_callback,
             user_info={"email": "test@example.com"},
             session_id_override=session_id_override,
         )
@@ -649,6 +652,26 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
         session.request_rerun.assert_called_once_with(session._client_state)
 
+    def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
+        """File-change notifications enqueue from the event-loop callback."""
+        session = _create_test_session()
+        session._run_on_save = False
+        session._call_soon_on_event_loop = MagicMock()
+        session._enqueue_forward_msg = MagicMock()
+
+        session._on_source_file_changed()
+
+        session._script_cache.clear.assert_called_once()
+        session._call_soon_on_event_loop.assert_called_once()
+        session._enqueue_forward_msg.assert_not_called()
+
+        scheduled_callback = session._call_soon_on_event_loop.call_args.args[0]
+        scheduled_callback()
+
+        session._enqueue_forward_msg.assert_called_once()
+        msg = session._enqueue_forward_msg.call_args.args[0]
+        assert msg.session_event.script_changed_on_disk is True
+
     @patch(
         "streamlit.runtime.app_session.AppSession._should_rerun_on_file_change",
         MagicMock(return_value=False),
@@ -842,14 +865,25 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
 
+    def test_rerun_without_context_info_passes_none(self) -> None:
+        """A client state with no context info reruns without one, not an empty one."""
+        session = _create_test_session()
+        client_state = ClientState(query_string="a=1")
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.context_info is None
+
     @parameterized.expand(
         [
-            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            ("too_long", "foo=" + ("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
             (
                 "too_many_fields",
                 "&".join(
                     f"key_{idx}=value"
-                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                    for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
                 ),
             ),
         ]
@@ -3256,6 +3290,25 @@ def test_handle_set_run_on_save_request_updates_flag(new_value: bool) -> None:
     assert msg.session_status_changed.run_on_save is new_value
 
 
+@pytest.mark.parametrize("enabled", [True, False])
+def test_set_run_on_save_decides_whether_a_file_change_reruns(enabled: bool) -> None:
+    """set_run_on_save changes what a source edit does without notifying anyone."""
+    # Without file watchers, the session does not outlive the test as a config
+    # listener that reruns on every later config parse.
+    with patch_config_options(
+        {"server.runOnSave": not enabled, "server.fileWatcherType": "none"}
+    ):
+        session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session.set_run_on_save(enabled)
+    enqueue_mock.assert_not_called()
+
+    with patch.object(session, "request_rerun") as request_rerun:
+        session._on_source_file_changed()
+    assert request_rerun.called is enabled
+
+
 @pytest.mark.parametrize(
     ("show_sidebar_navigation", "expected_hide_sidebar_nav"),
     [(False, True), (True, False)],
@@ -3470,3 +3523,348 @@ def test_close_script_event_loop_cancels_pending_tasks() -> None:
     assert script_loop.is_closed()
     assert task.done()
     assert task.cancelled() or isinstance(task.exception(), asyncio.CancelledError)
+
+
+# ---- Tests for the settle signal ----
+
+
+@pytest.fixture
+def distinct_scriptrunners() -> Iterator[MagicMock]:
+    """Patch ScriptRunner so each runner a session creates is a distinct mock."""
+    with patch(
+        "streamlit.runtime.app_session.ScriptRunner",
+        side_effect=lambda **_: MagicMock(),
+    ) as scriptrunner_class:
+        yield scriptrunner_class
+
+
+@pytest.fixture
+def mock_runtime_instance() -> Iterator[MagicMock]:
+    """Install a mocked Runtime singleton, which session teardown reads."""
+    mock_runtime = MagicMock(spec=Runtime)
+    mock_runtime.media_file_mgr = MediaFileManager(
+        MemoryMediaFileStorage("/mock/media")
+    )
+    Runtime._instance = mock_runtime
+    yield mock_runtime
+    Runtime._instance = None
+
+
+def _start_runner(session: AppSession) -> ScriptRunner:
+    """Start a run on ``session`` and return the runner it created."""
+    session.request_rerun(None)
+    assert session._scriptrunner is not None
+    return session._scriptrunner
+
+
+def _handle_shutdown(session: AppSession, runner: ScriptRunner) -> None:
+    """Handle ``runner``'s SHUTDOWN event as the session's event loop would."""
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.SHUTDOWN
+    )
+
+
+def _handle_enqueue(session: AppSession, runner: ScriptRunner) -> ForwardMsg:
+    """Handle a message ``runner`` enqueues and return that message."""
+    msg = ForwardMsg()
+    msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+    )
+    return msg
+
+
+def _create_tracked_session(*args: Any, **kwargs: Any) -> AppSession:
+    """Create a test session that tracks settling, as agent sessions do."""
+    session = _create_test_session(*args, **kwargs)
+    session.track_settling()
+    return session
+
+
+def _flush_and_send(session: AppSession) -> list[ForwardMsg]:
+    """Flush the session and confirm the batch was sent, as the Runtime loop does."""
+    msgs = session.flush_browser_queue()
+    session.on_flushed_messages_sent()
+    return msgs
+
+
+def test_new_session_is_settled() -> None:
+    """A session that never ran is settled."""
+    assert _create_tracked_session().is_settled
+
+
+@pytest.mark.usefixtures("distinct_scriptrunners")
+def test_creating_a_runner_unsettles_the_session() -> None:
+    """Starting a run unsettles the session."""
+    session = _create_tracked_session()
+
+    _start_runner(session)
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_requests_the_flush_cycle_that_settles() -> None:
+    """With nothing queued, the flush cycle SHUTDOWN requests settles the session."""
+    on_enqueued = MagicMock()
+    session = _create_tracked_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+
+    assert not session.is_settled
+    on_enqueued.assert_called_once()
+    _flush_and_send(session)
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_settles_only_once_trailing_messages_are_sent() -> None:
+    """Neither flushing the trailing messages nor a send confirmed while they
+    are still queued settles the session; their own confirmed send does.
+    """
+    session = _create_tracked_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+    trailing_msg = _handle_enqueue(session, runner)
+    _handle_shutdown(session, runner)
+
+    # The end of a batch flushed before the trailing message was enqueued.
+    session.on_flushed_messages_sent()
+    assert not session.is_settled
+
+    assert session.flush_browser_queue() == [trailing_msg]
+    assert not session.is_settled
+
+    session.on_flushed_messages_sent()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_from_replaced_runner_is_ignored() -> None:
+    """Only the current runner's SHUTDOWN settles the session."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    with patch_config_options({"runner.fastReruns": True}):
+        replaced_runner = _start_runner(session)
+        _start_runner(session)
+
+    _handle_shutdown(session, replaced_runner)
+    _flush_and_send(session)
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_runner_created_before_the_send_cancels_the_pending_settle() -> None:
+    """A new run cancels a pending settle, and its own SHUTDOWN arms a new one."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    _handle_shutdown(session, first_runner)
+
+    second_runner = _start_runner(session)
+    _flush_and_send(session)
+    assert not session.is_settled
+
+    _handle_shutdown(session, second_runner)
+    _flush_and_send(session)
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+async def test_wait_until_settled_returns_at_once_when_settled() -> None:
+    """Waiting on a settled session returns without a run."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+
+    await asyncio.wait_for(session.wait_until_settled(), timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
+    """A settle that a new run undoes before the waiter resumes does not wake it."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    _handle_shutdown(session, first_runner)
+    _flush_and_send(session)
+    second_runner = _start_runner(session)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert not waiter.done()
+
+    _handle_shutdown(session, second_runner)
+    _flush_and_send(session)
+    await asyncio.wait_for(waiter, timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners", "mock_runtime_instance")
+async def test_session_shutdown_releases_waiter_and_arms_nothing() -> None:
+    """Shutting down wakes waiters, and the runner's late SHUTDOWN arms no settle."""
+    on_enqueued = MagicMock()
+    session = _create_tracked_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    session.shutdown()
+    await asyncio.wait_for(waiter, timeout=1)
+
+    _handle_shutdown(session, runner)
+    on_enqueued.assert_not_called()
+    assert session.is_settled
+
+
+def test_dropped_fragment_rerun_leaves_session_settled(
+    distinct_scriptrunners: MagicMock,
+) -> None:
+    """A rerun of a fragment the storage no longer holds starts nothing."""
+    session = _create_tracked_session()
+
+    session.request_rerun(ClientState(fragment_id="removed_fragment"))
+
+    distinct_scriptrunners.assert_not_called()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+async def test_a_runner_that_fails_to_start_leaves_the_session_settled() -> None:
+    """A failure to start the run reaches the caller, and the session stays
+    settled without that runner, so the next rerun starts a new one even with
+    fastReruns off instead of queueing into a runner that never ran.
+    """
+    session = _create_tracked_session(asyncio.get_running_loop())
+    failing_runner = MagicMock()
+    failing_runner.start.side_effect = RuntimeError("no thread")
+    next_runner = MagicMock()
+
+    with (
+        patch_config_options({"runner.fastReruns": False}),
+        patch(
+            "streamlit.runtime.app_session.ScriptRunner",
+            side_effect=[failing_runner, next_runner],
+        ),
+    ):
+        with pytest.raises(RuntimeError, match="no thread"):
+            session.request_rerun(None)
+        assert session.is_settled
+
+        session.request_rerun(None)
+
+    failing_runner.request_rerun.assert_not_called()
+    next_runner.start.assert_called_once()
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_an_untracked_session_skips_the_settle_bookkeeping() -> None:
+    """A session that does not track settling, such as a browser's, requests
+    no extra flush when its runner shuts down and cannot be asked if settled.
+    """
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+    _flush_and_send(session)
+
+    on_enqueued.assert_not_called()
+    assert not session._settle_pending
+    with pytest.raises(RuntimeError, match="track_settling"):
+        _ = session.is_settled
+    with pytest.raises(RuntimeError, match="track_settling"):
+        await session.wait_until_settled()
+
+
+# ---- Tests for the public session hooks ----
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_page_script_hash_follows_script_started() -> None:
+    """The page script hash is the one the latest run started on."""
+    session = _create_test_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner,
+        event=ScriptRunnerEvent.SCRIPT_STARTED,
+        page_script_hash="other_page_hash",
+    )
+
+    assert session.page_script_hash == "other_page_hash"
+
+
+def test_get_pages_returns_a_copy_of_the_registry() -> None:
+    """get_pages lists the default page before navigation and copies the registry."""
+    session = _create_test_session()
+    main_script_hash = session._pages_manager.main_script_hash
+    assert list(session.get_pages()) == [main_script_hash]
+
+    session._pages_manager.set_pages_and_resolve(
+        {
+            "page_hash": {
+                "page_script_hash": "page_hash",
+                "page_name": "report",
+                "icon": "",
+                "script_path": "/fake/report.py",
+                "url_pathname": "report",
+            }
+        }
+    )
+    pages = session.get_pages()
+    pages.clear()
+
+    assert list(session.get_pages()) == ["page_hash"]
+
+
+def test_has_fragment_follows_the_fragment_storage() -> None:
+    """has_fragment is true while the storage holds the fragment, false once cleared."""
+    session = _create_test_session()
+    assert session.has_fragment("panel") is False
+
+    session._fragment_storage.register("panel", lambda: None)
+    assert session.has_fragment("panel") is True
+
+    session._fragment_storage.clear()
+    assert session.has_fragment("panel") is False
+
+
+def test_create_detached_script_run_ctx_shares_state_and_drops_messages() -> None:
+    """The detached context reads the session's data and emits nothing."""
+    session = _create_test_session()
+    session.session_state["greeting"] = "hello"
+    context_info = ContextInfo(timezone="Europe/Berlin")
+
+    ctx = session.create_detached_script_run_ctx(
+        query_string="a=1", context_info=context_info
+    )
+
+    assert ctx.session_id == session.id
+    assert ctx.session_state["greeting"] == "hello"
+    assert ctx.user_info == {"email": "test@example.com"}
+    assert ctx.query_string == "a=1"
+    assert ctx.context_info is context_info
+    assert ctx.script_requests is None
+    assert get_script_run_ctx(suppress_warning=True) is not ctx
+
+    def enqueue_with_thread_state() -> None:
+        ThreadState.initialize()
+        msg = ForwardMsg()
+        msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+        ctx.enqueue(msg)
+
+    contextvars.copy_context().run(enqueue_with_thread_state)
+    assert session.flush_browser_queue() == []

@@ -1,14 +1,10 @@
-# Streamlit charts & data
+# Streamlit data display
 
-Present data clearly.
+Present tabular data clearly. For charts, maps, and diagrams, see [charts.md](charts.md).
 
 ## Contents
 
 - [Accessible names (alt)](#accessible-names-alt)
-- [Native charts first](#native-charts-first)
-- [Human-readable labels](#human-readable-labels)
-- [Altair for complex charts](#altair-for-complex-charts)
-- [Apache ECharts](#apache-echarts)
 - [Deprecated: use_container_width](#deprecated-use_container_width)
 - [Dataframe column configuration](#dataframe-column-configuration)
 - [Markdown in dataframe cells](#markdown-in-dataframe-cells)
@@ -26,93 +22,14 @@ Present data clearly.
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence); Markdown syntax is announced literally. Prefer the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
+Pass keyword-only `alt=` on tables and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence) that states the table's purpose; Markdown syntax is announced literally. Do not paste cell values into `alt`. For charts and maps, see [charts.md](charts.md#accessible-names-alt).
 
 ```python
-st.bar_chart(
-    df, x="category", y="revenue", alt="Revenue by product line, highest for Enterprise"
-)
 st.dataframe(df, alt="Top 20 customers by revenue")
 st.table(summary, alt="Quarterly KPI summary")
 ```
 
-- Charts and maps (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart`, `st.mermaid_chart`): describe the chart's takeaway or the map's subject, not the chart type or a data dump.
-- **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than passing none.
-- **`st.dataframe` / `st.data_editor` / `st.table`:** name the grid or table; do not paste cell values into `alt`.
-- A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
-
-## Native charts first
-
-Prefer Streamlit's native charts for simple cases.
-
-```python
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-st.bar_chart(df, x="category", y="count", alt="Order count by category")
-st.scatter_chart(df, x="age", y="salary", alt="Salary versus age")
-st.area_chart(df, x="date", y="value", alt="Value over time")
-```
-
-Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
-
-## Human-readable labels
-
-Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` if the column names are already readable.
-
-```python
-# BAD: cryptic column names without labels
-st.line_chart(df, x="dt", y="rev")
-
-# GOOD: readable columns, no labels needed
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-
-# GOOD: cryptic columns, add labels
-st.line_chart(
-    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
-)
-```
-
-## Altair for complex charts
-
-Use Altair when you need more control. Altair is bundled with Streamlit (no extra install), while Plotly requires an additional package. Pick one and stay consistent throughout your app.
-
-```python
-import altair as alt
-
-chart = (
-    alt.Chart(df)
-    .mark_line()
-    .encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y("revenue:Q", title="Revenue ($)"),
-        color="region:N",
-    )
-)
-st.altair_chart(chart, alt="Revenue by region over time")
-```
-
-**When to use Altair:**
-
-- Custom axis formatting
-- Multiple series with legends
-- Interactive tooltips
-- Layered visualizations
-
-## Apache ECharts
-
-Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for this. Prefer Vega-based charts unless the spec is already ECharts-native.
-
-Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
-
-```python
-st.echarts_chart(
-    {
-        "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
-        "yAxis": {"type": "value"},
-        "series": [{"type": "bar", "data": [120, 200, 150]}],
-    },
-    alt="Weekday traffic, peak on Tuesday",
-)
-```
+A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command.
 
 ## Deprecated: `use_container_width`
 
@@ -179,11 +96,11 @@ st.dataframe(
 - `ListColumn` → Display lists/arrays
 - `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
 - `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
-- `NumberColumn` → Numbers with formatting
+- `NumberColumn` → Numbers and timedelta/duration values with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Time only (no date)
+- `TimeColumn` → Clock time of day without a date (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -262,11 +179,13 @@ st.dataframe(
 
 | Widget           | Use When                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, search, row selection       |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
 | `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
+
+Prefer `st.dataframe` for sorting, search, and formatting, and `st.data_editor` for editing, over `streamlit-aggrid`. Use `column_config` for formats and editors. Search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source such as a Polars `LazyFrame`). Pass `lazy=False` only when the full table still fits in the browser. Use aggrid only for per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Use `streamlit-pivot-table` for pivot tables. When hiding non-matching rows is enough, filter the data in Python with separate widgets.
 
 ## Description and key-value lists
 
@@ -319,6 +238,8 @@ st.dataframe(
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
 
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. On a timedelta column, `format="compact"` is an elapsed-time clock (`02:00:00`) and `format="localized"` is a locale-aware duration. On other number columns, both keep their number meaning (`compact` is `1.2K`). On any number column, `format="duration"` shows the value in seconds as an approximate humanized duration.
+
 ## Editing data with st.data_editor
 
 ```python
@@ -361,7 +282,7 @@ selected_data = df.iloc[selected_indices]
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
 
-Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, and `PydeckState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, and `st.pydeck_chart`, respectively. Do not import these types from Streamlit's internal modules.
+Import `DataframeState` from `streamlit.typing` when annotating the returned event; do not import it from Streamlit's internal modules. For chart selections, see [charts.md](charts.md#chart-selections).
 
 ## Empty DataFrames
 
@@ -421,7 +342,3 @@ See `dashboards.md` for composing metrics into dashboard layouts.
 - [st.table](https://docs.streamlit.io/develop/api-reference/data/st.table)
 - [st.column_config](https://docs.streamlit.io/develop/api-reference/data/st.column_config)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
-- [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
-- [st.bar_chart](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)
-- [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)
-- [st.echarts_chart](https://docs.streamlit.io/develop/api-reference/charts/st.echarts_chart)

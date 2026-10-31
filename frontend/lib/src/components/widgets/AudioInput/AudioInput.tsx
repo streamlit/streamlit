@@ -27,7 +27,9 @@ import {
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
 import type { AudioInput as AudioInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -150,7 +152,7 @@ const AudioInput: React.FC<Props> = ({
         try {
           blobUrl = URL.createObjectURL(wavBlob)
           if (
-            currentBlobUrlRef.current &&
+            currentBlobUrlRef.current !== null &&
             currentBlobUrlRef.current !== blobUrl
           ) {
             URL.revokeObjectURL(currentBlobUrlRef.current)
@@ -205,9 +207,9 @@ const AudioInput: React.FC<Props> = ({
           }
 
           setIsError(false)
-          const fileUrl = successfulUploads.at(0)?.fileUrl
-          if (fileUrl?.deleteUrl) {
-            setDeleteFileUrl(fileUrl.deleteUrl)
+          const deleteUrl = successfulUploads.at(0)?.fileUrl.deleteUrl
+          if (!isNullOrEmptyString(deleteUrl)) {
+            setDeleteFileUrl(deleteUrl)
           }
         } catch {
           // File upload failed - set error state unless request was cancelled
@@ -306,7 +308,7 @@ const AudioInput: React.FC<Props> = ({
     }): Promise<void> => {
       const urlToRevoke = recordingUrl
 
-      if (urlToRevoke && currentBlobUrlRef.current === urlToRevoke) {
+      if (urlToRevoke !== null && currentBlobUrlRef.current === urlToRevoke) {
         URL.revokeObjectURL(urlToRevoke)
         currentBlobUrlRef.current = null
       }
@@ -339,7 +341,7 @@ const AudioInput: React.FC<Props> = ({
         )
       }
 
-      if (deleteFile && deleteFileUrl) {
+      if (deleteFile && deleteFileUrl !== null) {
         try {
           await uploadClient.deleteFile(deleteFileUrl)
         } catch {
@@ -388,7 +390,7 @@ const AudioInput: React.FC<Props> = ({
   }, [isPlaybackPlaying, playback])
 
   useEffect(() => {
-    if (!recordingUrl) {
+    if (recordingUrl === null) {
       return
     }
 
@@ -442,7 +444,7 @@ const AudioInput: React.FC<Props> = ({
         cancelAnimationFrame(playbackTimerRef.current)
         playbackTimerRef.current = null
       }
-      if (currentBlobUrlRef.current) {
+      if (currentBlobUrlRef.current !== null) {
         URL.revokeObjectURL(currentBlobUrlRef.current)
         currentBlobUrlRef.current = null
       }
@@ -455,7 +457,7 @@ const AudioInput: React.FC<Props> = ({
         const currentTime = playback.getCurrentTimeMs()
         playback.pause()
         setProgressTime(formatTime(currentTime))
-      } else if (state === "idle" && recordingUrl) {
+      } else if (state === "idle" && recordingUrl !== null) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
         if (playback.getCurrentTimeMs() <= 100) {
@@ -470,7 +472,7 @@ const AudioInput: React.FC<Props> = ({
   }, [isPlaybackPlaying, recordingUrl, state, playback])
 
   const startRecording = useCallback(async () => {
-    if (recordingUrl) {
+    if (recordingUrl !== null) {
       await handleClear({ updateWidgetManager: false, deleteFile: true })
     }
 
@@ -490,7 +492,11 @@ const AudioInput: React.FC<Props> = ({
       }
       const { blob } = await current.stop()
       await current.approve(blob)
-    } catch {
+    } catch (error) {
+      // A cancelled stop (clear, reset, unmount) is not a failure.
+      if (error instanceof RecordingCancelledError) {
+        return
+      }
       // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }
@@ -526,7 +532,7 @@ const AudioInput: React.FC<Props> = ({
   const isPlaying = isPlaybackPlaying
   const displayedTime = isRecording ? recordingTime : progressTime
   const showPlaceholder =
-    state === "idle" && !hasNoMicPermissions && !recordingUrl
+    state === "idle" && !hasNoMicPermissions && recordingUrl === null
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
@@ -585,7 +591,7 @@ const AudioInput: React.FC<Props> = ({
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
         >
-          {recordingUrl && (
+          {recordingUrl !== null && (
             <ToolbarAction
               label="Download as WAV"
               icon={FileDownload}
@@ -593,7 +599,7 @@ const AudioInput: React.FC<Props> = ({
               labelContext={labelContext}
             />
           )}
-          {deleteFileUrl && (
+          {deleteFileUrl !== null && (
             <ToolbarAction
               label="Clear recording"
               icon={Delete}

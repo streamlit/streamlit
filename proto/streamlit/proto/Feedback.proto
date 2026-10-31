@@ -39,5 +39,8 @@ message Feedback {
   // batches values until submit.
   bool ignore_rerun = 8;
 
-  // next id: 9
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 9;
+
+  // next id: 10
 }

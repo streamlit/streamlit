@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
-  const lastInnerWidthRef = useRef(innerWidth ?? Infinity)
+  const lastInnerWidthRef = useRef(innerWidth)
 
   // When hovering sidebar header
   const [showSidebarCollapse, setShowSidebarCollapse] =
@@ -165,11 +165,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       _d: NumberSize
     ) => {
       // Use the actual ref width, not the delta, to avoid stale delta values
-      if (ref) {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-        const newWidth = ref.clientWidth || ref.offsetWidth
-        initializeSidebarWidth(newWidth)
-      }
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const newWidth = ref.clientWidth || ref.offsetWidth
+      initializeSidebarWidth(newWidth)
     },
     [initializeSidebarWidth]
   )

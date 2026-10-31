@@ -18,6 +18,7 @@ import time
 from typing import TYPE_CHECKING, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     EXPANDABLE_TYPE_TO_PROTO_MAPPING,
     ExpandableType,
@@ -39,6 +40,28 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
 
 States: TypeAlias = Literal["running", "complete", "error"]
+
+
+def _status_agent_props(
+    *,
+    label: str | None,
+    expanded: bool | None,
+    state: States | None,
+    type: ExpandableType,
+) -> str | None:
+    """Describe this status for the agent API.
+
+    Used when the container is created and when ``update`` re-sends it, so the
+    description matches the values on that message.
+    """
+    return agent_spec.block(
+        "status",
+        label=label,
+        expanded=expanded,
+        state=state,
+        type=type,
+    )
+
 
 # Maps each state to the icon the default and compact styles render. Also
 # defines the valid `state` values, which both validation sites check against.
@@ -92,7 +115,13 @@ class StatusContainer(DeltaGenerator):
 
         status_container = cast(
             "StatusContainer",
-            parent._block(block_proto=block_proto, dg_type=StatusContainer),
+            parent._block(
+                block_proto=block_proto,
+                dg_type=StatusContainer,
+                agent_props=_status_agent_props(
+                    label=label, expanded=expanded, state=state, type=type
+                ),
+            ),
         )
 
         # `update()` re-sends the block proto at this path. Use the path `_block()` wrote
@@ -100,6 +129,8 @@ class StatusContainer(DeltaGenerator):
         status_container._delta_path = status_container._block_delta_path
         status_container._current_proto = block_proto
         status_container._current_state = state
+        status_container._current_expanded = expanded
+        status_container._type = type
 
         # We need to sleep here for a very short time to prevent issues when
         # the status is updated too quickly. If an .update() directly follows the
@@ -121,6 +152,10 @@ class StatusContainer(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._current_state: States | None = None
+        # `update()` clears `expanded` on the re-sent proto to leave it as the
+        # user set it, so the proto cannot report it.
+        self._current_expanded: bool | None = None
+        self._type: ExpandableType = "default"
         self._delta_path: list[int] | None = None
 
     def update(
@@ -176,6 +211,21 @@ class StatusContainer(DeltaGenerator):
             msg.delta.add_block.expandable.icon = _STATE_ICONS[state]
             msg.delta.add_block.expandable.state = _STATE_PROTO_VALUES[state]
             self._current_state = state
+
+        if expanded is not None:
+            self._current_expanded = expanded
+
+        # This message replaces the one sent at the same delta path, so it has
+        # to carry a description too. Replaying the one from `_create` would
+        # leave the snapshot reporting a status as `running` after it completed.
+        agent_props = _status_agent_props(
+            label=msg.delta.add_block.expandable.label,
+            expanded=self._current_expanded,
+            state=self._current_state,
+            type=self._type,
+        )
+        if agent_props is not None:
+            msg.metadata.agent_props = agent_props
 
         self._current_proto = msg.delta.add_block
         # Bare mode has no session. enqueue_message would raise

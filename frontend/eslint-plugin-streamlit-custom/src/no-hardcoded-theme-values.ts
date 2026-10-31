@@ -42,8 +42,8 @@ const noHardcodedThemeValues = createRule<[], MessageIds>({
       noHardcodedThemeTemplate:
         "Hardcoded theme values are not allowed in template strings. All values must start with 'theme' or be a CSS built-in value such as 'none'. In general, please use the styled-object notation anyways.",
     },
+    defaultOptions: [],
   },
-  defaultOptions: [],
   create(context) {
     // Properties to check for values not allowed by the allowedValuesRegex. We check the whole set of CSS properties with the allowed values,
     // instead of checking for each property individually based on what they allow (e.g. only check 'background-color' for 'transparent'), since
@@ -66,8 +66,8 @@ const noHardcodedThemeValues = createRule<[], MessageIds>({
         node.properties.forEach(property => {
           if (
             property.type !== AST_NODE_TYPES.Property ||
-            property.key?.type !== AST_NODE_TYPES.Identifier ||
-            property.value?.type !== AST_NODE_TYPES.Literal ||
+            property.key.type !== AST_NODE_TYPES.Identifier ||
+            property.value.type !== AST_NODE_TYPES.Literal ||
             typeof property.value.raw !== "string"
           ) {
             return

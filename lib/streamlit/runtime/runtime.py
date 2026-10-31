@@ -31,6 +31,10 @@ from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
     get_resource_cache_stats_provider,
 )
+from streamlit.runtime.caching.global_cache_budget import (
+    get_global_cache_budget,
+    reconfigure_global_cache_budget_from_config,
+)
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
@@ -242,6 +246,8 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
+        reconfigure_global_cache_budget_from_config()
+        self._stats_mgr.register_provider(get_global_cache_budget())
         if self._uploaded_file_mgr is not None:
             self._stats_mgr.register_provider(self._uploaded_file_mgr)
         # Register media file storage for stats if it implements StatsProvider
@@ -290,8 +296,8 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
-    # NOTE: A few Runtime methods listed as threadsafe (get_client and
-    # is_active_session) currently rely on the implementation detail that
+    # NOTE: A few Runtime methods listed as threadsafe (get_client, get_app_session,
+    # and is_active_session) currently rely on the implementation detail that
     # WebsocketSessionManager's get_active_session_info and is_active_session methods
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
@@ -308,6 +314,33 @@ class Runtime:
         if session_info is None:
             return None
         return session_info.client
+
+    def get_app_session(self, session_id: str) -> AppSession | None:
+        """Get the AppSession for the given session_id, or None
+        if no such active session exists.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread. The returned AppSession
+        is not thread-safe; most of its methods must be called on the event
+        loop thread.
+        """
+        session_info = self._session_mgr.get_active_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.session
+
+    def mark_session_nonresumable(self, session_id: str) -> None:
+        """Prevent a later connection from resuming ``session_id``.
+
+        A connection that names the id as its existing session gets a new
+        session instead. Closing the session releases the mark.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
+        self._session_mgr.mark_session_nonresumable(session_id)
 
     def clear_user_info_for_session(self, session_id: str) -> None:
         """Clear user info for ``session_id`` and prevent that session from resuming.
@@ -784,6 +817,8 @@ class Runtime:
 
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
+
+                        active_session_info.session.on_flushed_messages_sent()
 
                     # Yield briefly between session message flushing cycles.
                     await asyncio.sleep(MESSAGE_FLUSH_INTERVAL_SECS)

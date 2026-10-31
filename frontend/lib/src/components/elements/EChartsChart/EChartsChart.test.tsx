@@ -18,15 +18,32 @@ import { type ReactElement, useMemo } from "react"
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import {
+  Float64,
+  Table,
+  tableToIPC,
+  Utf8,
+  vectorFromArray,
+} from "apache-arrow"
+import { getLogger } from "loglevel"
 
-import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
+import {
+  type ArrowNamedDataSet,
+  EChartsChart as EChartsChartProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import type * as ReadOnlyGridModule from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import type * as FormClearHelperModule from "~lib/components/widgets/Form/FormClearHelper"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 import { resetPageWheelClockForTests } from "./insideDataZoomWheel"
+
+const LOG = getLogger("EChartsChart")
 
 const { mockInit, mockChart } = vi.hoisted(() => {
   const mockChart = {
@@ -36,6 +53,12 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     dispose: vi.fn(),
     isDisposed: vi.fn(() => false),
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+    on: vi.fn(),
+    off: vi.fn(),
+    getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+    dispatchAction: vi.fn(),
+    convertFromPixel: vi.fn(),
+    getOption: vi.fn(() => ({})),
   }
   return {
     mockInit: vi.fn(
@@ -57,7 +80,33 @@ const { themeHolder } = vi.hoisted(() => {
 
 vi.mock("echarts", () => ({
   init: mockInit,
+  // Registered chart types; the tests use "notAChart" for an unknown one.
+  ComponentModel: {
+    getClass: (_mainType: string, subType?: string) =>
+      subType === "notAChart" ? undefined : Object,
+  },
 }))
+
+/** The props of the last rendered data table (the real grid still renders). */
+const { gridPropsHolder } = vi.hoisted(() => ({
+  gridPropsHolder: { last: undefined as { height?: number } | undefined },
+}))
+
+vi.mock(
+  "~lib/components/widgets/DataFrame/ReadOnlyGrid",
+  async importOriginal => {
+    const actual = await importOriginal<typeof ReadOnlyGridModule>()
+    return {
+      ...actual,
+      ReadOnlyGrid: (
+        props: Parameters<typeof actual.ReadOnlyGrid>[0]
+      ): ReactElement => {
+        gridPropsHolder.last = props
+        return <actual.ReadOnlyGrid {...props} />
+      },
+    }
+  }
+)
 
 /** Lets a test change the measured size to simulate a container resize. */
 const { dimensionsHolder } = vi.hoisted(() => ({
@@ -76,6 +125,19 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
   useEmotionTheme: () => themeHolder.override ?? mockTheme.emotion,
 }))
 
+// Keep the module's other exports: the "Show data" table renders the real
+// DataFrame, which uses `useFormClearHelper`.
+vi.mock(
+  "~lib/components/widgets/Form/FormClearHelper",
+  async importOriginal => ({
+    ...(await importOriginal<typeof FormClearHelperModule>()),
+    FormClearHelper: vi.fn().mockImplementation(() => ({
+      manageFormClearListener: vi.fn(),
+      disconnect: vi.fn(),
+    })),
+  })
+)
+
 const DEFAULT_SPEC = JSON.stringify({
   xAxis: { type: "category", data: ["A", "B", "C"] },
   yAxis: { type: "value" },
@@ -90,6 +152,7 @@ function createElement(
     theme: "streamlit",
     renderer: EChartsChartProto.Renderer.CANVAS,
     id: "",
+    formId: "",
     ...overrides,
   })
 }
@@ -137,37 +200,54 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
 }
 
 describe("EChartsChart", () => {
+  let widgetMgr: WidgetStateManager
+
   const Wrapper = ({
     element,
     isFullScreen = false,
+    disabled = false,
+    collapse,
+    heightConfig,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
+    disabled?: boolean
+    collapse?: () => void
+    heightConfig?: streamlit.HeightConfig.$Properties
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
         expanded: isFullScreen,
         width: 600,
-        height: 400,
+        // Like the real wrapper, the screen height is only set when expanded.
+        height: isFullScreen ? 400 : undefined,
         expand: vi.fn(),
-        collapse: vi.fn(),
+        collapse: collapse ?? vi.fn(),
       }),
-      [isFullScreen]
+      [isFullScreen, collapse]
     )
     return (
       <ElementFullscreenContext.Provider value={contextValue}>
-        <EChartsChart element={element} />
+        <EChartsChart
+          element={element}
+          widgetMgr={widgetMgr}
+          disabled={disabled}
+          heightConfig={heightConfig}
+        />
       </ElementFullscreenContext.Provider>
     )
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Chart errors are logged; keep the expected ones out of the test output.
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
     resetPageWheelClockForTests()
     mockContainerRef.current = null
     themeHolder.override = null
     dimensionsHolder.width = 600
     dimensionsHolder.height = 400
+    gridPropsHolder.last = undefined
     // Restore the shared-instance default; a test below overrides it locally.
     mockInit.mockImplementation(() => mockChart)
     mockChart.isDisposed.mockReturnValue(false)
@@ -176,6 +256,10 @@ describe("EChartsChart", () => {
         applyMockEchartsAria(option)
       }
     )
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
   })
 
   it("initializes an ECharts instance and applies the option", () => {
@@ -206,6 +290,80 @@ describe("EChartsChart", () => {
     rerender(<Wrapper element={createElement()} />)
 
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
+  })
+
+  it("prunes pixel-only brush when a new instance inits at a different size", () => {
+    const createIsolatedMockChart = (): typeof mockChart => {
+      const chart = {
+        setOption: vi.fn((option: Record<string, unknown>) => {
+          applyMockEchartsAria(option)
+        }),
+        setTheme: vi.fn(),
+        resize: vi.fn(),
+        dispose: vi.fn(() => {
+          chart.isDisposed.mockReturnValue(true)
+        }),
+        isDisposed: vi.fn(() => false),
+        getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+        on: vi.fn(),
+        off: vi.fn(),
+        getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+        dispatchAction: vi.fn(),
+        convertFromPixel: vi.fn(),
+        getOption: vi.fn(() => ({})),
+      }
+      return chart
+    }
+    const firstChart = createIsolatedMockChart()
+    const secondChart = createIsolatedMockChart()
+    mockInit
+      .mockImplementationOnce(() => firstChart)
+      .mockImplementationOnce(() => secondChart)
+
+    const element = createElement({
+      id: "chart-id",
+      selectionActivated: true,
+    })
+    const { rerender } = render(<Wrapper element={element} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(firstChart.resize).not.toHaveBeenCalled()
+
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [
+          {
+            brushType: "rect",
+            range: [
+              [10, 20],
+              [30, 40],
+            ],
+          },
+        ],
+        selected: [],
+      },
+    ])
+
+    dimensionsHolder.width = 800
+    dimensionsHolder.height = 500
+    rerender(
+      <Wrapper
+        element={createElement({
+          id: "chart-id",
+          selectionActivated: true,
+          renderer: EChartsChartProto.Renderer.SVG,
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(secondChart.resize).not.toHaveBeenCalled()
+    expect(secondChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [],
+    })
   })
 
   it("resizes on the first positive size after a 0x0 init", () => {
@@ -243,6 +401,104 @@ describe("EChartsChart", () => {
     expect(mockChart.resize).not.toHaveBeenCalled()
   })
 
+  it("does not bind selection handlers when disabled", () => {
+    widgetMgr.setElementState("chart-id", "selectedPoints", [
+      { seriesIndex: 0, dataIndex: [0] },
+    ])
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+        selected: [],
+      },
+    ])
+
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+    // Disabled bind still restores the overlay so a disconnect / setOption
+    // cannot drop the highlight. Handlers stay unbound.
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "select",
+      seriesIndex: 0,
+      dataIndex: [0],
+    })
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
+  })
+
+  it("disables pointer events on a disabled selection widget", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
+  it("keeps pointer events on a display-only chart when the host is disabled", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "styled_chart" })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).not.toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
+  it("does not bind selection handlers for a keyed display-only chart", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          id: "styled_chart",
+          spec: JSON.stringify({
+            xAxis: { type: "category", data: ["A", "B", "C"] },
+            yAxis: { type: "value" },
+            series: [{ type: "bar", data: [1, 2, 3], selectedMode: true }],
+          }),
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("binds selection handlers when selection is activated", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+
+    expect(mockChart.on).toHaveBeenCalled()
+  })
+
+  it("renders display-only charts (empty id) without binding selection handlers", () => {
+    render(<Wrapper element={createElement({ id: "" })} />)
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
   it("passes the SVG renderer through to echarts.init", () => {
     render(
       <Wrapper
@@ -262,6 +518,42 @@ describe("EChartsChart", () => {
     expect(appliedOption.aria).toEqual({ enabled: true })
     expect(appliedOption.grid).toBeUndefined()
   })
+
+  it.each([
+    ["the Streamlit theme", "streamlit"],
+    ["theme=None", ""],
+  ])("turns string tooltip formatters into functions with %s", (_, theme) => {
+    const spec = JSON.stringify({
+      ...JSON.parse(DEFAULT_SPEC),
+      tooltip: { formatter: "{b}: {@[1]}", valueFormatter: "%d units" },
+    })
+    render(<Wrapper element={createElement({ spec, theme })} />)
+
+    const [appliedOption] = mockChart.setOption.mock.calls[0]
+    expect(appliedOption.tooltip.formatter).toBeTypeOf("function")
+    expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
+  })
+
+  it.each([
+    ["sets", "the Streamlit theme", "streamlit", "function"],
+    ["skips", "theme=None", "", "undefined"],
+  ] as const)(
+    "%s the time axis label formatter with %s",
+    (_action, _case, theme, expectedType) => {
+      const spec = JSON.stringify({
+        xAxis: { type: "time" },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "axis" },
+        series: [{ type: "line", data: [["2026-08-18", 1]] }],
+      })
+      render(<Wrapper element={createElement({ spec, theme })} />)
+
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.xAxis.axisPointer?.label?.formatter).toBeTypeOf(
+        expectedType
+      )
+    }
+  )
 
   it("leaves the chart container's role to ECharts", () => {
     render(<Wrapper element={createElement()} />)
@@ -540,6 +832,59 @@ describe("EChartsChart", () => {
     expect(error).toHaveTextContent("invalid option")
   })
 
+  it("replaces the instance when a new option follows a failed one", () => {
+    mockChart.setOption.mockImplementationOnce(() => {
+      throw new Error('yAxis "0" not found')
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
+
+    // An unrelated rerun with the same spec doesn't retry the failed option.
+    rerender(<Wrapper element={createElement()} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+
+    // ECharts returns a new instance from each `init`.
+    const freshChart = {
+      ...mockChart,
+      setOption: vi.fn(),
+      dispose: vi.fn(),
+      isDisposed: vi.fn(() => false),
+    }
+    mockInit.mockImplementationOnce(() => freshChart)
+    const fixedSpec = JSON.stringify({
+      xAxis: { type: "category", data: ["A"] },
+      yAxis: {},
+      series: [{ type: "bar", data: [1] }],
+    })
+    rerender(<Wrapper element={createElement({ spec: fixedSpec })} />)
+
+    expect(mockChart.dispose).toHaveBeenCalledTimes(1)
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    expect(freshChart.setOption).toHaveBeenCalledTimes(1)
+    expect(freshChart.setOption.mock.calls[0][0].yAxis).toEqual(
+      expect.any(Object)
+    )
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
+  it("does not resize or re-theme an instance whose option failed", () => {
+    mockChart.setOption.mockImplementationOnce(() => {
+      throw new Error("invalid option")
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+
+    dimensionsHolder.width = 800
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).not.toHaveBeenCalled()
+    expect(mockChart.setTheme).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stEChartsChartError")).toHaveTextContent(
+      "invalid option"
+    )
+  })
+
   it("renders a styled error instead of throwing when echarts.init fails", () => {
     mockInit.mockImplementationOnce(() => {
       throw new Error("init failed")
@@ -592,6 +937,124 @@ describe("EChartsChart", () => {
     // No chart should be created for an invalid spec.
     expect(mockInit).not.toHaveBeenCalled()
     expect(screen.queryByTestId("stEChartsChart")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      op: "initialize",
+      fail: (): void => {
+        mockInit.mockImplementationOnce(() => {
+          throw new Error("init failed")
+        })
+      },
+      message: "init failed",
+    },
+    {
+      op: "render its option",
+      fail: (): void => {
+        mockChart.setOption.mockImplementationOnce(() => {
+          throw new Error("invalid option")
+        })
+      },
+      message: "invalid option",
+    },
+  ])("logs the error when the chart fails to $op", ({ op, fail, message }) => {
+    fail()
+
+    render(<Wrapper element={createElement({ alt: "Revenue by day" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      `ECharts chart "Revenue by day" failed to ${op}: ${message}`,
+      expect.objectContaining({ message })
+    )
+  })
+
+  it("logs the error when the theme fails to apply", () => {
+    mockChart.setTheme.mockImplementationOnce(() => {
+      throw new Error("theme failed")
+    })
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    themeHolder.override = { ...mockTheme.emotion }
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      "ECharts chart failed to apply the theme: theme failed",
+      expect.any(Error)
+    )
+  })
+
+  it("logs an error that repeats on resize only once", () => {
+    const failure = (): never => {
+      throw new Error("layout failed")
+    }
+    mockChart.resize
+      .mockImplementationOnce(failure)
+      .mockImplementationOnce(failure)
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    dimensionsHolder.width = 800
+    rerender(<Wrapper element={createElement()} />)
+    dimensionsHolder.width = 900
+    rerender(<Wrapper element={createElement()} />)
+
+    expect(mockChart.resize).toHaveBeenCalledTimes(2)
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+  })
+
+  it("logs a resize error again after a successful resize", () => {
+    const { rerender } = render(<Wrapper element={createElement()} />)
+    mockChart.resize
+      .mockImplementationOnce(() => {
+        throw new Error("resize failed")
+      })
+      .mockImplementationOnce(() => {})
+      .mockImplementationOnce(() => {
+        throw new Error("resize failed")
+      })
+    for (const width of [800, 900, 1000]) {
+      dimensionsHolder.width = width
+      rerender(<Wrapper element={createElement()} />)
+    }
+
+    expect(LOG.error).toHaveBeenCalledTimes(2)
+  })
+
+  it("logs an unparseable spec once", () => {
+    const element = createElement({ spec: "{not json" })
+    const { rerender } = render(<Wrapper element={element} />)
+    rerender(<Wrapper element={createElement({ spec: "{not json" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      expect.stringMatching(/^ECharts chart has an invalid spec: /)
+    )
+  })
+
+  it("logs series types that ECharts doesn't know once", () => {
+    const spec = JSON.stringify({
+      series: [
+        { type: "notAChart", data: [1] },
+        { type: "bar", data: [1] },
+      ],
+      baseOption: { series: [{ type: "notAChart" }] },
+    })
+    const { rerender } = render(
+      <Wrapper element={createElement({ spec, alt: "Sales" })} />
+    )
+    rerender(<Wrapper element={createElement({ spec, alt: "Sales" })} />)
+
+    expect(LOG.error).toHaveBeenCalledTimes(1)
+    expect(LOG.error).toHaveBeenCalledWith(
+      `ECharts chart "Sales" has series with an unknown type, which ECharts doesn't draw: "notAChart"`
+    )
+  })
+
+  it("does not log a chart that renders", () => {
+    render(<Wrapper element={createElement()} />)
+
+    expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    expect(LOG.error).not.toHaveBeenCalled()
   })
 
   it("does not inject a tooltip formatter or renderMode (XSS-safe)", () => {
@@ -757,6 +1220,413 @@ describe("EChartsChart", () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}_chart\.svg$/
     )
     clickSpy.mockRestore()
+  })
+
+  describe("Arrow datasets", () => {
+    const SALES_BYTES = tableToIPC(
+      new Table({
+        product: vectorFromArray(["Matcha", "Latte"], new Utf8()),
+        sales: vectorFromArray([43.3, 83.1], new Float64()),
+      }),
+      "stream"
+    )
+    const SALES_ROWS = [
+      { product: "Matcha", sales: 43.3 },
+      { product: "Latte", sales: 83.1 },
+    ]
+    const COST_BYTES = tableToIPC(
+      new Table({ cost: vectorFromArray([1.5, 2.5], new Float64()) }),
+      "stream"
+    )
+
+    /** A fresh dataset object, as every rerun delivers a new proto. */
+    const namedDataset = (
+      name: string,
+      data: Uint8Array | null
+    ): ArrowNamedDataSet.$Properties => ({
+      name,
+      hasName: true,
+      data: { data },
+    })
+
+    const datasetSpec = (source: unknown): string =>
+      JSON.stringify({
+        dataset: { source, dimensions: ["product", "sales"] },
+        xAxis: { type: "category" },
+        yAxis: {},
+        series: [{ type: "bar" }],
+      })
+
+    const createDatasetElement = (
+      overrides: Partial<EChartsChartProto> = {}
+    ): EChartsChartProto =>
+      createElement({
+        spec: datasetSpec({ name: "h1" }),
+        datasets: [namedDataset("h1", SALES_BYTES)],
+        ...overrides,
+      })
+
+    it("hands setOption the dataset rows instead of the placeholder", () => {
+      render(<Wrapper element={createDatasetElement()} />)
+
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.dataset.source).toEqual(SALES_ROWS)
+      expect(appliedOption.dataset.dimensions).toEqual(["product", "sales"])
+      expect(
+        screen.queryByTestId("stEChartsChartError")
+      ).not.toBeInTheDocument()
+    })
+
+    it("turns on large mode for a dense Arrow bar chart unless it selects", () => {
+      const count = 2001
+      const bytes = tableToIPC(
+        new Table({
+          x: vectorFromArray(
+            Array.from({ length: count }, (_, i) => i),
+            new Float64()
+          ),
+          y: vectorFromArray(
+            Array.from({ length: count }, (_, i) => i % 7),
+            new Float64()
+          ),
+        }),
+        "stream"
+      )
+      const spec = JSON.stringify({
+        dataset: { source: { name: "points" } },
+        xAxis: { type: "value" },
+        yAxis: { type: "value" },
+        series: [{ type: "bar", encode: { x: "x", y: "y" } }],
+      })
+      const datasets = [namedDataset("points", bytes)]
+
+      const { unmount } = render(
+        <Wrapper element={createElement({ spec, datasets })} />
+      )
+      const [displayOption] = mockChart.setOption.mock.calls[0]
+      expect(displayOption.dataset.source).toHaveLength(count)
+      expect(displayOption.series[0].large).toBe(true)
+      unmount()
+
+      mockChart.setOption.mockClear()
+      render(
+        <Wrapper
+          element={createElement({
+            spec,
+            datasets: [namedDataset("points", bytes)],
+            id: "chart-id",
+            selectionActivated: true,
+          })}
+        />
+      )
+      const [selectionOption] = mockChart.setOption.mock.calls[0]
+      expect(selectionOption.series[0]).not.toHaveProperty("large")
+    })
+
+    it("passes a user-authored name source through unchanged", () => {
+      render(
+        <Wrapper
+          element={createDatasetElement({
+            spec: datasetSpec({ name: "Matcha" }),
+          })}
+        />
+      )
+
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.dataset.source).toEqual({ name: "Matcha" })
+      expect(
+        screen.queryByTestId("stEChartsChartError")
+      ).not.toBeInTheDocument()
+    })
+
+    it("skips setOption on a rerun with the same spec and re-applies on a new hash", () => {
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      // Same spec, new proto and dataset objects (an unrelated rerun).
+      rerender(<Wrapper element={createDatasetElement()} />)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      // New data means a new content hash, so the spec string changes.
+      rerender(
+        <Wrapper
+          element={createDatasetElement({
+            spec: datasetSpec({ name: "h2" }),
+            datasets: [namedDataset("h2", COST_BYTES)],
+          })}
+        />
+      )
+      expect(mockChart.setOption).toHaveBeenCalledTimes(2)
+      const [appliedOption] = mockChart.setOption.mock.calls[1]
+      expect(appliedOption.dataset.source).toEqual([
+        { cost: 1.5 },
+        { cost: 2.5 },
+      ])
+      expect(mockChart.dispose).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      {
+        name: "missing",
+        data: null,
+        message: "The data for an ECharts dataset.source is missing.",
+      },
+      {
+        name: "corrupt",
+        data: new Uint8Array([1, 2, 3]),
+        message: "The data for an ECharts dataset.source could not be read",
+      },
+    ])(
+      "shows an error and creates no chart when the dataset bytes are $name",
+      ({ data, message }) => {
+        render(
+          <Wrapper
+            element={createDatasetElement({
+              datasets: [namedDataset("h1", data)],
+            })}
+          />
+        )
+
+        const error = screen.getByTestId("stEChartsChartError")
+        expect(error).toBeVisible()
+        expect(error).toHaveTextContent(`ECharts chart error: ${message}`)
+        expect(mockInit).not.toHaveBeenCalled()
+        expect(mockChart.setOption).not.toHaveBeenCalled()
+        expect(
+          screen.queryByRole("button", { name: "Show data" })
+        ).not.toBeInTheDocument()
+      }
+    )
+
+    it("does not offer Show data without Arrow datasets", () => {
+      render(<Wrapper element={createElement()} />)
+
+      expect(
+        screen.queryByRole("button", { name: "Download as PNG" })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).not.toBeInTheDocument()
+    })
+
+    it("offers Show data before Download for an Arrow dataset", () => {
+      render(<Wrapper element={createDatasetElement()} />)
+
+      const showDataButton = screen.getByRole("button", { name: "Show data" })
+      const downloadButton = screen.getByRole("button", {
+        name: "Download as PNG",
+      })
+      // DOCUMENT_POSITION_FOLLOWING means Download comes after Show data.
+      expect(
+        showDataButton.compareDocumentPosition(downloadButton) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    it("toggles to the data table and back without recreating the chart", async () => {
+      const user = userEvent.setup()
+      render(<Wrapper element={createDatasetElement()} />)
+      const chart = screen.getByTestId("stEChartsChart")
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The grid toolbar is only shown (opacity > 0) on hover, so assert
+      // presence rather than visibility.
+      expect(
+        screen.queryByRole("button", { name: "Show chart" })
+      ).toBeInTheDocument()
+      // The chart is hidden, not unmounted.
+      expect(screen.getByTestId("stEChartsChart")).toBe(chart)
+      expect(chart).not.toBeVisible()
+
+      await user.click(screen.getByRole("button", { name: "Show chart" }))
+
+      expect(screen.getByTestId("stEChartsChart")).toBe(chart)
+      expect(chart).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      expect(mockChart.dispose).not.toHaveBeenCalled()
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    })
+
+    it("adds the alt context to Show data and Show chart", async () => {
+      const user = userEvent.setup()
+      render(
+        <Wrapper element={createDatasetElement({ alt: "Sales by product" })} />
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "Show data: Sales by product" })
+      )
+
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The grid toolbar is only shown on hover, so assert presence.
+      expect(
+        screen.queryByRole("button", { name: "Show chart: Sales by product" })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show chart" })
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows the chart again when a rerun drops the datasets while the table is open", async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      rerender(
+        <Wrapper
+          element={createElement({
+            spec: datasetSpec(SALES_ROWS),
+            datasets: [],
+          })}
+        />
+      )
+
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).not.toBeInTheDocument()
+      // The hidden instance kept receiving option updates.
+      expect(mockChart.setOption).toHaveBeenCalledTimes(2)
+      expect(mockInit).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the table closed when a later rerun brings the datasets back", async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      rerender(
+        <Wrapper
+          element={createElement({
+            spec: datasetSpec(SALES_ROWS),
+            datasets: [],
+          })}
+        />
+      )
+      rerender(<Wrapper element={createDatasetElement()} />)
+
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      // The chart toolbar is only shown on hover, so assert presence.
+      expect(
+        screen.queryByRole("button", { name: "Show data" })
+      ).toBeInTheDocument()
+    })
+
+    it("sizes the table to the inline chart height after leaving fullscreen", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 300
+      const { rerender } = render(<Wrapper element={createDatasetElement()} />)
+
+      // In fullscreen the chart measures the screen, not its inline slot.
+      dimensionsHolder.height = 800
+      rerender(<Wrapper element={createDatasetElement()} isFullScreen />)
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(400)
+
+      // The hidden chart measures 0 once the table shows.
+      dimensionsHolder.height = 0
+      rerender(<Wrapper element={createDatasetElement()} />)
+
+      expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("resizes the open table when a rerun changes the pixel height", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 500
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 500 }}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(500)
+
+      // The hidden chart measures 0, so only the layout config knows the new
+      // slot height.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={{ pixelHeight: 300 }}
+        />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
+      expect(gridPropsHolder.last?.height).toBe(300)
+    })
+
+    it("keeps the measured inline height for a stretch-height table", async () => {
+      const user = userEvent.setup()
+      dimensionsHolder.height = 450
+      // Decode a wire message like the real element receives, so the unset
+      // `pixelHeight` oneof member keeps its generated default.
+      const heightConfig = streamlit.HeightConfig.decode(
+        streamlit.HeightConfig.encode({ useStretch: true }).finish()
+      )
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+
+      // The hidden chart measures 0 once the table shows.
+      dimensionsHolder.height = 0
+      rerender(
+        <Wrapper
+          element={createDatasetElement()}
+          heightConfig={heightConfig}
+        />
+      )
+
+      expect(gridPropsHolder.last?.height).toBe(450)
+    })
+
+    it("offers Close fullscreen in the table only while fullscreen", async () => {
+      const user = userEvent.setup()
+      const collapse = vi.fn()
+      const { rerender } = render(
+        <Wrapper
+          element={createDatasetElement()}
+          isFullScreen
+          collapse={collapse}
+        />
+      )
+
+      await user.click(screen.getByRole("button", { name: "Show data" }))
+      expect(await screen.findByTestId("stDataFrame")).toBeVisible()
+      // The chart's own Close fullscreen button is hidden with the chart, so
+      // only the table's button is in the accessibility tree.
+      await user.click(
+        screen.getByRole("button", { name: "Close fullscreen" })
+      )
+
+      expect(collapse).toHaveBeenCalledTimes(1)
+
+      rerender(
+        <Wrapper element={createDatasetElement()} collapse={collapse} />
+      )
+
+      expect(screen.getByTestId("stDataFrame")).toBeVisible()
+      expect(
+        screen.queryByRole("button", { name: "Close fullscreen" })
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("inside dataZoom wheel", () => {

@@ -32,6 +32,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
+    convert_anything_to_arrow_bytes,
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
@@ -43,15 +44,18 @@ from streamlit.elements.vega_charts import (
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
+    arrow_buffers,
+    loads_data_from_url,
 )
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
-from streamlit.util import ReadOnlyAttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -741,6 +745,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # The name is the content hash of the Arrow bytes.
+        assert proto.datasets[0].name == calc_hash(proto.datasets[0].data.data)
         # Decode it to confirm the payload really is Arrow bytes for this df, so
         # this cannot pass on a merge that left raw JSON values in place.
         pd.testing.assert_frame_equal(
@@ -5011,3 +5017,71 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
 
             # ID should change since no key is provided and data changed
             assert id1 != id2
+
+
+def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
+    """Inline data comes first, then every named dataset; no data is no buffer.
+
+    An empty named dataset, and the one empty row Altair gives a layer without
+    data, are skipped like empty inline data, so they do not turn a
+    single-table chart into `multiple_datasets`. Rows without columns are kept.
+    """
+    placeholder = convert_anything_to_arrow_bytes(pd.DataFrame([{}]))
+    rows_without_columns = convert_anything_to_arrow_bytes(pd.DataFrame(index=range(2)))
+    proto = VegaLiteChartProto()
+    proto.data.data = b"inline"
+    for name, data in (
+        ("first", b"one"),
+        ("empty", b""),
+        ("placeholder", placeholder),
+        ("rows", rows_without_columns),
+        ("second", b"two"),
+    ):
+        dataset = proto.datasets.add()
+        dataset.name = name
+        dataset.data.data = data
+
+    assert arrow_buffers(proto) == [b"inline", b"one", rows_without_columns, b"two"]
+    assert arrow_buffers(VegaLiteChartProto()) == []
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        pytest.param({"data": {"url": "https://example.com/a.csv"}}, True, id="top"),
+        pytest.param(
+            {"layer": [{"mark": "point"}, {"data": {"url": "b.json"}}]},
+            True,
+            id="layer",
+        ),
+        pytest.param(
+            {
+                "transform": [
+                    {
+                        "lookup": "id",
+                        "from": {"data": {"url": "c.csv"}, "key": "id"},
+                    }
+                ]
+            },
+            True,
+            id="lookup",
+        ),
+        pytest.param('{"data": {"url": "d.csv"}}', True, id="json-text"),
+        pytest.param({"data": {"name": "frame"}}, False, id="named-data"),
+        pytest.param({"data": {"values": [{"url": "e"}]}}, False, id="a-url-value"),
+        pytest.param(
+            {"data": {"values": [{"data": {"url": "f.csv"}}]}},
+            False,
+            id="a-row-shaped-like-a-source",
+        ),
+        pytest.param(
+            {"usermeta": {"data": {"url": "g.csv"}}, "mark": "point"},
+            False,
+            id="usermeta",
+        ),
+        pytest.param('{"data": {"url"', False, id="malformed-json"),
+    ],
+)
+def test_loads_data_from_url_at_any_depth(spec: Any, expected: bool) -> None:
+    """A URL anywhere a Vega-Lite spec takes data counts; a value named url does not."""
+    assert loads_data_from_url(spec) is expected

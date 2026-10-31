@@ -451,7 +451,8 @@ const RawElementNodeRenderer = (
       // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
       // This is consistent with how useLayoutStyles handles missing config for other elements.
       const isUsingStretch =
-        !node.element.widthConfig || node.element.widthConfig.useStretch
+        !node.element.widthConfig ||
+        node.element.widthConfig.useStretch === true
 
       const config = isUsingStretch
         ? ElementContainerConfig.FULL_WIDTH
@@ -506,8 +507,7 @@ const RawElementNodeRenderer = (
 
     case "metric": {
       const metricProto = node.element.metric as MetricProto
-      const hasChart =
-        metricProto.chartData && metricProto.chartData.length > 0
+      const hasChart = metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}
@@ -580,13 +580,10 @@ const RawElementNodeRenderer = (
       // container. The deprecated internal _skeleton() carries no layout config,
       // so it always renders at the default element height.
       const { heightConfig } = node.element
-      const fillContainerHeight = Boolean(
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch still lets a pixel or rem height count
-        heightConfig?.useStretch ||
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel height 0 still lets a rem height count
-        heightConfig?.pixelHeight ||
-        heightConfig?.remHeight
-      )
+      const fillContainerHeight =
+        heightConfig?.useStretch === true ||
+        !!heightConfig?.pixelHeight ||
+        !!heightConfig?.remHeight
       return (
         <ElementContainer
           node={node}
@@ -685,12 +682,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // Keyed by scriptRunId so the toast remounts on each run; a
-            // still-visible toast at the same position is de-duped in Toast.
+            // Keyed by scriptRunId so the toast remounts on each run, while
+            // msg.toast() updates within a run reach the same instance.
             key={node.scriptRunId}
             element={toastProto}
-            // The delta path is a stable per-position identity used to de-dupe
-            // the toast across the remounts that happen on every rerun.
+            // The delta path is a stable per-position identity. Toast uses it
+            // to keep a still-visible toast with identical content, or replace
+            // it when the content changed.
             toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />
@@ -706,7 +704,8 @@ const RawElementNodeRenderer = (
       // Resizable dataframes measure parent container width for the resize feature.
       // Parent needs defined width (not fit-content) for measurement to work.
       // Only needed in root where resize is enabled; disabled in nested containers.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       const config = needsFullWidth
         ? new ElementContainerConfig({
             minStretchWidth: MinStretchWidth.LARGE,
@@ -736,7 +735,8 @@ const RawElementNodeRenderer = (
       // VegaLite charts with embedded dataframes need a defined parent width
       // (not fit-content) for proper measurement and rendering due to the resize feature.
       // Resize is disabled in nested containers, so this is only necessary in the root container.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
       const needsFlex = isInHorizontalLayout && !node.element.widthConfig
       const config =
@@ -917,17 +917,18 @@ const RawElementNodeRenderer = (
       const heightConfig = node.element.heightConfig
       const chatInputConfig = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: heightConfig?.useStretch
-          ? isInHorizontalLayout
-            ? undefined
-            : { height: "100%", flex: "1 1 8rem" }
-          : heightConfig?.pixelHeight
-            ? {
-                height: "auto",
-                overflow: "visible",
-                ...(isInHorizontalLayout ? {} : { flex: "" }),
-              }
-            : undefined,
+        styleOverrides:
+          heightConfig?.useStretch === true
+            ? isInHorizontalLayout
+              ? undefined
+              : { height: "100%", flex: "1 1 8rem" }
+            : heightConfig?.pixelHeight
+              ? {
+                  height: "auto",
+                  overflow: "visible",
+                  ...(isInHorizontalLayout ? {} : { flex: "" }),
+                }
+              : undefined,
       })
 
       return (
@@ -1113,12 +1114,12 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <EChartsChart
-            // An ECharts chart only has an id when the user gave it a key.
-            // An unkeyed chart has none, so it falls back to positional
-            // identity like other elements.
+            // An ECharts chart only has an id when selections are activated or
+            // the user gave it a key. An unkeyed display-only chart has none,
+            // so it falls back to positional identity like other elements.
             key={echartsProto.id || undefined}
             element={echartsProto}
-            {...elementProps}
+            {...widgetProps}
           />
         </ElementContainer>
       )
@@ -1201,7 +1202,7 @@ const RawElementNodeRenderer = (
       // flex with height to be set on the element container. In horizontal
       // layouts, the default layout styles stretch a stretch-height text area
       // to the row.
-      const useStretchHeight = node.element.heightConfig?.useStretch
+      const useStretchHeight = node.element.heightConfig?.useStretch === true
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: useStretchHeight

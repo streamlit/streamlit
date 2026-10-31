@@ -122,18 +122,76 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Detects if the markdown source contains math syntax that requires KaTeX.
- * Checks for inline math ($...$) and display math ($$...$$) patterns.
- * For inline math, ensures no whitespace immediately after opening $ or before closing $
- * to avoid false positives like "$5 and $10".
+ * Approximates the Markdown that hides `$` signs from math parsing. One regex
+ * scans left to right like the parser, so an escaped backtick doesn't open
+ * code and a backslash inside code doesn't escape anything:
+ * - a fenced code block that starts a line (indented up to 3 spaces). An
+ *   unclosed fence, common while streaming, runs to the end of the source.
+ * - single-line inline code: a backtick run, content without backticks, and a
+ *   backtick run of the same length
+ * - a backslash that escapes a backslash, `$`, or backtick
+ *
+ * This isn't a full CommonMark code matcher: indented code blocks, fences
+ * inside blockquotes or nested lists, and inline code that contains backticks
+ * aren't matched. Their `$` signs stay in the check, which can only turn math
+ * parsing on (never hide a real formula).
+ */
+const CODE_OR_ESCAPE_PATTERN =
+  /(?<=^|\n) {0,3}(`{3,}|~{3,})[\s\S]*?(?:\n[ \t]*\1|$)|(?<!`)(`+)[^`\n]+\2(?!`)|\\[\\$`]/g
+
+/**
+ * Display math: a run of two or more `$`, then content, then another `$$`. A
+ * lone run like "$$$$" (price tiers) doesn't count.
+ */
+const DISPLAY_MATH_PATTERN = /(?<!\$)\$\$+(?!\$)[\s\S]*?\$\$/
+
+/**
+ * Inline math, following Pandoc's rule so dollar amounts like "$5 and $10" or
+ * "$5-$10" don't count as a formula:
+ * - the opening `$` is followed by a non-space
+ * - the closing `$` is preceded by a non-space and not followed by a digit
+ */
+const INLINE_MATH_PATTERN = /(?<!\$)\$(?![\s$])[^$\n]*?[^\s$]\$(?!\d)/
+
+/**
+ * While streaming, a possible dollar amount cut off at its closing `$`, as in
+ * "$5-$" before "10" arrives. It matches the last `$` pair when:
+ * - the span starts with a digit and has no LaTeX markers (`\`, `^`, `{`, `}`,
+ *   `=`), so a formula like "$2^n$" still counts
+ * - only non-space characters follow the closing `$`, such as closing `**`
+ *   from remend or a `st.write_stream` cursor
+ * Capture group 1 is the span without that closing `$`.
+ */
+const UNFINISHED_AMOUNT_PATTERN = /(\$\d[^$\n\\^{}=]*)\$(?=[^\s$]*$)/
+
+/**
+ * Detects whether the markdown source contains a math formula, ignoring `$` in
+ * code and escaped `\$`. RenderedMarkdown runs remark-math and KaTeX only when
+ * this returns true, so dollar signs in text without a formula stay plain.
  *
  * @param source - The markdown source string to check
+ * @param options - Detection options
+ * @param options.isStreaming - Whether more content may still be appended. If
+ *   so, a span that may still turn into a dollar amount doesn't count yet.
  * @returns true if math syntax is detected, false otherwise
  */
-export function containsMathSyntax(source: string): boolean {
-  // Detect display math: $$...$$ or inline math: $...$
-  // Inline math requires non-whitespace after opening $ and before closing $
-  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
+export function containsMathSyntax(
+  source: string,
+  { isStreaming = false }: { isStreaming?: boolean } = {}
+): boolean {
+  if (!source.includes("$")) {
+    return false
+  }
+  // Replace code and escapes with a placeholder that is neither a space nor
+  // a `$`, so they count as plain text next to a delimiter.
+  const text = source.replaceAll(CODE_OR_ESCAPE_PATTERN, "_")
+  if (DISPLAY_MATH_PATTERN.test(text)) {
+    return true
+  }
+  const inlineText = isStreaming
+    ? text.replace(UNFINISHED_AMOUNT_PATTERN, "$1")
+    : text
+  return INLINE_MATH_PATTERN.test(inlineText)
 }
 
 export enum Tags {
@@ -314,7 +372,7 @@ interface HeadingActionElements {
 const HeaderActionElements: FC<HeadingActionElements> = ({
   elementId,
   help,
-  hideAnchor,
+  hideAnchor = false,
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
@@ -358,7 +416,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   tag,
   anchor: propsAnchor,
   help,
-  hideAnchor,
+  hideAnchor = false,
   children,
   tagProps,
   icon,
@@ -433,7 +491,6 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     <HeaderActionElements
       elementId={elementId}
       help={help}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- sidebar and dialog always hide the anchor; false must not force the link to show
       hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
   )
@@ -619,7 +676,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
  * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
-  inline,
+  inline = false,
   className,
   children,
   ...props
@@ -874,8 +931,8 @@ function createRemarkColoringAndSmall(
       // Handle custom color directive (:color[text]{foreground="...", background="..."})
       if (nodeName === "color" && node.attributes) {
         const { foreground, background } = node.attributes
-        const validForeground = foreground && isValidCssColor(foreground)
-        const validBackground = background && isValidCssColor(background)
+        const validForeground = isValidCssColor(foreground ?? "")
+        const validBackground = isValidCssColor(background ?? "")
 
         const data = (node.data ??= {})
         data.hName = "span"
@@ -1172,9 +1229,9 @@ const directiveCompletionHandler: RemendHandler = {
 const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
 
 // Standard remark plugins that don't depend on theme or props
-// Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
+// Note: RenderedMarkdown adds remarkMathPlugin and the lazy-loaded remarkEmoji
+// only when the source needs them
 const BASE_REMARK_PLUGINS = [
-  remarkMathPlugin,
   remarkGfm,
   remarkDirective,
   createRemarkHelpIcon(),
@@ -1232,7 +1289,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href?.startsWith("#")) {
+  if (href?.startsWith("#") === true) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }
@@ -1257,22 +1314,65 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
-  isLabel,
-  disableLinks,
+  isLabel = false,
+  disableLinks = false,
   helpText,
-  unterminatedParsing,
-  hideAnchors,
-  truncate,
+  unterminatedParsing = false,
+  hideAnchors = false,
+  truncate = false,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
-  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+  const processedSource = useMemo(() => {
+    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
+    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
+    let processed = source.replaceAll(":material/", ":material_")
+
+    if (isLabel) {
+      // Escape markdown syntax that would be stripped in labels, leaving empty content.
+      // See: https://github.com/streamlit/streamlit/issues/7359
+      //
+      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
+      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
+      //
+      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
+      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
+      processed = processed.replaceAll(
+        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
+        "$1\\$2"
+      )
+      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
+    }
+
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed, REMEND_OPTIONS)
+    }
+
+    return processed
+  }, [source, isLabel, allowHTML, unterminatedParsing])
+
+  // Check the source that gets parsed: while streaming, remend closes an
+  // unfinished `$$` block so it can render as math right away.
+  const needsMath = useMemo(
+    () =>
+      containsMathSyntax(processedSource, {
+        isStreaming: unterminatedParsing,
+      }),
+    [processedSource, unterminatedParsing]
+  )
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
     key: "katex",
-    needed: needsKatex,
+    needed: needsMath,
     load: loadKatexPlugin,
     pluginName: "rehype-katex",
     onBeforeLoad: loadKatexStyles,
@@ -1322,6 +1422,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
+      // Parse math only when the source contains a formula, so dollar amounts
+      // like "$5 and $10" stay plain text
+      ...(needsMath ? [remarkMathPlugin] : []),
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
@@ -1335,12 +1438,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(createRemarkUnsupportedDirectivesCleanup())
 
     return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+  }, [theme, colorMapping, needsMath, needsEmoji, wrappedEmojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
 
-    if (needsKatex && wrappedKatexPlugin) {
+    if (needsMath && wrappedKatexPlugin) {
       plugins.push(wrappedKatexPlugin)
     }
 
@@ -1353,7 +1456,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
+  }, [allowHTML, needsMath, wrappedKatexPlugin, wrappedRawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -1364,41 +1467,6 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       }) as Components,
     [overrideComponents]
   )
-
-  const processedSource = useMemo(() => {
-    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
-    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
-
-    if (isLabel) {
-      // Escape markdown syntax that would be stripped in labels, leaving empty content.
-      // See: https://github.com/streamlit/streamlit/issues/7359
-      //
-      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
-      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
-      //
-      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
-      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replaceAll(
-        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
-        "$1\\$2"
-      )
-      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replaceAll(
-        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
-        "$1$2\\$3"
-      )
-    }
-
-    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
-    // Only apply when unterminatedParsing is enabled (during streaming).
-    // Skip for labels (short, complete strings) and HTML content (may interfere).
-    if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed, REMEND_OPTIONS)
-    }
-
-    return processed
-  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1413,7 +1481,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
   const isLoadingPlugins =
-    (needsKatex && katexPlugin === null) ||
+    (needsMath && katexPlugin === null) ||
     (allowHTML && rawPlugin === null) ||
     (needsEmoji && emojiPlugin === null)
 
@@ -1440,9 +1508,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   return (
-    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+    <StreamingContext.Provider value={unterminatedParsing}>
       <HelpTextContext.Provider value={helpText}>
-        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+        <HideAnchorsContext.Provider value={hideAnchors}>
           <ErrorBoundary>
             {truncate ? (
               <TruncateContext.Provider value={true}>
@@ -1466,7 +1534,7 @@ const StreamlitMarkdown: FC<Props> = ({
   source,
   allowHTML,
   style,
-  isCaption,
+  isCaption = false,
   isLabel,
   boldLabel,
   disableLinks,
@@ -1474,7 +1542,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   inheritLineHeight,
   helpText,
-  truncate,
+  truncate = false,
   unterminatedParsing,
   hideAnchors,
 }) => {
@@ -1482,7 +1550,7 @@ const StreamlitMarkdown: FC<Props> = ({
 
   return (
     <StyledStreamlitMarkdown
-      isCaption={Boolean(isCaption)}
+      isCaption={isCaption}
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}

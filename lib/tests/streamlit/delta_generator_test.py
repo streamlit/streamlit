@@ -1332,8 +1332,16 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             with pytest.raises(
                 StreamlitInvalidLayoutContextError,
                 match="outside a parallel fragment",
-            ):
+            ) as exc_info:
                 outside_dg._enqueue("text", TextProto())
+
+            message = str(exc_info.value)
+            assert "`st.sidebar`" in message
+            assert "`st.bottom`" in message
+            assert "full app run" in message
+            assert "later fragment rerun" in message
+            assert "if st.button" not in message
+            assert "sequential fragment rerun" not in message
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
@@ -1679,8 +1687,12 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
 
     def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
-        """If the outside container was never written to during a full app run, a
-        fragment-only rerun raises.
+        """A fragment-only rerun raises when that fragment did not write to the
+        outside container on the last full app run.
+
+        The message is shared with ``parallel=True`` fragments, which cannot
+        reserve that slot, so it also states that outside writes are
+        unsupported for them.
         """
         outside = st.container()
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
@@ -1688,7 +1700,36 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
 
         with pytest.raises(
             StreamlitInvalidLayoutContextError,
-            match="could not reserve a stable position",
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
+        ) as exc_info:
+            outside.markdown("hi")
+
+        message = str(exc_info.value)
+        assert "`parallel=True`" in message
+        assert "is not supported" in message
+        assert "`st.sidebar`" in message
+        assert "`st.bottom`" in message
+        assert "outside_container.empty()" in message
+        assert "inside the fragment function" in message
+
+    def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
+        """A main-script write does not reserve a wrapper, so a fragment-only
+        rerun still raises.
+        """
+        outside = st.container()
+        outside.empty()
+        self.script_run_ctx.fragment_ids_this_run = ["frag"]
+        _enter_fragment(self)
+
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
         ):
             outside.markdown("hi")
 

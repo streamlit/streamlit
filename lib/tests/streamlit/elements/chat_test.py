@@ -1025,6 +1025,32 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
         assert result == "test message"
 
+    @parameterized.expand(
+        [
+            ("past_the_limit", 4, "abcdef", "abcd"),
+            ("at_the_limit", 6, "abcdef", "abcdef"),
+            ("no_limit", None, "abcdef", "abcdef"),
+            # The browser reads 0 as no limit.
+            ("zero_means_no_limit", 0, "abcdef", "abcdef"),
+        ]
+    )
+    def test_deserialize_cuts_text_past_max_chars(
+        self, _name: str, max_chars: int | None, sent: str, expected: str
+    ) -> None:
+        """Text a client sends past `max_chars` is cut, as a text input cuts it."""
+        serde = ChatInputSerde(max_chars=max_chars)
+
+        assert serde.deserialize(ChatInputValueProto(data=sent)) == expected
+
+    def test_deserialize_cuts_text_past_max_chars_with_files(self) -> None:
+        """The cut applies to the text of a submission that accepts files too."""
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+
+        result = serde.deserialize(ChatInputValueProto(data="abc"))
+
+        assert isinstance(result, ChatInputValue)
+        assert result.text == "ab"
+
 
 class PopUploadFilesTest(DeltaGeneratorTestCase):
     """Test _pop_upload_files and _pop_audio_file functions."""

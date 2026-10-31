@@ -20,6 +20,8 @@ import {
   type TextCell,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -49,7 +51,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
   let validateRegex: RegExp | string | undefined = undefined
 
-  if (parameters.validate) {
+  if (!isNullOrEmptyString(parameters.validate)) {
     // Prepare the validation regex:
     try {
       // u flag allows unicode characters
@@ -76,7 +78,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
 
   const validateInput = (data?: unknown): boolean | string => {
     if (isNullOrUndefined(data)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -116,7 +118,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(data), validateRegex)
       }
 
-      if (validate) {
+      if (validate === true) {
         const validationResult = validateInput(data)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will

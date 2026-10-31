@@ -20,7 +20,7 @@ on:
         description: "Model to use for flaky test fixing"
         required: false
         type: string
-        default: "grok-4.7-xhigh"
+        default: "claude-opus-5-5-high"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -28,7 +28,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'grok-4.7-xhigh' }}
+  MODEL: ${{ inputs.model || 'claude-opus-5-5-high' }}
   TOP_N: ${{ inputs.top_n || 10 }}
   DAYS: ${{ inputs.days || 4 }}
 

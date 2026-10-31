@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+import operator
 import unittest
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.runtime.context import (
     _CONTEXT_KEYS,
     ContextProxy,
@@ -30,6 +33,10 @@ from streamlit.runtime.context import (
     _get_client_context,
     _normalize_header,
 )
+from streamlit.runtime.pages_manager import PagesManager
+
+if TYPE_CHECKING:
+    from contextlib import AbstractContextManager
 
 
 def _create_mock_client_context(
@@ -463,3 +470,55 @@ class GetClientContextTest(unittest.TestCase):
         mock_runtime.get_instance.return_value = mock_instance
 
         assert _get_client_context() == mock_client_context
+
+
+def _patch_script_run_ctx(
+    context_info: ContextInfo, pages_manager: PagesManager | None = None
+) -> AbstractContextManager[MagicMock]:
+    """Patch the script context ``st.context`` reads to carry ``context_info``."""
+    ctx = MagicMock()
+    ctx.context_info = context_info
+    ctx.pages_manager = pages_manager or PagesManager("/fake/app.py")
+    return patch("streamlit.runtime.context.get_script_run_ctx", return_value=ctx)
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["timezone", "timezone_offset", "locale", "url", "is_embedded", "theme.type"],
+)
+def test_unset_context_info_fields_read_none(attribute: str) -> None:
+    """A field the client did not send reads as None, not as the proto default."""
+    with _patch_script_run_ctx(ContextInfo()):
+        assert operator.attrgetter(attribute)(st.context) is None
+
+
+def test_explicit_falsy_context_info_fields_are_kept() -> None:
+    """A stated zero offset or non-embedded flag is a value, not a missing one."""
+    with _patch_script_run_ctx(ContextInfo(timezone_offset=0, is_embedded=False)):
+        assert st.context.timezone_offset == 0
+        assert st.context.is_embedded is False
+
+
+def test_set_url_is_still_rewritten_to_the_current_page() -> None:
+    """A stated URL gets the same page-path rewrite as a browser's."""
+    pages_manager = PagesManager("/fake/app.py")
+    pages_manager.set_pages_and_resolve(
+        {
+            "home_hash": {
+                "page_script_hash": "home_hash",
+                "script_path": "/fake/home.py",
+                "url_pathname": "home",
+            },
+            "report_hash": {
+                "page_script_hash": "report_hash",
+                "script_path": "/fake/report.py",
+                "url_pathname": "report",
+            },
+        }
+    )
+    pages_manager.set_current_page_script_hash("report_hash")
+
+    with _patch_script_run_ctx(
+        ContextInfo(url="https://example.com/app/home/"), pages_manager
+    ):
+        assert st.context.url == "https://example.com/app/report"

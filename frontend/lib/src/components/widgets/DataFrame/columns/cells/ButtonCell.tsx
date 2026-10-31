@@ -26,6 +26,8 @@ import {
 } from "@glideapps/glide-data-grid"
 import { darken } from "color2k"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   extractLeadingMaterialIcon,
   isMaterialIcon,
@@ -107,7 +109,7 @@ function getBaseFontFull(theme: ButtonInteractionTheme): string {
 function parseButtonLabel(label: string): ParsedLabel {
   const { icon: iconToken, text } = extractLeadingMaterialIcon(label)
 
-  if (iconToken && isMaterialIcon(iconToken)) {
+  if (iconToken !== null && isMaterialIcon(iconToken)) {
     return {
       icon: parseIconPackEntry(iconToken).icon,
       text: text.trim(),
@@ -129,7 +131,7 @@ function getContentWidth(
   const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
   const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
 
-  if (!label) {
+  if (isNullOrEmptyString(label)) {
     // Multi-action button uses "more_vert" icon
     ctx.font = iconFont
     return ctx.measureText("more_vert").width
@@ -138,7 +140,7 @@ function getContentWidth(
   const { icon, text } = parseButtonLabel(label)
 
   let width = 0
-  if (icon) {
+  if (icon !== null) {
     ctx.font = iconFont
     width += ctx.measureText(icon).width
     if (text) width += iconTextGap
@@ -179,7 +181,7 @@ function getEstimatedContentWidth(
     return MULTI_ACTION_ICON_WIDTH
   }
 
-  if (!label) {
+  if (isNullOrEmptyString(label)) {
     return 0
   }
 
@@ -187,8 +189,8 @@ function getEstimatedContentWidth(
 
   return (
     text.length * CHAR_WIDTH_ESTIMATE +
-    (icon ? ICON_WIDTH_ESTIMATE : 0) +
-    (icon && text ? getIconTextGap(theme.cellHorizontalPadding) : 0)
+    (icon !== null ? ICON_WIDTH_ESTIMATE : 0) +
+    (icon !== null && text ? getIconTextGap(theme.cellHorizontalPadding) : 0)
   )
 }
 
@@ -301,6 +303,7 @@ export function getButtonCellClickTarget(
   }
 ): ButtonCellClickTarget | undefined {
   const { data, alignment } = cell.data
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null and empty-string labels render no button
   if (!data) return undefined
 
   const label = getSingleButtonLabel(data)
@@ -308,7 +311,7 @@ export function getButtonCellClickTarget(
 
   // No interactive button is rendered when there is no content to show
   // (e.g. an empty-string label), so clicks are ignored to match draw().
-  if (!isMultiAction && !label) return undefined
+  if (!isMultiAction && isNullOrEmptyString(label)) return undefined
 
   const contentWidth = getClickContentWidth(
     label,
@@ -329,7 +332,7 @@ export function getButtonCellClickTarget(
     return undefined
   }
 
-  if (label) {
+  if (!isNullOrEmptyString(label)) {
     return {
       kind: "button",
       label,
@@ -390,7 +393,7 @@ const renderer: CustomRenderer<ButtonCell> = {
     // Skip rendering when there is no content to show: null/undefined data, an
     // empty array, or a single empty-string label. Multi-action buttons render
     // the "more_vert" icon even though their single-label value is null.
-    if (!isMultiAction && !label) return true
+    if (!isMultiAction && isNullOrEmptyString(label)) return true
 
     // Calculate button bounds using shared helper
     const contentWidth = getContentWidth(ctx, label, theme)
@@ -467,7 +470,7 @@ const renderer: CustomRenderer<ButtonCell> = {
     }
 
     // Draw button border (for secondary style)
-    if (borderColor) {
+    if (borderColor !== undefined) {
       ctx.beginPath()
       roundedRect(
         ctx,
@@ -493,12 +496,12 @@ const renderer: CustomRenderer<ButtonCell> = {
       ctx.font = iconFont
       ctx.fillStyle = textColor
       ctx.fillText("more_vert", centerX, centerY + middleCenterBias)
-    } else if (label) {
+    } else if (!isNullOrEmptyString(label)) {
       // Draw single button label (with optional icon)
       const { icon, text } = parseButtonLabel(label)
       ctx.fillStyle = textColor
 
-      if (icon && text) {
+      if (icon !== null && text) {
         // Icon + text: draw icon left, text right
         ctx.font = theme.baseFontFull
         const textWidth = ctx.measureText(text).width
@@ -515,7 +518,7 @@ const renderer: CustomRenderer<ButtonCell> = {
           startX + iconWidth + iconTextGap + textWidth / 2,
           centerY + middleCenterBias
         )
-      } else if (icon) {
+      } else if (icon !== null) {
         ctx.font = iconFont
         ctx.fillText(icon, centerX, centerY + middleCenterBias)
       } else {
@@ -533,7 +536,7 @@ const renderer: CustomRenderer<ButtonCell> = {
 
     // Return minimal width when there is no content to render: null/undefined
     // data, an empty array, or a single empty-string label.
-    if (!isMultiAction && !label) {
+    if (!isMultiAction && isNullOrEmptyString(label)) {
       return theme.cellHorizontalPadding * 2
     }
 

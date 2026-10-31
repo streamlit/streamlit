@@ -107,6 +107,7 @@ const FileDropzone = ({
               </StyledDragDropText>
             </StyledDragDropOverlay>
           )}
+          {/* eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- a falsy ReactNode means there is no file list to show */}
           {hasFiles && uploadedFiles ? (
             uploadedFiles
           ) : (

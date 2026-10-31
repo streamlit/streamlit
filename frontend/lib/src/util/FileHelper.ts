@@ -58,10 +58,6 @@ export const getSizeDisplay = (
   unit: FileSize,
   rounding = 1
 ): string => {
-  if (!unit) {
-    unit = FileSize.Byte
-  }
-
   if (rounding < 0) {
     rounding = 0
   }

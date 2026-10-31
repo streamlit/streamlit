@@ -35,10 +35,10 @@ export function isConcreteOutsideLeave(
 ): boolean {
   if (!(relatedTarget instanceof Node)) return false
   if (relatedTarget === document.body) return true
-  if (options.popover?.contains(relatedTarget)) return false
+  if (options.popover?.contains(relatedTarget) === true) return false
   if (
     relatedTarget instanceof Element &&
-    options.excludeSelectors?.some(sel => relatedTarget.closest(sel))
+    options.excludeSelectors?.some(sel => relatedTarget.closest(sel)) === true
   ) {
     return false
   }
@@ -55,11 +55,11 @@ export function isFocusInsideWidget(
   }
 ): boolean {
   if (!(active instanceof Node)) return false
-  if (options.field?.contains(active)) return true
-  if (options.popover?.contains(active)) return true
+  if (options.field?.contains(active) === true) return true
+  if (options.popover?.contains(active) === true) return true
   if (
     active instanceof Element &&
-    options.excludeSelectors?.some(sel => active.closest(sel))
+    options.excludeSelectors?.some(sel => active.closest(sel)) === true
   ) {
     return true
   }
@@ -93,7 +93,7 @@ export function handlePassivePreviewFieldTab(
 ): boolean {
   if (e.key !== "Tab") return false
 
-  if (!e.shiftKey && ctx.calendarButton?.contains(e.target as Node)) {
+  if (!e.shiftKey && ctx.calendarButton?.contains(e.target as Node) === true) {
     leave.immediate()
     return true
   }
@@ -115,7 +115,7 @@ export function handlePassivePreviewFieldTab(
       // Browsers that skip buttons can Tab into the open grid — move to the button.
       if (
         active instanceof Node &&
-        ctx.popover?.contains(active) &&
+        ctx.popover?.contains(active) === true &&
         !(
           ctx.calendarButton instanceof Node &&
           ctx.calendarButton.contains(active)
@@ -171,7 +171,7 @@ export function usePopoverInteractionFlag(
       if (!(target instanceof Node)) return
       // Native listeners see text nodes; normalize for closest().
       const el = target instanceof Element ? target : target.parentElement
-      if (popoverRef.current?.contains(target)) {
+      if (popoverRef.current?.contains(target) === true) {
         popoverInteractionRef.current = true
         return
       }

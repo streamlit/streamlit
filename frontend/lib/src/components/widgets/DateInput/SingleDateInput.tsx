@@ -283,9 +283,8 @@ function SingleDateInput({
     // the same condition that advances `prevResetKey`: a discarded render
     // retries against live focus rather than keeping a stale `true`. Strict
     // Mode's double render sees the same focus.
-    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
-      document.activeElement
-    )
+    shouldRestoreFocusRef.current =
+      triggerRef.current?.contains(document.activeElement) === true
   }
 
   // Ref so the close-detection effect always reads the latest displayValue
@@ -355,9 +354,8 @@ function SingleDateInput({
   // put it back. An outside click has moved focus away, so leave it there.
   useEffect(() => {
     if (!remountField) return
-    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
-      document.activeElement
-    )
+    shouldRestoreFocusRef.current =
+      triggerRef.current?.contains(document.activeElement) === true
     setRemountField(false)
     setFieldGeneration(generation => generation + 1)
   }, [remountField])
@@ -415,7 +413,7 @@ function SingleDateInput({
   // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+    if (calendarButtonRef.current?.contains(document.activeElement) !== true) {
       if (isCalendarActiveRef.current && activeOriginRef.current) {
         activeOriginRef.current.focus()
       } else {
@@ -537,8 +535,8 @@ function SingleDateInput({
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return
-      if (clearButtonRef.current?.contains(e.target)) return
-      if (calendarButtonRef.current?.contains(e.target)) return
+      if (clearButtonRef.current?.contains(e.target) === true) return
+      if (calendarButtonRef.current?.contains(e.target) === true) return
       if (!disabled) setIsOpen(true)
     },
     [disabled]
@@ -548,8 +546,9 @@ function SingleDateInput({
   // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
-      if (clearButtonRef.current?.contains(e.target as Node)) return
-      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      const target = e.target as Node
+      if (clearButtonRef.current?.contains(target) === true) return
+      if (calendarButtonRef.current?.contains(target) === true) return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
@@ -579,7 +578,7 @@ function SingleDateInput({
       }
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
-        triggerRef.current?.contains(document.activeElement)
+        triggerRef.current?.contains(document.activeElement) === true
           ? document.activeElement
           : undefined
       // Focus returns here when the dialog closes: the focused field control, or
@@ -785,7 +784,7 @@ function SingleDateInput({
         aria-keyshortcuts="Alt+ArrowDown"
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
+        data-has-error={error !== null ? "" : undefined}
         aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -801,8 +800,8 @@ function SingleDateInput({
                 // segment text when the controlled value has not changed.
                 key={`${formResetKey}-${fieldGeneration}`}
                 aria-label={label}
-                aria-describedby={error ? errorId : undefined}
-                isInvalid={!!error}
+                aria-describedby={error !== null ? errorId : undefined}
+                isInvalid={error !== null}
                 // Keep invalid state tied to Streamlit's error, not native
                 // constraint validation. Required is exposed on the field
                 // group that contains the focused segments, not via RAC
@@ -821,7 +820,7 @@ function SingleDateInput({
           </I18nProvider>
         </StyledDateFieldsScroller>
         <StyledTrailingIcons>
-          {error && (
+          {error !== null && (
             <StyledErrorIconContainer data-testid="stDateInputError">
               <Tooltip
                 content={
@@ -862,7 +861,7 @@ function SingleDateInput({
             <Icon content={CalendarToday} size="base" />
           </StyledCalendarButton>
         </StyledTrailingIcons>
-        {error && (
+        {error !== null && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replaceAll("**", "")}
           </StyledVisuallyHidden>

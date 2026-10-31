@@ -141,3 +141,30 @@ if TYPE_CHECKING:
         datetime_input("foo", datetime(2025, 11, 19, 16, 45), key="my_key", bind=None),
         datetime,
     )
+
+    # Test required parameter (keyword-only). Return types do not narrow.
+    assert_type(datetime_input("foo", required=True), datetime)
+    assert_type(datetime_input("foo", required=False), datetime)
+    assert_type(datetime_input("foo", value=None, required=True), datetime | None)
+    assert_type(
+        datetime_input("foo", value=None, required=True, on_change="ignore"),
+        datetime | None,
+    )
+
+    assert_type(
+        datetime_input(
+            "foo",
+            datetime(2025, 11, 19, 16, 45),
+            key="required_datetime",
+            help="Pick a datetime",
+            on_change=on_change_callback,
+            format="YYYY/MM/DD",
+            step=timedelta(minutes=30),
+            disabled=False,
+            required=True,
+            label_visibility="visible",
+            width=240,
+            persist_state="page",
+        ),
+        datetime,
+    )

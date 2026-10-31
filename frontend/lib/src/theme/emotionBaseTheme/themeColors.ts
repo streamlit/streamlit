@@ -52,6 +52,13 @@ export const requiredThemeColors = {
   greenTextColor: "#0C5A44",
   violetTextColor: "#6F33B8",
   grayTextColor: "#686255",
+
+  // Stock main chrome (opaque). Sidebar variants live in stockSidebarChrome.
+  borderColor: "#DCD8D4",
+  dataframeBorderColor: "#E8E5E2",
+  dataframeHeaderBackgroundColor: "#F7F7F6",
+  codeBackgroundColor: "#F7F7F6",
+  codeTextColor: "#2F2D2B",
 }
 
 export type RequiredThemeColors = Record<

@@ -21,6 +21,7 @@ import userEvent, {
 
 import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import type {
   RecordingState,
   WaveformController,
@@ -1134,6 +1135,42 @@ describe("AudioInput Error Handling", () => {
     // Verify can record again
     const recordButton = screen.getByRole("button", { name: /record/i })
     expect(recordButton).not.toBeDisabled()
+  })
+
+  it("shows no error when a pending stop is cancelled", async () => {
+    const user = userEvent.setup()
+    controllerState = "recording"
+    controller.stop = vi
+      .fn()
+      .mockRejectedValue(new RecordingCancelledError("Waveform player reset"))
+
+    render(<AudioInput {...createProps()} />)
+
+    await user.click(screen.getByRole("button", { name: "Stop recording" }))
+
+    await waitFor(() => {
+      expect(controller.stop).toHaveBeenCalledTimes(1)
+    })
+    expect(controller.approve).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText(/An error has occurred, please try again/i)
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows an error when stopping fails", async () => {
+    const user = userEvent.setup()
+    controllerState = "recording"
+    controller.stop = vi.fn().mockRejectedValue(new Error("stop failed"))
+
+    render(<AudioInput {...createProps()} />)
+
+    await user.click(screen.getByRole("button", { name: "Stop recording" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/An error has occurred, please try again/i)
+      ).toBeVisible()
+    })
   })
 
   it("shows an error when creating a blob URL fails", async () => {

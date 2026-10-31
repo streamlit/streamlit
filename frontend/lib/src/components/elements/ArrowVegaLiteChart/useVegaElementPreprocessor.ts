@@ -23,6 +23,11 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import type { VegaLiteChartElement } from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
+import {
+  applyLargeDataDefaults,
+  type DatasetRowCounts,
+  getDatasetRowCounts,
+} from "./largeDataDefaults"
 
 /**
  * A loosely-typed VegaLite spec after JSON parsing.
@@ -33,7 +38,9 @@ type VegaLiteSpec = Record<string, unknown>
 
 /** A single VegaLite selection/binding parameter within spec.params. */
 interface VegaLiteParam {
+  /** Parsed from the user's spec JSON, so it can be `null`. */
   select?:
+    | null
     | string
     | {
         type?: string
@@ -223,6 +230,7 @@ const generateSpec = (
   vegaLiteTheme: string,
   selectionMode: string[],
   theme: EmotionTheme,
+  rowCounts: DatasetRowCounts,
   containerWidth: number,
   containerHeight?: number,
   alt: string = ""
@@ -266,6 +274,11 @@ const generateSpec = (
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
 
+  // Render large charts to canvas and skip per-mark ARIA, unless the author
+  // set the renderer or ARIA.
+  applyLargeDataDefaults(spec, rowCounts)
+
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- title may be a string, array, object, or null; a missing or empty title is left unchanged
   if (spec.title) {
     const title =
       typeof spec.title === "string" ? { text: spec.title } : spec.title
@@ -376,6 +389,14 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
 
+  // Compare row counts by value so the spec regenerates only when a count
+  // changes. Every rerun delivers new dataset objects.
+  const rowCountsKey = JSON.stringify(getDatasetRowCounts(data, datasets))
+  const rowCounts = useMemo(
+    () => JSON.parse(rowCountsKey) as DatasetRowCounts,
+    [rowCountsKey]
+  )
+
   // The structural spec generated with neutral (0) container dimensions. This is
   // only recomputed when non-dimension inputs change, keeping it stable across
   // container resizes.
@@ -388,6 +409,7 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         0, // Use 0 for container dimensions
         0,
         alt
@@ -399,6 +421,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
       alt,
     ]
   )
@@ -463,6 +486,7 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         containerWidth,
         containerHeight,
         alt
@@ -474,6 +498,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
       containerWidth,
       containerHeight,
       alt,

@@ -227,5 +227,22 @@ ignore_area = st.text_area(
 )
 st.write("Ignore text area value:", ignore_area)
 
-if st.button("Apply ignore text area", key="apply_ignore_text_area"):
-    st.write("Applied ignore text area value:", ignore_area)
+apply_ignore_area = st.button("Apply ignore text area", key="apply_ignore_text_area")
+# Write into a fixed slot so the button click does not shift the widgets below.
+# A shift can remount a text area mid-rerun and drop a blocked required edit.
+applied_ignore_area_slot = st.empty()
+if apply_ignore_area:
+    applied_ignore_area_slot.write(f"Applied ignore text area value: {ignore_area}")
+
+# --- required text areas ---
+st.markdown("Required text areas:")
+
+with st.form("required_text_area_form", clear_on_submit=True):
+    st.text_area("Required message", key="required_message", required=True)
+    st.text_area("Required details", key="required_details", required=True)
+    required_form_submitted = st.form_submit_button("Submit required text area form")
+st.write("required form submitted:", required_form_submitted)
+st.write("required message:", st.session_state.get("required_message", ""))
+
+required_notes = st.text_area("Required notes", key="required_notes", required=True)
+st.write("required notes:", required_notes)

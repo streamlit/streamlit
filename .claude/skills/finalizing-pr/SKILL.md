@@ -52,11 +52,11 @@ Run the `reviewing-local-changes` subagent to review the changes. Wait for compl
 Review the recommendations from step 6. For each recommendation:
 
 - If valid and improves code quality: implement the change
-- If not applicable or would over-engineer: skip with brief reasoning
+- If not applicable or would over-engineer: skip with brief reasoning. This includes fixes for rare, low-impact edge cases that would add new state, abstractions, or long special-case branches (see the proportionality check in `/addressing-pr-review-comments`)
 
 ### 8. Run checks (second pass)
 
-Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored (they require manual updates).
+Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored while iterating. On a pull request, add the `update-snapshots` label and merge the snapshot PR the workflow opens.
 
 ### 9. Create or update PR
 

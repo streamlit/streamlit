@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -847,9 +848,6 @@ class TextWidgetsMixin:
             effective_validate
         )
 
-        if autocomplete is None:
-            autocomplete = type_defaults.autocomplete
-
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
             value = None
@@ -886,7 +884,9 @@ class TextWidgetsMixin:
 
         text_input_proto.type = type_defaults.proto_type
 
-        text_input_proto.autocomplete = autocomplete
+        text_input_proto.autocomplete = (
+            type_defaults.autocomplete if autocomplete is None else autocomplete
+        )
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
@@ -936,6 +936,36 @@ class TextWidgetsMixin:
             text_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_input",
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.STRING,
+                label=label,
+                max_chars=max_chars,
+                type=type,
+                help=text_input_proto.help or None,
+                placeholder=placeholder,
+                icon=icon,
+                disabled=disabled,
+                # `required` and `validate` are checked by the browser, not by
+                # this interface, so a client has to send values that pass
+                # them. `validate` is the effective rule, including the one
+                # `type` implies. `live` is left out: it only times the
+                # browser's commits, and every value a client sets reruns.
+                required=required,
+                validate=(
+                    [validate_regex, validate_message]
+                    if validate_message
+                    else validate_regex
+                )
+                or None,
+                # The resolved value, including the default `type` implies and
+                # an explicit empty string.
+                autocomplete=text_input_proto.autocomplete,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 
@@ -954,6 +984,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -976,6 +1007,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -998,6 +1030,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1122,6 +1155,21 @@ class TextWidgetsMixin:
             An optional boolean that disables the text area if set to ``True``.
             The default is ``False``.
 
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            and whitespace-only values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -1218,6 +1266,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             width=width,
             bind=bind,
@@ -1239,6 +1288,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1264,8 +1314,10 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
-            # Explicitly whitelist max_chars to make sure the ID changes when it changes
-            # since the widget value might become invalid based on a different max_chars
+            # Explicitly allowlist max_chars so the ID changes when it changes,
+            # since the widget value might become invalid based on a different
+            # max_chars. `required` is hashed for unkeyed widgets but is not on
+            # this allowlist: toggling it cannot make a stored value incompatible.
             key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
@@ -1275,6 +1327,7 @@ class TextWidgetsMixin:
             help=help,
             placeholder=str(placeholder),
             width=width,
+            required=required,
         )
 
         session_state = get_session_state().filtered_state
@@ -1288,6 +1341,7 @@ class TextWidgetsMixin:
             text_area_proto.default = value
         text_area_proto.form_id = current_form_id(self.dg)
         text_area_proto.disabled = disabled
+        text_area_proto.required = required
         text_area_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1346,6 +1400,22 @@ class TextWidgetsMixin:
             text_area_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_area",
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.STRING,
+                label=label,
+                max_chars=max_chars,
+                help=text_area_proto.help or None,
+                placeholder=placeholder,
+                disabled=disabled,
+                # `required` is checked by the browser, not by this interface,
+                # so a client has to send values that pass it.
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 

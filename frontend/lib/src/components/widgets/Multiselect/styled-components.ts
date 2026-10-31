@@ -108,7 +108,7 @@ export const StyledTagGroup = styled.span({
 
 /** Individual removable tag pill displaying a selected value. */
 export const StyledTag = styled.span<{ $disabled?: boolean; $wrap?: boolean }>(
-  ({ theme, $disabled, $wrap }) => ({
+  ({ theme, $disabled = false, $wrap }) => ({
     display: "inline-flex",
     alignItems: "center",
     // In single-row mode, keep chips at their natural width so the container
@@ -168,7 +168,7 @@ export const StyledTagRemoveButton = styled.button(({ theme }) => ({
 export const StyledFilterInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $typingDisabled?: boolean; $hasValues?: boolean }>(
-  ({ theme, $typingDisabled, $hasValues }) => ({
+  ({ theme, $typingDisabled = false, $hasValues = false }) => ({
     height: theme.sizes.elementHighlightHeight,
     marginBottom: theme.sizes.tagMarginInsideBorder,
     marginTop: theme.spacing.none,
@@ -196,7 +196,7 @@ export const StyledFilterInput = styled(Input, {
     cursor: $typingDisabled ? "pointer" : undefined,
     userSelect: $typingDisabled ? "none" : undefined,
     "&::placeholder": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
     },
     "&[data-disabled]": {
       cursor: "not-allowed",
@@ -253,7 +253,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * !important overrides neutralize RAC's imperative inline style writes.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
-  ({ theme, $isInSidebar }) => ({
+  ({ theme, $isInSidebar = false }) => ({
     ...getPopoverContainerStyle(theme),
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
@@ -299,7 +299,7 @@ export const StyledEmptyState = styled.span(({ theme }) => ({
   width: "100%",
   height: theme.sizes.emptyDropdownHeight,
   padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.base,
@@ -341,7 +341,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
     cursor: "not-allowed",
     color: theme.colors.fadedText40,
   },
-  ...($isCreatable && {
+  ...($isCreatable === true && {
     "&::before": {
       content: '""',
       position: "absolute",
@@ -353,7 +353,7 @@ export const StyledListBoxItem = styled(ListBoxItem, {
       transform: "translateY(-50%)",
     },
   }),
-  ...($isBulkAction && {
+  ...($isBulkAction === true && {
     "&::after": {
       content: '""',
       position: "absolute",

@@ -64,6 +64,7 @@ export const useStWidthHeight = ({
   ])
 
   const height = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `string | number`; a 0 or empty container height falls back to the element height
     if (isFullScreen && container.height) {
       return container.height
     }

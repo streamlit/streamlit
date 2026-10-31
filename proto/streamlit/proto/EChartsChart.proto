@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowNamedDataSet.proto";
+
 message EChartsChart {
   // JSON-serialized ECharts option object.
   string spec = 1;
@@ -24,21 +26,31 @@ message EChartsChart {
   // are accepted.
   string theme = 2;
 
-  // The unique element ID of this chart. Populated when the user provided a
-  // key (CSS class + remount identity). Unkeyed charts skip the ID entirely.
+  // The unique element ID of this chart. Populated when selections are
+  // activated (on_select != "ignore") or the user provided a key.
   string id = 3;
 
-  // Held for selection fields in the follow-up on_select PR.
-  reserved 4, 5;
+  // Form ID, filled if selections are activated.
+  string form_id = 4;
 
-  // Renderer passed to echarts.init.
+  // True when ``on_select`` is not ``"ignore"``. Keyed display-only charts
+  // also receive an element ID (CSS class + remount identity), so the
+  // frontend cannot treat a non-empty ID as "this is a selection widget".
+  bool selection_activated = 5;
+
+  // Renderer passed to echarts.init. Keep field 6 stable: older frontends
+  // read this number as the renderer.
   Renderer renderer = 6;
 
   // Accessible name for the chart (author `alt`). Applied on the frontend as
   // ECharts `aria.label.description` (→ aria-label on role="img").
   optional string alt = 7;
 
-  // Next ID: 8
+  // Arrow IPC for dataframe-like `dataset.source` values. The spec references
+  // each one as `{"name": "<content hash>"}`; identical frames share one entry.
+  repeated ArrowNamedDataSet datasets = 8;
+
+  // Next ID: 9
 
   // Available renderers:
   enum Renderer {

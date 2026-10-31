@@ -467,6 +467,76 @@ describe("useDeckGl", () => {
     })
   })
 
+  describe("server view state sync", () => {
+    it("keeps user camera changes when the server changes initialViewState but not views", () => {
+      const initialProps = getUseDeckGlProps()
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      act(() => {
+        result.current.onViewStateChange({
+          viewState: { ...mockInitialViewState, latitude: 55 },
+        } as ViewStateChangeParameters)
+      })
+
+      rerender({
+        ...initialProps,
+        element: getUseDeckGlProps({}, { zoom: 8 }).element,
+      })
+
+      expect(result.current.viewState).toEqual({
+        ...mockInitialViewState,
+        latitude: 55,
+        zoom: 8,
+      })
+    })
+
+    it.each([
+      ["a new", { latitude: 20, longitude: 10, zoom: 0 }],
+      ["an unchanged", mockInitialViewState],
+    ])(
+      "resets the camera when the views change with %s initialViewState",
+      (_, nextViewState) => {
+        const initialProps = getUseDeckGlProps()
+        const { result, rerender } = renderHook(props => useDeckGl(props), {
+          initialProps,
+        })
+
+        // MapController reports its full viewport props, including the default
+        // Web Mercator maxBounds that GlobeController would clamp its zoom to.
+        act(() => {
+          result.current.onViewStateChange({
+            viewState: {
+              ...mockInitialViewState,
+              zoom: 7,
+              maxBounds: [
+                [-Infinity, -90],
+                [Infinity, 90],
+              ],
+              normalize: true,
+            },
+          } as ViewStateChangeParameters)
+        })
+
+        rerender({
+          ...initialProps,
+          element: getUseDeckGlProps(
+            {},
+            {},
+            {
+              initialViewState: nextViewState,
+              views: [{ "@@type": "_GlobeView", controller: true }],
+            }
+          ).element,
+        })
+
+        expect(result.current.viewState).toEqual(nextViewState)
+        expect(result.current.viewState).not.toHaveProperty("maxBounds")
+      }
+    )
+  })
+
   describe("selection sanitization", () => {
     it("keeps a false update trigger when selection rewrites fill colors", () => {
       const props = getUseDeckGlProps(
@@ -504,6 +574,41 @@ describe("useDeckGl", () => {
         [],
         false,
       ])
+    })
+
+    it("skips null layers when selection mode makes layers pickable", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          // pydeck serializes a `None` layer as JSON `null`.
+          layers: [
+            null,
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layers = result.current.deck.layers as Array<{
+        id: string
+        props: { pickable?: boolean }
+      } | null>
+      expect(layers).toHaveLength(2)
+      expect(layers[0]).toBeNull()
+      expect(layers[1]?.id).toBe("points")
+      expect(layers[1]?.props.pickable).toBe(true)
     })
 
     const getPropsWithArrayData = (
@@ -900,9 +1005,9 @@ describe("useDeckGl", () => {
       const updatedProps = getPropsWithArrayData(updatedData, "object-layer")
       rerender(updatedProps)
 
-      expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
-        updatedData[1]
-      )
+      expect(
+        result.current.data.selection.objects["object-layer"]?.[0]
+      ).toEqual(updatedData[1])
     })
   })
 

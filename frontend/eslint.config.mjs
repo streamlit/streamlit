@@ -221,6 +221,19 @@ export const getNoRestrictedProperties = ({
   ]
 }
 
+// Base options for @typescript-eslint/strict-boolean-expressions. Scoped
+// blocks below tighten individual options for directories that are clean.
+const strictBooleanExpressionsOptions = {
+  allowString: true,
+  allowNumber: true,
+  allowNullableObject: true,
+  allowNullableBoolean: false,
+  allowNullableString: true,
+  allowNullableNumber: true,
+  allowNullableEnum: true,
+  allowAny: true,
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -665,13 +678,42 @@ export default defineConfig([
     },
   },
   // Flags redundant optional chains and always-true checks.
-  // Tests stay off until production source is clean. Elements and non-widget
-  // packages stay off until those directories are cleaned.
+  // Tests stay off until they are cleaned up.
   {
-    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
+  // A nullable boolean in a condition treats a missing value like `false`.
+  // Default it, or compare with `=== true`. Negate with `!== true`; the
+  // rule's suggested `=== false` is false for null and undefined. The rule
+  // always reports mixed-type unions (for example `string | number`); disable
+  // those inline with a reason. Other types, including `any`, stay allowed.
+  // The rule covers every package, tests included. The glob has no package
+  // prefix because `app/eslint.config.mjs` re-exports this config, and globs
+  // resolve relative to that file.
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        strictBooleanExpressionsOptions,
+      ],
+    },
+  },
+  // A nullable string in a condition treats `""` like a missing value. Use
+  // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
+  // compare with `null` / `undefined` when the value is never empty. Other
+  // directories stay on the base options until they are cleaned up.
+  {
+    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        { ...strictBooleanExpressionsOptions, allowNullableString: false },
+      ],
     },
   },
   // Styled components files

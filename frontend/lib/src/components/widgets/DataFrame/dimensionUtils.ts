@@ -48,17 +48,10 @@ export function shouldUseContentWidth(
 
 /**
  * Helper function to determine if the element is configured to use stretch height.
- * Stretch height is not enabled when the element is in the root container. Without a
- * fixed height enclosing container, there is nothing to stretch and the dataframe ends
- * up collapsed to minimum height to so we use auto height mode instead.
  */
 export function shouldUseStretchHeight(
-  heightConfig?: streamlit.HeightConfig.$Properties | null,
-  isInRoot?: boolean
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 ): boolean {
-  if (isInRoot) {
-    return false
-  }
   return heightConfig?.useStretch ?? false
 }
 

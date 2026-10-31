@@ -42,7 +42,7 @@ import {
   type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -229,7 +229,7 @@ const Multiselect: FC<Props> = props => {
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -451,7 +451,7 @@ const Multiselect: FC<Props> = props => {
         // Bulk select: add all currently displayed (non-special) options
         const options = displayOptionsRef.current
         const optionsToAdd = options
-          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .filter(o => o.isBulkAction !== true && o.isCreatable !== true)
           .map(o => o.value)
 
         let newValue: string[]
@@ -491,7 +491,7 @@ const Multiselect: FC<Props> = props => {
       // already handled by early returns above, so only filter undefined here.
       const optionById = new Map(
         displayOptionsRef.current
-          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .filter(o => o.isBulkAction !== true && o.isCreatable !== true)
           .map(o => [o.id, o.value])
       )
       const newValues = selectedKeys

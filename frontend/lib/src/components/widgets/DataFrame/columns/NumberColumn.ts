@@ -20,7 +20,15 @@ import {
   type NumberCell,
 } from "@glideapps/glide-data-grid"
 
-import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
+import { isNullOrEmptyString } from "@streamlit/utils"
+
+import {
+  type DurationFormat,
+  format as formatArrowCell,
+  formatDurationFromSeconds,
+  getDurationFractionalSecondDigits,
+  isValidDurationSeconds,
+} from "~lib/dataframes/arrowFormatUtils"
 import {
   isDurationType,
   isIntegerType,
@@ -41,6 +49,30 @@ import {
   truncateDecimals,
 } from "./utils"
 
+/**
+ * Returns the duration display for a column, or `undefined` to format the
+ * value as a plain number.
+ * - `duration`: any number column.
+ * - Timedelta columns: an empty format also means `duration`; `compact` and
+ *   `localized` select their duration displays.
+ */
+function getDurationFormat(
+  format: string | undefined,
+  isDuration: boolean
+): DurationFormat | undefined {
+  if (format === "duration") {
+    return "duration"
+  }
+  if (!isDuration) {
+    return undefined
+  }
+  // The "Automatic" menu entry sends an empty format string.
+  if (isNullOrEmptyString(format)) {
+    return "duration"
+  }
+  return format === "compact" || format === "localized" ? format : undefined
+}
+
 export interface NumberColumnParams {
   /**
    * The minimum allowed value for editing. Is set to 0 for unsigned values.
@@ -54,6 +86,16 @@ export interface NumberColumnParams {
    * A formatting syntax (e.g. sprintf) to format the display value.
    * This can be used for adding prefix or suffix, or changing the number of
    * decimals of the display value.
+   *
+   * Duration formats treat values as seconds:
+   * - `duration`: approximate human-readable duration (for example,
+   *   `a few seconds` or `a day`) on any number column
+   * - `compact` on a timedelta column: elapsed-time clock (e.g. `00:00:01`)
+   * - `localized` on a timedelta column: locale-aware duration
+   *
+   * `compact` and `localized` include sub-second parts when present. Timedelta
+   * columns default to `duration`. Other named and printf formats apply to the
+   * value in seconds.
    */
   readonly format?: string
   /**
@@ -67,15 +109,27 @@ export interface NumberColumnParams {
 }
 
 /**
- * A column types that supports optimized rendering and editing for numbers.
- * This supports float, integer, and unsigned integer types.
+ * A column type that supports optimized rendering and editing for numbers.
+ * This supports float, integer, unsigned integer, and duration types.
+ *
+ * Duration values must already be in seconds (converted in getCellFromArrow)
+ * so they stay within JavaScript's safe integer range.
  */
 function NumberColumn(props: BaseColumnProps): BaseColumn {
+  const isDuration = isDurationType(props.arrowType)
+  const durationFractionalSecondDigits = getDurationFractionalSecondDigits(
+    props.arrowType.arrowField
+  )
   const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
     {
-      // Set step to 1 for integer types
-      step: isIntegerType(props.arrowType) ? 1 : undefined,
+      // Set step to 1 for integer types and second-unit durations, which
+      // cannot store fractional seconds.
+      step:
+        isIntegerType(props.arrowType) ||
+        (isDuration && durationFractionalSecondDigits === 0)
+          ? 1
+          : undefined,
       // if uint (unsigned int), only positive numbers are allowed
       min_value: isUnsignedIntegerType(props.arrowType) ? 0 : undefined,
     },
@@ -83,11 +137,11 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     props.columnTypeOptions
   )
 
-  // If no custom format is provided & the column type is duration or period,
-  // instruct the column to use the arrow formatting for the display value.
+  const durationFormat = getDurationFormat(parameters.format, isDuration)
+
+  // Period columns without a custom format use Arrow's period formatter.
   const useArrowFormatting =
-    !parameters.format &&
-    (isDurationType(props.arrowType) || isPeriodType(props.arrowType))
+    isNullOrEmptyString(parameters.format) && isPeriodType(props.arrowType)
 
   const allowNegative =
     isNullOrUndefined(parameters.min_value) || parameters.min_value < 0
@@ -104,7 +158,8 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     readonly: !props.isEditable,
     allowOverlay: true,
     contentAlign:
-      props.contentAlignment ?? (useArrowFormatting ? "left" : "right"),
+      props.contentAlignment ??
+      (useArrowFormatting || durationFormat === "duration" ? "left" : "right"),
     // The text in pinned columns should be faded.
     style: props.isPinned ? "faded" : "normal",
     allowNegative,
@@ -118,7 +173,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     let cellData: number | null = toSafeNumber(data)
 
     if (isNullOrUndefined(cellData)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -152,6 +207,15 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       return false
     }
 
+    // Duration checks run after clamping so a corrected max_value that is
+    // finer than the column unit (e.g. 90.5s on timedelta64[s]) is rejected.
+    if (
+      isDuration &&
+      !isValidDurationSeconds(cellData, durationFractionalSecondDigits)
+    ) {
+      return false
+    }
+
     // TODO(lukasmasuch): validate step size?
     // if (notNullOrUndefined(parameters.step) && parameters.step !== 1)
 
@@ -162,7 +226,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "number",
     sortMode: "smart",
-    typeIcon: ":material/tag:",
+    typeIcon: isDuration ? ":material/timelapse:" : ":material/tag:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
       if (validate === true) {
@@ -205,8 +269,17 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
 
         try {
-          if (useArrowFormatting) {
-            // Use arrow formatting for some selected types (see above)
+          if (!Number.isFinite(cellData)) {
+            // ±Infinity (NaN is handled above). formatNumber would return an
+            // empty string, so show it as st.table does.
+            displayData = String(cellData)
+          } else if (durationFormat) {
+            displayData = formatDurationFromSeconds(
+              cellData,
+              durationFormat,
+              durationFractionalSecondDigits
+            )
+          } else if (useArrowFormatting) {
             displayData = formatArrowCell(cellData, props.arrowType)
           } else {
             displayData = formatNumber(
@@ -227,13 +300,19 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
         }
       }
 
+      let copyData = ""
+      if (notNullOrUndefined(cellData)) {
+        // Copy the raw number, not the formatted display, so paste
+        // round-trips through toSafeNumber.
+        copyData = toSafeString(cellData)
+      }
+
       return {
         ...cellTemplate,
         data: cellData,
         displayData,
         isMissingValue: isNullOrUndefined(cellData),
-        // We want to enforce the raw number without formatting when its copied:
-        copyData: isNullOrUndefined(cellData) ? "" : toSafeString(cellData),
+        copyData,
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {

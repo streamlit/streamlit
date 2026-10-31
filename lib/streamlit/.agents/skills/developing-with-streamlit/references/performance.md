@@ -14,7 +14,7 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached, bounded with max_entries
+# GOOD: Cache at most the 100 most recently used paths
 @st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
@@ -99,30 +99,30 @@ config = asyncio.run(load_config())
 
 Do not cache live async clients or connections bound to the event loop that created them — that loop may already be closed on a later rerun, and the object will raise `Event loop closed`. Cache results that stay valid across loops, such as API payloads, dataframes, and config.
 
-### Prevent unbounded cache growth
+### Bound cache growth
 
-**Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
+**Important:** `st.cache_data` and `st.cache_resource` are unbounded by default. Use `ttl` to expire stale results.
+Use `max_entries` when the workload gives a practical entry-count bound. For `st.cache_resource`, this is the available count-based limit.
+For `st.cache_data`, use `max_size` only when the user provides a byte budget or deployment memory constraints and the intended allocation across caches determine a per-cache budget. It limits serialized bytes for one decorated function, not total process memory or RSS. Do not guess it from source dataset size, representative or example values, or arbitrary constants; ask the user when the memory budget is unknown. Combine limits when they address different risks. `max_size` integers are bytes; strings use binary units (`"500MB"` and `"500MiB"` are equal):
 
 ```python
-# BAD: Unbounded cache - memory will grow indefinitely
+# BAD: No growth bound
 @st.cache_data
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with TTL
-@st.cache_data(ttl="1h")
+# GOOD: Bound by age and the app's 1,000-entry cache budget
+@st.cache_data(ttl="1h", max_entries=1000)
 def get_user_data(user_id):
     return fetch_user(user_id)
 
 
-# GOOD: Bounded cache with max entries
-@st.cache_data(max_entries=100)
-def get_user_data(user_id):
-    return fetch_user(user_id)
+# GOOD: Enforce the user's 500 MiB allocation (one oversized value is retained)
+@st.cache_data(max_size="500MiB")
+def get_large_report(report_id):
+    return build_report(report_id)
 ```
-
-Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
 
 ## Fragments
 
@@ -165,7 +165,6 @@ auto_refresh_metrics()
 ```
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
-
 
 ### Keyed reruns — target a fragment from a callback
 
@@ -329,9 +328,10 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
 
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
-- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.text_area`: `required` and `max_chars`. `st.selectbox`: `required`. `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
-- `st.date_input` and `st.datetime_input`: `min_value` and `max_value`. `st.datetime_input` also takes `step`.
+- `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
+- `required=True` does not change the default: `st.selectbox` still starts on its first option, `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` (`index=None` for `st.selectbox`) together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
 - `st.data_editor`: the same kinds of limits via `st.column_config`.
 - `st.file_uploader`: `type` rejects a disallowed file before upload.
 
@@ -344,9 +344,7 @@ These checks are a UX guardrail, not a security boundary. See [Widget input cons
 
 ## Conditional rendering
 
-**This is critical and often missed.**
-
-By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` always render all their content, even when hidden or collapsed.
+**This is critical and often missed.** By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
 
 ### Tabs with expensive content
 
@@ -421,6 +419,10 @@ Move expensive work outside the main flow:
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
 
+## Charts with large data
+
+Charts process every row in the browser, which outweighs the Python side from about 10,000 points. Aggregate first and pick the chart command by size; see [charts.md](charts.md#large-datasets).
+
 ## Render stable UI before slow work
 
 Streamlit runs your script top to bottom and emits a UI delta as each `st.*` command runs. During a rerun, the elements from the _previous_ run stay on screen and are marked **stale** (faded to ~33% opacity after a short delay) until the new run reaches the same delta paths or finishes and clears the leftovers. So if slow code runs before the app has recreated its downstream layout, users can temporarily see faded old elements, duplicate-looking content, or a stale UI branch from a previous run.
@@ -477,7 +479,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep a parallel fragment's output inside its own body: during a full-app run it runs on a separate thread, and writing to a container created outside it raises an error, even if that container was created earlier in the run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its output inside its own body; it cannot write to containers created outside it.
 
 ## Perceived performance (loading states)
 

@@ -27,10 +27,12 @@ def _render_widgets() -> None:
         st.text_input("Page-scoped", key="page_text", persist_state="page")
         st.text_input("Session-scoped", key="session_text", persist_state="session")
         st.text_input("Not persisted", key="plain_text")
+        st.feedback("stars", key="session_feedback", persist_state="session")
 
     _render_value("page_text", "page_text")
     _render_value("session_text", "session_text")
     _render_value("plain_text", "plain_text")
+    _render_value("session_feedback", "session_feedback")
 
     st.button("Rerun", key="rerun")
 

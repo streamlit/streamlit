@@ -92,7 +92,7 @@ FlexContext.displayName = "FlexContext"
 export function hasStretchHeightFallback(
   flexContext: IFlexContext | null
 ): boolean {
-  return !flexContext?.hasDefiniteHeight
+  return flexContext?.hasDefiniteHeight !== true
 }
 
 /**

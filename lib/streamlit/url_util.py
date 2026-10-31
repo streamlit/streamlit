@@ -20,12 +20,11 @@ from urllib.parse import urlparse
 
 UrlSchema: TypeAlias = Literal["http", "https", "mailto", "data"]
 
-# Static file serving endpoint path prefix used to detect relative static URLs.
-# Note: STATIC_SERVING_ENDPOINT in server.py is "/app/static" (without trailing slash)
-# and STATIC_SERVING_ENDPOINT in DefaultStreamlitEndpoints.ts is "/app/static/" (with slash).
-# This constant includes the trailing slash to ensure we only match actual file paths
-# like "/app/static/image.png" and not other paths that happen to start with "/app/static".
-_STATIC_SERVING_ENDPOINT: Final = "/app/static/"
+# Where the app's own static files (`server.enableStaticServing`) are served,
+# relative to the app's root. It must match STATIC_SERVING_ENDPOINT in
+# DefaultStreamlitEndpoints.ts. The trailing slash matches only file paths like
+# "/app/static/image.png", not other paths that start with "/app/static".
+STATIC_SERVING_ENDPOINT: Final = "/app/static/"
 
 
 # Regular expression for process_gitblob_url
@@ -146,4 +145,4 @@ def is_relative_static_url(url: str) -> bool:
     bool
         True if the URL starts with /app/static/, False otherwise.
     """
-    return url.startswith(_STATIC_SERVING_ENDPOINT)
+    return url.startswith(STATIC_SERVING_ENDPOINT)

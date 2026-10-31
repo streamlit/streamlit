@@ -63,7 +63,7 @@ export class BlobUrlManager {
     const hash = this.computeHash(content)
     const cachedUrl = this.cache.get(hash)
 
-    if (cachedUrl) {
+    if (cachedUrl !== undefined) {
       return { url: cachedUrl, hash }
     }
 

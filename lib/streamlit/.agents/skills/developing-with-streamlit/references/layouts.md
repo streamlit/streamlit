@@ -10,7 +10,7 @@ How you structure your app affects usability more than you think.
 | `st.columns`      | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards.                                                                                                                                                                                                |
 | `st.grid`         | You need a responsive grid of equal-width tiles that reflow with available width. Use it for metric walls, galleries, and dashboard cards. `st.columns` stays the tool for a known side-by-side split. |
 | `st.sidebar`      | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content.                                                                                                                                                             |
-| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) or `bind="query-params"` (with `key`), then check each tab's `.open` property. |
+| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page.                                                                                                                                                                             |
 | `st.expander`     | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view.                                                                                                                                                                    |
 | `st.status`       | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error.                                                                                                                                                        |
 | `st.popover`      | You need compact on-demand controls or filters without changing page layout. For a button that opens a short list of one-shot actions, use `st.menu_button` instead.                                                                                                                        |
@@ -21,6 +21,8 @@ How you structure your app affects usability more than you think.
 | `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns.                                                                                                                                                                          |
 | `st.bottom`       | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls.                                                                                                                                                                       |
 | `st.space`        | You need explicit vertical or horizontal spacing inside the current layout direction.                                                                                                                                                                                                       |
+
+By default, the app script enters every tab, expander, and popover body on every rerun, including hidden, collapsed, and closed bodies. For expensive content, see [Conditional rendering](performance.md#conditional-rendering).
 
 ## Sidebar: navigation + global filters only
 
@@ -323,6 +325,19 @@ Prefer context manager mode; use standalone mode only when you need to reserve a
 
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
+## Fragments with discontiguous layout
+
+Sometimes a fragment's controls or output need to appear at positions the fragment body does not own — a button in the main script that refreshes a chart fragment, or a fragment that renders into a slot between other main-script elements.
+
+**Triggering a fragment from outside.** Give the fragment a key (`@st.fragment(key="charts")`) and call `st.rerun("charts")` from a widget callback in the main script or another fragment. See "Keyed reruns" in `performance.md`.
+
+**Rendering into an outside container.** Keep a fragment's output in its own body unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container.
+
+- Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot.
+- If that run has nothing to show yet, `container.empty()` reserves the slot.
+- Interacting with a widget that a fragment rendered into an outside container reruns that fragment, not the full app.
+- A `@st.fragment(parallel=True)` fragment cannot write outside or reserve a slot.
+
 ## Dialogs for focused interactions
 
 Use `@st.dialog` for UI that doesn't need to be always visible:
@@ -401,6 +416,7 @@ st.container(height=300)
 - [st.dialog](https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
 - [st.empty](https://docs.streamlit.io/develop/api-reference/layout/st.empty)
+- [st.fragment](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment)
 - [Insert elements out of order](https://docs.streamlit.io/knowledge-base/using-streamlit/insert-elements-out-of-order)
 - [st.chat_message](https://docs.streamlit.io/develop/api-reference/chat/st.chat_message)
 - [Chat UI reference](chat-ui.md)

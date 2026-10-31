@@ -184,7 +184,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // still be set for CSS key styling without implying widget mode.
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank id means this is not a widget
   const widgetId = element.id || undefined
-  const isWidget = Boolean(widgetMgr && widgetId)
+  const isWidget = Boolean(widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
   // Bind using the original `expanded=` default, not the current backend state.
@@ -230,7 +230,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
-      if (widgetMgr && widgetId) {
+      if (widgetId) {
         widgetMgr.setBoolValue(widgetId, newOpen, {
           formId: undefined,
           fragmentId,
@@ -274,7 +274,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showLeadingChevron = !isCompact && (!icon || isHovered)
   const showLeadingUserIcon = isCompact
     ? Boolean(icon) && !hideCompactSpinnerForShimmer
-    : icon && !isHovered
+    : Boolean(icon) && !isHovered
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({

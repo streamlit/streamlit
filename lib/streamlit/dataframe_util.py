@@ -77,8 +77,11 @@ _DASK_INDEX: Final = "dask.dataframe.dask_expr._collection.Index"
 _DASK_DATAFRAME_LEGACY: Final = "dask.dataframe.core.DataFrame"
 _DASK_SERIES_LEGACY: Final = "dask.dataframe.core.Series"
 _DASK_INDEX_LEGACY: Final = "dask.dataframe.core.Index"
-_DUCKDB_RELATION: Final = "_duckdb.DuckDBPyRelation"
-_DUCKDB_RELATION_LEGACY: Final = "duckdb.duckdb.DuckDBPyRelation"
+# DuckDB moved DuckDBPyRelation across modules. Keep every path so current
+# and older releases are recognized.
+_DUCKDB_RELATION: Final = "duckdb._relation.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY: Final = "_duckdb.DuckDBPyRelation"
+_DUCKDB_RELATION_LEGACY_NESTED: Final = "duckdb.duckdb.DuckDBPyRelation"
 _MODIN_DF_TYPE_STR: Final = "modin.pandas.dataframe.DataFrame"
 _MODIN_SERIES_TYPE_STR: Final = "modin.pandas.series.Series"
 _PANDAS_STYLER_TYPE_STR: Final = "pandas.io.formats.style.Styler"
@@ -475,7 +478,11 @@ def is_duckdb_relation(obj: object) -> bool:
     https://duckdb.org/docs/api/python/relational_api
     """
 
-    return is_type(obj, _DUCKDB_RELATION) or is_type(obj, _DUCKDB_RELATION_LEGACY)
+    return (
+        is_type(obj, _DUCKDB_RELATION)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY)
+        or is_type(obj, _DUCKDB_RELATION_LEGACY_NESTED)
+    )
 
 
 def _is_list_of_scalars(data: Iterable[Any]) -> bool:
@@ -882,8 +889,11 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
     import pyarrow as pa
 
     def _downcast_type(arrow_type: pa.DataType) -> pa.DataType:
-        if isinstance(arrow_type, pa.LargeListType):
-            return pa.list_(_downcast_type(arrow_type.value_type))
+        # Regular lists are rebuilt too, so a large_list nested inside one
+        # (for example, `list<large_list>`) is also downcast.
+        if isinstance(arrow_type, (pa.ListType, pa.LargeListType)):
+            value_field = arrow_type.value_field
+            return pa.list_(value_field.with_type(_downcast_type(value_field.type)))
         return arrow_type
 
     new_fields = [f.with_type(_downcast_type(f.type)) for f in schema]
@@ -1035,6 +1045,37 @@ def _show_data_information(msg: str) -> None:
     get_dg_singleton_instance().main_dg.caption(msg)
 
 
+def collect_polars_lazyframe(
+    data: Any, max_unevaluated_rows: int = _MAX_UNEVALUATED_DF_ROWS
+) -> Any:
+    """Collect at most ``max_unevaluated_rows`` rows of a Polars LazyFrame.
+
+    Shows a caption in the app when it truncates the LazyFrame.
+
+    Parameters
+    ----------
+    data : polars.LazyFrame
+        The LazyFrame to collect.
+
+    max_unevaluated_rows : int
+        The maximum number of rows to collect, defaults to 10k.
+
+    Returns
+    -------
+    polars.DataFrame
+        The collected (and possibly truncated) DataFrame.
+    """
+    # Collect one extra row to detect truncation accurately.
+    collected = data.limit(max_unevaluated_rows + 1).collect()
+    if collected.height > max_unevaluated_rows:
+        collected = collected.head(max_unevaluated_rows)
+        _show_data_information(
+            f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+            "rows. Call `collect()` on the dataframe to show more."
+        )
+    return collected
+
+
 def _convert_polars_to_arrow_bytes(data: Any) -> bytes:
     """Convert Polars DataFrame to Arrow IPC bytes via to_arrow().
 
@@ -1098,15 +1139,9 @@ def convert_anything_to_arrow_bytes(
 
     # Fast path: Polars LazyFrame - must collect first with row limit
     if is_polars_lazyframe(data):
-        # Collect one extra row to detect truncation accurately
-        collected = data.limit(max_unevaluated_rows + 1).collect()
-        truncated = collected.height > max_unevaluated_rows
-        if truncated:
-            collected = collected.head(max_unevaluated_rows)
-            _show_data_information(
-                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                "rows. Call `collect()` on the dataframe to show more."
-            )
+        collected = collect_polars_lazyframe(
+            data, max_unevaluated_rows=max_unevaluated_rows
+        )
         try:
             return _convert_polars_to_arrow_bytes(collected)
         except Exception:
@@ -1114,7 +1149,9 @@ def convert_anything_to_arrow_bytes(
                 "Direct Polars LazyFrame→Arrow IPC failed, falling back to Pandas path",
                 exc_info=True,
             )
-            # Fall through to Pandas conversion
+            # Fall through to Pandas conversion with the collected frame, so
+            # the LazyFrame is not collected (and captioned) a second time.
+            data = collected
 
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.

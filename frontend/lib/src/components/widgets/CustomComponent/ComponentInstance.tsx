@@ -31,7 +31,7 @@ import type {
   ComponentInstance as ComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
-import { StreamlitConfig } from "@streamlit/utils"
+import { isNullOrEmptyString, StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
@@ -103,7 +103,7 @@ function getSrc(
     url: src,
     query: {
       streamlitUrl: currentUrl.origin + currentUrl.pathname,
-      ...(customComponentClientId && {
+      ...(!isNullOrEmptyString(customComponentClientId) && {
         __streamlit_parent_client_id: customComponentClientId,
       }),
     },
@@ -119,7 +119,7 @@ function getSrc(
  */
 function getWarnMessage(componentName: string, url?: string): string {
   let message: string
-  if (url && url !== "") {
+  if (!isNullOrEmptyString(url)) {
     message =
       `Your app is having trouble loading the **${componentName}** component.` +
       `\nThe app is attempting to load the component from **${url}**,` +
@@ -225,6 +225,8 @@ function ComponentInstance(props: Props): ReactElement {
 
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
+  // Starts as `undefined` so that `setIsReadyTimeout(false)` on COMPONENT_READY
+  // is a real state change and re-renders to hide the loading skeleton.
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
   // Initial iframe height comes from args.height, e.g. my_custom_component(height=100)
   // or st.pdf, which sends a numeric string. Numbers and numeric strings are used;
@@ -270,7 +272,7 @@ function ComponentInstance(props: Props): ReactElement {
   }, [componentSourceUrl, componentName, registry])
 
   useEffect(() => {
-    if (isReadyTimeout && !isReadyRef.current) {
+    if (isReadyTimeout === true && !isReadyRef.current) {
       // Send timeout error if we've timed out waiting for the READY message from the component
       LOG.error(
         `Client Error: Custom Component ${componentName} timeout error`
@@ -408,7 +410,7 @@ function ComponentInstance(props: Props): ReactElement {
   // but while we also have not waited until the ready timeout
 
   const loadingSkeleton = !isReadyRef.current &&
-    !isReadyTimeout &&
+    isReadyTimeout !== true &&
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
@@ -422,7 +424,7 @@ function ComponentInstance(props: Props): ReactElement {
   // If we've timed out waiting for the READY message from the component,
   // display a warning.
   const warns =
-    !isReadyRef.current && isReadyTimeout ? (
+    !isReadyRef.current && isReadyTimeout === true ? (
       <AlertElement
         body={getWarnMessage(componentName, url)}
         kind={Kind.WARNING}

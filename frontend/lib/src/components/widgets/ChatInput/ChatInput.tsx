@@ -48,7 +48,10 @@ import {
   type streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
+import type { StopResult } from "~lib/components/audio/core/types"
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import { LOG } from "~lib/components/ChatInput/logger"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -173,6 +176,8 @@ function ChatInput({
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
   const [recordingError, setRecordingError] = useState<string | null>(null)
+  /** Whether the controller reported an error during the current mic attempt. */
+  const recordingErrorReportedRef = useRef(false)
   const [isStacked, setIsStacked] = useState(false)
 
   // Forces dropzone to remount when files are cleared
@@ -348,7 +353,10 @@ function ChatInput({
       }
 
       // Delete file from server if it was successfully uploaded
-      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      if (
+        file.status.type === "uploaded" &&
+        !isNullOrEmptyString(file.status.fileUrls.deleteUrl)
+      ) {
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
@@ -705,11 +713,10 @@ function ChatInput({
         // left over from a previous (never-started) run.
         pendingStopRef.current = false
         // `fragmentId` is an empty string for top-level (non-fragment) widgets
-        // because it comes from a protobuf string field. Normalize falsy values
+        // because it comes from a protobuf string field. Normalize empty values
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- protobuf "" means a full-script run
-          fragmentId: fragmentId || null,
+          fragmentId: isNullOrEmptyString(fragmentId) ? null : fragmentId,
           scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,
         })
@@ -809,11 +816,13 @@ function ChatInput({
       onApprove: handleAudioApprove,
       onPermissionDenied: () => {
         const errorMessage = "Microphone access denied"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Permission denied:", errorMessage)
       },
       onError: (error: Error) => {
         const errorMessage = "Recording failed"
+        recordingErrorReportedRef.current = true
         setRecordingError(errorMessage)
         LOG.error("Recording error:", error)
       },
@@ -858,12 +867,13 @@ function ChatInput({
     updateScrollHeight()
 
     // Clear recording error when user starts typing
-    if (recordingError) {
+    if (recordingError !== null) {
       setRecordingError(null)
     }
   }
 
   const handleMicClick = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setRecordingError is a stable setter
     async (e: React.MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
@@ -877,7 +887,22 @@ function ChatInput({
         return
       }
 
-      await controller.start()
+      // An earlier attempt's error stays visible until this attempt resolves:
+      // clearing it here would swap the mic button out of its error tooltip
+      // and drop keyboard focus.
+      recordingErrorReportedRef.current = false
+      try {
+        await controller.start()
+      } catch (error) {
+        LOG.error("Failed to start recording:", error)
+        // The controller reports most failures (e.g. permission denied) via
+        // its events before rejecting; keep that message and fall back to a
+        // generic one only for failures it didn't report.
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- onPermissionDenied/onError set this ref while start() is awaited; TypeScript only sees the reset above
+        if (!recordingErrorReportedRef.current) {
+          setRecordingError("Recording failed")
+        }
+      }
     },
     [acceptAudio, disabled, isDisabledDuringRun, controller]
   )
@@ -890,8 +915,17 @@ function ChatInput({
   }, [controller])
 
   const handleRecordingApprove = useCallback(async () => {
-    const { blob } = await controller.stop()
-    await controller.approve(blob)
+    let stopResult: StopResult
+    try {
+      stopResult = await controller.stop()
+    } catch (error) {
+      // Cancelling while the stop is pending is not a recording failure.
+      if (error instanceof RecordingCancelledError) {
+        return
+      }
+      throw error
+    }
+    await controller.approve(stopResult.blob)
   }, [controller])
 
   // Void wrappers for async handlers to satisfy eslint
@@ -932,7 +966,10 @@ function ChatInput({
     const handleDragEnter = (event: DragEvent): void => {
       event.preventDefault()
       event.stopPropagation()
-      if (!fileDragged && event.dataTransfer?.types.includes("Files")) {
+      if (
+        !fileDragged &&
+        event.dataTransfer?.types.includes("Files") === true
+      ) {
         setFileDragged(true)
       }
     }
@@ -1013,10 +1050,10 @@ function ChatInput({
   // Calculate minimum height for the textarea based on heightConfig.
   // Subtracts container padding and border from pixel height to get inner textarea height.
   const textareaMinHeight = useMemo((): string | undefined => {
-    if (!heightConfig || heightConfig.useContent) {
+    if (!heightConfig || heightConfig.useContent === true) {
       return undefined
     }
-    if (heightConfig.useStretch) {
+    if (heightConfig.useStretch === true) {
       return "100%"
     }
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
@@ -1113,6 +1150,18 @@ function ChatInput({
             </StyledTextareaWrapper>
           )}
 
+          {/* Keep this node mounted in every layout. WaveSurfer binds to it
+              once, and a remount leaves later recordings drawing into a
+              detached node. It is hidden while idle. While recording, the
+              left cluster's `order: -1` places the waveform between the
+              button clusters. */}
+          <StyledWaveformContainer isRecording={isRecording}>
+            <StyledChatAudioWave
+              ref={waveformContainerRef}
+              data-testid="stChatInputWaveform"
+            />
+          </StyledWaveformContainer>
+
           {/* Toolbar/buttons section - wrapped in StyledToolbarRow when expanded */}
           {hasExpandedHeight && !isRecording ? (
             <StyledToolbarRow>
@@ -1151,7 +1200,7 @@ function ChatInput({
                   </StyledInputInstructions>
                 )}
                 {acceptAudio &&
-                  (recordingError ? (
+                  (recordingError !== null ? (
                     <Tooltip
                       content={recordingError}
                       placement={Placement.TOP}
@@ -1208,11 +1257,6 @@ function ChatInput({
                 )}
               </StyledLeftCluster>
 
-              {/* Waveform - shown inline when recording */}
-              <StyledWaveformContainer isRecording={isRecording}>
-                <StyledChatAudioWave ref={waveformContainerRef} />
-              </StyledWaveformContainer>
-
               <StyledRightCluster>
                 {isRecording ? (
                   <>
@@ -1257,7 +1301,7 @@ function ChatInput({
                       </StyledInputInstructions>
                     )}
                     {acceptAudio &&
-                      (recordingError ? (
+                      (recordingError !== null ? (
                         <Tooltip
                           content={recordingError}
                           placement={Placement.TOP}

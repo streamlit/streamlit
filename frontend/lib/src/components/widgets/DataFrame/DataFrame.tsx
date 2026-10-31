@@ -51,9 +51,13 @@ import {
   Dataframe as DataframeProto,
   type streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -193,7 +197,8 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+  const flexContext = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = flexContext
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -668,7 +673,7 @@ function DataFrame({
    * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
-    if (!element.selectionState) {
+    if (isNullOrEmptyString(element.selectionState)) {
       processedSelectionStateRef.current = null
       return
     }
@@ -785,6 +790,7 @@ function DataFrame({
   // To activate the group row feature (multi-level headers),
   // we need more than one header row.
   const usesGroupRow = data.dimensions.numHeaderRows > 1
+  const hasFallbackHeight = hasStretchHeightFallback(flexContext)
   const {
     minHeight,
     maxHeight,
@@ -804,7 +810,7 @@ function DataFrame({
     widthConfig,
     heightConfig,
     measuredContainerHeight,
-    isInRoot
+    hasFallbackHeight
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -931,7 +937,7 @@ function DataFrame({
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
   // in a nested container.
   const disableResize =
-    isInHorizontalLayout || Boolean(widthConfig?.useContent && !isInRoot)
+    isInHorizontalLayout || (widthConfig?.useContent === true && !isInRoot)
 
   // The search overlay may only be open while search is actually enabled.
   // Deriving it from `canSearch` ensures the overlay is hidden (instead of
@@ -943,8 +949,10 @@ function DataFrame({
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt must not become an accessible name
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledResizableContainer
@@ -1115,7 +1123,7 @@ function DataFrame({
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}
-        {...(accessibleName ? { role: "region" } : {})}
+        {...(accessibleName !== undefined ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
@@ -1416,7 +1424,7 @@ function DataFrame({
           })}
         />
       </Resizable>
-      {tooltip?.content && (
+      {tooltip !== undefined && (
         <Tooltip
           top={tooltip.top}
           left={tooltip.left}

@@ -20,6 +20,7 @@ import threading
 from abc import abstractmethod
 from collections.abc import Callable, Container, Iterator, Sequence
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum, auto
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
@@ -583,13 +584,47 @@ def _reset_outside_wrappers(
     # See docstring — tag wrappers with fragment_id for stale-child GC.
     with ThreadState.scoped(fragment_id=fragment_id):
         for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
-            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+            _enqueue_add_block(
+                wrapper.creation_delta_path,
+                wrapper.block_proto,
+                agent_props=wrapper.agent_props,
+            )
 
             wrapper_cursor = wrapper.delta_generator._cursor
             if not isinstance(wrapper_cursor, RunningCursor):
                 # LockedCursor (st.empty wrappers) always points at index 0.
                 continue
             wrapper_cursor.reset()
+
+
+@dataclass(frozen=True, slots=True)
+class _FragmentIdentity:
+    """Definition and call-site IDs for one fragment invocation.
+
+    ``definition_id`` is shared by every call site and is what duplicate-key
+    detection compares. ``fragment_id`` is unique per delta path.
+    """
+
+    definition_id: str
+    fragment_id: str
+
+
+def _make_fragment_identity(
+    func: Callable[..., Any],
+    *,
+    delta_path: str,
+    additional_hash_info: str,
+) -> _FragmentIdentity:
+    """Build the definition ID and call-site ID from one ``{module}.{qualname}`` token."""
+    # Keep additional_hash_info after delta_path so fragment IDs stay
+    # byte-identical to earlier releases. Hashing definition_id + delta_path
+    # would change dialog fragment IDs, the fragment_id stored on widget
+    # metadata, and run_every auto-rerun targets.
+    definition_token = f"{func.__module__}.{get_object_name(func)}"
+    return _FragmentIdentity(
+        definition_id=f"{definition_token}{additional_hash_info}",
+        fragment_id=calc_hash(f"{definition_token}{delta_path}{additional_hash_info}"),
+    )
 
 
 def _fragment(
@@ -648,18 +683,17 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_hash(
-            f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
+        identity = _make_fragment_identity(
+            non_optional_func,
+            delta_path=dg_stack_snapshot[-1]._get_delta_path_str(),
+            additional_hash_info=additional_hash_info,
         )
+        fragment_id = identity.fragment_id
 
-        fragment_definition_id: str | None = None
-        if key is not None:
-            fragment_definition_id = (
-                f"{non_optional_func.__module__}."
-                f"{get_object_name(non_optional_func)}{additional_hash_info}"
-            )
-            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
+        if key is not None and not ctx.shared.register_fragment_user_key(
+            key, identity.definition_id
+        ):
+            raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -870,7 +904,9 @@ def fragment(
     writing fragment, not the full app.
 
     To populate an outside container from a fragment, the container must first
-    receive at least one write during the initial full app run.
+    receive at least one write during the initial full app run. Parallel
+    fragments (``parallel=True``) cannot write to outside containers at all,
+    including ``st.sidebar`` and ``st.bottom``.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
@@ -912,10 +948,14 @@ def fragment(
 
         During the initial parallel run, some Streamlit commands are
         restricted because they are not safe to call from concurrent
-        threads. These include ``st.dialog``, ``st.switch_page``, and
-        writing to containers created outside the fragment. These
-        commands work normally during sequential fragment reruns
+        threads. These include ``st.dialog`` and ``st.switch_page``.
+        Those commands work normally during sequential fragment reruns
         (e.g., after a widget interaction).
+
+        Writing to containers created outside the fragment, including
+        ``st.sidebar`` and ``st.bottom``, is not supported in a
+        parallel fragment on the initial parallel run or a later
+        fragment rerun.
 
         .. warning::
 
@@ -1107,6 +1147,10 @@ def _run_parallel_fragment(
     ThreadState.update(
         pre_allocated_container_fragment_id=fragment_id,
         is_parallel_worker=True,
+        # Workers are a new nesting stack. Clear a flag copied from an
+        # in-flight parent command so it cannot suppress this worker's
+        # top-level commands.
+        command_tracking_deactivated=False,
     )
 
     coordinator = ctx.parallel_coordinator

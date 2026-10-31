@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -25,9 +26,13 @@ from typing import (
     Protocol,
     TypeAlias,
     cast,
+    get_args,
+    overload,
 )
 
 from streamlit import dataframe_util
+from streamlit.elements.lib import agent_data, agent_spec, column_types
+from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
     LayoutConfig,
@@ -35,6 +40,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
+from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
     Key,
     compute_and_register_element_id,
@@ -43,16 +49,22 @@ from streamlit.elements.lib.utils import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitDataframeConversionError,
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from streamlit.delta_generator import DeltaGenerator
 
 
@@ -102,7 +114,9 @@ _GL_SERIES_TYPES: Final = frozenset(
 
 # Components from the same ECharts GL extension. Unlike the series types above
 # these are top-level option keys, so they are matched per option variant.
-_GL_COMPONENT_KEYS: Final = frozenset({"geo3D", "globe", "grid3D"})
+_GL_COMPONENT_KEYS: Final = frozenset(
+    {"geo3D", "globe", "grid3D", "mapbox3D", "maptalks3D"}
+)
 
 # Series types from other ECharts extensions that Streamlit doesn't bundle,
 # mapped to the package that provides them. This list is best-effort: any other
@@ -121,6 +135,20 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 # ``dump_options_with_quotes`` emits that encoding as a JSON string value.
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
+# The named formats a tooltip ``valueFormatter`` string accepts (the same set as
+# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
+# ``util/formatNumber.ts``.
+_NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# One token of a printf-style format string: literal text, an escaped ``%%``, or
+# a placeholder. The alternatives and their order mirror the parser of the
+# frontend's vendored sprintf (``frontend/lib/src/vendor/sprintf.js``), so a
+# string this rejects would also fail there.
+_PRINTF_TOKEN: Final = re.compile(
+    r"[^%]+|%%|(?P<placeholder>%(?:[1-9][0-9]*\$|\([^)]+\))?\+?(?:0|'[^$])?-?"
+    r"[,_]?[0-9]*(?:\.[0-9]+)?[b-gijostTuvxX])"
+)
+
 
 class EChartsCompatible(Protocol):
     """Duck-typed protocol for objects convertible to an ECharts option.
@@ -136,6 +164,212 @@ class EChartsCompatible(Protocol):
 # Input accepted by ``st.echarts_chart``: an option ``Mapping``, a JSON string,
 # or a duck-typed ``pyecharts`` chart.
 EChartsSpec: TypeAlias = Mapping[str, Any] | str | EChartsCompatible
+
+
+class EChartsSelectionState(ReadOnlyAttributeDictionary):
+    """
+    The schema for the ECharts chart selection state.
+
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
+
+    This is a Streamlit-normalized snapshot of ECharts selection events, not
+    the raw ``selectchanged`` or ``brushSelected`` payload. Exposed field
+    names use ``snake_case``; ECharts string values, such as
+    ``brush_type="lineX"``, remain unchanged.
+
+    Empty series groups that ECharts emits are omitted, so ``selected[0]`` is
+    the first series that has a selection, not necessarily series 0. Iterate
+    the groups and match ``series_index``. A brush region can appear in
+    ``areas`` even when it hits no data (``selected`` is empty).
+
+    Attributes
+    ----------
+    selected : list[dict[str, Any]]
+        The union of native and brushed selections, grouped by ECharts series
+        and data type. Each entry contains ``series_index``, ``series_id``,
+        ``series_name``, ``data_type``, and ``data_indices``. Series IDs and
+        names are ``None`` when they weren't explicitly configured.
+
+        ``data_type`` is ``"main"`` (used when ECharts omits ``dataType``),
+        ``"node"``, or ``"edge"``.
+
+        ``data_indices`` is sorted and series-local. For a dataset without
+        transforms, it addresses ``dataset.source`` rows. For inline series,
+        it addresses ``series.data``. For graph series, ``data_type="node"``
+        addresses ``data`` and ``data_type="edge"`` addresses ``links``.
+
+    areas : list[dict[str, Any]]
+        The active brush regions. Each entry contains ``brush_index``,
+        ``brush_type``, and ``coord_range``. ``brush_type`` is ECharts'
+        ``"rect"``, ``"lineX"``, ``"lineY"``, or ``"polygon"``. The shape of
+        ``coord_range`` depends on that type: ``"rect"`` uses
+        ``[[x0, x1], [y0, y1]]``; ``"lineX"`` and ``"lineY"`` use
+        ``[start, end]``; ``"polygon"`` uses ``[[x, y], ...]``. Category-axis
+        coordinates are ordinal positions and can include half-indices such
+        as ``[0.5, 3.5]``. Regions that ECharts only describes in pixel space
+        are omitted, since their geometry can't be mapped back to your data.
+
+    Example
+    -------
+    Selecting points and a rect brush returns a grouped, series-local payload:
+
+    >>> {
+    ...     "selected": [
+    ...         {
+    ...             "series_index": 0,
+    ...             "series_id": "sales",
+    ...             "series_name": "Sales",
+    ...             "data_type": "main",
+    ...             "data_indices": [1, 2, 3],
+    ...         },
+    ...     ],
+    ...     "areas": [
+    ...         {
+    ...             "brush_index": 0,
+    ...             "brush_type": "rect",
+    ...             "coord_range": [[0, 2], [10, 20]],
+    ...         },
+    ...     ],
+    ... }
+
+    If ``event`` is the return value of ``st.echarts_chart`` and ``df`` holds
+    the data of a single series, filter it with:
+
+    >>> rows = (
+    ...     event.selection.selected[0]["data_indices"]
+    ...     if event.selection.selected
+    ...     else []
+    ... )
+    >>> filtered_df = df.iloc[rows]
+
+    """
+
+    selected: list[dict[str, Any]]
+    areas: list[dict[str, Any]]
+
+    @overload
+    def __getitem__(self, key: Literal["selected"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["areas"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class EChartsState(ReadOnlyAttributeDictionary):
+    """
+    The schema for the ECharts chart event state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
+
+    Only selection events are supported at this time.
+
+    ``selection`` is the Streamlit-normalized payload described by
+    ``EChartsSelectionState``, not a raw ECharts event.
+
+    Attributes
+    ----------
+    selection : dict
+        The state of the ``on_select`` event. This attribute returns a
+        dictionary-like object that supports both key and attribute notation.
+        The attributes are described by the ``EChartsSelectionState`` dictionary
+        schema.
+
+    Example
+    -------
+    The event state wraps that selection payload:
+
+    >>> {
+    ...     "selection": {
+    ...         "selected": [
+    ...             {
+    ...                 "series_index": 0,
+    ...                 "series_id": "sales",
+    ...                 "series_name": "Sales",
+    ...                 "data_type": "main",
+    ...                 "data_indices": [1, 2, 3],
+    ...             },
+    ...         ],
+    ...         "areas": [
+    ...             {
+    ...                 "brush_index": 0,
+    ...                 "brush_type": "rect",
+    ...                 "coord_range": [[0, 2], [10, 20]],
+    ...             },
+    ...         ],
+    ...     }
+    ... }
+
+    """
+
+    selection: EChartsSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to return EChartsSelectionState. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> EChartsSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, EChartsSelectionState):
+                item = EChartsSelectionState(item)
+                # Cache via dict.__setitem__ — ReadOnlyAttributeDictionary
+                # blocks normal mutation, but storing the wrapped instance
+                # keeps identity stable across accesses.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
+
+
+@dataclass
+class EChartsChartSelectionSerde:
+    """Serialize and deserialize the ECharts chart selection state."""
+
+    def deserialize(self, ui_value: str | None) -> EChartsState:
+        empty_selection_state: dict[str, Any] = {
+            "selection": {
+                "selected": [],
+                "areas": [],
+            },
+        }
+
+        selection_state: Any = (
+            empty_selection_state if ui_value is None else json.loads(ui_value)
+        )
+
+        if "selection" not in selection_state:  # pragma: no cover - defensive
+            selection_state = empty_selection_state
+        else:
+            selection_state["selection"].setdefault("selected", [])
+            selection_state["selection"].setdefault("areas", [])
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = EChartsSelectionState(
+            selection_state["selection"]
+        )
+        return EChartsState(selection_state)
+
+    def serialize(self, selection_state: EChartsState) -> str:
+        # The selection state is already JSON-clean (produced by the frontend),
+        # so no ``default`` fallback is needed here.
+        return json.dumps(selection_state)
 
 
 def _js_callback_error() -> StreamlitAPIException:
@@ -200,63 +434,41 @@ def _loads_json_option(raw: str) -> Any:
     return option
 
 
-def _dataframe_to_records(df: pd.DataFrame) -> list[dict[str, Any]]:
-    """Convert a dataframe to JSON-native records (array of objects).
+def _convert_single_dataset(
+    dataset: dict[str, Any], arrow_datasets: dict[str, bytes]
+) -> None:
+    """Replace a single ``dataset`` dict's dataframe-like ``source`` in place.
 
-    Uses pandas' JSON serialization to normalize datetimes (to ISO strings),
-    NaN/NaT/infinities (to ``null``), and numpy scalar types into JSON-native
-    values so the result can be strictly serialized without a ``default``
-    fallback. ``double_precision=15`` keeps float values that the default of
-    10 would round, matching an equivalent dict spec more closely.
-
-    ``DataFrame.to_json`` on older pandas emits invalid JSON (``Infinity``)
-    for infinities, which would surface as a raw ``JSONDecodeError``. Replacing
-    them with NaN first makes every supported pandas version emit ``null``.
-    The copy is skipped when no numeric column contains an infinity.
-    Numeric columns are coerced to ``float64`` first because nullable or
-    mixed extension dtypes can yield an object array that ``np.isinf``
-    cannot scan.
+    The serialized table is added to ``arrow_datasets`` under its content
+    hash, and ``source`` becomes a ``{"name": <hash>}`` reference to it, so
+    identical frames share one entry.
     """
-    try:
-        numeric = df.select_dtypes(include="number")
-        if not numeric.empty:
-            import numpy as np
-
-            if np.isinf(numeric.to_numpy(dtype=float, na_value=np.nan)).any():
-                df = df.replace([float("inf"), float("-inf")], float("nan"))
-        records = json.loads(
-            df.to_json(orient="records", date_format="iso", double_precision=15)
-        )
-    except (TypeError, ValueError, OverflowError) as ex:
-        raise StreamlitAPIException(
-            "The provided ECharts `dataset.source` is not JSON-serializable. "
-            "`st.echarts_chart` only supports JSON-compatible values inside "
-            "`dataset.source`. Convert or drop columns that cannot be "
-            "serialized to JSON.",
-            error_id="echarts-dataset-not-json-serializable",
-        ) from ex
-    return cast("list[dict[str, Any]]", records)
-
-
-def _convert_single_dataset(dataset: dict[str, Any]) -> None:
-    """Convert a single ``dataset`` dict's dataframe-like ``source`` in place."""
     source = dataset.get("source")
     if source is None or not dataframe_util.is_dataframe_like(source):
         return
 
-    df = dataframe_util.convert_anything_to_pandas_df(source)
-    labels = [str(column) for column in df.columns]
-    if len(labels) != len(set(labels)):
-        raise StreamlitAPIException(
-            "The provided ECharts dataset has duplicate column labels after "
-            'converting them to strings (for example both `1` and `"1"`). '
-            "Rename the columns so each label is unique.",
-            error_id="echarts-dataset-duplicate-columns",
-        )
-    dataset["source"] = _dataframe_to_records(df)
-    # Preserve column order via ``dimensions`` unless the user set it explicitly.
-    if "dimensions" not in dataset:
-        dataset["dimensions"] = labels
+    # Dataframe and PyArrow conversions raise plain TypeError and ValueError
+    # for unsupported values, such as duplicate pandas column names.
+    conversion_errors: tuple[type[BaseException], ...] = (
+        StreamlitDataframeConversionError,
+        *dataframe_util.get_arrow_conversion_errors(),
+        TypeError,
+        ValueError,
+    )
+    try:
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(source)
+    except conversion_errors as ex:
+        raise StreamlitDataframeConversionError(
+            "The provided ECharts `dataset.source` could not be converted for "
+            "display. Convert or drop the columns that cannot be serialized "
+            "(for example, cast object columns to strings, or call "
+            f"`.sparse.to_dense()` on sparse columns).\n\n{ex}",
+            error_id="echarts-dataset-not-arrow-serializable",
+        ) from ex
+
+    name = calc_hash(data_bytes)
+    arrow_datasets.setdefault(name, data_bytes)
+    dataset["source"] = {"name": name}
 
 
 def _iter_sequence_entries(value: Any, key: str) -> Iterator[Any]:
@@ -300,12 +512,15 @@ def _iter_option_variants(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
             yield from _iter_media_options(timeline_option)
 
 
-def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
-    """Yield series configs from a ``series`` value (object, list, or tuple)."""
-    if isinstance(series, dict):
-        yield series
-    elif isinstance(series, (list, tuple)):
-        for entry in series:
+def _iter_config_entries(value: Any) -> Iterator[dict[str, Any]]:
+    """Yield the dicts of a value that is one dict or a list or tuple of dicts.
+
+    Used for option keys such as ``series`` and ``tooltip``.
+    """
+    if isinstance(value, dict):
+        yield value
+    elif isinstance(value, (list, tuple)):
+        for entry in value:
             if isinstance(entry, dict):
                 yield entry
 
@@ -332,7 +547,33 @@ def _author_aria_label_description(option: dict[str, Any]) -> str | None:
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
-        yield from _iter_series_entries(variant.get("series"))
+        yield from _iter_config_entries(variant.get("series"))
+
+
+def _enables_selection(option: dict[str, Any]) -> bool:
+    """Return whether the spec configures a selection ECharts can emit.
+
+    Selection is opt-in through the user's own option keys: ``selectedMode`` on
+    a series for point selection, or a ``brush`` component for region selection.
+    A ``toolbox`` brush feature counts too, since it drives the same brush
+    events. Only ``series`` entries are inspected, so ``legend.selectedMode``
+    (a different feature that happens to share the name) is not mistaken for
+    data selection.
+    """
+    for variant in _iter_option_variants(option):
+        if "brush" in variant:
+            return True
+        toolbox = variant.get("toolbox")
+        # ECharts accepts a single toolbox or a list/tuple of them.
+        for entry in toolbox if isinstance(toolbox, (list, tuple)) else [toolbox]:
+            if (
+                isinstance(entry, dict)
+                and isinstance(feature := entry.get("feature"), dict)
+                and "brush" in feature
+            ):
+                return True
+
+    return any(series.get("selectedMode") for series in _iter_series(option))
 
 
 def _validate_supported_features(option: dict[str, Any]) -> None:
@@ -397,28 +638,91 @@ def _validate_supported_features(option: dict[str, Any]) -> None:
         )
 
 
-def _convert_datasets_in_variant(option: dict[str, Any]) -> None:
+def _iter_tooltips(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    """Yield top-level and series tooltip configs across option variants.
+
+    Skips per-data-item tooltips, which the frontend does not convert either.
+    """
+    for variant in _iter_option_variants(option):
+        yield from _iter_config_entries(variant.get("tooltip"))
+    for series in _iter_series(option):
+        yield from _iter_config_entries(series.get("tooltip"))
+
+
+def _is_printf_format(value: str) -> bool:
+    """Whether ``value`` parses as printf and has at least one placeholder.
+
+    A string without a placeholder (an escaped ``%%`` is not one) would print
+    the same text for every value.
+    """
+    has_placeholder = False
+    position = 0
+    while position < len(value):
+        token = _PRINTF_TOKEN.match(value, position)
+        if token is None:
+            return False
+        has_placeholder = has_placeholder or token["placeholder"] is not None
+        position = token.end()
+    return has_placeholder
+
+
+def _is_number_format(value: Any) -> bool:
+    """Whether ``value`` is a named number format or a printf-style string."""
+    return isinstance(value, str) and (
+        value in _NAMED_NUMBER_FORMATS or _is_printf_format(value)
+    )
+
+
+def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
+    """Log tooltip ``valueFormatter`` values that are not number formats.
+
+    ECharts only accepts a function there, which a JSON spec cannot carry, so
+    Streamlit reads a string as a number format. The frontend drops any other
+    value and keeps the default tooltip formatting, so the chart still renders.
+    """
+    for tooltip in _iter_tooltips(option):
+        value_formatter = tooltip.get("valueFormatter")
+        if value_formatter is None or _is_number_format(value_formatter):
+            continue
+        message = (
+            "The provided ECharts spec sets a tooltip `valueFormatter` of "
+            f"{value_formatter!r}, which is not a number format, so Streamlit "
+            "ignores it and uses the default tooltip formatting. Use a named "
+            'format such as "dollar" or "compact", or a printf-style string '
+            'such as "%.2f" (for example, "%.2f €" instead of "{value} €").'
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
+def _convert_datasets_in_variant(
+    option: dict[str, Any], arrow_datasets: dict[str, bytes]
+) -> None:
     """Convert dataframe-like ``dataset.source`` values on a single option variant."""
     dataset = option.get("dataset")
     if isinstance(dataset, dict):
-        _convert_single_dataset(dataset)
+        _convert_single_dataset(dataset, arrow_datasets)
     elif isinstance(dataset, (list, tuple)):
         for entry in dataset:
             if isinstance(entry, dict):
-                _convert_single_dataset(entry)
+                _convert_single_dataset(entry, arrow_datasets)
 
 
-def _convert_dataset_sources(option: dict[str, Any]) -> None:
-    """Convert dataframe-like ``dataset.source`` values into JSON records.
+def _convert_dataset_sources(option: dict[str, Any]) -> dict[str, bytes]:
+    """Replace dataframe-like ``dataset.source`` values with named Arrow datasets.
 
     ECharts' ``dataset`` can be a single object or a list/tuple of objects;
     both are supported here (mirroring how ``st.vega_lite_chart`` ingests
     dataframes). Timeline specs nest datasets under ``baseOption`` and per-tick
     ``options``, and responsive specs nest them under ``media[*].option``, so
     those variants are converted too.
+
+    Returns the Arrow IPC bytes of each distinct frame keyed by the name left
+    in its ``source``, in the order the frames were first found.
     """
+    arrow_datasets: dict[str, bytes] = {}
     for variant in _iter_option_variants(option):
-        _convert_datasets_in_variant(variant)
+        _convert_datasets_in_variant(variant, arrow_datasets)
+    return arrow_datasets
 
 
 def _copy_option_for_normalization(value: Any) -> Any:
@@ -445,12 +749,13 @@ def _copy_option_for_normalization(value: Any) -> Any:
     return value
 
 
-def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
+def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]]:
     """Normalize the ``spec`` input into a JSON-compatible ECharts option dict.
 
     Accepts a Python ``Mapping``, a JSON string, or a duck-typed ``pyecharts``
     chart (an object with a callable ``dump_options`` method). Dataframe-like
-    ``dataset.source`` values are converted to JSON records.
+    ``dataset.source`` values are replaced with named Arrow datasets, which are
+    returned next to the option (see ``_convert_dataset_sources``).
     """
     if isinstance(spec, str):
         option = _loads_json_option(spec)
@@ -477,8 +782,9 @@ def _normalize_spec(spec: EChartsSpec) -> dict[str, Any]:
         )
 
     _validate_supported_features(option)
-    _convert_dataset_sources(option)
-    return option
+    _warn_on_unsupported_value_formatters(option)
+    arrow_datasets = _convert_dataset_sources(option)
+    return option, arrow_datasets
 
 
 def _serialize_option(option: dict[str, Any]) -> str:
@@ -585,7 +891,68 @@ def _resolve_content_height(height: Height, spec: Any) -> Height:
     return _DEFAULT_CONTENT_HEIGHT
 
 
+def _echarts_data(
+    proto: EChartsChartProto, *, coordinates: str
+) -> dict[str, Any] | None:
+    """Build the agent ``data`` block for an ECharts chart.
+
+    - No Arrow dataset: the option holds all values, so it is reported as
+      complete.
+    - One dataset: the table is summarized and served like a dataframe, with
+      the option (holding its ``{"name": <hash>}`` placeholder) under ``spec``.
+    - Several datasets: no single table describes the chart, so none is served.
+    """
+    datasets = proto.datasets
+    if not datasets:
+        return agent_data.raw_spec(proto.spec)
+
+    data: dict[str, Any]
+    if len(datasets) > 1:
+        data = agent_data.unavailable("multiple_datasets")
+    else:
+        # agent_data.arrow returns None for empty bytes and for bytes that can
+        # neither be summarized nor served. A converted dataset is never
+        # empty, and in a recording session only server.maxMessageSize
+        # prevents serving.
+        data = agent_data.arrow(
+            datasets[0].data.data, coordinates=coordinates
+        ) or agent_data.unavailable("too_large_to_serve")
+    spec = agent_data.parse_spec(proto.spec)
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
 class EChartsMixin:
+    @overload
+    def echarts_chart(
+        self,
+        spec: EChartsSpec,
+        *,
+        width: Width = "stretch",
+        height: Height = "content",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        on_select: Literal["ignore"] = "ignore",
+        renderer: Literal["canvas", "svg"] = "canvas",
+        alt: str | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def echarts_chart(
+        self,
+        spec: EChartsSpec,
+        *,
+        width: Width = "stretch",
+        height: Height = "content",
+        theme: Literal["streamlit"] | None = "streamlit",
+        key: Key | None = None,
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
+        renderer: Literal["canvas", "svg"] = "canvas",
+        alt: str | None = None,
+    ) -> EChartsState: ...
+
     @gather_metrics("echarts_chart")
     def echarts_chart(
         self,
@@ -595,9 +962,10 @@ class EChartsMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
+        on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         renderer: Literal["canvas", "svg"] = "canvas",
         alt: str | None = None,
-    ) -> DeltaGenerator:
+    ) -> DeltaGenerator | EChartsState:
         r"""Display an interactive Apache ECharts chart.
 
         `Apache ECharts <https://echarts.apache.org/>`_ is a powerful, open-source
@@ -612,8 +980,9 @@ class EChartsMixin:
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
-            ``renderItem``) is not supported. Most formatting needs are covered
-            by ECharts' string-template formatters (e.g. ``"formatter": "{b}: {c}"``).
+            ``renderItem``) is not supported. Use ECharts' string templates
+            instead (e.g. ``"formatter": "{b}: {c}"``). To format tooltip
+            values, see the tooltip note below.
 
             Consequently, three families of ECharts charts are unavailable and
             raise an error: ``custom`` series (which require a ``renderItem``
@@ -630,6 +999,66 @@ class EChartsMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
+        .. note::
+            Streamlit extends two tooltip options so you can format tooltips
+            without JavaScript. Both work in ``tooltip`` and
+            ``series[i].tooltip``. Per-item tooltips inside ``series[i].data``
+            support neither, so set these options on the series instead:
+
+            - ``valueFormatter`` accepts a number format string, which formats
+              each value in the default tooltip. Use a named format
+              (``"plain"``, ``"localized"``, ``"dollar"``, ``"euro"``,
+              ``"yen"``, ``"percent"``, ``"compact"``, ``"scientific"``,
+              ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
+              printf-style format string (e.g. ``"%,d sessions"``). These are
+              the same formats as in |st.metric|_. ``"percent"`` multiplies
+              values by 100. One format applies to every value of a series, so
+              use ``encode.tooltip`` to choose which dimensions the tooltip
+              shows. Streamlit ignores any other value, including a malformed
+              printf-style string, and the tooltip keeps its default
+              formatting.
+            - String ``formatter`` templates in tooltips expand the
+              ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
+              otherwise supports only in series labels (e.g.
+              ``"{b}: {@[2]} sessions"``). In an axis tooltip, they read the
+              first series. Template values are inserted as escaped text,
+              without a number format. The template itself is HTML, as in any
+              other ECharts tooltip string.
+
+            .. |st.metric| replace:: ``st.metric``
+            .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
+
+        .. note::
+            To keep large charts fast, Streamlit sets two ECharts options when
+            your ``spec`` doesn't set them. It counts the items in each
+            series' ``data`` or in its dataset's ``source``:
+
+            - ``"large": True`` on ``scatter`` series with more than 20,000
+              points and on ``bar`` series with more than 2,000 bars. ECharts
+              then draws each series in a few batched paths instead of one
+              shape per item, which loads much faster. At these sizes ECharts
+              already skips animations. Tooltips still work, but hovering no
+              longer highlights an item, and series labels aren't drawn.
+            - ``"showSymbol": False`` on ``line`` series with more than 2,000
+              points on a value or time axis, where the symbols would merge
+              into a solid band. An axis tooltip
+              (``"tooltip": {"trigger": "axis"}``) still marks the hovered
+              point.
+
+            Streamlit leaves series unchanged in charts with selections
+            (``on_select``, ``selectedMode``, or a ``brush``) and series whose
+            ``data`` items are objects with their own settings. Large mode
+            also skips charts with a ``visualMap`` and series with
+            ``"colorBy": "data"``. Line series keep their symbols when the
+            chart uses an item tooltip or the line has empty values. To opt
+            out, set the option yourself, for example ``"large": False``.
+            pyecharts charts always set ``large`` and ``showSymbol``, so pass
+            ``is_large=True`` or ``is_symbol_show=False`` yourself. For line
+            charts with even more points, you can set ``"sampling": "lttb"``,
+            which draws a subset of points that keeps the line's shape.
+            Streamlit doesn't set it for you because it changes which points
+            are drawn and which points tooltips show.
+
         Parameters
         ----------
         spec : dict, str, or pyecharts chart
@@ -643,9 +1072,13 @@ class EChartsMixin:
               automatically. ``pyecharts`` is not a Streamlit dependency.
 
             If your option object includes a ``dataset`` with a dataframe-like
-            ``source`` (pandas, Polars, PyArrow, and others), Streamlit converts
-            it to JSON records and preserves the column order through
-            ``dataset.dimensions`` when you haven't set it.
+            ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
+            its rows to ECharts and keeps the column order through
+            ``dataset.dimensions`` when you haven't set it. The dataframe index
+            isn't included, so use ``df.reset_index()`` to plot it. Datetimes
+            become ISO-8601 strings (in UTC if timezone-aware), durations become
+            milliseconds, and missing values become ``null``. Other non-numeric
+            values use the text ``st.dataframe`` shows.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -690,26 +1123,83 @@ class EChartsMixin:
 
             - Accessibility: ``aria.enabled`` stays on so the chart keeps a
               screen-reader description unless you set ``aria`` yourself.
-            - Display-only cursor: a missing ``series.cursor`` is set to
-              ``"default"`` so the chart does not look clickable. Set
-              ``series.cursor`` yourself to override it.
+            - Display-only cursor: for charts with ``on_select="ignore"``, a
+              missing ``series.cursor`` is set to ``"default"`` so the chart
+              does not look clickable. Set ``series.cursor`` yourself to
+              override it.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened. Set
-            ``tooltip.formatter`` to a string template (for example
-            ``"{b}: {c}"``) to use your own formatting.
+            ``tooltip.valueFormatter`` to a number format (for example
+            ``"dollar"``) or ``tooltip.formatter`` to a string template (for
+            example ``"{b}: {c}"``) to use your own formatting. On a time
+            ``xAxis`` or ``yAxis``, the axis tooltip header and axis pointer
+            label show a midnight value as a date (for example
+            ``2026-08-18``) and any other value as a date and time to the
+            second. An hourly point at midnight therefore shows only its
+            date. An ``axisPointer.label.formatter`` on the axis,
+            ``tooltip``, ``grid.tooltip``, or the top-level ``axisPointer``
+            replaces this, including one set in a timeline tick or ``media``
+            override. ``"{value}"`` restores ECharts' default label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
-            is ``None`` (default), the chart's identity is determined by its
-            position in the app, so moving it can reset the chart and replay
-            its entry animation.
+            is ``None`` (default) and the chart is display-only, identity
+            follows its position in the app, so moving it can reset the chart
+            and replay its entry animation. If this is ``None`` and selections
+            are activated, identity also includes the chart's parameters, so a
+            change to the spec, theme, renderer, size, or ``alt`` resets the
+            selection.
+
+            If selections are activated and ``key`` is provided, Streamlit
+            will register the key in Session State to store the selection
+            state, and the selection survives changes to your ``spec``,
+            ``theme``, and ``renderer``. Indices are not revalidated against
+            the new data, so check them before indexing. The selection state
+            is read-only. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             If ``key`` is provided, it will be used as a CSS class name
             prefixed with ``st-key-``, and the chart keeps its identity across
             reruns even when the spec, theme, or renderer changes.
+
+        on_select : "ignore", "rerun", or callable
+            How the chart should respond to user selection events. This
+            controls whether or not the chart behaves like an input widget.
+            ``on_select`` can be one of the following:
+
+            - ``"ignore"`` (default): Streamlit will not react to any selection
+              events in the chart. The chart will not behave like an input
+              widget.
+
+            - ``"rerun"``: Streamlit will rerun the app when the user selects
+              data in the chart. In this case, ``st.echarts_chart`` will return
+              the selection data as a dictionary.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+              In this case, ``st.echarts_chart`` will return the selection data
+              as a dictionary.
+
+            When ``on_select`` is not ``"ignore"``, Streamlit returns whatever
+            selections you enable in your ``spec``. Enable point selection by
+            setting ``selectedMode`` on a series (for example,
+            ``{"type": "bar", "selectedMode": "multiple", "data": [...]}``), and
+            enable region selection by adding a
+            `brush <https://echarts.apache.org/en/option.html#brush>`_ component
+            or ``toolbox.feature.brush``. Target an axis on the brush (for
+            example, ``"brush": {"xAxisIndex": "all"}``) so its regions are
+            reported in ``areas`` and survive resizes. A brush without an
+            axis, grid, or geo target only has pixel geometry, so its regions
+            are omitted from ``areas`` and dropped when the chart resizes.
+            Selected data is grouped by series in ``EChartsState.selection.selected``,
+            and brush geometry is returned in ``EChartsState.selection.areas``.
+            Selections are re-applied visually after reruns. Double-click the
+            chart to clear both point and brush selections. If your ``spec``
+            enables neither, the chart still renders but never returns a
+            selection, and Streamlit logs a warning.
 
         renderer : "canvas" or "svg"
             The renderer passed to ECharts. This can be one of the following:
@@ -737,6 +1227,15 @@ class EChartsMixin:
             one can be worse than none. This is a short description of the
             chart, not a full text alternative for dense graphics.
 
+        Returns
+        -------
+        element or EChartsState
+            If ``on_select`` is ``"ignore"`` (default), this command returns an
+            internal placeholder for the chart element. Otherwise, this command
+            returns an ``EChartsState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
+
         Examples
         --------
         **Example 1: Basic bar chart**
@@ -761,8 +1260,10 @@ class EChartsMixin:
 
         **Example 2: Chart from a dataframe**
 
-        Pass a dataframe as ``dataset.source``. Streamlit converts it to JSON
-        records and preserves column order through ``dataset.dimensions``.
+        Pass a dataframe as ``dataset.source``. Streamlit preserves its column
+        order through ``dataset.dimensions``, so ECharts maps the first column
+        to the category axis and each remaining column to a series. Hover the
+        chart and choose **Show data** to view the dataframe in a table.
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -792,11 +1293,12 @@ class EChartsMixin:
         **Example 3: Zoom slider, toolbox, and legend**
 
         In-chart controls such as ``dataZoom`` and ``toolbox`` are configured
-        in the spec. Streamlit's hover toolbar (download, fullscreen) is
-        separate from ECharts' ``toolbox``: omit ``saveAsImage`` if you only
-        want Streamlit's download, or set ``toolbox.left`` so the two don't
-        stack in the top-right corner. Place ``legend`` at the top so it
-        doesn't share the footer with a bottom ``dataZoom`` slider.
+        in the spec. Streamlit's hover toolbar (Show data for dataframe-backed
+        charts, download, and fullscreen) is separate from ECharts'
+        ``toolbox``: omit ``saveAsImage`` if you only want Streamlit's
+        download, or set ``toolbox.left`` so the two don't stack in the
+        top-right corner. Place ``legend`` at the top so it doesn't share the
+        footer with a bottom ``dataZoom`` slider.
 
         With an inside ``dataZoom``, the wheel scrolls the page until the
         pointer has rested on the chart, then it zooms or pans. Pinch, or the
@@ -848,6 +1350,46 @@ class EChartsMixin:
            https://doc-echarts-chart-controls.streamlit.app/
            height: 450px
 
+        **Example 4: Point selections driving the app**
+
+        Set ``on_select="rerun"`` to make the chart behave like an input widget,
+        and enable point selection in your ``spec`` by setting
+        ``selectedMode`` on the series. Streamlit returns selected indices grouped
+        by series and data type.
+
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+
+           spec = {
+               "xAxis": {
+                   "type": "category",
+                   "data": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+               },
+               "yAxis": {"type": "value"},
+               "series": [
+                   {
+                       "type": "bar",
+                       "selectedMode": "multiple",
+                       "data": [120, 200, 150, 80, 70],
+                   }
+               ],
+           }
+
+           event = st.echarts_chart(spec, key="sales", on_select="rerun")
+
+           rows = (
+               event.selection.selected[0]["data_indices"]
+               if event.selection.selected
+               else []
+           )
+           st.write("You selected:", [spec["series"][0]["data"][i] for i in rows])
+
+        .. output::
+           https://doc-echarts-chart-selection.streamlit.app/
+           height: 500px
+
         """
         validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
@@ -858,8 +1400,29 @@ class EChartsMixin:
         if renderer not in {"canvas", "svg"}:
             raise StreamlitValueError("renderer", ["'canvas'", "'svg'"])
 
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
+
         key = to_key(key)
-        normalized_option = _normalize_spec(spec)
+        is_selection_activated = on_select != "ignore"
+
+        if is_selection_activated:
+            # Run some checks that are only relevant when selections are activated
+            is_callback = on_select_callback is not None
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=on_select_callback,
+                default_value=None,
+                writes_allowed=False,
+                enable_check_callback_rules=is_callback,
+            )
+
+        normalized_option, arrow_datasets = _normalize_spec(spec)
         normalized_alt = normalize_alt(alt)
 
         # Only walk option variants when alt is present; the common path skips it.
@@ -878,6 +1441,19 @@ class EChartsMixin:
                 stack_info=True,
             )
 
+        if is_selection_activated and not _enables_selection(normalized_option):
+            # The chart still renders, but it can never return a selection, and
+            # a chart that silently swallows clicks is hard to debug from the
+            # app alone.
+            _LOGGER.warning(
+                "`st.echarts_chart` has selections activated through `on_select`, "
+                "but the provided spec doesn't enable any: no series sets "
+                "`selectedMode`, there is no `brush` component, and no "
+                "`toolbox.feature.brush`. The chart will render, but it will never "
+                "return a selection.",
+                stack_info=True,
+            )
+
         echarts_chart_proto = EChartsChartProto()
         echarts_chart_proto.spec = _serialize_option(normalized_option)
         echarts_chart_proto.theme = theme or ""
@@ -891,33 +1467,99 @@ class EChartsMixin:
             # wire spec JSON (applied on the frontend as aria.label.description).
             echarts_chart_proto.alt = normalized_alt
 
+        # The spec references each dataset by name; the frontend swaps the
+        # rows back in before rendering.
+        for name, data_bytes in arrow_datasets.items():
+            dataset_proto = echarts_chart_proto.datasets.add()
+            dataset_proto.name = name
+            dataset_proto.has_name = True
+            dataset_proto.data.data = data_bytes
+
         # The backend only resolves the "content" default; the frontend handles
         # the actual layout.
         final_width = _resolve_content_width(width, spec)
         final_height = _resolve_content_height(height, spec)
 
-        # An element ID is computed when the user gave a key. The frontend
+        ctx = get_script_run_ctx()
+
+        echarts_chart_proto.selection_activated = is_selection_activated
+        if is_selection_activated:
+            # Selections are activated, treat the ECharts chart as a widget.
+            echarts_chart_proto.form_id = current_form_id(self.dg)
+
+        # An element ID is computed for selection widgets and for any chart the
+        # user gave a key. The key case is not only cosmetic: the frontend
         # derives the ``st-key-<key>`` CSS class from the ID and uses the ID as
         # a stable identity across reruns, which keeps ECharts from remounting
-        # and replaying its entry animation. Unkeyed charts skip the ID
-        # entirely so they stay off the widget path.
-        if key is not None:
+        # and replaying its entry animation. Unkeyed display-only charts skip
+        # the ID entirely so they stay off the widget path.
+        if is_selection_activated or key is not None:
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
-                # A key is the whole identity, so a keyed chart keeps its
-                # frontend instance across data, theme, and renderer changes.
-                # ``dg`` is reserved for widgets; this display-only command
-                # is not one.
-                key_as_main_identity=True,
-                dg=None,
+                # Identity rules:
+                # - Keyed display-only: key only, so data/theme/renderer
+                #   changes keep the instance.
+                # - Keyed widget: key + is_selection_activated, so toggling
+                #   on_select gets a fresh ID and drops stale frontend
+                #   selection state.
+                # - Unkeyed widget: all params, so any spec/theme/renderer/size
+                #   change resets the selection. The spec carries each Arrow
+                #   dataset's content hash, so a data change counts too.
+                key_as_main_identity=(
+                    {"is_selection_activated"} if is_selection_activated else True
+                ),
+                dg=self.dg if is_selection_activated else None,
+                spec=echarts_chart_proto.spec,
+                theme=theme,
+                renderer=renderer,
+                width=width,
+                height=height,
+                is_selection_activated=is_selection_activated,
                 alt=normalized_alt,
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
-        return self.dg._enqueue(
-            "echarts_chart", echarts_chart_proto, layout_config=layout_config
+        # A display-only chart has an element ID only when the author set a key.
+        # An active selection is reported, not settable through this API.
+        agent_props = agent_spec.element(
+            "echarts_chart",
+            key=echarts_chart_proto.id or None,
+            support="action_unsupported" if is_selection_activated else None,
+            # Reported only with selections on; the documented default,
+            # "ignore", is left out. A callback reaches the server too, so
+            # it is "rerun".
+            on_select="rerun" if is_selection_activated else None,
+            alt=echarts_chart_proto.alt or None,
+            data_builder=lambda: _echarts_data(
+                echarts_chart_proto, coordinates=self.dg._get_write_delta_path_str()
+            ),
         )
+
+        if not is_selection_activated:
+            return self.dg._enqueue(
+                "echarts_chart",
+                echarts_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_props,
+            )
+
+        serde = EChartsChartSelectionSerde()
+        widget_state = register_widget(
+            echarts_chart_proto.id,
+            on_change_handler=on_select_callback,
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            ctx=ctx,
+            value_type="string_value",
+        )
+        self.dg._enqueue(
+            "echarts_chart",
+            echarts_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_props,
+        )
+        return widget_state.value
 
     @property
     def dg(self) -> DeltaGenerator:

@@ -147,7 +147,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     // on subsequent reruns. Without this, a programmatic close (e.g.
     // st.session_state.key = False) would leave a stale "true" in the widget
     // state, causing the popover to reopen when another widget triggers a rerun.
-    widgetMgr?.setBoolValue(widgetId, element.open, {
+    widgetMgr.setBoolValue(widgetId, element.open, {
       formId: undefined,
       fragmentId,
       fromUser: false,
@@ -181,7 +181,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(newOpen)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, newOpen, {
+      widgetMgr.setBoolValue(widgetId, newOpen, {
         formId: undefined,
         fragmentId,
         fromUser: true,
@@ -195,7 +195,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setOpen(false)
 
     if (widgetId) {
-      widgetMgr?.setBoolValue(widgetId, false, {
+      widgetMgr.setBoolValue(widgetId, false, {
         formId: undefined,
         fragmentId,
         fromUser: true,
@@ -342,10 +342,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       const targetElement =
         target instanceof Element ? target : target.parentElement
       return Boolean(
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets the popover body count
-        triggerRef.current?.contains(target) ||
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets an overlay target count
-        popoverBodyRef.current?.contains(target) ||
+        triggerRef.current?.contains(target) === true ||
+        popoverBodyRef.current?.contains(target) === true ||
         targetElement?.closest('[data-st-overlay-root="true"]')
       )
     }
@@ -378,7 +376,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const active = document.activeElement
         if (
           active &&
-          popoverBodyRef.current?.contains(active) &&
+          popoverBodyRef.current?.contains(active) === true &&
           active.getAttribute("aria-expanded") === "true"
         ) {
           return

@@ -50,6 +50,21 @@ describe("computeDerivedColors", () => {
     // darkenedBgMix40 is more opaque (less transparent) than darkenedBgMix25.
     expect(result.darkenedBgMix40).not.toBe(result.darkenedBgMix25)
   })
+
+  it.each([
+    ["light", lightTheme],
+    ["dark", darkTheme],
+  ])(
+    "derives fadedText60 and fadedText70 from bodyText for %s theme",
+    (_, theme) => {
+      const { bodyText } = theme.emotion.colors
+      const result = computeDerivedColors(theme.emotion.colors)
+
+      // The token suffix is the bodyText opacity percentage.
+      expect(result.fadedText60).toBe(transparentize(bodyText, 0.4))
+      expect(result.fadedText70).toBe(transparentize(bodyText, 0.3))
+    }
+  )
 })
 
 describe("getDividerColors", () => {

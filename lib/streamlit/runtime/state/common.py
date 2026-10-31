@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import (
@@ -35,6 +36,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.session_state import SessionState
 
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
@@ -118,6 +120,23 @@ ValueFieldName: TypeAlias = Literal[
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
     return obj in _ARRAY_VALUE_FIELD_NAMES
+
+
+def unpack_widget_state_value(widget_state: WidgetStateProto) -> Any:
+    """Return what a widget's deserializer receives for ``widget_state``.
+
+    That is the set ``value`` field, with a message that keeps its payload in
+    ``data`` unwrapped and JSON text parsed. A cleared value is ``None``.
+    """
+    field_name = widget_state.WhichOneof("value")
+    if field_name is None:
+        return None
+    value = getattr(widget_state, field_name)
+    if is_array_value_field_name(field_name) or field_name == "string_trigger_value":
+        return value.data
+    if field_name == "json_value":
+        return json.loads(value)
+    return value
 
 
 # Optional hook that allows a widget to customize how its value should be

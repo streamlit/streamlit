@@ -112,7 +112,7 @@ export const StyledSkillsNudgeHeading = styled.div(({ theme }) => ({
 }))
 
 export const StyledSkillsNudgeBody = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
 }))
 
 // Deliberately sets no font size: ``BaseButton`` is ``fontSize: inherit``, so

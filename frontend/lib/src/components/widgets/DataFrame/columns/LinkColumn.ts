@@ -20,6 +20,8 @@ import {
   type UriCell,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   isMaterialIcon,
   parseIconPackEntry,
@@ -74,7 +76,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   let validateRegex: RegExp | string | undefined = undefined
 
-  if (parameters.validate) {
+  if (!isNullOrEmptyString(parameters.validate)) {
     // Prepare the validation regex:
     try {
       // u flag allows unicode characters
@@ -137,7 +139,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   const validateInput = (href?: string): boolean => {
     if (isNullOrUndefined(href)) {
-      if (props.isRequired) {
+      if (props.isRequired === true) {
         return false
       }
       return true
@@ -184,7 +186,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         return getErrorCell(toSafeString(href), validateRegex)
       }
 
-      if (validate) {
+      if (validate === true) {
         const validationResult = validateInput(href)
         if (validationResult === false) {
           // The input is invalid, we return an error cell which will
@@ -203,9 +205,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
         } else {
           // Use user provided display_text unless it's null, undefined, or an empty string.
-          // If it's any of those falsy values, use the href.
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank display text falls back to the href
-          displayText = configuredDisplayText || href
+          // Otherwise, use the href.
+          displayText = isNullOrEmptyString(configuredDisplayText)
+            ? href
+            : configuredDisplayText
         }
       }
 
