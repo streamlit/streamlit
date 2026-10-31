@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import sys
 import textwrap
@@ -108,7 +109,12 @@ def _assert_inline_proto(
     proto = at.get("bidi_component")[0].proto
     assert proto.html_content == html
     assert proto.css_content == css
-    assert proto.js_content == js
+    assert proto.js_content == ""
+    expected_js_path = f"__inline__/{hashlib.sha256(js.encode()).hexdigest()}.js"
+    assert proto.js_source_path == expected_js_path
+    manager = at._bidi_component_manager
+    assert manager is not None
+    assert manager.get_inline_asset(proto.js_source_path) == js
 
 
 def _assert_file_backed_proto(at: AppTest) -> None:

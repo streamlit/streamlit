@@ -98,11 +98,22 @@ export class ComponentRegistry {
     return this.endpoints.buildComponentURL(componentName, path)
   }
 
-  /** Return a URL for fetching a resource for the given bidirectional component. */
+  /**
+   * Return a URL for fetching a resource for the given bidirectional component.
+   *
+   * Paths that start with `__inline__/` are content-addressed inline JS. The
+   * URL omits the component name so identical source shares one ES module.
+   */
   public getBidiComponentURL = (
     componentName: string,
     path: string
   ): string => {
+    if (path.startsWith("__inline__/")) {
+      return this.endpoints.buildBidiComponentURL(
+        "__inline__",
+        path.slice("__inline__/".length)
+      )
+    }
     return this.endpoints.buildBidiComponentURL(componentName, path)
   }
 
