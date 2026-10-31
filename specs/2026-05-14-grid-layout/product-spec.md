@@ -601,11 +601,8 @@ grid = st.grid(2, height=720, row_height=340, border=True)
 with grid.cell(column_span=2):
     st.line_chart(revenue_df, height="stretch")
 
-with grid.cell():
-    st.bar_chart(pipeline_df, height="stretch")
-
-with grid.cell():
-    st.dataframe(accounts_df, height="stretch")
+grid.bar_chart(pipeline_df, height="stretch")
+grid.dataframe(accounts_df, height="stretch")
 ```
 
 Each row is 340px, so the charts can use `height="stretch"`. Splitting the 720px box
@@ -626,8 +623,7 @@ with grid.cell():
     controls.selectbox("Segment", segments)
     st.area_chart(region_df)
 
-with grid.cell():
-    st.dataframe(detail_df, height=300)
+grid.dataframe(detail_df, height=300)
 ```
 
 #### Fixed Column Count (No Wrap)
@@ -638,9 +634,9 @@ import streamlit as st
 # Three charts stay side by side. On a phone the grid scrolls horizontally
 # instead of stacking into unreadably tall single-column charts.
 grid = st.grid(3, wrap=False, border=True)
-grid.cell().line_chart(revenue_df, height=220)
-grid.cell().bar_chart(pipeline_df, height=220)
-grid.cell().dataframe(accounts_df, height=220)
+grid.line_chart(revenue_df, height=220)
+grid.bar_chart(pipeline_df, height=220)
+grid.dataframe(accounts_df, height=220)
 ```
 
 ## API Evaluation

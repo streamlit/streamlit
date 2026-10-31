@@ -55,14 +55,10 @@ For more control over card layout, use `st.grid`:
 
 ```python
 # Uniform cards use a pixel row height. Borders sit inside the cell.
-grid = st.grid(4, border=True, row_height=160, gap="medium")
-with grid.cell():
+with st.grid(4, border=True, row_height=160, gap="medium"):
     st.metric("Revenue", "$1.2M", "-7%")
-with grid.cell():
     st.metric("Users", "762k", "+12%")
-with grid.cell():
     st.metric("Orders", "1.4k", "+5%")
-with grid.cell():
     st.metric("Conversion", "3.2%", "+0.1%")
 ```
 

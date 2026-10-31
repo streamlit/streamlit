@@ -1200,8 +1200,7 @@ class LayoutsMixin:
             grid = st.grid("auto", min_column_width=220)
             with grid.cell(column_span="all"):
                 st.markdown("**Featured**")
-            with grid.cell():
-                st.markdown("Card")
+            grid.markdown("Card")
 
         .. output::
             https://doc-grid2.streamlit.app/
@@ -1217,9 +1216,9 @@ class LayoutsMixin:
 
             df = rng(0).standard_normal((20, 3))
             grid = st.grid(3, wrap=False, border=True)
-            grid.cell().line_chart(df, height=220)
-            grid.cell().bar_chart(df, height=220)
-            grid.cell().dataframe(df, height=220)
+            grid.line_chart(df, height=220)
+            grid.bar_chart(df, height=220)
+            grid.dataframe(df, height=220)
 
         .. output::
             https://doc-grid3.streamlit.app/

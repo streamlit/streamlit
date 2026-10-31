@@ -84,11 +84,11 @@ to wrap even in a column.
 ## Grid: repeated equal-width tiles
 
 Use `st.grid` for metric walls, galleries, and dashboard cards that should
-reflow with the available width. Direct children become cells. Group multiple
-elements or span tracks with `grid.cell()`. Keep section headings outside the
-grid — a bare `st.header` inside it takes one cell. A fragment called inside
-the grid is one cell. A fragment that writes into a grid captured outside the
-fragment adds one cell per child.
+reflow with the available width. Each direct child is one cell, so a single
+element needs no wrapper. Keep section headings outside the grid — a bare
+`st.header` inside it takes one cell. A fragment called inside the grid is one
+cell. A fragment that writes into a grid captured outside the fragment adds one
+cell per child.
 
 ```python
 metrics = [
@@ -97,11 +97,13 @@ metrics = [
     ("Conversion", "12.4%", "+1.1%"),
     ("Retention", "96%", "-0.4%"),
 ]
-grid = st.grid(4, border=True)
-for label, value, delta in metrics:
-    with grid.cell():
+with st.grid(4, border=True):
+    for label, value, delta in metrics:
         st.metric(label, value, delta)
 ```
+
+Use `grid.cell()` only when a cell holds several elements, or spans tracks
+with `column_span` (an integer, or `"all"` for a full-width row) or `row_span`.
 
 **Grid vs columns vs flex:**
 - `st.columns` — Fixed side-by-side split. Pass `wrap=False` to keep columns in one row.
@@ -116,21 +118,23 @@ with st.grid("auto", min_column_width=72, gap="xsmall"):
     for item in items:
         st.button(item, key=f"item-{item}", width="stretch", wrap=True)
 
-# Full-width featured cell
-grid = st.grid("auto", min_column_width=220)
-with grid.cell(column_span="all"):
+# Spanning and grouped cells
+grid = st.grid(3, border=True)
+with grid.cell(column_span="all"):  # Full-width row
     st.markdown("**Featured**")
-with grid.cell():
-    st.markdown("Card")
+    st.caption("Spans every column")
+with grid.cell(column_span=2):
+    st.metric("Revenue", "$1.2M", "+8%")
+grid.metric("Users", "762k", "+12%")  # One element, no cell() needed
 
 # Keep a column count (scrolls horizontally on a phone)
 from numpy.random import default_rng as rng
 
 df = rng(0).standard_normal((20, 3))
 grid = st.grid(3, wrap=False, border=True)
-grid.cell().line_chart(df, height=220)
-grid.cell().bar_chart(df, height=220)
-grid.cell().dataframe(df, height=220)
+grid.line_chart(df, height=220)
+grid.bar_chart(df, height=220)
+grid.dataframe(df, height=220)
 ```
 
 **Key parameters:**
