@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
@@ -33,6 +34,7 @@ from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
+from streamlit.testing.v1 import AppTestLookupError
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     _DATAFRAME_EDITING_MODE_NAMES,
@@ -63,6 +65,7 @@ from streamlit.testing.v1.element_tree import (
 from streamlit.typing import ChatInputValue
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -2383,6 +2386,288 @@ def test_widget_list_call_by_key_not_found():
 
     with pytest.raises(KeyError):
         at.button("nonexistent")
+
+
+def test_widget_list_call_by_label_returns_unique_widget() -> None:
+    """Button and text input collections return the unique widget with a label."""
+
+    def script():
+        import streamlit as st
+
+        with st.container(key="toolbar"):
+            st.button("Save")
+        st.button("Save draft")
+        name = st.text_input("Your  name")
+        st.text(f"name={name}")
+        with st.form("f"):
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+
+    # Exact matching does not select "Save draft" for "Save".
+    assert at.button(label="Save") is at.button[0]
+    assert at.button(label=re.compile(r"draft$")) is at.button[1]
+    assert at.button(label="Submit") is at.form_submit_button[0]
+    assert at.form_submit_button(label="Submit") is at.form_submit_button[0]
+    assert at.container(key="toolbar").button(label="Save") is at.button[0]
+    # Exact matching is case-sensitive.
+    with pytest.raises(AppTestLookupError, match=r"No button matches label='save'"):
+        at.button(label="save")
+
+    # Whitespace is normalized on both sides.
+    at.text_input(label=" Your name ").set_value("Ada").run()
+    assert at.text[0].value == "name=Ada"
+
+
+def test_element_list_call_by_text_matches_markdown() -> None:
+    """Markdown collections match normalized text, regexes, and substrings."""
+
+    def script():
+        import streamlit as st
+
+        st.markdown("Revenue:\n**$12M**")
+        st.markdown("Costs: **$4M**")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.markdown(text="Revenue: **$12M**") is at.markdown[0]
+    assert at.markdown(text=re.compile(r"^Costs")) is at.markdown[1]
+    assert at.markdown(text="REVENUE", exact=False) is at.markdown[0]
+    with pytest.raises(AppTestLookupError, match=r"text='Revenue'"):
+        at.markdown(text="Revenue")
+    # Markdown has no key, so the ambiguity hint does not suggest key=.
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"2 markdown elements match text='M\*\*', exact=False: "
+            r"text='Revenue: \*\*\$12M\*\*', text='Costs: \*\*\$4M\*\*'\. "
+            r"Use a more specific value or regex"
+        ),
+    ):
+        at.markdown(text="M**", exact=False)
+
+
+def test_element_list_call_by_label_is_strict() -> None:
+    """Label lookups raise AppTestLookupError unless exactly one widget matches."""
+
+    def script():
+        import streamlit as st
+
+        st.button("Save", key="top")
+        st.button("Save", key="bottom")
+        st.button("Cancel")
+
+    at = AppTest.from_function(script).run()
+
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"No button matches label='Delete'\. "
+            r"Candidates: label='Save', label='Save', label='Cancel'\."
+        ),
+    ):
+        at.button(label="Delete")
+    # A regex ignores exact=, so the message does not report exact=False.
+    with pytest.raises(
+        AppTestLookupError, match=r"No button matches label=re\.compile\('save'\)\. "
+    ):
+        at.button(label=re.compile(r"save"), exact=False)
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"2 button elements match label='Save': "
+            r"\(key='top', label='Save'\), \(key='bottom', label='Save'\)\. "
+            r"Add key= or scope"
+        ),
+    ):
+        at.button(label="Save")
+    with pytest.raises(AppTestLookupError, match=r"2 button elements match"):
+        at.button(label=" sav ", exact=False)
+
+    assert at.button("bottom", label="Save") is at.button[1]
+    # key= with label= raises AppTestLookupError, not KeyError, when no widget
+    # matches both. The candidates show their keys, and the one with the
+    # requested label comes first.
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"No button matches key='top', label='Cancel'\. "
+            r"Candidates: \(key=None, label='Cancel'\), "
+            r"\(key='top', label='Save'\), \(key='bottom', label='Save'\)\."
+        ),
+    ):
+        at.button(key="top", label="Cancel")
+
+
+@pytest.mark.parametrize(
+    ("lookup", "match"),
+    [
+        pytest.param(
+            lambda at: at.button(label="Save"),
+            r"AppTest supports label= on: button, text_input\.",
+            id="supported",
+        ),
+        pytest.param(
+            lambda at: at.checkbox(label="Agree"),
+            r"AppTest supports label= on: button, text_input\.",
+            id="unsupported",
+        ),
+    ],
+)
+def test_element_list_call_lookup_error_on_empty_collection(
+    lookup: Callable[[AppTest], Any], match: str
+) -> None:
+    """An empty collection names the types that support the filter."""
+    at = AppTest.from_string("import streamlit as st").run()
+
+    with pytest.raises(
+        AppTestLookupError,
+        match=r"No element matches label='\w+'\. The collection is empty\. " + match,
+    ):
+        lookup(at)
+
+
+def test_element_list_call_lookup_error_shortens_candidates() -> None:
+    """Lookup errors list at most ten candidates, each cut to 80 characters."""
+
+    def script():
+        import streamlit as st
+
+        # Text without spaces must still show its start, not only "...".
+        st.markdown("売上高" * 40)
+        for i in range(11):
+            st.markdown(f"Paragraph {i}: " + "lorem ipsum " * 10)
+
+    at = AppTest.from_function(script).run()
+
+    with pytest.raises(AppTestLookupError) as exc_info:
+        at.markdown(text="Summary")
+    message = str(exc_info.value)
+    assert f"text='{('売上高' * 40)[:77]}...'" in message
+    assert "text='Paragraph 8: lorem ipsum" in message
+    assert "Paragraph 9" not in message
+    assert message.endswith("...', and 2 more.")
+
+
+def test_element_list_call_lists_value_matches_first_with_key() -> None:
+    """With key=, candidates with the right value stay within the limit."""
+
+    def script():
+        import streamlit as st
+
+        for i in range(11):
+            st.button(f"Item {i}")
+        st.button("Save", key="other")
+
+    at = AppTest.from_function(script).run()
+
+    with pytest.raises(
+        AppTestLookupError,
+        match=(
+            r"No button matches key='save', label='Save'\. "
+            r"Candidates: \(key='other', label='Save'\), "
+            r"\(key=None, label='Item 0'\), "
+        ),
+    ) as exc_info:
+        at.button(key="save", label="Save")
+    assert str(exc_info.value).endswith("label='Item 8'), and 2 more.")
+
+
+@pytest.mark.parametrize(
+    "lookup",
+    [
+        pytest.param(
+            lambda at: at.button(label=" ", exact=False), id="blank-substring"
+        ),
+        pytest.param(lambda at: at.button(label=re.compile(r"")), id="empty-regex"),
+        pytest.param(
+            lambda at: at.markdown(text="", exact=False), id="blank-markdown-text"
+        ),
+    ],
+)
+def test_element_list_call_rejects_queries_that_match_everything(
+    lookup: Callable[[AppTest], Any],
+) -> None:
+    """A query that matches every value does not select the only element."""
+    at = AppTest.from_string(
+        "import streamlit as st\nst.button('Go')\nst.markdown('Hi')"
+    ).run()
+
+    with pytest.raises(AppTestError, match=r"matches every element") as exc_info:
+        lookup(at)
+    assert not isinstance(exc_info.value, AppTestLookupError)
+
+
+@pytest.mark.parametrize(
+    ("script", "lookup", "match"),
+    [
+        pytest.param(
+            "st.checkbox('Agree')",
+            lambda at: at.checkbox(label="Agree"),
+            r"label= lookups are not supported for checkbox\. "
+            r"AppTest supports label= on: button, text_input\.",
+            id="checkbox-label",
+        ),
+        pytest.param(
+            "st.markdown('Hello')",
+            lambda at: at.markdown(label="Hello"),
+            r"label= lookups are not supported for markdown\.",
+            id="markdown-label",
+        ),
+        pytest.param(
+            "st.button('Go')",
+            lambda at: at.button(text="Go"),
+            r"text= lookups are not supported for button\. "
+            r"AppTest supports text= on: markdown\.",
+            id="button-text",
+        ),
+        pytest.param(
+            "st.button('Go')",
+            lambda at: at.button(label="Stop", text="Go"),
+            r"text= lookups are not supported for button\.",
+            id="button-text-with-non-matching-label",
+        ),
+    ],
+)
+def test_element_list_call_rejects_unsupported_filters(
+    script: str, lookup: Callable[[AppTest], Any], match: str
+) -> None:
+    """A filter the element type does not support raises AppTestError."""
+    at = AppTest.from_string(f"import streamlit as st\n{script}").run()
+
+    with pytest.raises(AppTestError, match=match) as exc_info:
+        lookup(at)
+    assert not isinstance(exc_info.value, AppTestLookupError)
+
+
+def test_element_list_call_requires_a_filter() -> None:
+    """Calls without label or text need a key and reject exact=False."""
+    at = AppTest.from_string("import streamlit as st\nst.button('Go', key='go')").run()
+
+    with pytest.raises(TypeError, match=r"key, label=, or text="):
+        at.button()
+    with pytest.raises(TypeError, match=r"exact= applies only to label= and text="):
+        at.button("go", exact=False)
+
+
+@pytest.mark.parametrize(
+    ("query", "got"),
+    [
+        pytest.param(b"Go", r"Got bytes\.", id="bytes"),
+        pytest.param(
+            re.compile(rb"Go"), r"Got a bytes regular expression\.", id="bytes-regex"
+        ),
+    ],
+)
+def test_element_list_call_rejects_non_string_queries(query: object, got: str) -> None:
+    """A label= or text= query must be a str or a regex compiled from a str."""
+    at = AppTest.from_string("import streamlit as st\nst.button('Go')").run()
+
+    with pytest.raises(
+        TypeError,
+        match=r"label= must be a str or a compiled regular expression\. " + got,
+    ):
+        at.button(label=query)  # type: ignore[arg-type]
 
 
 def test_file_uploader_single():

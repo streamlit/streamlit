@@ -13,6 +13,6 @@
 # limitations under the License.
 
 from streamlit.testing.v1.app_test import AppTest
-from streamlit.testing.v1.errors import AppTestError
+from streamlit.testing.v1.errors import AppTestError, AppTestLookupError
 
-__all__ = ["AppTest", "AppTestError"]
+__all__ = ["AppTest", "AppTestError", "AppTestLookupError"]
