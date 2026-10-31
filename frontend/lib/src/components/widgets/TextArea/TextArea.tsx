@@ -74,10 +74,10 @@ export interface Props {
 type TextAreaValue = string | null
 
 /**
- * Frontend-only key for a required empty edit that was blocked on commit.
- * Survives remount so a sibling-triggered rerun that briefly removes the
- * field (e.g. a conditional element rendered above it) cannot snap the UI
- * back to the last accepted WidgetStateManager value.
+ * Element-state key for the empty value of a required field whose commit was
+ * blocked. WidgetStateManager keeps it across remounts, so a rerun that
+ * briefly removes the field doesn't snap the UI back to the last accepted
+ * value.
  */
 const REQUIRED_BLOCKED_UI_KEY = "requiredBlockedUiValue"
 
@@ -173,9 +173,9 @@ const TextArea: FC<Props> = ({
    * empty edit persisted in element state over the last accepted value.
    */
   const [uiValue, setUiValue] = useState<string | null>(() => {
-    const blockedUi = readBlockedUiValue(widgetMgr, element.id)
-    if (blockedUi !== undefined) {
-      return blockedUi ?? null
+    const blockedUiValue = readBlockedUiValue(widgetMgr, element.id)
+    if (blockedUiValue !== undefined) {
+      return blockedUiValue
     }
     return getStateFromWidgetMgr(widgetMgr, element) ?? null
   })
@@ -244,9 +244,8 @@ const TextArea: FC<Props> = ({
   }
   const hasError = Boolean(requiredError)
 
-  // Keep a blocked empty edit in WidgetStateManager element state so a remount
-  // during a sibling-triggered rerun restores the empty UI instead of the last
-  // accepted value. Clear it once the field is no longer in that state.
+  // Mirror the blocked empty edit into element state (see REQUIRED_BLOCKED_UI_KEY)
+  // and drop it once the field leaves that state.
   useEffect(() => {
     if (
       element.required &&

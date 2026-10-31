@@ -788,9 +788,8 @@ describe("TextArea required", () => {
     expectRequiredError(textArea)
     expect(textArea).toHaveValue("")
 
-    // A sibling-triggered rerun can remount the field when a conditional
-    // element above it shifts the tree. Element state must restore the
-    // blocked empty edit instead of the last accepted value.
+    // Simulate the remount a sibling rerun causes when it inserts an element
+    // above the field.
     unmount()
     render(<TextArea {...props} />)
 
@@ -798,6 +797,32 @@ describe("TextArea required", () => {
     expect(remounted).toHaveValue("")
     expectRequiredError(remounted)
     expect(props.widgetMgr.getStringValue(props.element)).toBe("hello")
+  })
+
+  it("does not restore a stale blocked entry after a successful commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, default: "hello" })
+    const { unmount } = render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    await user.clear(textArea)
+    await user.tab()
+    expectRequiredError(textArea)
+
+    await user.type(textArea, "abc")
+    await user.tab()
+    await waitFor(() => {
+      expect(props.widgetMgr.getStringValue(props.element)).toBe("abc")
+    })
+    expect(textArea).toHaveValue("abc")
+    expectNoRequiredError(textArea)
+
+    unmount()
+    render(<TextArea {...props} />)
+
+    const remounted = screen.getByRole("textbox")
+    expect(remounted).toHaveValue("abc")
+    expectNoRequiredError(remounted)
   })
 
   it.each([
