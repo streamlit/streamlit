@@ -752,6 +752,80 @@ describe("useVegaElementPreprocessor", () => {
 
       expect(result.current.baseSpecKey).toBe(initialKey)
     })
+
+    describe("with datasets named by their contents", () => {
+      /**
+       * A layered chart like Altair sends it: each layer reads a dataset
+       * named by a hash of its contents.
+       */
+      const layeredElement = (
+        [lineName, pointsName]: [string, string],
+        layerNames: [string, string] = [lineName, pointsName],
+        pointMark = "point"
+      ): VegaLiteChartElement =>
+        getElement({
+          spec: JSON.stringify({
+            layer: [
+              { data: { name: layerNames[0] }, mark: "line" },
+              { data: { name: layerNames[1] }, mark: pointMark },
+            ],
+          }),
+          datasets: [lineName, pointsName].map(name => ({
+            name,
+            hasName: true,
+            data: { dimensions: { numDataRows: 3 } } as unknown as Quiver,
+          })),
+        })
+      const renderLayered = (
+        element: VegaLiteChartElement
+      ): ReturnType<
+        typeof renderHook<
+          VegaLiteChartElement,
+          ReturnType<typeof useVegaElementPreprocessor>
+        >
+      > =>
+        renderHook(
+          (props: VegaLiteChartElement) =>
+            useVegaElementPreprocessor(props, 100, 100, false, false),
+          { initialProps: element }
+        )
+
+      it("stays stable when new data renames the datasets", () => {
+        const { result, rerender } = renderLayered(
+          layeredElement(["3f2a", "9c1b"])
+        )
+        const initialKey = result.current.baseSpecKey
+
+        rerender(layeredElement(["7d4e", "9c1b"]))
+
+        expect(result.current.baseSpecKey).toBe(initialKey)
+        // The spec that the view is created from keeps the real names.
+        const spec = result.current.spec as unknown as {
+          layer: { data: { name: string } }[]
+        }
+        expect(spec.layer[0].data.name).toBe("7d4e")
+      })
+
+      it.each([
+        [
+          "the spec changes along with the data",
+          layeredElement(["7d4e", "9c1b"], undefined, "tick"),
+        ],
+        [
+          "the layers swap their datasets",
+          layeredElement(["7d4e", "9c1b"], ["9c1b", "7d4e"]),
+        ],
+      ])("changes when %s", (_description, element) => {
+        const { result, rerender } = renderLayered(
+          layeredElement(["3f2a", "9c1b"])
+        )
+        const initialKey = result.current.baseSpecKey
+
+        rerender(element)
+
+        expect(result.current.baseSpecKey).not.toBe(initialKey)
+      })
+    })
   })
 
   describe("builtin color name resolution", () => {
