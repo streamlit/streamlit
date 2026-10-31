@@ -151,7 +151,7 @@ Accessible names for icon-only controls were largely addressed in [#17170](https
 | Checkbox with visible label | Line box 21px (`0.875rem` × line-height 1.5) | Library blocks | `StyledCheckboxButton` is the hit target; field `minHeight` 1.5rem does not stretch the label |
 | Toggle with visible label | Same 21px label line box | Library blocks | Same `isLabel` markdown as checkbox |
 | Toggle with collapsed label | Track 32×16 (`2 × sizes.checkbox` by `sizes.checkbox`) | Library blocks | Height 16px |
-| Radio option with visible label | Line box ≈ 22.4px (`0.875rem` × line-height 1.6) | Library blocks | Vertical groups with no caption use `gap: 0`, so 24px spacing circles overlap |
+| Radio option with visible label | Line box ≈ 22.4px (`0.875rem` × line-height 1.6) | Library blocks | Default `type` only. Vertical groups with no caption use `gap: 0`, so 24px spacing circles overlap. With `type="cards"`, the whole padded card is the target, which is taller than 24px |
 | Main menu trigger | `headerItemHeight` 1.75rem (= 28px at 16px root) | Library meets | No `24px` CSS floor; below 24px when `theme.baseFontSize` is 13 or smaller (`1.75rem`). That custom root is Author must |
 | Sidebar expand / collapse | Same `headerItemHeight` sizing | Library meets | Same root-font caveat; not every app-header control |
 | Element toolbar actions | `max(1.5rem, 24px)` | Library meets | [#17211](https://github.com/streamlit/streamlit/pull/17211) |

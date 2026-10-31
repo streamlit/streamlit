@@ -256,3 +256,61 @@ st.write("Ignore radio value:", ignore_radio)
 
 if st.button("Apply ignore radio", key="apply_ignore_radio"):
     st.write("Applied ignore radio value:", ignore_radio)
+
+# --- type="cards" ---
+st.header("Radio - cards")
+
+v16 = st.radio(
+    "radio 16 (cards)",
+    ["Starter", "Pro", "Enterprise"],
+    index=1,
+    captions=[
+        "For individuals.",
+        "For growing teams that share workspaces.",
+        "Advanced controls and support.",
+    ],
+    type="cards",
+)
+st.write("value 16:", v16)
+
+st.radio(
+    "radio 17 (cards, horizontal, stretch)",
+    ["Basic", "Plus", "Premium with priority support"],
+    captions=[
+        "Get started for free.",
+        "",
+        "Everything in Plus, with a title and a caption that wrap.",
+    ],
+    type="cards",
+    horizontal=True,
+    width="stretch",
+)
+
+v18 = st.radio(
+    "radio 18 (cards, disabled)",
+    ["Monthly", "Yearly", "Lifetime"],
+    index=2,
+    captions=["Billed every month.", "Two months free.", "Pay once."],
+    type="cards",
+    disabled=True,
+)
+st.write("value 18:", v18)
+
+v19 = st.radio(
+    "radio 19 (cards, horizontal, empty)",
+    ["Light", "Dark", "System"],
+    index=None,
+    type="cards",
+    horizontal=True,
+)
+st.write("value 19:", v19)
+
+narrow_column, _, _ = st.columns(3)
+with narrow_column:
+    st.radio(
+        "radio 20 (cards, horizontal, narrow column)",
+        ["Small", "Medium", "Large"],
+        captions=["", "", "See the [size guide](https://example.com)."],
+        type="cards",
+        horizontal=True,
+    )

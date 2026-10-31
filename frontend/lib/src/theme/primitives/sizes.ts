@@ -98,4 +98,7 @@ export const sizes = {
   fileChipNameMinWidth: "4.875rem",
   // Date input calendar sizing so changing months doesn't impact display width
   dateInputMinWidth: "14rem",
+  // Narrowest card in a horizontal st.radio(type="cards") with a stretch or
+  // pixel width; a card that would get narrower wraps to the next row.
+  radioCardMinWidth: "10rem",
 }

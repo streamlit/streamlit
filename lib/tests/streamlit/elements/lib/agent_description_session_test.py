@@ -532,6 +532,19 @@ class AgentDescriptionSessionTest(DeltaGeneratorTestCase):
         assert radio["props"]["options"] == ["a", "b"]
         assert radio["value_schema"] == {"type": "string"}
 
+    def test_radio_type_is_not_reported(self) -> None:
+        """The cards style is presentation, so the description leaves it out."""
+        self._record()
+        st.radio("Plan", ["a", "b"], type="cards")
+
+        radio = next(
+            item
+            for item in _descriptions(list(self.forward_msg_queue._queue))
+            if item["type"] == "radio"
+        )
+        assert "type" not in radio["props"]
+        assert radio["props"]["options"] == ["a", "b"]
+
     def test_radio_reports_format_func_labels(self) -> None:
         """Options are the labels a later request would send back."""
         self._record()
