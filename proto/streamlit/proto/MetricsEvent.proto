@@ -83,8 +83,10 @@ message MetricsEvent {
   string server_mode = 45;
   repeated string installed_skills = 46;
   repeated string installed_agents = 47;
+  // Same as PageProfile.agent_api_usage.
+  AgentApiUsage agent_api_usage = 49;
 
-  // Next ID: 49
+  // Next ID: 50
 }
 
 message BrowserInfo {

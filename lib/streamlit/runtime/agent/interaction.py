@@ -45,7 +45,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
-from streamlit.runtime.agent import snapshot, widget_writes
+from streamlit.runtime.agent import snapshot, usage, widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
@@ -465,6 +465,9 @@ class AgentSessionRegistry:
 
         if self._sweeper is None or self._sweeper.done():
             self._sweeper = asyncio.get_running_loop().create_task(self._sweep())
+        # Count the session only now that it is set up, so a creation refused
+        # at the cap or failed during setup counts nothing.
+        usage.record("sessions")
         return session
 
     def get(self, handle: str, user_info: UserInfoType) -> AgentSession:
@@ -571,6 +574,7 @@ async def interact(
     registry: AgentSessionRegistry,
     request: dict[str, Any],
     *,
+    transport: usage.Transport,
     user_info: UserInfoType,
     headers: Iterable[tuple[str, str]],
     encode: Callable[[dict[str, Any]], bytes],
@@ -588,6 +592,9 @@ async def interact(
         The agent sessions to create the interaction's session in or find it.
     request : dict[str, Any]
         The parsed request body.
+    transport : "http" or "mcp"
+        The route the request arrived on, whose counter this call increments
+        once, whatever its outcome.
     user_info : UserInfoType
         What the deployment's trusted identity headers say about the caller,
         mapped the way the WebSocket maps them for a browser.
@@ -609,6 +616,9 @@ async def interact(
         For every refusal the error catalog lists. A creating call that fails
         after its session exists carries that session's handle.
     """
+    # Counted first, so a request refused below still counts: it is still an
+    # agent using the API.
+    usage.record_interaction(transport)
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.
     parsed = await asyncio.to_thread(_validate_request_shape, request)
