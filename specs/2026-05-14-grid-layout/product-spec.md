@@ -667,6 +667,7 @@ follow-ups.
 | Breakpoint maps `{"sm": 1, "md": 4}` | Defer | Viewport breakpoints fail in sidebars, nests, and embeds. |
 | `streamlit-extras`-style row specs | Not in MVP | Unclear how varying row specs collapse when wrapping. |
 | Fixed cell list `st.grid(num_cells=20)` | Reject | Users must know the count; empty cells return. |
+| Spans via element `width` / `height` | Reject | A flex weight is not a track span; see [Spans Via Element Width And Height](#alternative-api-spans-via-element-width-and-height). |
 | Separate `st.auto_grid` | Reject | One command; `columns="auto"` is the auto mode. |
 
 ### Compatible Extension: Weighted Columns And Rows
@@ -715,6 +716,36 @@ embeds. Defer unless `min_column_width` proves insufficient.
 `st.grid(num_cells=20, columns=4)` with index access. Close to `st.columns`, but users
 must know the count and empty cells return. Do not pursue unless a later selectable-grid
 feature needs random access.
+
+### Alternative API: Spans Via Element Width And Height
+
+```python
+grid = st.grid(4)
+grid.line_chart(df, width="stretch:2")  # Spans two columns
+grid.dataframe(df, height="stretch:2")  # Spans two rows
+```
+
+Reuses the weighted-stretch syntax proposed in
+[#16308](https://github.com/streamlit/streamlit/issues/16308), so a single spanned element
+needs no `cell()` wrapper. Rejected:
+
+- **Same spelling, different math (Principle 10).** In a flex row, `stretch:N` is a share
+  relative to siblings. In a grid it would be an absolute track count. `stretch:2` next to
+  `stretch:1` splits a flex row 2/3 to 1/3 but leaves an empty track in a 4-column grid,
+  so moving content between containers silently changes the layout.
+- **Placement is not sizing.** CSS Grid keeps `grid-column` separate from `width`. A
+  spanned element could no longer keep its own size (`width="content"` or pixels) inside
+  the area without a wrapper again.
+- **The rest does not fit.** `column_span="all"` needs a new width value, and
+  `height="stretch:2"` collides with `height="stretch"`, which already fills a
+  pixel-height row.
+- **Context-dependent and hard to reverse.** The value would mean a span in a grid, a
+  weight in a flex row, and nothing in a vertical container, which every element must
+  validate, type, and document. `cell()` is one grid-local method.
+
+The two features compose rather than compete. A grid cell holds one element, so a weight
+there has no siblings to share with. A horizontal container inside a cell uses weights
+normally, so #16308 can ship independently.
 
 ### Alternative API: Named Mosaic / Template Grid
 
