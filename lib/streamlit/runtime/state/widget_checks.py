@@ -121,9 +121,9 @@ class CheckResult(NamedTuple):
     violation: Violation | None
     # The deserialized value, once the deserializer has read it.
     value: Any = None
-    # Whether the value differs from the stored one. Always False for a value
-    # a browser session drops. A shared label (`ambiguous_option`) is kept, so
-    # it can be a change.
+    # Whether the value differs from the stored one and a browser session keeps
+    # it. False for every refused value except a shared label
+    # (`ambiguous_option`), which a browser session keeps.
     changed: bool = False
 
 

@@ -83,7 +83,7 @@ Notes:
 
 ## Widget input constraints
 
-The server checks every value a client sends, including a bound URL parameter, against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs. The widget keeps its previous value. This holds for a modified client too, so app code doesn't need to re-check these:
+The server checks every value a client sends against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs, so the widget keeps its previous value. A bound URL parameter that breaks one is repaired where it can be (a reversed range is sorted, text past `max_chars` is cut) and cleared otherwise. This holds for a modified client too, so app code doesn't need to re-check these:
 
 - `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …), unless `accept_new_options=True` lets the user type any non-empty text, and `max_selections`
 - `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range

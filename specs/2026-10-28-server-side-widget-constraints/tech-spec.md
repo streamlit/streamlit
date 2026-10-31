@@ -76,12 +76,13 @@ self._call_callbacks(changed, ...)  # reuses the boundary's comparison
 
 ```python
 def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]]:
-    """Return the IDs of accepted changes, in message order, and of rejected values."""
+    """Return accepted changes in first-occurrence order, and the rejected IDs."""
     changed: list[str] = []
     rejected: set[str] = set()
     # After compaction the states hold this message only. set_widgets_from_proto
     # kept the last entry of a repeated ID at the position of its first, so each
-    # ID is checked once, on its last entry, and callbacks keep message order.
+    # ID is checked once, on its last entry, and callbacks run in the order the
+    # IDs first appear.
     for widget_id, wstate in list(self._new_widget_state.states.items()):
         state = wstate.value
         metadata = self._new_widget_state.widget_metadata.get(widget_id)
@@ -126,11 +127,11 @@ def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]
     return tuple(changed), frozenset(rejected)
 ```
 
-`changed` is ordered because callbacks run in message order, which the agent API relies
-on when it sorts its states into snapshot order. Compaction clears every stored entry
-before the message arrives, including entries with no metadata that an interrupted run
-left behind (`MutableMapping.clear` used to stop at the first of them), so the states
-hold exactly this message.
+`changed` is ordered because callbacks run in the order the IDs first appear in the
+message, which the agent API relies on when it sorts its states into snapshot order.
+Compaction clears every stored entry before the message arrives, including entries with
+no metadata that an interrupted run left behind (`MutableMapping.clear` used to stop at
+the first of them), so the states hold exactly this message.
 
 `check_client_value` is a function in a new `runtime/state/widget_checks.py`. It reports
 a violation and never acts on it. Its only side effect comes from the chat input
@@ -263,7 +264,8 @@ class CheckResult(NamedTuple):
     # A data editor payload without its violating entries (item 6).
     partial: Any = None
     # Whether the value kept, `value` or `partial`, differs from the stored one.
-    # Always False for a refused value.
+    # False for every refused value except a shared label (`ambiguous_option`),
+    # which a browser session keeps.
     changed: bool = False
 ```
 

@@ -1040,8 +1040,9 @@ class SessionState:
         Returns
         -------
         tuple[tuple[str, ...], frozenset[str]]
-            The IDs of accepted values that changed, in message order, and the
-            IDs of refused values.
+            The IDs of accepted values that changed, in the order each ID first
+            appears in the message, judged on its last entry, and the IDs of
+            refused values.
         """
         widget_state = self._new_widget_state
         metadata_by_id = widget_state.widget_metadata
@@ -1095,7 +1096,8 @@ class SessionState:
         """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically.
 
         ``changed_widget_ids`` are the accepted client values that changed, in
-        message order, which is the order callbacks run in.
+        the order each ID first appears in the message, which is the order
+        callbacks run in.
         """
         votes = _CallbackRerunVotes()
 
@@ -2114,9 +2116,9 @@ class SessionState:
     def _url_would_seed(self, widget_id: str, user_key: str) -> bool:
         """Whether the URL would seed a bound widget in this run if it were enabled.
 
-        That needs the parameter present and the URL to have priority. When the
-        URL has no priority, the frontend has already dropped any parameter the
-        server cleared, so there is nothing to correct.
+        That needs the parameter present and the URL to have priority. Without
+        priority, an earlier run already decided the widget's value and
+        corrected or removed its parameter, so nothing is left to correct.
         """
         if self.query_params.get_initial_value(user_key) is None:
             return False
