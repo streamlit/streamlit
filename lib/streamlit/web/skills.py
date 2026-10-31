@@ -773,54 +773,91 @@ def _install_skill_copy(
         result.write_reasons.add(classify_write_error(e))
 
 
+def _safe_echo(
+    message: str = "",
+    *,
+    fg: str | None = None,
+    bold: bool | None = None,
+    nl: bool = True,
+) -> None:
+    """Print a line of install output without ever raising.
+
+    Prints characters stdout cannot encode as ``?`` and drops the line on any
+    other write error.
+    """
+    # Never let printing fail the install: the output only describes it. The
+    # one-click install prints to the server's stdout, which can refuse text:
+    # - a Windows pipe (an IDE run panel, or an agent that launched
+    #   `streamlit run`) uses the ANSI code page, which has no ✓/⚠/→
+    # - a launcher that exited leaves a broken pipe
+    # - an app that redirects stdout into an element raises NoSessionContext,
+    #   since the install runs outside the script thread
+    # Plain lines skip click.style so they get no trailing reset code, as with
+    # click.echo.
+    styled = fg is not None or bold is not None
+    text = click.style(message, fg=fg, bold=bold) if styled else message
+    try:
+        try:
+            click.echo(text, nl=nl)
+        except UnicodeEncodeError:
+            # Click writes through sys.stdout (except on a Windows console), so
+            # re-encode in its codec. Not the error's own encoding: cp1252
+            # reports the generic "charmap" codec (Latin-1), which would also
+            # replace cp1252-only characters such as € or —.
+            encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+            click.echo(text.encode(encoding, "replace").decode(encoding), nl=nl)
+    except Exception as ex:
+        _LOGGER.debug("Could not print skills install output", exc_info=ex)
+
+
 def _print_result(result: _InstallResult) -> None:
     """Print the installation result summary."""
     if result.installed:
-        click.secho("\n✓ Installed:", fg="green", bold=True)
+        _safe_echo("\n✓ Installed:", fg="green", bold=True)
         for path in result.installed:
-            click.echo(
+            _safe_echo(
                 f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
             )
 
     if result.up_to_date:
-        click.secho("\n● Up to date:", fg="blue", bold=True)
+        _safe_echo("\n● Up to date:", fg="blue", bold=True)
         for path in result.up_to_date:
-            click.echo(
+            _safe_echo(
                 f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
             )
 
     if result.skipped:
-        click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
+        _safe_echo("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
-            click.echo(f"  {click.style('→', fg='yellow')} {path}")
+            _safe_echo(f"  {click.style('→', fg='yellow')} {path}")
 
     if result.errored:
-        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        _safe_echo("\n✗ Failed to write:", fg="red", bold=True)
         for path in result.errored:
-            click.echo(f"  {click.style('→', fg='red')} {path}")
+            _safe_echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
     """Prompt user to select install mode."""
-    click.echo()
-    click.secho(
+    _safe_echo()
+    _safe_echo(
         "Install skills to enable agents to build better Streamlit apps",
         fg="magenta",
         bold=True,
     )
-    click.echo()
-    click.echo("Install mode:")
-    click.echo(
+    _safe_echo()
+    _safe_echo("Install mode:")
+    _safe_echo(
         f"  {click.style('[p]', fg='cyan', bold=True)} "
         f"Project {click.style('(recommended)', fg='green')} - "
         "skills available in this project only"
     )
-    click.echo(
+    _safe_echo(
         f"  {click.style('[g]', fg='cyan', bold=True)} "
         f"Global - "
         "skills available across all projects"
     )
-    click.echo()
+    _safe_echo()
 
     while True:
         choice = click.prompt("Choice", default="p", show_default=True).strip().lower()
@@ -828,7 +865,7 @@ def _prompt_install_mode() -> str:
             return "project"
         if choice in {"g", "global"}:
             return "global"
-        click.echo("Invalid choice. Enter 'p' for project or 'g' for global install.")
+        _safe_echo("Invalid choice. Enter 'p' for project or 'g' for global install.")
 
 
 def _confirm_project_installation(
@@ -837,62 +874,62 @@ def _confirm_project_installation(
     target_dirs: list[Path],
 ) -> bool:
     """Show project installation plan and confirm with user."""
-    click.echo()
-    click.echo(
+    _safe_echo()
+    _safe_echo(
         f"Installing to project: {click.style(str(project_root), fg='bright_blue')}"
     )
 
-    click.secho("\nSkills to install:", bold=True)
+    _safe_echo("\nSkills to install:", bold=True)
     for skill in skills:
-        click.echo(
+        _safe_echo(
             f"  {click.style('•', fg='magenta')} {click.style(skill, fg='cyan')}"
         )
 
-    click.secho("\nTarget directories:", bold=True)
+    _safe_echo("\nTarget directories:", bold=True)
     for target_dir in target_dirs:
         try:
             rel_path = target_dir.relative_to(project_root)
         except ValueError:
             rel_path = target_dir
-        click.echo(
+        _safe_echo(
             f"  {click.style('•', fg='magenta')} "
             f"{click.style(str(rel_path) + '/', fg='cyan')}"
         )
 
-    click.echo()
+    _safe_echo()
     return click.confirm("Proceed with installation?", default=True)
 
 
 def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     """Show global installation plan and confirm with user."""
-    click.echo()
-    click.echo("Installing globally")
+    _safe_echo()
+    _safe_echo("Installing globally")
 
-    click.secho("\nSource:", bold=True)
-    click.echo(
+    _safe_echo("\nSource:", bold=True)
+    _safe_echo(
         f"  {click.style('•', fg='magenta')} "
         f"{click.style(str(_get_meta_skill_dir() / _GLOBAL_SKILL_NAME), fg='cyan')}"
     )
 
-    click.secho("\nSkill to install:", bold=True)
-    click.echo(
+    _safe_echo("\nSkill to install:", bold=True)
+    _safe_echo(
         f"  {click.style('•', fg='magenta')} "
         f"{click.style(_GLOBAL_SKILL_NAME, fg='cyan')}"
     )
 
-    click.secho("\nTarget directories:", bold=True)
+    _safe_echo("\nTarget directories:", bold=True)
     home = Path.home()
     for target_dir in target_dirs:
         try:
             rel_path = Path("~") / target_dir.relative_to(home)
         except ValueError:
             rel_path = target_dir
-        click.echo(
+        _safe_echo(
             f"  {click.style('•', fg='magenta')} "
             f"{click.style(str(rel_path) + '/', fg='cyan')}"
         )
 
-    click.echo()
+    _safe_echo()
     return click.confirm("Proceed with installation?", default=True)
 
 
@@ -1004,20 +1041,20 @@ def _install_project_skills(
     symlink_blocker = _symlink_blocker(project_root, source_skills_dir / skills[0])
     if symlink_blocker is not None:
         if fallback_to_global:
-            click.secho(
+            _safe_echo(
                 "\n⚠ Symlinks not supported on this system.",
                 fg="yellow",
                 bold=True,
             )
-            click.echo(
+            _safe_echo(
                 "Project install uses symlinks so skills stay matched to your "
                 "active Streamlit environment."
             )
-            click.echo(
+            _safe_echo(
                 "Falling back to global installation. On Windows, enable "
                 "Developer Mode to use project installs."
             )
-            click.echo()
+            _safe_echo()
             global_result = _install_global_skills(yes=yes)
             global_result.fallback_reason = symlink_blocker
             return global_result
@@ -1029,7 +1066,7 @@ def _install_project_skills(
 
     # Confirm installation
     if not yes and not _confirm_project_installation(project_root, skills, target_dirs):
-        click.echo("Installation cancelled.")
+        _safe_echo("Installation cancelled.")
         raise click.Abort()
 
     # Install skills
@@ -1053,13 +1090,13 @@ def _install_project_skills(
         # Don't clean up partial project symlinks - they're in a different location
         # than global install (~/.agents vs project/.agents) and serve as fallback
         # if global install fails.
-        click.secho(
+        _safe_echo(
             "\n⚠ Symlinks not supported on this system.",
             fg="yellow",
             bold=True,
         )
-        click.echo("Falling back to global installation mode...")
-        click.echo()
+        _safe_echo("Falling back to global installation mode...")
+        _safe_echo()
         try:
             global_result = _install_global_skills(yes=yes)
             # The pre-check said symlinks work here, yet laying one still failed -
@@ -1087,27 +1124,27 @@ def _install_project_skills(
     _print_result(result)
 
     if result.installed or result.up_to_date:
-        click.echo()
-        click.secho("✨ Successfully installed to ", fg="green", bold=True, nl=False)
-        click.secho(str(project_root), fg="bright_blue")
+        _safe_echo()
+        _safe_echo("✨ Successfully installed to ", fg="green", bold=True, nl=False)
+        _safe_echo(str(project_root), fg="bright_blue")
         if result.installed:
-            click.echo()
-            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-            click.secho(
+            _safe_echo()
+            _safe_echo("Note: ", fg="bright_black", bold=True, nl=False)
+            _safe_echo(
                 "Installed skills are symlinks to your local Streamlit environment.",
                 fg="bright_black",
             )
-            click.secho(
+            _safe_echo(
                 "      They generally should not be committed to git.",
                 fg="bright_black",
             )
-        click.echo()
-        click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
+        _safe_echo()
+        _safe_echo("Recommended .gitignore snippet:", fg="bright_black", bold=True)
         gitignore_snippet = _generate_gitignore_snippet(
             skills, target_dirs, project_root
         )
         for line in gitignore_snippet.splitlines():
-            click.secho(f"  {line}", fg="bright_black")
+            _safe_echo(f"  {line}", fg="bright_black")
     elif result.skipped:
         raise _conflict_error(result.skipped)
 
@@ -1130,7 +1167,7 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
 
     # Confirm installation
     if not yes and not _confirm_global_installation(target_dirs):
-        click.echo("Installation cancelled.")
+        _safe_echo("Installation cancelled.")
         raise click.Abort()
 
     # The meta-skill ships in the wheel; copy it from local disk (no network).
@@ -1222,20 +1259,20 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
         )
 
     if result.installed or result.up_to_date:
-        click.echo()
-        click.secho(
+        _safe_echo()
+        _safe_echo(
             "✨ Successfully installed globally",
             fg="green",
             bold=True,
         )
         if result.installed:
-            click.echo()
-            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
-            click.secho(
+            _safe_echo()
+            _safe_echo("Note: ", fg="bright_black", bold=True, nl=False)
+            _safe_echo(
                 "Global skills include a discover.py script that finds",
                 fg="bright_black",
             )
-            click.secho(
+            _safe_echo(
                 "      project-specific bundled skills at runtime.",
                 fg="bright_black",
             )
