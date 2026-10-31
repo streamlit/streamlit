@@ -20,7 +20,11 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import type { VegaLiteChartElement } from "./arrowUtils"
+import {
+  aliasDatasetReferences,
+  getAliasedDataSets,
+  type VegaLiteChartElement,
+} from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 import {
@@ -397,6 +401,23 @@ export const useVegaElementPreprocessor = (
     [rowCountsKey]
   )
 
+  // Map each dataset name to its alias. Memoize on the serialized names,
+  // because every rerun delivers new dataset objects.
+  const datasetNamesKey = JSON.stringify(
+    datasets.map(({ hasName, name }) => (hasName ? name : null))
+  )
+  const datasetAliases = useMemo(
+    () =>
+      new Map(
+        Array.from(getAliasedDataSets(datasets), ([alias, { name }]) => [
+          name,
+          alias,
+        ])
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
+    [datasetNamesKey]
+  )
+
   // The structural spec generated with neutral (0) container dimensions. This is
   // only recomputed when non-dimension inputs change, keeping it stable across
   // container resizes.
@@ -462,15 +483,22 @@ export const useVegaElementPreprocessor = (
     }
     // Include the sizing mode flags so that transitioning to/from
     // container-driven sizing triggers a view recreation.
-    return JSON.stringify({
-      spec: specForKey,
-      useContainerWidth,
-      useContainerHeight,
-      concatWidth,
-      concatHeight,
-    })
+    return JSON.stringify(
+      {
+        spec: specForKey,
+        useContainerWidth,
+        useContainerHeight,
+        concatWidth,
+        concatHeight,
+      },
+      // Key dataset references by alias, not name. Altair names a dataset by
+      // a hash of its contents, so new data would otherwise rebuild the view
+      // instead of swapping the new rows into it.
+      aliasDatasetReferences(datasetAliases)
+    )
   }, [
     baseSpec,
+    datasetAliases,
     useContainerWidth,
     useContainerHeight,
     concatWidth,

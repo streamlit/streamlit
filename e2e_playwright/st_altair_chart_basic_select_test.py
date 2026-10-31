@@ -547,7 +547,9 @@ def test_selection_persists_after_data_update(app: Page):
 
     This verifies the key_as_main_identity feature for st.altair_chart selections.
     When a key is provided and selection_mode stays the same, selections should
-    be preserved even when the underlying data changes.
+    be preserved even when the underlying data changes. The keyed chart also
+    keeps its Vega view: the new rows are swapped into it. Without a key, the
+    data is part of the chart's identity, so the selection resets.
     """
     chart = _get_persistent_selection_chart(app)
     expect(chart).to_be_visible()
@@ -568,6 +570,22 @@ def test_selection_persists_after_data_update(app: Page):
     )
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
 
+    unkeyed_chart = get_vega_graphics_document(
+        get_element_by_key(app, "unkeyed_selection_chart")
+    )
+    unkeyed_chart.scroll_into_view_if_needed()
+    _click(app, unkeyed_chart, _MousePosition(150, 180))
+    expect_prefixed_markdown(
+        app,
+        "Unkeyed selection:",
+        re.compile(
+            r"\{'selection': \{'unkeyed_selection': \[\{'category': '[A-E]'.+\}\]\}\}"
+        ),
+    )
+
+    # Tag the drawn marks: a rebuilt view would replace this element.
+    chart.locator("svg.marks").evaluate("el => el.setAttribute('data-test-tag', '')")
+
     # Click the button to update data (changes the chart data)
     # Use the key-based locator for precise selection
     update_button = get_element_by_key(app, "update_chart_data_btn").locator("button")
@@ -581,6 +599,16 @@ def test_selection_persists_after_data_update(app: Page):
     # Verify selection persisted after data change
     # The selection should still show the same category even though values changed
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
+
+    # The new values are drawn into the same view.
+    expect(chart.locator("[aria-label='category: A; value: 15']")).to_have_count(1)
+    expect(chart.locator("svg.marks[data-test-tag]")).to_have_count(1)
+
+    expect_prefixed_markdown(
+        app,
+        "Unkeyed selection:",
+        re.compile(r"\{'selection': \{'unkeyed_selection': \{\}\}\}"),
+    )
 
 
 def _assert_single_region_bind(

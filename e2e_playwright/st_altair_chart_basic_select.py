@@ -454,7 +454,7 @@ legend_selection_state = st.altair_chart(
 )
 st.write("Legend-bound selection:", str(legend_selection_state))
 
-# Keep this chart last so existing .nth() locators stay valid.
+# Keep the remaining charts last so existing .nth() locators stay valid.
 st.subheader("Scatter chart with x-only interval")
 x_interval = alt.selection_interval(encodings=["x"], name="x_interval")
 x_interval_chart = (
@@ -482,3 +482,24 @@ if (
         "Scatter chart with x-interval:",
         str(st.session_state.scatter_interval_x),
     )
+
+# Without a key, the chart data is part of the chart's identity, so the
+# "Update chart data" button above resets this selection.
+st.subheader("Unkeyed bar chart whose data changes")
+point_unkeyed = alt.selection_point(name="unkeyed_selection")
+unkeyed_chart = (
+    alt.Chart(persistent_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("category:N"),
+        y=alt.Y("value:Q"),
+        fillOpacity=alt.condition(point_unkeyed, alt.value(1), alt.value(0.3)),
+        tooltip=alt.value(None),
+    )
+    .add_params(point_unkeyed)
+)
+with st.container(key="unkeyed_selection_chart"):
+    unkeyed_selection = st.altair_chart(
+        unkeyed_chart, on_select="rerun", width="content"
+    )
+st.write("Unkeyed selection:", str(unkeyed_selection))
