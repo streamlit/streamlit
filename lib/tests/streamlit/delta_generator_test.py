@@ -260,10 +260,10 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         new_dg = dg._enqueue("empty", EmptyProto())
         assert dg == new_dg
 
-    def test_block_bare_mode_returns_dg_type_parented_on_caller(self):
-        """Bare-mode _block returns the subclass and parents it on the caller.
+    def test_block_without_script_context_returns_subclass_parented_on_caller(self):
+        """Without a script run context, _block returns the subclass on the caller.
 
-        The enqueued path uses parent=dg; bare mode must match so walks of
+        The enqueued path uses parent=dg; this path must match so walks of
         ``_parent`` (for example ``current_form_id``) stay consistent.
         """
         from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -276,8 +276,8 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert result._parent is dg
         assert not isinstance(result._parent, StatusContainer)
 
-    def test_block_bare_mode_nested_same_type_is_a_new_instance(self):
-        """A nested bare-mode block must not reuse the parent instance."""
+    def test_nested_block_without_script_context_is_a_new_instance(self):
+        """Without a script run context, a nested block is a new instance."""
         from streamlit.elements.lib.grid_container import GridContainer
 
         dg = DeltaGenerator(root_container=None)

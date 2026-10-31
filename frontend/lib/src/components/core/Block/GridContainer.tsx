@@ -117,16 +117,16 @@ function useNeedsKeyboardScrollStop(
   elementRef: { readonly current: HTMLElement | null },
   dependency: unknown
 ): boolean {
-  const [exposed, setExposed] = useState(false)
-  const exposedRef = useRef(false)
+  const [needsTabStop, setNeedsTabStop] = useState(false)
+  const needsTabStopRef = useRef(false)
   useLayoutEffect(() => {
     const element = elementRef.current
     const publish = (next: boolean): void => {
-      if (exposedRef.current === next) {
+      if (needsTabStopRef.current === next) {
         return
       }
-      exposedRef.current = next
-      setExposed(next)
+      needsTabStopRef.current = next
+      setNeedsTabStop(next)
     }
     if (!active || !element) {
       publish(false)
@@ -149,7 +149,7 @@ function useNeedsKeyboardScrollStop(
     })
     return () => observer.disconnect()
   }, [active, elementRef, dependency])
-  return exposed
+  return needsTabStop
 }
 
 interface GridCellProps {
@@ -163,17 +163,9 @@ interface GridCellProps {
 }
 
 /**
- * One CSS Grid item. The cell itself never becomes a scrollport: hover
- * toolbars sit `position: absolute` above charts and would be clipped even
- * when in-flow content fits. The inner body stays mounted in both row-height
- * modes so toggling `row_height` does not remount cell contents. Content
- * rows use `display: contents` on that body. Definite-height rows fill the
- * cell and switch to `overflow: auto` only if in-flow content exceeds it.
- */
-/**
- * One observer for the cell body and its content. State updates only when
- * the scroll decision changes, so a resize that stays on the same side of
- * the row height does not re-render the cell.
+ * One observer for the cell body and its content. The hook updates state
+ * only when the scroll decision changes, so a resize that stays on the same
+ * side of the row height does not re-render the cell.
  */
 function useCellOverflowScroll(
   active: boolean,
@@ -225,6 +217,14 @@ function useCellOverflowScroll(
   return scroll
 }
 
+/**
+ * One CSS Grid item. The cell itself never becomes a scrollport: hover
+ * toolbars sit `position: absolute` above charts and would be clipped even
+ * when in-flow content fits. The inner body stays mounted in both row-height
+ * modes so toggling `row_height` does not remount cell contents. Content
+ * rows use `display: contents` on that body. Definite-height rows fill the
+ * cell and switch to `overflow: auto` only if in-flow content exceeds it.
+ */
 const GridCell = ({
   hasFixedRowHeight,
   verticalAlignment,
@@ -276,6 +276,12 @@ const GridCell = ({
   )
 }
 
+/**
+ * Scroll container for a pixel- or rem-height grid. It scrolls vertically
+ * only when the rows overflow, and horizontally when `wrap=False` tracks
+ * overflow. For content and stretch heights it renders as
+ * `display: contents`, so the grid stays mounted when `height` changes.
+ */
 const GridScrollport = ({
   bounded,
   wrap,
@@ -559,6 +565,17 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
 
     return collectGridCellSources(node.children).flatMap(
       ({ node: childNode, sourceKey }) => {
+        // An empty block that does not allow empty renders nothing in other
+        // layouts, so it gets no cell either. `grid.cell()` allows empty and
+        // keeps the cell it reserves.
+        if (
+          childNode instanceof BlockNode &&
+          childNode.isEmpty &&
+          !childNode.deltaBlock.allowEmpty
+        ) {
+          return []
+        }
+
         // A spinner wraps the anchor in a TransientNode, which has no id of
         // its own. Key and span come from the anchor so the cell stays
         // mounted when the spinner appears or clears.
@@ -625,18 +642,15 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
   const hasFixedRowHeight =
     rowHeightMode === BlockProto.GridContainer.RowHeightMode.FIXED
 
-  // wrap=False tracks will not shrink below this floor. The scrollport's
-  // content box must be at least that wide, or overflow-x clips the columns.
-  // Only become a scrollport once the tracks are wider than the box.
-  // That port clips the cross axis. Toolbar padding on the grid keeps
-  // hover chrome inside the clip.
-  //
-  // A bounded grid must not use its own measured width here. Applying the
-  // track floor makes that element wider, the next measure clears the
-  // scroll flag, and the floor drops — a loop. The scrollport's client
-  // width does not follow the floor, and it excludes a classic vertical
-  // scrollbar. Unbounded grids scroll on the grid itself and never apply
-  // that floor, so their own width is the available width.
+  // With wrap=False, tracks never shrink below `tracksMinWidthPx`, so the
+  // grid scrolls horizontally once that floor is wider than the available
+  // width. That scrollport clips the cross axis, so toolbar padding on the
+  // grid keeps hover chrome inside the clip.
+  // - Unbounded grids scroll on the grid itself and never apply the floor,
+  //   so they compare against their own width.
+  // - Bounded grids scroll on the port and compare against the port's
+  //   client width, which also excludes a classic vertical scrollbar. Their
+  //   own width grows with the floor and would toggle scrolling in a loop.
   const tracksMinWidthPx = gridTracksMinWidthPx(
     columnCount,
     minColumnWidthPx,

@@ -98,6 +98,8 @@ export function resolveGridColumnCount({
       ? availableWidthPx
       : fallbackWidthPx
 
+  // N columns and N - 1 gaps fit when N * min + (N - 1) * gap <= width,
+  // which is N <= (width + gap) / (min + gap).
   const denom = minColumnWidthPx + columnGapPx
   const fitted = denom <= 0 ? cap : Math.floor((width + columnGapPx) / denom)
   const n = Math.max(1, fitted)

@@ -26,18 +26,21 @@ def test_grid_renders(app: Page):
 
 
 def test_auto_sizing_grid(app: Page):
-    """Test that the auto-sizing grid contains metrics."""
+    """Test that the auto-sizing grid fits three tracks at the default width."""
     first_grid = get_element_by_key(app, "auto_sizing")
     metrics = first_grid.get_by_test_id("stMetric")
     expect(metrics).to_have_count(4)
     expect(first_grid).to_have_attribute("data-test-wrap", "true")
+    # The 704px centered content box fits three 200px tracks, not four.
+    expect(first_grid).to_have_attribute("data-test-column-count", "3")
 
 
 def test_grid_with_border(app: Page):
-    """Test that the bordered grid has visible borders."""
+    """The bordered grid renders one cell per grouped child."""
     bordered_grid = get_element_by_key(app, "bordered")
     expect(bordered_grid).to_be_visible()
     expect(bordered_grid.get_by_test_id("stGridCell")).to_have_count(6)
+    expect(bordered_grid).to_have_attribute("data-test-column-count", "3")
 
 
 def test_grid_with_span(app: Page):

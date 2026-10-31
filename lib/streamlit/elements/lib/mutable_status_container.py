@@ -228,7 +228,8 @@ class StatusContainer(DeltaGenerator):
             msg.metadata.agent_props = agent_props
 
         self._current_proto = msg.delta.add_block
-        # Bare mode has no session. enqueue_message would raise
+        # Without a script run context (for example, `python app.py`) there
+        # is no session to enqueue to. enqueue_message would raise
         # NoSessionContext from __exit__ and hide an exception from the
         # with-block body.
         if get_script_run_ctx(suppress_warning=True) is None:

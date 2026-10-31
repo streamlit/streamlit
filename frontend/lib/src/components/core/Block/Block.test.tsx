@@ -1774,10 +1774,73 @@ describe("GridContainer Component", () => {
       })
       expect(scrollBody).toHaveStyle("overflow-y: auto")
       expect(scrollBody).toHaveStyle("overflow-x: auto")
+      // The horizontally scrolling grid already holds the toolbar room, so
+      // the port does not add a second copy.
+      expect(getComputedStyle(scrollBody).paddingTop).toBe("")
     } finally {
       clientSpy.mockRestore()
       offsetSpy.mockRestore()
       restoreWidths()
+    }
+  })
+
+  it("reserves toolbar room at the top once a bounded grid scrolls vertically", async () => {
+    // Rows of 400px in a 160px port. A chart toolbar above the first row
+    // would sit outside the port's top edge without the padding.
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height =
+          this.dataset.testid === "stGridContentMeasure" ? 400 : 160
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: 704,
+          width: 704,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [makeTextElement("Tall content")],
+            new BlockProto({
+              allowEmpty: true,
+              heightConfig: { pixelHeight: 160 },
+              gridContainer: {
+                minColumnWidthPx: 220,
+                rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                verticalAlignment:
+                  BlockProto.GridContainer.VerticalAlignment.TOP,
+                border: false,
+                rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+              },
+            })
+          )
+        )
+      )
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      await waitFor(() => {
+        expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+      expect(scrollBody).toHaveStyle(
+        "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+      )
+      // A wrapping grid does not scroll horizontally, so the grid itself
+      // stays unpadded.
+      expect(getComputedStyle(screen.getByTestId("stGrid")).paddingTop).toBe(
+        ""
+      )
+    } finally {
+      spy.mockRestore()
     }
   })
 
@@ -1838,10 +1901,10 @@ describe("GridContainer Component", () => {
 
     expect(screen.getByTestId("stGridCell")).toHaveStyle("overflow: visible")
     expect(screen.getByTestId("stGridCell")).toHaveStyle("height: 100%")
-    expect(screen.getByTestId("stGridCellBody")).toHaveAttribute(
-      "data-test-scroll",
-      "false"
-    )
+    const body = screen.getByTestId("stGridCellBody")
+    expect(body).toHaveAttribute("data-test-scroll", "false")
+    // Toolbar room is only reserved once the cell scrolls.
+    expect(getComputedStyle(body).paddingTop).toBe("")
   })
 
   function makeTextElement(body: string, stretch = false): ElementNode {
@@ -1960,6 +2023,22 @@ describe("GridContainer Component", () => {
       })
       expect(body).not.toHaveAttribute("role")
       expect(body).not.toHaveAttribute("aria-label")
+    } finally {
+      restore()
+    }
+  })
+
+  it("reserves toolbar room at the top of a scrolling fixed-height cell", async () => {
+    const restore = mockMeasuredHeights()
+    try {
+      renderFixedHeightCell([makeTextElement("A long note")])
+      const body = screen.getByTestId("stGridCellBody")
+      await waitFor(() => {
+        expect(body).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(body).toHaveStyle(
+        "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+      )
     } finally {
       restore()
     }
@@ -2314,6 +2393,32 @@ describe("GridContainer Component", () => {
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
     expect(screen.getByTestId("stGridCell")).toHaveTextContent("A")
     expect(screen.getByTestId("stGridCell")).toHaveTextContent("B")
+  })
+
+  it("does not create a cell for an empty block that does not allow empty", () => {
+    // A `grid.container()` that is never written to renders nothing in a
+    // vertical layout. An empty `grid.cell()` allows empty and keeps its cell.
+    const unwrittenContainer = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: false, vertical: {} })
+    )
+    const reservedCell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell: {} })
+    )
+    const block = makeGridBlock({ border: true }, [
+      unwrittenContainer,
+      reservedCell,
+      text("Kept"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).not.toHaveTextContent("Kept")
+    expect(cells[1]).toHaveTextContent("Kept")
   })
 
   it("does not create a cell for an empty transient child", () => {

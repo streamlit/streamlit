@@ -1038,7 +1038,7 @@ class LayoutsMixin:
         Parameters
         ----------
         columns : "auto" or int
-            Number of equal-width columns.
+            Number of equal-width columns. This can be one of the following:
 
             - ``"auto"`` (default): Fit as many columns as the container
               allows, using ``min_column_width``. Automatic layouts are
@@ -1079,9 +1079,10 @@ class LayoutsMixin:
             keep.
 
         gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, tuple, list, or None
-            The size of the gap between cells. A scalar matches
-            ``st.columns``. A 2-tuple or 2-list is ``(row_gap, column_gap)``.
-            This can be one of the following:
+            The size of the gap between cells. Pass one value to use the
+            same gap between rows and columns, or a 2-tuple or 2-list
+            ``(row_gap, column_gap)`` to set them separately. Each value can
+            be one of the following:
 
             - ``"xxsmall"``: 0.25rem gap between the cells.
             - ``"xsmall"``: 0.5rem gap between the cells.
