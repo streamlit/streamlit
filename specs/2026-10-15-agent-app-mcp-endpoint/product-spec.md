@@ -650,7 +650,9 @@ tests. Beyond the endpoint itself:
   reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
   and its endpoint is wrapped so every response carries the `Link` header. That `404`
   covers every method, not only `GET`, for all the reserved paths, as
-  [Connecting an app](#connecting-an-app) describes.
+  [Connecting an app](#connecting-an-app) describes. An `interact` call passes
+  `transport="mcp"` to `interaction.interact`, and the API-off path records an `mcp`
+  interaction, so usage is counted per transport.
 - Reading a file back is optional for a media store. Hosts can plug in their own store
   through `RuntimeConfig.media_file_storage`, and the storage interface has no read
   today: only the built-in in-memory store can return a file's bytes. On a store that
@@ -826,6 +828,10 @@ and most apps are unaffected.
 - **A stdio transport or a bridge package.**
 - **Clients that run inside a web page.** They would need CORS headers for their
   origin, which no agent route sends.
+- **The negotiated protocol version in usage metrics.** It would need a new
+  `AgentApiUsage` field, and a new field needs the data team's sign-off. The transport
+  is already counted. `clientInfo.name` arrives only on `initialize`, so it would not
+  be a per-call field in the revisions this server speaks either.
 
 ## Checklist
 
@@ -834,7 +840,7 @@ and most apps are unaffected.
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
 | No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. One change to the shipped routes: any method on a reserved path under a page's URL is a `404`, so `POST /page2/_stcore/agent/interact` stops answering `405`. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
-| Metrics collected          | Not in v1, as in the parent spec. Streamlit's usage stats are reported by the browser, which an agent session does not have. When agent usage metrics land (the parent's operations follow-up), they should also record the transport (`mcp` or HTTP) and the negotiated protocol version. `clientInfo.name` arrives only on `initialize`, so it is not a per-call field in the revisions this server speaks. |
+| Metrics collected          | The parent spec's usage counts, which ride on browser page profiles while `browser.gatherUsageStats` is on. Each `interact` tool call counts in `AgentApiUsage.mcp_interactions`, refused ones included, and each session it creates in `sessions`. With the API off, a request that passes the Host, `Origin`, and content-type checks counts, as on the HTTP route. A `get_data` read is not an interaction and is not counted. The negotiated protocol version is [out of scope](#out-of-scope) for v1. |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is no broader than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                   |
 | Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, without a trailing slash, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
