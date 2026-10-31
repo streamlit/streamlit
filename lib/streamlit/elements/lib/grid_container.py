@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, Self
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     get_align,
     get_gap_config,
@@ -183,4 +184,6 @@ class GridContainer(DeltaGenerator):
         if row_span > 1:
             block_proto.grid_cell.row_span = row_span
 
-        return self.dg._block(block_proto)
+        # Spans size the cell on screen, like a column's width ratio. What a
+        # non-visual client needs is the grouping, which the nesting gives it.
+        return self.dg._block(block_proto, agent_props=agent_spec.block("cell"))

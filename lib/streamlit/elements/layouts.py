@@ -1386,6 +1386,10 @@ class LayoutsMixin:
             self.dg._block(
                 block_proto,
                 dg_type=get_dg_singleton_instance().grid_container_cls,
+                # Track count, track width, row height, and dense packing only
+                # arrange cells on screen. The tree keeps cells in source
+                # order, which is what a non-visual client reads.
+                agent_props=agent_spec.block("grid", key=maybe_key),
             ),
         )
         grid_dg._declared_columns = validated_columns
