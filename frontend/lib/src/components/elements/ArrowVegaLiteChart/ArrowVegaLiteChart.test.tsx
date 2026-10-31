@@ -28,8 +28,8 @@ const vegaEmbedMock = vi.hoisted(() => {
     isViewReady: false,
     lastSpec: undefined as { height?: number } | undefined,
     createdHeights,
-    // Stable like the real hook's callbacks, so each createView call is a
-    // view creation the chart asked for.
+    // Keep these callbacks stable, like the real hook's, so the chart's
+    // effects don't rerun and createdHeights counts only real view rebuilds.
     createView: (_container: unknown, spec: { height?: number }) => {
       createdHeights.push(spec?.height)
       return Promise.resolve(null)

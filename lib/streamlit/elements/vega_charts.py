@@ -659,16 +659,18 @@ def _parse_selection_mode(
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
-    """Altair uses a global counter for unnamed parameters and views.
-    We need to reset these counters on a spec-level to make the
-    spec stable across reruns and avoid changes to the element ID.
+    """Altair names unnamed parameters and views with a global counter
+    (Altair 5) or a hash (Altair 6). We need to reset these names on a
+    spec-level to make the spec stable across reruns and avoid changes to the
+    element ID.
     """
 
-    # Altair 6.0.0 introduced a new way to handle parameters,
-    # by using hashes instead of pure counters. Layered and concatenated
-    # views with params add a position suffix (``view_<hash>_<i>``), and the
-    # hash covers the view's dataset name, which changes with the data:
-    pattern = re.compile(rf'"{prefix}[0-9a-z]+(?:_[0-9]+)?"')
+    # Match counter names (``view_1``), hex hash names (``view_79c4``), and
+    # hash names with a position suffix (``view_79c4_0``) that layered and
+    # concatenated views with params get. The hash covers the view's dataset
+    # name, so it changes whenever the data changes. User-chosen names with
+    # other letters, such as ``view_custom_1``, are left unchanged.
+    pattern = re.compile(rf'"{prefix}[0-9a-f]+(?:_[0-9]+)?"')
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.

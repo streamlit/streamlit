@@ -214,10 +214,10 @@ export class Quiver {
   /**
    * Whether `other` was parsed from byte-identical Arrow IPC data.
    *
-   * Views of the same buffer region, such as a message the ForwardMsg cache
-   * decodes again, match without a scan. Otherwise the comparison stops at
-   * the first differing byte, so only identical data reads every byte (about
-   * 15 ms for 16 MB).
+   * Two views of the same buffer region (for example, a chart re-delivered
+   * from the ForwardMsg cache) match without a scan. Otherwise the
+   * comparison stops at the first differing byte, so only identical data in
+   * a new buffer reads every byte.
    */
   public hasSameBytes(other: Quiver): boolean {
     const bytes = this._bytes

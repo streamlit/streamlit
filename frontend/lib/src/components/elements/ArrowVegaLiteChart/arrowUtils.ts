@@ -136,7 +136,7 @@ export function getDataSets(
 
 /** A chart dataset, as listed by {@link getAliasedDataSets}. */
 interface AliasedDataset {
-  /** The name the spec refers to the dataset by. */
+  /** The dataset's name in the spec (`"null"` for an unnamed dataset). */
   name: string
   /** The dataset's rows. */
   data: Quiver

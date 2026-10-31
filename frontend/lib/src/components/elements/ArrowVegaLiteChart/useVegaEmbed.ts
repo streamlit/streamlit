@@ -187,7 +187,7 @@ export function useVegaEmbed(
       const prevDataSets = getAliasedDataSets(prevDatasets)
       const dataSets = getAliasedDataSets(inputDatasets)
       // The name the view compiled for this alias. A dataset the view hasn't
-      // seen keeps its own name, and an unnamed one uses the default dataset.
+      // seen keeps its own name, and an empty name uses the default dataset.
       const getViewDatasetName = (alias: string, name: string): string =>
         (viewDatasetNamesRef.current.get(alias) ?? name) ||
         defaultDataNameRef.current
