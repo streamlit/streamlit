@@ -133,7 +133,8 @@ dev = [
 # Test dependencies
 test = [
   # Testing infrastructure dependencies:
-  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  # pytest >= 9.1.0 is causing issues and is not yet supported. The same cap
+  # is repeated in .github/workflows/meta-skill-discovery.yml.
   "pytest<9.1.0",
   "pytest-cov",
   "hypothesis",

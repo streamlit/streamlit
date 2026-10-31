@@ -36,6 +36,10 @@ if __name__ not in {"__main__", "__mp_main__"}:
     )
 
 _SKILLS_DIR = "lib/streamlit/.agents/"
+# Scripts that skills tell agents to run, not read.
+_EXCLUDED_DIRS = (
+    "lib/streamlit/.agents/meta-skill/developing-with-streamlit/scripts/",
+)
 _MAX_READ_ROWS = 500
 _MAX_READ_CHARS = 50_000
 
@@ -63,6 +67,8 @@ def main() -> None:
     files = subprocess.check_output(["git", "ls-files", _SKILLS_DIR], text=True)
     too_large = 0
     for fileloc in sorted(files.splitlines()):
+        if fileloc.startswith(_EXCLUDED_DIRS):
+            continue
         try:
             text = Path(fileloc).read_text(encoding="utf-8")
         except UnicodeDecodeError:
