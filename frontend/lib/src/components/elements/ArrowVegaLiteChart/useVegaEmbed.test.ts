@@ -1002,6 +1002,53 @@ describe("useVegaEmbed hook", () => {
     )
   })
 
+  it("resets zoom and pan when new data is swapped in", async () => {
+    const bytes = floatBytes([1, 2, 3])
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: new Quiver({ data: bytes }),
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["picked_range"],
+      formId: "",
+    }
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {
+        params: [
+          { name: "zoom", select: "interval", bind: "scales" },
+          // Selections that Streamlit reports keep their store.
+          { name: "picked_range", select: "interval", bind: "scales" },
+          { name: "brush", select: "interval" },
+        ],
+        layer: [
+          {
+            params: [
+              { name: "layer_zoom", select: "interval", bind: "scales" },
+            ],
+            mark: "line",
+          },
+        ],
+      })
+    })
+    const update = async (data: Quiver): Promise<void> => {
+      await act(async () => {
+        await result.current.updateView(data, [])
+      })
+    }
+
+    // A rerun with the same data keeps the zoom.
+    await update(new Quiver({ data: bytes.slice() }))
+    expect(mockVegaView.remove).not.toHaveBeenCalled()
+
+    await update(new Quiver({ data: floatBytes([4, 5, 6]) }))
+    const removedStores = mockVegaView.remove.mock.calls.map(([name]) => name)
+    expect(removedStores).toEqual(["zoom_store", "layer_zoom_store"])
+  })
+
   it("swaps data into the view only when its bytes change", async () => {
     const element: VegaLiteChartElement = {
       id: "chartId",
