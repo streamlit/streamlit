@@ -34,6 +34,120 @@ from tests.testutil import patch_config_options
 class NavigationTest(DeltaGeneratorTestCase):
     """Test st.navigation"""
 
+    def test_navigation_rejects_page_created_outside_script_run(self) -> None:
+        """Import-time st.Page objects are rejected once a script is running."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.navigation([page])
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_switch_page_rejects_page_created_outside_script_run(self) -> None:
+        """st.switch_page uses the same error as st.navigation."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.switch_page(page)
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_page_link_rejects_page_created_outside_script_run(self) -> None:
+        """st.page_link uses the same error as st.navigation."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.page_link(page)
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_page_run_rejects_navigation_built_outside_script_run(self) -> None:
+        """Import-time st.navigation(...).run() fails once a script run exists."""
+        with (
+            patch("streamlit.navigation.page.get_script_run_ctx", return_value=None),
+            patch(
+                "streamlit.commands.navigation.get_script_run_ctx", return_value=None
+            ),
+        ):
+
+            def home() -> None:
+                pass
+
+            nav = st.navigation([st.Page(home)])
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            nav.run()
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_page_run_rejects_page_created_outside_script_run(self) -> None:
+        """Page.run() raises StreamlitAPIException for a page created at import time."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+
+            def home() -> None:
+                pass
+
+            page = st.Page(home)
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            page.run()
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_navigation_run_outside_script_run_does_not_raise(self) -> None:
+        """Bare execution can call st.navigation(...).run() with no script run."""
+        with (
+            patch("streamlit.navigation.page.get_script_run_ctx", return_value=None),
+            patch(
+                "streamlit.commands.navigation.get_script_run_ctx", return_value=None
+            ),
+        ):
+
+            def home() -> None:
+                pass
+
+            st.navigation([st.Page(home)]).run()
+
+    def test_page_attributes_reject_page_created_outside_script_run(self) -> None:
+        """title, icon, url_path, and external fields use the import-time page error."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+
+            def home() -> None:
+                pass
+
+            page = st.Page(home)
+            with pytest.raises(
+                StreamlitAPIException, match="while the Streamlit script is running"
+            ) as exc_info:
+                _ = page.title
+            assert exc_info.value.error_id == "page-created-outside-script-run"
+
+        for read_attribute in (
+            lambda: page.title,
+            lambda: page.icon,
+            lambda: page.url_path,
+            lambda: page.is_external,
+            lambda: page.external_url,
+        ):
+            with pytest.raises(
+                StreamlitAPIException, match="while the Streamlit script is running"
+            ) as exc_info:
+                read_attribute()
+            assert exc_info.value.error_id == "page-created-outside-script-run"
+
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
         with pytest.raises(StreamlitMissingRequiredParameterError) as exc:

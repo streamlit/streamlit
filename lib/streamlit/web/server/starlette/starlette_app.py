@@ -17,7 +17,12 @@
 from __future__ import annotations
 
 import copy
+import functools
+import inspect
+import os
+import site
 import sys
+import sysconfig
 from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -140,6 +145,432 @@ def _set_anyio_thread_limiter() -> None:
     to_thread.current_default_thread_limiter().total_tokens = (
         ANYIO_STATIC_FILE_THREAD_TOKENS
     )
+
+
+def _uses_inherited_partial_call(obj: Any) -> bool:
+    """Return whether ``obj`` still uses ``functools.partial.__call__``."""
+    return (
+        isinstance(obj, functools.partial)
+        and type(obj).__call__ is functools.partial.__call__
+    )
+
+
+def _is_async_callable(obj: Any) -> bool:
+    """Return True if ``obj`` is an async function or async callable instance."""
+    if _uses_inherited_partial_call(obj):
+        return _is_async_callable(obj.func)
+    # partial instances are routines, which would hide an overridden __call__.
+    if isinstance(obj, functools.partial):
+        call = type(obj).__call__
+        return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
+    if inspect.iscoroutinefunction(obj) or inspect.isasyncgenfunction(obj):
+        return True
+    if inspect.isroutine(obj):
+        return False
+    call = type(obj).__call__
+    return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
+
+
+def _is_generator_callable(obj: Any) -> bool:
+    """Return True if ``obj`` is a sync generator function or generator callable."""
+    if _uses_inherited_partial_call(obj):
+        return _is_generator_callable(obj.func)
+    # partial instances are routines, which would hide an overridden __call__.
+    if isinstance(obj, functools.partial):
+        return inspect.isgeneratorfunction(type(obj).__call__)
+    if inspect.isgeneratorfunction(obj):
+        return True
+    if inspect.isroutine(obj):
+        return False
+    return inspect.isgeneratorfunction(type(obj).__call__)
+
+
+def _callable_for_signature(obj: Any) -> Any:
+    """Return the callable whose signature Streamlit actually invokes.
+
+    ``inspect.signature`` special-cases ``functools.partial`` and ignores an
+    overridden ``__call__``. A partial subclass that replaces ``__call__`` is
+    inspected through that bound method instead.
+    """
+    if isinstance(obj, functools.partial) and not _uses_inherited_partial_call(obj):
+        return obj.__call__
+    return obj
+
+
+def _require_zero_arg_callable(obj: Any) -> None:
+    """Raise if ``obj`` requires arguments when its signature is inspectable.
+
+    ``follow_wrapped=False`` inspects the callable Streamlit actually invokes.
+    ``functools.wraps`` would otherwise expose the inner function's parameters,
+    so a zero-argument wrapper around a function that requires arguments would
+    be rejected even when the wrapper supplies those arguments.
+    """
+    try:
+        signature = inspect.signature(
+            _callable_for_signature(obj), follow_wrapped=False
+        )
+    except (ValueError, TypeError):
+        # A missing or unreadable signature means the object could not be
+        # inspected, which is separate from "this callable requires arguments".
+        return
+    try:
+        signature.bind()
+    except TypeError as ex:
+        raise StreamlitAPIException(
+            "The st.App callable entrypoint must be callable without arguments.",
+            error_id="app-callable-requires-arguments",
+        ) from ex
+
+
+def _next_wrapped(obj: Any) -> Any | None:
+    """Return the next ``__wrapped__`` object, one edge only."""
+    try:
+        wrapped = getattr(obj, "__wrapped__", None)
+    except Exception:
+        # ``__wrapped__`` may be a descriptor that raises. One bad wrapper
+        # must not fail App construction.
+        return None
+    if wrapped is None or wrapped is obj:
+        return None
+    return wrapped
+
+
+def _is_nested_function(candidate: Any) -> bool:
+    """Return whether ``candidate`` was defined inside another function.
+
+    ``functools.wraps`` overwrites ``__qualname__``, so the code object's
+    original qualname is what shows the function was nested.
+    """
+    qualname = None
+    try:
+        code = getattr(candidate, "__code__", None)
+        if code is not None:
+            qualname = getattr(code, "co_qualname", None)
+        if not isinstance(qualname, str):
+            qualname = getattr(candidate, "__qualname__", None)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return isinstance(qualname, str) and "<locals>" in qualname
+
+
+def _module_object_name(value: Any) -> str | None:
+    """Return a module's ``__name__``, ignoring lookup failures."""
+    try:
+        name = value.__name__
+    except Exception:
+        return None
+    return name if isinstance(name, str) else None
+
+
+def _is_module_object(value: Any) -> bool:
+    """Return whether ``value`` is a module, ignoring lookup failures."""
+    try:
+        return inspect.ismodule(value)
+    except Exception:
+        return False
+
+
+def _module_namespace_values(module: Any) -> tuple[Any, ...] | None:
+    """Return a snapshot of ``module``'s globals, or None if it cannot be read."""
+    try:
+        return tuple(vars(module).values())
+    except (TypeError, RuntimeError):
+        # A live module dict can change during iteration. A snapshot avoids
+        # that RuntimeError; some objects have no namespace at all.
+        return None
+
+
+def _code_defines_wrapper(value: Any, code: Any) -> bool:
+    """Return whether ``value``'s code object defines ``code``.
+
+    ``@decorator`` nests the wrapper directly. ``@decorator(arg)`` nests it one
+    function deeper, inside the decorator that the factory returns.
+    """
+    try:
+        consts = value.__code__.co_consts
+    except Exception:
+        # Proxy objects can raise arbitrary lookup errors. Skip the value so
+        # one bad global does not fail App construction.
+        return False
+    if code in consts:
+        return True
+    for const in consts:
+        nested = getattr(const, "co_consts", None)
+        if nested and code in nested:
+            return True
+    return False
+
+
+def _decorator_for_wrapper(wrapper: Any) -> Any | None:
+    """Return the function whose code defines ``wrapper``, if it is a global."""
+    try:
+        code = wrapper.__code__
+        namespace = wrapper.__globals__
+    except AttributeError:
+        return None
+    if not isinstance(namespace, dict):
+        return None
+    try:
+        values = tuple(namespace.values())
+    except RuntimeError:
+        return None
+    for value in values:
+        if _code_defines_wrapper(value, code):
+            return value
+    return None
+
+
+def _values_contain(values: tuple[Any, ...], target: Any) -> bool:
+    """Return whether ``target`` itself is one of ``values``."""
+    return any(value is target for value in values)
+
+
+def _module_reaches_value(module_values: tuple[Any, ...], target: Any) -> bool:
+    """Return whether a module holds ``target`` or imports a module that does."""
+    if _values_contain(module_values, target):
+        return True
+    for value in module_values:
+        if not _is_module_object(value):
+            continue
+        nested = _module_namespace_values(value)
+        if nested is not None and _values_contain(nested, target):
+            return True
+    return False
+
+
+def _module_references_decorator(
+    importer_name: str, decorator: Any, wrapped: Any
+) -> bool:
+    """Return whether ``importer_name`` references the decorator function.
+
+    A direct import stores that function. ``import helpers`` plus
+    ``@helpers.deco`` stores the module, so look inside it when that module
+    defines the decorator and does not also hold the wrapped callable. A
+    library that imports the app holds both, and scanning it would hide the
+    app wrapper.
+    """
+    importer = sys.modules.get(importer_name)
+    if importer is None:
+        return False
+    values = _module_namespace_values(importer)
+    if values is None:
+        return False
+    if _values_contain(values, decorator):
+        return True
+    try:
+        decorator_module = decorator.__module__
+    except Exception:
+        decorator_module = None
+    for value in values:
+        if not _is_module_object(value) or value is importer:
+            continue
+        imported_name = _module_object_name(value)
+        nested = _module_namespace_values(value)
+        if nested is None:
+            continue
+        # The decorator's own module also holding the wrapped callable means a
+        # library imported the app. Scanning it would hide the app file.
+        if imported_name == decorator_module and _module_reaches_value(nested, wrapped):
+            continue
+        if _values_contain(nested, decorator):
+            return True
+    return False
+
+
+def _is_imported_decorator_wrapper(candidate: Any) -> bool:
+    """Return whether ``candidate`` is a nested decorator another module applied.
+
+    The wrapper's code lives in the decorator module, and the wrapped function's
+    module references that decorator function. A nested wrapper defined in the
+    app around another module has no such back-reference, so the wrapper file
+    stays. Importing the app module from the library is not that reference.
+    """
+    if not _is_nested_function(candidate):
+        return False
+    wrapped = _next_wrapped(candidate)
+    if wrapped is None:
+        return False
+    decorator = _decorator_for_wrapper(candidate)
+    if decorator is None:
+        return False
+    try:
+        wrapper_globals = getattr(candidate, "__globals__", None)
+        wrapper_module = (
+            wrapper_globals.get("__name__") if wrapper_globals is not None else None
+        )
+        wrapped_module = getattr(wrapped, "__module__", None)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    if (
+        not isinstance(wrapper_module, str)
+        or not isinstance(wrapped_module, str)
+        or wrapper_module == wrapped_module
+    ):
+        return False
+    return _module_references_decorator(wrapped_module, decorator, wrapped)
+
+
+def _callable_source_candidates(obj: Any) -> list[Any]:
+    """Return objects to try when resolving a callable's source file.
+
+    Candidates are listed from the outer object inward. ``__wrapped__`` is
+    followed one edge at a time, so an app wrapper between a decorator and a
+    library stays in the list. ``functools.partial.func`` is followed only
+    when the instance still uses ``partial.__call__``. A callable instance
+    contributes its class, and a subclass that inherits ``__call__`` is
+    visited before that base method.
+    """
+    candidates: list[Any] = []
+    seen: set[int] = set()
+    stack: list[Any] = [obj]
+    # A __wrapped__ chain that manufactures a new object on each access would
+    # otherwise walk forever. inspect.unwrap uses the same bound.
+    limit = sys.getrecursionlimit()
+    while stack and len(candidates) < limit:
+        current = stack.pop()
+        current_id = id(current)
+        if current_id in seen:
+            continue
+        seen.add(current_id)
+        candidates.append(current)
+        wrapped = _next_wrapped(current)
+
+        if _uses_inherited_partial_call(current):
+            # wraps(fn)(partial(helper, fn)) stores the app function on
+            # __wrapped__ and the helper on .func. Visit the app function
+            # first so the helper's module does not win.
+            if id(current.func) not in seen:
+                stack.append(current.func)
+            if wrapped is not None and id(wrapped) not in seen:
+                stack.append(wrapped)
+            continue
+
+        # Partial instances are routines, but an overridden __call__ is still
+        # the body Streamlit invokes. Other routines are functions or methods.
+        if isinstance(current, functools.partial) or (
+            not inspect.isroutine(current) and not isinstance(current, type)
+        ):
+            # Push the base __call__ first and the subclass after it so the
+            # subclass is visited next and can win over the inherited method.
+            owner = type(current)
+            call = owner.__call__
+            if id(call) not in seen:
+                stack.append(call)
+            if "__call__" not in owner.__dict__ and id(owner) not in seen:
+                stack.append(owner)
+        if wrapped is not None and id(wrapped) not in seen:
+            stack.append(wrapped)
+    return candidates
+
+
+def _candidate_source_file(candidate: Any) -> Path | None:
+    """Return ``candidate``'s source file when it exists on disk."""
+    try:
+        source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
+    except (OSError, TypeError):
+        return None
+    if not source_file:
+        return None
+    candidate_path = Path(source_file).resolve()
+    if candidate_path.is_file():
+        return candidate_path
+    return None
+
+
+def _is_streamlit_framework_path(path: Path) -> bool:
+    """Return whether ``path`` is inside the Streamlit package.
+
+    Editable installs are not under site-packages. Decorators such as
+    ``st.fragment`` still must not anchor ``static/`` on Streamlit's source.
+    ``starlette_app.py`` lives at ``streamlit/web/server/starlette/``.
+    """
+    streamlit_root = Path(__file__).resolve().parents[3]
+    resolved = path.resolve()
+    return resolved == streamlit_root or streamlit_root in resolved.parents
+
+
+def _is_installed_package_path(path: Path) -> bool:
+    """Return whether ``path`` is inside an installed-package directory.
+
+    Matches conventional directory names (``site-packages``, ``dist-packages``,
+    ``__pypackages__``) and this interpreter's site and sysconfig library roots,
+    so a custom prefix is recognized even when the directory is not named
+    ``site-packages``.
+    """
+    if {"site-packages", "dist-packages", "__pypackages__"}.intersection(path.parts):
+        return True
+
+    roots: list[Path] = []
+    try:
+        roots.extend(Path(item) for item in site.getsitepackages())
+        user_site = site.getusersitepackages()
+        if user_site:
+            roots.append(Path(user_site))
+    except (AttributeError, OSError, TypeError):
+        # Fall back to conventional package-directory names when interpreter
+        # roots are unavailable.
+        pass
+    try:
+        for key in ("purelib", "platlib"):
+            value = sysconfig.get_path(key)
+            if value:
+                roots.append(Path(value))
+    except (KeyError, OSError, TypeError):
+        # Fall back to conventional package-directory names when interpreter
+        # roots are unavailable.
+        pass
+
+    resolved = path.resolve()
+    for root in roots:
+        root_path = root.resolve()
+        if resolved == root_path or root_path in resolved.parents:
+            return True
+    return False
+
+
+def _resolve_callable_source_path(obj: Any) -> Path:
+    """Resolve the filesystem source path for a callable entrypoint.
+
+    The outermost source file outside an installed package wins, including a
+    nested wrapper the app defines around another module. A nested decorator
+    is skipped when the wrapped function's module imports that decorator, so
+    the decorator file does not hide the app callable. That skip follows
+    ``__wrapped__``, which ``functools.wraps`` sets. A decorator that does not
+    set ``__wrapped__`` keeps the decorator's file. When every file is inside
+    an installed package, the outermost of those files is used.
+    """
+    fallback: Path | None = None
+    installed: Path | None = None
+    decorator_wrapper: Path | None = None
+    chosen: Path | None = None
+    for candidate in _callable_source_candidates(obj):
+        candidate_path = _candidate_source_file(candidate)
+        if candidate_path is None:
+            continue
+        if fallback is None:
+            fallback = candidate_path
+        imported_decorator = _is_imported_decorator_wrapper(candidate)
+        if _is_installed_package_path(candidate_path) or _is_streamlit_framework_path(
+            candidate_path
+        ):
+            if installed is None and not imported_decorator:
+                installed = candidate_path
+            continue
+        if imported_decorator:
+            if decorator_wrapper is None:
+                decorator_wrapper = candidate_path
+            continue
+        chosen = candidate_path
+        break
+
+    script_path = chosen or installed or decorator_wrapper or fallback
+    if script_path is None:
+        raise StreamlitAPIException(
+            "The st.App callable entrypoint must be defined in a "
+            "filesystem-backed Python source file.",
+            error_id="app-callable-missing-source-file",
+        )
+    return script_path
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -305,23 +736,42 @@ class App:
     """ASGI-compatible Streamlit application.
 
     .. warning::
-        Hosting multiple ``App`` instances with different ``script_path`` values
-        in the same process is not supported. The first ``App`` constructed in a
-        process pins the script-level config directory (via the process-global
+        Hosting multiple ``App`` instances with different source paths in the
+        same process is not supported. The first ``App`` constructed in a process
+        pins the script-level config directory (via the process-global
         ``config._main_script_path``), and subsequent ``App`` instances will
-        resolve relative ``script_path`` values against that first directory
-        rather than the current working directory.
+        resolve relative paths against that first directory rather than the
+        current working directory.
 
     This class provides a way to configure and run Streamlit applications
     with custom routes, middleware, lifespan hooks, and exception handlers.
 
     Parameters
     ----------
-    script_path : str | Path
-        Path to the main Streamlit script. Can be absolute or relative. Relative
-        paths are resolved based on context: when started via ``streamlit run``,
-        they resolve relative to the main script; when started directly via uvicorn
-        or another ASGI server, they resolve relative to the current working directory.
+    script_path : str | Path | Callable[[], None]
+        The app entrypoint: a script path, or a zero-argument synchronous
+        callable defined in a filesystem-backed Python source file.
+
+        - Path: absolute or relative. Relative paths resolve against the
+          launched file under ``streamlit run`` and ``App.run()``
+          (``python app.py``). When no launched file is set, such as under
+          uvicorn, they resolve against the current working directory.
+        - Callable: Streamlit calls it on every full rerun, and the script
+          health check calls that same object. Local variables are fresh each
+          run. Closure cells, module globals, and callable-instance attributes
+          are shared across reruns and sessions, so those updates can race.
+          Use ``st.session_state`` for per-session values, and synchronize any
+          other shared mutation. Restart the process after editing the
+          callable or modules it imported at the top level.
+
+          .. note::
+              ``static/`` files and source watching use the callable's source
+              file. Script-level ``config.toml`` and ``secrets.toml`` come
+              from the launched file under ``streamlit run`` and ``App.run()``,
+              and from the callable source only when no launched file is set,
+              such as under uvicorn. Callable execution takes precedence over
+              a legacy ``pages/`` directory. Use ``st.navigation``, and create
+              ``st.Page`` objects inside the entrypoint rather than at import.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
@@ -374,6 +824,15 @@ class App:
 
     >>> import streamlit as st
     >>> app = st.App("main.py")
+
+    Use a callable to keep the app and launcher in one file:
+
+    >>> import streamlit as st
+    >>> def main():
+    ...     st.title("My app")
+    >>> app = st.App(main)
+    >>> if __name__ == "__main__":
+    ...     app.run()
 
     With lifespan hooks:
 
@@ -440,7 +899,7 @@ class App:
 
     def __init__(
         self,
-        script_path: str | Path,
+        script_path: str | Path | Callable[[], None],
         *,
         secrets: Mapping[str, SecretsValue] | None = None,
         lifespan: (
@@ -454,7 +913,33 @@ class App:
     ) -> None:
         from streamlit.runtime.secrets import _validate_secrets_value
 
-        self._script_path = Path(script_path)
+        self._script_entrypoint: Callable[[], None] | None = None
+        # Check PathLike before callable so an object that implements both
+        # __fspath__ and __call__ is treated as a path.
+        if isinstance(script_path, (str, os.PathLike)):
+            self._script_path = Path(script_path)
+        elif callable(script_path):
+            if _is_async_callable(script_path):
+                raise StreamlitAPIException(
+                    "st.App does not support async callable entrypoints. "
+                    "Pass a synchronous callable instead.",
+                    error_id="app-async-callable-not-supported",
+                )
+            if _is_generator_callable(script_path):
+                raise StreamlitAPIException(
+                    "st.App does not support generator callable entrypoints. "
+                    "Pass a synchronous non-generator callable instead.",
+                    error_id="app-generator-callable-not-supported",
+                )
+            _require_zero_arg_callable(script_path)
+            self._script_path = _resolve_callable_source_path(script_path)
+            self._script_entrypoint = script_path
+        else:
+            raise StreamlitInvalidParameterTypeError(
+                "script_path",
+                type(script_path).__name__,
+                ["str", "Path", "Callable"],
+            )
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
         self._user_middleware = list(middleware) if middleware else []
@@ -528,7 +1013,7 @@ class App:
 
     @property
     def script_path(self) -> Path:
-        """The entry point script path."""
+        """Script path as given, or a callable entrypoint's resolved source file."""
         return self._script_path
 
     @property
@@ -547,6 +1032,10 @@ class App:
         ``uv run app.py`` is useful for shareable launcher scripts that declare
         their dependencies inline with PEP 723 script metadata.
 
+        When the app uses a callable entrypoint, Streamlit retains that callable
+        object for the lifetime of this ``App``. Source changes can trigger a
+        rerun, but changes to the callable definition require a process restart.
+
         Parameters
         ----------
         config : Mapping[str, Any] or None
@@ -558,11 +1047,13 @@ class App:
 
         Examples
         --------
-        Launch a launcher module directly with ``python app.py``:
+        Launch a callable app directly with ``python app.py``:
 
         >>> import streamlit as st
         >>>
-        >>> app = st.App("dashboard.py")
+        >>> def main():
+        ...     st.title("My app")
+        >>> app = st.App(main)
         >>>
         >>> if __name__ == "__main__":
         ...     app.run()
@@ -582,7 +1073,10 @@ class App:
         # ///
         import streamlit as st
 
-        app = st.App("dashboard.py")
+        def main():
+            st.title("My app")
+
+        app = st.App(main)
 
         if __name__ == "__main__":
             app.run()
@@ -728,6 +1222,15 @@ class App:
         media_file_storage = MemoryMediaFileStorage(f"/{BASE_ROUTE_MEDIA}")
         uploaded_file_mgr = MemoryUploadedFileManager(f"/{BASE_ROUTE_UPLOAD_FILE}")
 
+        if self._script_entrypoint is not None:
+            # Sessions build PagesManager after the runtime exists. Clear the
+            # pages/ flag here, not when the App is constructed, so importing a
+            # launcher does not disable pages/ for a later script. st.switch_page
+            # then uses the st.navigation error instead of the pages/ hint.
+            from streamlit.runtime.pages_manager import PagesManager
+
+            PagesManager.uses_pages_directory = False
+
         return Runtime(
             RuntimeConfig(
                 script_path=str(script_path),
@@ -735,6 +1238,7 @@ class App:
                 uploaded_file_manager=uploaded_file_mgr,
                 cache_storage_manager=create_default_cache_storage_manager(),
                 is_hello=False,
+                script_entrypoint=self._script_entrypoint,
                 session_storage=MemorySessionStorage(
                     ttl_seconds=config.get_option("server.disconnectedSessionTTL")
                 ),

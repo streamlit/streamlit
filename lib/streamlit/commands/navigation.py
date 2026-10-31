@@ -25,7 +25,7 @@ from streamlit.errors import (
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
-from streamlit.navigation.page import Page
+from streamlit.navigation.page import Page, _raise_if_page_created_outside_run
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -49,6 +49,11 @@ def convert_to_streamlit_page(
 ) -> Page:
     """Convert various input types to Page objects."""
     if isinstance(page_input, Page):
+        # Reject pages created at import time once a script run exists.
+        # Outside a run, return the page unchanged so importing the module
+        # still works.
+        if get_script_run_ctx() is not None:
+            _raise_if_page_created_outside_run(page_input)
         return page_input
 
     if isinstance(page_input, str):
