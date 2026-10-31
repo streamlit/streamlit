@@ -198,8 +198,8 @@ function useTableSizer(
   // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (fullscreenContainerHeight) {
-    // Cap to the fullscreen container, then fill available height
-    // (including when the user configured a fixed pixel height).
+    // In fullscreen, every height mode uses the table's max height,
+    // capped by the fullscreen container.
     maxHeight = Math.min(maxHeight, fullscreenContainerHeight)
     initialHeight = maxHeight
   }

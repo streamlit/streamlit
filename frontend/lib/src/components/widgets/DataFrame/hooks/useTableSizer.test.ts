@@ -308,7 +308,7 @@ describe("useTableSizer hook", () => {
     expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
   })
 
-  it("expands a configured pixel height to fill fullscreen", () => {
+  it("keeps a configured pixel height expanded after entering fullscreen", () => {
     const CONTAINER_WIDTH = 1920
     const CONTAINER_HEIGHT = 1080
     const CONFIGURED_HEIGHT = 458
@@ -317,38 +317,23 @@ describe("useTableSizer hook", () => {
       pixelHeight: CONFIGURED_HEIGHT,
     })
 
-    const { result } = renderHook(() =>
-      useTableSizer(
-        DataframeProto.create({
-          arrowData: { data: VERY_TALL },
-        }),
-        mockTheme,
-        NUMBER_OF_ROWS,
-        false,
-        CONTAINER_WIDTH,
-        CONTAINER_HEIGHT,
-        true,
-        undefined,
-        heightConfig
-      )
-    )
+    type Props = {
+      fullscreenContainerHeight?: number
+      isFullScreen: boolean
+      measuredContainerHeight: number
+    }
 
-    expect(result.current.maxHeight).toEqual(CONTAINER_HEIGHT)
-    expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
-    expect(result.current.resizableSize.height).not.toEqual(CONFIGURED_HEIGHT)
-  })
-
-  it("keeps fullscreen height after measured container height updates", () => {
-    const CONTAINER_WIDTH = 1920
-    const CONTAINER_HEIGHT = 1080
-    const CONFIGURED_HEIGHT = 458
-    const NUMBER_OF_ROWS = 100
-    const heightConfig = new streamlit.HeightConfig({
-      pixelHeight: CONFIGURED_HEIGHT,
-    })
+    const initialProps: Props = {
+      isFullScreen: false,
+      measuredContainerHeight: CONFIGURED_HEIGHT,
+    }
 
     const { result, rerender } = renderHook(
-      ({ measuredContainerHeight }: { measuredContainerHeight: number }) =>
+      ({
+        fullscreenContainerHeight,
+        isFullScreen,
+        measuredContainerHeight,
+      }: Props) =>
         useTableSizer(
           DataframeProto.create({
             arrowData: { data: VERY_TALL },
@@ -357,22 +342,33 @@ describe("useTableSizer hook", () => {
           NUMBER_OF_ROWS,
           false,
           CONTAINER_WIDTH,
-          CONTAINER_HEIGHT,
-          true,
+          fullscreenContainerHeight,
+          isFullScreen,
           undefined,
           heightConfig,
           measuredContainerHeight
         ),
-      { initialProps: { measuredContainerHeight: CONFIGURED_HEIGHT } }
+      { initialProps }
     )
 
+    expect(result.current.resizableSize.height).toEqual(CONFIGURED_HEIGHT)
+
+    // Enter fullscreen, then apply a later container measurement (the race
+    // that previously reset height back to the configured pixel value).
+    rerender({
+      fullscreenContainerHeight: CONTAINER_HEIGHT,
+      isFullScreen: true,
+      measuredContainerHeight: CONFIGURED_HEIGHT,
+    })
+    expect(result.current.maxHeight).toEqual(CONTAINER_HEIGHT)
     expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
 
-    // Entering fullscreen grows the container; a later measurement must not
-    // reset the table back to the configured pixel height.
-    rerender({ measuredContainerHeight: CONTAINER_HEIGHT })
+    rerender({
+      fullscreenContainerHeight: CONTAINER_HEIGHT,
+      isFullScreen: true,
+      measuredContainerHeight: CONTAINER_HEIGHT,
+    })
     expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
-    expect(result.current.resizableSize.height).not.toEqual(CONFIGURED_HEIGHT)
   })
 
   it("restores the configured pixel height after exiting fullscreen", () => {

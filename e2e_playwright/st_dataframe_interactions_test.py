@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
+from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
@@ -190,10 +191,11 @@ def test_dataframe_column_menu_opens_in_fullscreen(app: Page):
 
 
 def test_fixed_height_dataframe_expands_in_fullscreen(app: Page):
-    """Fixed pixel height dataframes should fill available height in fullscreen.
+    """Fixed pixel height dataframes should grow past that height in fullscreen.
 
     Regression for https://github.com/streamlit/streamlit/issues/17771
     """
+    # Must match FIXED_HEIGHT_FULLSCREEN in st_dataframe_interactions.py.
     configured_height = (12 + 1) * 35 + 3  # 458
     dataframe_element = (
         get_element_by_key(app, "fixed-height-fullscreen")
@@ -214,16 +216,12 @@ def test_fixed_height_dataframe_expands_in_fullscreen(app: Page):
 
     # Must expand beyond the configured height; must not stay stuck at 458px.
     expect(dataframe_element).not_to_have_css("height", f"{configured_height}px")
-
-    expanded_height_str = dataframe_element.evaluate(
-        "el => getComputedStyle(el).height"
-    )
-    expanded_height_px = float(expanded_height_str.replace("px", ""))
-    # Content for 40 rows exceeds the configured height; fullscreen should grow
-    # toward the viewport (observed ~660px in CI/local Playwright viewports).
-    assert expanded_height_px > configured_height + 100, (
-        f"Expected fullscreen height > {configured_height + 100}, "
-        f"got {expanded_height_px}"
+    wait_until(
+        app,
+        lambda: (
+            (dataframe_element.bounding_box() or {}).get("height", 0)
+            > configured_height + 100
+        ),
     )
 
     dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()

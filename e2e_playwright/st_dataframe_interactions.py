@@ -114,8 +114,7 @@ st.container(key="column-menu-test").dataframe(
 
 st.header("Fixed-height fullscreen")
 
-# Tall table with a short fixed height — used to assert fullscreen expands
-# beyond the configured pixel height (see issue #17771).
+# 40 rows with a 12-row fixed height; fullscreen must grow past it.
 FIXED_HEIGHT_FULLSCREEN = (12 + 1) * 35 + 3  # 458
 st.container(key="fixed-height-fullscreen").dataframe(
     pd.DataFrame({"a": range(40), "b": range(40)}),
