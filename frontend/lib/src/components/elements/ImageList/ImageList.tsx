@@ -124,7 +124,7 @@ const Image = ({
   const imgAlt: string | undefined = isNullOrUndefined(image.alt)
     ? undefined
     : image.alt
-  // A decorative (empty) alt names the link from its URL.
+  // With an unset or empty (decorative) alt, the URL names the link.
   const linkAccessibleName = isNullOrEmptyString(imgAlt) ? safeLink : imgAlt
 
   // Watch the caption for text that arrives late: async Markdown plugins

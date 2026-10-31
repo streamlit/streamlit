@@ -707,8 +707,8 @@ export default defineConfig([
   // A nullable string in a condition treats `""` like a missing value. Use
   // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
   // compare with `null` / `undefined` when the value is never empty. Other
-  // directories stay on the base options until they are cleaned up. The
-  // `lib/` prefix is intentional: only the root config lints `lib/`.
+  // directories stay on the base options until they are cleaned up. Globs
+  // resolve relative to this file, so they need the `lib/` prefix.
   {
     files: [
       "lib/src/components/elements/**/*.{ts,tsx}",

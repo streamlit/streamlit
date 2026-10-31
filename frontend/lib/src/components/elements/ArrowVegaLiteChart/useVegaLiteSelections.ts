@@ -420,7 +420,7 @@ export const useVegaLiteSelections = (
 
         const widgetInfo: WidgetInfo = { id: chartId, formId }
         const widgetStateStr = widgetMgr.getStringValue(widgetInfo)
-        // Blank widget state parses as an empty object.
+        // Missing or blank widget state parses as an empty object.
         const currentWidgetState = JSON.parse(
           isNullOrEmptyString(widgetStateStr) ? "{}" : widgetStateStr
         )

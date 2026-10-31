@@ -784,10 +784,10 @@ interface CustomHelpIconProps {
  *   which passes content via context and avoids directive label limitations.
  */
 const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Prefer context (from help parameter) over children (from directive label)
+  // Prefer the help parameter (context); fall back to the directive label
+  // when it is unset or blank.
   const contextHelpText = useContext(HelpTextContext)
   const directiveLabel = typeof children === "string" ? children : ""
-  // Blank help text falls back to the directive label.
   const tooltipContent = isNullOrEmptyString(contextHelpText)
     ? directiveLabel
     : contextHelpText
