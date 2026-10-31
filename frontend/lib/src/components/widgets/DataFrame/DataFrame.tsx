@@ -1128,6 +1128,7 @@ function DataFrame({
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
           borderRadius: `${gridTheme.tableBorderRadius}`,
+          backgroundColor: `${gridTheme.glideTheme.borderColor}`,
         }}
         minHeight={minHeight}
         maxHeight={maxHeight}
