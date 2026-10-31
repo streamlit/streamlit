@@ -455,9 +455,11 @@ The name is `row_height` rather than `cell_height` because these modes size **ro
 | `"content"` (default) | Each row is as tall as its tallest cell. The cell frame, including its border, fills that row. Content inside the frame follows `vertical_alignment`. A `row_span=N` cell's height is distributed across the N rows it covers (CSS Grid default), so it can grow unrelated cells in those rows. Use a pixel `row_height` when row-span math must stay predictable. |
 | `<int>` | Every row is that many pixels. `cell(row_span=2)` is `2 * row_height + row_gap`. Overflow scrolls inside the cell. |
 
-An integer `height` bounds the grid the way `st.container(height=…)` does. Rows stay
-content-sized or pixel-sized inside that box; leftover space is not divided across rows.
-`"stretch"` on the grid itself follows the shared `Height` rule ([Risks](#risks)).
+An integer `height` bounds the grid the way `st.container(height=…)` does and scrolls
+inside that box. Rows stay content-sized or pixel-sized; leftover space is not divided
+across rows. `"stretch"` follows the shared `Height` rule ([Risks](#risks)): the grid
+is as tall as its content or its parent, whichever is larger, and is not its own
+scrollport.
 
 The cell frame always fills its grid area. `vertical_alignment` aligns the content inside
 that frame. It does not shrink the cell the way `st.columns` aligns a column with margin,
@@ -490,9 +492,11 @@ stretch — a [known gap](#risks), not a grid ship gate.
 Grid cells nest like any other container. Keep nested layout shallow; no CSS `subgrid` in
 the MVP.
 
-`st.grid` works inside `@st.fragment`. A fragment that writes through a layout-transparent
-wrapper has no extra DOM node, so its direct children become cells. To keep fragment
-output in one cell, wrap it in `grid.cell()` inside the fragment.
+`st.grid` works inside `@st.fragment`. A fragment called as a direct child of the grid
+wraps its output in a container, so that output is one cell. A fragment that writes
+into a grid it captured from outside uses a layout-transparent wrapper and has no extra
+DOM node, so each child is a cell. To keep that output in one cell, wrap it in
+`grid.cell()` inside the fragment.
 
 #### Accessibility
 
@@ -597,11 +601,8 @@ grid = st.grid(2, height=720, row_height=340, border=True)
 with grid.cell(column_span=2):
     st.line_chart(revenue_df, height="stretch")
 
-with grid.cell():
-    st.bar_chart(pipeline_df, height="stretch")
-
-with grid.cell():
-    st.dataframe(accounts_df, height="stretch")
+grid.bar_chart(pipeline_df, height="stretch")
+grid.dataframe(accounts_df, height="stretch")
 ```
 
 Each row is 340px, so the charts can use `height="stretch"`. Splitting the 720px box
@@ -622,8 +623,7 @@ with grid.cell():
     controls.selectbox("Segment", segments)
     st.area_chart(region_df)
 
-with grid.cell():
-    st.dataframe(detail_df, height=300)
+grid.dataframe(detail_df, height=300)
 ```
 
 #### Fixed Column Count (No Wrap)
@@ -634,9 +634,9 @@ import streamlit as st
 # Three charts stay side by side. On a phone the grid scrolls horizontally
 # instead of stacking into unreadably tall single-column charts.
 grid = st.grid(3, wrap=False, border=True)
-grid.cell().line_chart(revenue_df, height=220)
-grid.cell().bar_chart(pipeline_df, height=220)
-grid.cell().dataframe(accounts_df, height=220)
+grid.line_chart(revenue_df, height=220)
+grid.bar_chart(pipeline_df, height=220)
+grid.dataframe(accounts_df, height=220)
 ```
 
 ## API Evaluation
@@ -663,6 +663,7 @@ follow-ups.
 | Breakpoint maps `{"sm": 1, "md": 4}` | Defer | Viewport breakpoints fail in sidebars, nests, and embeds. |
 | `streamlit-extras`-style row specs | Not in MVP | Unclear how varying row specs collapse when wrapping. |
 | Fixed cell list `st.grid(num_cells=20)` | Reject | Users must know the count; empty cells return. |
+| Spans via element `width` / `height` | Reject | A flex weight is not a track span; see [Spans Via Element Width And Height](#alternative-api-spans-via-element-width-and-height). |
 | Separate `st.auto_grid` | Reject | One command; `columns="auto"` is the auto mode. |
 
 ### Compatible Extension: Weighted Columns And Rows
@@ -711,6 +712,36 @@ embeds. Defer unless `min_column_width` proves insufficient.
 `st.grid(num_cells=20, columns=4)` with index access. Close to `st.columns`, but users
 must know the count and empty cells return. Do not pursue unless a later selectable-grid
 feature needs random access.
+
+### Alternative API: Spans Via Element Width And Height
+
+```python
+grid = st.grid(4)
+grid.line_chart(df, width="stretch:2")  # Spans two columns
+grid.dataframe(df, height="stretch:2")  # Spans two rows
+```
+
+Reuses the weighted-stretch syntax proposed in
+[#16308](https://github.com/streamlit/streamlit/issues/16308), so a single spanned element
+needs no `cell()` wrapper. Rejected:
+
+- **Same spelling, different math (Principle 10).** In a flex row, `stretch:N` is a share
+  relative to siblings. In a grid it would be an absolute track count. `stretch:2` next to
+  `stretch:1` splits a flex row 2/3 to 1/3 but leaves an empty track in a 4-column grid,
+  so moving content between containers silently changes the layout.
+- **Placement is not sizing.** CSS Grid keeps `grid-column` separate from `width`. A
+  spanned element could no longer keep its own size (`width="content"` or pixels) inside
+  the area without a wrapper again.
+- **The rest does not fit.** `column_span="all"` needs a new width value, and
+  `height="stretch:2"` collides with `height="stretch"`, which already fills a
+  pixel-height row.
+- **Context-dependent and hard to reverse.** The value would mean a span in a grid, a
+  weight in a flex row, and nothing in a vertical container, which every element must
+  validate, type, and document. `cell()` is one grid-local method.
+
+The two features compose rather than compete. A grid cell holds one element, so a weight
+there has no siblings to share with. A horizontal container inside a cell uses weights
+normally, so #16308 can ship independently.
 
 ### Alternative API: Named Mosaic / Template Grid
 
@@ -836,5 +867,5 @@ cell; `height="stretch"` on the grid does nothing at page top.
 | Any docs changes needed? | ✅ Add API docs and update layout guide/examples. |
 | Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). `dense` stays opt-in (`False` by default) and ships only with that check. No ARIA `grid`/`row`/`gridcell`. Integer `row_height` overflow is keyboard-scrollable. See [Accessibility](#accessibility). |
 | First-paint column count | Estimate the grid width as `contentMaxWidth` minus `2 * theme.spacing.lg` (704px at the default layout), not the raw 736px content max width. `st.grid(4)` is 3 columns either way; other floors can paint one count and then jump. See [Responsive placement](#responsive-placement). |
-| Fragment cells | A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
+| Fragment cells | A fragment called as a direct child is one cell, because it wraps its output in a container. A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
 | Depends on other work? | `st.card` is planned as a separate spec and is not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate. This PR adds `st.grid` to the wrap spec's command table (`wrap=False` keeps column tracks in one row, not cells) and a grid-cell row to its `wrap=None` table (resolves to `False`, like a column). |

@@ -260,6 +260,78 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         new_dg = dg._enqueue("empty", EmptyProto())
         assert dg == new_dg
 
+    def test_block_bare_mode_returns_dg_type_parented_on_caller(self):
+        """Bare-mode _block returns the subclass and parents it on the caller.
+
+        The enqueued path uses parent=dg; bare mode must match so walks of
+        ``_parent`` (for example ``current_form_id``) stay consistent.
+        """
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.expandable.SetInParent()
+        result = dg._block(block_proto, dg_type=StatusContainer)
+        assert isinstance(result, StatusContainer)
+        assert result._parent is dg
+        assert not isinstance(result._parent, StatusContainer)
+
+    def test_block_bare_mode_nested_same_type_is_a_new_instance(self):
+        """A nested bare-mode block must not reuse the parent instance."""
+        from streamlit.elements.lib.grid_container import GridContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.grid_container.SetInParent()
+        outer = dg._block(block_proto, dg_type=GridContainer)
+        assert isinstance(outer, GridContainer)
+        inner = outer._block(block_proto, dg_type=GridContainer)
+        assert isinstance(inner, GridContainer)
+        assert inner is not outer
+        assert inner._parent is outer
+
+    def _without_script_context(self):
+        add_script_run_ctx(threading.current_thread(), None)
+        self.addCleanup(
+            add_script_run_ctx, threading.current_thread(), self.script_run_ctx
+        )
+
+    def test_status_without_script_context_does_not_raise(self):
+        """Bare `with st.status` must not raise, including when the body does."""
+        self._without_script_context()
+        with st.status("label"):
+            pass
+
+        with pytest.raises(RuntimeError, match="from body"):
+            with st.status("label"):
+                raise RuntimeError("from body")
+
+    def test_nested_grid_without_script_context_keeps_parent_columns(self):
+        """A nested bare-mode grid must not overwrite the parent's column count."""
+        self._without_script_context()
+        outer = st.grid(4)
+        with outer:
+            inner = st.grid(2)
+        assert inner is not outer
+        assert outer._declared_columns == 4
+        assert inner._declared_columns == 2
+
+    def test_dialog_open_close_without_script_context_does_not_raise(self):
+        """Dialog open/close must not enqueue when there is no session."""
+        from streamlit.elements.lib.dialog import Dialog
+
+        self._without_script_context()
+        dialog = Dialog(
+            root_container=None,
+            cursor=None,
+            parent=None,
+            block_type="dialog",
+        )
+        dialog._current_proto = Block_pb2.Block()
+        dialog._delta_path = []
+        dialog.open()
+        dialog.close()
+
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):
         dg = DeltaGenerator(root_container=container)

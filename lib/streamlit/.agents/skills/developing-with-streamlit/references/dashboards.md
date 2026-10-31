@@ -51,6 +51,21 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
+For more control over card layout, use `st.grid`:
+
+```python
+# Uniform cards use a pixel row height. Borders sit inside the cell.
+with st.grid(4, border=True, row_height=160, gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%")
+    st.metric("Users", "762k", "+12%")
+    st.metric("Orders", "1.4k", "+5%")
+    st.metric("Conversion", "3.2%", "+0.1%")
+```
+
+**Grid vs horizontal container:**
+- `st.container(horizontal=True)` — Simple metric rows, auto-wrapping
+- `st.grid` — Equal-width tracks, wrapping by `min_column_width`, spans via `grid.cell()`
+
 ## Zero deltas
 
 Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
@@ -224,10 +239,11 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 ## References
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
-- `layouts.md` — Columns, containers, tabs, dialogs
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
 - `charts.md` — Choosing chart commands, consistent charts, chart selections
 - `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)
