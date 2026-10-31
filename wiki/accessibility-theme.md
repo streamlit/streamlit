@@ -1,6 +1,6 @@
 # Streamlit WCAG theme & shell chrome inventory
 
-Last updated: 2026-10-29. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
+Last updated: 2026-10-30. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
@@ -91,7 +91,7 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 
 | Role | Light | Dark | Bucket | Note |
 | ---- | ----- | ---- | ------ | ---- |
-| Secondary / muted UI text (`fadedText70`, dataframe header) | Pass (~5.1–5.2 page / secondary) | Pass (~6.6–7.9) | Library meets | Includes default `dataframeHeaderTextColor`. `grayTextColor` is opaque and also passes on stock themes |
+| Secondary / muted UI text (`fadedText70`, dataframe header) | Pass (~5.24 page / ~5.08 secondary / ~5.05 header) | Pass (~6.6–7.9) | Library meets | Includes default `dataframeHeaderTextColor`. `grayTextColor` is opaque and also passes on stock themes |
 | White label on primary fill | Pass (~5.18) | Pass (~4.62) | Library meets | `StyledPrimaryButton` and similar (`#C53948` / `#CF4250`) |
 | `primary` as **text** | Pass page ~5.18; pass secondary ~4.88 | Fail page ~3.92; fail secondary ~3.06 | Library blocks (dark) | File-uploader drag overlay is primary on `secondaryBg`. Not primary-on-`primarybg` |
 | Status text on status fill — **page** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |

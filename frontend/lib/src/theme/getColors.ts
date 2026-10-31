@@ -35,9 +35,11 @@ export const computeDerivedColors = (
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
-  // Muted icon strokes (60% opacity); use fadedText70 for text.
+  // Muted icons, disabled controls, and other non-text strokes (60% opacity);
+  // use fadedText70 for readable text. transparentize() takes the transparent fraction.
   const fadedText60 = transparentize(bodyText, 0.4)
-  // Secondary / muted text (70% opacity); meets 4.5:1 on default themes.
+  // Secondary / muted text (70% opacity); meets 4.5:1 on default page,
+  // secondary, and dataframe-header fills.
   const fadedText70 = transparentize(bodyText, 0.3)
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
