@@ -739,8 +739,9 @@ should spell this out.
 
 **Programmatic writes: a follow-up, not part of this spec.** App code is trusted, so a
 programmatic value raises no security question. It also does not affect agents: the
-browser and the agent API echo it back unchanged, and unchanged values pass check 3. But
-today an out-of-constraint write has four different outcomes, depending on the widget:
+browser and the agent API echo it back unchanged, and unchanged values pass check 3,
+apart from the browser's echo of a color below. But today an out-of-constraint write has
+four different outcomes, depending on the widget:
 
 - **Reset to the default:** an unknown option, or a number or date out of range.
 - **A clean error:** more than `max_selections`, or a slider above `max_value`.
@@ -757,6 +758,12 @@ today an out-of-constraint write has four different outcomes, depending on the w
     `max_chars` with `truncate_utf16` when it pushes it to the browser. The message the
     user sends is then accepted, cut to the limit as the deserializer used to cut it,
     but in UTF-16 code units.
+  - A color such as `"red"` is reset to the default one rerun later, and `"ff0000"`
+    gets its `#`, both with an `on_change`. Once the color picker's deserializer stops
+    falling back to the default (item 4), the color stays as written, but the
+    deserializer still adds the `#` a link may leave out. So the browser's echo of either
+    reads as a change, which `validate` refuses at warning level. An empty string is
+    kept, so its echo is unchanged.
 - **A raw `TypeError`:** `"abc"` for a number input, `123` for a text input, or `"yes"`
   for a checkbox.
 
@@ -833,6 +840,11 @@ Items 1–3 are covered above.
   allows that newline, and the browser sends it back. react-color's hex field also
   accepts the word `transparent`, which the picker used to commit. The frontend now
   keeps the previous color instead (`BaseColorPicker`), and the server refuses the word.
+  `deserialize` reads only a missing value as the default, so an empty string reaches
+  `validate` even while the widget holds the default. An empty URL parameter is cleared
+  before deserializing, as for any widget that is not clearable. `deserialize` still
+  adds the `#` a link may leave out, so a forged `000000` reads as unchanged while the
+  widget holds `#000000`, the conversion check 3 allows.
 - `pagination`: an integer in `1..num_pages`.
 - `feedback`: `""` or an index in range (`"0"` to `"n-1"`). The browser sends `""` when
   the user clicks the selected face again to clear it, and `FeedbackSerde` reads it as

@@ -324,11 +324,12 @@ class TestColorPickerSerde:
 
         assert serde.deserialize("00ff00") == "#00ff00"
 
-    def test_empty_string_returns_default(self) -> None:
-        """Test that empty string returns the default value."""
+    def test_only_a_missing_value_reads_as_the_default(self) -> None:
+        """An empty string is kept, without a "#", for validate to refuse."""
         serde = ColorPickerSerde("#ff0000")
 
-        assert serde.deserialize("") == "#ff0000"
+        assert serde.deserialize(None) == "#ff0000"
+        assert serde.deserialize("") == ""
 
     def test_serialize_deserialize_round_trip(self) -> None:
         """Test that serialize/deserialize round-trips correctly."""

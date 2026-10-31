@@ -61,8 +61,8 @@ _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
 
 
 def _normalize_hex_color(color: str) -> str:
-    """Normalize a hex color to include the # prefix."""
-    if not color.startswith("#"):
+    """Add the # prefix a hex color may leave out. An empty string is kept."""
+    if color and not color.startswith("#"):
         return f"#{color}"
     return color
 
@@ -89,11 +89,14 @@ class ColorPickerSerde:
     def deserialize(self, ui_value: str | None) -> str:
         # Converts a value, but never swaps an invalid one for the default:
         # validate refuses what a client may not send, and URL seeding
-        # validates the result.
-        # None or empty string means use default
-        if ui_value is None or ui_value == "":
+        # validates the result. Only a missing value reads as the default, so
+        # an empty string is kept for validate to refuse. An empty URL
+        # parameter never gets here, because the widget is not clearable.
+        if ui_value is None:
             return self.value
-        # A URL value may leave out the "#", which a link has to escape.
+        # A URL value may leave out the "#", which a link has to escape. A
+        # client value gets it too, so a forged "000000" reads as unchanged
+        # while the widget holds "#000000". That changes nothing.
         return _normalize_hex_color(ui_value)
 
 

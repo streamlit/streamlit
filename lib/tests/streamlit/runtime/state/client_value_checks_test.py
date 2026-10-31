@@ -1443,7 +1443,7 @@ _LEGAL_COLOR: dict[str, dict[str, Any]] = {"color": {"string_value": "#123456"}}
 
 @pytest.mark.parametrize(
     "color",
-    # "" would read as the default, which differs from the held color.
+    # Only a missing field reads as the default, so "" is refused too.
     ["red", "#12345", "#ffffff\n", "##123456", "654321", "#12345g", ""],
 )
 def test_a_color_the_picker_never_sends_is_refused(color: str) -> None:
@@ -1452,6 +1452,22 @@ def test_a_color_the_picker_never_sends_is_refused(color: str) -> None:
     _send_legal_values(at, _LEGAL_COLOR)
 
     _assert_refused_and_resynced(at, "color", {"string_value": color}, _LEGAL_COLOR)
+
+
+def test_an_empty_color_is_refused_while_the_default_is_held(
+    refusal_logs: list[str],
+) -> None:
+    """An empty color does not read as the default the widget already holds."""
+    at = AppTest.from_function(_color_app).run()
+
+    at._run(widget_state=forged(_widget_id(at, "color"), string_value=""))
+
+    assert not at.exception
+    assert "calls" not in at.session_state
+    assert at.session_state.color == "#00FF00"
+    assert at.get_by_key("color").proto.set_value is True
+    assert len(refusal_logs) == 1
+    assert "(malformed)" in refusal_logs[0]
 
 
 @pytest.mark.parametrize("color", ["#abc", "#ABCDEF", "#00FF00"])
