@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { createContext, type FC, type PropsWithChildren, useMemo } from "react"
+import {
+  createContext,
+  type CSSProperties,
+  type FC,
+  type PropsWithChildren,
+  useMemo,
+} from "react"
 
 import { Direction } from "./utils"
 
@@ -23,9 +29,9 @@ export interface IFlexContext {
   isInHorizontalLayout: boolean
   /**
    * True when widgets here are direct layout children of an `st.columns`
-   * column. Nested layout providers create a new context and leave this
-   * false. Transparent blocks do not create a provider, so they keep the
-   * parent value.
+   * column or an `st.grid` cell (including `grid.cell()`). Nested layout
+   * providers create a new context and leave this false. Transparent
+   * blocks do not create a provider, so they keep the parent value.
    */
   isDirectlyInColumn: boolean
   isInRoot: boolean
@@ -46,11 +52,28 @@ export interface IFlexContext {
    */
   isInContentWidthContainer: boolean
   /**
+   * True inside a definite-height `st.grid` cell (pixel `row_height`). A
+   * `grid.cell()` block fills that cell so `height="stretch"` descendants
+   * resolve. Nested providers do not inherit this.
+   */
+  fillAvailableHeight?: boolean
+  /**
+   * `vertical_alignment` for that filling `grid.cell()` block, so
+   * content-sized children still pack to the top, center, or bottom.
+   */
+  fillJustify?: { fallback: CSSProperties["justifyContent"]; safe?: string }
+  /**
+   * Set by a filling `grid.cell()` block for its own children. Stretch-height
+   * elements take leftover space in the cell instead of 100% of the whole
+   * cell (which overflows siblings). Nested providers do not inherit this.
+   */
+  verticalStretchGrows?: boolean
+  /**
    * Whether this container gives its stretch-height children a definite
    * height to fill:
    * - true for pixel- and rem-height containers, and for stretch-height
    *   containers whose own parent has a definite height. Tab panels use their
-   *   tab container's height.
+   *   tab container's height. A filling `st.grid` cell counts too.
    * - false (or unset) for the root and content-height containers, where
    *   stretch elements size to their content.
    */
@@ -91,11 +114,13 @@ export function hasStretchHeightFallback(
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
  * @returns isDirectlyInColumn: Whether widgets in this context are direct
- *   layout children of an `st.columns` column.
+ *   layout children of an `st.columns` column or an `st.grid` cell.
  * @returns parentWidth: The width of the parent container in pixels, if it has
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
  *   container, unless a closer fixed-width container overrides it.
+ * @returns fillAvailableHeight: Whether a `grid.cell()` block should fill a
+ *   definite-height grid cell.
  * @returns hasDefiniteHeight: Whether stretch-height children get a definite
  *   height from this container.
  *
@@ -111,6 +136,9 @@ export const FlexContextProvider: FC<
     parentWidth?: number
     hasContentWidth?: boolean
     hasFixedWidth?: boolean
+    fillAvailableHeight?: boolean
+    fillJustify?: IFlexContext["fillJustify"]
+    verticalStretchGrows?: boolean
     hasFixedHeight?: boolean
     hasStretchHeight?: boolean
     parentContext?: IFlexContext | null
@@ -124,6 +152,9 @@ export const FlexContextProvider: FC<
   parentWidth,
   hasContentWidth = false,
   hasFixedWidth = false,
+  fillAvailableHeight = false,
+  fillJustify,
+  verticalStretchGrows = false,
   hasFixedHeight = false,
   hasStretchHeight = false,
   parentContext = null,
@@ -157,6 +188,9 @@ export const FlexContextProvider: FC<
       wrap,
       parentWidth,
       isInContentWidthContainer,
+      ...(fillAvailableHeight && { fillAvailableHeight: true }),
+      ...(fillJustify && { fillJustify }),
+      ...(verticalStretchGrows && { verticalStretchGrows: true }),
       hasDefiniteHeight,
     }
   }, [
@@ -167,6 +201,9 @@ export const FlexContextProvider: FC<
     parentWidth,
     hasContentWidth,
     hasFixedWidth,
+    fillAvailableHeight,
+    fillJustify,
+    verticalStretchGrows,
     hasFixedHeight,
     hasStretchHeight,
     parentContext,

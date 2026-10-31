@@ -3277,10 +3277,16 @@ class Block:
         self,
         proto: BlockProto | None,
         root: ElementTree,
+        *,
+        type: str | None = None,
     ) -> None:
         self.children = {}
         self.proto = proto
-        if proto:
+        if type is not None:
+            # A subclass that only has a sub-message passes its public type
+            # here so it does not assign `type` again after this init.
+            self.type = type
+        elif proto:
             ty = proto.WhichOneof("type")
             if ty is not None:
                 self.type = ty
@@ -3412,6 +3418,7 @@ class Block:
         """``st.container`` blocks, including horizontal/flex containers.
 
         The implicit row wrapper created by ``st.columns`` is excluded.
+        ``grid.cell()`` blocks are excluded.
         """
         return BlockList(
             [
@@ -3423,6 +3430,9 @@ class Block:
                 # st.columns currently emits a flex-container whose direct
                 # children are Column blocks; that wrapper is not st.container.
                 and not any(isinstance(child, Column) for child in e.children.values())
+                # grid.cell() is a flex container tagged with grid_cell.
+                # A nested st.container has no grid_cell and stays included.
+                and not (e.proto is not None and e.proto.HasField("grid_cell"))
             ]
         )
 
@@ -3476,6 +3486,14 @@ class Block:
     @property
     def file_uploader(self) -> WidgetList[FileUploader]:
         return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
+    def grid(self) -> BlockList[Grid]:
+        """``st.grid`` blocks.
+
+        ``grid.cell()`` is a flex container and is not included here.
+        """
+        return BlockList([e for e in self if isinstance(e, Grid) and e is not self])
 
     @property
     def form(self) -> BlockList[Block]:
@@ -3649,8 +3667,9 @@ class Block:
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
         ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
-        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
-        the matching attributes.
+        ``columns`` / ``status`` / ``chat_message`` / ``grid`` use the same
+        filtering as the matching attributes. ``grid_container`` is the node
+        type for ``st.grid``.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -3658,6 +3677,8 @@ class Block:
             return list(self.segmented_control)
         if element_type == "container":
             return list(self.container)
+        if element_type == "grid":
+            return list(self.grid)
         if element_type == "form":
             return list(self.form)
         if element_type == "form_submit_button":
@@ -3781,6 +3802,122 @@ class ChatMessage(Block):
         self.type = "chat_message"
         self.name = proto.name
         self.avatar = proto.avatar
+
+
+# Public gap names. None is the "no gap" value, matching GapSize.NONE.
+_GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
+    GapSize.NONE: None,
+    GapSize.XXSMALL: "xxsmall",
+    GapSize.XSMALL: "xsmall",
+    GapSize.SMALL: "small",
+    GapSize.MEDIUM: "medium",
+    GapSize.LARGE: "large",
+    GapSize.XLARGE: "xlarge",
+    GapSize.XXLARGE: "xxlarge",
+}
+
+GridGapValue: TypeAlias = str | int | None
+GridSizeValue: TypeAlias = int | float | str
+
+
+def _public_gap_value(gap_config: Any) -> GridGapValue:
+    """Rebuild one ``st.grid`` gap argument from a ``GapConfig``."""
+    spec = gap_config.WhichOneof("gap_spec")
+    if spec == "pixel_gap":
+        return int(gap_config.pixel_gap)
+    if spec == "gap_size":
+        return _GRID_GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
+    return "small"
+
+
+def _public_width(width_config: Any) -> GridSizeValue:
+    """Rebuild a width argument. An unset config is the grid default, stretch."""
+    spec = width_config.WhichOneof("width_spec") if width_config is not None else None
+    if spec == "pixel_width":
+        return int(width_config.pixel_width)
+    if spec == "rem_width":
+        return float(width_config.rem_width)
+    if spec == "use_content":
+        return "content"
+    return "stretch"
+
+
+def _public_height(height_config: Any) -> GridSizeValue:
+    """Rebuild a height argument. An unset config is the grid default, content."""
+    spec = (
+        height_config.WhichOneof("height_spec") if height_config is not None else None
+    )
+    if spec == "pixel_height":
+        return int(height_config.pixel_height)
+    if spec == "rem_height":
+        return float(height_config.rem_height)
+    if spec == "use_stretch":
+        return "stretch"
+    return "content"
+
+
+@dataclass(repr=False)
+class Grid(Block):
+    """A representation of ``st.grid``.
+
+    ``grid.cell()`` is a separate flex container and is not a ``Grid``.
+    """
+
+    type: str = field(repr=False)
+    proto: BlockProto.GridContainer = field(repr=False)
+    # Not `columns`: Block.columns is the nested st.columns collection.
+    column_count: int | str
+    wrap: bool
+    border: bool
+    row_height: int | str
+    min_column_width: int | str
+    gap: GridGapValue | tuple[GridGapValue, GridGapValue]
+    vertical_alignment: str
+    dense: bool
+    width: GridSizeValue
+    height: GridSizeValue
+
+    def __init__(
+        self,
+        proto: BlockProto.GridContainer,
+        root: ElementTree,
+        *,
+        block: BlockProto | None = None,
+    ) -> None:
+        # Pass the sub-message and the node type into Block so this class
+        # does not assign `proto` or `type` again. WhichOneof("type") does
+        # not apply to the grid sub-message.
+        super().__init__(cast("BlockProto", proto), root, type="grid_container")
+        self.column_count = proto.columns if proto.HasField("columns") else "auto"
+        self.wrap = proto.wrap if proto.HasField("wrap") else True
+        self.border = bool(proto.border)
+        self.min_column_width = (
+            proto.min_column_width_px
+            if proto.HasField("min_column_width_px")
+            else "auto"
+        )
+        row_gap = _public_gap_value(proto.row_gap_config)
+        column_gap = _public_gap_value(proto.column_gap_config)
+        self.gap = row_gap if row_gap == column_gap else (row_gap, column_gap)
+        alignment = type(proto).VerticalAlignment
+        if proto.vertical_alignment == alignment.CENTER:
+            self.vertical_alignment = "center"
+        elif proto.vertical_alignment == alignment.BOTTOM:
+            self.vertical_alignment = "bottom"
+        else:
+            self.vertical_alignment = "top"
+        self.dense = bool(proto.dense)
+        # Width and height live on the parent block, same as the block id.
+        self.width = _public_width(None if block is None else block.width_config)
+        self.height = _public_height(None if block is None else block.height_config)
+        # FIXED is the pixel row-height mode. Anything else surfaces as
+        # "content".
+        if proto.row_height_mode == type(proto).RowHeightMode.FIXED and proto.HasField(
+            "row_height_config"
+        ):
+            self.row_height = proto.row_height_config.pixel_height
+        else:
+            self.row_height = "content"
 
 
 @dataclass(repr=False)
@@ -4268,6 +4405,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             bty = block.WhichOneof("type")
             if bty == "chat_message":
                 new_node = ChatMessage(block.chat_message, root=root)
+            elif bty == "grid_container":
+                new_node = Grid(block.grid_container, root=root, block=block)
             elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "expandable":
