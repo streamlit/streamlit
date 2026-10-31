@@ -20,6 +20,7 @@ import {
   type ElementNode,
   type TransientNode,
 } from "~lib/AppNode"
+import { getRetainedAfterRemoval } from "~lib/render-tree/elementRetention"
 
 import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -51,12 +52,14 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
     }
 
     const newChildren: AppNode[] = []
+    const keptChildren: boolean[] = []
     let childrenChanged = false
     for (const child of node.children) {
       const filteredChild = child.accept(this)
       if (filteredChild !== child) {
         childrenChanged = true
       }
+      keptChildren.push(filteredChild !== undefined)
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
@@ -73,7 +76,8 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       node.deltaBlock,
       node.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      getRetainedAfterRemoval(node.retained, keptChildren, () => true)
     )
   }
 

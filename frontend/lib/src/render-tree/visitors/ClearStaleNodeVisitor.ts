@@ -20,6 +20,7 @@ import {
   type ElementNode,
   TransientNode,
 } from "~lib/AppNode"
+import { getRetainedAfterRemoval } from "~lib/render-tree/elementRetention"
 
 import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -106,20 +107,31 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     }
 
     // Recursively clear our children.
+    const childVisitor = clearStaleNodeVisitor ?? this
     const newChildren: AppNode[] = []
+    const keptChildren: boolean[] = []
     let childrenChanged = false
     for (const child of node.children) {
-      const filteredChild = child.accept(clearStaleNodeVisitor ?? this)
+      const filteredChild = child.accept(childVisitor)
       if (filteredChild !== child) {
         childrenChanged = true
       }
+      keptChildren.push(filteredChild !== undefined)
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
     }
 
+    // Retained elements are prior-run nodes, so they follow the same rule as
+    // stale children of this block.
+    const retained = getRetainedAfterRemoval(
+      node.retained,
+      keptChildren,
+      entry => entry.node.accept(childVisitor) !== undefined
+    )
+
     // Performance optimization: If the children haven't changed, return the same node.
-    if (!childrenChanged) {
+    if (!childrenChanged && retained === node.retained) {
       return node
     }
 
@@ -129,7 +141,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       node.deltaBlock,
       this.currentScriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      retained
     )
   }
 

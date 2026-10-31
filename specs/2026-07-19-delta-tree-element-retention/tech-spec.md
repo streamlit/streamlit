@@ -154,9 +154,9 @@ occupant `O` (which may be `undefined` for an append):
 1. **Reclaim.** If `N` has an element ID that matches a retained entry, remove that
    entry. `N` takes over its React key, so React keeps the instance, and rule 3 then
    places `N` in front of the remaining entries at this slot.
-2. **Same key, no change.** If `O` exists and `N` has the same React key as `O` (same
-   element ID, or the same positional key, see [section 5](#5-positional-keys-include-the-element-type)),
-   React updates the instance in place, and every retained entry stays where it renders.
+2. **Same key, no change.** If `O` exists and `N` has the same React key as `O` (the same
+   element or block ID, or both unkeyed and therefore keyed by the same index), React
+   updates the instance in place, and every retained entry stays where it renders.
 3. **New key at this slot.** Otherwise `N` is a fresh insertion. Entries anchored at `j`
    move to `j + 1`, keeping their order, so `N` renders in front of them. If `O` is
    retainable, from a prior run, and has an ID different from `N`'s, `O` joins them at
@@ -193,8 +193,12 @@ A retained entry:
 
 - is keyed by its element ID and never advances the positional index, so canonical
   unkeyed siblings keep their keys;
-- goes through the existing first-wins dedup (a current-run copy can't follow it, because
-  the write that would create one reclaims it); and
+- goes through the existing first-wins dedup. Usually a current-run copy can't exist,
+  because the write that would create one reclaims the entry. The exception is an element
+  that moved earlier: its stale copy further down can be displaced and retained after the
+  current copy was written. That copy always renders behind the current one, so dedup
+  ignores it. A displaced copy whose ID is already retained isn't added again, so there
+  is at most one entry per ID; and
 - renders through the normal `ElementNodeRenderer` subtree with an `isRetained` flag. The
   flag must reach `ElementContainer` without changing the subtree's shape, for example
   through a context provider that every element renders, because toggling the shape would
@@ -220,20 +224,7 @@ to a retained element.
   its previous place, interactive like any stale element today, until it is reclaimed or
   the user moves focus away.
 
-### 5. Positional keys include the element type
-
-Unkeyed leaves get the positional key `${element.type}-${index}` instead of `${index}`.
-Without this, a new unkeyed element written into the slot of an old unkeyed sibling (for
-example a second `st.info` overwriting a trailing `st.markdown`) reuses that sibling's
-index key. React then treats it as the old node, which rendered after the retained
-element, and moves the retained element's DOM node to keep up. The prototype reproduced
-an iframe reload this way, and the typed key removed it.
-
-The side effect is that an unkeyed slot changing element type also remounts its
-`ElementContainer` wrapper. Today only the inner component remounts in that case, because
-the component types already differ. Blocks keep their current keys.
-
-### 6. Lifecycle
+### 5. Lifecycle
 
 | Event | Retained entries |
 |---|---|
@@ -258,10 +249,13 @@ zero work, and rendering adds O(retained) to the existing O(children) pass.
   mechanism. That needs reclaim-aware child inheritance (inherit from the retained block,
   not the positional occupant) and hiding rules for transparent, portal, and tab blocks,
   and is left to a follow-up phase.
-- **Same-type unkeyed overwrites after a displacement.** If an inserted unkeyed element
-  has the same type as the old unkeyed sibling it overwrites, React still matches them by
-  position, and the retained element's DOM node moves once. Component state survives, but
-  an iframe reloads and focus drops.
+- **Unkeyed overwrites after a displacement.** A second inserted unkeyed element (for
+  example an `st.info` overwriting a trailing `st.markdown`) reuses that sibling's index
+  key. React then treats it as the old node, which rendered after the retained element,
+  and moves the retained element's DOM node once. Component state survives, but an iframe
+  (only legacy v1 custom components) reloads and focus drops. Including the element type
+  in positional keys avoided this in the prototype, but it changes the key of every
+  unkeyed element, so it's left out.
 - **Reorders.** Keyed siblings that change order still cause React DOM moves, as they do
   today.
 
@@ -274,17 +268,16 @@ Chromium, Firefox, and WebKit:
 | Scenario | `develop` | Prototype |
 |---|---|---|
 | One or two notices inserted above a keyed `text_input` and `data_editor` | Remount | Same DOM node; hidden while displaced |
-| Insert above a v1 custom component, including an interrupted run | Iframe reloads | Same iframe document |
+| One notice inserted above a v1 custom component | Iframe reloads | Same iframe document |
+| Two notices above a v1 custom component, the second overwriting trailing markdown | Iframe reloads | Iframe reloads, component instance kept (known limitation) |
 | Fragment rerun inserts above a focused `text_input` | Focus and typed text lost | Focus and typed text kept |
 | `number_input` replaces a `text_input` (genuine removal) | Replaced immediately | Hidden immediately, unmounted at cleanup |
 | Insert above `st.columns` | Remount | Remount (known limitation) |
 
-The interrupted-run case was checked in Chromium and WebKit, the others in all three
-browsers. A screenshot taken mid-run, while the text input was retained, matched the `develop`
+A screenshot taken mid-run, while the text input was retained, matched the `develop`
 screenshot. Layout and content were the same; the only differences were 1,171 pixels of
 canvas anti-aliasing inside the data editor, none more than 4 of 255 gray levels. The 464
-existing `render-tree/` and `Block/` unit tests passed. Two `RenderNodeVisitor`
-assertions on the old positional key format need updating for section 5.
+existing `render-tree/` and `Block/` unit tests passed.
 
 A simulation of one block (React's keyed placement rule, a commit after every delta,
 20,000 random insertion and deletion sequences, half with an interrupted run) compared
@@ -304,38 +297,43 @@ run. This proposal's remaining moves all occur where the interrupted run emitted
 in a different order than the run after it. An extra rule for elements that move earlier
 removes about 60% of those, but it needs a sibling scan for every displacement, so it
 isn't proposed. With unkeyed elements mixed in, every model also shows moves caused by
-positional keys (see [section 5](#5-positional-keys-include-the-element-type)).
+positional keys (see [Known limitations](#known-limitations)).
 
 ## Testing plan
 
-- **Canonical equivalence (unit).** Apply the same random delta sequences with retention
-  on and off, covering full, fragment, and interrupted runs, locked-cursor rewrites,
-  transients, and block inheritance. Assert identical `children`, delta-path lookups, and
-  active IDs after every delta and every cleanup. Assert the retention invariants: at most
-  one entry per ID, never a current-run node, anchors sorted and within bounds.
+- **Canonical equivalence (unit).** Apply seeded random delta sequences (successful and
+  interrupted runs, locked-cursor rewrites, keyed and unkeyed elements) and compare
+  `children` with a plain positional-overwrite model after every delta and cleanup.
+  Assert the retention invariants: at most one entry per ID, never a current-run node,
+  anchors sorted. Fragment cleanup, block inheritance, page filtering, and transient
+  writes get targeted cases.
 - **Render (unit).** Retained entries don't change the keys of canonical siblings. A
   reclaim updates props on the same instance. Genuine removal unmounts exactly once at
   cleanup. One and two insertions produce no unmount and no DOM move of the retained
   wrapper (count unmounts *and* check node identity, since a DOM move reloads an iframe
   without unmounting anything).
-- **E2E.** Add one focused app covering: an insertion above a widget, a data editor, a
-  chart, and a v1 and v2 custom component (DOM node and iframe token preserved); two
-  insertions; an interrupted run; a fragment rerun above a focused input (focus and dirty
-  value preserved); genuine removal (a snapshot during the window shows no ghost or gap);
-  `st.empty` same-run replacement; and a spinner. Run it on all three browsers, because
-  focus behavior differs in WebKit.
-- **Existing restoration tests.** The "Create some elements to unmount component" apps
-  stop remounting once retention covers their element types. Keep their restoration
-  coverage by running them with retention disabled, or by moving the element across a
-  parent.
+- **E2E.** One focused app covers an insertion above a widget and a data editor (same DOM
+  node, hidden while displaced, no duplicate), a focused input displaced by its own rerun
+  (focus kept), a replaced widget (hidden, then removed), and value restoration after a
+  real remount inside `st.columns`. It runs on all three browsers, because focus behavior
+  differs in WebKit.
+- **Existing remount tests.** The "Create some elements to unmount component" apps keep
+  passing. For retainable types (charts, dataframes, data editor, pills, feedback,
+  segmented control) they now check that state survives the shift through retention.
+  Audio, video, and audio input are on the denylist, so their apps still cover state
+  restoration after a real remount.
+- **Manual.** A kitchen-sink app with about 25 element types, spinners, `st.empty`, keyed
+  and unkeyed blocks, a form, and a fragment, driven through insertions and rapidly
+  interrupted reruns in all three browsers: no visible duplicates, no retained elements
+  left after a run, and no new console errors.
 
 ## Rollout
 
-Ship in one PR behind an internal frontend kill switch that E2E tests can turn off, with
-no cohorts. Retention never changes placement, the denylist covers
-the types known to have autonomous effects, and the equivalence tests guard delta
-behavior. If one element type misbehaves while hidden, add it to the denylist. Update the
-architecture skill's `frontend.md` and `element-identity.md` in the same PR.
+Ship in one PR, with no runtime flag and no cohorts. Retention never changes placement,
+the denylist covers the types known to have autonomous effects, and the equivalence tests
+guard delta behavior. If one element type misbehaves while hidden, add it to the
+denylist; reverting the PR restores today's behavior. Update the architecture skill's
+`frontend.md` and `element-identity.md` in the same PR.
 
 ## Alternatives considered
 
@@ -372,12 +370,6 @@ architecture skill's `frontend.md` and `element-identity.md` in the same PR.
 
 ## Open questions
 
-- Custom components may report a frame height while hidden (some report 0 from a resize
-  observer). Should `ComponentInstance` defer height updates until the element is visible
-  again, or is the resize on reclaim enough?
 - Charts with size observers (Vega, Plotly, ECharts, deck.gl) see a zero size while
   hidden. ECharts already latches its last positive size. The E2E matrix should confirm
   that each one redraws at the right size on reclaim rather than going on the denylist.
-- Should the same-type unkeyed overwrite case (see [Known limitations](#known-limitations))
-  get a key salt that forces a fresh mount of the cheap unkeyed node instead of moving
-  the retained one? It's only worth it if real apps hit it.

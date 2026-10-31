@@ -67,10 +67,12 @@ export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
     }
 
     // Shortcut to avoid re-creating the same block node
-    if (!childrenChanged) {
+    if (!childrenChanged && node.retained.length === 0) {
       return node
     }
 
+    // Retained elements are dropped: elements are not kept mounted across a
+    // page change, and the page change also removes their widget state.
     return new BlockNode(
       node.activeScriptHash,
       newChildren,

@@ -29,6 +29,7 @@ import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"
 import { ElementContainerConfig } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 
 // Helper to create a mock element node
 const createMockElementNode = (
@@ -163,6 +164,43 @@ describe("ElementContainer", () => {
       expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
         "data-stale",
         "false"
+      )
+    })
+  })
+
+  describe("retained state", () => {
+    it("marks the container as retained inside a retained element", () => {
+      render(
+        <RetainedElementContext.Provider value={true}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={true}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </RetainedElementContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-retained",
+        "true"
+      )
+    })
+
+    it("does not mark the container as retained by default", () => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).not.toHaveAttribute(
+        "data-retained"
       )
     })
   })

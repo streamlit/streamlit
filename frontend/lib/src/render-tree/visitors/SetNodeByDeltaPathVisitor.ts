@@ -20,6 +20,10 @@ import {
   type ElementNode,
   TransientNode,
 } from "~lib/AppNode"
+import {
+  getRetainedAfterWrite,
+  shiftRetainedAfter,
+} from "~lib/render-tree/elementRetention"
 
 import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
@@ -116,6 +120,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
     // Create a copy of the children array
     let newChildren: AppNode[] = []
+    let insertedTransient = false
     const childVisitor = new SetNodeByDeltaPathVisitor(
       remainingPath,
       this.nodeToSet,
@@ -154,6 +159,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
           // and not affect the existing non-transient child
           newChildren.push(nextChild)
           newChildren.push(child)
+          insertedTransient = true
         } else {
           // This will be a replacement
           newChildren.push(nextChild)
@@ -169,8 +175,35 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       node.deltaBlock,
       this.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      this.getRetained(node, currentIndex, newChildren, insertedTransient)
     )
+  }
+
+  /**
+   * Retained elements of `node` after this write. Only the parent of the
+   * written slot updates them; ancestors rebuilt along the path keep theirs.
+   */
+  private getRetained(
+    node: BlockNode,
+    index: number,
+    newChildren: AppNode[],
+    insertedTransient: boolean
+  ): BlockNode["retained"] {
+    if (this.deltaPath.length > 1) {
+      return node.retained
+    }
+    if (insertedTransient) {
+      return shiftRetainedAfter(node.retained, index)
+    }
+    return getRetainedAfterWrite({
+      retained: node.retained,
+      index,
+      // Undefined when the write appends past the last child.
+      prev: node.children[index],
+      next: newChildren[index],
+      scriptRunId: this.scriptRunId,
+    })
   }
 
   /**
